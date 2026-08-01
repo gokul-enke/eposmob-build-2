@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/newcomponents/custom_container_box.dart';
@@ -9,10 +11,12 @@ import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/language_provider.dart';
+import 'package:pos_machine/resources/app_url.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AddCategoryModal extends StatefulWidget {
   const AddCategoryModal({super.key});
@@ -37,6 +41,81 @@ class _AddCategoryModalState extends State<AddCategoryModal> {
   String? _iconPath;
   bool _isSubmitting = false;
   bool _isArabicTranslating = false;
+
+  // Tax multi-select state
+  List<_TaxItem> _availableTaxes = [];
+  final List<int> _selectedTaxIds = [];
+  bool _taxesLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTaxes();
+  }
+
+  Future<void> _fetchTaxes() async {
+    setState(() => _taxesLoading = true);
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final token = authModel.token ?? '';
+      final prefs = await SharedPreferences.getInstance();
+      final apiKey = prefs.getString('api_key') ?? '';
+
+      // DEBUG — remove after diagnosis
+      debugPrint('[TaxFetch] URL: ${APPUrl.listTax}');
+      debugPrint('[TaxFetch] token empty: ${token.isEmpty}  apiKey empty: ${apiKey.isEmpty}');
+
+      if (token.isEmpty || apiKey.isEmpty) {
+        debugPrint('[TaxFetch] Aborting — missing token or apiKey');
+        return;
+      }
+
+      final response = await http.get(
+        Uri.parse(APPUrl.listTax),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'X-Tenant': apiKey,
+          'Accept': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      // DEBUG — remove after diagnosis
+      debugPrint('[TaxFetch] Status: ${response.statusCode}');
+      debugPrint('[TaxFetch] Body: ${response.body}');
+
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+        // DEBUG — show top-level keys and first item if any
+        debugPrint('[TaxFetch] decoded keys: ${decoded.keys.toList()}');
+        final rawData = decoded['data'];
+        debugPrint('[TaxFetch] data type: ${rawData.runtimeType}  value: $rawData');
+        final list = (rawData as List? ?? []);
+        if (list.isNotEmpty) {
+          debugPrint('[TaxFetch] first item keys: ${(list.first as Map).keys.toList()}');
+          debugPrint('[TaxFetch] first item: ${list.first}');
+        }
+        setState(() {
+          _availableTaxes = list
+              .map((e) => _TaxItem(
+                    id: (e['id'] as num).toInt(),
+                    name: e['name']?.toString() ?? '',
+                  ))
+              .toList();
+        });
+        debugPrint('[TaxFetch] loaded ${_availableTaxes.length} taxes');
+      } else {
+        debugPrint('[TaxFetch] Non-200 — body: ${response.body}');
+      }
+    } catch (e, st) {
+      // DEBUG — print exception so it's visible
+      debugPrint('[TaxFetch] Exception: $e');
+      debugPrint('[TaxFetch] StackTrace: $st');
+    } finally {
+      if (mounted) setState(() => _taxesLoading = false);
+    }
+  }
+
 
   @override
   void dispose() {
@@ -136,6 +215,7 @@ class _AddCategoryModalState extends State<AddCategoryModal> {
         description: _descriptionController.text.trim(),
         productPropertyIds:
             productProperty != null ? <int>[productProperty] : null,
+        taxIds: _selectedTaxIds.isEmpty ? null : List<int>.from(_selectedTaxIds),
       );
 
       if (!mounted) return;
@@ -456,6 +536,89 @@ class _AddCategoryModalState extends State<AddCategoryModal> {
     );
   }
 
+  Widget _buildTaxSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Select Taxes',
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s12,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        const SizedBox(height: 4),
+        if (_taxesLoading)
+          const SizedBox(
+            height: 36,
+            child: Center(
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          )
+        else if (_availableTaxes.isEmpty)
+          Text(
+            'No taxes available',
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s11,
+              0.27,
+              Colors.black38,
+            ),
+          )
+        else
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: _availableTaxes.map((tax) {
+              final selected = _selectedTaxIds.contains(tax.id);
+              return FilterChip(
+                label: Text(
+                  tax.name,
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s11,
+                    0.27,
+                    selected
+                        ? Colors.white
+                        : ColorManager.textColor.withOpacity(0.8),
+                  ),
+                ),
+                selected: selected,
+                onSelected: (val) {
+                  setState(() {
+                    if (val) {
+                      _selectedTaxIds.add(tax.id);
+                    } else {
+                      _selectedTaxIds.remove(tax.id);
+                    }
+                  });
+                },
+                selectedColor: ColorManager.kPrimaryColor,
+                backgroundColor: Colors.grey.shade100,
+                checkmarkColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                  side: BorderSide(
+                    color: selected
+                        ? ColorManager.kPrimaryColor
+                        : Colors.grey.shade300,
+                  ),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              );
+            }).toList(),
+          ),
+      ],
+    );
+  }
+
   Widget _buildParentCategoryDropdown(List<Category> parentCategories) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -573,6 +736,8 @@ class _AddCategoryModalState extends State<AddCategoryModal> {
                   ),
                 ),
                 const SizedBox(height: 12),
+                _buildTaxSelector(),
+                const SizedBox(height: 12),
                 _buildTwoColumnRow(
                   left: _buildTextField(
                     'Description',
@@ -655,4 +820,11 @@ class _AddCategoryModalState extends State<AddCategoryModal> {
       ),
     );
   }
+}
+
+/// Minimal tax record used only within [AddCategoryModal].
+class _TaxItem {
+  final int id;
+  final String name;
+  const _TaxItem({required this.id, required this.name});
 }

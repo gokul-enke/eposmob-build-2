@@ -155,6 +155,7 @@ class APPUrl {
   static String get addToStock => '$baseURL/api/v1/product/add-stock';
   static String get addBulkStock => '$baseURL/api/v1/product/add-stock';
   static String get getTaxtDetails => '$baseURL/api/v1/tax/get-category-tax';
+  static String get listTax => '$baseURL/api/v1/tax/list-tax';
   static String get addPurchaseStock => '$baseURL/api/v1/purchases/add-stock';
   static String get listStock => '$baseURL/api/v1/product/list-stocks';
   static String get updateStockDetails =>

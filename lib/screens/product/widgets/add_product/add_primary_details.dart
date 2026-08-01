@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/widgets/add_category_modal.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../components/build_container_box.dart';
@@ -103,84 +104,139 @@ class AddProductPageScreen extends StatelessWidget {
                                   Colors.black.withOpacity(0.6),
                                 ),
                               ),
-                              BuildBoxShadowContainer(
-                                circleRadius: 7,
-                                alignment: Alignment.centerLeft,
-                                margin: const EdgeInsets.symmetric(
-                                    horizontal: 5, vertical: 0),
-                                padding: const EdgeInsets.only(left: 15),
-                                height: size.height * .07,
-                                width: size.width / 3,
-                                child: DropdownButtonFormField<Category>(
-                                  decoration: const InputDecoration(
-                                    border: InputBorder
-                                        .none, // Remove the underline
-                                  ),
-                                  value: categoryProvider
-                                              .selectedCategoryIndex >=
-                                          0
-                                      ? categoryList![categoryProvider
-                                          .selectedCategoryIndex]
-                                      : null,
-                                  hint: Text(
-                                    'Select Category',
-                                    style: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s12,
-                                      0.27,
-                                      ColorManager.textColor
-                                          .withOpacity(.5),
+                              Row(
+                                children: [
+                                  BuildBoxShadowContainer(
+                                    circleRadius: 7,
+                                    alignment: Alignment.centerLeft,
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 5, vertical: 0),
+                                    padding: const EdgeInsets.only(left: 15),
+                                    height: size.height * .07,
+                                    width: size.width / 3 - 50,
+                                    child: DropdownButtonFormField<Category>(
+                                      decoration: const InputDecoration(
+                                        border: InputBorder
+                                            .none, // Remove the underline
+                                      ),
+                                      value: categoryProvider
+                                                  .selectedCategoryIndex >=
+                                              0
+                                          ? categoryList![categoryProvider
+                                              .selectedCategoryIndex]
+                                          : null,
+                                      hint: Text(
+                                        'Select Category',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.medium,
+                                          FontSize.s12,
+                                          0.27,
+                                          ColorManager.textColor
+                                              .withOpacity(.5),
+                                        ),
+                                      ),
+                                      items: categoryList!
+                                          .map((Category category) {
+                                            return DropdownMenuItem<Category>(
+                                                value: category,
+                                                child: category.categoryName ==
+                                                        "ALL"
+                                                    ? Text(
+                                                        ' Please Select',
+                                                        style: buildCustomStyle(
+                                                          FontWeightManager
+                                                              .medium,
+                                                          FontSize.s12,
+                                                          0.27,
+                                                          ColorManager.textColor
+                                                              .withOpacity(.5),
+                                                        ),
+                                                      )
+                                                    : Text(
+                                                        category.categoryName ??
+                                                            '',
+                                                        style: buildCustomStyle(
+                                                          FontWeightManager
+                                                              .medium,
+                                                          FontSize.s12,
+                                                          0.27,
+                                                          ColorManager.textColor
+                                                              .withOpacity(.5),
+                                                        ),
+                                                      ));
+                                          })
+                                          .toSet()
+                                          .toList(),
+                                      onChanged: (Category? selectedCategory) {
+                                        if (selectedCategory != null) {
+                                          // Update the selected category in the provider
+                                          categoryProvider.selectCategory(
+                                            categoryList
+                                                .indexOf(selectedCategory),
+                                            selectedCategory.categoryName ?? '',
+                                            selectedCategory.productsCount ?? 0,
+                                          );
+                                          parentCategory =
+                                              "${selectedCategory.categoryId ?? 0}";
+                                          // debugPrint(parentCategory);
+                                          categoryProvider.setParentCategory(
+                                              "${selectedCategory.categoryId ?? 0}");
+                                        }
+                                      },
                                     ),
                                   ),
-                                  items: categoryList!
-                                      .map((Category category) {
-                                        return DropdownMenuItem<Category>(
-                                            value: category,
-                                            child: category.categoryName ==
-                                                    "ALL"
-                                                ? Text(
-                                                    ' Please Select',
-                                                    style: buildCustomStyle(
-                                                      FontWeightManager
-                                                          .medium,
-                                                      FontSize.s12,
-                                                      0.27,
-                                                      ColorManager.textColor
-                                                          .withOpacity(.5),
-                                                    ),
-                                                  )
-                                                : Text(
-                                                    category.categoryName ??
-                                                        '',
-                                                    style: buildCustomStyle(
-                                                      FontWeightManager
-                                                          .medium,
-                                                      FontSize.s12,
-                                                      0.27,
-                                                      ColorManager.textColor
-                                                          .withOpacity(.5),
-                                                    ),
-                                                  ));
-                                      })
-                                      .toSet()
-                                      .toList(),
-                                  onChanged: (Category? selectedCategory) {
-                                    if (selectedCategory != null) {
-                                      // Update the selected category in the provider
-                                      categoryProvider.selectCategory(
-                                        categoryList
-                                            .indexOf(selectedCategory),
-                                        selectedCategory.categoryName ?? '',
-                                        selectedCategory.productsCount ?? 0,
-                                      );
-                                      parentCategory =
-                                          "${selectedCategory.categoryId ?? 0}";
-                                      // debugPrint(parentCategory);
-                                      categoryProvider.setParentCategory(
-                                          "${selectedCategory.categoryId ?? 0}");
-                                    }
-                                  },
-                                ),
+                                  const SizedBox(width: 8),
+                                  BuildBoxShadowContainer(
+                                    height: size.height * .07,
+                                    width: 42,
+                                    circleRadius: 7,
+                                    child: InkWell(
+                                      onTap: () async {
+                                        final existingIds = categoryProvider.category
+                                                ?.map((c) => c.categoryId)
+                                                .toSet() ??
+                                            {};
+
+                                        final result = await showDialog<bool>(
+                                          context: context,
+                                          barrierDismissible: false,
+                                          builder: (_) => const AddCategoryModal(),
+                                        );
+
+                                        if (result == true) {
+                                          final updatedCategories = categoryProvider.category ?? [];
+                                          Category? newCategory;
+                                          for (var c in updatedCategories) {
+                                            if (c.categoryId != null &&
+                                                !existingIds.contains(c.categoryId)) {
+                                              newCategory = c;
+                                              break;
+                                            }
+                                          }
+                                          if (newCategory != null) {
+                                            final index = updatedCategories.indexOf(newCategory);
+                                            if (index != -1) {
+                                              categoryProvider.selectCategory(
+                                                index,
+                                                newCategory.categoryName ?? '',
+                                                newCategory.productsCount ?? 0,
+                                              );
+                                              categoryProvider.setParentCategory(
+                                                  "${newCategory.categoryId ?? 0}");
+                                            }
+                                          }
+                                        }
+                                      },
+                                      child: const Center(
+                                        child: Icon(
+                                          Icons.add,
+                                          size: 27,
+                                          color: ColorManager.kButtonGreen,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),

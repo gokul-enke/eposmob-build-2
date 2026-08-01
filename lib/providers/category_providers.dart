@@ -640,6 +640,7 @@ class CategoryProvider extends ChangeNotifier {
     bool isPurchasable = true,
     String? description,
     List<int>? productPropertyIds,
+    List<int>? taxIds,
     Map<String, String>? categoryLangNames}) async {
     // debugPrint("ADD CATEGORY  API parentCategory $parentCategory ");
     // debugPrint("ADD CATEGORY  API categoryName $categoryName ");
@@ -706,6 +707,12 @@ class CategoryProvider extends ChangeNotifier {
       for (int index = 0; index < productPropertyIds.length; index++) {
         request.fields['product_properties[$index]'] =
             productPropertyIds[index].toString();
+      }
+    }
+
+    if (taxIds != null && taxIds.isNotEmpty) {
+      for (int index = 0; index < taxIds.length; index++) {
+        request.fields['tax_ids[$index]'] = taxIds[index].toString();
       }
     }
 
