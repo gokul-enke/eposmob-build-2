@@ -400,9 +400,8 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         : '';
     final sellerCrNumber = cfgVal('showExtraHeading2', '');
 
-    // ── Bank details ────────────────────────────────────────────────
-    final bank = params.primaryBank;
-    final bankAccount = params.primaryBankAccount;
+    // ── Bank details (API visibility flags) ─────────────────────────
+    final bankLines = params.visibleBankAccountDetailLines(dc);
 
     // ── Invoice number (prefix + stripping) ─────────────────────────
     // Invoice prefix: config value > config default > numberPrefix > 'INV-'
@@ -773,21 +772,13 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text('OUR BANK DETAILS | لتفاصيل المصرفية',
-                            style: bankHeading),
-                        pw.SizedBox(height: 2),
-                        if (bankAccount?.accountHolderName?.isNotEmpty == true)
-                          _autoText(
-                              'Beneficiary Name: ${bankAccount!.accountHolderName}',
-                              bankStyle),
-                        if (bank?.bankName?.isNotEmpty == true)
-                          _autoText('Bank Name: ${bank!.bankName}', bankStyle),
-                        if (bankAccount?.accountNumber?.isNotEmpty == true)
-                          pw.Text('Bank Account: ${bankAccount!.accountNumber}',
-                              style: bankStyle),
-                        if (bankAccount?.iban?.isNotEmpty == true)
-                          pw.Text('IBAN : ${bankAccount!.iban}',
-                              style: bankStyle),
+                        if (bankLines.isNotEmpty) ...[
+                          pw.Text('OUR BANK DETAILS | لتفاصيل المصرفية',
+                              style: bankHeading),
+                          pw.SizedBox(height: 2),
+                          ...bankLines
+                              .map((line) => _autoText(line, bankStyle)),
+                        ],
                       ],
                     ),
                   ),
