@@ -34,6 +34,9 @@ Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 MinVersion=10.0
+; Do not interrupt routine app updates with a restart prompt after the
+; VC++ Redistributable runs. Pending changes finish on the next normal reboot.
+RestartIfNeededByRun=no
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
