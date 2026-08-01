@@ -69,3 +69,6 @@ Todo.md
 /Output
 /installer-assets/
 /.pi-subagents
+# Local QA/analyzer output (generated, never release source)
+/analysis_qa.txt
+/tmp

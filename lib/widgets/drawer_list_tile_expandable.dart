@@ -32,7 +32,7 @@ class DrawerListTileExpandableColumn extends StatefulWidget {
   final double? iconSize;
   // Optional: allow custom horizontal gap between icon and title per tile
   final double? horizontalGap;
-  
+
   // Permission parameters for sub-items
   final bool? showTitle1;
   final bool? showTitle2;
@@ -85,7 +85,6 @@ class _DrawerListTileExpandableColumnState
     extends State<DrawerListTileExpandableColumn> {
   bool _isExpanded = true;
   int _selectedTileIndex = 0;
-  
 
   void _onTapTile(int index, VoidCallback onTap) {
     setState(() {
@@ -123,7 +122,8 @@ class _DrawerListTileExpandableColumnState
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: widget.icon != null
-                    ? FaIcon(widget.icon!, size: 14, color: ColorManager.kPrimaryColor)
+                    ? FaIcon(widget.icon!,
+                        size: 14, color: ColorManager.kPrimaryColor)
                     : const SizedBox.shrink(),
               ),
               const SizedBox(width: 8),
@@ -396,9 +396,10 @@ class _DrawerListTileExpandableColumnState
     final double resolvedIconSize = widget.iconSize ?? 18.0;
     final double leadingBox = resolvedIconSize + 4.0;
     final double gap = widget.horizontalGap ?? 12.0;
-    
+
     // Check if sidebar is collapsed
-    final sidebarState = context.findAncestorStateOfType<CollapsibleSidebarState>();
+    final sidebarState =
+        context.findAncestorStateOfType<CollapsibleSidebarState>();
     final isSidebarExpanded = sidebarState?.isExpanded ?? true;
 
     // Collapsed state - icon only with click to show popup menu
@@ -428,14 +429,18 @@ class _DrawerListTileExpandableColumnState
                       ? FaIcon(
                           widget.icon!,
                           size: 16,
-                          color: widget.selected ? Colors.white : ColorManager.kPrimaryColor,
+                          color: widget.selected
+                              ? Colors.white
+                              : ColorManager.kPrimaryColor,
                         )
                       : WebsafeSvg.asset(
                           widget.iconPath!,
                           width: 16,
                           height: 16,
                           colorFilter: ColorFilter.mode(
-                            widget.selected ? Colors.white : ColorManager.kPrimaryColor,
+                            widget.selected
+                                ? Colors.white
+                                : ColorManager.kPrimaryColor,
                             BlendMode.srcIn,
                           ),
                         ),
@@ -452,7 +457,8 @@ class _DrawerListTileExpandableColumnState
         ? Column(
             children: [
               Container(
-                margin: const EdgeInsets.symmetric(vertical: 1.5, horizontal: 15),
+                margin:
+                    const EdgeInsets.symmetric(vertical: 1.5, horizontal: 15),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -469,56 +475,64 @@ class _DrawerListTileExpandableColumnState
                     ),
                   ],
                 ),
-                child: ListTile(
-                  selected: widget.selected,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                  horizontalTitleGap: gap,
-                  visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
-                  minVerticalPadding: 0,
-                  onTap: () {
-                    setState(() {
-                      _isExpanded = !_isExpanded;
-                    });
-                    // Also perform the navigation action when main title is tapped
-                    widget.onTap();
-                  },
-                  minLeadingWidth: leadingBox,
-                  leading: SizedBox(
-                    width: leadingBox,
-                    height: leadingBox,
-                    child: Center(
-                      child: widget.icon != null
-                          ? FaIcon(
-                              widget.icon!,
-                              color: Colors.white,
-                              size: resolvedIconSize,
-                            )
-                          : WebsafeSvg.asset(
-                              widget.iconPath!,
-                              width: resolvedIconSize,
-                              height: resolvedIconSize,
-                              colorFilter: const ColorFilter.mode(
-                                  Colors.white, BlendMode.srcIn),
-                            ),
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: ListTile(
+                    selected: widget.selected,
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                    horizontalTitleGap: gap,
+                    visualDensity:
+                        const VisualDensity(vertical: -4, horizontal: 0),
+                    minVerticalPadding: 0,
+                    onTap: () {
+                      setState(() {
+                        _isExpanded = !_isExpanded;
+                      });
+                      // Also perform the navigation action when main title is tapped
+                      widget.onTap();
+                    },
+                    minLeadingWidth: leadingBox,
+                    leading: SizedBox(
+                      width: leadingBox,
+                      height: leadingBox,
+                      child: Center(
+                        child: widget.icon != null
+                            ? FaIcon(
+                                widget.icon!,
+                                color: Colors.white,
+                                size: resolvedIconSize,
+                              )
+                            : WebsafeSvg.asset(
+                                widget.iconPath!,
+                                width: resolvedIconSize,
+                                height: resolvedIconSize,
+                                colorFilter: const ColorFilter.mode(
+                                    Colors.white, BlendMode.srcIn),
+                              ),
+                      ),
                     ),
-                  ),
-                  trailing: Icon(
-                    _isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                    color: Colors.white,
-                  ),
-                  title: Text(
-                    widget.title,
-                    style: const TextStyle(
+                    trailing: Icon(
+                      _isExpanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
                       color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                    ),
+                    title: Text(
+                      widget.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ),
               ),
               if (_isExpanded)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20.0, vertical: 2),
                   child: Column(
                     children: [
                       // First sub-item - only show if permission allows
@@ -531,27 +545,33 @@ class _DrawerListTileExpandableColumnState
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: ListTile(
-                            selected: _selectedTileIndex == 0,
-                            contentPadding: const EdgeInsets.only(left: 20, right: 10),
-                            horizontalTitleGap: 8.0,
-                            visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
-                            minVerticalPadding: 0,
-                            onTap: () => _onTapTile(0, widget.onTapTitle1),
-                            leading: const BubbleIcon(),
-                            title: Text(
-                              widget.listTitle1,
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s12,
-                                0.21,
-                                ColorManager.textColor,
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: ListTile(
+                              selected: _selectedTileIndex == 0,
+                              contentPadding:
+                                  const EdgeInsets.only(left: 20, right: 10),
+                              horizontalTitleGap: 8.0,
+                              visualDensity: const VisualDensity(
+                                  vertical: -4, horizontal: 0),
+                              minVerticalPadding: 0,
+                              onTap: () => _onTapTile(0, widget.onTapTitle1),
+                              leading: const BubbleIcon(),
+                              title: Text(
+                                widget.listTitle1,
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s12,
+                                  0.21,
+                                  ColorManager.textColor,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       // Second sub-item - only show if permission allows and title exists
-                      if (widget.listTitle2 != null && widget.showTitle2 == true)
+                      if (widget.listTitle2 != null &&
+                          widget.showTitle2 == true)
                         Container(
                           margin: const EdgeInsets.symmetric(vertical: 1),
                           decoration: BoxDecoration(
@@ -560,27 +580,33 @@ class _DrawerListTileExpandableColumnState
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: ListTile(
-                            selected: _selectedTileIndex == 1,
-                            contentPadding: const EdgeInsets.only(left: 20, right: 10),
-                            horizontalTitleGap: 8.0,
-                            visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
-                            minVerticalPadding: 0,
-                            onTap: () => _onTapTile(1, widget.onTapTitle2!),
-                            leading: const BubbleIcon(),
-                            title: Text(
-                              widget.listTitle2 ?? '',
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s12,
-                                0.21,
-                                ColorManager.textColor,
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: ListTile(
+                              selected: _selectedTileIndex == 1,
+                              contentPadding:
+                                  const EdgeInsets.only(left: 20, right: 10),
+                              horizontalTitleGap: 8.0,
+                              visualDensity: const VisualDensity(
+                                  vertical: -4, horizontal: 0),
+                              minVerticalPadding: 0,
+                              onTap: () => _onTapTile(1, widget.onTapTitle2!),
+                              leading: const BubbleIcon(),
+                              title: Text(
+                                widget.listTitle2 ?? '',
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s12,
+                                  0.21,
+                                  ColorManager.textColor,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       // Third sub-item - only show if permission allows and title exists
-                      if (widget.listTitle3 != null && widget.showTitle3 == true)
+                      if (widget.listTitle3 != null &&
+                          widget.showTitle3 == true)
                         Container(
                           margin: const EdgeInsets.symmetric(vertical: 1),
                           decoration: BoxDecoration(
@@ -589,27 +615,33 @@ class _DrawerListTileExpandableColumnState
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: ListTile(
-                            selected: _selectedTileIndex == 2,
-                            contentPadding: const EdgeInsets.only(left: 20, right: 10),
-                            horizontalTitleGap: 8.0,
-                            visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
-                            minVerticalPadding: 0,
-                            onTap: () => _onTapTile(2, widget.onTapTitle3!),
-                            leading: const BubbleIcon(),
-                            title: Text(
-                              widget.listTitle3 ?? '',
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s12,
-                                0.21,
-                                ColorManager.textColor,
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: ListTile(
+                              selected: _selectedTileIndex == 2,
+                              contentPadding:
+                                  const EdgeInsets.only(left: 20, right: 10),
+                              horizontalTitleGap: 8.0,
+                              visualDensity: const VisualDensity(
+                                  vertical: -4, horizontal: 0),
+                              minVerticalPadding: 0,
+                              onTap: () => _onTapTile(2, widget.onTapTitle3!),
+                              leading: const BubbleIcon(),
+                              title: Text(
+                                widget.listTitle3 ?? '',
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s12,
+                                  0.21,
+                                  ColorManager.textColor,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       // Fourth sub-item
-                      if (widget.listTitle4 != null && widget.showTitle4 == true)
+                      if (widget.listTitle4 != null &&
+                          widget.showTitle4 == true)
                         Container(
                           margin: const EdgeInsets.symmetric(vertical: 1),
                           decoration: BoxDecoration(
@@ -618,27 +650,33 @@ class _DrawerListTileExpandableColumnState
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: ListTile(
-                            selected: _selectedTileIndex == 3,
-                            contentPadding: const EdgeInsets.only(left: 20, right: 10),
-                            horizontalTitleGap: 8.0,
-                            visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
-                            minVerticalPadding: 0,
-                            onTap: () => _onTapTile(3, widget.onTapTitle4!),
-                            leading: const BubbleIcon(),
-                            title: Text(
-                              widget.listTitle4 ?? '',
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s12,
-                                0.21,
-                                ColorManager.textColor,
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: ListTile(
+                              selected: _selectedTileIndex == 3,
+                              contentPadding:
+                                  const EdgeInsets.only(left: 20, right: 10),
+                              horizontalTitleGap: 8.0,
+                              visualDensity: const VisualDensity(
+                                  vertical: -4, horizontal: 0),
+                              minVerticalPadding: 0,
+                              onTap: () => _onTapTile(3, widget.onTapTitle4!),
+                              leading: const BubbleIcon(),
+                              title: Text(
+                                widget.listTitle4 ?? '',
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s12,
+                                  0.21,
+                                  ColorManager.textColor,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       // Fifth sub-item - only show if permission allows and title exists
-                      if (widget.listTitle5 != null && widget.showTitle5 == true)
+                      if (widget.listTitle5 != null &&
+                          widget.showTitle5 == true)
                         Container(
                           margin: const EdgeInsets.symmetric(vertical: 1),
                           decoration: BoxDecoration(
@@ -647,27 +685,33 @@ class _DrawerListTileExpandableColumnState
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: ListTile(
-                            selected: _selectedTileIndex == 4,
-                            contentPadding: const EdgeInsets.only(left: 20, right: 10),
-                            horizontalTitleGap: 8.0,
-                            visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
-                            minVerticalPadding: 0,
-                            onTap: () => _onTapTile(4, widget.onTapTitle5!),
-                            leading: const BubbleIcon(),
-                            title: Text(
-                              widget.listTitle5 ?? '',
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s12,
-                                0.21,
-                                ColorManager.textColor,
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: ListTile(
+                              selected: _selectedTileIndex == 4,
+                              contentPadding:
+                                  const EdgeInsets.only(left: 20, right: 10),
+                              horizontalTitleGap: 8.0,
+                              visualDensity: const VisualDensity(
+                                  vertical: -4, horizontal: 0),
+                              minVerticalPadding: 0,
+                              onTap: () => _onTapTile(4, widget.onTapTitle5!),
+                              leading: const BubbleIcon(),
+                              title: Text(
+                                widget.listTitle5 ?? '',
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s12,
+                                  0.21,
+                                  ColorManager.textColor,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       // Sixth sub-item - only show if permission allows and title exists
-                      if (widget.listTitle6 != null && widget.showTitle6 == true)
+                      if (widget.listTitle6 != null &&
+                          widget.showTitle6 == true)
                         Container(
                           margin: const EdgeInsets.symmetric(vertical: 1),
                           decoration: BoxDecoration(
@@ -676,27 +720,33 @@ class _DrawerListTileExpandableColumnState
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: ListTile(
-                            selected: _selectedTileIndex == 5,
-                            contentPadding: const EdgeInsets.only(left: 20, right: 10),
-                            horizontalTitleGap: 8.0,
-                            visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
-                            minVerticalPadding: 0,
-                            onTap: () => _onTapTile(5, widget.onTapTitle6!),
-                            leading: const BubbleIcon(),
-                            title: Text(
-                              widget.listTitle6 ?? '',
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s12,
-                                0.21,
-                                ColorManager.textColor,
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: ListTile(
+                              selected: _selectedTileIndex == 5,
+                              contentPadding:
+                                  const EdgeInsets.only(left: 20, right: 10),
+                              horizontalTitleGap: 8.0,
+                              visualDensity: const VisualDensity(
+                                  vertical: -4, horizontal: 0),
+                              minVerticalPadding: 0,
+                              onTap: () => _onTapTile(5, widget.onTapTitle6!),
+                              leading: const BubbleIcon(),
+                              title: Text(
+                                widget.listTitle6 ?? '',
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s12,
+                                  0.21,
+                                  ColorManager.textColor,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       // Seventh sub-item - only show if permission allows and title exists
-                      if (widget.listTitle7 != null && widget.showTitle7 == true)
+                      if (widget.listTitle7 != null &&
+                          widget.showTitle7 == true)
                         Container(
                           margin: const EdgeInsets.symmetric(vertical: 1),
                           decoration: BoxDecoration(
@@ -705,21 +755,26 @@ class _DrawerListTileExpandableColumnState
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: ListTile(
-                            selected: _selectedTileIndex == 6,
-                            contentPadding: const EdgeInsets.only(left: 20, right: 10),
-                            horizontalTitleGap: 8.0,
-                            visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
-                            minVerticalPadding: 0,
-                            onTap: () => _onTapTile(6, widget.onTapTitle7!),
-                            leading: const BubbleIcon(),
-                            title: Text(
-                              widget.listTitle7 ?? '',
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s12,
-                                0.21,
-                                ColorManager.textColor,
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: ListTile(
+                              selected: _selectedTileIndex == 6,
+                              contentPadding:
+                                  const EdgeInsets.only(left: 20, right: 10),
+                              horizontalTitleGap: 8.0,
+                              visualDensity: const VisualDensity(
+                                  vertical: -4, horizontal: 0),
+                              minVerticalPadding: 0,
+                              onTap: () => _onTapTile(6, widget.onTapTitle7!),
+                              leading: const BubbleIcon(),
+                              title: Text(
+                                widget.listTitle7 ?? '',
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s12,
+                                  0.21,
+                                  ColorManager.textColor,
+                                ),
                               ),
                             ),
                           ),
@@ -742,9 +797,11 @@ class _DrawerListTileExpandableColumnState
                 borderRadius: BorderRadius.circular(10),
                 child: ListTile(
                   selected: widget.selected,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                   horizontalTitleGap: gap,
-                  visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
+                  visualDensity:
+                      const VisualDensity(vertical: -4, horizontal: 0),
                   minVerticalPadding: 0,
                   minLeadingWidth: leadingBox,
                   leading: SizedBox(

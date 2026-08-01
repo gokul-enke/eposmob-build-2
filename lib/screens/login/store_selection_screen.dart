@@ -33,14 +33,21 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
   @override
   void initState() {
     super.initState();
-    final storeSession =
-        Provider.of<StoreSessionProvider>(context, listen: false);
-    storeSession.initializeStores(
-      widget.stores,
-      activeStoreId: storeSession.activeStore?.storeId,
-    );
-    _selectedStoreId = storeSession.activeStore?.storeId ??
-        (widget.stores.isNotEmpty ? widget.stores.first.storeId : null);
+    // initializeStores notifies listeners. Defer it until after the first
+    // frame so the inherited Provider is not marked dirty during build.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
+      storeSession.initializeStores(
+        widget.stores,
+        activeStoreId: storeSession.activeStore?.storeId,
+      );
+      setState(() {
+        _selectedStoreId = storeSession.activeStore?.storeId ??
+            (widget.stores.isNotEmpty ? widget.stores.first.storeId : null);
+      });
+    });
   }
 
   @override
@@ -155,8 +162,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 16),
                             child: Opacity(
-                              opacity:
-                                  storeSession.isBootstrapping ? 0.5 : 1.0,
+                              opacity: storeSession.isBootstrapping ? 0.5 : 1.0,
                               child: IgnorePointer(
                                 ignoring: storeSession.isBootstrapping,
                                 child: _buildStoreCard(
@@ -178,41 +184,41 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
             SafeArea(
               top: false,
               child: Container(
-              padding: EdgeInsets.all(isMobile ? 16 : 24),
-              child: Consumer<StoreSessionProvider>(
-                builder: (context, storeSession, _) {
-                  if (storeSession.isBootstrapping) {
-                    return Column(
-                      children: [
-                        const CircularProgressIndicator(
-                          color: ColorManager.kPrimaryColor,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          storeSession.statusMessage ??
-                              'Preparing your workspace...',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontFamily: FontConstants.fontFamily,
-                            fontSize: FontSize.s12,
-                            color: Colors.black87,
+                padding: EdgeInsets.all(isMobile ? 16 : 24),
+                child: Consumer<StoreSessionProvider>(
+                  builder: (context, storeSession, _) {
+                    if (storeSession.isBootstrapping) {
+                      return Column(
+                        children: [
+                          const CircularProgressIndicator(
+                            color: ColorManager.kPrimaryColor,
                           ),
-                        ),
-                      ],
-                    );
-                  }
+                          const SizedBox(height: 16),
+                          Text(
+                            storeSession.statusMessage ??
+                                'Preparing your workspace...',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: FontConstants.fontFamily,
+                              fontSize: FontSize.s12,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
+                      );
+                    }
 
-                  return CustomRoundButton(
-                    width: isMobile ? double.infinity : 400,
-                    height: isMobile ? 50 : 60,
-                    fontSize: FontSize.s14,
-                    radius: 25,
-                    title: 'Continue',
-                    fct: _handleSubmit,
-                  );
-                },
+                    return CustomRoundButton(
+                      width: isMobile ? double.infinity : 400,
+                      height: isMobile ? 50 : 60,
+                      fontSize: FontSize.s14,
+                      radius: 25,
+                      title: 'Continue',
+                      fct: _handleSubmit,
+                    );
+                  },
+                ),
               ),
-            ),
             ),
         ],
       ),
@@ -368,8 +374,8 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
   Future<void> _handleSubmit() async {
     if (_selectedStoreId == null) return;
 
-    final selectedStore = widget.stores
-        .firstWhere((store) => store.storeId == _selectedStoreId);
+    final selectedStore =
+        widget.stores.firstWhere((store) => store.storeId == _selectedStoreId);
 
     try {
       final storeSession =
@@ -393,24 +399,22 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
       bool dayCloseSubmitted = false;
       DayClosePendingStatus? pendingStatus;
 
-      final appSettingsProvider = Provider.of<AppSettingsProvider>(
-        context, listen: false);
-      final compulsoryDayClose = appSettingsProvider
-        .appSettings?.compulsoryDayCloseRegister ?? false;
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+      final compulsoryDayClose =
+          appSettingsProvider.appSettings?.compulsoryDayCloseRegister ?? false;
 
       if (compulsoryDayClose) {
-        final authModel = Provider.of<AuthModel>(
-          context, listen: false);
+        final authModel = Provider.of<AuthModel>(context, listen: false);
         final accessToken = authModel.token ?? '';
-        final salesProvider = Provider.of<SalesProvider>(
-          context, listen: false);
+        final salesProvider =
+            Provider.of<SalesProvider>(context, listen: false);
 
-        pendingStatus = await salesProvider
-          .fetchDayClosePendingStatus(
-            accessToken: accessToken,
-            storeId: selectedStore.storeId ?? 0,
-            userId: authModel.userId ?? 0,
-          );
+        pendingStatus = await salesProvider.fetchDayClosePendingStatus(
+          accessToken: accessToken,
+          storeId: selectedStore.storeId ?? 0,
+          userId: authModel.userId ?? 0,
+        );
 
         debugPrint('=== DIAGNOSTICS: fetchDayClosePendingStatus ===');
         debugPrint('Sent storeId: ${selectedStore.storeId ?? 0}');
@@ -418,7 +422,8 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
         debugPrint('pendingStatus null? ${pendingStatus == null}');
         debugPrint('pendingDayClose: ${pendingStatus?.pendingDayClose}');
         debugPrint('openDraft: ${pendingStatus?.openDraft}');
-        debugPrint('requiresConfirmation: ${pendingStatus?.requiresConfirmation}');
+        debugPrint(
+            'requiresConfirmation: ${pendingStatus?.requiresConfirmation}');
         debugPrint('==================================================');
 
         if (!mounted) return;
@@ -443,7 +448,9 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
           }
         }
 
-        if (pendingStatus != null && pendingStatus.pendingDayClose && isPastDate) {
+        if (pendingStatus != null &&
+            pendingStatus.pendingDayClose &&
+            isPastDate) {
           shouldNavigateToMainScreen = false;
 
           await showDialog(
@@ -459,9 +466,10 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
                     (pendingStatus?.message.isNotEmpty ?? false)
                         ? pendingStatus!.message
                         : 'You did not close your last day sales for '
-                          '${pendingStatus?.businessDate ?? ''}.',
+                            '${pendingStatus?.businessDate ?? ''}.',
                   ),
-                  if (pendingStatus?.confirmationMessage.isNotEmpty ?? false) ...[
+                  if (pendingStatus?.confirmationMessage.isNotEmpty ??
+                      false) ...[
                     const SizedBox(height: 8),
                     Text(
                       pendingStatus!.confirmationMessage,
@@ -480,8 +488,10 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
                       builder: (_) => DayCloseModal(
                         openDraft: pendingStatus?.openDraft,
                         pendingBusinessDate: pendingStatus?.businessDate,
-                        pendingOpeningTransactionId: pendingStatus?.openingTransactionId,
-                        pendingClosingTransactionId: pendingStatus?.closingTransactionId,
+                        pendingOpeningTransactionId:
+                            pendingStatus?.openingTransactionId,
+                        pendingClosingTransactionId:
+                            pendingStatus?.closingTransactionId,
                         onSuccess: () {
                           dayCloseSubmitted = true;
                           Navigator.of(context).pushReplacement(

@@ -727,13 +727,15 @@ class _SideMenuState extends State<SideMenu> {
                       'menu.reports.consumed_stock.access');
               final hasStockReportPermission =
                   roleProvider.currentUserHasPermissionSync(
-                      'menu.reports.stock.access') ||
-                  (userRole == 'company_admin');
+                          'menu.reports.stock.access') ||
+                      (userRole == 'company_admin');
               final isCompanyAdmin = userRole == 'company_admin';
-              debugPrint("🔍 [StockReportDebug] hasStockReportPermission: $hasStockReportPermission, isCompanyAdmin: $isCompanyAdmin, userRole: '$userRole', roleProvider.currentUserRole: '${roleProvider.currentUserRole}', rolesCount: ${roleProvider.roles.length}");
+              debugPrint(
+                  "🔍 [StockReportDebug] hasStockReportPermission: $hasStockReportPermission, isCompanyAdmin: $isCompanyAdmin, userRole: '$userRole', roleProvider.currentUserRole: '${roleProvider.currentUserRole}', rolesCount: ${roleProvider.roles.length}");
               for (var role in roleProvider.roles) {
                 if (role.originalName == roleProvider.currentUserRole) {
-                  debugPrint("🔍 [StockReportDebug] currentUser role permissions: ${role.permissions}");
+                  debugPrint(
+                      "🔍 [StockReportDebug] currentUser role permissions: ${role.permissions}");
                 }
               }
 
@@ -1453,46 +1455,49 @@ class DrawerListTile extends StatelessWidget {
                 ),
               ],
             ),
-            child: ListTile(
-              selected: selected,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-              horizontalTitleGap: gap,
-              visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
-              minVerticalPadding: 0,
-              onTap: onTap,
-              minLeadingWidth: leadingBox,
-              leading: SizedBox(
-                width: leadingBox,
-                height: leadingBox,
-                child: Center(
-                  child: icon != null
-                      ? fa.FaIcon(
-                          icon!,
-                          color: Colors.white,
-                          size: resolvedIconSize,
-                        )
-                      : WebsafeSvg.asset(
-                          iconPath!,
-                          width: resolvedIconSize,
-                          height: resolvedIconSize,
-                          colorFilter: const ColorFilter.mode(
-                              Colors.white, BlendMode.srcIn),
-                        ),
+            child: Material(
+              type: MaterialType.transparency,
+              child: ListTile(
+                selected: selected,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                horizontalTitleGap: gap,
+                visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
+                minVerticalPadding: 0,
+                onTap: onTap,
+                minLeadingWidth: leadingBox,
+                leading: SizedBox(
+                  width: leadingBox,
+                  height: leadingBox,
+                  child: Center(
+                    child: icon != null
+                        ? fa.FaIcon(
+                            icon!,
+                            color: Colors.white,
+                            size: resolvedIconSize,
+                          )
+                        : WebsafeSvg.asset(
+                            iconPath!,
+                            width: resolvedIconSize,
+                            height: resolvedIconSize,
+                            colorFilter: const ColorFilter.mode(
+                                Colors.white, BlendMode.srcIn),
+                          ),
+                  ),
                 ),
-              ),
-              trailing: items != null
-                  ? buildNotification(
-                      item: items ?? 0,
-                      selected: selected,
-                    )
-                  : null,
-              title: Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+                trailing: items != null
+                    ? buildNotification(
+                        item: items ?? 0,
+                        selected: selected,
+                      )
+                    : null,
+                title: Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ),
