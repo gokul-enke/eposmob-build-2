@@ -23,28 +23,16 @@ import 'package:pos_machine/resources/localization_service.dart';
 import '../logo_loader.dart';
 import 'standard_pdf_layout.dart';
 
-/// Centered Simplified Tax Invoice PDF layout — Saudi ZATCA "Simplified Tax
-/// Invoice" design with a three-column bilingual letterhead.
-///
-/// Visual structure (top → bottom):
-///   • Header band: Arabic configuration values (left), centered logo, and
-///     English configuration defaults (right), closed by a thick accent rule.
-///   • Title band: `CR No.` (left) | `SIMPLIFIED TAX INVOICE` + Arabic
-///     (center) | `VAT No.` (right).
-///   • Info band: customer box (left) + invoice box (middle) + QR (right).
-///   • Items table with Arabic-over-English bilingual column headers.
-///   • Totals: amount-in-words / payment / balance (left) + bilingual totals
-///     box (right).
-///   • Signature band (Signature / Salesman Signature) + accent rule.
-///   • Footer band: API-configured bank details + store address line.
+/// Boxed bilingual tax-invoice PDF with a reference-style full-width logo,
+/// metadata strip, seller/buyer boxes, fixed six-column items table, and a
+/// bank-details / QR / totals footer row.
 ///
 /// All field visibility, data extraction, B2B/B2C title resolution, ZATCA QR
 /// (with payment-gateway fallback), multi-payment breakdown, customer balance,
 /// bilingual item names, bilingual amount-in-words and A4/A5 scaling follow the
 /// same rules as the thermal `classic`/`premium2` layouts and the other
 /// standard PDF layouts.
-class BoxedBilingualTaxInvoiceStandardPdfLayout
-    implements StandardPdfLayout {
+class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   @override
   String get layoutId => 'boxed_bilingual_tax_invoice';
 
@@ -155,8 +143,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout
 
     final sanitized = params.orderNumber.replaceAll('/', '_');
     final output = await _getEposDirectory();
-    final file =
-        File('${output.path}/BoxedBilingualTaxInvoice_$sanitized.pdf');
+    final file = File('${output.path}/BoxedBilingualTaxInvoice_$sanitized.pdf');
     await file.writeAsBytes(await pdf.save());
 
     if (Platform.isWindows) {
@@ -185,7 +172,9 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout
             .paymentGateways;
     final currency = appSettings?.currency ?? '';
     final config = params.billDocumentConfig;
-    final dc = config.displayConfiguration?.options;
+    // `params.displayConfig` preserves every API option and overlays the
+    // B2B/B2C-resolved invoice-title option when required.
+    final dc = params.displayConfig ?? config.displayConfiguration?.options;
     final resolvedLabels = config.resolvedLabels;
     final isA5 = params.selectedPaperSize.toUpperCase() == 'A5';
     final pageFormat = isA5 ? PdfPageFormat.a5 : PdfPageFormat.a4;
@@ -443,8 +432,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout
     final showSwiftCode = cfgVisible('showSwiftCode');
     final bankLines = params.visibleBankAccountDetailLines(dc);
 
-    debugPrint(
-        '[BoxedBilingualTaxInvoice][Bank] order=${params.orderNumber} '
+    debugPrint('[BoxedBilingualTaxInvoice][Bank] order=${params.orderNumber} '
         'bankDetailsCount=${params.bankDetails.length} '
         'primaryBank=${primaryBank?.bankName ?? '<none>'} '
         'accountCount=${primaryBank?.bankAccounts.length ?? 0}');
@@ -663,6 +651,38 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout
             infoValue),
     ];
 
+    final runtimeSellerName = params.storeName?.trim().isNotEmpty == true
+        ? params.storeName!.trim()
+        : params.zatcaCompanyName?.trim();
+    final referenceSellerName = _referenceConfiguredTextLines(
+      dc,
+      'showStoreName',
+      runtimeSellerName ?? 'Seller',
+      isDualLanguage,
+    ).join(' / ');
+    final sellerAddressOption = dc?['showStoreAddress'];
+    final localizedSellerAddress =
+        sellerAddressOption?.value?.toString().trim() ?? '';
+    final englishSellerAddress =
+        sellerAddressOption?.defaultValue?.trim() ?? '';
+    final runtimeSellerAddress = params.storeLocation?.trim() ?? '';
+    final referenceSellerAddress =
+        isDualLanguage && englishSellerAddress.isNotEmpty
+            ? englishSellerAddress
+            : (localizedSellerAddress.isNotEmpty
+                ? localizedSellerAddress
+                : (englishSellerAddress.isNotEmpty
+                    ? englishSellerAddress
+                    : runtimeSellerAddress));
+    final referenceSellerAddressSecondary = isDualLanguage &&
+            localizedSellerAddress.isNotEmpty &&
+            localizedSellerAddress != referenceSellerAddress
+        ? localizedSellerAddress
+        : null;
+    final referenceBuyerAddress = params.customerAddress?.trim() ?? '';
+    final referenceDueDate = displayDate;
+    final referenceGross = netExcTaxValue + discountAmountValue;
+
     // ── Payment breakdown lines (left column) ───────────────────────
     // ══════════════════════════════════════════════════════════════════
     // BUILD PDF
@@ -671,16 +691,462 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout
       pw.MultiPage(
         pageFormat: pageFormat,
         textDirection: pw.TextDirection.ltr,
-        margin: pw.EdgeInsets.only(
-            left: isA5 ? 14 : 22,
-            right: isA5 ? 14 : 22,
-            top: isA5 ? 12 : 18,
-            bottom: isA5 ? 12 : 18),
-        footer: (ctx) => pw.Center(
-          child: pw.Text('Page ${ctx.pageNumber} of ${ctx.pagesCount}',
-              style: pw.TextStyle(font: font, fontSize: fs(6))),
-        ),
+        margin: pw.EdgeInsets.all(isA5 ? 8 : 10),
         build: (pw.Context ctx) {
+          if (layoutId == 'boxed_bilingual_tax_invoice') {
+            final referenceValueStyle = pw.TextStyle(
+              font: font,
+              fontBold: fontBold,
+              fontSize: fs(8),
+            );
+            final referenceTitleStyle = pw.TextStyle(
+              font: fontBold,
+              fontSize: fs(9),
+              fontWeight: pw.FontWeight.bold,
+            );
+
+            pw.Widget metadataValue(String value) => pw.Padding(
+                  padding:
+                      const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                  child: _autoText(value, referenceValueStyle,
+                      textAlign: pw.TextAlign.left),
+                );
+
+            final referenceMetadata =
+                <({String english, String arabic, String value})>[
+              if (cfgVisibleDefault('showDate'))
+                (
+                  english: _labelEn(
+                    dc,
+                    'showDate',
+                    isDualLanguage ? null : resolvedLabels?.date,
+                    'Invoice Date',
+                    isDualLanguage,
+                  ),
+                  arabic: _labelAr(
+                    dc,
+                    'showDate',
+                    resolvedLabels?.date,
+                    'تاريخ الفاتورة',
+                    isDualLanguage,
+                  ),
+                  value: displayDate,
+                ),
+              // The current print contract has no due-date key or value. Keep
+              // the reference field with its documented invoice-date fallback.
+              (
+                english: 'Invoice Due Date',
+                arabic: 'تاريخ استحقاق الفاتورة',
+                value: referenceDueDate,
+              ),
+              if (cfgVisibleDefault('showInvoiceNumber'))
+                (
+                  english: _labelEn(
+                    dc,
+                    'showInvoiceNumber',
+                    isDualLanguage ? null : resolvedLabels?.orderNumber,
+                    'Invoice No',
+                    isDualLanguage,
+                  ),
+                  arabic: _labelAr(
+                    dc,
+                    'showInvoiceNumber',
+                    resolvedLabels?.orderNumber,
+                    'رقم الفاتورة',
+                    isDualLanguage,
+                  ),
+                  value: invoiceNumber,
+                ),
+            ];
+
+            pw.Widget referenceMetadataTable() {
+              final widths = <int, pw.TableColumnWidth>{};
+              final cells = <pw.Widget>[];
+              for (final entry in referenceMetadata) {
+                widths[cells.length] = const pw.FlexColumnWidth(1.5);
+                cells.add(_referenceMetadataLabel(
+                  entry.english,
+                  entry.arabic,
+                  font,
+                  fontBold,
+                  isA5,
+                ));
+                widths[cells.length] = const pw.FlexColumnWidth(1.1);
+                cells.add(metadataValue(entry.value));
+              }
+              return pw.Table(
+                border: pw.TableBorder.all(width: 0.75),
+                columnWidths: widths,
+                children: [
+                  pw.TableRow(
+                    verticalAlignment: pw.TableCellVerticalAlignment.full,
+                    children: cells,
+                  ),
+                ],
+              );
+            }
+
+            final referenceTitleEnglish = _labelEn(
+              dc,
+              'showInvoiceTitle',
+              null,
+              'Tax Invoice',
+              isDualLanguage,
+            );
+            final referenceTitleArabic = _labelAr(
+              dc,
+              'showInvoiceTitle',
+              null,
+              'فاتورة ضريبية',
+              isDualLanguage,
+            );
+            final showReferenceTitle = resolvedTitleOpt?.visible != false;
+
+            final showReferenceGross =
+                dc?['showMRPTotal']?.visible ?? showSubTotalFlag;
+            final showReferenceGrossBeforeVat =
+                dc?['showSubTotal']?.visible ?? showSubTotalFlag;
+            final showReferenceAmountWords = cfgVisible('showAmountInWords');
+
+            pw.Widget referenceSummaryRow() {
+              final cells = <pw.Widget>[];
+              final widths = <int, pw.TableColumnWidth>{};
+
+              void addSection(pw.Widget widget, double flex) {
+                if (cells.isNotEmpty) {
+                  widths[cells.length] = const pw.FixedColumnWidth(10);
+                  cells.add(pw.SizedBox());
+                }
+                widths[cells.length] = pw.FlexColumnWidth(flex);
+                cells.add(widget);
+              }
+
+              if (cfgVisible('showBankInfo')) {
+                addSection(
+                  _referenceBankBox(
+                    params,
+                    dc,
+                    font,
+                    fontBold,
+                    isA5,
+                    isDualLanguage,
+                  ),
+                  4.2,
+                );
+              }
+              if (cfgVisible('showQRCode') && qrData.isNotEmpty) {
+                addSection(
+                  pw.Container(
+                    alignment: pw.Alignment.center,
+                    padding: const pw.EdgeInsets.all(6),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(width: 0.75),
+                    ),
+                    child: pw.BarcodeWidget(
+                      barcode: pw.Barcode.qrCode(),
+                      data: qrData,
+                      width: isA5 ? 62 : 94,
+                      height: isA5 ? 62 : 94,
+                    ),
+                  ),
+                  1.9,
+                );
+              }
+
+              final hasTotals = showReferenceGross ||
+                  showDiscountFlag ||
+                  showReferenceGrossBeforeVat ||
+                  showTaxTotalFlag ||
+                  showNetFlag ||
+                  showReferenceAmountWords;
+              if (hasTotals) {
+                addSection(
+                  _referenceTotalsBox(
+                    gross: referenceGross,
+                    discount: discountAmountValue,
+                    grossBeforeVat: netExcTaxValue,
+                    vat: totalTax,
+                    net: totalAmount,
+                    currency: currency,
+                    dc: dc,
+                    resolvedLabels: resolvedLabels,
+                    isDualLanguage: isDualLanguage,
+                    configLanguage: configLang,
+                    showGross: showReferenceGross,
+                    showDiscount: showDiscountFlag,
+                    showGrossBeforeVat: showReferenceGrossBeforeVat,
+                    showVat: showTaxTotalFlag,
+                    showNet: showNetFlag,
+                    showAmountInWords: showReferenceAmountWords,
+                    font: font,
+                    fontBold: fontBold,
+                    isA5: isA5,
+                  ),
+                  5.1,
+                );
+              }
+
+              if (cells.isEmpty) return pw.SizedBox();
+              return pw.Table(
+                columnWidths: widths,
+                children: [
+                  pw.TableRow(
+                    verticalAlignment: pw.TableCellVerticalAlignment.full,
+                    children: cells,
+                  ),
+                ],
+              );
+            }
+
+            final referenceTerms = _referenceConfiguredTextLines(
+              dc,
+              'showTermsConditions',
+              config.terms,
+              isDualLanguage,
+            );
+            final referenceThankYou = _referenceConfiguredTextLines(
+              dc,
+              'showThankYouMessage',
+              config.footer ??
+                  (isEnglish
+                      ? 'Thank you for your business'
+                      : 'شكراً لتسوقكم معنا'),
+              isDualLanguage,
+            );
+
+            return [
+              pw.Container(
+                height: isA5 ? 58 : 90,
+                width: double.infinity,
+                alignment: pw.Alignment.center,
+                child: logoImage != null
+                    ? pw.Container(
+                        width: double.infinity,
+                        height: isA5 ? 52 : 82,
+                        alignment: pw.Alignment.center,
+                        child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+                      )
+                    : pw.SizedBox(),
+              ),
+              referenceMetadataTable(),
+              if (showReferenceTitle) ...[
+                pw.SizedBox(height: 6),
+                pw.Container(
+                  width: double.infinity,
+                  padding: const pw.EdgeInsets.symmetric(vertical: 5),
+                  decoration:
+                      pw.BoxDecoration(border: pw.Border.all(width: 0.75)),
+                  child: pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.center,
+                    children: [
+                      pw.Text(referenceTitleEnglish,
+                          style: referenceTitleStyle),
+                      if (isDualLanguage &&
+                          referenceTitleArabic.trim().isNotEmpty) ...[
+                        pw.Text(' / ', style: referenceTitleStyle),
+                        pw.Text(
+                          referenceTitleArabic,
+                          style: referenceTitleStyle,
+                          textDirection: pw.TextDirection.rtl,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+              pw.SizedBox(height: 10),
+              pw.Table(
+                columnWidths: showCustomerSection
+                    ? const {
+                        0: pw.FlexColumnWidth(1),
+                        1: pw.FixedColumnWidth(10),
+                        2: pw.FlexColumnWidth(1),
+                      }
+                    : const {0: pw.FlexColumnWidth(1)},
+                children: [
+                  pw.TableRow(
+                    verticalAlignment: pw.TableCellVerticalAlignment.full,
+                    children: [
+                      _referencePartyBox(
+                        titleEnglish: 'Seller Details',
+                        titleArabic: 'تفاصيل البائع',
+                        nameLabelEnglish: 'Name',
+                        nameLabelArabic: 'الاسم',
+                        vatLabelEnglish: 'VAT No',
+                        vatLabelArabic: 'الرقم الضريبي',
+                        addressLabelEnglish: 'Street',
+                        addressLabelArabic: 'الشارع',
+                        name: referenceSellerName,
+                        vatNumber: params.zatcaVatNumber?.trim() ?? '',
+                        address: referenceSellerAddress,
+                        secondaryAddress: referenceSellerAddressSecondary,
+                        showName: cfgVisibleDefault('showStoreName'),
+                        showVat: true,
+                        showAddress: cfgVisibleDefault('showStoreAddress'),
+                        font: font,
+                        fontBold: fontBold,
+                        isA5: isA5,
+                        isDualLanguage: isDualLanguage,
+                      ),
+                      if (showCustomerSection) ...[
+                        pw.SizedBox(),
+                        _referencePartyBox(
+                          titleEnglish: _labelEn(
+                            dc,
+                            'showCustomerNameAndPhone',
+                            null,
+                            'Buyer Details',
+                            isDualLanguage,
+                          ),
+                          titleArabic: _labelAr(
+                            dc,
+                            'showCustomerNameAndPhone',
+                            null,
+                            'تفاصيل المشتري',
+                            isDualLanguage,
+                          ),
+                          nameLabelEnglish: _labelEn(
+                            dc,
+                            'showCustomerName',
+                            null,
+                            'Customer Name',
+                            isDualLanguage,
+                          ),
+                          nameLabelArabic: _labelAr(
+                            dc,
+                            'showCustomerName',
+                            null,
+                            'اسم العميل',
+                            isDualLanguage,
+                          ),
+                          vatLabelEnglish: _labelEn(
+                            dc,
+                            'showCustomerVatNumber',
+                            null,
+                            'VAT No',
+                            isDualLanguage,
+                          ),
+                          vatLabelArabic: _labelAr(
+                            dc,
+                            'showCustomerVatNumber',
+                            null,
+                            'الرقم الضريبي',
+                            isDualLanguage,
+                          ),
+                          addressLabelEnglish: _labelEn(
+                            dc,
+                            'showCustomerAddress',
+                            null,
+                            'Street',
+                            isDualLanguage,
+                          ),
+                          addressLabelArabic: _labelAr(
+                            dc,
+                            'showCustomerAddress',
+                            null,
+                            'الشارع',
+                            isDualLanguage,
+                          ),
+                          name: custName,
+                          vatNumber: params.customerVatNumber?.trim() ?? '',
+                          address: referenceBuyerAddress,
+                          secondaryAddress: null,
+                          showName: cfgVisibleDefault('showCustomerName'),
+                          showVat: cfgVisible('showCustomerVatNumber'),
+                          showAddress: cfgVisibleDefault('showCustomerAddress'),
+                          font: font,
+                          fontBold: fontBold,
+                          isA5: isA5,
+                          isDualLanguage: isDualLanguage,
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 10),
+              if (!params.isReturnOnly)
+                _buildReferenceItemsTable(
+                  params,
+                  dc,
+                  resolvedLabels,
+                  font,
+                  fontBold,
+                  isA5,
+                  isDualLanguage,
+                ),
+              pw.SizedBox(height: 10),
+              referenceSummaryRow(),
+              if (params.orderReturns != null &&
+                  params.orderReturns!.returnItems != null &&
+                  params.orderReturns!.returnItems!.isNotEmpty) ...[
+                ..._buildReturnsPdfSection(
+                    params, dc, currency, font, fontBold, isA5),
+                if (!params.isReturnOnly)
+                  ..._buildFinalSummaryPdfSection(params, dc, currency, font,
+                      fontBold, isA5, isDualLanguage, configLang),
+              ],
+              pw.SizedBox(height: 8),
+              if (cfgVisible('showTermsConditions') &&
+                  referenceTerms.isNotEmpty) ...[
+                ...referenceTerms.map((text) => _autoText(text, smallStyle)),
+                pw.SizedBox(height: 4),
+              ],
+              if (cfgVisible('showThankYouMessage') &&
+                  referenceThankYou.isNotEmpty)
+                pw.Center(
+                  child: pw.Column(
+                    children: referenceThankYou
+                        .map(
+                          (text) => _autoText(
+                            text,
+                            footerBold,
+                            textAlign: pw.TextAlign.center,
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+              pw.SizedBox(height: 10),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Row(
+                    children: [
+                      pw.Text(
+                        'Customer Signature: ____________________',
+                        style: signatureStyle,
+                      ),
+                      pw.SizedBox(width: 6),
+                      pw.Text(
+                        'التوقيع',
+                        style: signatureArStyle,
+                        textDirection: pw.TextDirection.rtl,
+                      ),
+                    ],
+                  ),
+                  pw.Row(
+                    children: [
+                      pw.Text(
+                        'Salesman Signature: ____________________',
+                        style: signatureStyle,
+                      ),
+                      pw.SizedBox(width: 6),
+                      pw.Text(
+                        'توقيع البائع',
+                        style: signatureArStyle,
+                        textDirection: pw.TextDirection.rtl,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 6),
+              pw.Container(height: 3, color: _accent),
+              pw.SizedBox(height: 4),
+            ];
+          }
+
           return [
             // ═══════════════════════════════════════════════════════
             // SECTION 1: HEADER — Arabic | centered logo | English
@@ -960,150 +1426,158 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout
             // ═══════════════════════════════════════════════════════
             // Replacement summary row: bank details | QR code | totals.
             if (!params.isReturnOnly) ...[
-              pw.Row(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
+              pw.Table(
+                columnWidths: const {
+                  0: pw.FlexColumnWidth(5),
+                  1: pw.FixedColumnWidth(8),
+                  2: pw.FlexColumnWidth(3),
+                  3: pw.FixedColumnWidth(8),
+                  4: pw.FlexColumnWidth(6),
+                },
                 children: [
-                  pw.Expanded(
-                    flex: 5,
-                    child: pw.Container(
-                      decoration: pw.BoxDecoration(
-                        border: pw.Border.all(width: 0.5),
-                      ),
-                      padding: const pw.EdgeInsets.all(6),
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          if (bankLines.isNotEmpty) ...[
-                            pw.Center(
-                              child: _autoText('BANK DETAILS', footerBold,
-                                  textAlign: pw.TextAlign.center),
-                            ),
-                            pw.SizedBox(height: 3),
-                            ...bankLines
-                                .map((line) => _autoText(line, footerStyle)),
-                          ],
-                          if (showComment &&
-                              params.orderComment != null &&
-                              params.orderComment!.isNotEmpty) ...[
-                            if (bankLines.isNotEmpty) pw.SizedBox(height: 4),
-                            _autoText(
-                                '${_getLabel(dc, commentConfigKey, null, 'Comment')}: ${params.orderComment}',
-                                wordsStyle),
-                          ],
-                          ..._customerBalanceLines(
-                              params, dc, currency, wordsStyle, wordsBold),
-                          if (cfgVisible('showSaved') && saved > 0)
-                            pw.Text(
-                              '${_getLabel(dc, 'showSaved', null, 'You Saved:')} ${_formatMoney(currency, saved)}',
-                              style: wordsBold,
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  pw.SizedBox(width: 8),
-                  pw.Expanded(
-                    flex: 3,
-                    child: pw.Container(
-                      decoration: pw.BoxDecoration(
-                        border: pw.Border.all(width: 0.5),
-                      ),
-                      padding: const pw.EdgeInsets.all(4),
-                      alignment: pw.Alignment.center,
-                      child: (cfgVisible('showQRCode') && qrData.isNotEmpty)
-                          ? pw.BarcodeWidget(
-                              barcode: pw.Barcode.qrCode(),
-                              data: qrData,
-                              width: summaryQrSize,
-                              height: summaryQrSize,
-                            )
-                          : pw.SizedBox(),
-                    ),
-                  ),
-                  pw.SizedBox(width: 8),
-                  pw.Expanded(
-                    flex: 6,
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.end,
-                      children: [
-                        pw.Table(
-                          // Keep the original complete payment-summary
-                          // grid inside its own payment-summary table.
-                          border: pw.TableBorder.all(width: 0.5),
-                          columnWidths: const {
-                            0: pw.FlexColumnWidth(2.2),
-                            1: pw.FlexColumnWidth(2.0),
-                            2: pw.FlexColumnWidth(1.8),
-                          },
+                  pw.TableRow(
+                    verticalAlignment: pw.TableCellVerticalAlignment.full,
+                    children: [
+                      pw.Container(
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border.all(width: 0.5),
+                        ),
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
                           children: [
-                            if (cfgVisible('showItemsCount'))
-                              _totalsRow(
-                                  _withColon(_getLabel(
-                                      dc, 'showItemsCount', null, 'Items')),
-                                  '',
-                                  params.cartItems.length.toString(),
-                                  totalsLabelEn,
-                                  totalsLabelAr,
-                                  totalsValueStyle),
-                            if (cfgVisible('showQuantityCount'))
-                              _totalsRow(
-                                  _withColon(_getLabel(dc, 'showQuantityCount',
-                                      null, 'Total Qty')),
-                                  '',
-                                  params.totalQuantity % 1 == 0
-                                      ? params.totalQuantity.toInt().toString()
-                                      : params.totalQuantity.toStringAsFixed(2),
-                                  totalsLabelEn,
-                                  totalsLabelAr,
-                                  totalsValueStyle),
-                            if (showSubTotalFlag)
-                              _totalsRow(
-                                  _labelEn(dc, 'showSubTotal', null,
-                                      'SUB TOTAL', isDualLanguage),
-                                  _labelAr(dc, 'showSubTotal', null,
-                                      'SUB TOTAL', isDualLanguage),
-                                  _formatMoney(currency, netExcTaxValue),
-                                  totalsLabelEn,
-                                  totalsLabelAr,
-                                  totalsValueStyle),
-                            if (showDiscountFlag && discountAmountValue != 0)
-                              _totalsRow(
-                                  _labelEn(dc, 'showDiscount', null, 'DISCOUNT',
-                                      isDualLanguage),
-                                  _labelAr(dc, 'showDiscount', null, 'DISCOUNT',
-                                      isDualLanguage),
-                                  _formatMoney(currency, discountAmountValue),
-                                  totalsLabelEn,
-                                  totalsLabelAr,
-                                  totalsValueStyle),
-                            if (showTaxTotalFlag)
-                              _totalsRow(
-                                  _labelEn(
-                                      dc,
-                                      'showTax',
-                                      resolvedLabels?.taxDefault,
-                                      'TOTAL VAT 15%',
-                                      isDualLanguage),
-                                  _labelAr(dc, 'showTax', resolvedLabels?.tax,
-                                      'TOTAL VAT 15%', isDualLanguage),
-                                  _formatMoney(currency, totalTax),
-                                  totalsLabelEn,
-                                  totalsLabelAr,
-                                  totalsValueStyle),
-                            if (showNetFlag)
-                              _totalsRow(
-                                  _labelEn(dc, 'showNetAmount', null,
-                                      'NET AMOUNT', isDualLanguage),
-                                  _labelAr(dc, 'showNetAmount', null,
-                                      'NET AMOUNT', isDualLanguage),
-                                  _formatMoney(currency, totalAmount),
-                                  totalsLabelEn,
-                                  totalsLabelAr,
-                                  totalsValueBold),
+                            if (bankLines.isNotEmpty) ...[
+                              pw.Center(
+                                child: _autoText('BANK DETAILS', footerBold,
+                                    textAlign: pw.TextAlign.center),
+                              ),
+                              pw.SizedBox(height: 3),
+                              ...bankLines
+                                  .map((line) => _autoText(line, footerStyle)),
+                            ],
+                            if (showComment &&
+                                params.orderComment != null &&
+                                params.orderComment!.isNotEmpty) ...[
+                              if (bankLines.isNotEmpty) pw.SizedBox(height: 4),
+                              _autoText(
+                                  '${_getLabel(dc, commentConfigKey, null, 'Comment')}: ${params.orderComment}',
+                                  wordsStyle),
+                            ],
+                            ..._customerBalanceLines(
+                                params, dc, currency, wordsStyle, wordsBold),
+                            if (cfgVisible('showSaved') && saved > 0)
+                              pw.Text(
+                                '${_getLabel(dc, 'showSaved', null, 'You Saved:')} ${_formatMoney(currency, saved)}',
+                                style: wordsBold,
+                              ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                      pw.SizedBox(),
+                      pw.Container(
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border.all(width: 0.5),
+                        ),
+                        padding: const pw.EdgeInsets.all(4),
+                        alignment: pw.Alignment.center,
+                        child: (cfgVisible('showQRCode') && qrData.isNotEmpty)
+                            ? pw.BarcodeWidget(
+                                barcode: pw.Barcode.qrCode(),
+                                data: qrData,
+                                width: summaryQrSize,
+                                height: summaryQrSize,
+                              )
+                            : pw.SizedBox(),
+                      ),
+                      pw.SizedBox(),
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.end,
+                        children: [
+                          pw.Table(
+                            // Keep the original complete payment-summary
+                            // grid inside its own payment-summary table.
+                            border: pw.TableBorder.all(width: 0.5),
+                            columnWidths: const {
+                              0: pw.FlexColumnWidth(2.2),
+                              1: pw.FlexColumnWidth(2.0),
+                              2: pw.FlexColumnWidth(1.8),
+                            },
+                            children: [
+                              if (cfgVisible('showItemsCount'))
+                                _totalsRow(
+                                    _withColon(_getLabel(
+                                        dc, 'showItemsCount', null, 'Items')),
+                                    '',
+                                    params.cartItems.length.toString(),
+                                    totalsLabelEn,
+                                    totalsLabelAr,
+                                    totalsValueStyle),
+                              if (cfgVisible('showQuantityCount'))
+                                _totalsRow(
+                                    _withColon(_getLabel(
+                                        dc,
+                                        'showQuantityCount',
+                                        null,
+                                        'Total Qty')),
+                                    '',
+                                    params.totalQuantity % 1 == 0
+                                        ? params.totalQuantity
+                                            .toInt()
+                                            .toString()
+                                        : params.totalQuantity
+                                            .toStringAsFixed(2),
+                                    totalsLabelEn,
+                                    totalsLabelAr,
+                                    totalsValueStyle),
+                              if (showSubTotalFlag)
+                                _totalsRow(
+                                    _labelEn(dc, 'showSubTotal', null,
+                                        'SUB TOTAL', isDualLanguage),
+                                    _labelAr(dc, 'showSubTotal', null,
+                                        'SUB TOTAL', isDualLanguage),
+                                    _formatMoney(currency, netExcTaxValue),
+                                    totalsLabelEn,
+                                    totalsLabelAr,
+                                    totalsValueStyle),
+                              if (showDiscountFlag && discountAmountValue != 0)
+                                _totalsRow(
+                                    _labelEn(dc, 'showDiscount', null,
+                                        'DISCOUNT', isDualLanguage),
+                                    _labelAr(dc, 'showDiscount', null,
+                                        'DISCOUNT', isDualLanguage),
+                                    _formatMoney(currency, discountAmountValue),
+                                    totalsLabelEn,
+                                    totalsLabelAr,
+                                    totalsValueStyle),
+                              if (showTaxTotalFlag)
+                                _totalsRow(
+                                    _labelEn(
+                                        dc,
+                                        'showTax',
+                                        resolvedLabels?.taxDefault,
+                                        'TOTAL VAT 15%',
+                                        isDualLanguage),
+                                    _labelAr(dc, 'showTax', resolvedLabels?.tax,
+                                        'TOTAL VAT 15%', isDualLanguage),
+                                    _formatMoney(currency, totalTax),
+                                    totalsLabelEn,
+                                    totalsLabelAr,
+                                    totalsValueStyle),
+                              if (showNetFlag)
+                                _totalsRow(
+                                    _labelEn(dc, 'showNetAmount', null,
+                                        'NET AMOUNT', isDualLanguage),
+                                    _labelAr(dc, 'showNetAmount', null,
+                                        'NET AMOUNT', isDualLanguage),
+                                    _formatMoney(currency, totalAmount),
+                                    totalsLabelEn,
+                                    totalsLabelAr,
+                                    totalsValueBold),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1199,6 +1673,934 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout
     );
 
     return pdf;
+  }
+
+  List<String> _referenceConfiguredTextLines(
+    Map<String, DisplayOption>? dc,
+    String key,
+    String? fallback,
+    bool isDualLanguage,
+  ) {
+    final option = dc?[key];
+    final localized = option?.value?.toString().trim() ?? '';
+    final english = option?.defaultValue?.trim() ?? '';
+    final fallbackText = fallback?.trim() ?? '';
+    final lines = <String>[];
+
+    void add(String value) {
+      if (value.isNotEmpty && !lines.contains(value)) lines.add(value);
+    }
+
+    if (isDualLanguage) {
+      add(localized);
+      add(english);
+    } else {
+      add(localized);
+      if (lines.isEmpty) add(english);
+    }
+    if (lines.isEmpty) add(fallbackText);
+    return lines;
+  }
+
+  List<String> _referenceAddressParts(String? rawAddress) {
+    if (rawAddress == null || rawAddress.trim().isEmpty) return const [];
+    return rawAddress
+        .split(',')
+        .map((part) => part.trim())
+        .where((part) =>
+            part.isNotEmpty &&
+            part.toLowerCase() != 'null' &&
+            part.toLowerCase() != 'n/a')
+        .toList();
+  }
+
+  String _referenceAddressPart(List<String> parts, int index) {
+    if (index < 0 || index >= parts.length) return '';
+    return parts[index];
+  }
+
+  pw.Widget _referenceMetadataLabel(
+    String english,
+    String arabic,
+    pw.Font font,
+    pw.Font fontBold,
+    bool isA5,
+  ) {
+    double fs(double value) => isA5 ? value * 0.78 : value;
+    final englishStyle = pw.TextStyle(
+      font: fontBold,
+      fontSize: fs(8),
+      fontWeight: pw.FontWeight.bold,
+    );
+    final arabicStyle = pw.TextStyle(
+      font: font,
+      fontBold: fontBold,
+      fontSize: fs(7),
+    );
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+      child: pw.Column(
+        mainAxisAlignment: pw.MainAxisAlignment.center,
+        crossAxisAlignment: pw.CrossAxisAlignment.end,
+        children: [
+          pw.Text(arabic,
+              style: arabicStyle,
+              textDirection: pw.TextDirection.rtl,
+              textAlign: pw.TextAlign.right),
+          pw.Text(english, style: englishStyle, textAlign: pw.TextAlign.right),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _referencePartyBox({
+    required String titleEnglish,
+    required String titleArabic,
+    required String nameLabelEnglish,
+    required String nameLabelArabic,
+    required String vatLabelEnglish,
+    required String vatLabelArabic,
+    required String addressLabelEnglish,
+    required String addressLabelArabic,
+    required String name,
+    required String vatNumber,
+    required String? address,
+    required String? secondaryAddress,
+    required bool showName,
+    required bool showVat,
+    required bool showAddress,
+    required pw.Font font,
+    required pw.Font fontBold,
+    required bool isA5,
+    required bool isDualLanguage,
+  }) {
+    double fs(double value) => isA5 ? value * 0.78 : value;
+    final titleStyle = pw.TextStyle(
+      font: fontBold,
+      fontSize: fs(9),
+      fontWeight: pw.FontWeight.bold,
+    );
+    final labelStyle = pw.TextStyle(
+      font: fontBold,
+      fontSize: fs(8),
+      fontWeight: pw.FontWeight.bold,
+    );
+    final valueStyle = pw.TextStyle(
+      font: font,
+      fontBold: fontBold,
+      fontSize: fs(8),
+    );
+    final addressParts = _referenceAddressParts(address);
+    final secondaryAddressParts = _referenceAddressParts(secondaryAddress);
+    final rows = <({
+      String english,
+      String arabic,
+      String value,
+      String secondaryValue
+    })>[
+      if (showName)
+        (
+          english: nameLabelEnglish,
+          arabic: nameLabelArabic,
+          value: name,
+          secondaryValue: '',
+        ),
+      if (showVat)
+        (
+          english: vatLabelEnglish,
+          arabic: vatLabelArabic,
+          value: vatNumber,
+          secondaryValue: '',
+        ),
+      if (showAddress) ...[
+        (
+          english: addressLabelEnglish,
+          arabic: addressLabelArabic,
+          value: _referenceAddressPart(addressParts, 0),
+          secondaryValue: _referenceAddressPart(secondaryAddressParts, 0),
+        ),
+        (
+          english: 'Building No',
+          arabic: 'رقم المبنى',
+          value: _referenceAddressPart(addressParts, 1),
+          secondaryValue: _referenceAddressPart(secondaryAddressParts, 1),
+        ),
+        (
+          english: 'Postal Code',
+          arabic: 'الرمز البريدي',
+          value: _referenceAddressPart(addressParts, 2),
+          secondaryValue: _referenceAddressPart(secondaryAddressParts, 2),
+        ),
+        (
+          english: 'District',
+          arabic: 'الحي',
+          value: _referenceAddressPart(addressParts, 3),
+          secondaryValue: _referenceAddressPart(secondaryAddressParts, 3),
+        ),
+        (
+          english: 'City',
+          arabic: 'المدينة',
+          value: _referenceAddressPart(addressParts, 4),
+          secondaryValue: _referenceAddressPart(secondaryAddressParts, 4),
+        ),
+        (
+          english: 'Country',
+          arabic: 'الدولة',
+          value:
+              addressParts.length > 5 ? addressParts.sublist(5).join(', ') : '',
+          secondaryValue: secondaryAddressParts.length > 5
+              ? secondaryAddressParts.sublist(5).join(', ')
+              : '',
+        ),
+      ],
+    ];
+
+    return pw.Container(
+      decoration: pw.BoxDecoration(border: pw.Border.all(width: 0.75)),
+      child: pw.Column(
+        children: [
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+            decoration: const pw.BoxDecoration(
+              border: pw.Border(bottom: pw.BorderSide(width: 0.75)),
+            ),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
+                pw.Text(titleEnglish, style: titleStyle),
+                if (isDualLanguage && titleArabic.trim().isNotEmpty) ...[
+                  pw.Text(' | ', style: titleStyle),
+                  pw.Text(
+                    titleArabic,
+                    style: titleStyle,
+                    textDirection: pw.TextDirection.rtl,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          ...rows.map(
+            (row) => pw.Container(
+              padding:
+                  const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: const pw.BoxDecoration(
+                border: pw.Border(
+                  bottom: pw.BorderSide(width: 0.25, color: PdfColors.grey400),
+                ),
+              ),
+              child: pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.SizedBox(
+                    width: isA5 ? 74 : 104,
+                    child: pw.Wrap(
+                      children: [
+                        pw.Text(row.english, style: labelStyle),
+                        if (isDualLanguage && row.arabic.trim().isNotEmpty)
+                          pw.Text(
+                            ' ${row.arabic}',
+                            style: valueStyle,
+                            textDirection: pw.TextDirection.rtl,
+                          ),
+                      ],
+                    ),
+                  ),
+                  pw.Text(': ', style: valueStyle),
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        _autoText(row.value, valueStyle),
+                        if (row.secondaryValue.trim().isNotEmpty &&
+                            row.secondaryValue.trim() != row.value.trim())
+                          _autoText(row.secondaryValue, valueStyle),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _buildReferenceItemsTable(
+    ReceiptLayoutParams params,
+    Map<String, DisplayOption>? dc,
+    ResolvedLabels? resolvedLabels,
+    pw.Font font,
+    pw.Font fontBold,
+    bool isA5,
+    bool isDualLanguage,
+  ) {
+    double fs(double value) => isA5 ? value * 0.78 : value;
+    final headerEn = pw.TextStyle(
+      font: fontBold,
+      fontSize: fs(8),
+      fontWeight: pw.FontWeight.bold,
+    );
+    final headerAr = pw.TextStyle(
+      font: font,
+      fontBold: fontBold,
+      fontSize: fs(7),
+    );
+    final bodyStyle = pw.TextStyle(
+      font: font,
+      fontBold: fontBold,
+      fontSize: fs(8.5),
+    );
+
+    pw.Widget headerCell(String english, String arabic) => pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+          child: pw.Column(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            children: [
+              pw.Text(english, style: headerEn, textAlign: pw.TextAlign.center),
+              if (arabic.isNotEmpty)
+                pw.Text(arabic,
+                    style: headerAr,
+                    textDirection: pw.TextDirection.rtl,
+                    textAlign: pw.TextAlign.center),
+            ],
+          ),
+        );
+
+    const columnKeys = [
+      'showSLNumber',
+      'showParticulars',
+      'showMRP',
+      'showUnit',
+      'showQty',
+      'showRate',
+      'showRateExcTax',
+      'showDiscountColumn',
+      'showTaxHeader',
+      'showTotal',
+    ];
+    final hasColumnConfiguration =
+        dc != null && columnKeys.any((key) => dc.containsKey(key));
+    bool show(String key, {required bool fallback}) {
+      if (!hasColumnConfiguration) return fallback;
+      return dc[key]?.visible == true;
+    }
+
+    final showSl = show('showSLNumber', fallback: true);
+    final showParticulars = show('showParticulars', fallback: true);
+    final showMrp = show('showMRP', fallback: false);
+    final showUnit = show('showUnit', fallback: true);
+    final showQty = show('showQty', fallback: true);
+    final showRate = show('showRate', fallback: true);
+    final showRateExcTax = show('showRateExcTax', fallback: false);
+    final showDiscount = show('showDiscountColumn', fallback: false);
+    final showTax = show('showTaxHeader', fallback: false);
+    final showTotal = show('showTotal', fallback: true);
+
+    final columnWidths = <int, pw.TableColumnWidth>{};
+    final headers = <pw.Widget>[];
+    void addHeader(
+      double flex,
+      String english,
+      String arabic,
+    ) {
+      columnWidths[headers.length] = pw.FlexColumnWidth(flex);
+      headers.add(headerCell(english, arabic));
+    }
+
+    if (showSl) {
+      addHeader(
+        0.7,
+        _labelEn(
+          dc,
+          'showSLNumber',
+          resolvedLabels?.slNumberDefault ??
+              (isDualLanguage ? null : resolvedLabels?.slNumber),
+          'No',
+          isDualLanguage,
+        ),
+        _labelAr(
+          dc,
+          'showSLNumber',
+          resolvedLabels?.slNumber,
+          'م',
+          isDualLanguage,
+        ),
+      );
+    }
+    if (showParticulars) {
+      addHeader(
+        3.8,
+        _labelEn(
+          dc,
+          'showParticulars',
+          resolvedLabels?.particularsDefault ??
+              (isDualLanguage
+                  ? null
+                  : resolvedLabels?.particulars ?? resolvedLabels?.itemName),
+          'Fare Name',
+          isDualLanguage,
+        ),
+        _labelAr(
+          dc,
+          'showParticulars',
+          resolvedLabels?.particulars ?? resolvedLabels?.itemName,
+          'اسم الصنف',
+          isDualLanguage,
+        ),
+      );
+    }
+    if (showMrp) {
+      addHeader(
+        1.2,
+        _labelEn(
+            dc,
+            'showMRP',
+            resolvedLabels?.mrpDefault ??
+                (isDualLanguage ? null : resolvedLabels?.mrp),
+            'MRP',
+            isDualLanguage),
+        _labelAr(dc, 'showMRP', resolvedLabels?.mrp, 'القيمة', isDualLanguage),
+      );
+    }
+    if (showUnit) {
+      addHeader(
+        1.0,
+        _labelEn(
+            dc,
+            'showUnit',
+            resolvedLabels?.unitNameDefault ??
+                (isDualLanguage ? null : resolvedLabels?.unitName),
+            'Units',
+            isDualLanguage),
+        _labelAr(
+            dc, 'showUnit', resolvedLabels?.unitName, 'الوحدة', isDualLanguage),
+      );
+    }
+    if (showQty) {
+      addHeader(
+        1.1,
+        _labelEn(
+            dc,
+            'showQty',
+            resolvedLabels?.qtyDefault ??
+                (isDualLanguage ? null : resolvedLabels?.qty),
+            'Qty',
+            isDualLanguage),
+        _labelAr(dc, 'showQty', resolvedLabels?.qty, 'الكمية', isDualLanguage),
+      );
+    }
+    if (showRate) {
+      addHeader(
+        1.5,
+        _labelEn(
+            dc,
+            'showRate',
+            resolvedLabels?.rateDefault ??
+                (isDualLanguage
+                    ? null
+                    : resolvedLabels?.rate ?? resolvedLabels?.priceName),
+            'Unit Price',
+            isDualLanguage),
+        _labelAr(
+          dc,
+          'showRate',
+          resolvedLabels?.rate ?? resolvedLabels?.priceName,
+          'سعر الوحدة',
+          isDualLanguage,
+        ),
+      );
+    }
+    if (showRateExcTax) {
+      addHeader(
+        1.4,
+        _labelEn(
+            dc,
+            'showRateExcTax',
+            resolvedLabels?.rateExcTaxDefault ??
+                (isDualLanguage ? null : resolvedLabels?.rateExcTax),
+            'Rate Ex Tax',
+            isDualLanguage),
+        _labelAr(dc, 'showRateExcTax', resolvedLabels?.rateExcTax,
+            'السعر بدون ضريبة', isDualLanguage),
+      );
+    }
+    if (showDiscount) {
+      addHeader(
+        1.3,
+        _labelEn(dc, 'showDiscountColumn', null, 'Discount', isDualLanguage),
+        _labelAr(dc, 'showDiscountColumn', null, 'خصم', isDualLanguage),
+      );
+    }
+    if (showTax) {
+      addHeader(
+        1.3,
+        _labelEn(
+            dc,
+            'showTaxHeader',
+            resolvedLabels?.taxDefault ??
+                (isDualLanguage
+                    ? null
+                    : resolvedLabels?.tax ?? resolvedLabels?.taxName),
+            'Tax',
+            isDualLanguage),
+        _labelAr(
+          dc,
+          'showTaxHeader',
+          resolvedLabels?.tax ?? resolvedLabels?.taxName,
+          'الضريبة',
+          isDualLanguage,
+        ),
+      );
+    }
+    if (showTotal) {
+      addHeader(
+        1.6,
+        _labelEn(
+            dc,
+            'showTotal',
+            resolvedLabels?.totalDefault ??
+                (isDualLanguage
+                    ? null
+                    : resolvedLabels?.total ?? resolvedLabels?.amountName),
+            'Amount',
+            isDualLanguage),
+        _labelAr(
+          dc,
+          'showTotal',
+          resolvedLabels?.total ?? resolvedLabels?.amountName,
+          'إجمالي',
+          isDualLanguage,
+        ),
+      );
+    }
+
+    if (headers.isEmpty) return pw.SizedBox();
+
+    final itemCount = params.cartItems.isEmpty ? 1 : params.cartItems.length;
+    final targetBodyHeight = isA5 ? 72.0 : 128.0;
+    var rowHeight = targetBodyHeight / itemCount;
+    final minimumRowHeight = isA5 ? 18.0 : 23.0;
+    if (rowHeight < minimumRowHeight) rowHeight = minimumRowHeight;
+
+    pw.Widget dataCell(
+      String text, {
+      pw.Alignment alignment = pw.Alignment.topCenter,
+      pw.TextDirection? direction,
+    }) =>
+        pw.Container(
+          height: rowHeight,
+          alignment: alignment,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+          child: pw.Text(
+            text,
+            style: bodyStyle,
+            textDirection: direction,
+            maxLines: 3,
+            overflow: pw.TextOverflow.clip,
+          ),
+        );
+
+    final rows = <pw.TableRow>[];
+    for (var index = 0; index < params.cartItems.length; index++) {
+      final item = params.cartItems[index];
+      String name = '';
+      String unit = '';
+      double quantity = 0;
+      double mrp = 0;
+      double unitPrice = 0;
+      double discount = 0;
+      double tax = 0;
+      double total = 0;
+
+      if (params.isFromLocalStorage || item is Map) {
+        name = (item['productName'] ?? item['product_name'] ?? '').toString();
+        unit = getPrintUnit(item);
+        quantity = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
+        mrp = double.tryParse(item['mrp']?.toString() ?? '0') ?? 0;
+        unitPrice = double.tryParse(
+                (item['unitPrice'] ?? item['unit_price'])?.toString() ?? '0') ??
+            0;
+        discount = double.tryParse(
+                (item['discount'] ?? item['discount_amount'])?.toString() ??
+                    '0') ??
+            0;
+        tax = double.tryParse(
+                (item['taxAmount'] ?? item['tax_amount'])?.toString() ?? '0') ??
+            0;
+        total = double.tryParse(
+                (item['totalPrice'] ?? item['total_price'])?.toString() ??
+                    '0') ??
+            0;
+      } else {
+        try {
+          name = item.productName?.toString() ?? '';
+          unit = getPrintUnit(item);
+          quantity = double.tryParse(item.quantity?.toString() ?? '0') ?? 0;
+          mrp = double.tryParse(item.mrp?.toString() ?? '0') ?? 0;
+          unitPrice = double.tryParse(item.unitPrice?.toString() ?? '0') ?? 0;
+          tax = double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0;
+          total = double.tryParse(item.totalPrice?.toString() ?? '0') ?? 0;
+        } catch (_) {}
+        try {
+          discount =
+              double.tryParse(item.discountAmount?.toString() ?? '0') ?? 0;
+        } catch (_) {}
+      }
+
+      name = _itemDisplayName(item, name);
+      name = _bilingualItemName(item, name, isDualLanguage);
+      final isArabicName = _hasArabic(name);
+      final taxPerUnit = quantity > 0 ? tax / quantity : 0.0;
+      final rateExcTax = unitPrice - taxPerUnit;
+      final cells = <pw.Widget>[];
+      if (showSl) cells.add(dataCell('${index + 1}'));
+      if (showParticulars) {
+        cells.add(dataCell(name,
+            alignment:
+                isArabicName ? pw.Alignment.topRight : pw.Alignment.topLeft,
+            direction:
+                isArabicName ? pw.TextDirection.rtl : pw.TextDirection.ltr));
+      }
+      if (showMrp) {
+        cells.add(dataCell(AmountHelper.formatAmount(mrp),
+            alignment: pw.Alignment.topRight));
+      }
+      if (showUnit) cells.add(dataCell(unit));
+      if (showQty) {
+        cells.add(dataCell(quantity.toStringAsFixed(2),
+            alignment: pw.Alignment.topRight));
+      }
+      if (showRate) {
+        cells.add(dataCell(AmountHelper.formatAmount(unitPrice),
+            alignment: pw.Alignment.topRight));
+      }
+      if (showRateExcTax) {
+        cells.add(dataCell(AmountHelper.formatAmount(rateExcTax),
+            alignment: pw.Alignment.topRight));
+      }
+      if (showDiscount) {
+        cells.add(dataCell(AmountHelper.formatAmount(discount),
+            alignment: pw.Alignment.topRight));
+      }
+      if (showTax) {
+        cells.add(dataCell(AmountHelper.formatAmount(tax),
+            alignment: pw.Alignment.topRight));
+      }
+      if (showTotal) {
+        cells.add(dataCell(AmountHelper.formatAmount(total),
+            alignment: pw.Alignment.topRight));
+      }
+      rows.add(
+        pw.TableRow(children: cells),
+      );
+    }
+
+    if (rows.isEmpty) {
+      rows.add(
+        pw.TableRow(
+          children: List.generate(headers.length, (_) => dataCell('')),
+        ),
+      );
+    }
+
+    return pw.Table(
+      border: pw.TableBorder.all(width: 0.75),
+      columnWidths: columnWidths,
+      children: [
+        pw.TableRow(children: headers),
+        ...rows,
+      ],
+    );
+  }
+
+  pw.Widget _referenceBankBox(
+    ReceiptLayoutParams params,
+    Map<String, DisplayOption>? dc,
+    pw.Font font,
+    pw.Font fontBold,
+    bool isA5,
+    bool isDualLanguage,
+  ) {
+    double fs(double value) => isA5 ? value * 0.78 : value;
+    final headingStyle = pw.TextStyle(
+      font: fontBold,
+      fontSize: fs(8.5),
+      fontWeight: pw.FontWeight.bold,
+    );
+    final labelStyle = pw.TextStyle(
+      font: fontBold,
+      fontSize: fs(8),
+      fontWeight: pw.FontWeight.bold,
+    );
+    final valueStyle = pw.TextStyle(
+      font: font,
+      fontBold: fontBold,
+      fontSize: fs(8),
+    );
+    final bank = params.primaryBank;
+    final account = params.primaryBankAccount;
+    bool visible(String key) => dc?[key]?.visible == true;
+    final rows = <({String english, String arabic, String value})>[
+      if (visible('showBankName'))
+        (
+          english:
+              _labelEn(dc, 'showBankName', null, 'Bank Name', isDualLanguage),
+          arabic:
+              _labelAr(dc, 'showBankName', null, 'اسم البنك', isDualLanguage),
+          value: bank?.bankName ?? ''
+        ),
+      if (visible('showAccountName'))
+        (
+          english: _labelEn(
+              dc, 'showAccountName', null, 'Account Name', isDualLanguage),
+          arabic: _labelAr(
+              dc, 'showAccountName', null, 'اسم الحساب', isDualLanguage),
+          value: account?.accountHolderName ?? ''
+        ),
+      if (visible('showAccountNumber'))
+        (
+          english: _labelEn(
+              dc, 'showAccountNumber', null, 'Account Number', isDualLanguage),
+          arabic: _labelAr(
+              dc, 'showAccountNumber', null, 'رقم الحساب', isDualLanguage),
+          value: account?.accountNumber ?? ''
+        ),
+      if (visible('showIBAN'))
+        (
+          english: _labelEn(dc, 'showIBAN', null, 'IBAN', isDualLanguage),
+          arabic: _labelAr(
+              dc, 'showIBAN', null, 'رقم الحساب المصرفي', isDualLanguage),
+          value: account?.iban ?? ''
+        ),
+      if (visible('showSwiftCode'))
+        (
+          english:
+              _labelEn(dc, 'showSwiftCode', null, 'SWIFT Code', isDualLanguage),
+          arabic:
+              _labelAr(dc, 'showSwiftCode', null, 'رمز سويفت', isDualLanguage),
+          value: account?.swiftCode?.trim().isNotEmpty == true
+              ? account!.swiftCode!.trim()
+              : account?.ifsc ?? ''
+        ),
+    ];
+
+    final headingEnglish =
+        _labelEn(dc, 'showBankInfo', null, 'Bank Details', isDualLanguage);
+    final headingArabic =
+        _labelAr(dc, 'showBankInfo', null, 'تفاصيل البنك', isDualLanguage);
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(5),
+      decoration: pw.BoxDecoration(border: pw.Border.all(width: 0.75)),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            children: [
+              pw.Text(headingEnglish, style: headingStyle),
+              if (isDualLanguage && headingArabic.trim().isNotEmpty) ...[
+                pw.Text(' | ', style: headingStyle),
+                pw.Text(
+                  headingArabic,
+                  style: headingStyle,
+                  textDirection: pw.TextDirection.rtl,
+                ),
+              ],
+            ],
+          ),
+          pw.Divider(height: 5, thickness: 0.4),
+          ...rows.map(
+            (row) => pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 5),
+              child: pw.Wrap(
+                crossAxisAlignment: pw.WrapCrossAlignment.center,
+                children: [
+                  pw.Text(row.english, style: labelStyle),
+                  if (isDualLanguage && row.arabic.trim().isNotEmpty)
+                    pw.Text(' ${row.arabic}',
+                        style: valueStyle, textDirection: pw.TextDirection.rtl),
+                  pw.Text(': ${row.value}', style: valueStyle),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _referenceTotalsBox({
+    required double gross,
+    required double discount,
+    required double grossBeforeVat,
+    required double vat,
+    required double net,
+    required String currency,
+    required Map<String, DisplayOption>? dc,
+    required ResolvedLabels? resolvedLabels,
+    required bool isDualLanguage,
+    required String? configLanguage,
+    required bool showGross,
+    required bool showDiscount,
+    required bool showGrossBeforeVat,
+    required bool showVat,
+    required bool showNet,
+    required bool showAmountInWords,
+    required pw.Font font,
+    required pw.Font fontBold,
+    required bool isA5,
+  }) {
+    double fs(double value) => isA5 ? value * 0.78 : value;
+    final labelStyle = pw.TextStyle(
+      font: font,
+      fontBold: fontBold,
+      fontSize: fs(8),
+    );
+    final labelBold = pw.TextStyle(
+      font: fontBold,
+      fontSize: fs(8.5),
+      fontWeight: pw.FontWeight.bold,
+    );
+    final valueStyle = pw.TextStyle(
+      font: font,
+      fontBold: fontBold,
+      fontSize: fs(8.5),
+    );
+    final valueBold = pw.TextStyle(
+      font: fontBold,
+      fontSize: fs(9),
+      fontWeight: pw.FontWeight.bold,
+    );
+
+    String money(double amount) {
+      final value = AmountHelper.formatAmount(amount);
+      return currency.trim().isEmpty ? value : '$value ${currency.trim()}';
+    }
+
+    pw.Widget row(
+      String english,
+      String arabic,
+      double amount, {
+      bool bold = false,
+    }) =>
+        pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          child: pw.Row(
+            children: [
+              pw.Text(english, style: bold ? labelBold : labelStyle),
+              if (isDualLanguage && arabic.trim().isNotEmpty) ...[
+                pw.SizedBox(width: 3),
+                pw.Text(arabic,
+                    style: labelStyle, textDirection: pw.TextDirection.rtl),
+              ],
+              pw.Spacer(),
+              pw.Text(money(amount), style: bold ? valueBold : valueStyle),
+            ],
+          ),
+        );
+
+    final grossEnglish =
+        _labelEn(dc, 'showMRPTotal', null, 'Gross', isDualLanguage);
+    final grossArabic =
+        _labelAr(dc, 'showMRPTotal', null, 'إجمالي', isDualLanguage);
+    final discountEnglish =
+        _labelEn(dc, 'showDiscount', null, 'Discount', isDualLanguage);
+    final discountArabic =
+        _labelAr(dc, 'showDiscount', null, 'خصم', isDualLanguage);
+    final grossBeforeVatEnglish =
+        _labelEn(dc, 'showSubTotal', null, 'Gross Before VAT', isDualLanguage);
+    final grossBeforeVatArabic = _labelAr(
+        dc, 'showSubTotal', null, 'إجمالي قبل الضريبة', isDualLanguage);
+    final vatEnglish = _labelEn(
+      dc,
+      'showTax',
+      resolvedLabels?.taxDefault ??
+          (isDualLanguage
+              ? null
+              : resolvedLabels?.tax ?? resolvedLabels?.taxName),
+      'VAT 15%',
+      isDualLanguage,
+    );
+    final vatArabic = _labelAr(
+      dc,
+      'showTax',
+      resolvedLabels?.tax ?? resolvedLabels?.taxName,
+      'ضريبة القيمة المضافة',
+      isDualLanguage,
+    );
+    final netEnglish =
+        _labelEn(dc, 'showNetAmount', null, 'Net Amount', isDualLanguage);
+    final netArabic =
+        _labelAr(dc, 'showNetAmount', null, 'المبلغ الإجمالي', isDualLanguage);
+    final wordsEnglish = _labelEn(
+        dc, 'showAmountInWords', null, 'Amount In Words :', isDualLanguage);
+    final wordsArabic = _labelAr(
+        dc, 'showAmountInWords', null, 'المبلغ بالكلمات :', isDualLanguage);
+    final hasRows =
+        showGross || showDiscount || showGrossBeforeVat || showVat || showNet;
+    final hasRowsBeforeNet =
+        showGross || showDiscount || showGrossBeforeVat || showVat;
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(vertical: 4),
+      decoration: pw.BoxDecoration(border: pw.Border.all(width: 0.75)),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+        children: [
+          if (showGross) row(grossEnglish, grossArabic, gross),
+          if (showDiscount) row(discountEnglish, discountArabic, discount),
+          if (showGrossBeforeVat)
+            row(grossBeforeVatEnglish, grossBeforeVatArabic, grossBeforeVat),
+          if (showVat) row(vatEnglish, vatArabic, vat),
+          if (showNet) ...[
+            if (hasRowsBeforeNet)
+              pw.Divider(height: 7, thickness: 0.6, indent: 6, endIndent: 6),
+            row(netEnglish, netArabic, net, bold: true),
+          ],
+          if (showAmountInWords) ...[
+            if (hasRows)
+              pw.Divider(height: 7, thickness: 0.4, indent: 6, endIndent: 6),
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 6),
+              child: pw.Row(
+                children: [
+                  pw.Text(wordsEnglish, style: labelBold),
+                  if (isDualLanguage && wordsArabic.trim().isNotEmpty) ...[
+                    pw.SizedBox(width: 3),
+                    pw.Text(
+                      wordsArabic,
+                      style: labelStyle,
+                      textDirection: pw.TextDirection.rtl,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.fromLTRB(6, 2, 6, 0),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: _amountInWords(
+                  net,
+                  currency,
+                  isDualLanguage,
+                  configLanguage,
+                  pw.TextStyle(
+                    font: font,
+                    fontBold: fontBold,
+                    fontSize: fs(8),
+                    fontStyle: pw.FontStyle.italic,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   // ══════════════════════════════════════════════════════════════════
