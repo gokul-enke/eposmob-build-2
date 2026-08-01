@@ -7,6 +7,7 @@ import '../../../controllers/sidebar_controller.dart';
 import '../../../models/get_product.dart';
 import '../../../models/list_purchase.dart';
 import '../../../providers/app_settings_provider.dart';
+import '../../../providers/category_providers.dart';
 import '../../../providers/grid_provider.dart';
 import '../../../providers/purchase_provider.dart';
 import '../../../resources/color_manager.dart';
@@ -39,6 +40,7 @@ class ViewPurchaseWidget extends StatelessWidget {
     final sideBarController = Get.put(SideBarController());
     final purchaseProvider = Provider.of<PurchaseProvider>(context);
     final gridProvider = Provider.of<GridSelectionProvider>(context);
+    final categoryProvider = Provider.of<CategoryProvider>(context);
     final appSettings = Provider.of<AppSettingsProvider>(context).appSettings;
     final currency = (appSettings?.currency.trim().isNotEmpty ?? false)
         ? appSettings!.currency.trim()
@@ -46,6 +48,7 @@ class ViewPurchaseWidget extends StatelessWidget {
     final viewData = _PurchaseViewData.fromProvider(
       purchaseProvider,
       gridProvider,
+      categoryProvider,
     );
 
     return SafeArea(
@@ -850,6 +853,7 @@ class _PurchaseViewData {
   static _PurchaseViewData? fromProvider(
     PurchaseProvider purchaseProvider,
     GridSelectionProvider gridProvider,
+    CategoryProvider categoryProvider,
   ) {
     final activeDetails = purchaseProvider.activePurchaseOrderDetails;
     if (activeDetails != null) {
@@ -857,6 +861,7 @@ class _PurchaseViewData {
         activeDetails,
         purchaseProvider,
         gridProvider,
+        categoryProvider,
       );
     }
 
@@ -884,7 +889,11 @@ class _PurchaseViewData {
       statusLabel: _DisplayFormatter.orderStatus(voucher?.status),
       items: filteredItems
           .map(
-            (item) => _PurchaseViewItem.fromPurchaseItem(item, gridProvider),
+            (item) => _PurchaseViewItem.fromPurchaseItem(
+              item,
+              gridProvider,
+              categoryProvider,
+            ),
           )
           .toList(),
     );
@@ -894,6 +903,7 @@ class _PurchaseViewData {
     Map<String, dynamic> raw,
     PurchaseProvider purchaseProvider,
     GridSelectionProvider gridProvider,
+    CategoryProvider categoryProvider,
   ) {
     final rawItems =
         (raw['items'] as List?) ?? (raw['purchase_items'] as List?) ?? [];
@@ -921,6 +931,7 @@ class _PurchaseViewData {
             (item) => _PurchaseViewItem.fromMap(
               Map<String, dynamic>.from(item),
               gridProvider,
+              categoryProvider,
             ),
           )
           .toList(),
@@ -958,6 +969,7 @@ class _PurchaseViewItem {
   factory _PurchaseViewItem.fromMap(
     Map<String, dynamic> raw,
     GridSelectionProvider gridProvider,
+    CategoryProvider categoryProvider,
   ) {
     debugPrint('🔍 variant_name raw: ${raw['variant_name']}');
     final product = _DisplayFormatter.findProduct(
@@ -965,6 +977,9 @@ class _PurchaseViewItem {
       _DisplayFormatter.toInt(raw['product_id']),
     );
     final statusDisplay = _DisplayFormatter.itemStatus(raw['status']);
+
+    final categoryId = _DisplayFormatter.toInt(raw['category_id']);
+    final categoryNameFromList = _DisplayFormatter.findCategoryName(categoryProvider, categoryId);
 
     return _PurchaseViewItem(
       productName: _DisplayFormatter.firstNonEmpty([
@@ -975,6 +990,7 @@ class _PurchaseViewItem {
           '-',
       variantName: _DisplayFormatter.asText(raw['variant_name']),
       categoryName: _DisplayFormatter.firstNonEmpty([
+            categoryNameFromList,
             _DisplayFormatter.entityName(raw['category']),
             product?.category?.name,
           ]) ??
@@ -1007,9 +1023,13 @@ class _PurchaseViewItem {
   factory _PurchaseViewItem.fromPurchaseItem(
     PurchaseItem item,
     GridSelectionProvider gridProvider,
+    CategoryProvider categoryProvider,
   ) {
     final product = _DisplayFormatter.findProduct(gridProvider, item.productId);
     final statusDisplay = _DisplayFormatter.itemStatus(item.status);
+
+    final categoryId = product?.categoryId;
+    final categoryNameFromList = _DisplayFormatter.findCategoryName(categoryProvider, categoryId);
 
     return _PurchaseViewItem(
       productName: _DisplayFormatter.firstNonEmpty([
@@ -1018,7 +1038,7 @@ class _PurchaseViewItem {
           ]) ??
           '-',
       variantName: null,
-      categoryName: product?.category?.name ?? '-',
+      categoryName: categoryNameFromList ?? product?.category?.name ?? '-',
       quantity: item.quantity?.toString() ?? '0',
       unitPrice: item.unitPrice?.toString() ?? '0',
       totalPrice: _DisplayFormatter.calculatedTotal(
@@ -1168,6 +1188,44 @@ class _DisplayFormatter {
         return product;
       }
     }
+    return null;
+  }
+
+  static String? findCategoryName(
+    CategoryProvider categoryProvider,
+    int? categoryId,
+  ) {
+    if (categoryId == null || categoryId == 0) {
+      return null;
+    }
+
+    final legacyList = categoryProvider.category;
+    if (legacyList != null) {
+      for (final cat in legacyList) {
+        if (cat.categoryId == categoryId) {
+          return cat.categoryName;
+        }
+      }
+    }
+
+    for (final cat in categoryProvider.sellableCategories) {
+      if (cat.categoryId == categoryId) {
+        return cat.categoryName;
+      }
+    }
+
+    for (final cat in categoryProvider.purchasableCategories) {
+      if (cat.categoryId == categoryId) {
+        return cat.categoryName;
+      }
+    }
+
+    for (final cat in categoryProvider.allCategories) {
+      if (cat.categoryId == categoryId) {
+        return cat.categoryName;
+      }
+    }
+
     return null;
   }
 

@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 import 'package:pos_machine/components/build_back_button.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_err_view.dart';
@@ -10,6 +12,7 @@ import 'package:pos_machine/models/product_list_file.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../components/build_container_box.dart';
 import '../../components/build_round_button.dart';
@@ -23,6 +26,7 @@ import '../../providers/auth_model.dart';
 import '../../providers/category_providers.dart';
 import '../../providers/category_list_scope.dart';
 import '../../providers/language_provider.dart';
+import '../../resources/app_url.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
@@ -87,15 +91,63 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
   bool _isPurchasable = true;
   bool _languagesRequested = false;
 
+  // Tax multi-select state
+  List<_TaxItem> _availableTaxes = [];
+  final List<int> _selectedTaxIds = [];
+  bool _taxesLoading = false;
+
   @override
   void initState() {
     super.initState();
     getData();
     _fetchLanguages();
+    _fetchTaxes();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<CategoryProvider>(context, listen: false)
           .ensureCategories(CategoryListScope.all);
     });
+  }
+
+  Future<void> _fetchTaxes() async {
+    setState(() => _taxesLoading = true);
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final token = authModel.token ?? '';
+      final prefs = await SharedPreferences.getInstance();
+      final apiKey = prefs.getString('api_key') ?? '';
+
+      if (token.isEmpty || apiKey.isEmpty) {
+        return;
+      }
+
+      final response = await http.get(
+        Uri.parse(APPUrl.listTax),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'X-Tenant': apiKey,
+          'Accept': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+        final rawData = decoded['data'];
+        final list = (rawData as List? ?? []);
+        setState(() {
+          _availableTaxes = list
+              .map((e) => _TaxItem(
+                    id: (e['id'] as num).toInt(),
+                    name: e['name']?.toString() ?? '',
+                  ))
+              .toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('[TaxFetch] Exception: $e');
+    } finally {
+      if (mounted) setState(() => _taxesLoading = false);
+    }
   }
 
   Future<void> _fetchLanguages() async {
@@ -210,6 +262,89 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
 
   bool _isMobile(BuildContext context) => categoryIsPhone(context);
 
+  Widget _buildTaxSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Select Taxes',
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s12,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        const SizedBox(height: 4),
+        if (_taxesLoading)
+          const SizedBox(
+            height: 36,
+            child: Center(
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          )
+        else if (_availableTaxes.isEmpty)
+          Text(
+            'No taxes available',
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s11,
+              0.27,
+              Colors.black38,
+            ),
+          )
+        else
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: _availableTaxes.map((tax) {
+              final selected = _selectedTaxIds.contains(tax.id);
+              return FilterChip(
+                label: Text(
+                  tax.name,
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s11,
+                    0.27,
+                    selected
+                        ? Colors.white
+                        : ColorManager.textColor.withOpacity(0.8),
+                  ),
+                ),
+                selected: selected,
+                onSelected: (val) {
+                  setState(() {
+                    if (val) {
+                      _selectedTaxIds.add(tax.id);
+                    } else {
+                      _selectedTaxIds.remove(tax.id);
+                    }
+                  });
+                },
+                selectedColor: ColorManager.kPrimaryColor,
+                backgroundColor: Colors.grey.shade100,
+                checkmarkColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                  side: BorderSide(
+                    color: selected
+                        ? ColorManager.kPrimaryColor
+                        : Colors.grey.shade300,
+                  ),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              );
+            }).toList(),
+          ),
+      ],
+    );
+  }
+
   Future<void> _handleSubmit(
     BuildContext context,
     CategoryProvider categoryProvider,
@@ -270,6 +405,9 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                 isSellable: _isSellable,
                 isPurchasable: _isPurchasable,
                 categoryLangNames: categoryLangNames,
+                taxIds: _selectedTaxIds.isEmpty
+                    ? null
+                    : List<int>.from(_selectedTaxIds),
             )
             .then((value) async {
           if (value["status"] == "success") {
@@ -580,6 +718,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                       readOnly: true,
                                     ),
                                   ),
+                                  _buildTaxSelector(),
                                 ];
 
                                 final List<Widget> rightWidgets = [];
@@ -1919,4 +2058,11 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
           });
         });
   }
+}
+
+/// Minimal tax record used only within [AddCategoryPageScreen].
+class _TaxItem {
+  final int id;
+  final String name;
+  const _TaxItem({required this.id, required this.name});
 }

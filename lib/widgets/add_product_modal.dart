@@ -20,6 +20,8 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/widgets/add_category_modal.dart';
+import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/newcomponents/custom_container_box.dart';
 import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
 
@@ -2697,21 +2699,73 @@ class _AddProductWithBarcodeModalState
           ),
         ),
         const SizedBox(height: 4),
-        CustomDropDownWithSearch<Category>(
-          focusNode: _categoryFocusNode,
-          title: "",
-          hintText: "Select Category",
-          value: selectedCategory,
-          height: size.height * 0.048,
-          margin: EdgeInsets.zero,
-          items: categoryList ?? [],
-          onChanged: (Category? newCategory) {
-            setState(() {
-              selectedCategory = newCategory;
-            });
-          },
-          displayText: (category) => category.categoryName ?? '',
-          searchController: _categorySearchController,
+        Row(
+          children: [
+            Expanded(
+              child: CustomDropDownWithSearch<Category>(
+                focusNode: _categoryFocusNode,
+                title: "",
+                hintText: "Select Category",
+                value: selectedCategory,
+                height: size.height * 0.048,
+                margin: EdgeInsets.zero,
+                items: categoryList ?? [],
+                onChanged: (Category? newCategory) {
+                  setState(() {
+                    selectedCategory = newCategory;
+                  });
+                },
+                displayText: (category) => category.categoryName ?? '',
+                searchController: _categorySearchController,
+              ),
+            ),
+            const SizedBox(width: 8),
+            BuildBoxShadowContainer(
+              height: size.height * 0.048,
+              width: size.height * 0.048,
+              circleRadius: 7,
+              child: InkWell(
+                onTap: () async {
+                  final categoryProvider =
+                      Provider.of<CategoryProvider>(context, listen: false);
+                  final existingIds = categoryProvider.category
+                          ?.map((c) => c.categoryId)
+                          .toSet() ??
+                      {};
+
+                  final result = await showDialog<bool>(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (_) => const AddCategoryModal(),
+                  );
+
+                  if (result == true) {
+                    final updatedCategories = categoryProvider.category ?? [];
+                    Category? newCategory;
+                    for (var c in updatedCategories) {
+                      if (c.categoryId != null &&
+                          !existingIds.contains(c.categoryId)) {
+                        newCategory = c;
+                        break;
+                      }
+                    }
+                    if (newCategory != null) {
+                      setState(() {
+                        selectedCategory = newCategory;
+                      });
+                    }
+                  }
+                },
+                child: const Center(
+                  child: Icon(
+                    Icons.add,
+                    size: 20,
+                    color: ColorManager.kButtonGreen,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
         if (isValidatedOnce && selectedCategory == null)
           Padding(
