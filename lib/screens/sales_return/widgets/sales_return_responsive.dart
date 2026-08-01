@@ -267,13 +267,17 @@ class SalesReturnStatusBadge extends StatelessWidget {
             size: 14,
           ),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s11,
-              0.13,
-              color,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s11,
+                0.13,
+                color,
+              ),
             ),
           ),
         ],

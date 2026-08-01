@@ -45,15 +45,23 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 ; Ship the full Release output (exe + all plugin DLLs + data).
 ; Excludes debug symbols that are not needed at runtime.
 Source: ".\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb,*.lib,*.exp,*.ilk"
+; Use Microsoft's signed installer instead of app-local runtime DLL copies.
+Source: ".\installer-assets\vc_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
+Filename: "{tmp}\vc_redist.x64.exe"; Parameters: "/install /quiet /norestart"; StatusMsg: "Installing Microsoft Visual C++ runtime..."; Flags: waituntilterminated runhidden
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [InstallDelete]
+; Remove runtime DLLs bundled by older releases. The official x64
+; Redistributable installed above now supplies these system-wide.
+Type: files; Name: "{app}\msvcp140.dll"
+Type: files; Name: "{app}\vcruntime140.dll"
+Type: files; Name: "{app}\vcruntime140_1.dll"
 ; Clean only products and categories cache when installing/upgrading
 ; This preserves cart_items, saved_orders, and confirmed_orders
 Type: files; Name: "{userappdata}\com.enke\pos_machine\epos\hive_data\products.hive"

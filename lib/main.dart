@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:marionette_flutter/marionette_flutter.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
@@ -78,7 +79,11 @@ import 'package:pos_machine/features/realtime_sync/presentation/realtime_sync_li
 import 'package:pos_machine/features/realtime_sync/presentation/realtime_sync_provider.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  if (kDebugMode) {
+    MarionetteBinding.ensureInitialized();
+  } else {
+    WidgetsFlutterBinding.ensureInitialized();
+  }
 
   await _initializeBaseUrlFromPreferences();
   await _initializeNotificationPosition();

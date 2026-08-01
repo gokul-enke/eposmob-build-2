@@ -67,4 +67,8 @@ Todo.md
 !/local-release/release.config.example.psd1
 /.cursor
 /Output
+/installer-assets/
 /.pi-subagents
+# Local QA/analyzer output (generated, never release source)
+/analysis_qa.txt
+/tmp

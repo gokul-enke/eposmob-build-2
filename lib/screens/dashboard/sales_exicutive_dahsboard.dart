@@ -126,8 +126,9 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
       // Fetch dashboard data for this period
       try {
         // Fetch legacy dashboard data
-        final dashboardResponse =
-            await DashboardProvider().dashbaord(accessToken, context);
+        final dashboardResponse = await DashboardProvider()
+            .dashbaord(accessToken, context)
+            .timeout(const Duration(seconds: 15));
         if (dashboardResponse["status"] == "success") {
           DashBoardModel dashBoardModel =
               DashBoardModel.fromJson(dashboardResponse);
@@ -152,21 +153,25 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
         ProductStats? productStats;
 
         try {
-          ordersPerMonth = await dashboardProvider.fetchOrdersPerMonth(
-              accessToken, currentYear);
+          ordersPerMonth = await dashboardProvider
+              .fetchOrdersPerMonth(accessToken, currentYear)
+              .timeout(const Duration(seconds: 15));
         } catch (e) {
           debugPrint('Orders per month failed: $e');
         }
 
         try {
-          customersPerMonth = await dashboardProvider.fetchCustomersPerMonth(
-              accessToken, currentYear);
+          customersPerMonth = await dashboardProvider
+              .fetchCustomersPerMonth(accessToken, currentYear)
+              .timeout(const Duration(seconds: 15));
         } catch (e) {
           debugPrint('Customers per month failed: $e');
         }
 
         try {
-          stats = await dashboardProvider.fetchSalesStats(accessToken);
+          stats = await dashboardProvider
+              .fetchSalesStats(accessToken)
+              .timeout(const Duration(seconds: 15));
         } catch (e) {
           debugPrint('Sales stats failed: $e');
         }
@@ -178,21 +183,26 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
         if (period == 'month') apiPeriod = 'month';
 
         try {
-          graph = await dashboardProvider.fetchExecutiveSalesGraph(
-              accessToken, apiPeriod, startDate, endDate);
+          graph = await dashboardProvider
+              .fetchExecutiveSalesGraph(
+                  accessToken, apiPeriod, startDate, endDate)
+              .timeout(const Duration(seconds: 15));
         } catch (e) {
           debugPrint('Executive sales graph failed: $e');
         }
 
         try {
-          customerStats = await dashboardProvider.fetchCustomerStats(
-              accessToken, apiPeriod, startDate, endDate);
+          customerStats = await dashboardProvider
+              .fetchCustomerStats(accessToken, apiPeriod, startDate, endDate)
+              .timeout(const Duration(seconds: 15));
         } catch (e) {
           debugPrint('Customer stats failed: $e');
         }
 
         try {
-          productStats = await dashboardProvider.fetchProductStats(accessToken);
+          productStats = await dashboardProvider
+              .fetchProductStats(accessToken)
+              .timeout(const Duration(seconds: 15));
         } catch (e) {
           debugPrint('Product stats failed: $e');
         }
@@ -521,7 +531,8 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
   Widget _buildSalesCards() {
     return ResponsiveStatGrid(
       cards: [
-        _buildSalesCard("Count", ColorManager.kPrimaryColor, Icons.receipt_long),
+        _buildSalesCard(
+            "Count", ColorManager.kPrimaryColor, Icons.receipt_long),
         _buildSalesCard("Amount", ColorManager.kMagentha, Icons.attach_money),
         _buildSalesCard("Customers", ColorManager.kOrange, Icons.people),
         _buildSalesCard("Products", ColorManager.kBlue, Icons.inventory),
@@ -568,10 +579,17 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
         const DashboardSectionHeader(title: "Company Account Overview"),
         ResponsiveStatGrid(
           cards: [
-            _buildCompanyAccountCard("Bank Account", "Total Balance",
-                bankAccountValue, ColorManager.kPrimaryColor, Icons.account_balance),
-            _buildCompanyAccountCard("Cash Account", "Total Balance",
-                cashAccountValue, ColorManager.kMagentha,
+            _buildCompanyAccountCard(
+                "Bank Account",
+                "Total Balance",
+                bankAccountValue,
+                ColorManager.kPrimaryColor,
+                Icons.account_balance),
+            _buildCompanyAccountCard(
+                "Cash Account",
+                "Total Balance",
+                cashAccountValue,
+                ColorManager.kMagentha,
                 Icons.account_balance_wallet),
             _buildCompanyAccountCard("Total Revenue", "Company Revenue",
                 revenueValue, ColorManager.kOrange, Icons.trending_up),
@@ -611,8 +629,11 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
         const DashboardSectionHeader(title: "Your Account Overview"),
         ResponsiveStatGrid(
           cards: [
-            _buildCompanyAccountCard("Cash Received", "Your Cash Inflow",
-                cashReceivedValue, ColorManager.kPrimaryColor,
+            _buildCompanyAccountCard(
+                "Cash Received",
+                "Your Cash Inflow",
+                cashReceivedValue,
+                ColorManager.kPrimaryColor,
                 Icons.call_received),
             _buildCompanyAccountCard("Cash Sent", "Your Cash Outflow",
                 cashSentValue, ColorManager.kMagentha, Icons.call_made),
@@ -727,101 +748,72 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
         DashboardSectionHeader(
           title: "Sales Graph",
           trailing: BuildBoxShadowContainer(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                height: 38,
-                width: 130,
-                circleRadius: 10,
-                child: DropdownButton<String>(
-                  value: salesGraphPeriod,
-                  onChanged: (String? newValue) async {
-                    debugPrint(
-                        'Sales graph period changed from $salesGraphPeriod to $newValue');
-                    setState(() {
-                      salesGraphPeriod = newValue ?? "today";
-                      // We could also cache graph data for different periods if needed
-                      // For now, we'll keep the existing behavior for the graph
-                    });
-                    debugPrint(
-                        'Fetching data for new period: $salesGraphPeriod');
-                    // Refetch only graph data with new period
-                    await fetchGraphDataForPeriod(salesGraphPeriod);
-                  },
-                  dropdownColor: Colors.white,
-                  menuMaxHeight: 200,
-                  elevation: 2,
-                  padding: EdgeInsets.zero,
-                  items: <String>['today', 'week', 'month'].map((String value) {
-                    String displayValue = '';
-                    switch (value) {
-                      case 'today':
-                        displayValue = 'Today';
-                        break;
-                      case 'week':
-                        displayValue = 'This Week';
-                        break;
-                      case 'month':
-                        displayValue = 'This Month';
-                        break;
-                    }
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: Text(
-                          displayValue,
-                          textAlign: TextAlign.center,
-                          style: buildCustomStyle(
-                            FontWeightManager.bold,
-                            FontSize.s12,
-                            0.10,
-                            ColorManager.kPrimaryColor,
-                          ),
-                        ),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            height: 38,
+            width: 130,
+            circleRadius: 10,
+            child: DropdownButton<String>(
+              value: salesGraphPeriod,
+              onChanged: (String? newValue) async {
+                debugPrint(
+                    'Sales graph period changed from $salesGraphPeriod to $newValue');
+                setState(() {
+                  salesGraphPeriod = newValue ?? "today";
+                  // We could also cache graph data for different periods if needed
+                  // For now, we'll keep the existing behavior for the graph
+                });
+                debugPrint('Fetching data for new period: $salesGraphPeriod');
+                // Refetch only graph data with new period
+                await fetchGraphDataForPeriod(salesGraphPeriod);
+              },
+              dropdownColor: Colors.white,
+              menuMaxHeight: 200,
+              elevation: 2,
+              padding: EdgeInsets.zero,
+              items: <String>['today', 'week', 'month'].map((String value) {
+                String displayValue = '';
+                switch (value) {
+                  case 'today':
+                    displayValue = 'Today';
+                    break;
+                  case 'week':
+                    displayValue = 'This Week';
+                    break;
+                  case 'month':
+                    displayValue = 'This Month';
+                    break;
+                }
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      displayValue,
+                      textAlign: TextAlign.center,
+                      style: buildCustomStyle(
+                        FontWeightManager.bold,
+                        FontSize.s12,
+                        0.10,
+                        ColorManager.kPrimaryColor,
                       ),
-                    );
-                  }).toList(),
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s12,
-                    0.10,
-                    ColorManager.textColor,
+                    ),
                   ),
-                  underline: Container(),
-                  isExpanded: true,
-                  icon: const Icon(
-                    Icons.arrow_drop_down,
-                    color: ColorManager.kPrimaryColor,
-                  ),
-                  selectedItemBuilder: (BuildContext context) {
-                    String displayValue = '';
-                    switch (salesGraphPeriod) {
-                      case 'today':
-                        displayValue = 'Today';
-                        break;
-                      case 'week':
-                        displayValue = 'This Week';
-                        break;
-                      case 'month':
-                        displayValue = 'This Month';
-                        break;
-                    }
-                    return [
-                      Container(
-                        alignment: Alignment.center,
-                        child: Text(
-                          displayValue,
-                          style: buildCustomStyle(
-                            FontWeightManager.bold,
-                            FontSize.s12,
-                            0.10,
-                            ColorManager.kPrimaryColor,
-                          ),
-                        ),
-                      )
-                    ];
-                  },
-                ),
+                );
+              }).toList(),
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s12,
+                0.10,
+                ColorManager.textColor,
               ),
+              underline: Container(),
+              isExpanded: true,
+              icon: const Icon(
+                Icons.arrow_drop_down,
+                color: ColorManager.kPrimaryColor,
+              ),
+            ),
+          ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),

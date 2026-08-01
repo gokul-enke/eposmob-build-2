@@ -18,5 +18,6 @@ export 'standard_tax_invoice_standard_pdf_layout.dart';
 export 'new_classic_standad_pdf_layout.dart';
 export 'simplified_tax_invoice_standard_pdf_layout.dart';
 export 'centered_simplified_tax_invoice_standard_pdf_layout.dart';
+export 'bilingual_centered_tax_invoice_standard_pdf_layout.dart';
 export 'corporate_tax_invoice_standard_pdf_layout.dart';
 export 'letterhead_tax_invoice_standard_pdf_layout.dart';

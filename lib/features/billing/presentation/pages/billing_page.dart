@@ -375,11 +375,11 @@ class BillingPageState extends State<BillingPage>
     _isUpiSelected = false;
     _isDebitSelected = false;
     _isCodSelected = false;
-    _hydrateCustomerListFromProviderCache();
-
-    // After first frame, rehydrate UI from any saved order/discounts
+    // Defer cache hydration because applying the default customer notifies a
+    // provider and must not happen while this page is being built.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      _hydrateCustomerListFromProviderCache();
       _syncStockEnabledSetting();
       _rehydrateFromProvider();
     });
@@ -3517,8 +3517,8 @@ class BillingPageState extends State<BillingPage>
                                     color: isFocusedRow
                                         ? Colors.orange.withValues(alpha: 0.06)
                                         : isLowStock || isOutOfStock
-                                            ? stockAlertColor
-                                                .withValues(alpha: 0.06)
+                                            ? stockAlertColor.withValues(
+                                                alpha: 0.06)
                                             : index % 2 == 0
                                                 ? Colors.white
                                                 : Colors.grey.shade50,
@@ -3624,11 +3624,11 @@ class BillingPageState extends State<BillingPage>
                                                     message: isOutOfStock
                                                         ? 'Out of stock'
                                                         : isLowStock
-                                                        ? 'Low stock'
-                                                        : canViewBillingProductDetails
-                                                            ? 'billing.view_details'
-                                                                .tr
-                                                            : 'No permission to view product details',
+                                                            ? 'Low stock'
+                                                            : canViewBillingProductDetails
+                                                                ? 'billing.view_details'
+                                                                    .tr
+                                                                : 'No permission to view product details',
                                                     waitDuration:
                                                         const Duration(
                                                             milliseconds: 400),
