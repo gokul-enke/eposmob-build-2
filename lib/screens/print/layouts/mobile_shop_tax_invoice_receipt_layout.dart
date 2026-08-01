@@ -372,6 +372,39 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
           isBold: true, scale: 0.95, verticalPadding: 2, verticalOffset: 0));
     }
 
+    // B2B/B2C invoice title - shown above the store name.
+    if (displayConfig?['showInvoiceTitle']?.visible == true) {
+      final option = displayConfig?['showInvoiceTitle'];
+      final configuredEnglish = option?.defaultValue?.trim() ?? '';
+      final invoiceTitle = resolveMobileShopInvoiceTitle(
+        option: option,
+        fallbackTitle: appSettings?.printTitle,
+      );
+      final englishTitle = _hasArabic(invoiceTitle) &&
+              configuredEnglish.isNotEmpty &&
+              !_hasArabic(configuredEnglish)
+          ? configuredEnglish
+          : invoiceTitle;
+      final arabicTitle = resolveMobileShopArabicInvoiceTitle(invoiceTitle);
+
+      rows.add(SpacingRow(6));
+      if (isBilingual) {
+        rows.add(TextRow(englishTitle.toUpperCase(),
+            isBold: true, scale: 1.15, align: TextAlign.center));
+        if (arabicTitle != englishTitle) {
+          rows.add(TextRow(arabicTitle,
+              isBold: true, scale: 1.1, align: TextAlign.center));
+        }
+      } else {
+        // Single-language English follows supermarket_en exactly by printing
+        // the resolved option value. Arabic uses its translated companion.
+        final title = isEnglish ? invoiceTitle : arabicTitle;
+        rows.add(TextRow(title.toUpperCase(), isBold: true, scale: 1.15));
+      }
+      debugPrint(
+          "[MobileShopTaxInvoiceReceiptLayout] order=${params.orderNumber}, customerType=${params.customerType ?? 'null'}, resolvedInvoiceTitle=$invoiceTitle, printedInvoiceTitle=$englishTitle / $arabicTitle");
+    }
+
     // Store Name — reference shows Arabic then English, centered.
     if (displayConfig?['showStoreName']?.visible == true) {
       final fallbackStoreName = params.storeName?.isNotEmpty == true
@@ -523,39 +556,6 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
           scale: 0.85,
         ));
       }
-    }
-
-    // Invoice title — reference: TAX INVOICE then Arabic on next line.
-    if (displayConfig?['showInvoiceTitle']?.visible == true) {
-      final option = displayConfig?['showInvoiceTitle'];
-      final configuredEnglish = option?.defaultValue?.trim() ?? '';
-      final invoiceTitle = resolveMobileShopInvoiceTitle(
-        option: option,
-        fallbackTitle: appSettings?.printTitle,
-      );
-      final englishTitle = _hasArabic(invoiceTitle) &&
-              configuredEnglish.isNotEmpty &&
-              !_hasArabic(configuredEnglish)
-          ? configuredEnglish
-          : invoiceTitle;
-      final arabicTitle = resolveMobileShopArabicInvoiceTitle(invoiceTitle);
-
-      rows.add(SpacingRow(6));
-      if (isBilingual) {
-        rows.add(TextRow(englishTitle.toUpperCase(),
-            isBold: true, scale: 1.15, align: TextAlign.center));
-        if (arabicTitle != englishTitle) {
-          rows.add(TextRow(arabicTitle,
-              isBold: true, scale: 1.1, align: TextAlign.center));
-        }
-      } else {
-        // Single-language English follows supermarket_en exactly by printing
-        // the resolved option value. Arabic uses its translated companion.
-        final title = isEnglish ? invoiceTitle : arabicTitle;
-        rows.add(TextRow(title.toUpperCase(), isBold: true, scale: 1.15));
-      }
-      debugPrint(
-          "[MobileShopTaxInvoiceReceiptLayout] order=${params.orderNumber}, customerType=${params.customerType ?? 'null'}, resolvedInvoiceTitle=$invoiceTitle, printedInvoiceTitle=$englishTitle / $arabicTitle");
     }
 
     rows.add(SpacingRow(_headerGap));
