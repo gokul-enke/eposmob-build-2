@@ -296,4 +296,38 @@ class ReceiptLayoutParams {
 
     return lines;
   }
+
+  /// Returns bank detail lines enabled by the document configuration.
+  ///
+  /// `showBankInfo` is the master switch. The individual fields are controlled
+  /// by `showBankName`, `showAccountName`, `showAccountNumber`, `showIBAN`, and
+  /// `showSwiftCode`, matching the API's `display_configuration` keys.
+  List<String> visibleBankAccountDetailLines(
+      Map<String, DisplayOption>? displayConfig) {
+    bool isVisible(String key) => displayConfig?[key]?.visible == true;
+
+    if (!isVisible('showBankInfo')) return const [];
+
+    final bank = primaryBank;
+    final account = primaryBankAccount;
+    final lines = <String>[];
+
+    void addLine(bool visible, String label, String? value) {
+      if (!visible) return;
+      final trimmed = value?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) {
+        lines.add('$label: $trimmed');
+      }
+    }
+
+    addLine(isVisible('showBankName'), 'Bank Name', bank?.bankName);
+    addLine(isVisible('showAccountName'), 'Account Name',
+        account?.accountHolderName);
+    addLine(isVisible('showAccountNumber'), 'Account Number',
+        account?.accountNumber);
+    addLine(isVisible('showIBAN'), 'IBAN', account?.iban);
+    addLine(isVisible('showSwiftCode'), 'SWIFT Code', account?.swiftCode);
+
+    return lines;
+  }
 }

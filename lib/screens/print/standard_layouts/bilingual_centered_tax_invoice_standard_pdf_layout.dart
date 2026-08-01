@@ -36,7 +36,7 @@ import 'standard_pdf_layout.dart';
 ///   • Totals: amount-in-words / payment / balance (left) + bilingual totals
 ///     box (right).
 ///   • Signature band (Signature / Salesman Signature) + accent rule.
-///   • Footer band: account number / IBAN + store address line.
+///   • Footer band: API-configured bank details + store address line.
 ///
 /// All field visibility, data extraction, B2B/B2C title resolution, ZATCA QR
 /// (with payment-gateway fallback), multi-payment breakdown, customer balance,
@@ -278,6 +278,13 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
       return (trimmed != null && trimmed.isNotEmpty) ? trimmed : '';
     }
 
+    String maskBankValue(String? value) {
+      final trimmed = value?.trim() ?? '';
+      if (trimmed.isEmpty) return '<empty>';
+      if (trimmed.length <= 4) return '****';
+      return '****${trimmed.substring(trimmed.length - 4)}';
+    }
+
     // ── Logo ────────────────────────────────────────────────────────
     pw.MemoryImage? logoImage;
     if (config.showLogo == 1 &&
@@ -420,8 +427,40 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     }
     final storeFssai = cfgVal('showFssaiInfo', '');
     final extraHeading2 = cfgVal('showExtraHeading2', '');
-    final ibanValue = params.primaryBankAccount?.iban ?? '';
-    final accountNumberValue = params.primaryBankAccount?.accountNumber ?? '';
+    final primaryBank = params.primaryBank;
+    final primaryBankAccount = params.primaryBankAccount;
+    final ibanValue = primaryBankAccount?.iban ?? '';
+    final accountNumberValue = primaryBankAccount?.accountNumber ?? '';
+
+    // These keys match the API's display_configuration schema.
+    final showBankInfo = cfgVisible('showBankInfo');
+    final showBankName = cfgVisible('showBankName');
+    final showAccountName = cfgVisible('showAccountName');
+    final showAccountNumber = cfgVisible('showAccountNumber');
+    final showIban = cfgVisible('showIBAN');
+    final showSwiftCode = cfgVisible('showSwiftCode');
+    final bankLines = params.visibleBankAccountDetailLines(dc);
+
+    debugPrint(
+        '[BilingualCenteredTaxInvoice][Bank] order=${params.orderNumber} '
+        'bankDetailsCount=${params.bankDetails.length} '
+        'primaryBank=${primaryBank?.bankName ?? '<none>'} '
+        'accountCount=${primaryBank?.bankAccounts.length ?? 0}');
+    debugPrint('[BilingualCenteredTaxInvoice][Bank] '
+        'accountNumber=${maskBankValue(accountNumberValue)} '
+        'iban=${maskBankValue(ibanValue)} '
+        'accountHolderPresent=${primaryBankAccount?.accountHolderName?.trim().isNotEmpty == true} '
+        'ifscPresent=${primaryBankAccount?.ifsc?.trim().isNotEmpty == true} '
+        'swiftPresent=${primaryBankAccount?.swiftCode?.trim().isNotEmpty == true}');
+    debugPrint('[BilingualCenteredTaxInvoice][Bank] flags '
+        'showBankInfo=$showBankInfo '
+        'showBankName=$showBankName '
+        'showAccountName=$showAccountName '
+        'showAccountNumber=$showAccountNumber '
+        'showIBAN=$showIban '
+        'showSwiftCode=$showSwiftCode '
+        'configuredLineCount=${bankLines.length} '
+        'willRender=${bankLines.isNotEmpty}');
 
     // ── Invoice number (prefix + stripping) ─────────────────────────
     // Invoice prefix: config value > config default > numberPrefix > 'INV-'
@@ -983,13 +1022,16 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
             // Store name / address / tax info / extra headings are rendered
             // in the top header band instead of here.
             // ═══════════════════════════════════════════════════════
-            // Bank account/IBAN is gated behind `showBankDetails`, a key that
-            // is absent from the API response, so it defaults to hidden.
-            if (cfgVisible('showBankDetails') &&
-                (accountNumberValue.isNotEmpty || ibanValue.isNotEmpty))
-              _autoText(
-                'ACCOUNT NUMBER AT ${displayOrBlank(accountNumberValue)}${ibanValue.isNotEmpty ? ' / IBAN ${displayOrBlank(ibanValue)}' : ''}',
-                footerBold,
+            // Bank fields follow the API's showBankInfo and per-field flags.
+            if (bankLines.isNotEmpty)
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  _autoText('BANK DETAILS', footerBold,
+                      textAlign: pw.TextAlign.center),
+                  ...bankLines.map((line) => _autoText(line, footerStyle,
+                      textAlign: pw.TextAlign.center)),
+                ],
               ),
             if (cfgVisible('showVATFooter') &&
                 params.zatcaVatNumber?.isNotEmpty == true)
