@@ -5,7 +5,7 @@ import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/screens/print/return_bill_layout_params_builder.dart';
-import 'package:pos_machine/screens/print/standard_layouts/simplified_tax_invoice_standard_pdf_layout.dart';
+import 'package:pos_machine/screens/print/standard_layouts/standard_pdf_layout_factory.dart';
 
 class ReturnBillStandardPrinter {
   final BuildContext context;
@@ -28,6 +28,10 @@ class ReturnBillStandardPrinter {
     String? customerEmail,
     String? customerAddress,
     String? customerBalance,
+    String? customerVatNumber,
+    String? customerCrNumber,
+    String? customerType,
+    required String theme,
   }) async {
     if (returnBillDocumentConfig == null) {
       debugPrint('ERROR: Return Bill document configuration not loaded yet.');
@@ -75,9 +79,13 @@ class ReturnBillStandardPrinter {
         customerEmail: customerEmail,
         customerAddress: customerAddress,
         customerBalance: customerBalance,
+        customerVatNumber: customerVatNumber,
+        customerCrNumber: customerCrNumber,
+        customerType: customerType,
       );
 
-      await SimplifiedTaxInvoiceStandardPdfLayout().generateAndPrintPdf(params);
+      final layout = StandardPdfLayoutFactory.getLayout(theme);
+      await layout.generateAndPrintPdf(params);
 
       if (context.mounted) {
         showScaffold(

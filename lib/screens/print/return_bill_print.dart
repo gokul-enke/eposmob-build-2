@@ -15,6 +15,7 @@ import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/screens/print/return_bill_print_thermal.dart';
 import 'package:pos_machine/screens/print/return_bill_print_standard.dart';
+import 'package:pos_machine/screens/print/receipt_customer_segment.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/services/printer_permission_service.dart';
 
@@ -30,6 +31,9 @@ class ReturnBillPrintPage extends StatefulWidget {
   final String? customerEmail;
   final String? customerAddress;
   final String? customerBalance;
+  final String? customerVatNumber;
+  final String? customerCrNumber;
+  final String? customerType;
 
   const ReturnBillPrintPage({
     super.key,
@@ -44,6 +48,9 @@ class ReturnBillPrintPage extends StatefulWidget {
     this.customerEmail,
     this.customerAddress,
     this.customerBalance,
+    this.customerVatNumber,
+    this.customerCrNumber,
+    this.customerType,
   });
 
   @override
@@ -60,6 +67,21 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
   String selectedPaperSize = '80mm';
 
   DocumentConfig? _returnBillDocumentConfig;
+
+  bool get _isB2B => ReceiptCustomerSegment.isBusiness(
+        customerType: widget.customerType,
+        vatNumber: widget.customerVatNumber,
+        crNumber: widget.customerCrNumber,
+      );
+
+  String get _printerPrefsKey =>
+      _isB2B ? 'default_printer_b2b' : 'default_printer';
+
+  String get _paperSizePrefsKey =>
+      _isB2B ? 'default_paper_size_b2b' : 'default_paper_size';
+
+  String get _themePrefsKey =>
+      _isB2B ? 'billing_receipt_theme_b2b' : 'billing_receipt_theme';
 
   static const Color primaryColor = Color(0XFF3C92F5);
   static const Color accentColor = Color(0xFF4CAF50);
@@ -223,7 +245,8 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
     debugPrint(
         '[ReturnBillPrintPage] _loadDefaultPrinter() reading from SharedPreferences');
     final prefs = await SharedPreferences.getInstance();
-    final defaultPrinterJson = prefs.getString('default_printer');
+    final defaultPrinterJson =
+        prefs.getString(_printerPrefsKey) ?? prefs.getString('default_printer');
 
     if (defaultPrinterJson != null) {
       final Map<String, dynamic> printerData = json.decode(defaultPrinterJson);
@@ -270,7 +293,7 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
       'productId': printer.productId,
       'typePrinter': printer.typePrinter.toString(),
     };
-    await prefs.setString('default_printer', json.encode(printerData));
+    await prefs.setString(_printerPrefsKey, json.encode(printerData));
   }
 
   void selectPrinter(BluetoothPrinter printer) {
@@ -378,17 +401,21 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
       return;
     }
 
+    final theme = await _getReceiptTheme();
+    debugPrint(
+        '[ReturnBillPrintPage] Using return theme=$theme, config=${_returnBillDocumentConfig?.type}, isB2B=$_isB2B');
+
     if (selectedPaperSize == '112mm' ||
         selectedPaperSize == '80mm' ||
         selectedPaperSize == '58mm') {
-      await _printThermalReceipt(customerCareNumber, customerCareEmail);
+      await _printThermalReceipt(customerCareNumber, customerCareEmail, theme);
     } else {
-      await _generateAndPrintPDF(customerCareNumber, customerCareEmail);
+      await _generateAndPrintPDF(customerCareNumber, customerCareEmail, theme);
     }
   }
 
   Future<void> _printThermalReceipt(
-      String customerCareNumber, String customerCareEmail) async {
+      String customerCareNumber, String customerCareEmail, String theme) async {
     final thermalPrinter = ReturnBillThermalPrinter(context);
 
     await thermalPrinter.printReturnBill(
@@ -407,11 +434,15 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
       customerEmail: widget.customerEmail,
       customerAddress: widget.customerAddress,
       customerBalance: widget.customerBalance,
+      customerVatNumber: widget.customerVatNumber,
+      customerCrNumber: widget.customerCrNumber,
+      customerType: widget.customerType,
+      theme: theme,
     );
   }
 
   Future<void> _generateAndPrintPDF(
-      String customerCareNumber, String customerCareEmail) async {
+      String customerCareNumber, String customerCareEmail, String theme) async {
     final standardPrinter = ReturnBillStandardPrinter(context);
 
     await standardPrinter.generateAndPrintPDF(
@@ -430,13 +461,33 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
       customerEmail: widget.customerEmail,
       customerAddress: widget.customerAddress,
       customerBalance: widget.customerBalance,
+      customerVatNumber: widget.customerVatNumber,
+      customerCrNumber: widget.customerCrNumber,
+      customerType: widget.customerType,
+      theme: theme,
     );
+  }
+
+  Future<String> _getReceiptTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final localTheme = prefs.getString(_themePrefsKey) ??
+        prefs.getString('billing_receipt_theme');
+    if (localTheme != null && localTheme.trim().isNotEmpty) {
+      return localTheme.trim();
+    }
+
+    final apiTheme = _returnBillDocumentConfig?.activeTheme;
+    if (apiTheme != null && apiTheme.trim().isNotEmpty) {
+      return apiTheme.trim();
+    }
+    return 'classic';
   }
 
   Future<void> _loadDefaultPaperSize() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final defaultPaperSize = prefs.getString('default_paper_size');
+      final defaultPaperSize = prefs.getString(_paperSizePrefsKey) ??
+          prefs.getString('default_paper_size');
 
       if (defaultPaperSize != null) {
         setState(() {
@@ -457,7 +508,7 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
 
   Future<void> _saveDefaultPaperSize(String paperSize) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('default_paper_size', paperSize);
+    await prefs.setString(_paperSizePrefsKey, paperSize);
 
     setState(() {
       selectedPaperSize = paperSize;

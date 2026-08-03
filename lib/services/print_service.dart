@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
@@ -12,6 +13,7 @@ import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/features/billing/domain/receipt_customer_balance.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
+import 'package:pos_machine/services/sales_only_print_helper.dart';
 
 enum PrintMode { salesOnly, returnOnly, combined }
 
@@ -58,13 +60,19 @@ class PrintService {
     bool checkoutIsDefaultCustomer = false,
   }) async {
     try {
+      debugPrint(
+          '[PrintService] printOrderByIdWithOptions started: order=$ordersId');
       final orderDetails = await _fetchOrderDetails(context, ordersId);
       if (orderDetails == null || !context.mounted) {
+        debugPrint(
+            '[PrintService] Print stopped: order details unavailable or context unmounted');
         return false;
       }
 
       final orderReturns = orderDetails.data?.orderReturns;
       if (!_hasOrderReturns(orderReturns)) {
+        debugPrint(
+            '[PrintService] No returns found; printing the normal sales bill');
         return _executeOrderPrint(
           context,
           orderDetails,
@@ -78,8 +86,11 @@ class PrintService {
 
       final mode = await _showPrintModeSheet(context);
       if (mode == null || !context.mounted) {
+        debugPrint('[PrintService] Print option sheet dismissed');
         return false;
       }
+
+      debugPrint('[PrintService] Selected print mode: ${mode.name}');
 
       return _executeOrderPrint(
         context,
@@ -90,7 +101,15 @@ class PrintService {
         checkoutTotalPaid: checkoutTotalPaid,
         checkoutIsDefaultCustomer: checkoutIsDefaultCustomer,
       );
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('[PrintService] Print failed: $error');
+      debugPrint('[PrintService] Stacktrace: $stackTrace');
+      if (context.mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Unable to prepare this order for printing: $error',
+        );
+      }
       return false;
     }
   }
@@ -183,20 +202,28 @@ class PrintService {
                   title: const Text('Print Sales'),
                   subtitle:
                       const Text('Receipt with returned quantities removed'),
-                  onTap: () => Navigator.pop(sheetContext, PrintMode.salesOnly),
+                  onTap: () {
+                    debugPrint('[PrintService] Print Sales tapped');
+                    Navigator.pop(sheetContext, PrintMode.salesOnly);
+                  },
                 ),
                 ListTile(
                   leading: const Icon(Icons.assignment_return),
                   title: const Text('Print Return'),
                   subtitle: const Text('Return receipt only'),
-                  onTap: () =>
-                      Navigator.pop(sheetContext, PrintMode.returnOnly),
+                  onTap: () {
+                    debugPrint('[PrintService] Print Return tapped');
+                    Navigator.pop(sheetContext, PrintMode.returnOnly);
+                  },
                 ),
                 ListTile(
                   leading: const Icon(Icons.receipt),
                   title: const Text('Print Combined'),
                   subtitle: const Text('Full bill with sales and returns'),
-                  onTap: () => Navigator.pop(sheetContext, PrintMode.combined),
+                  onTap: () {
+                    debugPrint('[PrintService] Print Combined tapped');
+                    Navigator.pop(sheetContext, PrintMode.combined);
+                  },
                 ),
               ],
             ),
@@ -204,51 +231,6 @@ class PrintService {
         );
       },
     );
-  }
-
-  List<OrderDetailsModelDataCartItem> _adjustCartItemsForSalesOnly(
-    List<OrderDetailsModelDataCartItem> cartItems,
-    List<OrderReturnItem> returnItems,
-  ) {
-    final returnQtyByProduct = <String, int>{};
-    for (final returnItem in returnItems) {
-      final productName = returnItem.productName?.trim().toLowerCase() ?? '';
-      if (productName.isEmpty) continue;
-      returnQtyByProduct[productName] =
-          (returnQtyByProduct[productName] ?? 0) + (returnItem.quantity ?? 0);
-    }
-
-    final remainingReturns = Map<String, int>.from(returnQtyByProduct);
-    final adjustedItems = <OrderDetailsModelDataCartItem>[];
-
-    for (final item in cartItems) {
-      final productName = item.productName?.trim().toLowerCase() ?? '';
-      final originalQty = item.quantity?.toDouble() ?? 0;
-      if (originalQty <= 0) continue;
-
-      final returnedQty = remainingReturns[productName] ?? 0;
-      final deductQty = returnedQty.clamp(0, originalQty.toInt());
-      if (deductQty > 0) {
-        remainingReturns[productName] = returnedQty - deductQty;
-      }
-
-      final newQty = originalQty - deductQty;
-      if (newQty <= 0) continue;
-
-      final unitPrice = double.tryParse(item.unitPrice ?? '0') ?? 0;
-      final originalTax = double.tryParse(item.taxAmount ?? '0') ?? 0;
-      final taxPerUnit = originalQty > 0 ? originalTax / originalQty : 0;
-
-      adjustedItems.add(
-        item.copyWith(
-          quantity: newQty,
-          totalPrice: (unitPrice * newQty).toStringAsFixed(2),
-          taxAmount: (taxPerUnit * newQty).toStringAsFixed(2),
-        ),
-      );
-    }
-
-    return adjustedItems;
   }
 
   String _calculateSavedTotalFromCartItems(
@@ -313,6 +295,9 @@ class PrintService {
     final cart = orderDetails.data!.cart!;
     final orderReturns = orderDetails.data?.orderReturns;
 
+    debugPrint(
+        '[PrintService] Preparing ${mode.name} print: order=${orderDetails.data?.orderNumber}, originalItems=${cart.cartItems?.length ?? 0}, returnItems=${orderReturns?.returnItems?.length ?? 0}');
+
     if (mode == PrintMode.returnOnly) {
       if (!_hasOrderReturns(orderReturns) || !context.mounted) {
         return false;
@@ -346,6 +331,9 @@ class PrintService {
             customerEmail: orderDetails.data?.customerDetails?.email,
             customerAddress: orderDetails.data?.getCustomerAddressForDisplay(),
             customerBalance: customerBalance,
+            customerVatNumber: orderDetails.data?.kycInfo?.vatNumber,
+            customerCrNumber: orderDetails.data?.kycInfo?.crNumber,
+            customerType: orderDetails.data?.customerDetails?.customerType,
           ),
         ),
       );
@@ -354,15 +342,27 @@ class PrintService {
 
     final isSalesOnly = mode == PrintMode.salesOnly;
     final cartItems = isSalesOnly
-        ? _adjustCartItemsForSalesOnly(
+        ? buildSalesOnlyCartItems(
             cart.cartItems!,
             orderReturns!.returnItems!,
           )
         : cart.cartItems!;
 
     if (cartItems.isEmpty) {
+      debugPrint(
+          '[PrintService] Sales-only print has no remaining quantities after returns');
+      if (context.mounted) {
+        showScaffoldError(
+          context: context,
+          message:
+              'All sold quantities were returned. There are no remaining sales items to print.',
+        );
+      }
       return false;
     }
+
+    debugPrint(
+        '[PrintService] ${mode.name} print contains ${cartItems.length} item row(s)');
 
     final formattedTotal = isSalesOnly
         ? _calculateTotalFromCartItems(cartItems)
