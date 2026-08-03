@@ -704,6 +704,21 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               fontSize: fs(9),
               fontWeight: pw.FontWeight.bold,
             );
+            final referenceFooterBold = pw.TextStyle(
+              font: fontBold,
+              fontSize: fs(7.5),
+              fontWeight: pw.FontWeight.bold,
+            );
+            final referenceSignatureStyle = pw.TextStyle(
+              font: fontBold,
+              fontSize: fs(8),
+              fontWeight: pw.FontWeight.bold,
+            );
+            final referenceSignatureArStyle = pw.TextStyle(
+              font: font,
+              fontBold: fontBold,
+              fontSize: fs(8),
+            );
 
             pw.Widget metadataValue(String value) => pw.Padding(
                   padding:
@@ -838,15 +853,15 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 addSection(
                   pw.Container(
                     alignment: pw.Alignment.center,
-                    padding: const pw.EdgeInsets.all(6),
+                    padding: const pw.EdgeInsets.all(3),
                     decoration: pw.BoxDecoration(
                       border: pw.Border.all(width: 0.75),
                     ),
                     child: pw.BarcodeWidget(
                       barcode: pw.Barcode.qrCode(),
                       data: qrData,
-                      width: isA5 ? 62 : 94,
-                      height: isA5 ? 62 : 94,
+                      width: isA5 ? 54 : 76,
+                      height: isA5 ? 54 : 76,
                     ),
                   ),
                   1.9,
@@ -1064,7 +1079,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   ),
                 ],
               ),
-              pw.SizedBox(height: 10),
+              pw.SizedBox(height: 5),
               if (!params.isReturnOnly)
                 _buildReferenceItemsTable(
                   params,
@@ -1075,7 +1090,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   isA5,
                   isDualLanguage,
                 ),
-              pw.SizedBox(height: 10),
+              pw.SizedBox(height: 5),
               referenceSummaryRow(),
               if (params.orderReturns != null &&
                   params.orderReturns!.returnItems != null &&
@@ -1086,28 +1101,37 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   ..._buildFinalSummaryPdfSection(params, dc, currency, font,
                       fontBold, isA5, isDualLanguage, configLang),
               ],
-              pw.SizedBox(height: 8),
+              pw.SizedBox(height: 4),
               if (cfgVisible('showTermsConditions') &&
                   referenceTerms.isNotEmpty) ...[
-                ...referenceTerms.map((text) => _autoText(text, smallStyle)),
-                pw.SizedBox(height: 4),
+                pw.Wrap(
+                  spacing: 4,
+                  runSpacing: 1,
+                  children: referenceTerms
+                      .map((text) => _autoText(text, smallStyle))
+                      .toList(),
+                ),
+                pw.SizedBox(height: 2),
               ],
               if (cfgVisible('showThankYouMessage') &&
                   referenceThankYou.isNotEmpty)
                 pw.Center(
-                  child: pw.Column(
+                  child: pw.Wrap(
+                    alignment: pw.WrapAlignment.center,
+                    spacing: 4,
+                    runSpacing: 1,
                     children: referenceThankYou
                         .map(
                           (text) => _autoText(
                             text,
-                            footerBold,
+                            referenceFooterBold,
                             textAlign: pw.TextAlign.center,
                           ),
                         )
                         .toList(),
                   ),
                 ),
-              pw.SizedBox(height: 10),
+              pw.SizedBox(height: 5),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
@@ -1115,12 +1139,12 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     children: [
                       pw.Text(
                         'Customer Signature: ____________________',
-                        style: signatureStyle,
+                        style: referenceSignatureStyle,
                       ),
-                      pw.SizedBox(width: 6),
+                      pw.SizedBox(width: 4),
                       pw.Text(
                         'التوقيع',
-                        style: signatureArStyle,
+                        style: referenceSignatureArStyle,
                         textDirection: pw.TextDirection.rtl,
                       ),
                     ],
@@ -1129,21 +1153,21 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     children: [
                       pw.Text(
                         'Salesman Signature: ____________________',
-                        style: signatureStyle,
+                        style: referenceSignatureStyle,
                       ),
-                      pw.SizedBox(width: 6),
+                      pw.SizedBox(width: 4),
                       pw.Text(
                         'توقيع البائع',
-                        style: signatureArStyle,
+                        style: referenceSignatureArStyle,
                         textDirection: pw.TextDirection.rtl,
                       ),
                     ],
                   ),
                 ],
               ),
-              pw.SizedBox(height: 6),
-              pw.Container(height: 3, color: _accent),
-              pw.SizedBox(height: 4),
+              pw.SizedBox(height: 3),
+              pw.Container(height: 2, color: _accent),
+              pw.SizedBox(height: 2),
             ];
           }
 
@@ -1782,13 +1806,13 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     );
     final labelStyle = pw.TextStyle(
       font: fontBold,
-      fontSize: fs(8),
+      fontSize: fs(7.5),
       fontWeight: pw.FontWeight.bold,
     );
     final valueStyle = pw.TextStyle(
       font: font,
       fontBold: fontBold,
-      fontSize: fs(8),
+      fontSize: fs(7.5),
     );
     final addressParts = _referenceAddressParts(address);
     final secondaryAddressParts = _referenceAddressParts(secondaryAddress);
@@ -1861,7 +1885,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         children: [
           pw.Container(
             width: double.infinity,
-            padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+            padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
             decoration: const pw.BoxDecoration(
               border: pw.Border(bottom: pw.BorderSide(width: 0.75)),
             ),
@@ -1882,8 +1906,10 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           ),
           ...rows.map(
             (row) => pw.Container(
-              padding:
-                  const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const pw.EdgeInsets.symmetric(
+                horizontal: 6,
+                vertical: 0.75,
+              ),
               decoration: const pw.BoxDecoration(
                 border: pw.Border(
                   bottom: pw.BorderSide(width: 0.25, color: PdfColors.grey400),
@@ -1939,22 +1965,22 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     double fs(double value) => isA5 ? value * 0.78 : value;
     final headerEn = pw.TextStyle(
       font: fontBold,
-      fontSize: fs(8),
+      fontSize: fs(7.5),
       fontWeight: pw.FontWeight.bold,
     );
     final headerAr = pw.TextStyle(
       font: font,
       fontBold: fontBold,
-      fontSize: fs(7),
+      fontSize: fs(6.5),
     );
     final bodyStyle = pw.TextStyle(
       font: font,
       fontBold: fontBold,
-      fontSize: fs(8.5),
+      fontSize: fs(7.5),
     );
 
     pw.Widget headerCell(String english, String arabic) => pw.Padding(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 1.5),
           child: pw.Column(
             mainAxisAlignment: pw.MainAxisAlignment.center,
             children: [
@@ -2178,27 +2204,49 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
 
     if (headers.isEmpty) return pw.SizedBox();
 
-    final itemCount = params.cartItems.isEmpty ? 1 : params.cartItems.length;
-    final targetBodyHeight = isA5 ? 72.0 : 128.0;
-    var rowHeight = targetBodyHeight / itemCount;
-    final minimumRowHeight = isA5 ? 18.0 : 23.0;
-    if (rowHeight < minimumRowHeight) rowHeight = minimumRowHeight;
-
     pw.Widget dataCell(
       String text, {
       pw.Alignment alignment = pw.Alignment.topCenter,
       pw.TextDirection? direction,
     }) =>
-        pw.Container(
-          height: rowHeight,
-          alignment: alignment,
-          padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
-          child: pw.Text(
-            text,
-            style: bodyStyle,
-            textDirection: direction,
-            maxLines: 3,
-            overflow: pw.TextOverflow.clip,
+        pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 1.5),
+          child: pw.Align(
+            alignment: alignment,
+            child: pw.Text(
+              text,
+              style: bodyStyle,
+              textDirection: direction,
+              maxLines: 1,
+              overflow: pw.TextOverflow.clip,
+            ),
+          ),
+        );
+
+    pw.Widget itemNameCell(String englishName, String arabicName) => pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 1.5),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+            children: [
+              if (englishName.trim().isNotEmpty)
+                pw.Text(
+                  englishName,
+                  style: bodyStyle,
+                  textDirection: pw.TextDirection.ltr,
+                  textAlign: pw.TextAlign.left,
+                  maxLines: 1,
+                  overflow: pw.TextOverflow.clip,
+                ),
+              if (arabicName.trim().isNotEmpty)
+                pw.Text(
+                  arabicName,
+                  style: bodyStyle,
+                  textDirection: pw.TextDirection.rtl,
+                  textAlign: pw.TextAlign.right,
+                  maxLines: 1,
+                  overflow: pw.TextOverflow.clip,
+                ),
+            ],
           ),
         );
 
@@ -2250,18 +2298,13 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       }
 
       name = _itemDisplayName(item, name);
-      name = _bilingualItemName(item, name, isDualLanguage);
-      final isArabicName = _hasArabic(name);
+      final arabicName = isDualLanguage ? _arabicItemName(item) : '';
       final taxPerUnit = quantity > 0 ? tax / quantity : 0.0;
       final rateExcTax = unitPrice - taxPerUnit;
       final cells = <pw.Widget>[];
       if (showSl) cells.add(dataCell('${index + 1}'));
       if (showParticulars) {
-        cells.add(dataCell(name,
-            alignment:
-                isArabicName ? pw.Alignment.topRight : pw.Alignment.topLeft,
-            direction:
-                isArabicName ? pw.TextDirection.rtl : pw.TextDirection.ltr));
+        cells.add(itemNameCell(name, arabicName));
       }
       if (showMrp) {
         cells.add(dataCell(AmountHelper.formatAmount(mrp),
@@ -2326,18 +2369,18 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     double fs(double value) => isA5 ? value * 0.78 : value;
     final headingStyle = pw.TextStyle(
       font: fontBold,
-      fontSize: fs(8.5),
+      fontSize: fs(8),
       fontWeight: pw.FontWeight.bold,
     );
     final labelStyle = pw.TextStyle(
       font: fontBold,
-      fontSize: fs(8),
+      fontSize: fs(7.25),
       fontWeight: pw.FontWeight.bold,
     );
     final valueStyle = pw.TextStyle(
       font: font,
       fontBold: fontBold,
-      fontSize: fs(8),
+      fontSize: fs(7.25),
     );
     final bank = params.primaryBank;
     final account = params.primaryBankAccount;
@@ -2392,7 +2435,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         _labelAr(dc, 'showBankInfo', null, 'تفاصيل البنك', isDualLanguage);
 
     return pw.Container(
-      padding: const pw.EdgeInsets.all(5),
+      padding: const pw.EdgeInsets.all(3),
       decoration: pw.BoxDecoration(border: pw.Border.all(width: 0.75)),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -2411,10 +2454,10 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               ],
             ],
           ),
-          pw.Divider(height: 5, thickness: 0.4),
+          pw.Divider(height: 3, thickness: 0.4),
           ...rows.map(
             (row) => pw.Padding(
-              padding: const pw.EdgeInsets.only(bottom: 5),
+              padding: const pw.EdgeInsets.only(bottom: 2),
               child: pw.Wrap(
                 crossAxisAlignment: pw.WrapCrossAlignment.center,
                 children: [
@@ -2457,21 +2500,21 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final labelStyle = pw.TextStyle(
       font: font,
       fontBold: fontBold,
-      fontSize: fs(8),
+      fontSize: fs(7.25),
     );
     final labelBold = pw.TextStyle(
       font: fontBold,
-      fontSize: fs(8.5),
+      fontSize: fs(7.75),
       fontWeight: pw.FontWeight.bold,
     );
     final valueStyle = pw.TextStyle(
       font: font,
       fontBold: fontBold,
-      fontSize: fs(8.5),
+      fontSize: fs(7.5),
     );
     final valueBold = pw.TextStyle(
       font: fontBold,
-      fontSize: fs(9),
+      fontSize: fs(8),
       fontWeight: pw.FontWeight.bold,
     );
 
@@ -2487,7 +2530,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       bool bold = false,
     }) =>
         pw.Padding(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 0.75),
           child: pw.Row(
             children: [
               pw.Text(english, style: bold ? labelBold : labelStyle),
@@ -2545,7 +2588,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         showGross || showDiscount || showGrossBeforeVat || showVat;
 
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(vertical: 4),
+      padding: const pw.EdgeInsets.symmetric(vertical: 2),
       decoration: pw.BoxDecoration(border: pw.Border.all(width: 0.75)),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.stretch,
@@ -2557,14 +2600,14 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           if (showVat) row(vatEnglish, vatArabic, vat),
           if (showNet) ...[
             if (hasRowsBeforeNet)
-              pw.Divider(height: 7, thickness: 0.6, indent: 6, endIndent: 6),
+              pw.Divider(height: 4, thickness: 0.6, indent: 5, endIndent: 5),
             row(netEnglish, netArabic, net, bold: true),
           ],
           if (showAmountInWords) ...[
             if (hasRows)
-              pw.Divider(height: 7, thickness: 0.4, indent: 6, endIndent: 6),
+              pw.Divider(height: 4, thickness: 0.4, indent: 5, endIndent: 5),
             pw.Padding(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 6),
+              padding: const pw.EdgeInsets.symmetric(horizontal: 5),
               child: pw.Row(
                 children: [
                   pw.Text(wordsEnglish, style: labelBold),
@@ -2580,7 +2623,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               ),
             ),
             pw.Padding(
-              padding: const pw.EdgeInsets.fromLTRB(6, 2, 6, 0),
+              padding: const pw.EdgeInsets.fromLTRB(5, 1, 5, 0),
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: _amountInWords(
@@ -2591,7 +2634,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   pw.TextStyle(
                     font: font,
                     fontBold: fontBold,
-                    fontSize: fs(8),
+                    fontSize: fs(7.25),
                     fontStyle: pw.FontStyle.italic,
                   ),
                 ),
@@ -3027,24 +3070,33 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     ]);
   }
 
-  /// When the template language is Arabic and the item carries an Arabic name,
-  /// show Arabic on line 1 and English on line 2 (mirrors the thermal layout).
-  String _bilingualItemName(dynamic item, String englishName, bool isAr) {
-    if (!isAr) return englishName;
-    String? ar;
+  /// Returns the product's Arabic name for the second, RTL-aligned item line.
+  String _arabicItemName(dynamic item) {
+    String? arabicName;
     try {
       if (item is Map) {
-        final n =
+        final names =
             item['product_names'] ?? item['productNames'] ?? item['names'];
-        if (n is Map) ar = (n['ar'] ?? n['arabic'])?.toString();
+        if (names is Map) {
+          arabicName = (names['ar'] ?? names['arabic'])?.toString();
+        }
       } else {
-        ar = item.names?.ar?.toString();
+        arabicName = item.names?.ar?.toString();
       }
     } catch (_) {}
-    if (ar != null && ar.trim().isNotEmpty) {
-      return englishName.trim().isNotEmpty ? '$ar\n$englishName' : ar;
-    }
-    return englishName;
+    return arabicName?.trim() ?? '';
+  }
+
+  /// Compatibility formatter for the alternate table used by the non-boxed
+  /// branch of this layout class. The boxed reference table renders its two
+  /// language lines independently so each can have the correct direction.
+  String _bilingualItemName(dynamic item, String englishName, bool isArabic) {
+    if (!isArabic) return englishName;
+    final arabicName = _arabicItemName(item);
+    if (arabicName.isEmpty) return englishName;
+    return englishName.trim().isEmpty
+        ? arabicName
+        : '$arabicName\n$englishName';
   }
 
   String _variantAttributeLabel(dynamic rawAttributes) {

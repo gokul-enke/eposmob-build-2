@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:image/image.dart' as img;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/resources/app_url.dart';
@@ -11,6 +12,26 @@ import 'package:pos_machine/resources/app_url.dart';
 class PrintLogoLoader {
   static final Map<String, ui.Image> _uiMemoryCache = <String, ui.Image>{};
   static final Map<String, Uint8List> _bytesMemoryCache = <String, Uint8List>{};
+
+  static bool _isSupportedRaster(Uint8List bytes) {
+    if (bytes.isEmpty) return false;
+    try {
+      return img.findDecoderForData(bytes) != null;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Uint8List? _validatedBytes(
+    Uint8List bytes, {
+    required String tag,
+    required String source,
+  }) {
+    if (_isSupportedRaster(bytes)) return bytes;
+    debugPrint(
+        '$tag rejected non-raster logo response from $source (${bytes.length} bytes)');
+    return null;
+  }
 
   static String resolveUrl(String url) {
     if (url.startsWith('http')) return url;
@@ -30,12 +51,21 @@ class PrintLogoLoader {
         : null;
 
     final mem = _bytesMemoryCache[fullUrl];
-    if (mem != null && mem.isNotEmpty) return mem;
+    if (mem != null && mem.isNotEmpty) {
+      final valid = _validatedBytes(mem, tag: tag, source: 'memory cache');
+      if (valid != null) return valid;
+      _bytesMemoryCache.remove(fullUrl);
+    }
     if (pngFallbackUrl != null) {
       final pngMem = _bytesMemoryCache[pngFallbackUrl];
       if (pngMem != null && pngMem.isNotEmpty) {
-        _bytesMemoryCache[fullUrl] = pngMem;
-        return pngMem;
+        final valid =
+            _validatedBytes(pngMem, tag: tag, source: 'PNG memory cache');
+        if (valid != null) {
+          _bytesMemoryCache[fullUrl] = valid;
+          return valid;
+        }
+        _bytesMemoryCache.remove(pngFallbackUrl);
       }
     }
 
@@ -50,12 +80,17 @@ class PrintLogoLoader {
       try {
         if (!(isSvg && cachedFilePath.toLowerCase().endsWith('.svg'))) {
           final bytes = await File(cachedFilePath).readAsBytes();
-          if (bytes.isNotEmpty) {
-            _bytesMemoryCache[fullUrl] = bytes;
+          final valid = _validatedBytes(
+            bytes,
+            tag: tag,
+            source: 'local cache $cachedFilePath',
+          );
+          if (valid != null) {
+            _bytesMemoryCache[fullUrl] = valid;
             if (pngFallbackUrl != null) {
-              _bytesMemoryCache[pngFallbackUrl] = bytes;
+              _bytesMemoryCache[pngFallbackUrl] = valid;
             }
-            return bytes;
+            return valid;
           }
         }
       } catch (e) {
@@ -67,16 +102,30 @@ class PrintLogoLoader {
       if (pngFallbackUrl != null) {
         final pngResponse = await http.get(Uri.parse(pngFallbackUrl));
         if (pngResponse.statusCode == 200 && pngResponse.bodyBytes.isNotEmpty) {
-          _bytesMemoryCache[fullUrl] = pngResponse.bodyBytes;
-          _bytesMemoryCache[pngFallbackUrl] = pngResponse.bodyBytes;
-          return pngResponse.bodyBytes;
+          final valid = _validatedBytes(
+            pngResponse.bodyBytes,
+            tag: tag,
+            source: pngFallbackUrl,
+          );
+          if (valid != null) {
+            _bytesMemoryCache[fullUrl] = valid;
+            _bytesMemoryCache[pngFallbackUrl] = valid;
+            return valid;
+          }
         }
       }
 
       final response = await http.get(Uri.parse(fullUrl));
       if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
-        _bytesMemoryCache[fullUrl] = response.bodyBytes;
-        return response.bodyBytes;
+        final valid = _validatedBytes(
+          response.bodyBytes,
+          tag: tag,
+          source: fullUrl,
+        );
+        if (valid != null) {
+          _bytesMemoryCache[fullUrl] = valid;
+          return valid;
+        }
       }
     } catch (e) {
       debugPrint('$tag network logo fetch failed: $e');
@@ -110,6 +159,22 @@ class PrintLogoLoader {
       {String tag = '[LOGO]'}) async {
     final bytes = await _fetchLogoBytes(url, tag: tag);
     if (bytes == null || bytes.isEmpty) return null;
-    return pw.MemoryImage(bytes);
+    return decodePdfLogoBytes(bytes, tag: tag);
+  }
+
+  @visibleForTesting
+  static pw.MemoryImage? decodePdfLogoBytes(
+    Uint8List bytes, {
+    String tag = '[LOGO]',
+  }) {
+    if (_validatedBytes(bytes, tag: tag, source: 'PDF decoder') == null) {
+      return null;
+    }
+    try {
+      return pw.MemoryImage(bytes);
+    } catch (e) {
+      debugPrint('$tag PDF logo decode failed: $e');
+      return null;
+    }
   }
 }
