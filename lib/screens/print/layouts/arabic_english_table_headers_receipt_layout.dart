@@ -303,6 +303,21 @@ class ArabicEnglishTableHeadersReceiptLayout implements ReceiptLayout {
           isBold: true, scale: 0.95, verticalPadding: 2, verticalOffset: 0));
     }
 
+    // B2B/B2C invoice title - shown above the store name.
+    if (displayConfig?['showInvoiceTitle']?.visible == true) {
+      final invoiceTitleText = _getOptionText(
+        displayConfig,
+        'showInvoiceTitle',
+        fallback: appSettings?.printTitle,
+        defaultValue: 'INVOICE',
+      );
+
+      if (invoiceTitleText.isNotEmpty) {
+        rows.add(TextRow(invoiceTitleText.toUpperCase(),
+            isBold: true, scale: 1.1, verticalPadding: 0, verticalOffset: 0));
+      }
+    }
+
     // Store Name - Large, centered, clean
     if (displayConfig?['showStoreName']?.visible == true) {
       final _configStoreName =
@@ -356,21 +371,6 @@ class ArabicEnglishTableHeadersReceiptLayout implements ReceiptLayout {
       if (addressText.isNotEmpty) {
         rows.add(TextRow(addressText,
             scale: 0.85, isBold: true, verticalPadding: 0, verticalOffset: 0));
-      }
-    }
-
-    // Invoice Title (Moved above Tax/Fssai Info)
-    if (displayConfig?['showInvoiceTitle']?.visible == true) {
-      final invoiceTitleText = _getOptionText(
-        displayConfig,
-        'showInvoiceTitle',
-        fallback: appSettings?.printTitle,
-        defaultValue: 'INVOICE',
-      );
-
-      if (invoiceTitleText.isNotEmpty) {
-        rows.add(TextRow(invoiceTitleText.toUpperCase(),
-            isBold: true, scale: 1.1, verticalPadding: 0, verticalOffset: 0));
       }
     }
 

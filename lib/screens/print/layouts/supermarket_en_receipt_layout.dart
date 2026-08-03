@@ -320,6 +320,20 @@ class SupermarketEnReceiptLayout implements ReceiptLayout {
           isBold: true, scale: 0.95, verticalPadding: 2, verticalOffset: 0));
     }
 
+    // B2B/B2C invoice title - shown above the store name.
+    if (displayConfig?['showInvoiceTitle']?.visible == true) {
+      final invoiceTitle = _getDisplayValue(
+        displayConfig?['showInvoiceTitle']?.value,
+        appSettings?.printTitle,
+        'INVOICE',
+      );
+      debugPrint(
+          "[Premium2ReceiptLayout] order=${params.orderNumber}, customerType=${params.customerType ?? 'null'}, hasCustomerKyc=${(params.customerVatNumber?.trim().isNotEmpty ?? false) || (params.customerCrNumber?.trim().isNotEmpty ?? false)}, printedInvoiceTitle=$invoiceTitle");
+      rows.add(SpacingRow(5));
+      rows.add(TextRow(invoiceTitle.toUpperCase(), isBold: true, scale: 1.1));
+      rows.add(SpacingRow(2));
+    }
+
     // Store Name - Large, centered, clean
     if (displayConfig?['showStoreName']?.visible == true) {
       final _configStoreName =
@@ -367,20 +381,6 @@ class SupermarketEnReceiptLayout implements ReceiptLayout {
         final storeAddress = label.isNotEmpty ? '$label: $address' : address;
         rows.add(TextRow(storeAddress, scale: 0.85, isBold: true));
       }
-    }
-
-    // Invoice Title (Moved above Tax/Fssai Info)
-    if (displayConfig?['showInvoiceTitle']?.visible == true) {
-      final invoiceTitle = _getDisplayValue(
-        displayConfig?['showInvoiceTitle']?.value,
-        appSettings?.printTitle,
-        'INVOICE',
-      );
-      debugPrint(
-          "[Premium2ReceiptLayout] order=${params.orderNumber}, customerType=${params.customerType ?? 'null'}, hasCustomerKyc=${(params.customerVatNumber?.trim().isNotEmpty ?? false) || (params.customerCrNumber?.trim().isNotEmpty ?? false)}, printedInvoiceTitle=$invoiceTitle");
-      rows.add(SpacingRow(5));
-      rows.add(TextRow(invoiceTitle.toUpperCase(), isBold: true, scale: 1.1));
-      rows.add(SpacingRow(2));
     }
 
     // Location info (like "Al Qasim, Saudi Arabia" in reference)
