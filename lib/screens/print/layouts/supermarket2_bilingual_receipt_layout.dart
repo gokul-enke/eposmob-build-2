@@ -494,6 +494,25 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
       rows.add(SpacingRow(_itemGap));
     }
 
+    // B2B/B2C invoice title - shown above the store name.
+    if (displayConfig?['showInvoiceTitle']?.visible == true) {
+      final invoiceTitleText = _getModeLabel(
+        displayConfig: displayConfig,
+        key: 'showInvoiceTitle',
+        isEnglish: isEnglish,
+        isBilingual: isBilingual,
+        english: appSettings?.printTitle ?? 'INVOICE',
+        arabic: 'فاتورة',
+      );
+
+      if (invoiceTitleText.isNotEmpty) {
+        rows.add(SpacingRow(_itemGap));
+        rows.add(
+            TextRow(invoiceTitleText.toUpperCase(), isBold: true, scale: 1.0));
+        rows.add(SpacingRow(_itemGap));
+      }
+    }
+
     // Store Name - Large, centered, clean
     if (displayConfig?['showStoreName']?.visible == true) {
       final fallbackStoreName = params.storeName?.isNotEmpty == true
@@ -559,25 +578,6 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
             ? _appendValueToModeLabel(label, ': $addressVal', isBilingual)
             : addressVal;
         rows.add(TextRow(addressText, scale: 0.75, isBold: true));
-      }
-    }
-
-    // Invoice Title
-    if (displayConfig?['showInvoiceTitle']?.visible == true) {
-      final invoiceTitleText = _getModeLabel(
-        displayConfig: displayConfig,
-        key: 'showInvoiceTitle',
-        isEnglish: isEnglish,
-        isBilingual: isBilingual,
-        english: appSettings?.printTitle ?? 'INVOICE',
-        arabic: 'فاتورة',
-      );
-
-      if (invoiceTitleText.isNotEmpty) {
-        rows.add(SpacingRow(_itemGap));
-        rows.add(
-            TextRow(invoiceTitleText.toUpperCase(), isBold: true, scale: 1.0));
-        rows.add(SpacingRow(_itemGap));
       }
     }
 
