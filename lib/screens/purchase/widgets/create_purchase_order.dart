@@ -2818,7 +2818,40 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
     );
   }
 
+  bool? _getSelectAllReceiveState() {
+    final unreceivedItems =
+        orderItems.where((item) => !item.alreadyReceived).toList();
+    if (unreceivedItems.isEmpty) return false;
+    final allChecked = unreceivedItems.every((item) => item.receive);
+    if (allChecked) return true;
+    final noneChecked = unreceivedItems.every((item) => !item.receive);
+    if (noneChecked) return false;
+    return null; // Tristate / Indeterminate
+  }
+
+  void _toggleSelectAllReceive(bool? value) {
+    final unreceivedItems =
+        orderItems.where((item) => !item.alreadyReceived).toList();
+    if (unreceivedItems.isEmpty) return;
+
+    final currentState = _getSelectAllReceiveState();
+    final newTargetState = currentState != true;
+
+    setState(() {
+      for (final item in unreceivedItems) {
+        item.receive = newTargetState;
+      }
+      _syncPaidAmount();
+    });
+    _saveDraftToHive();
+  }
+
   Widget _buildPurchaseListHeader() {
+    final unreceivedItems =
+        orderItems.where((item) => !item.alreadyReceived).toList();
+    final selectAllState = _getSelectAllReceiveState();
+    final hasReceivableItems = unreceivedItems.isNotEmpty;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8),
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
@@ -2828,7 +2861,36 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       ),
       child: Row(
         children: [
-          _buildPurchaseListCell("Receive", width: 100, isHeader: true),
+          _buildPurchaseListCell(
+            "",
+            width: 100,
+            isHeader: true,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (hasReceivableItems)
+                  Checkbox(
+                    value: selectAllState,
+                    tristate: true,
+                    onChanged: (val) => _toggleSelectAllReceive(val),
+                    visualDensity: VisualDensity.compact,
+                    activeColor: ColorManager.kPrimaryColor,
+                  ),
+                Flexible(
+                  child: Text(
+                    "Receive",
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s12,
+                      0.2,
+                      ColorManager.kPrimaryColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           _buildPurchaseListCell("Product", width: 220, isHeader: true),
           _buildPurchaseListCell("Unit", width: 120, isHeader: true),
           _buildPurchaseListCell("QTY", width: 100, isHeader: true),
