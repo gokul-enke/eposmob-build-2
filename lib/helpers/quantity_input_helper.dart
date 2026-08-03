@@ -18,6 +18,7 @@ const Set<String> decimalQuantityUnits = {
   'CARTOON',
   // Pack and set units configured with fractional quantities.
   'DOZEN',
+  'DZ',
   'DZN',
   'BOX 10 DZ',
   'BX 10 D',

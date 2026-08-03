@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -481,6 +482,23 @@ class CustomerProvider extends ChangeNotifier {
   Future<void> refreshAfterMutation(String accessToken) async {
     if (accessToken.trim().isEmpty) return;
     await loadAllCustomers(accessToken);
+  }
+
+  /// Starts a best-effort directory refresh without delaying the successful
+  /// customer mutation flow that requested it.
+  void refreshAfterMutationInBackground(String accessToken) {
+    final normalizedToken = accessToken.trim();
+    if (normalizedToken.isEmpty) return;
+
+    unawaited(Future<void>(() async {
+      try {
+        await refreshAfterMutation(normalizedToken);
+      } catch (error) {
+        debugPrint(
+          '[CustomerProvider] Background refresh after mutation failed: $error',
+        );
+      }
+    }));
   }
 
   //                 *********************** ADD CUSTOMER API ***************************************************

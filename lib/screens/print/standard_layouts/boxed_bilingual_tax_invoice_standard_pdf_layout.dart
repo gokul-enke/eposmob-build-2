@@ -1743,6 +1743,56 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     return parts[index];
   }
 
+  /// Keeps bilingual party names visually stable on this LTR template.
+  ///
+  /// The `pdf` package applies one direction to an entire Text/RichText
+  /// widget, so a value such as `English / العربية` cannot give both scripts
+  /// their natural direction inside a single widget. Render the two language
+  /// runs separately: English on the left in LTR and Arabic on the right in
+  /// RTL. Single-language values continue to use their detected direction.
+  pw.Widget _referencePartyNameText(
+    String text,
+    pw.TextStyle style,
+  ) {
+    final parts = text
+        .split(RegExp(r'\s*/\s*'))
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .toList();
+    final englishParts =
+        parts.where((part) => !_hasArabic(part)).toList(growable: false);
+    final arabicParts =
+        parts.where((part) => _hasArabic(part)).toList(growable: false);
+
+    if (englishParts.isEmpty || arabicParts.isEmpty) {
+      return _autoText(text, style);
+    }
+
+    return pw.Directionality(
+      textDirection: pw.TextDirection.ltr,
+      child: pw.Wrap(
+        crossAxisAlignment: pw.WrapCrossAlignment.center,
+        children: [
+          pw.Text(
+            englishParts.join(' / '),
+            style: style,
+            textDirection: pw.TextDirection.ltr,
+          ),
+          pw.Text(
+            ' / ',
+            style: style,
+            textDirection: pw.TextDirection.ltr,
+          ),
+          pw.Text(
+            arabicParts.join(' / '),
+            style: style,
+            textDirection: pw.TextDirection.rtl,
+          ),
+        ],
+      ),
+    );
+  }
+
   pw.Widget _referenceMetadataLabel(
     String english,
     String arabic,
@@ -1820,7 +1870,8 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       String english,
       String arabic,
       String value,
-      String secondaryValue
+      String secondaryValue,
+      bool isName,
     })>[
       if (showName)
         (
@@ -1828,6 +1879,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           arabic: nameLabelArabic,
           value: name,
           secondaryValue: '',
+          isName: true,
         ),
       if (showVat)
         (
@@ -1835,6 +1887,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           arabic: vatLabelArabic,
           value: vatNumber,
           secondaryValue: '',
+          isName: false,
         ),
       if (showAddress) ...[
         (
@@ -1842,30 +1895,35 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           arabic: addressLabelArabic,
           value: _referenceAddressPart(addressParts, 0),
           secondaryValue: _referenceAddressPart(secondaryAddressParts, 0),
+          isName: false,
         ),
         (
           english: 'Building No',
           arabic: 'رقم المبنى',
           value: _referenceAddressPart(addressParts, 1),
           secondaryValue: _referenceAddressPart(secondaryAddressParts, 1),
+          isName: false,
         ),
         (
           english: 'Postal Code',
           arabic: 'الرمز البريدي',
           value: _referenceAddressPart(addressParts, 2),
           secondaryValue: _referenceAddressPart(secondaryAddressParts, 2),
+          isName: false,
         ),
         (
           english: 'District',
           arabic: 'الحي',
           value: _referenceAddressPart(addressParts, 3),
           secondaryValue: _referenceAddressPart(secondaryAddressParts, 3),
+          isName: false,
         ),
         (
           english: 'City',
           arabic: 'المدينة',
           value: _referenceAddressPart(addressParts, 4),
           secondaryValue: _referenceAddressPart(secondaryAddressParts, 4),
+          isName: false,
         ),
         (
           english: 'Country',
@@ -1875,6 +1933,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           secondaryValue: secondaryAddressParts.length > 5
               ? secondaryAddressParts.sublist(5).join(', ')
               : '',
+          isName: false,
         ),
       ],
     ];
@@ -1937,7 +1996,10 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        _autoText(row.value, valueStyle),
+                        if (row.isName)
+                          _referencePartyNameText(row.value, valueStyle)
+                        else
+                          _autoText(row.value, valueStyle),
                         if (row.secondaryValue.trim().isNotEmpty &&
                             row.secondaryValue.trim() != row.value.trim())
                           _autoText(row.secondaryValue, valueStyle),

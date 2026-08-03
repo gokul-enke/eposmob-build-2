@@ -83,6 +83,7 @@ class SalesReturnCart {
   final double returnedQuantity;
   final String returnedTotal;
   final bool isReturned;
+  final String? reason;
   final int? productVariantId;
   final Map<String, dynamic>? variantAttributes;
 
@@ -96,6 +97,7 @@ class SalesReturnCart {
     required this.returnedQuantity,
     required this.returnedTotal,
     required this.isReturned,
+    this.reason,
     this.productVariantId,
     this.variantAttributes,
   });
@@ -160,6 +162,7 @@ class SalesReturnCart {
           : 0,
       returnedTotal: json['returned_total']?.toString() ?? '0',
       isReturned: _parseBool(json['is_returned'] ?? json['returned']),
+      reason: (json['reason'] ?? json['return_reason'])?.toString(),
       productVariantId: _parseNullableInt(json['product_variant_id']),
       variantAttributes: _parseVariantAttributes(json['variant_attributes']),
     );

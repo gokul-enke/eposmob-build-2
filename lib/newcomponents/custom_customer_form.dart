@@ -1237,13 +1237,15 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
 
         final customerProvider =
             Provider.of<CustomerProvider>(context, listen: false);
+        final createdPhone = phoneNumberController.text.replaceAll("-", "");
+        final createdName =
+            "${firstNameTextController.text} ${lastNameTextController.text}";
 
-        await customerProvider
-            .addCustomer(
+        final value = await customerProvider.addCustomer(
           accessToken ?? "",
-          phoneNumberController.text.replaceAll("-", ""),
+          createdPhone,
           storeId,
-          "${firstNameTextController.text} ${lastNameTextController.text}",
+          createdName,
           emailTextController.text,
           _composeAddress(),
           pincodeValue,
@@ -1259,60 +1261,44 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           customerType: customerTypeToSend,
           crNumber: crToSend,
           vatNumber: vatToSend,
-        )
-            .then((value) async {
-          if (value["status"] == "success") {
-            showScaffold(context: context, message: '${value["message"]}');
-            // Close the loading dialog first
-            Navigator.pop(context);
+        );
 
-            // Keep the shared customer directory and its local cache in sync
-            // with this successful POST before the form closes.
-            try {
-              await customerProvider.refreshAfterMutation(accessToken ?? '');
-            } catch (refreshError) {
-              debugPrint(
-                  '[CustomCustomerForm] Customer refresh after POST failed: $refreshError');
-            }
+        if (value["status"] == "success") {
+          customerProvider.refreshAfterMutationInBackground(accessToken ?? '');
+          if (!mounted) return;
 
-            if (widget.isModal) {
-              // Return the created customer's essential details to the caller
-              Navigator.pop(context, {
-                "status": "success",
-                "phone": phoneNumberController.text.replaceAll("-", ""),
-                "name":
-                    "${firstNameTextController.text} ${lastNameTextController.text}",
-                "response": value,
-              });
-            } else {
-              _clearFields();
-            }
+          showScaffold(context: context, message: '${value["message"]}');
+          // Close the loading dialog. The directory refresh continues without
+          // delaying or retaining this form's BuildContext.
+          Navigator.pop(context);
 
-            if (widget.onSuccess != null) {
-              widget.onSuccess!();
-            }
+          if (widget.isModal) {
+            Navigator.pop(context, {
+              "status": "success",
+              "phone": createdPhone,
+              "name": createdName,
+              "response": value,
+            });
           } else {
-            Map<String, dynamic> errorResponse = value['errors'] ?? {};
-            String errorMessage = "";
-
-            if (errorResponse.isNotEmpty) {
-              errorMessage = errorResponse.values.map((e) {
-                if (e is List) {
-                  return e.join(', ');
-                } else {
-                  return e.toString();
-                }
-              }).join('\n');
-            } else {
-              errorMessage =
-                  value['message']?.toString() ?? "An unknown error occurred";
-            }
-
-            showScaffoldError(context: context, message: errorMessage);
-            Navigator.pop(context);
+            _clearFields();
           }
-        });
+
+          widget.onSuccess?.call();
+          return;
+        }
+
+        if (!mounted) return;
+        final Map<String, dynamic> errorResponse = value['errors'] ?? {};
+        final String errorMessage = errorResponse.isNotEmpty
+            ? errorResponse.values.map((error) {
+                return error is List ? error.join(', ') : error.toString();
+              }).join('\n')
+            : value['message']?.toString() ?? "An unknown error occurred";
+
+        showScaffoldError(context: context, message: errorMessage);
+        Navigator.pop(context);
       } catch (error) {
+        if (!mounted) return;
         Navigator.pop(context);
         showScaffoldError(context: context, message: 'Error: $error');
       }

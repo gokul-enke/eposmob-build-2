@@ -14,6 +14,27 @@ import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/models/list_sales_return_items.dart';
 import 'sales_return_responsive.dart';
 
+String? resolveSalesReturnItemReason(
+  SalesReturnCart loadedItem,
+  Iterable<SalesReturnItem> summaryItems,
+) {
+  final endpointReason = loadedItem.reason?.trim();
+  if (endpointReason != null && endpointReason.isNotEmpty) {
+    return endpointReason;
+  }
+
+  for (final summaryItem in summaryItems) {
+    final matchesCartItem = summaryItem.cartItemId == loadedItem.cartItemId ||
+        summaryItem.cartItem.id == loadedItem.cartItemId;
+    final summaryReason = summaryItem.reason.trim();
+    if (matchesCartItem && summaryReason.isNotEmpty) {
+      return summaryReason;
+    }
+  }
+
+  return null;
+}
+
 class SalesReturnDetailModal extends StatefulWidget {
   final SalesReturnOrder order;
 
@@ -76,11 +97,12 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
         final returnedQuantity = item.returnedQuantity > 0
             ? item.returnedQuantity
             : double.tryParse(item.quantity) ?? 0;
+        final reason = resolveSalesReturnItemReason(item, order.items);
         return OrderReturnItem(
           id: item.cartItemId,
           productName: item.productName,
           quantity: returnedQuantity.toInt(),
-          reason: item.isReturned ? 'Returned' : '',
+          reason: reason ?? (item.isReturned ? 'Returned' : ''),
         );
       }).toList();
     }
@@ -483,7 +505,8 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
             final quantity = item.returnedQuantity > 0
                 ? item.returnedQuantity
                 : double.tryParse(item.quantity) ?? 0;
-            final reason = item.isReturned ? 'Returned' : '—';
+            final reason = resolveSalesReturnItemReason(item, order.items) ??
+                (item.isReturned ? 'Returned' : '—');
             return TableRow(children: [
               _buildTableValue(
                 item.productName.trim().isEmpty
