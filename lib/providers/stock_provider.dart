@@ -148,6 +148,18 @@ class StockProvider extends ChangeNotifier {
       errors['category'] = 'Category is required';
     }
 
+    final rawVariantRequired = stockItem['variantRequired'];
+    final variantRequired = rawVariantRequired == true ||
+        rawVariantRequired?.toString().trim().toLowerCase() == 'true' ||
+        rawVariantRequired?.toString().trim() == '1';
+    final rawVariantId = stockItem['productVariantId'];
+    final hasVariantId = rawVariantId != null &&
+        rawVariantId.toString().trim().isNotEmpty &&
+        rawVariantId.toString().trim() != '0';
+    if (variantRequired && !hasVariantId) {
+      errors['variant'] = 'Product variant is required';
+    }
+
     if (stockItem['quantity'] == null ||
         stockItem['quantity'].toString().isEmpty) {
       errors['quantity'] = 'Quantity is required';

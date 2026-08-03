@@ -66,9 +66,10 @@ class _SupplierTransactionReportScreenState
     super.initState();
     // Set default date values
     _setInitialDateFilters();
-    loadInitData();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _showFilters = !_isMobile(context));
+      if (!mounted) return;
+      setState(() => _showFilters = !_isMobile(context));
+      loadInitData();
     });
   }
 
@@ -91,6 +92,7 @@ class _SupplierTransactionReportScreenState
   }
 
   Future<void> loadInitData() async {
+    if (!mounted) return;
     setState(() {
       initLoading = true;
     });
@@ -106,6 +108,8 @@ class _SupplierTransactionReportScreenState
         accessToken: accessToken ?? "",
         supplierName: null,
       );
+
+      if (!mounted) return;
 
       // Get all suppliers for suggestions
       allSuppliers = supplierProvider.allSuppliers ?? [];

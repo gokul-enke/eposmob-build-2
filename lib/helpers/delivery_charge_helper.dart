@@ -50,10 +50,12 @@ double resolveDeliveryCharge(
   String? deliveryMethodId,
   String? deliveryMethodName,
 }) {
+  // Delivery-charge resolution is also used while restoring cached orders and
+  // during the earliest billing bootstrap.  Keep the helper safe for those
+  // isolated contexts, where settings may not have been mounted yet.
   final appSettings =
-      Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
-  final billingProvider =
-      Provider.of<BillingProvider>(context, listen: false);
+      Provider.of<AppSettingsProvider?>(context, listen: false)?.appSettings;
+  final billingProvider = Provider.of<BillingProvider>(context, listen: false);
   final deliveryMethodsProvider =
       Provider.of<DeliveryMethodsProvider>(context, listen: false);
   final localProductProvider =

@@ -473,6 +473,16 @@ class CustomerProvider extends ChangeNotifier {
     );
   }
 
+  /// Refresh the shared customer directory after a successful customer
+  /// mutation.  Customer forms used to create a short-lived provider, which
+  /// left the page-level provider and its Hive cache stale until a full store
+  /// bootstrap.  Keeping this operation on the shared provider makes POST
+  /// forms immediately visible to search, billing and quotation selectors.
+  Future<void> refreshAfterMutation(String accessToken) async {
+    if (accessToken.trim().isEmpty) return;
+    await loadAllCustomers(accessToken);
+  }
+
   //                 *********************** ADD CUSTOMER API ***************************************************
 
   Future<dynamic> addCustomer(

@@ -315,7 +315,8 @@ class _KitchenMasterState extends State<KitchenMaster> {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
-      debugPrint('🔑 Auth Token: ${authModel.token?.substring(0, 20)}...');
+      debugPrint(
+          'Kitchen status request access token present: ${authModel.token?.isNotEmpty == true}');
       debugPrint('🔄 Calling getCartItemStatuses API...');
 
       final response = await cartProvider.getCartItemStatuses(
@@ -608,12 +609,14 @@ class _KitchenMasterState extends State<KitchenMaster> {
       if (propsList is List) {
         try {
           final match = propsList.firstWhere(
-            (e) => (e is Map) &&
+            (e) =>
+                (e is Map) &&
                 (e['code'] ?? e['props_code'])?.toString().toUpperCase() ==
                     'ORDER_TOKEN_NUMBER',
             orElse: () => null,
           );
-          if (match is Map && (match['value'] ?? match['props_value']) != null) {
+          if (match is Map &&
+              (match['value'] ?? match['props_value']) != null) {
             tokenNumber = (match['value'] ?? match['props_value']).toString();
           }
         } catch (_) {}
@@ -1352,7 +1355,8 @@ class _KitchenMasterState extends State<KitchenMaster> {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
-      debugPrint('🔑 Auth Token: ${authModel.token?.substring(0, 20)}...');
+      debugPrint(
+          'Kitchen status update access token present: ${authModel.token?.isNotEmpty == true}');
       debugPrint('🔄 Calling updateCartItemStatus API...');
 
       final response = await cartProvider.updateCartItemStatus(
@@ -1528,8 +1532,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
         'unitPrice': '0.00',
         'totalPrice': '0.00',
         'mrp': '0.00',
-        if (item.notes != null && item.notes!.isNotEmpty)
-          'notes': item.notes,
+        if (item.notes != null && item.notes!.isNotEmpty) 'notes': item.notes,
       });
     }
 
@@ -2480,73 +2483,10 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: _getStatusColor(actualOrderStatus),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '${order.id} - ${order.tableId}',
-                              style: buildCustomStyle(FontWeightManager.bold,
-                                  FontSize.s16, 0.21, Colors.white),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          // Print Button
-                          IconButton(
-                            icon: const Icon(
-                              Icons.print,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                            onPressed: () => widget.onPrintOrder(order),
-                            tooltip: 'Print KOT',
-                          ),
-                          const Spacer(),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: _getStatusColor(actualOrderStatus),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  _getStatusText(actualOrderStatus)
-                                      .toUpperCase(),
-                                  style: buildCustomStyle(
-                                      FontWeightManager.bold,
-                                      FontSize.s10,
-                                      0.21,
-                                      Colors.white),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  '${timeSinceOrder.inMinutes}m ago',
-                                  style: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s12,
-                                      0.21,
-                                      const Color(0xFF64748B)),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                      _buildOrderSummaryHeader(
+                        order,
+                        actualOrderStatus,
+                        timeSinceOrder,
                       ),
                       if (order.notes != null && order.notes!.isNotEmpty) ...[
                         const SizedBox(height: 12),
@@ -2598,6 +2538,97 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildOrderSummaryHeader(
+    KitchenOrder order,
+    OrderStatus actualOrderStatus,
+    Duration timeSinceOrder,
+  ) {
+    final orderLabel = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: _getStatusColor(actualOrderStatus),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        '${order.id} - ${order.tableId}',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: buildCustomStyle(
+            FontWeightManager.bold, FontSize.s16, 0.21, Colors.white),
+      ),
+    );
+
+    final printButton = IconButton(
+      icon: const Icon(Icons.print, color: Colors.white, size: 24),
+      onPressed: () => widget.onPrintOrder(order),
+      tooltip: 'Print KOT',
+    );
+
+    final statusSummary = Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: _getStatusColor(actualOrderStatus),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            _getStatusText(actualOrderStatus).toUpperCase(),
+            style: buildCustomStyle(
+                FontWeightManager.bold, FontSize.s10, 0.21, Colors.white),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            '${timeSinceOrder.inMinutes}m ago',
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
+                0.21, const Color(0xFF64748B)),
+          ),
+        ),
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 520) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: orderLabel),
+                  printButton,
+                ],
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: statusSummary,
+              ),
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            orderLabel,
+            const SizedBox(width: 12),
+            printButton,
+            const Spacer(),
+            statusSummary,
+          ],
+        );
+      },
     );
   }
 
@@ -3124,13 +3155,17 @@ class _KitchenStatsPanel extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  'Kitchen Stats',
-                  style: buildCustomStyle(
-                      FontWeightManager.bold,
-                      isCompact ? FontSize.s16 : FontSize.s18,
-                      0.30,
-                      const Color(0xFF1E293B)),
+                Flexible(
+                  child: Text(
+                    'Kitchen Stats',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                        FontWeightManager.bold,
+                        isCompact ? FontSize.s16 : FontSize.s18,
+                        0.30,
+                        const Color(0xFF1E293B)),
+                  ),
                 ),
               ],
             ),

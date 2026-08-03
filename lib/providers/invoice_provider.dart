@@ -512,7 +512,7 @@ class InvoiceProvider extends ChangeNotifier {
     }
   }
 
-  void resetFilters({bool reload = true}) {
+  void resetFilters({bool reload = true, bool notify = true}) {
     _filterName = null;
     _filterInvoiceNumber = null;
     _filterFromDate = null;
@@ -531,7 +531,7 @@ class InvoiceProvider extends ChangeNotifier {
           page: 1,
         ),
       );
-    } else {
+    } else if (notify) {
       notifyListeners();
     }
   }

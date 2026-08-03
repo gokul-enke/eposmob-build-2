@@ -85,12 +85,20 @@ class Quotation {
   });
 
   factory Quotation.fromJson(Map<String, dynamic> json) {
+    final rawCustomer = json['customer'];
+    final customerMap =
+        rawCustomer is Map ? Map<String, dynamic>.from(rawCustomer) : null;
+    final customerName = customerMap?['name']?.toString() ??
+        (rawCustomer is String ? rawCustomer : null) ??
+        json['customer_name']?.toString();
+    final customerPhone =
+        customerMap?['phone']?.toString() ?? json['customer_phone']?.toString();
     return Quotation(
       id: json['id'],
       quotationNumber: json['quotation_number']?.toString(),
-      customerId: _parseInt(json['customer_id']),
-      customer: json['customer']?.toString(),
-      customerPhone: json['customer_phone']?.toString(),
+      customerId: _parseInt(json['customer_id'] ?? customerMap?['id']),
+      customer: customerName,
+      customerPhone: customerPhone,
       store: json['store']?.toString(),
       quotationDate: json['quotation_date']?.toString(),
       expiryDate: json['expiry_date']?.toString(),
@@ -174,13 +182,33 @@ class QuotationDetailsData {
     final dynamic deliveryMethodData = json['delivery_method'];
     final Map<String, dynamic>? deliveryMethodMap =
         deliveryMethodData is Map<String, dynamic> ? deliveryMethodData : null;
+    final rawCustomer = json['customer'];
+    final customerMap =
+        rawCustomer is Map ? Map<String, dynamic>.from(rawCustomer) : null;
+    final customerName = customerMap?['name']?.toString() ??
+        (rawCustomer is String ? rawCustomer : null) ??
+        json['customer_name']?.toString();
+    final customerPhone =
+        customerMap?['phone']?.toString() ?? json['customer_phone']?.toString();
+    final quotationCustomer = customerMap != null
+        ? QuotationCustomer.fromJson({
+            ...customerMap,
+            if (json['customer_id'] != null && customerMap['id'] == null)
+              'id': json['customer_id'],
+          })
+        : (customerName != null || customerPhone != null
+            ? QuotationCustomer(
+                id: _parseInt(json['customer_id']),
+                name: customerName,
+                phone: customerPhone,
+                isInline: true,
+              )
+            : null);
     return QuotationDetailsData(
       id: json['id'],
       quotationNumber: json['quotation_number']?.toString(),
       status: json['status']?.toString(),
-      customer: json['customer'] != null
-          ? QuotationCustomer.fromJson(json['customer'])
-          : null,
+      customer: quotationCustomer,
       store:
           json['store'] != null ? QuotationStore.fromJson(json['store']) : null,
       address: json['address'],
@@ -217,10 +245,17 @@ class QuotationCustomer {
   QuotationCustomer({this.id, this.name, this.phone, this.isInline = false});
 
   factory QuotationCustomer.fromJson(Map<String, dynamic> json) {
+    final user = json['user'] is Map
+        ? Map<String, dynamic>.from(json['user'] as Map)
+        : null;
     return QuotationCustomer(
       id: _parseInt(json['id']),
-      name: json['name']?.toString(),
-      phone: json['phone']?.toString(),
+      name: json['name']?.toString() ??
+          json['customer_name']?.toString() ??
+          user?['name']?.toString(),
+      phone: json['phone']?.toString() ??
+          json['customer_phone']?.toString() ??
+          user?['phone']?.toString(),
       isInline: json['is_inline'] == true,
     );
   }

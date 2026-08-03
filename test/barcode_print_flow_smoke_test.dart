@@ -79,7 +79,9 @@ void main() {
     expect(BarcodeStickerImageRenderer.reservedBarcodeHeight(20), 20);
   });
 
-  test('BarcodeRow.toProductForPrint copies correct prices and updates names with suffixes', () {
+  test(
+      'BarcodeRow.toProductForPrint copies correct prices and updates names with suffixes',
+      () {
     final baseProduct = GetProduct(
       productName: 'Keyboard',
       barcode: '111111',
@@ -129,15 +131,24 @@ void main() {
       productName: 'Keyboard',
       barcode: '111111',
       stock: [
-        Stock(id: 1, productVariantId: 10, pkgMfg: '2026-01-01', expiryDate: '2027-01-01'),
-        Stock(id: 2, productVariantId: 20, pkgMfg: '2026-02-01', expiryDate: '2027-02-01'),
+        Stock(
+            id: 1,
+            productVariantId: 10,
+            pkgMfg: '2026-01-01',
+            expiryDate: '2027-01-01'),
+        Stock(
+            id: 2,
+            productVariantId: 20,
+            pkgMfg: '2026-02-01',
+            expiryDate: '2027-02-01'),
       ],
     );
 
-    // 1. Base row case: stock list should remain unfiltered (length 2)
+    // 1. Base row case: variant-owned batches must not bleed into the base
+    // row, even when the API did not include the variant catalog payload.
     final baseRow = BarcodeRow(product: baseProduct);
     final basePrint = baseRow.toProductForPrint();
-    expect(basePrint.stock?.length, 2);
+    expect(basePrint.stock, isEmpty);
 
     // 2. Variant row case: stock list should only contain entries with matching productVariantId
     final variant = ProductVariant(

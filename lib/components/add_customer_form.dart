@@ -6,6 +6,7 @@ import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/location_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:provider/provider.dart';
 
 import '../components/build_container_box.dart';
@@ -68,12 +69,17 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
     }
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       debugPrint('🚀 [AddCustomerForm] START: Initializing location data...');
-      final locationProvider = Provider.of<LocationProvider>(context, listen: false);
-      final purchaseProvider = Provider.of<PurchaseProvider>(context, listen: false);
-      final sharedPrefProvider = Provider.of<SharedPreferenceProvider>(context, listen: false);
-      String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+      final locationProvider =
+          Provider.of<LocationProvider>(context, listen: false);
+      final purchaseProvider =
+          Provider.of<PurchaseProvider>(context, listen: false);
+      final sharedPrefProvider =
+          Provider.of<SharedPreferenceProvider>(context, listen: false);
+      String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
 
-      debugPrint('🔑 [AddCustomerForm] Token exists: ${accessToken != null && accessToken.isNotEmpty}');
+      debugPrint(
+          '🔑 [AddCustomerForm] Token exists: ${accessToken != null && accessToken.isNotEmpty}');
 
       if (accessToken == null) {
         debugPrint('⚠️ [AddCustomerForm] EXIT: No access token found.');
@@ -82,17 +88,21 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
 
       // Fetch states
       await locationProvider.listAllStates(accessToken);
-      debugPrint('📊 [AddCustomerForm] States in list: ${locationProvider.stateList.length}');
+      debugPrint(
+          '📊 [AddCustomerForm] States in list: ${locationProvider.stateList.length}');
       if (locationProvider.stateList.isNotEmpty) {
-        debugPrint('   - First State: ${locationProvider.stateList.first.key} (${locationProvider.stateList.first.value})');
+        debugPrint(
+            '   - First State: ${locationProvider.stateList.first.key} (${locationProvider.stateList.first.value})');
       }
 
       // Get activeStoreId from storage
       final activeStoreId = await sharedPrefProvider.getActiveStoreId();
-      debugPrint('🔑 [AddCustomerForm] active_store_id from storage: $activeStoreId');
+      debugPrint(
+          '🔑 [AddCustomerForm] active_store_id from storage: $activeStoreId');
 
       // Inspect storeList
-      debugPrint('🏬 [AddCustomerForm] purchaseProvider.storeList items: ${purchaseProvider.storeList.length}');
+      debugPrint(
+          '🏬 [AddCustomerForm] purchaseProvider.storeList items: ${purchaseProvider.storeList.length}');
       for (var s in purchaseProvider.storeList.take(5)) {
         debugPrint('   - Store [ID: ${s.id}, Name: ${s.name}]');
       }
@@ -102,19 +112,24 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
         final currentStore = purchaseProvider.storeList.firstWhere(
           (s) => s.id == activeStoreId,
           orElse: () {
-            debugPrint('⚠️ [AddCustomerForm] Store ID $activeStoreId NOT FOUND in list. Fallback to first.');
+            debugPrint(
+                '⚠️ [AddCustomerForm] Store ID $activeStoreId NOT FOUND in list. Fallback to first.');
             return purchaseProvider.storeList.first;
           },
         );
 
-        debugPrint('🏪 [AddCustomerForm] SELECTED STORE: ${currentStore.name} (ID: ${currentStore.id})');
-        debugPrint('📍 [AddCustomerForm] METADATA: stateId=${currentStore.stateId}, districtId=${currentStore.districtId}, pincodeId=${currentStore.pincodeId}');
+        debugPrint(
+            '🏪 [AddCustomerForm] SELECTED STORE: ${currentStore.name} (ID: ${currentStore.id})');
+        debugPrint(
+            '📍 [AddCustomerForm] METADATA: stateId=${currentStore.stateId}, districtId=${currentStore.districtId}, pincodeId=${currentStore.pincodeId}');
 
         if (currentStore.stateId != null) {
           final stateIdStr = currentStore.stateId.toString();
-          bool stateExists = locationProvider.stateList.any((s) => s.key == stateIdStr);
-          
-          debugPrint('🏁 [AddCustomerForm] Matching State ID [$stateIdStr] in States List? $stateExists');
+          bool stateExists =
+              locationProvider.stateList.any((s) => s.key == stateIdStr);
+
+          debugPrint(
+              '🏁 [AddCustomerForm] Matching State ID [$stateIdStr] in States List? $stateExists');
 
           if (stateExists) {
             setState(() {
@@ -123,17 +138,21 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
               stateDropdownKey = UniqueKey();
             });
 
-            debugPrint('🌆 [AddCustomerForm] Fetching Districts for State: $selectedStateId');
+            debugPrint(
+                '🌆 [AddCustomerForm] Fetching Districts for State: $selectedStateId');
             await locationProvider.listAllDistricts(
               stateId: selectedStateId!,
               accessToken: accessToken,
             );
-            debugPrint('📊 [AddCustomerForm] Districts in list: ${locationProvider.districtList.length}');
+            debugPrint(
+                '📊 [AddCustomerForm] Districts in list: ${locationProvider.districtList.length}');
 
             if (currentStore.districtId != null) {
               final districtIdStr = currentStore.districtId.toString();
-              bool districtExists = locationProvider.districtList.any((d) => d.key == districtIdStr);
-              debugPrint('🏁 [AddCustomerForm] Matching District ID [$districtIdStr] in Districts List? $districtExists');
+              bool districtExists = locationProvider.districtList
+                  .any((d) => d.key == districtIdStr);
+              debugPrint(
+                  '🏁 [AddCustomerForm] Matching District ID [$districtIdStr] in Districts List? $districtExists');
 
               if (districtExists) {
                 setState(() {
@@ -143,18 +162,22 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
                   districtDropdownKey = UniqueKey();
                 });
 
-                debugPrint('🏘️ [AddCustomerForm] Fetching Pincodes for District: $selectedDistrictId');
+                debugPrint(
+                    '🏘️ [AddCustomerForm] Fetching Pincodes for District: $selectedDistrictId');
                 await locationProvider.listAllPincodes(
                   districtId: selectedDistrictId!,
                   accessToken: accessToken,
                 );
-                debugPrint('📊 [AddCustomerForm] Pincodes in list: ${locationProvider.pincodeList.length}');
+                debugPrint(
+                    '📊 [AddCustomerForm] Pincodes in list: ${locationProvider.pincodeList.length}');
 
                 if (currentStore.pincodeId != null) {
                   final pincodeIdStr = currentStore.pincodeId.toString();
-                  bool pincodeExists = locationProvider.pincodeList.any((p) => p.key == pincodeIdStr);
-                  debugPrint('🏁 [AddCustomerForm] Matching Pincode ID [$pincodeIdStr] in Pincodes List? $pincodeExists');
-                  
+                  bool pincodeExists = locationProvider.pincodeList
+                      .any((p) => p.key == pincodeIdStr);
+                  debugPrint(
+                      '🏁 [AddCustomerForm] Matching Pincode ID [$pincodeIdStr] in Pincodes List? $pincodeExists');
+
                   if (pincodeExists) {
                     setState(() {
                       selectedPincodeId = pincodeIdStr;
@@ -162,14 +185,16 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
                       pincodeDropdownKey = UniqueKey();
                     });
                   } else {
-                    debugPrint('⚠️ [AddCustomerForm] Pincode ID not found in list.');
+                    debugPrint(
+                        '⚠️ [AddCustomerForm] Pincode ID not found in list.');
                     setState(() => isLoadingPincodes = false);
                   }
                 } else {
                   setState(() => isLoadingPincodes = false);
                 }
               } else {
-                debugPrint('⚠️ [AddCustomerForm] District ID not found in list.');
+                debugPrint(
+                    '⚠️ [AddCustomerForm] District ID not found in list.');
                 setState(() => isLoadingDistricts = false);
               }
             } else {
@@ -180,7 +205,8 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
           debugPrint('⚠️ [AddCustomerForm] currentStore.stateId is NULL.');
         }
       } else {
-        debugPrint('⚠️ [AddCustomerForm] SKIPPING AUTOFILL: storeList is empty or activeStoreId is null.');
+        debugPrint(
+            '⚠️ [AddCustomerForm] SKIPPING AUTOFILL: storeList is empty or activeStoreId is null.');
       }
       debugPrint('🏁 [AddCustomerForm] END: Initialization complete.');
     });
@@ -293,7 +319,8 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
             children: [
               Expanded(
                 child: widget.isModal
-                    ? _buildStateDropdownWithSearch(size, locationProvider, accessToken)
+                    ? _buildStateDropdownWithSearch(
+                        size, locationProvider, accessToken)
                     : _buildStateDropdown(size, locationProvider, accessToken),
               ),
               const SizedBox(width: 10),
@@ -326,7 +353,8 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
                   balanceTextController,
                   TextInputType.number,
                   size,
-                  inputFormatter: FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+                  inputFormatter: FilteringTextInputFormatter.allow(
+                      RegExp(r'^\d*\.?\d{0,2}$')),
                 ),
               ),
               const SizedBox(width: 10),
@@ -354,8 +382,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
       int minLines = 1,
       String? hintText}) {
     final isMultiline = maxLines > 1;
-    final fieldHeight =
-        isMultiline ? size.height * .12 : size.height * .07;
+    final fieldHeight = isMultiline ? size.height * .12 : size.height * .07;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,14 +391,14 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
           children: [
             BuildTextTile(
               title: title,
-              textStyle: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                  0.27, Colors.black.withOpacity(0.6)),
+              textStyle: buildCustomStyle(FontWeightManager.regular,
+                  FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
             ),
             if (isRequired)
               Text(
                 ' *',
-                style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                    0.27, Colors.red),
+                style: buildCustomStyle(
+                    FontWeightManager.regular, FontSize.s14, 0.27, Colors.red),
               ),
           ],
         ),
@@ -460,7 +487,8 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
     );
   }
 
-  Widget _buildDistrictDropdownWithSearch(Size size, LocationProvider locationProvider) {
+  Widget _buildDistrictDropdownWithSearch(
+      Size size, LocationProvider locationProvider) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -780,13 +808,13 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
           children: [
             BuildTextTile(
               title: "Payment Type",
-              textStyle: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                  0.27, Colors.black.withOpacity(0.6)),
+              textStyle: buildCustomStyle(FontWeightManager.regular,
+                  FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
             ),
             Text(
               ' *',
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                  0.27, Colors.red),
+              style: buildCustomStyle(
+                  FontWeightManager.regular, FontSize.s14, 0.27, Colors.red),
             ),
           ],
         ),
@@ -825,8 +853,8 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
         ),
         Text(
           title,
-          style: buildCustomStyle(FontWeightManager.regular, FontSize.s12,
-              0.27, ColorManager.textColor.withOpacity(.7)),
+          style: buildCustomStyle(FontWeightManager.regular, FontSize.s12, 0.27,
+              ColorManager.textColor.withOpacity(.7)),
         ),
       ],
     );
@@ -883,11 +911,13 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
     }
   }
 
-  Future<void> _submitForm(LocationProvider locationProvider, String? accessToken) async {
+  Future<void> _submitForm(
+      LocationProvider locationProvider, String? accessToken) async {
     if (_formKey.currentState!.validate()) {
       // Validate payment type
       if (selectedPaymentType == PaymentType.none) {
-        showScaffoldError(context: context, message: "Please select a payment type");
+        showScaffoldError(
+            context: context, message: "Please select a payment type");
         return;
       }
 
@@ -931,11 +961,21 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
           paymentStatus = 'to_receive';
         }
 
-        await CustomerProvider()
+        final customerProvider =
+            Provider.of<CustomerProvider>(context, listen: false);
+        final storeProvider =
+            Provider.of<StoreSessionProvider>(context, listen: false);
+        final persistedStoreId =
+            await SharedPreferenceProvider().getActiveStoreId();
+        final storeId =
+            (storeProvider.activeStore?.storeId ?? persistedStoreId ?? 1)
+                .toString();
+
+        await customerProvider
             .addCustomer(
           accessToken ?? "",
           phoneNumberController.text.replaceAll("-", ""),
-          "1",
+          storeId,
           "${firstNameTextController.text} ${lastNameTextController.text}",
           emailTextController.text,
           _composeAddress(),
@@ -947,46 +987,54 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
           balance: balanceTextController.text.trim(),
           paymentType: paymentStatus,
         )
-            .then((value) {
+            .then((value) async {
           if (value["status"] == "success") {
-            showScaffold(
-                context: context, message: '${value["message"]}');
+            showScaffold(context: context, message: '${value["message"]}');
             // Close the loading dialog first
             Navigator.pop(context);
-            
+
+            // Refresh the shared provider so the newly-created customer is
+            // searchable immediately after the POST succeeds.
+            try {
+              await customerProvider.refreshAfterMutation(accessToken ?? '');
+            } catch (refreshError) {
+              debugPrint(
+                  '[AddCustomerForm] Customer refresh after POST failed: $refreshError');
+            }
+
             if (widget.isModal) {
               // Return the created customer's essential details to the caller
               Navigator.pop(context, {
                 "status": "success",
                 "phone": phoneNumberController.text.replaceAll("-", ""),
-                "name": "${firstNameTextController.text} ${lastNameTextController.text}",
+                "name":
+                    "${firstNameTextController.text} ${lastNameTextController.text}",
                 "response": value,
               });
             } else {
               _clearFields();
             }
-            
+
             if (widget.onSuccess != null) {
               widget.onSuccess!();
             }
           } else {
             Map<String, dynamic> errorResponse = value['errors'] ?? {};
             String errorMessage = "";
-            
+
             if (errorResponse.isNotEmpty) {
-              errorMessage = errorResponse.values
-                  .map((e) {
-                    if (e is List) {
-                      return e.join(', ');
-                    } else {
-                      return e.toString();
-                    }
-                  })
-                  .join('\n');
+              errorMessage = errorResponse.values.map((e) {
+                if (e is List) {
+                  return e.join(', ');
+                } else {
+                  return e.toString();
+                }
+              }).join('\n');
             } else {
-              errorMessage = value['message']?.toString() ?? "An unknown error occurred";
+              errorMessage =
+                  value['message']?.toString() ?? "An unknown error occurred";
             }
-            
+
             showScaffoldError(context: context, message: errorMessage);
             Navigator.pop(context);
           }

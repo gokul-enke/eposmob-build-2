@@ -318,6 +318,8 @@ class BillingPageState extends State<BillingPage>
   VoidCallback? _paymentMethodListener;
 
   void _syncStockEnabledSetting() {
+    if (!mounted) return;
+
     final generalSettingsProvider =
         Provider.of<GeneralSettingsProvider>(context, listen: false);
     final localProductProvider =
@@ -9693,12 +9695,16 @@ class BillingPageState extends State<BillingPage>
 
     // Listen for delivery methods to be loaded and update default
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
       final deliveryMethodsProvider =
           Provider.of<DeliveryMethodsProvider>(context, listen: false);
       final appSettingsProvider =
           Provider.of<AppSettingsProvider>(context, listen: false);
 
       void updateDeliveryMethod() {
+        if (!mounted) return;
+
         if (!deliveryMethodsProvider.isLoading &&
             deliveryMethodsProvider.deliveryMethods.isNotEmpty) {
           // 1. Try App Settings Default
@@ -9765,10 +9771,14 @@ class BillingPageState extends State<BillingPage>
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
       final appSettingsProvider =
           Provider.of<AppSettingsProvider>(context, listen: false);
 
       void updatePaymentMethod() {
+        if (!mounted) return;
+
         setState(() {
           _applyDefaultPaymentMethod();
         });

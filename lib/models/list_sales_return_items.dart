@@ -23,14 +23,22 @@ class SalesReturnItemsResponse {
           .map((item) => SalesReturnCart.fromJson(item))
           .toList();
     } else if (json['data'] is Map) {
-      if (json['data']['items'] is List) {
-        salesReturnItems = (json['data']['items'] as List)
-            .map((item) => SalesReturnCart.fromJson(item))
-            .toList();
+      final data = Map<String, dynamic>.from(json['data'] as Map);
+      final rawItems = data['items'] ??
+          data['return_items'] ??
+          data['sales_return_items'] ??
+          data['data'];
+      if (rawItems is List) {
+        salesReturnItems =
+            rawItems.map((item) => SalesReturnCart.fromJson(item)).toList();
       }
-      if (json['data']['order'] is Map) {
-        orderInfo = SalesReturnOrderInfo.fromJson(json['data']['order']);
+      if (data['order'] is Map) {
+        orderInfo = SalesReturnOrderInfo.fromJson(data['order']);
       }
+    }
+
+    if (orderInfo == null && json['order'] is Map) {
+      orderInfo = SalesReturnOrderInfo.fromJson(json['order']);
     }
 
     return SalesReturnItemsResponse(
@@ -53,9 +61,14 @@ class SalesReturnOrderInfo {
 
   factory SalesReturnOrderInfo.fromJson(Map<String, dynamic> json) {
     return SalesReturnOrderInfo(
-      id: json['id'],
+      id: _parseInt(json['id']),
       shippingCost: json['shipping_cost']?.toString() ?? '0.00',
     );
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value is int) return value;
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 }
 
@@ -124,20 +137,42 @@ class SalesReturnCart {
   }
 
   factory SalesReturnCart.fromJson(Map<String, dynamic> json) {
+    final product = json['product'] is Map
+        ? Map<String, dynamic>.from(json['product'] as Map)
+        : const <String, dynamic>{};
+
     return SalesReturnCart(
-      cartItemId: json['cart_item_id'],
-      returnOrderId: json['return_order_id'] ?? 0,
-      productName: json['product_name'],
-      quantity: json['quantity'],
-      unitPrice: json['unit_price'].toString(),
-      totalPrice: json['total_price'].toString(),
+      cartItemId: _parseInt(json['cart_item_id'] ?? json['id']),
+      returnOrderId: _parseInt(json['return_order_id']),
+      productName: (json['product_name'] ??
+                  product['name'] ??
+                  product['product_name'] ??
+                  json['name'] ??
+                  json['item_name'])
+              ?.toString() ??
+          '',
+      quantity: json['quantity']?.toString() ?? '0',
+      unitPrice: (json['unit_price'] ?? json['price'] ?? '0.00').toString(),
+      totalPrice:
+          (json['total_price'] ?? json['line_total'] ?? '0.00').toString(),
       returnedQuantity: json['returned_quantity'] != null
           ? double.tryParse(json['returned_quantity'].toString()) ?? 0
           : 0,
       returnedTotal: json['returned_total']?.toString() ?? '0',
-      isReturned: json['is_returned'],
+      isReturned: _parseBool(json['is_returned'] ?? json['returned']),
       productVariantId: _parseNullableInt(json['product_variant_id']),
       variantAttributes: _parseVariantAttributes(json['variant_attributes']),
     );
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value is int) return value;
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static bool _parseBool(dynamic value) {
+    if (value is bool) return value;
+    final normalized = value?.toString().toLowerCase();
+    return normalized == 'true' || normalized == '1' || normalized == 'yes';
   }
 }
