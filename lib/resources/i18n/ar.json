@@ -2,6 +2,12 @@
   "app": {
     "title": "كلاود بوس"
   },
+  "pagination": {
+    "previous": "السابق",
+    "next": "التالي",
+    "page": "صفحة",
+    "of": "من"
+  },
   "general": {
     "ok": "حسنا",
     "cancel": "إلغاء",
@@ -374,5 +380,37 @@
     "select_customer_placeholder": "اختر عميل",
     "select_payment": "اختر طريقة الدفع",
     "select_delivery": "اختر طريقة التوصيل"
+  },
+  "sales": {
+    "orders_list": "قائمة الطلبات",
+    "online_orders_list": "قائمة الطلبات الإلكترونية",
+    "order_number_short": "رقم الطلب",
+    "order_number_hint": "رقم الطلب",
+    "customer_name_hint": "اسم العميل",
+    "phone": "الهاتف",
+    "from_date": "من تاريخ",
+    "to_date": "إلى تاريخ",
+    "business_date": "تاريخ العمل",
+    "price": "السعر",
+    "status": "الحالة",
+    "select_status": "اختر الحالة",
+    "reset_filters": "إعادة تعيين الفلاتر",
+    "hide_filters": "إخفاء الفلاتر",
+    "show_filters": "إظهار الفلاتر",
+    "si_no": "الرقم التسلسلي",
+    "date_col": "التاريخ",
+    "items_col": "العناصر",
+    "amount_col": "المبلغ",
+    "loading_orders": "جارٍ تحميل الطلبات...",
+    "no_orders_available": "لا توجد طلبات متاحة",
+    "no_orders_match_filters": "لا توجد طلبات مطابقة للفلاتر",
+    "no_online_orders": "لا توجد طلبات إلكترونية متاحة",
+    "try_adjusting_filters": "حاول تعديل الفلاتر أو مسحها.",
+    "orders_appear_here": "ستظهر الطلبات هنا بمجرد تقديمها.",
+    "no_orders_found": "لم يتم العثور على طلبات",
+    "status_new": "جديد",
+    "status_pending": "معلق",
+    "status_confirmed": "مؤكد",
+    "status_cancelled": "ملغى"
   }
 }

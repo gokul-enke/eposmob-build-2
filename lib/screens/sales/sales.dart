@@ -1262,7 +1262,7 @@ Powered by CloudPOS''',
 
         Widget buildStatusDropdown() {
           return buildFilterField(
-            label: "Status",
+            label: 'sales.status'.tr,
             child: SizedBox(
               height: 45,
               child: BuildBoxShadowContainer(
@@ -1282,7 +1282,7 @@ Powered by CloudPOS''',
                   isExpanded: true,
                   dropdownColor: Colors.white,
                   hint: Text(
-                    'Select Status',
+                    'sales.select_status'.tr,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: buildCustomStyle(
@@ -1296,7 +1296,7 @@ Powered by CloudPOS''',
                     DropdownMenuItem<String>(
                       value: null,
                       child: Text(
-                        'All',
+                        'common.all'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.medium,
                           FontSize.s10,
@@ -1309,7 +1309,7 @@ Powered by CloudPOS''',
                       return DropdownMenuItem<String>(
                         value: status,
                         child: Text(
-                          status.toUpperCase(),
+                          _statusLabel(status),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: buildCustomStyle(
@@ -1344,25 +1344,25 @@ Powered by CloudPOS''',
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               buildTextFilter(
-                label: "Order #",
-                hint: 'Order Number',
+                label: 'sales.order_number_short'.tr,
+                hint: 'sales.order_number_hint'.tr,
                 controller: orderNumberController,
               ),
               const SizedBox(height: 12),
               buildTextFilter(
-                label: "Customer",
-                hint: 'Customer Name',
+                label: 'billing.customer'.tr,
+                hint: 'sales.customer_name_hint'.tr,
                 controller: customerNameController,
               ),
               const SizedBox(height: 12),
               buildTextFilter(
-                label: "Phone",
-                hint: 'Phone',
+                label: 'sales.phone'.tr,
+                hint: 'sales.phone'.tr,
                 controller: phoneController,
               ),
               const SizedBox(height: 12),
               buildFilterField(
-                label: "From Date",
+                label: 'sales.from_date'.tr,
                 child: BuildBoxShadowContainer(
                   circleRadius: 10,
                   height: 45,
@@ -1384,7 +1384,7 @@ Powered by CloudPOS''',
               ),
               const SizedBox(height: 12),
               buildFilterField(
-                label: "To Date",
+                label: 'sales.to_date'.tr,
                 child: BuildBoxShadowContainer(
                   circleRadius: 10,
                   height: 45,
@@ -1406,7 +1406,7 @@ Powered by CloudPOS''',
               ),
               const SizedBox(height: 12),
               buildFilterField(
-                label: "Business Date",
+                label: 'sales.business_date'.tr,
                 child: BuildBoxShadowContainer(
                   circleRadius: 10,
                   height: 45,
@@ -1426,15 +1426,15 @@ Powered by CloudPOS''',
               ),
               const SizedBox(height: 12),
               buildTextFilter(
-                label: "Price",
-                hint: 'Price',
+                label: 'sales.price'.tr,
+                hint: 'sales.price'.tr,
                 controller: amountController,
               ),
               const SizedBox(height: 12),
               buildStatusDropdown(),
               const SizedBox(height: 16),
               CustomRoundButton(
-                title: "Reset Filters",
+                title: 'sales.reset_filters'.tr,
                 boxColor: Colors.white,
                 textColor: ColorManager.kPrimaryColor,
                 fct: resetSearch,
@@ -1454,16 +1454,16 @@ Powered by CloudPOS''',
               children: [
                 Expanded(
                   child: buildTextFilter(
-                    label: "Order #",
-                    hint: 'Order Number',
+                    label: 'sales.order_number_short'.tr,
+                    hint: 'sales.order_number_hint'.tr,
                     controller: orderNumberController,
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: buildTextFilter(
-                    label: "Customer",
-                    hint: 'Customer Name',
+                    label: 'billing.customer'.tr,
+                    hint: 'sales.customer_name_hint'.tr,
                     controller: customerNameController,
                   ),
                 ),
@@ -1475,8 +1475,8 @@ Powered by CloudPOS''',
               children: [
                 Expanded(
                   child: buildTextFilter(
-                    label: "Phone",
-                    hint: 'Phone',
+                    label: 'sales.phone'.tr,
+                    hint: 'sales.phone'.tr,
                     controller: phoneController,
                   ),
                 ),
@@ -1486,7 +1486,7 @@ Powered by CloudPOS''',
                     children: [
                       Expanded(
                         child: buildFilterField(
-                          label: "From Date",
+                          label: 'sales.from_date'.tr,
                           child: BuildBoxShadowContainer(
                             circleRadius: 10,
                             height: 45,
@@ -1510,7 +1510,7 @@ Powered by CloudPOS''',
                       const SizedBox(width: 10),
                       Expanded(
                         child: buildFilterField(
-                          label: "To Date",
+                          label: 'sales.to_date'.tr,
                           child: BuildBoxShadowContainer(
                             circleRadius: 10,
                             height: 45,
@@ -1542,7 +1542,7 @@ Powered by CloudPOS''',
               children: [
                 Expanded(
                   child: buildFilterField(
-                    label: "Business Date",
+                    label: 'sales.business_date'.tr,
                     child: BuildBoxShadowContainer(
                       circleRadius: 10,
                       height: 45,
@@ -1567,15 +1567,15 @@ Powered by CloudPOS''',
             ),
             const SizedBox(height: 12),
             buildTextFilter(
-              label: "Price",
-              hint: 'Price',
+              label: 'sales.price'.tr,
+              hint: 'sales.price'.tr,
               controller: amountController,
             ),
             const SizedBox(height: 12),
             buildStatusDropdown(),
             const SizedBox(height: 16),
             CustomRoundButton(
-              title: "Reset Filters",
+              title: 'sales.reset_filters'.tr,
               boxColor: Colors.white,
               textColor: ColorManager.kPrimaryColor,
               fct: resetSearch,
@@ -1657,7 +1657,7 @@ Powered by CloudPOS''',
       debugPrint('Stack trace: $stackTrace');
       showScaffoldError(
         context: context,
-        message: 'No Orders Found',
+        message: 'sales.no_orders_found'.tr,
       );
     } finally {
       setState(() {
@@ -1736,6 +1736,21 @@ Powered by CloudPOS''',
     );
   }
 
+  String _statusLabel(String status) {
+    switch (status.toLowerCase()) {
+      case 'new':
+        return 'sales.status_new'.tr;
+      case 'pending':
+        return 'sales.status_pending'.tr;
+      case 'confirmed':
+        return 'sales.status_confirmed'.tr;
+      case 'cancelled':
+        return 'sales.status_cancelled'.tr;
+      default:
+        return status.toUpperCase();
+    }
+  }
+
   Widget _buildStatusChip(String status) {
     Color backgroundColor;
     Color textColor;
@@ -1783,7 +1798,7 @@ Powered by CloudPOS''',
           ),
           const SizedBox(width: 6),
           Text(
-            status.toUpperCase(),
+            _statusLabel(status),
             style: TextStyle(
               color: textColor,
               fontSize: 10,
@@ -2460,9 +2475,9 @@ Powered by CloudPOS''',
             Text(
               displayedOrders.isEmpty && provider.orders.isNotEmpty
                   ? (widget.isOnlineSales
-                      ? "No online orders available"
-                      : "No orders match your filters")
-                  : "No orders available",
+                      ? 'sales.no_online_orders'.tr
+                      : 'sales.no_orders_match_filters'.tr)
+                  : 'sales.no_orders_available'.tr,
               textAlign: TextAlign.center,
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
@@ -2474,8 +2489,8 @@ Powered by CloudPOS''',
             const SizedBox(height: 6),
             Text(
               hasFilters
-                  ? "Try adjusting or clearing your filters."
-                  : "Orders will appear here once they are placed.",
+                  ? 'sales.try_adjusting_filters'.tr
+                  : 'sales.orders_appear_here'.tr,
               textAlign: TextAlign.center,
               style: buildCustomStyle(
                 FontWeightManager.regular,
@@ -2488,7 +2503,7 @@ Powered by CloudPOS''',
               Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: CustomRoundButton(
-                  title: "Reset filters",
+                  title: 'sales.reset_filters'.tr,
                   boxColor: ColorManager.kPrimaryColor,
                   textColor: Colors.white,
                   fct: resetSearch,
@@ -2547,14 +2562,14 @@ Powered by CloudPOS''',
                       children: [
                         TableRow(
                           children: [
-                            _buildTableHeader('SI No'),
-                            _buildTableHeader('Order #'),
-                            _buildTableHeader('Customer'),
-                            _buildTableHeader('Date'),
-                            _buildTableHeader('Items'),
-                            _buildTableHeader('Amount'),
-                            _buildTableHeader('Status'),
-                            _buildTableHeader('Actions'),
+                            _buildTableHeader('sales.si_no'.tr),
+                            _buildTableHeader('sales.order_number_short'.tr),
+                            _buildTableHeader('billing.customer'.tr),
+                            _buildTableHeader('sales.date_col'.tr),
+                            _buildTableHeader('sales.items_col'.tr),
+                            _buildTableHeader('sales.amount_col'.tr),
+                            _buildTableHeader('sales.status'.tr),
+                            _buildTableHeader('billing.table_actions'.tr),
                           ],
                         ),
                       ],
@@ -2791,8 +2806,8 @@ Powered by CloudPOS''',
                     Expanded(
                       child: Text(
                         widget.isOnlineSales
-                            ? "Online Orders List"
-                            : "Orders List",
+                            ? 'sales.online_orders_list'.tr
+                            : 'sales.orders_list'.tr,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: buildCustomStyle(
@@ -2838,8 +2853,8 @@ Powered by CloudPOS''',
                                   salesProvider.toggleFilters();
                                 },
                                 tooltip: salesProvider.showFilters
-                                    ? 'Hide Filters'
-                                    : 'Show Filters',
+                                    ? 'sales.hide_filters'.tr
+                                    : 'sales.show_filters'.tr,
                               ),
                               if (hasFilters)
                                 PositionedDirectional(
@@ -2894,7 +2909,7 @@ Powered by CloudPOS''',
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
-                                            "Order #",
+                                            'sales.order_number_short'.tr,
                                             style: buildCustomStyle(
                                               FontWeightManager.regular,
                                               FontSize.s14,
@@ -2913,7 +2928,7 @@ Powered by CloudPOS''',
                                           },
                                           controller: orderNumberController,
                                           size: size,
-                                          hintText: 'Order Number',
+                                          hintText: 'sales.order_number_hint'.tr,
                                         ),
                                       ],
                                     ),
@@ -2930,7 +2945,7 @@ Powered by CloudPOS''',
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
-                                            "Customer",
+                                            'billing.customer'.tr,
                                             style: buildCustomStyle(
                                               FontWeightManager.regular,
                                               FontSize.s14,
@@ -2949,7 +2964,7 @@ Powered by CloudPOS''',
                                           },
                                           controller: customerNameController,
                                           size: size,
-                                          hintText: 'Customer Name',
+                                          hintText: 'sales.customer_name_hint'.tr,
                                         ),
                                       ],
                                     ),
@@ -2966,7 +2981,7 @@ Powered by CloudPOS''',
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
-                                            "Phone",
+                                            'sales.phone'.tr,
                                             style: buildCustomStyle(
                                               FontWeightManager.regular,
                                               FontSize.s14,
@@ -2985,7 +3000,7 @@ Powered by CloudPOS''',
                                           },
                                           controller: phoneController,
                                           size: size,
-                                          hintText: 'Phone',
+                                          hintText: 'sales.phone'.tr,
                                         ),
                                       ],
                                     ),
@@ -2996,7 +3011,7 @@ Powered by CloudPOS''',
                                   Expanded(
                                     flex: 1,
                                     child: _buildDateField(
-                                      "From Date",
+                                      'sales.from_date'.tr,
                                       _fromDateController,
                                       true,
                                     ),
@@ -3007,7 +3022,7 @@ Powered by CloudPOS''',
                                   Expanded(
                                     flex: 1,
                                     child: _buildDateField(
-                                      "To Date",
+                                      'sales.to_date'.tr,
                                       _toDateController,
                                       false,
                                     ),
@@ -3030,7 +3045,7 @@ Powered by CloudPOS''',
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
-                                            "Price",
+                                            'sales.price'.tr,
                                             style: buildCustomStyle(
                                               FontWeightManager.regular,
                                               FontSize.s14,
@@ -3049,7 +3064,7 @@ Powered by CloudPOS''',
                                           },
                                           controller: amountController,
                                           size: size,
-                                          hintText: 'Price',
+                                          hintText: 'sales.price'.tr,
                                         ),
                                       ],
                                     ),
@@ -3066,7 +3081,7 @@ Powered by CloudPOS''',
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
-                                            "Status",
+                                            'sales.status'.tr,
                                             style: buildCustomStyle(
                                               FontWeightManager.regular,
                                               FontSize.s14,
@@ -3095,7 +3110,7 @@ Powered by CloudPOS''',
                                               value: selectedStatus,
                                               dropdownColor: Colors.white,
                                               hint: Text(
-                                                'Select Status',
+                                                'sales.select_status'.tr,
                                                 style: buildCustomStyle(
                                                   FontWeightManager.medium,
                                                   FontSize.s10,
@@ -3108,7 +3123,7 @@ Powered by CloudPOS''',
                                                 DropdownMenuItem<String>(
                                                   value: null,
                                                   child: Text(
-                                                    'All',
+                                                    'common.all'.tr,
                                                     style: buildCustomStyle(
                                                       FontWeightManager.medium,
                                                       FontSize.s10,
@@ -3124,7 +3139,7 @@ Powered by CloudPOS''',
                                                       String>(
                                                     value: status,
                                                     child: Text(
-                                                      status.toUpperCase(),
+                                                      _statusLabel(status),
                                                       style: buildCustomStyle(
                                                         FontWeightManager
                                                             .medium,
@@ -3167,7 +3182,7 @@ Powered by CloudPOS''',
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Text(
-                                            "Business Date",
+                                            'sales.business_date'.tr,
                                             style: buildCustomStyle(
                                               FontWeightManager.regular,
                                               FontSize.s14,
@@ -3202,7 +3217,7 @@ Powered by CloudPOS''',
                                     child: Padding(
                                       padding: const EdgeInsets.only(top: 35.0),
                                       child: CustomRoundButton(
-                                        title: "Reset",
+                                        title: 'sales.reset_filters'.tr,
                                         boxColor: Colors.white,
                                         textColor: ColorManager.kPrimaryColor,
                                         fct: resetSearch,
@@ -3233,17 +3248,17 @@ Powered by CloudPOS''',
                   child: Consumer<SalesProvider>(
                     builder: (context, orderProvider, child) {
                       if (initLoading) {
-                        return const Center(
+                        return Center(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              CircularProgressIndicator(
+                              const CircularProgressIndicator(
                                 color: ColorManager.kPrimaryColor,
                               ),
-                              SizedBox(height: 14),
+                              const SizedBox(height: 14),
                               Text(
-                                "Loading orders...",
-                                style: TextStyle(
+                                'sales.loading_orders'.tr,
+                                style: const TextStyle(
                                   color: ColorManager.kGreyColor,
                                   fontSize: 13,
                                 ),

@@ -43,6 +43,21 @@ class MobileOrderCard extends StatelessWidget {
     return defaultPhone.isNotEmpty && phone == defaultPhone;
   }
 
+  String _statusLabel(String status) {
+    switch (status.toLowerCase()) {
+      case 'new':
+        return 'sales.status_new'.tr;
+      case 'pending':
+        return 'sales.status_pending'.tr;
+      case 'confirmed':
+        return 'sales.status_confirmed'.tr;
+      case 'cancelled':
+        return 'sales.status_cancelled'.tr;
+      default:
+        return status.toUpperCase();
+    }
+  }
+
   Widget _buildStatusChip(String status) {
     Color backgroundColor;
     Color textColor;
@@ -90,7 +105,7 @@ class MobileOrderCard extends StatelessWidget {
           ),
           const SizedBox(width: 6),
           Text(
-            status.toUpperCase(),
+            _statusLabel(status),
             style: TextStyle(
               color: textColor,
               fontSize: 10,

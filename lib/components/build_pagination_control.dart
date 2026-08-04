@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class PaginationControl extends StatelessWidget {
   final int currentPage;
@@ -20,16 +21,17 @@ class PaginationControl extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _PaginationButton(
-            title: "Previous",
+            title: 'pagination.previous'.tr,
             onPressed:
                 currentPage > 1 ? () => onPageChanged(currentPage - 1) : null,
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text('Page $currentPage of $totalPages'),
+            child: Text(
+                '${'pagination.page'.tr} $currentPage ${'pagination.of'.tr} $totalPages'),
           ),
           _PaginationButton(
-            title: "Next",
+            title: 'pagination.next'.tr,
             onPressed: currentPage < totalPages
                 ? () => onPageChanged(currentPage + 1)
                 : null,

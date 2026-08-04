@@ -2,6 +2,12 @@
   "app": {
     "title": "CLOUDPOS"
   },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page",
+    "of": "of"
+  },
   "general": {
     "ok": "OK",
     "cancel": "Cancel",
@@ -377,5 +383,37 @@
     "select_customer_placeholder": "Select customer",
     "select_payment": "Select payment",
     "select_delivery": "Select delivery"
+  },
+  "sales": {
+    "orders_list": "Orders List",
+    "online_orders_list": "Online Orders List",
+    "order_number_short": "Order #",
+    "order_number_hint": "Order Number",
+    "customer_name_hint": "Customer Name",
+    "phone": "Phone",
+    "from_date": "From Date",
+    "to_date": "To Date",
+    "business_date": "Business Date",
+    "price": "Price",
+    "status": "Status",
+    "select_status": "Select Status",
+    "reset_filters": "Reset Filters",
+    "hide_filters": "Hide Filters",
+    "show_filters": "Show Filters",
+    "si_no": "SI No",
+    "date_col": "Date",
+    "items_col": "Items",
+    "amount_col": "Amount",
+    "loading_orders": "Loading orders...",
+    "no_orders_available": "No orders available",
+    "no_orders_match_filters": "No orders match your filters",
+    "no_online_orders": "No online orders available",
+    "try_adjusting_filters": "Try adjusting or clearing your filters.",
+    "orders_appear_here": "Orders will appear here once they are placed.",
+    "no_orders_found": "No Orders Found",
+    "status_new": "NEW",
+    "status_pending": "PENDING",
+    "status_confirmed": "CONFIRMED",
+    "status_cancelled": "CANCELLED"
   }
 }
