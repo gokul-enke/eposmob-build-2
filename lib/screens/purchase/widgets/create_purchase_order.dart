@@ -1865,7 +1865,12 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                     },
                     isNumber: true,
                     focusNode: quantityFocusNode,
-                    inputFormatters: quantityInputFormattersForUnit(item.unit)),
+                    keyboardType: allowsDecimalQuantityUnit(
+                            item.selectedPurchaseUnit?.unitName ?? item.unit)
+                        ? const TextInputType.numberWithOptions(decimal: true)
+                        : TextInputType.number,
+                    inputFormatters: quantityInputFormattersForUnit(
+                        item.selectedPurchaseUnit?.unitName ?? item.unit)),
               ),
               const SizedBox(width: 8),
               InkWell(
@@ -2062,6 +2067,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       ValueChanged<String>? onSubmitted,
       TextInputAction textInputAction = TextInputAction.next,
       FocusNode? focusNode,
+      TextInputType? keyboardType,
       List<TextInputFormatter>? inputFormatters,
       bool readOnly = false}) {
     return BuildBoxShadowContainer(
@@ -2080,7 +2086,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
           },
           onSubmitted: onSubmitted,
           textInputAction: textInputAction,
-          keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+          keyboardType: keyboardType ??
+              (isNumber ? TextInputType.number : TextInputType.text),
           inputFormatters: inputFormatters,
           textAlignVertical: TextAlignVertical.center,
           decoration: InputDecoration(
@@ -2095,6 +2102,9 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
             prefixStyle: buildCustomStyle(
                 FontWeightManager.medium, FontSize.s12, 0.2, Colors.grey),
             border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            disabledBorder: InputBorder.none,
             isCollapsed: true, // Replaces isDense and zero padding
           ),
           style: buildCustomStyle(FontWeightManager.medium, FontSize.s12, 0.2,

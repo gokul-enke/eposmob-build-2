@@ -379,7 +379,7 @@ class BillingMobileController {
       context,
     );
     final appSettings =
-        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+        Provider.of<AppSettingsProvider?>(context, listen: false)?.appSettings;
     final effectiveTotal = BillingTotals.effectiveOrderTotal(
       baseTotal: baseTotal,
       deliveryCharge: deliveryCharge,

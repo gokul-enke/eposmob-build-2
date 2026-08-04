@@ -294,11 +294,18 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         : '';
     final extraHeading1 = _cfgVal('showExtraHeading1', '');
     final extraHeading2 = _cfgVal('showExtraHeading2', '');
-    final ibanValue = params.primaryBankAccount?.iban ?? extraHeading2;
-    final accountNumberValue =
-        params.primaryBankAccount?.accountNumber ?? 'N/A';
+    final bankNameValue = params.primaryBank?.bankName ?? '';
     final accountHolderNameValue =
-        params.primaryBankAccount?.accountHolderName ?? 'N/A';
+        params.primaryBankAccount?.accountHolderName ?? '';
+    final accountNumberValue = params.primaryBankAccount?.accountNumber ?? '';
+    final ibanValue = params.primaryBankAccount?.iban ?? '';
+    final swiftCodeValue = params.primaryBankAccount?.swiftCode ?? '';
+    final showBankInfo = _cfgVisible('showBankInfo');
+    final showBankName = showBankInfo && _cfgVisible('showBankName');
+    final showAccountName = showBankInfo && _cfgVisible('showAccountName');
+    final showAccountNumber = showBankInfo && _cfgVisible('showAccountNumber');
+    final showIban = showBankInfo && _cfgVisible('showIBAN');
+    final showSwiftCode = showBankInfo && _cfgVisible('showSwiftCode');
 
     // Invoice number with prefix + stripping
     final prefix = config.numberPrefix ?? '';
@@ -367,12 +374,21 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 fromToLabel, fromToValue),
             _fromToRow('VAT No :', _displayOrNA(params.zatcaVatNumber),
                 'رقم الضريبة :', fromToLabel, fromToValue),
-            _fromToRow('Account Name :', _displayOrNA(accountHolderNameValue),
-                'رقم الحساب :', fromToLabel, fromToValue),
-            _fromToRow('Account No :', _displayOrNA(accountNumberValue),
-                'رقم الحساب :', fromToLabel, fromToValue),
-            _fromToRow('IBAN :', _displayOrNA(ibanValue), 'رقم الآيبان :',
-                fromToLabel, fromToValue),
+            if (showBankName)
+              _fromToRow('Bank Name :', _displayOrNA(bankNameValue),
+                  'اسم البنك :', fromToLabel, fromToValue),
+            if (showAccountName)
+              _fromToRow('Account Name :', _displayOrNA(accountHolderNameValue),
+                  'اسم الحساب :', fromToLabel, fromToValue),
+            if (showAccountNumber)
+              _fromToRow('Account No :', _displayOrNA(accountNumberValue),
+                  'رقم الحساب :', fromToLabel, fromToValue),
+            if (showIban)
+              _fromToRow('IBAN :', _displayOrNA(ibanValue), 'رقم الآيبان :',
+                  fromToLabel, fromToValue),
+            if (showSwiftCode)
+              _fromToRow('SWIFT Code :', _displayOrNA(swiftCodeValue),
+                  'رمز السويفت :', fromToLabel, fromToValue),
           ];
 
           final toFieldRows = <pw.Widget>[

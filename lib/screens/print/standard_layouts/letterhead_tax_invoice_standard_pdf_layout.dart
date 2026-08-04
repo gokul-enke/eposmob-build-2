@@ -35,7 +35,7 @@ import 'tax_invoice_returns_pdf_section.dart';
 ///   • Items table with Arabic-over-English bilingual column headers.
 ///   • Totals: amount-in-words / payment / balance (left) + bilingual totals
 ///     box (right).
-///   • Footer: tagline (thank-you) + account / IBAN line.
+///   • Footer: tagline (thank-you) + API-configured bank details.
 ///
 /// All field visibility, data extraction, B2B/B2C title resolution, ZATCA QR
 /// (with payment-gateway fallback), multi-payment breakdown, customer balance,
@@ -394,8 +394,7 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         ? (emailLabel.isNotEmpty ? '$emailLabel: $emailVal' : emailVal)
         : '';
     final sellerCrNumber = cfgVal('showExtraHeading2', '');
-    final ibanValue = params.primaryBankAccount?.iban ?? '';
-    final accountNumberValue = params.primaryBankAccount?.accountNumber ?? '';
+    final bankLines = params.visibleBankAccountDetailLines(dc);
 
     final sellerNameEn = documentHeader.isNotEmpty ? documentHeader : storeName;
 
@@ -850,7 +849,7 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             ],
 
             // ═══════════════════════════════════════════════════════
-            // SECTION 6: FOOTER — tagline + account/IBAN
+            // SECTION 6: FOOTER — tagline + API-configured bank details
             // ═══════════════════════════════════════════════════════
             pw.Container(height: 1.5, color: _maroon),
             pw.SizedBox(height: 4),
@@ -860,13 +859,15 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     _thankYouText(dc, config, isEnglish), taglineStyle,
                     textAlign: pw.TextAlign.center),
               ),
-            if (accountNumberValue.isNotEmpty || ibanValue.isNotEmpty)
-              pw.Center(
-                child: _autoText(
-                  'ACCOUNT NUMBER AT ${displayOrBlank(accountNumberValue)}${ibanValue.isNotEmpty ? ' / IBAN ${displayOrBlank(ibanValue)}' : ''}',
-                  footerStyle,
-                  textAlign: pw.TextAlign.center,
-                ),
+            if (bankLines.isNotEmpty)
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  _autoText('BANK DETAILS', footerStyle,
+                      textAlign: pw.TextAlign.center),
+                  ...bankLines.map((line) => _autoText(line, footerStyle,
+                      textAlign: pw.TextAlign.center)),
+                ],
               ),
             if (cfgVisible('showTel') && storeTel.isNotEmpty)
               pw.Center(

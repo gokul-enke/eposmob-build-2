@@ -293,18 +293,12 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         ? (emailLabel.isNotEmpty ? '$emailLabel: $emailVal' : emailVal)
         : '';
     final extraHeading1 = _cfgVal('showExtraHeading1', '');
-    final extraHeading2 = _cfgVal('showExtraHeading2', '');
-    final fallbackAccountLines = extraHeading2
-        .split('\n')
-        .map((line) => line.trim())
-        .where((line) => line.isNotEmpty)
-        .toList();
-    final accountLines = params.bankAccountDetailLines.isNotEmpty
-        ? params.bankAccountDetailLines
-        : fallbackAccountLines;
-    final ibanValue = params.primaryBankAccount?.iban ?? extraHeading2;
-    final accountNumberValue =
-        params.primaryBankAccount?.accountNumber ?? 'N/A';
+    final accountLines = params.visibleBankAccountDetailLines(dc);
+    final ibanValue = params.primaryBankAccount?.iban ?? '';
+    final accountNumberValue = params.primaryBankAccount?.accountNumber ?? '';
+    final showBankInfo = _cfgVisible('showBankInfo');
+    final showAccountNumber = showBankInfo && _cfgVisible('showAccountNumber');
+    final showIban = showBankInfo && _cfgVisible('showIBAN');
 
     // Invoice number with prefix + stripping
     final prefix = config.numberPrefix ?? '';
@@ -373,10 +367,12 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 fromToLabel, fromToValue),
             _fromToRow('VAT No :', _displayOrNA(params.zatcaVatNumber),
                 'رقم الضريبة :', fromToLabel, fromToValue),
-            _fromToRow('IBAN :', _displayOrNA(ibanValue), 'رقم الآيبان :',
-                fromToLabel, fromToValue),
-            _fromToRow('Account No :', _displayOrNA(accountNumberValue),
-                'رقم الحساب :', fromToLabel, fromToValue),
+            if (showIban)
+              _fromToRow('IBAN :', _displayOrNA(ibanValue), 'رقم الآيبان :',
+                  fromToLabel, fromToValue),
+            if (showAccountNumber)
+              _fromToRow('Account No :', _displayOrNA(accountNumberValue),
+                  'رقم الحساب :', fromToLabel, fromToValue),
             _fromToRow('Customer No :', 'N/A', 'رقم العميل :', fromToLabel,
                 fromToValue),
           ];

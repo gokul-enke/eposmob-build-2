@@ -290,7 +290,7 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         : '';
     final extraHeading1 = _cfgVal('showExtraHeading1', '');
     final extraHeading2 = _cfgVal('showExtraHeading2', '');
-    final accountLines = params.bankAccountDetailLines;
+    final accountLines = params.visibleBankAccountDetailLines(dc);
 
     // Invoice number with prefix + stripping
     final prefix = config.numberPrefix ?? '';

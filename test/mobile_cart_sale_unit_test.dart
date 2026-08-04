@@ -332,6 +332,7 @@ void main() {
                   kotBillAutoMarkServed: false,
                   kotBillAllowedForDineIn: false,
                   pineLabPayment: false,
+                  multiSaleUnitEnabled: true,
                 ),
               ),
             ),

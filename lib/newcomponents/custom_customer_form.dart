@@ -26,6 +26,7 @@ class CustomCustomerForm extends StatefulWidget {
   final String? initialMobileNumber;
   final String? initialCustomerName;
   final bool isModal;
+
   /// When true, fields stack in a single column (or two on wide phones)
   /// instead of the desktop 3-column rows.
   final bool isMobileLayout;
@@ -335,7 +336,8 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    icon: const Icon(Icons.location_pin, size: 14, color: Colors.blue),
+                    icon: const Icon(Icons.location_pin,
+                        size: 14, color: Colors.blue),
                     label: const Text(
                       "Pick on Map",
                       style: TextStyle(fontSize: 12, color: Colors.blue),
@@ -516,8 +518,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                         ],
                         onChanged: (PaymentType? newValue) {
                           setState(() {
-                            selectedPaymentType =
-                                newValue ?? PaymentType.none;
+                            selectedPaymentType = newValue ?? PaymentType.none;
                           });
                         },
                         displayText: (PaymentType value) {
@@ -673,9 +674,8 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                 isMultiline ? TextInputAction.newline : TextInputAction.next,
             inputFormatters: inputFormatter != null ? [inputFormatter] : null,
             cursorColor: ColorManager.kPrimaryColor,
-            onFieldSubmitted: isMultiline
-                ? null
-                : (_) => FocusScope.of(context).nextFocus(),
+            onFieldSubmitted:
+                isMultiline ? null : (_) => FocusScope.of(context).nextFocus(),
             decoration: InputDecoration(
               border: InputBorder.none,
               hintText: hintText,
@@ -1235,12 +1235,17 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
         final String vatToSend =
             isCompanyB2BEnabled ? vatNumberController.text.trim() : '';
 
-        await CustomerProvider()
-            .addCustomer(
+        final customerProvider =
+            Provider.of<CustomerProvider>(context, listen: false);
+        final createdPhone = phoneNumberController.text.replaceAll("-", "");
+        final createdName =
+            "${firstNameTextController.text} ${lastNameTextController.text}";
+
+        final value = await customerProvider.addCustomer(
           accessToken ?? "",
-          phoneNumberController.text.replaceAll("-", ""),
+          createdPhone,
           storeId,
-          "${firstNameTextController.text} ${lastNameTextController.text}",
+          createdName,
           emailTextController.text,
           _composeAddress(),
           pincodeValue,
@@ -1256,51 +1261,44 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           customerType: customerTypeToSend,
           crNumber: crToSend,
           vatNumber: vatToSend,
-        )
-            .then((value) {
-          if (value["status"] == "success") {
-            showScaffold(context: context, message: '${value["message"]}');
-            // Close the loading dialog first
-            Navigator.pop(context);
+        );
 
-            if (widget.isModal) {
-              // Return the created customer's essential details to the caller
-              Navigator.pop(context, {
-                "status": "success",
-                "phone": phoneNumberController.text.replaceAll("-", ""),
-                "name":
-                    "${firstNameTextController.text} ${lastNameTextController.text}",
-                "response": value,
-              });
-            } else {
-              _clearFields();
-            }
+        if (value["status"] == "success") {
+          customerProvider.refreshAfterMutationInBackground(accessToken ?? '');
+          if (!mounted) return;
 
-            if (widget.onSuccess != null) {
-              widget.onSuccess!();
-            }
+          showScaffold(context: context, message: '${value["message"]}');
+          // Close the loading dialog. The directory refresh continues without
+          // delaying or retaining this form's BuildContext.
+          Navigator.pop(context);
+
+          if (widget.isModal) {
+            Navigator.pop(context, {
+              "status": "success",
+              "phone": createdPhone,
+              "name": createdName,
+              "response": value,
+            });
           } else {
-            Map<String, dynamic> errorResponse = value['errors'] ?? {};
-            String errorMessage = "";
-
-            if (errorResponse.isNotEmpty) {
-              errorMessage = errorResponse.values.map((e) {
-                if (e is List) {
-                  return e.join(', ');
-                } else {
-                  return e.toString();
-                }
-              }).join('\n');
-            } else {
-              errorMessage =
-                  value['message']?.toString() ?? "An unknown error occurred";
-            }
-
-            showScaffoldError(context: context, message: errorMessage);
-            Navigator.pop(context);
+            _clearFields();
           }
-        });
+
+          widget.onSuccess?.call();
+          return;
+        }
+
+        if (!mounted) return;
+        final Map<String, dynamic> errorResponse = value['errors'] ?? {};
+        final String errorMessage = errorResponse.isNotEmpty
+            ? errorResponse.values.map((error) {
+                return error is List ? error.join(', ') : error.toString();
+              }).join('\n')
+            : value['message']?.toString() ?? "An unknown error occurred";
+
+        showScaffoldError(context: context, message: errorMessage);
+        Navigator.pop(context);
       } catch (error) {
+        if (!mounted) return;
         Navigator.pop(context);
         showScaffoldError(context: context, message: 'Error: $error');
       }
@@ -1511,7 +1509,8 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
 
     if (normSource.isEmpty || normTarget.isEmpty) return false;
     if (normSource == normTarget) return true;
-    if (normSource.contains(normTarget) || normTarget.contains(normSource)) return true;
+    if (normSource.contains(normTarget) || normTarget.contains(normSource))
+      return true;
 
     final lev = _levenshtein(normSource, normTarget);
     final maxLen = normSource.length > normTarget.length
@@ -1524,7 +1523,8 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
 
   Future<void> _autoFillFromLocation(LocationResult result) async {
     final accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    final locationProvider = Provider.of<LocationProvider>(context, listen: false);
+    final locationProvider =
+        Provider.of<LocationProvider>(context, listen: false);
 
     setState(() {
       selectedStateId = null;

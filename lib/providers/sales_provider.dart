@@ -675,7 +675,7 @@ class SalesProvider with ChangeNotifier {
       }),
     );
 
-    debugPrint("accessToken $accessToken");
+    debugPrint("Sales request access token present: ${accessToken.isNotEmpty}");
     debugPrint("orderId $orderId");
     debugPrint("price $price");
     debugPrint("quantity $quantity");
@@ -728,7 +728,7 @@ class SalesProvider with ChangeNotifier {
     debugPrint(requestBody);
     debugPrint('=== END REQUEST BODY ===');
 
-    debugPrint("accessToken $accessToken");
+    debugPrint("Sales request access token present: ${accessToken.isNotEmpty}");
     debugPrint("returnOrderId $returnOrderId");
     debugPrint("hasPayment $hasPayment");
     debugPrint("paymentMethod $paymentMethod");
@@ -790,7 +790,7 @@ class SalesProvider with ChangeNotifier {
       body: jsonEncode(requestBody),
     );
 
-    debugPrint("accessToken $accessToken");
+    debugPrint("Sales request access token present: ${accessToken.isNotEmpty}");
     debugPrint("orderId $orderId");
     debugPrint("paymentMethod $paymentMethod");
     debugPrint("refundAmount $refundAmount");

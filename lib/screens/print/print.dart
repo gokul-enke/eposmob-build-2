@@ -21,6 +21,7 @@ import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/screens/print/layouts/layouts.dart';
 import 'package:pos_machine/screens/print/standard_layouts/standard_layouts.dart';
 import 'package:pos_machine/screens/print/receipt_customer_segment.dart';
+import 'package:pos_machine/screens/print/receipt_document_config_resolver.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/services/development_printer_service.dart';
@@ -447,43 +448,12 @@ class PrintPage extends StatefulWidget {
     required bool hasReturns,
     String? paperSize,
   }) {
-    final requestedType = documentConfigType?.trim();
-    if (requestedType != null && requestedType.isNotEmpty) {
-      if (_isStandardPaperSize(paperSize) &&
-          requestedType.toLowerCase() == 'bill') {
-        return docConfigProvider.getCachedConfig("Bill A4") ??
-            docConfigProvider.getCachedConfig("bill_a4") ??
-            docConfigProvider.getCachedConfig("bill-a4") ??
-            docConfigProvider.getCachedConfig(requestedType);
-      }
-      return docConfigProvider.getCachedConfig(requestedType) ??
-          docConfigProvider.getCachedConfig(requestedType.toLowerCase());
-    }
-
-    if (hasReturns) {
-      if (_isStandardPaperSize(paperSize)) {
-        return docConfigProvider.getCachedConfig("Sales and Return Bill A4") ??
-            docConfigProvider.getCachedConfig("Sales and Return Bill") ??
-            docConfigProvider.getCachedConfig("sales_and_return_bill");
-      }
-      return docConfigProvider.getCachedConfig("Sales and Return Bill") ??
-          docConfigProvider.getCachedConfig("sales_and_return_bill");
-    }
-
-    if (_isStandardPaperSize(paperSize)) {
-      return docConfigProvider.getCachedConfig("Bill A4") ??
-          docConfigProvider.getCachedConfig("bill_a4") ??
-          docConfigProvider.getCachedConfig("bill-a4") ??
-          docConfigProvider.getCachedConfig("Bill") ??
-          docConfigProvider.getCachedConfig("bill");
-    }
-
-    return docConfigProvider.getCachedConfig("Bill") ??
-        docConfigProvider.getCachedConfig("bill");
-  }
-
-  static bool _isStandardPaperSize(String? paperSize) {
-    return paperSize == 'A4' || paperSize == 'A5';
+    return resolveReceiptDocumentConfig(
+      lookup: docConfigProvider.getCachedConfig,
+      documentConfigType: documentConfigType,
+      hasReturns: hasReturns,
+      paperSize: paperSize,
+    );
   }
 
   static bool _isQuotationDocument(String? documentConfigType) {

@@ -26,6 +26,49 @@ import '../thermal/printer_utils.dart';
 import '../thermal/debug_image_saver.dart';
 import '../logo_loader.dart';
 
+/// Resolves the already-segmented invoice title with the same priority used by
+/// the supermarket receipt layout: configured value, app fallback, default.
+///
+/// [ReceiptLayoutParams.displayConfig] is responsible for replacing
+/// `showInvoiceTitle` with `showInvoiceTitleB2B` for business customers, so the
+/// option received here is already the correct B2B or B2C option.
+@visibleForTesting
+String resolveMobileShopInvoiceTitle({
+  required DisplayOption? option,
+  String? fallbackTitle,
+  String defaultTitle = 'TAX INVOICE',
+}) {
+  final configuredValue = option?.value;
+  if (configuredValue is String && configuredValue.trim().isNotEmpty) {
+    return configuredValue.trim();
+  }
+
+  final fallback = fallbackTitle?.trim();
+  if (fallback != null && fallback.isNotEmpty) return fallback;
+
+  return defaultTitle;
+}
+
+/// Provides the Arabic companion for the configured invoice title when this
+/// layout is printed in Arabic or bilingual mode.
+@visibleForTesting
+String resolveMobileShopArabicInvoiceTitle(String invoiceTitle) {
+  final title = invoiceTitle.trim();
+  if (RegExp(r'[\u0600-\u06FF]').hasMatch(title)) return title;
+
+  final normalized = title.toLowerCase();
+  if (normalized.contains('simplified')) return 'فاتورة ضريبية مبسطة';
+  if (normalized.contains('quotation') || normalized.contains('quote')) {
+    return 'عرض سعر';
+  }
+  if (normalized.contains('credit note')) return 'إشعار دائن';
+  if (normalized.contains('debit note')) return 'إشعار مدين';
+  if (normalized.contains('return')) return 'فاتورة مرتجع';
+  if (normalized.contains('tax')) return 'فاتورة ضريبية';
+  if (normalized.contains('invoice')) return 'فاتورة';
+  return 'فاتورة ضريبية';
+}
+
 /// Mobile shop bilingual tax invoice thermal layout.
 ///
 /// This layout features:
@@ -329,6 +372,39 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
           isBold: true, scale: 0.95, verticalPadding: 2, verticalOffset: 0));
     }
 
+    // B2B/B2C invoice title - shown above the store name.
+    if (displayConfig?['showInvoiceTitle']?.visible == true) {
+      final option = displayConfig?['showInvoiceTitle'];
+      final configuredEnglish = option?.defaultValue?.trim() ?? '';
+      final invoiceTitle = resolveMobileShopInvoiceTitle(
+        option: option,
+        fallbackTitle: appSettings?.printTitle,
+      );
+      final englishTitle = _hasArabic(invoiceTitle) &&
+              configuredEnglish.isNotEmpty &&
+              !_hasArabic(configuredEnglish)
+          ? configuredEnglish
+          : invoiceTitle;
+      final arabicTitle = resolveMobileShopArabicInvoiceTitle(invoiceTitle);
+
+      rows.add(SpacingRow(6));
+      if (isBilingual) {
+        rows.add(TextRow(englishTitle.toUpperCase(),
+            isBold: true, scale: 1.15, align: TextAlign.center));
+        if (arabicTitle != englishTitle) {
+          rows.add(TextRow(arabicTitle,
+              isBold: true, scale: 1.1, align: TextAlign.center));
+        }
+      } else {
+        // Single-language English follows supermarket_en exactly by printing
+        // the resolved option value. Arabic uses its translated companion.
+        final title = isEnglish ? invoiceTitle : arabicTitle;
+        rows.add(TextRow(title.toUpperCase(), isBold: true, scale: 1.15));
+      }
+      debugPrint(
+          "[MobileShopTaxInvoiceReceiptLayout] order=${params.orderNumber}, customerType=${params.customerType ?? 'null'}, resolvedInvoiceTitle=$invoiceTitle, printedInvoiceTitle=$englishTitle / $arabicTitle");
+    }
+
     // Store Name — reference shows Arabic then English, centered.
     if (displayConfig?['showStoreName']?.visible == true) {
       final fallbackStoreName = params.storeName?.isNotEmpty == true
@@ -480,32 +556,6 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
           scale: 0.85,
         ));
       }
-    }
-
-    // Invoice title — reference: TAX INVOICE then Arabic on next line.
-    if (displayConfig?['showInvoiceTitle']?.visible == true) {
-      final option = displayConfig?['showInvoiceTitle'];
-      final configuredArabic =
-          option?.value is String ? (option!.value as String).trim() : '';
-      final configuredEnglish = option?.defaultValue?.trim() ?? '';
-      final englishTitle = configuredEnglish.isNotEmpty
-          ? configuredEnglish
-          : (appSettings?.printTitle ?? 'TAX INVOICE');
-      final arabicTitle =
-          configuredArabic.isNotEmpty ? configuredArabic : 'فاتورة ضريبية';
-
-      rows.add(SpacingRow(6));
-      if (isBilingual) {
-        rows.add(TextRow(englishTitle.toUpperCase(),
-            isBold: true, scale: 1.15, align: TextAlign.center));
-        rows.add(TextRow(arabicTitle,
-            isBold: true, scale: 1.1, align: TextAlign.center));
-      } else {
-        final title = isEnglish ? englishTitle : arabicTitle;
-        rows.add(TextRow(title.toUpperCase(), isBold: true, scale: 1.15));
-      }
-      debugPrint(
-          "[MobileShopTaxInvoiceReceiptLayout] order=${params.orderNumber}, printedInvoiceTitle=$englishTitle / $arabicTitle");
     }
 
     rows.add(SpacingRow(_headerGap));

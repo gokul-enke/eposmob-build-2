@@ -333,7 +333,7 @@ class SyncProvider extends ChangeNotifier {
       _activeSyncKey = 'all';
 
       debugPrint("🔄 Starting comprehensive data sync...");
-      debugPrint("Access Token: ${accessToken.substring(0, 20)}...");
+      debugPrint("Sync access token present: ${accessToken.isNotEmpty}");
 
       // Pre-Step: Refresh settings (general and app)
       _updateProgress(0.05, "Refreshing settings...");
@@ -672,7 +672,7 @@ class SyncProvider extends ChangeNotifier {
 
       debugPrint(
           "🔄 Starting stock-only sync after successful stock operations...");
-      debugPrint("Access Token: ${accessToken.substring(0, 20)}...");
+      debugPrint("Sync access token present: ${accessToken.isNotEmpty}");
 
       // Step 1: Sync Suppliers (20%)
       _updateProgress(0.2, "Syncing supplier data...");

@@ -30,6 +30,9 @@ class ReturnBillLayoutParamsBuilder {
     String? customerEmail,
     String? customerAddress,
     String? customerBalance,
+    String? customerVatNumber,
+    String? customerCrNumber,
+    String? customerType,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final zatcaVatNumber = prefs.getString('zatca_vat_number');
@@ -81,6 +84,9 @@ class ReturnBillLayoutParamsBuilder {
       customerPhone: customerPhone,
       customerEmail: customerEmail,
       customerAddress: customerAddress,
+      customerVatNumber: customerVatNumber,
+      customerCrNumber: customerCrNumber,
+      customerType: customerType,
       orderReturns: orderReturns,
       customerCurrentBalance: customerCurrentBalance,
       documentTitleOverride: documentTitle,
@@ -121,8 +127,7 @@ class ReturnBillLayoutParamsBuilder {
 
     return returnItems.map((item) {
       final qty = item.quantity ?? 0;
-      final lineTotal =
-          totalQty > 0 ? totalAmount * qty / totalQty : 0.0;
+      final lineTotal = totalQty > 0 ? totalAmount * qty / totalQty : 0.0;
       final unitPrice = qty > 0 ? lineTotal / qty : 0.0;
 
       return OrderDetailsModelDataCartItem(

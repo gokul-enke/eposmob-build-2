@@ -3,7 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
-import 'package:pos_machine/components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
+import 'package:pos_machine/components/build_dialog_box.dart'
+    hide
+        showScaffold,
+        showScaffoldError,
+        showLoadingOverlay,
+        hideLoadingOverlay;
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
@@ -49,9 +54,9 @@ class _AddStockScreenState extends State<AddStockScreen> {
 
   bool _variantFeatureEnabled({bool listen = false}) =>
       Provider.of<AppSettingsProvider>(context, listen: listen)
-              .appSettings
-              ?.productVariantEnabled ??
-          false;
+          .appSettings
+          ?.productVariantEnabled ??
+      false;
 
   bool _canViewPurchasePrice({bool listen = false}) =>
       Provider.of<RoleProvider>(context, listen: listen)
@@ -66,11 +71,17 @@ class _AddStockScreenState extends State<AddStockScreen> {
   @override
   void initState() {
     super.initState();
-    loadInitData();
     categoryController.text = "All Categories"; // Initialize with default value
     storeController.text = "All Stores"; // Initialize with default value
     stockStatusController.text =
         "All Statuses"; // Initialize with default value
+
+    // StockProvider.loadAllStocks notifies listeners while it loads. Defer
+    // the initial fetch until this screen has completed its first build so
+    // the provider cannot mark the tree dirty during the build phase.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) loadInitData();
+    });
   }
 
   void loadInitData() async {
@@ -110,21 +121,27 @@ class _AddStockScreenState extends State<AddStockScreen> {
       await Provider.of<PurchaseProvider>(context, listen: false)
           .listAllStores(accessToken, null);
 
+      if (!mounted) return;
+
       // Extract categories from CategoryProvider and stores from stocks
       _extractCategoriesAndStores();
 
-      setState(() {
-        isInitialized = true;
-        initLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isInitialized = true;
+          initLoading = false;
+        });
+      }
     } catch (error) {
       debugPrint("Error loading stocks: $error");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error loading stocks: $error")),
-      );
-      setState(() {
-        initLoading = false;
-      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error loading stocks: $error")),
+        );
+        setState(() {
+          initLoading = false;
+        });
+      }
     }
   }
 
@@ -156,6 +173,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
       // Sort stores alphabetically
       uniqueStores.sort();
     }
+
+    if (!mounted) return;
 
     setState(() {
       categories = ["All Categories", ...uniqueCategories];
@@ -498,12 +517,12 @@ class _AddStockScreenState extends State<AddStockScreen> {
                             ),
                       const SizedBox(height: 10),
                       StockPaginationBar(
-                        currentPage: Provider.of<StockProvider>(context,
-                                listen: true)
-                            .stockCurrentPage,
-                        totalPages: Provider.of<StockProvider>(context,
-                                listen: true)
-                            .stockTotalPages,
+                        currentPage:
+                            Provider.of<StockProvider>(context, listen: true)
+                                .stockCurrentPage,
+                        totalPages:
+                            Provider.of<StockProvider>(context, listen: true)
+                                .stockTotalPages,
                         onPageChanged: (int page) {
                           Provider.of<StockProvider>(context, listen: false)
                               .goToStockPage(page);
@@ -531,8 +550,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                 : Consumer<StockProvider>(
                                     builder: (context, stockProvider, child) {
                                       final listStockModelDataList =
-                                          stockProvider
-                                              .listStockModelDataList;
+                                          stockProvider.listStockModelDataList;
 
                                       if (listStockModelDataList == null ||
                                           listStockModelDataList.isEmpty) {
@@ -573,8 +591,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
       children: [
         Text(
           "Product Stock List",
-          style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20, 0.30,
-              ColorManager.textColor),
+          style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
+              0.30, ColorManager.textColor),
         ),
         CustomRoundButton(
           title: "Add Stock",
@@ -812,9 +830,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
       value: categoryController.text == "All Categories"
           ? null
           : categoryController.text,
-      items: categories
-          .where((category) => category != "All Categories")
-          .toList(),
+      items:
+          categories.where((category) => category != "All Categories").toList(),
       onChanged: (String? newValue) {
         setState(() {
           categoryController.text = newValue ?? "All Categories";
@@ -920,11 +937,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
       value: stockStatusController.text == "All Statuses"
           ? null
           : stockStatusController.text,
-      items: const [
-        "Out of Stock",
-        "Low Stock",
-        "At Reorder Level"
-      ],
+      items: const ["Out of Stock", "Low Stock", "At Reorder Level"],
       onChanged: (String? newValue) {
         setState(() {
           stockStatusController.text = newValue ?? "All Statuses";
@@ -1064,8 +1077,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
             circleRadius: 6,
             child: IconButton(
               icon: Icon(Icons.visibility,
-                  size: 14,
-                  color: ColorManager.kPrimaryColor.withOpacity(0.9)),
+                  size: 14, color: ColorManager.kPrimaryColor.withOpacity(0.9)),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
               onPressed: () => _showStockDetails(stock),
@@ -1172,8 +1184,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
           const SizedBox(height: 2),
           valueBgColor != null
               ? Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: valueBgColor,
                     borderRadius: BorderRadius.circular(4),
@@ -1230,8 +1242,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
   Widget _buildMobileStockCard(ListStockModelData stock) {
     final barcode = stock.barCode ?? 'N/A';
     final qtyColors = _quantityColors(stock);
-    final orderDate =
-        DateHelper.formatISODate(stock.orderDate ?? '');
+    final orderDate = DateHelper.formatISODate(stock.orderDate ?? '');
 
     return StockContentCard(
       padding: const EdgeInsetsDirectional.all(14),
@@ -1351,8 +1362,6 @@ class _AddStockScreenState extends State<AddStockScreen> {
     return (null, null);
   }
 
-
-
   List<Widget> _buildDesktopStockActionButtons(ListStockModelData stock) {
     return [
       BuildBoxShadowContainer(
@@ -1411,8 +1420,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
               value: 'adjust',
               child: Row(
                 children: [
-                  Icon(Icons.sync,
-                      size: 18, color: ColorManager.kPrimaryColor),
+                  Icon(Icons.sync, size: 18, color: ColorManager.kPrimaryColor),
                   SizedBox(width: 8),
                   Text('Adjust Stock'),
                 ],
@@ -1446,8 +1454,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
     ];
   }
 
-  Map<int, TableColumnWidth> _desktopStockColumnWidths(
-      bool showPurchasePrice) {
+  Map<int, TableColumnWidth> _desktopStockColumnWidths(bool showPurchasePrice) {
     final widths = <double>[
       1.7,
       1.1,
@@ -1489,8 +1496,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
               ],
             ),
             child: Table(
-              columnWidths:
-                  _desktopStockColumnWidths(canViewPurchasePrice),
+              columnWidths: _desktopStockColumnWidths(canViewPurchasePrice),
               border: null,
               defaultVerticalAlignment: TableCellVerticalAlignment.middle,
               children: [
@@ -1531,8 +1537,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                     columnWidths:
                         _desktopStockColumnWidths(canViewPurchasePrice),
                     border: null,
-                    defaultVerticalAlignment:
-                        TableCellVerticalAlignment.middle,
+                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                     children: [
                       ...listStockModelDataList.asMap().entries.map((entry) {
                         final int index = entry.key;
@@ -1549,12 +1554,14 @@ class _AddStockScreenState extends State<AddStockScreen> {
                           ),
                           children: [
                             TableCell(
-                              verticalAlignment: TableCellVerticalAlignment.middle,
+                              verticalAlignment:
+                                  TableCellVerticalAlignment.middle,
                               child: Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: Center(
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 4),
                                     decoration: BoxDecoration(
                                       color: Colors.transparent,
                                       borderRadius: BorderRadius.circular(6),
@@ -1595,7 +1602,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                 ),
                               ),
                             ),
-                             TableCell(
+                            TableCell(
                               verticalAlignment:
                                   TableCellVerticalAlignment.middle,
                               child: Padding(
@@ -1617,15 +1624,17 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                           ),
                                         ),
                                       ),
-                                      if (barcode.isNotEmpty && barcode != 'N/A') ...[
+                                      if (barcode.isNotEmpty &&
+                                          barcode != 'N/A') ...[
                                         const SizedBox(width: 6),
                                         GestureDetector(
                                           onTap: () {
-                                            Clipboard.setData(ClipboardData(
-                                                text: barcode));
+                                            Clipboard.setData(
+                                                ClipboardData(text: barcode));
                                             showScaffold(
                                               context: context,
-                                              message: 'Barcode copied to clipboard',
+                                              message:
+                                                  'Barcode copied to clipboard',
                                             );
                                           },
                                           child: const Icon(
@@ -1652,14 +1661,14 @@ class _AddStockScreenState extends State<AddStockScreen> {
                             _buildTableCell('${stock.unit}'),
                             _buildTableCell(stock.rack ?? "N/A"),
                             _buildTableCell(
-                              DateHelper.formatISODate(
-                                  stock.orderDate ?? ""),
+                              DateHelper.formatISODate(stock.orderDate ?? ""),
                             ),
                             Center(
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 mainAxisAlignment: MainAxisAlignment.center,
-                                children: _buildDesktopStockActionButtons(stock),
+                                children:
+                                    _buildDesktopStockActionButtons(stock),
                               ),
                             ),
                           ],

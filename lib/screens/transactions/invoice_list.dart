@@ -4,7 +4,12 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
 import 'dart:ui';
-import 'package:pos_machine/components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
+import 'package:pos_machine/components/build_dialog_box.dart'
+    hide
+        showScaffold,
+        showScaffoldError,
+        showLoadingOverlay,
+        hideLoadingOverlay;
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/models/list_invoice.dart';
@@ -91,6 +96,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   void _resetInvoiceFilters({
     required bool clearProviderFilters,
     bool reloadProvider = false,
+    bool notifyProvider = true,
   }) {
     searchTextController.clear();
     invoiceNumberController.clear();
@@ -104,7 +110,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     selectedInvoiceIds.clear();
 
     if (clearProviderFilters) {
-      _invoiceProvider?.resetFilters(reload: reloadProvider);
+      _invoiceProvider?.resetFilters(
+        reload: reloadProvider,
+        notify: notifyProvider,
+      );
     }
   }
 
@@ -150,7 +159,14 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   void dispose() {
     _invoiceSearchDebounce?.cancel();
     _sidebarIndexWorker?.dispose();
-    _resetInvoiceFilters(clearProviderFilters: true, reloadProvider: false);
+    // Do not notify a provider while this route is being disposed. The
+    // Flutter tree is locked during disposal and an eager notification can
+    // trigger "markNeedsBuild called when widget tree was locked".
+    _resetInvoiceFilters(
+      clearProviderFilters: true,
+      reloadProvider: false,
+      notifyProvider: false,
+    );
     searchTextController.dispose();
     invoiceNumberController.dispose();
     orderNumberController.dispose();
@@ -333,14 +349,15 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             invoice.zatcaRequestStatus?.toLowerCase();
 
         // Determine states
-        final bool isZatcaPass =
-          (zatcaStatus == 'pass' || zatcaStatus == 'success' || zatcaStatus == 'sent');
+        final bool isZatcaPass = (zatcaStatus == 'pass' ||
+            zatcaStatus == 'success' ||
+            zatcaStatus == 'sent');
         final bool isZatcaWarning = (zatcaStatus == 'warning');
         final bool isRequestFailed = (zatcaRequestStatus == 'failed');
         final bool isRequestPending = (zatcaRequestStatus == 'pending' ||
             zatcaRequestStatus == 'processing');
         final bool neverRequested =
-          (zatcaRequestStatus == null || zatcaRequestStatus == 'not_sent');
+            (zatcaRequestStatus == null || zatcaRequestStatus == 'not_sent');
 
         final List<Widget> dynamicItems = [];
 
@@ -554,7 +571,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       }
 
       // 1. Check if already successfully sent
-        if (invoice.zatcaStatus?.toLowerCase() == 'pass' ||
+      if (invoice.zatcaStatus?.toLowerCase() == 'pass' ||
           invoice.zatcaStatus?.toLowerCase() == 'success' ||
           invoice.zatcaStatus?.toLowerCase() == 'sent') {
         showScaffold(
@@ -690,8 +707,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     _invoiceSearchDebounce?.cancel();
     _clearSelectedInvoices();
 
-    await Provider.of<InvoiceProvider>(context, listen: false)
-        .listAllInvoices(
+    await Provider.of<InvoiceProvider>(context, listen: false).listAllInvoices(
       accessToken: accessToken,
       page: Provider.of<InvoiceProvider>(context, listen: false).currentPage,
     );
@@ -748,7 +764,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     }
   }
 
- @override
+  @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     final bool isMobile = size.width < 700;
@@ -760,12 +776,15 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           child: Consumer<InvoiceProvider>(
             builder: (context, invoiceProvider, child) {
               return InvoiceMobileView(
-                invoices: invoiceProvider.invoiceListDetails ?? const <Invoice>[],
+                invoices:
+                    invoiceProvider.invoiceListDetails ?? const <Invoice>[],
                 isLoading: invoiceProvider.isLoading,
                 selectedInvoiceIds: selectedInvoiceIds,
                 onToggleSelect: (id, selected) => setState(() {
-                  if (selected) selectedInvoiceIds.add(id);
-                  else selectedInvoiceIds.remove(id);
+                  if (selected)
+                    selectedInvoiceIds.add(id);
+                  else
+                    selectedInvoiceIds.remove(id);
                 }),
                 onViewDetails: _showInvoiceDetails,
                 onShowActions: _showInvoiceActionsSheet,
@@ -805,7 +824,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 isBulkSending: isBulkSending,
                 activeBulkSyncType: activeBulkSyncType,
                 onBulkSync: (syncType, ids) async {
-                  final token = Provider.of<AuthModel>(context, listen: false).token;
+                  final token =
+                      Provider.of<AuthModel>(context, listen: false).token;
                   if (token == null || token.isEmpty) return;
                   await _performBulkZatcaSync(
                     idsToSync: ids,
@@ -814,7 +834,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   );
                 },
                 onSelectPage: () => setState(() {
-                  for (final inv in invoiceProvider.invoiceListDetails ?? const <Invoice>[]) {
+                  for (final inv in invoiceProvider.invoiceListDetails ??
+                      const <Invoice>[]) {
                     selectedInvoiceIds.add(inv.id);
                   }
                 }),
@@ -1007,12 +1028,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             'This will sync all NOT SENT and FAILED invoices.';
         break;
       case 'failed':
-        confirmationMessage =
-            'This will sync all FAILED invoices.';
+        confirmationMessage = 'This will sync all FAILED invoices.';
         break;
       case 'not_sent':
-        confirmationMessage =
-            'This will sync all NOT SENT invoices.';
+        confirmationMessage = 'This will sync all NOT SENT invoices.';
         break;
       default:
         confirmationMessage =
@@ -1033,11 +1052,11 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
 
     try {
       final provider = Provider.of<InvoiceProvider>(context, listen: false);
-      
+
       // Determine flags based on sync type
       bool bulkNotSend = false;
       bool bulkFailed = false;
-      
+
       if (syncType == 'all') {
         bulkNotSend = true;
         bulkFailed = true;
@@ -1049,7 +1068,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         bulkFailed = true;
       }
       // 'selected' has both false (backend syncs all provided IDs)
-      
+
       // Debug: Print API request body
       debugPrint('[ZATCA][Bulk Sync] API Request Body:');
       debugPrint('  syncType: $syncType');
@@ -1091,7 +1110,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   }
 
   List<int> _getFailedInvoiceIds() {
-    final allInvoices = Provider.of<InvoiceProvider>(context, listen: false).invoiceListDetails ?? <Invoice>[];
+    final allInvoices = Provider.of<InvoiceProvider>(context, listen: false)
+            .invoiceListDetails ??
+        <Invoice>[];
     return allInvoices
         .where((inv) => inv.zatcaRequestStatus?.toLowerCase() == 'failed')
         .map((inv) => inv.id)
@@ -1099,7 +1120,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   }
 
   List<int> _getNotSentInvoiceIds() {
-    final allInvoices = Provider.of<InvoiceProvider>(context, listen: false).invoiceListDetails ?? <Invoice>[];
+    final allInvoices = Provider.of<InvoiceProvider>(context, listen: false)
+            .invoiceListDetails ??
+        <Invoice>[];
     return allInvoices
         .where((inv) =>
             inv.zatcaStatus?.toLowerCase() != 'pass' &&
@@ -1110,7 +1133,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   }
 
   List<int> _getAllInvoiceIds() {
-    final allInvoices = Provider.of<InvoiceProvider>(context, listen: false).invoiceListDetails ?? <Invoice>[];
+    final allInvoices = Provider.of<InvoiceProvider>(context, listen: false)
+            .invoiceListDetails ??
+        <Invoice>[];
     return allInvoices.map((inv) => inv.id).toList();
   }
 
@@ -1193,7 +1218,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 textColor: Colors.white,
                 borderColor: Colors.transparent,
                 isLoading: isBulkSending && activeBulkSyncType == 'selected',
-                fct: (isBulkSending || !hasSelection || token == null || token.isEmpty)
+                fct: (isBulkSending ||
+                        !hasSelection ||
+                        token == null ||
+                        token.isEmpty)
                     ? () {}
                     : () async {
                         final selectedList = selectedInvoiceIds.toList();
@@ -1303,7 +1331,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   FontSize.s10, 0.18, ColorManager.textColor),
               prefixIconColor: Colors.black,
               focusedBorder: OutlineInputBorder(
-                borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2),
+                borderSide: const BorderSide(
+                    color: ColorManager.kPrimaryColor, width: 1.2),
                 borderRadius: BorderRadius.circular(7),
               ),
               enabledBorder: OutlineInputBorder(
@@ -1353,7 +1382,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                     FontSize.s10, 0.18, ColorManager.textColor),
                 prefixIconColor: Colors.black,
                 focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2),
+                  borderSide: const BorderSide(
+                      color: ColorManager.kPrimaryColor, width: 1.2),
                   borderRadius: BorderRadius.circular(7),
                 ),
                 enabledBorder: OutlineInputBorder(
@@ -1437,13 +1467,17 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                     readOnly: true,
                     cursorColor: ColorManager.kPrimaryColor,
                     textInputAction: TextInputAction.next,
-                    onFieldSubmitted: (_) => _selectDate(context, isFromDate: true),
+                    onFieldSubmitted: (_) =>
+                        _selectDate(context, isFromDate: true),
                     style: buildCustomStyle(FontWeightManager.medium,
                         FontSize.s10, 0.18, ColorManager.textColor),
                     decoration: decoration.copyWith(
                       hintText: "YYYY-MM-DD HH:MM:SS",
-                      hintStyle: buildCustomStyle(FontWeightManager.medium,
-                          FontSize.s10, 0.18, ColorManager.textColor.withOpacity(.5)),
+                      hintStyle: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s10,
+                          0.18,
+                          ColorManager.textColor.withOpacity(.5)),
                       prefixIcon: Container(
                         padding: const EdgeInsets.all(8),
                         child: const Icon(
@@ -1455,7 +1489,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                       filled: true,
                       fillColor: Colors.white,
                       focusedBorder: OutlineInputBorder(
-                        borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2),
+                        borderSide: const BorderSide(
+                            color: ColorManager.kPrimaryColor, width: 1.2),
                         borderRadius: BorderRadius.circular(7),
                       ),
                       enabledBorder: OutlineInputBorder(
@@ -1493,13 +1528,17 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                     readOnly: true,
                     cursorColor: ColorManager.kPrimaryColor,
                     textInputAction: TextInputAction.next,
-                    onFieldSubmitted: (_) => _selectDate(context, isFromDate: false),
+                    onFieldSubmitted: (_) =>
+                        _selectDate(context, isFromDate: false),
                     style: buildCustomStyle(FontWeightManager.medium,
                         FontSize.s10, 0.18, ColorManager.textColor),
                     decoration: decoration.copyWith(
                       hintText: "YYYY-MM-DD HH:MM:SS",
-                      hintStyle: buildCustomStyle(FontWeightManager.medium,
-                          FontSize.s10, 0.18, ColorManager.textColor.withOpacity(.5)),
+                      hintStyle: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s10,
+                          0.18,
+                          ColorManager.textColor.withOpacity(.5)),
                       prefixIcon: Container(
                         padding: const EdgeInsets.all(8),
                         child: const Icon(
@@ -1511,7 +1550,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                       filled: true,
                       fillColor: Colors.white,
                       focusedBorder: OutlineInputBorder(
-                        borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2),
+                        borderSide: const BorderSide(
+                            color: ColorManager.kPrimaryColor, width: 1.2),
                         borderRadius: BorderRadius.circular(7),
                       ),
                       enabledBorder: OutlineInputBorder(
@@ -1652,7 +1692,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   Future<void> _showInvoiceDetails(Invoice invoice) async {
     final String? token = Provider.of<AuthModel>(context, listen: false).token;
     if (token == null || token.isEmpty) {
-      showScaffoldError(context: context, message: 'Missing authentication token');
+      showScaffoldError(
+          context: context, message: 'Missing authentication token');
       return;
     }
 
@@ -1676,14 +1717,20 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           title: 'Invoice details',
           gridColumns: [
             [
-              CommonDetailsDialog.buildKeyValueRow('Invoice Number', details.invoiceNumber, copyable: true),
-              CommonDetailsDialog.buildKeyValueRow('Customer Name', details.customer.name),
-              CommonDetailsDialog.buildKeyValueRow('Customer Phone', details.customer.phone, copyable: true),
+              CommonDetailsDialog.buildKeyValueRow(
+                  'Invoice Number', details.invoiceNumber,
+                  copyable: true),
+              CommonDetailsDialog.buildKeyValueRow(
+                  'Customer Name', details.customer.name),
+              CommonDetailsDialog.buildKeyValueRow(
+                  'Customer Phone', details.customer.phone,
+                  copyable: true),
               CommonDetailsDialog.buildKeyValueRow('Amount', details.amount),
               CommonDetailsDialog.buildKeyValueRow('Type', details.type),
             ],
             [
-              CommonDetailsDialog.buildKeyValueRow('Invoice Date', details.invoiceDate),
+              CommonDetailsDialog.buildKeyValueRow(
+                  'Invoice Date', details.invoiceDate),
               CommonDetailsDialog.buildKeyValueRow('Due Date', details.dueDate),
               CommonDetailsDialog.buildKeyValueRow('Status', details.status),
               CommonDetailsDialog.buildKeyValueRow('Order Number', 'N/A'),
@@ -1755,7 +1802,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               // Table Rows
               ...details.invoiceItems.map((item) {
                 return Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                   decoration: BoxDecoration(
                     border: Border(
                       bottom: BorderSide(color: Colors.grey.shade100, width: 1),
@@ -1816,7 +1864,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       );
     } catch (e) {
       hideLoadingOverlay();
-      showScaffoldError(context: context, message: 'Error loading invoice details: $e');
+      showScaffoldError(
+          context: context, message: 'Error loading invoice details: $e');
     }
   }
 
@@ -1949,7 +1998,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                     FontSize.s10, 0.18, ColorManager.textColor),
                 prefixIconColor: Colors.black,
                 focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2),
+                  borderSide: const BorderSide(
+                      color: ColorManager.kPrimaryColor, width: 1.2),
                   borderRadius: BorderRadius.circular(7),
                 ),
                 enabledBorder: OutlineInputBorder(
@@ -2123,72 +2173,79 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                                     },
                                                   ),
                                                 ),
-                                                 TableCell(
-                                                   verticalAlignment:
-                                                       TableCellVerticalAlignment
-                                                           .middle,
-                                                   child: Padding(
-                                                     padding:
-                                                         const EdgeInsets.all(
-                                                             8.0),
-                                                     child: Row(
-                                                       mainAxisAlignment:
-                                                           MainAxisAlignment
-                                                               .center,
-                                                       children: [
-                                                         Text(
-                                                           invoice
-                                                               .invoiceNumber,
-                                                           textAlign:
-                                                               TextAlign.center,
-                                                           style:
-                                                               buildCustomStyle(
-                                                             FontWeightManager
-                                                                 .medium,
-                                                             FontSize.s9,
-                                                             0.13,
-                                                             Colors.black,
-                                                           ),
-                                                         ),
-                                                         const SizedBox(
-                                                             width: 6),
-                                                         GestureDetector(
-                                                           onTap: () {
-                                                             Clipboard.setData(
-                                                                 ClipboardData(
-                                                                     text: invoice
-                                                                         .invoiceNumber));
-                                                             showScaffold(
-                                                               context: context,
-                                                               message:
-                                                                   'Invoice number copied to clipboard',
-                                                             );
-                                                           },
-                                                           child: Icon(
-                                                             Icons.copy,
-                                                             size: 14,
-                                                             color: ColorManager
-                                                                 .textColor
-                                                                 .withOpacity(
-                                                                     0.6),
-                                                           ),
-                                                         ),
-                                                       ],
-                                                     ),
-                                                   ),
-                                                 ),
+                                                TableCell(
+                                                  verticalAlignment:
+                                                      TableCellVerticalAlignment
+                                                          .middle,
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            8.0),
+                                                    child: Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .center,
+                                                      children: [
+                                                        Text(
+                                                          invoice.invoiceNumber,
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                          style:
+                                                              buildCustomStyle(
+                                                            FontWeightManager
+                                                                .medium,
+                                                            FontSize.s9,
+                                                            0.13,
+                                                            Colors.black,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                            width: 6),
+                                                        GestureDetector(
+                                                          onTap: () {
+                                                            Clipboard.setData(
+                                                                ClipboardData(
+                                                                    text: invoice
+                                                                        .invoiceNumber));
+                                                            showScaffold(
+                                                              context: context,
+                                                              message:
+                                                                  'Invoice number copied to clipboard',
+                                                            );
+                                                          },
+                                                          child: Icon(
+                                                            Icons.copy,
+                                                            size: 14,
+                                                            color: ColorManager
+                                                                .textColor
+                                                                .withOpacity(
+                                                                    0.6),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
                                                 _buildTableCell(
                                                     invoice.amount.toString()),
                                                 TableCell(
-                                                  verticalAlignment: TableCellVerticalAlignment.middle,
+                                                  verticalAlignment:
+                                                      TableCellVerticalAlignment
+                                                          .middle,
                                                   child: Padding(
-                                                    padding: const EdgeInsets.all(8.0),
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            8.0),
                                                     child: Center(
                                                       child: SelectableText(
-                                                        invoice.customer.user.name.toString(),
-                                                        textAlign: TextAlign.center,
+                                                        invoice
+                                                            .customer.user.name
+                                                            .toString(),
+                                                        textAlign:
+                                                            TextAlign.center,
                                                         style: buildCustomStyle(
-                                                          FontWeightManager.medium,
+                                                          FontWeightManager
+                                                              .medium,
                                                           FontSize.s9,
                                                           0.13,
                                                           Colors.black,
@@ -2468,8 +2525,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         invoice.zatcaRequestStatus?.toLowerCase();
 
     // Determine states based on backend values
-    final bool isZatcaPass =
-      (zatcaStatus == 'pass' || zatcaStatus == 'success' || zatcaStatus == 'sent');
+    final bool isZatcaPass = (zatcaStatus == 'pass' ||
+        zatcaStatus == 'success' ||
+        zatcaStatus == 'sent');
     final bool isRequestFailed = (zatcaRequestStatus == 'failed');
     final bool isRequestPending =
         (zatcaRequestStatus == 'pending' || zatcaRequestStatus == 'processing');
