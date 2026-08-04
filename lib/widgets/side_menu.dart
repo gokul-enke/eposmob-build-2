@@ -300,7 +300,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.house,
-                  title: 'nav.home'.tr,
+                  title: 'Home',
                   onTap: () {
                     sideBarController.index.value = 0;
                   },
@@ -324,7 +324,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.store,
-                  title: 'nav.billing'.tr,
+                  title: 'Billing',
                   onTap: () {
                     sideBarController.index.value = 90;
                   },
@@ -347,7 +347,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.chartLine,
-                  title: 'nav.dashboard'.tr,
+                  title: 'Dashboard',
                   onTap: () {
                     sideBarController.index.value = 1;
                   },
@@ -370,7 +370,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.shop,
-                  title: 'nav.restaurant'.tr,
+                  title: 'Restaurant',
                   onTap: () {
                     sideBarController.index.value = 89;
                   },
@@ -393,7 +393,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.cashRegister,
-                  title: 'nav.store'.tr,
+                  title: 'Store',
                   onTap: () {
                     sideBarController.index.value = 97;
                   },
@@ -414,7 +414,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.bellConcierge,
-                  title: 'nav.attender'.tr,
+                  title: 'Attender',
                   onTap: () {
                     sideBarController.index.value = 55;
                   },
@@ -435,7 +435,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.utensils,
-                  title: 'nav.kitchen_master'.tr,
+                  title: 'Kitchen Master',
                   onTap: () {
                     sideBarController.index.value = 56;
                   },
@@ -512,7 +512,7 @@ class _SideMenuState extends State<SideMenu> {
                   showTitle5: isCompanyAdmin && hasDayClosingPermission,
                   showTitle6: hasOnlineSalesPermission || isCompanyAdmin,
                   icon: fa.FontAwesomeIcons.shoppingCart,
-                  title: 'nav.sales'.tr,
+                  title: 'Sales',
                   onTap: () {
                     sideBarController.index.value = 2;
                     final salesProvider =
@@ -560,7 +560,7 @@ class _SideMenuState extends State<SideMenu> {
                   listTitle1: "Quotations",
                   listTitle2: "Quotation List",
                   icon: fa.FontAwesomeIcons.fileInvoice,
-                  title: 'nav.quotations'.tr,
+                  title: 'Quotations',
                   onTap: () {
                     sideBarController.index.value = 86;
                   },
@@ -585,7 +585,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.tags,
-                  title: 'nav.category'.tr,
+                  title: 'Category',
                   onTap: () {
                     sideBarController.index.value = 12;
                   },
@@ -639,7 +639,7 @@ class _SideMenuState extends State<SideMenu> {
                     showTitle2: hasStockPermission,
                     showTitle3: hasBarcodePermission,
                     icon: fa.FontAwesomeIcons.cube,
-                    title: 'nav.product'.tr,
+                    title: 'Product',
                     onTap: () async {
                       sideBarController.index.value = 14;
                     },
@@ -683,7 +683,7 @@ class _SideMenuState extends State<SideMenu> {
                     // Permission-based visibility
                     showTitle1: hasPurchasePermission,
                     icon: fa.FontAwesomeIcons.clipboardList,
-                    title: 'nav.purchase'.tr,
+                    title: 'Purchase',
                     onTap: () async {
                       sideBarController.index.value = 81;
                     },
@@ -790,7 +790,7 @@ class _SideMenuState extends State<SideMenu> {
                     showTitle6: hasNonStockPermission,
                     showTitle7: hasConsumedStockPermission,
                     icon: fa.FontAwesomeIcons.chartPie,
-                    title: 'nav.reports'.tr,
+                    title: 'Reports',
                     onTap: () {
                       sideBarController.index.value = isCompanyAdmin ? 85 : 58;
                     },
@@ -887,7 +887,7 @@ class _SideMenuState extends State<SideMenu> {
                     showTitle5: hasProformaPermission,
                     showTitle6: true,
                     icon: fa.FontAwesomeIcons.exchange,
-                    title: 'nav.transactions'.tr,
+                    title: 'Transactions',
                     onTap: () {
                       sideBarController.index.value = 21;
                     },
@@ -947,7 +947,7 @@ class _SideMenuState extends State<SideMenu> {
                     showTitle1: hasCustomerTransactionsPermission,
                     showTitle2: hasSupplierTransactionsPermission,
                     icon: fa.FontAwesomeIcons.users,
-                    title: 'nav.party_accounts'.tr,
+                    title: 'Party Accounts',
                     onTap: () {
                       sideBarController.index.value = 23;
                     },
@@ -969,7 +969,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.users,
-                  title: 'nav.customers'.tr,
+                  title: 'Customers',
                   onTap: () {
                     sideBarController.index.value = 5;
                   },
@@ -1062,7 +1062,7 @@ class _SideMenuState extends State<SideMenu> {
                   showTitle2: hasSupplierTransactionsPermission,
                   showTitle3: hasSupplierVouchersPermission,
                   icon: fa.FontAwesomeIcons.truck,
-                  title: 'nav.suppliers'.tr,
+                  title: 'Suppliers',
                   onTap: () {
                     sideBarController.index.value = 52;
                     final supplierProvider =
@@ -1109,7 +1109,7 @@ class _SideMenuState extends State<SideMenu> {
                   Obx(
                     () => DrawerListTile(
                       icon: fa.FontAwesomeIcons.print,
-                      title: 'nav.printer'.tr,
+                      title: 'Printer',
                       onTap: () {
                         sideBarController.index.value = 53;
                       },
@@ -1134,7 +1134,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.gear,
-                  title: 'nav.settings'.tr,
+                  title: 'Settings',
                   onTap: () {
                     sideBarController.index.value = 62;
                   },
@@ -1147,7 +1147,7 @@ class _SideMenuState extends State<SideMenu> {
           // LOGOUT (always visible)
           DrawerListTile(
             icon: fa.FontAwesomeIcons.signOutAlt,
-            title: 'nav.logout'.tr,
+            title: 'Logout',
             onTap: () async {
               String token = authModel.token ?? '';
               showDialog(

@@ -295,27 +295,5 @@
     "messages": {
       "failed_graph": "Failed to load graph data"
     }
-  },
-  "nav": {
-    "home": "Home",
-    "billing": "Billing",
-    "dashboard": "Dashboard",
-    "restaurant": "Restaurant",
-    "store": "Store",
-    "attender": "Attender",
-    "kitchen_master": "Kitchen Master",
-    "sales": "Sales",
-    "quotations": "Quotations",
-    "category": "Category",
-    "product": "Product",
-    "purchase": "Purchase",
-    "reports": "Reports",
-    "transactions": "Transactions",
-    "party_accounts": "Party Accounts",
-    "customers": "Customers",
-    "suppliers": "Suppliers",
-    "printer": "Printer",
-    "settings": "Settings",
-    "logout": "Logout"
   }
 }

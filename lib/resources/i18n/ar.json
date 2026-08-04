@@ -292,27 +292,5 @@
     "messages": {
       "failed_graph": "فشل تحميل بيانات الرسم البياني"
     }
-  },
-  "nav": {
-    "home": "الرئيسية",
-    "billing": "الفواتير",
-    "dashboard": "لوحة التحكم",
-    "restaurant": "المطعم",
-    "store": "المتجر",
-    "attender": "المساعد",
-    "kitchen_master": "المطبخ",
-    "sales": "المبيعات",
-    "quotations": "عروض الأسعار",
-    "category": "الفئات",
-    "product": "المنتجات",
-    "purchase": "المشتريات",
-    "reports": "التقارير",
-    "transactions": "المعاملات",
-    "party_accounts": "حسابات الأطراف",
-    "customers": "العملاء",
-    "suppliers": "الموردون",
-    "printer": "الطابعة",
-    "settings": "الإعدادات",
-    "logout": "تسجيل الخروج"
   }
 }
