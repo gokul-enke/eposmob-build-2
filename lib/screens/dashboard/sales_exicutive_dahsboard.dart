@@ -341,7 +341,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: Align(
-                    alignment: Alignment.centerRight,
+                    alignment: AlignmentDirectional.centerEnd,
                     child: _buildHeaderActions(),
                   ),
                 ),
