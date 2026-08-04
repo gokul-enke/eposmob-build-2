@@ -133,7 +133,14 @@
     "quote_customer_save_required": "Create or select a saved customer before confirming",
     "mobile_select_customer": "Select Customer",
     "mobile_search_customers": "Search customers by name or phone",
-    "mobile_customer_label": "Customer"
+    "mobile_customer_label": "Customer",
+    "delivery_charge": "Delivery Charge",
+    "free": "Free",
+    "subtotal": "Subtotal",
+    "tax": "Tax",
+    "total_payable_label": "Total Payable",
+    "empty_cart_hint": "Add products using the search bar above",
+    "customer": "Customer"
   },
   "customers": {
     "title": "Customers"

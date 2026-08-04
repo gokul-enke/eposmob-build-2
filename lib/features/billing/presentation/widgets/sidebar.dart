@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -64,7 +65,7 @@ class SidebarWidget extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                'Products',
+                                'billing.products'.tr,
                                 style: TextStyle(
                                   color: selectedTab == 0 ? Colors.white : Colors.grey.shade700,
                                   fontWeight: FontWeight.w600,
@@ -91,7 +92,7 @@ class SidebarWidget extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                'Orders',
+                                'billing.orders'.tr,
                                 style: TextStyle(
                                   color: selectedTab == 1 ? Colors.white : Colors.grey.shade700,
                                   fontWeight: FontWeight.w600,

@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -93,19 +94,19 @@ class CartItemsTable extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    _buildFixedHeaderCell('#',
+                    _buildFixedHeaderCell('billing.table_serial'.tr,
                         width: indexWidth, alignment: Alignment.center),
-                    _buildFixedHeaderCell('Item Name',
+                    _buildFixedHeaderCell('billing.table_item_name'.tr,
                         width: itemNameWidth, alignment: Alignment.centerLeft),
-                    _buildFixedHeaderCell('Unit',
+                    _buildFixedHeaderCell('billing.table_unit'.tr,
                         width: unitWidth, alignment: Alignment.center),
-                    _buildFixedHeaderCell('Quantity',
+                    _buildFixedHeaderCell('billing.quantity_hint'.tr,
                         width: qtyWidth, alignment: Alignment.center),
-                    _buildFixedHeaderCell('MRP',
+                    _buildFixedHeaderCell('billing.table_mrp'.tr,
                         width: mrpWidth, alignment: Alignment.center),
-                    _buildFixedHeaderCell('Price',
+                    _buildFixedHeaderCell('billing.table_price'.tr,
                         width: priceWidth, alignment: Alignment.center),
-                    _buildFixedHeaderCell('Total',
+                    _buildFixedHeaderCell('billing.table_total'.tr,
                         width: totalWidth, alignment: Alignment.center),
                     _buildFixedHeaderCell('',
                         width: actionsWidth, alignment: Alignment.center),
@@ -306,7 +307,7 @@ class CartItemsTable extends StatelessWidget {
     final variantLabel = item.variantLabel;
     if (variantLabel.isEmpty) {
       return Text(
-        item.product.productName ?? 'Unknown',
+        item.product.productName ?? 'general.unknown'.tr,
         style: buildCustomStyle(
           FontWeightManager.regular,
           12,
@@ -323,7 +324,7 @@ class CartItemsTable extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          item.product.productName ?? 'Unknown',
+          item.product.productName ?? 'general.unknown'.tr,
           style: buildCustomStyle(
             FontWeightManager.regular,
             12,
@@ -361,7 +362,7 @@ class CartItemsTable extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Your cart is empty',
+            'billing.empty_cart'.tr,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w500,
@@ -370,7 +371,7 @@ class CartItemsTable extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Add products using the search bar above',
+            'billing.empty_cart_hint'.tr,
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade500,

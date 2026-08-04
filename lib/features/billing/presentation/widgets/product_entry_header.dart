@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 import 'package:pos_machine/models/get_product.dart';
@@ -114,7 +115,7 @@ class ProductEntryHeader extends StatelessWidget {
                                             }
                                           },
                                           size: size,
-                                          hintText: 'Barcode',
+                                          hintText: 'billing.barcode_hint'.tr,
                                         ),
                                       ),
                                     )
@@ -130,7 +131,7 @@ class ProductEntryHeader extends StatelessWidget {
                                           controller: billingProvider.selectedProductNameController,
                                           onchanged: (query) {},
                                           size: size,
-                                          hintText: 'Product Name',
+                                          hintText: 'billing.product_name_hint'.tr,
                                         ),
                                       ),
                                     )
@@ -198,13 +199,13 @@ class ProductEntryHeader extends StatelessWidget {
                                             } else {
                                               showScaffoldError(
                                                 context: context,
-                                                message: "No product selected!",
+                                                message: "billing.no_product_selected".tr,
                                               );
                                             }
                                           } catch (_) {
                                             showScaffoldError(
                                               context: context,
-                                              message: "Failed to add item. Please try again.",
+                                              message: "billing.failed_add_item".tr,
                                             );
                                           } finally {
                                             billingProvider.setLoadingAddItem(false);
@@ -237,7 +238,7 @@ class ProductEntryHeader extends StatelessWidget {
                                     focusTextField();
                                     showScaffold(
                                       context: context,
-                                      message: 'Product Details Cleared Successfully',
+                                      message: 'billing.product_cleared'.tr,
                                     );
                                   },
                                   style: OutlinedButton.styleFrom(
@@ -263,7 +264,7 @@ class ProductEntryHeader extends StatelessWidget {
                                       controller: quantityController,
                                       onchanged: (query) {},
                                       size: size,
-                                      hintText: 'Quantity',
+                                      hintText: 'billing.quantity_hint'.tr,
                                       focusNode: billingProvider.quantityFocusNode,
                                       keyboardType: TextInputType.number,
                                       onTap: () {
@@ -285,7 +286,7 @@ class ProductEntryHeader extends StatelessWidget {
                                       onchanged: (query) {},
                                       size: size,
                                       focusNode: billingProvider.unitPriceFocusNode,
-                                      hintText: 'Unit Price',
+                                      hintText: 'billing.unit_price_hint'.tr,
                                       keyboardType: TextInputType.number,
                                       onTap: () {
                                         Provider.of<KeyboardProvider>(context, listen: false).show(
@@ -322,7 +323,7 @@ class ProductEntryHeader extends StatelessWidget {
                                       }
                                     },
                                     size: size,
-                                    hintText: 'Barcode',
+                                    hintText: 'billing.barcode_hint'.tr,
                                   ),
                                 ),
                               )
@@ -338,7 +339,7 @@ class ProductEntryHeader extends StatelessWidget {
                                     controller: billingProvider.selectedProductNameController,
                                     onchanged: (query) {},
                                     size: size,
-                                    hintText: 'Product Name',
+                                    hintText: 'billing.product_name_hint'.tr,
                                   ),
                                 ),
                               )
@@ -382,7 +383,7 @@ class ProductEntryHeader extends StatelessWidget {
                               controller: quantityController,
                               onchanged: (query) {},
                               size: size,
-                              hintText: 'Quantity',
+                              hintText: 'billing.quantity_hint'.tr,
                               focusNode: billingProvider.quantityFocusNode,
                               keyboardType: TextInputType.number,
                               onTap: () {
@@ -404,7 +405,7 @@ class ProductEntryHeader extends StatelessWidget {
                               onchanged: (query) {},
                               size: size,
                               focusNode: billingProvider.unitPriceFocusNode,
-                              hintText: 'Unit Price',
+                              hintText: 'billing.unit_price_hint'.tr,
                               keyboardType: TextInputType.number,
                               onTap: () {
                                 Provider.of<KeyboardProvider>(context, listen: false).show(
@@ -425,7 +426,7 @@ class ProductEntryHeader extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   CustomRoundButton(
-                                    title: "Add Item",
+                                    title: 'billing.add_item'.tr,
                                     boxColor: ColorManager.kButtonGreen,
                                     borderColor: ColorManager.kButtonGreen,
                                     isLoading: billingProvider.isLoadingAddItem,
@@ -453,13 +454,13 @@ class ProductEntryHeader extends StatelessWidget {
                                         } else {
                                           showScaffoldError(
                                             context: context,
-                                            message: "No product selected!",
+                                            message: "billing.no_product_selected".tr,
                                           );
                                         }
                                       } catch (_) {
                                         showScaffoldError(
                                           context: context,
-                                          message: "Failed to add item. Please try again.",
+                                          message: "billing.failed_add_item".tr,
                                         );
                                       } finally {
                                         billingProvider.setLoadingAddItem(false);
@@ -490,7 +491,7 @@ class ProductEntryHeader extends StatelessWidget {
                                     focusTextField();
                                     showScaffold(
                                       context: context,
-                                      message: 'Product Details Cleared Successfully',
+                                      message: 'billing.product_cleared'.tr,
                                     );
                                   },
                                   child: Center(
