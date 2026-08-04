@@ -40,6 +40,7 @@ import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/screens/billing/restaurant/utils/restaurant_helpers.dart';
+import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 
 part 'order_panel_current_cart.dart';
 part 'order_panel_saved_order_item.dart';
@@ -7699,6 +7700,9 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   Future<bool> _confirmOrder({bool closeOnSuccess = true}) async {
+    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
+      return false;
+    }
     if (_selectedOrder == null) {
       showScaffoldError(
         context: context,
@@ -7943,6 +7947,12 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint('\nÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥ updateOrderAPI RESPONSE:');
       debugPrint('   Response: $response');
       debugPrint('   Response Type: ${response.runtimeType}');
+      if (await SubscriptionActionGuard.handleBackendResponse(
+        context,
+        response,
+      )) {
+        return false;
+      }
       if (response is Map) {
         debugPrint('   Status: ${response['status']}');
         debugPrint('   Message: ${response['message']}');

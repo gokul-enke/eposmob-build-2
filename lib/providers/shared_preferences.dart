@@ -97,6 +97,8 @@ class SharedPreferenceProvider extends ChangeNotifier {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     prefs.remove('access_token');
+    prefs.remove('company_subscription_cache');
+    prefs.remove('company_subscription_verified_at');
   }
 
   removeTokenAndCustomerId() async {
@@ -116,6 +118,8 @@ class SharedPreferenceProvider extends ChangeNotifier {
     prefs.remove('active_store_id');
     prefs.remove('time_zone');
     prefs.remove('country_name');
+    prefs.remove('company_subscription_cache');
+    prefs.remove('company_subscription_verified_at');
 
     // Remove ZATCA fields
     prefs.remove('zatca_cr_number');

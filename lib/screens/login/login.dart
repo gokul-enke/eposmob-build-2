@@ -15,6 +15,7 @@ import 'package:pos_machine/services/session_reset_service.dart';
 import 'package:pos_machine/screens/login/forgot_password.dart';
 import 'package:pos_machine/screens/login/store_selection_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/features/subscription/presentation/subscription_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../components/build_round_button.dart';
@@ -502,6 +503,18 @@ class _SignInScreenState extends State<SignInScreen> {
                                                         ?.timeZone,
                                                     countryName: countryName,
                                                   );
+
+                                                  final subscriptionProvider =
+                                                      context.read<
+                                                          SubscriptionProvider>();
+                                                  final subscriptionInLogin =
+                                                      await subscriptionProvider
+                                                          .applyLoginPayload(
+                                                              value);
+                                                  if (!subscriptionInLogin) {
+                                                    await subscriptionProvider
+                                                        .refresh();
+                                                  }
 
                                                   // Update DateHelper with the new timezone
                                                   if (executiveModelData

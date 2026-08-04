@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
-import 'package:pos_machine/components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
+import 'package:pos_machine/components/build_dialog_box.dart'
+    hide
+        showScaffold,
+        showScaffoldError,
+        showLoadingOverlay,
+        hideLoadingOverlay;
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
@@ -868,9 +873,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
 
   Widget _buildMobileQuotationCard(Quotation q) {
     final status = q.status ?? '';
-    final quotationDate = q.quotationDate != null
-        ? q.quotationDate!.split(' ').first
-        : '—';
+    final quotationDate =
+        q.quotationDate != null ? q.quotationDate!.split(' ').first : '—';
     final expiryDate =
         q.expiryDate != null ? q.expiryDate!.split(' ').first : '—';
 
@@ -906,12 +910,14 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                             ),
                           ),
                         ),
-                        if (q.quotationNumber != null && q.quotationNumber!.isNotEmpty && q.quotationNumber != '—') ...[
+                        if (q.quotationNumber != null &&
+                            q.quotationNumber!.isNotEmpty &&
+                            q.quotationNumber != '—') ...[
                           const SizedBox(width: 6),
                           GestureDetector(
                             onTap: () {
-                              Clipboard.setData(ClipboardData(
-                                  text: q.quotationNumber!));
+                              Clipboard.setData(
+                                  ClipboardData(text: q.quotationNumber!));
                               showScaffold(
                                 context: context,
                                 message: 'Quotation number copied to clipboard',
@@ -993,9 +999,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                 backgroundColor: Colors.green.withOpacity(0.9),
                 iconColor: Colors.white,
                 tooltip: 'Print quotation',
-                onPressed: _isPrintingQuotation
-                    ? null
-                    : () => _printQuotation(q),
+                onPressed:
+                    _isPrintingQuotation ? null : () => _printQuotation(q),
               ),
             ],
           ),
@@ -1102,8 +1107,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         TableCell(
           verticalAlignment: TableCellVerticalAlignment.middle,
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-                vertical: 16.0, horizontal: 12.0),
+            padding:
+                const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -1121,12 +1126,14 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                     ),
                   ),
                 ),
-                if (q.quotationNumber != null && q.quotationNumber!.isNotEmpty && q.quotationNumber != '—') ...[
+                if (q.quotationNumber != null &&
+                    q.quotationNumber!.isNotEmpty &&
+                    q.quotationNumber != '—') ...[
                   const SizedBox(width: 6),
                   GestureDetector(
                     onTap: () {
-                      Clipboard.setData(ClipboardData(
-                          text: q.quotationNumber!));
+                      Clipboard.setData(
+                          ClipboardData(text: q.quotationNumber!));
                       showScaffold(
                         context: context,
                         message: 'Quotation number copied to clipboard',
@@ -1146,7 +1153,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         TableCell(
           verticalAlignment: TableCellVerticalAlignment.middle,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
+            padding:
+                const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
             child: Center(
               child: SelectableText(
                 q.customer ?? '—',
@@ -1215,9 +1223,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                     backgroundColor: Colors.green.withOpacity(0.9),
                     iconColor: Colors.white,
                     tooltip: 'Print quotation',
-                    onPressed: _isPrintingQuotation
-                        ? null
-                        : () => _printQuotation(q),
+                    onPressed:
+                        _isPrintingQuotation ? null : () => _printQuotation(q),
                   ),
                 ],
               ),

@@ -20,6 +20,7 @@ import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/features/billing/domain/billing_totals.dart';
 import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
+import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 import 'package:pos_machine/features/billing/domain/payment_validation.dart';
 import 'package:pos_machine/features/billing/domain/product_details_helpers.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
@@ -6537,6 +6538,9 @@ class BillingPageState extends State<BillingPage>
   }
 
   Future<void> _createOrderAndPrint() async {
+    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
+      return;
+    }
     // Check for internet connection before proceeding
     if (!_hasInternet) {
       showScaffoldError(
@@ -6679,6 +6683,12 @@ class BillingPageState extends State<BillingPage>
           .then((response) async {
         debugPrint(
             "✅ API RESPONSE - Create Order and Print: ${json.encode(response)}");
+        if (await SubscriptionActionGuard.handleBackendResponse(
+          context,
+          response,
+        )) {
+          return;
+        }
         if (response["order_id"] != null) {
           showScaffold(
             context: context,
@@ -6887,6 +6897,9 @@ class BillingPageState extends State<BillingPage>
   }
 
   Future<void> _confirmOrder() async {
+    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
+      return;
+    }
     // Check for internet connection before proceeding
     if (!_hasInternet) {
       showScaffoldError(
@@ -7025,6 +7038,12 @@ class BillingPageState extends State<BillingPage>
       )
           .then((response) async {
         debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
+        if (await SubscriptionActionGuard.handleBackendResponse(
+          context,
+          response,
+        )) {
+          return;
+        }
         if (response["order_id"] != null) {
           showScaffold(
             context: context,

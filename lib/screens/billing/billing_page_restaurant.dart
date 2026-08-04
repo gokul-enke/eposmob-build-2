@@ -67,6 +67,7 @@ import 'package:pos_machine/features/billing/presentation/widgets/payment_method
 import 'package:pos_machine/features/billing/presentation/widgets/delivery_method_modal.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/coupon_modal.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/price_fields.dart';
+import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/screens/customers/add_customer_modal.dart';
 // import 'package:pos_machine/screens/print/print_kot.dart'; // Add KOT print import
@@ -5297,6 +5298,9 @@ class BillingPageState extends State<BillingPageRestaurant>
   }
 
   Future<void> _createOrderAndPrint() async {
+    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
+      return;
+    }
     // Check for internet connection before proceeding
     if (!_hasInternet) {
       showScaffoldError(
@@ -5466,6 +5470,12 @@ class BillingPageState extends State<BillingPageRestaurant>
           .then((response) async {
         debugPrint(
             "✅ API RESPONSE - Create Order and Print: ${json.encode(response)}");
+        if (await SubscriptionActionGuard.handleBackendResponse(
+          context,
+          response,
+        )) {
+          return;
+        }
         final responseDataRaw = response["data"];
         final Map<String, dynamic> responseData = responseDataRaw is Map
             ? Map<String, dynamic>.from(responseDataRaw)
@@ -5690,6 +5700,9 @@ class BillingPageState extends State<BillingPageRestaurant>
   }
 
   Future<void> _confirmOrder() async {
+    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
+      return;
+    }
     // Check for internet connection before proceeding
     if (!_hasInternet) {
       showScaffoldError(
@@ -5854,6 +5867,12 @@ class BillingPageState extends State<BillingPageRestaurant>
       )
           .then((response) async {
         debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
+        if (await SubscriptionActionGuard.handleBackendResponse(
+          context,
+          response,
+        )) {
+          return;
+        }
         if (response["order_id"] != null) {
           showScaffold(
             context: context,

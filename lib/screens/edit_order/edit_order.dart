@@ -36,6 +36,7 @@ import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/widgets/compact_quantity_control.dart';
 import 'package:pos_machine/widgets/horizontal_product_view.dart';
 import 'package:pos_machine/widgets/product_autocomplete_list.dart';
+import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
@@ -1967,6 +1968,9 @@ class _EditOrderState extends State<EditOrder> {
   }
 
   void _createOrderAndPrint() async {
+    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
+      return;
+    }
     setState(() {
       isLoadingCreateOrder = true; // Indicate that loading has started
     });
@@ -2039,6 +2043,12 @@ class _EditOrderState extends State<EditOrder> {
           status: "confirmed",
         )
             .then((response) async {
+          if (await SubscriptionActionGuard.handleBackendResponse(
+            context,
+            response,
+          )) {
+            return;
+          }
           AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(response);
           // debugPrint("this is response of add to order $response");
           if (response["status"] == "success") {
@@ -2083,16 +2093,21 @@ class _EditOrderState extends State<EditOrder> {
                     customerName: orderDetails.data?.customerDetails?.name,
                     customerPhone: orderDetails.data?.customerDetails?.phone,
                     customerEmail: orderDetails.data?.customerDetails?.email,
-                    customerAlternatePhone: orderDetails.data?.customerDetails?.alternatePhone,
-                    customerType: orderDetails.data?.customerDetails?.customerType,
+                    customerAlternatePhone:
+                        orderDetails.data?.customerDetails?.alternatePhone,
+                    customerType:
+                        orderDetails.data?.customerDetails?.customerType,
                     customerVatNumber: orderDetails.data?.kycInfo?.vatNumber,
                     customerCrNumber: orderDetails.data?.kycInfo?.crNumber,
-                    paymentMethod: orderDetails.data?.paymentDetails?.paymentMethod,
+                    paymentMethod:
+                        orderDetails.data?.paymentDetails?.paymentMethod,
                     paymentBreakdown: orderDetails.data?.payments,
                     deliveryMethod: orderDetails.data?.deliveryMethodName,
-                    netExcTax: orderDetails.data?.cart?.priceSummary?.netExcTax?.toString(),
+                    netExcTax: orderDetails.data?.cart?.priceSummary?.netExcTax
+                        ?.toString(),
                     documentConfigType: 'Bill',
-                    apiTotalTax: orderDetails.data?.priceSummary?.totalTax?.toDouble(),
+                    apiTotalTax:
+                        orderDetails.data?.priceSummary?.totalTax?.toDouble(),
                   ),
                 ),
               );
@@ -2143,6 +2158,9 @@ class _EditOrderState extends State<EditOrder> {
   }
 
   void _confirmOrder() async {
+    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
+      return;
+    }
     // Set loading to true at the start of the function
     setState(() {
       isLoadingConfirmOrder = true; // Indicate that loading has started
@@ -2203,6 +2221,20 @@ class _EditOrderState extends State<EditOrder> {
           status: "confirmed",
         )
             .then((response) async {
+          if (await SubscriptionActionGuard.handleBackendResponse(
+            context,
+            response,
+          )) {
+            return;
+          }
+          if (response["status"] != "success" && response["order_id"] == null) {
+            showScaffoldError(
+              context: context,
+              message:
+                  response["message"]?.toString() ?? "Failed to confirm order",
+            );
+            return;
+          }
           // AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(response);
           // debugPrint("this is response of add to order $response");
           // if (response["status"] == "success") {

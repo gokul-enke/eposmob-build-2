@@ -16,6 +16,14 @@ bool _readSettingStatus(
   return defaultValue;
 }
 
+String _readEnabledSettingValue(
+  Map<String, dynamic> settingsMap,
+  String code,
+) {
+  if (!_readSettingStatus(settingsMap, code)) return '';
+  return settingsMap[code]?['value']?.toString() ?? '';
+}
+
 class AppSettings {
   final bool barcodeSales;
   final String customerCarePhone;
@@ -57,6 +65,11 @@ class AppSettings {
   final bool multiSaleUnitEnabled;
   final bool allowOverselling;
   final bool compulsoryShiftOpen;
+  final bool companySubscriptionFallbackEnabled;
+  final String companySubscriptionStatus;
+  final String companySubscriptionMessage;
+  final String companySubscriptionValidUntil;
+  final String companySubscriptionManageUrl;
 
   AppSettings({
     required this.barcodeSales,
@@ -99,6 +112,11 @@ class AppSettings {
     this.multiSaleUnitEnabled = false,
     this.allowOverselling = true,
     this.compulsoryShiftOpen = false,
+    this.companySubscriptionFallbackEnabled = false,
+    this.companySubscriptionStatus = '',
+    this.companySubscriptionMessage = '',
+    this.companySubscriptionValidUntil = '',
+    this.companySubscriptionManageUrl = '',
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -236,6 +254,29 @@ class AppSettings {
         settingsMap,
         'COMPULSORY_SHIFT_OPEN_',
         defaultValue: false,
+      ),
+      // The row status enables this temporary compatibility source. The
+      // subscription state itself is stored in the row value.
+      companySubscriptionFallbackEnabled: _readSettingStatus(
+        settingsMap,
+        'COMPANY_SUBSCRIPTION_STATUS',
+        defaultValue: false,
+      ),
+      companySubscriptionStatus: _readEnabledSettingValue(
+        settingsMap,
+        'COMPANY_SUBSCRIPTION_STATUS',
+      ),
+      companySubscriptionMessage: _readEnabledSettingValue(
+        settingsMap,
+        'COMPANY_SUBSCRIPTION_MESSAGE',
+      ),
+      companySubscriptionValidUntil: _readEnabledSettingValue(
+        settingsMap,
+        'COMPANY_SUBSCRIPTION_VALID_UNTIL',
+      ),
+      companySubscriptionManageUrl: _readEnabledSettingValue(
+        settingsMap,
+        'COMPANY_SUBSCRIPTION_MANAGE_URL',
       ),
     );
   }
@@ -470,6 +511,30 @@ class AppSettings {
           "code": "COMPULSORY_SHIFT_OPEN_",
           "value": "",
           "status": compulsoryShiftOpen.toString(),
+        },
+        {
+          "name": "Company Subscription Status",
+          "code": "COMPANY_SUBSCRIPTION_STATUS",
+          "value": companySubscriptionStatus,
+          "status": companySubscriptionFallbackEnabled.toString(),
+        },
+        {
+          "name": "Company Subscription Message",
+          "code": "COMPANY_SUBSCRIPTION_MESSAGE",
+          "value": companySubscriptionMessage,
+          "status": companySubscriptionMessage.isNotEmpty.toString(),
+        },
+        {
+          "name": "Company Subscription Valid Until",
+          "code": "COMPANY_SUBSCRIPTION_VALID_UNTIL",
+          "value": companySubscriptionValidUntil,
+          "status": companySubscriptionValidUntil.isNotEmpty.toString(),
+        },
+        {
+          "name": "Company Subscription Management URL",
+          "code": "COMPANY_SUBSCRIPTION_MANAGE_URL",
+          "value": companySubscriptionManageUrl,
+          "status": companySubscriptionManageUrl.isNotEmpty.toString(),
         },
       ],
     };
