@@ -157,7 +157,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
               ),
               const SizedBox(width: 12),
               Text(
-                'Edit Price',
+                'billing.edit_price'.tr,
                 style: buildCustomStyle(FontWeightManager.bold, FontSize.s18,
                     0.21, const Color(0xFF1E293B)),
               ),
@@ -191,7 +191,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                 style: buildCustomStyle(FontWeightManager.bold, FontSize.s16,
                     0.21, const Color(0xFF1E293B)),
                 decoration: InputDecoration(
-                  labelText: 'New Unit Price',
+                  labelText: 'restaurant.new_unit_price'.tr,
                   labelStyle: const TextStyle(color: Color(0xFF64748B)),
                   filled: true,
                   fillColor: Colors.grey.shade50,
@@ -239,7 +239,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                           borderRadius: BorderRadius.circular(12)),
                     ),
                     child: Text(
-                      'Cancel',
+                      'general.cancel'.tr,
                       style: buildCustomStyle(FontWeightManager.semiBold,
                           FontSize.s14, 0.21, const Color(0xFF64748B)),
                     ),
@@ -258,7 +258,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                       ),
                     ),
                     child: Text(
-                      'Update',
+                      'restaurant.update'.tr,
                       style: buildCustomStyle(FontWeightManager.bold,
                           FontSize.s14, 0.21, Colors.white),
                     ),
@@ -328,7 +328,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
               ),
               const SizedBox(width: 12),
               Text(
-                'Edit Quantity',
+                'restaurant.edit_qty'.tr,
                 style: buildCustomStyle(FontWeightManager.bold, FontSize.s18,
                     0.21, const Color(0xFF1E293B)),
               ),
@@ -361,7 +361,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                 style: buildCustomStyle(FontWeightManager.bold, FontSize.s16,
                     0.21, const Color(0xFF1E293B)),
                 decoration: InputDecoration(
-                  labelText: 'New Quantity',
+                  labelText: 'restaurant.new_qty'.tr,
                   labelStyle: const TextStyle(color: Color(0xFF64748B)),
                   filled: true,
                   fillColor: Colors.grey.shade50,
@@ -406,7 +406,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                           borderRadius: BorderRadius.circular(12)),
                     ),
                     child: Text(
-                      'Cancel',
+                      'general.cancel'.tr,
                       style: buildCustomStyle(FontWeightManager.semiBold,
                           FontSize.s14, 0.21, const Color(0xFF64748B)),
                     ),
@@ -425,7 +425,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                       ),
                     ),
                     child: Text(
-                      'Update',
+                      'restaurant.update'.tr,
                       style: buildCustomStyle(FontWeightManager.bold,
                           FontSize.s14, 0.21, Colors.white),
                     ),

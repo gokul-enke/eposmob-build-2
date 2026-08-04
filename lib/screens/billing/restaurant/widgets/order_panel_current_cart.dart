@@ -339,7 +339,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                       if (showClearSaveActions) ...[
                         Expanded(
                           child: _buildCurrentCartFooterButton(
-                            label: 'Clear',
+                            label: 'general.cancel'.tr,
                             color: const Color(0xFFDC2626),
                             isDisabled: cartItems.isEmpty,
                             onTap: () => _clearCurrentCart(),
@@ -348,7 +348,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                         const SizedBox(width: 8),
                         Expanded(
                           child: _buildCurrentCartFooterButton(
-                            label: 'Save',
+                            label: 'general.save'.tr,
                             color: const Color(0xFF2563EB),
                             isDisabled: cartItems.isEmpty ||
                                 (widget.tableId == null &&
@@ -369,7 +369,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                               ? 1
                               : 2,
                           child: _buildCurrentCartFooterButton(
-                            label: 'Send Kitchen',
+                            label: 'restaurant.send_kitchen'.tr,
                             color: const Color(0xFF059669),
                             isDisabled: cartItems.isEmpty ||
                                 widget.isLoadingPrint ||
@@ -389,7 +389,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                                   ? 1
                                   : 2),
                           child: _buildCurrentCartFooterButton(
-                            label: 'KOT + BILL',
+                            label: 'restaurant.kot_bill'.tr,
                             color: const Color(0xFF7C3AED),
                             isDisabled: cartItems.isEmpty ||
                                 widget.onKotBill == null ||
@@ -409,8 +409,8 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                               : (showClearSaveActions ? 2 : 1),
                           child: _buildCurrentCartFooterButton(
                             label: showKotBillForKitchenContext
-                                ? 'Confirm'
-                                : 'Confirm Order',
+                                ? 'restaurant.confirm_order'.tr
+                                : 'billing.confirm_order'.tr,
                             shortcutLabel: 'F2',
                             color: const Color(0xFF08C63F),
                             isDisabled: cartItems.isEmpty || _isLoadingConfirm,
@@ -428,7 +428,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                         Expanded(
                           flex: showClearSaveActions ? 2 : 1,
                           child: _buildCurrentCartFooterButton(
-                            label: 'Save & Print',
+                            label: 'restaurant.save_print'.tr,
                             color: const Color(0xFFF59E0B),
                             isDisabled: cartItems.isEmpty ||
                                 !hasOfflineOrderContext ||
@@ -517,7 +517,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Total Payable',
+                      'billing.total_payable_label'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         FontSize.s14,
@@ -562,7 +562,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildSummaryRow(
-                    'Net Amount',
+                    'billing.net_amount'.tr,
                     '$currency ${netAmount.toStringAsFixed(2)}',
                     color: const Color(0xFF3F3F46),
                   ),
@@ -573,7 +573,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Total Payable',
+                        'billing.total_payable_label'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s16,
@@ -603,12 +603,12 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                     ],
                   ),
                   _buildSummaryRow(
-                    'Total Paid',
+                    'billing.total_paid'.tr,
                     '$currency 0.00',
                     color: const Color(0xFF3F3F46),
                   ),
                   _buildSummaryRow(
-                    'Balance',
+                    'billing.balance'.tr,
                     '$currency ${totalPayable.toStringAsFixed(2)}',
                     color: const Color(0xFF00C739),
                     isBold: true,
@@ -632,7 +632,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildSummaryRow(
-            'Net Amount',
+            'billing.net_amount'.tr,
             '$currency ${netAmount.toStringAsFixed(2)}',
             color: const Color(0xFF3F3F46),
           ),
@@ -640,19 +640,19 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
           Container(height: 1, color: const Color(0xFFE4E4ED)),
           const SizedBox(height: 8),
           _buildSummaryRow(
-            'Total Payable',
+            'billing.total_payable_label'.tr,
             '$currency ${totalPayable.toStringAsFixed(2)}',
             color: const Color(0xFF3B82F6),
             isBold: true,
             large: true,
           ),
           _buildSummaryRow(
-            'Total Paid',
+            'billing.total_paid'.tr,
             '$currency 0.00',
             color: const Color(0xFF3F3F46),
           ),
           _buildSummaryRow(
-            'Balance',
+            'billing.balance'.tr,
             '$currency ${totalPayable.toStringAsFixed(2)}',
             color: const Color(0xFF00C739),
             isBold: true,

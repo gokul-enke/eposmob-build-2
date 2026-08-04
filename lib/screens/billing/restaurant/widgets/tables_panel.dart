@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
@@ -70,7 +71,7 @@ class TablesPanel extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Failed to load tables',
+                    'restaurant.failed_load_tables'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.medium,
                       FontSize.s16,
@@ -92,7 +93,7 @@ class TablesPanel extends StatelessWidget {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () => tableProvider.refreshTables(),
-                    child: const Text('Retry'),
+                    child: Text('restaurant.retry'.tr),
                   ),
                 ],
               ),
@@ -153,7 +154,7 @@ class TablesPanel extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      showTables ? 'Tables' : 'Walk-in / Delivery',
+                      showTables ? 'restaurant.tables_tab'.tr : 'restaurant.walk_in_delivery'.tr,
                       style: buildCustomStyle(
                           FontWeightManager.bold,
                           isCompact ? FontSize.s14 : FontSize.s16,
@@ -213,13 +214,13 @@ class TablesPanel extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Walk-in / delivery billing',
+            'restaurant.walk_in_delivery_billing'.tr,
             style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s14,
                 0.21, ColorManager.textColor.withOpacity(0.75)),
           ),
           const SizedBox(height: 4),
           Text(
-            'Pick a delivery method above or just start billing',
+            'restaurant.pick_delivery_method'.tr,
             textAlign: TextAlign.center,
             style: buildCustomStyle(FontWeightManager.regular, FontSize.s12,
                 0.21, ColorManager.textColor.withOpacity(0.55)),
@@ -485,7 +486,7 @@ class TablesPanel extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'No tables available',
+              'restaurant.no_tables_available'.tr,
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,
                   0.21, ColorManager.textColor.withOpacity(0.7)),
             ),
@@ -878,15 +879,15 @@ class TablesPanel extends StatelessWidget {
   String _getStatusText(TableStatus status) {
     switch (status) {
       case TableStatus.available:
-        return 'FREE';
+        return 'restaurant.status_free'.tr;
       case TableStatus.occupied:
-        return 'BUSY';
+        return 'restaurant.status_busy'.tr;
       case TableStatus.reserved:
-        return 'RSVD';
+        return 'restaurant.status_rsvd'.tr;
       case TableStatus.cleaning:
-        return 'CLEAN';
+        return 'restaurant.status_clean'.tr;
       case TableStatus.maintenance:
-        return 'MAINT';
+        return 'restaurant.status_maint'.tr;
     }
   }
 

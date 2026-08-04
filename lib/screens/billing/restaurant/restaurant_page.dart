@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
@@ -113,7 +114,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   DeliveryMethodsProvider? _deliveryMethodsProviderForDefaults;
   GeneralSettingsProvider? _generalSettingsProviderForStock;
 
-  String get _menuTitle => widget.storeMode ? 'Products' : 'Menu';
+  String get _menuTitle => widget.storeMode ? 'restaurant.products_tab'.tr : 'restaurant.menu_tab'.tr;
 
   void _syncStockEnabledSetting() {
     final stockEnabled =
@@ -726,7 +727,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Order',
+                    'restaurant.order_tab'.tr,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: buildCustomStyle(
@@ -749,8 +750,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   if (!widget.storeMode) ...[
                     _buildCounterSelectorButton(
                       icon: Icons.restaurant_rounded,
-                      title: 'Dining',
-                      value: _counterDiningLabel(fallback: 'Select table'),
+                      title: 'restaurant.dining_label'.tr,
+                      value: _counterDiningLabel(
+                          fallback: 'restaurant.select_table_short'.tr),
                       color: const Color(0xFF2563EB),
                       isSelected: _hasCounterDiningSelection,
                       onTap: _showDiningSelectionModal,
@@ -759,10 +761,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   ],
                   _buildCounterSelectorButton(
                     icon: Icons.person_rounded,
-                    title: 'Customer',
+                    title: 'restaurant.customer_label'.tr,
                     value: _counterCustomerLabel(
                       customerSelectionProvider,
-                      fallback: 'Select customer',
+                      fallback: 'restaurant.select_customer_placeholder'.tr,
                     ),
                     color: const Color(0xFF7C3AED),
                     isSelected: _hasCounterCustomer(customerSelectionProvider),
@@ -783,8 +785,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   const SizedBox(height: 10),
                   _buildCounterSelectorButton(
                     icon: Icons.payments_rounded,
-                    title: 'Payment',
-                    value: _counterPaymentLabel(fallback: 'Select payment'),
+                    title: 'restaurant.payment_label'.tr,
+                    value: _counterPaymentLabel(
+                        fallback: 'restaurant.select_payment'.tr),
                     color: const Color(0xFFEA580C),
                     isSelected: _hasCounterPaymentSelection,
                     onTap: () async {
@@ -804,8 +807,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   const SizedBox(height: 10),
                   _buildCounterSelectorButton(
                     icon: Icons.local_shipping_rounded,
-                    title: 'Delivery',
-                    value: _counterDeliveryLabel(fallback: 'Select delivery'),
+                    title: 'restaurant.delivery_label'.tr,
+                    value: _counterDeliveryLabel(
+                        fallback: 'restaurant.select_delivery'.tr),
                     color: const Color(0xFF059669),
                     isSelected: _hasCounterDeliverySelection,
                     onTap: () async {
@@ -829,7 +833,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                           deliveryMethodId,
                           deliveryMethod.isNotEmpty
                               ? deliveryMethod
-                              : 'Delivery',
+                              : 'restaurant.delivery_label'.tr,
                         );
                       } else {
                         setState(() {});
@@ -960,7 +964,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
               child: Row(
                 children: [
                   _buildCounterActionButton(
-                    text: 'Clear Cart',
+                    text: 'restaurant.clear_cart'.tr,
                     shortcutLabel: showShortcuts ? 'F1' : null,
                     color: const Color(0xFFEF233C),
                     isDisabled: !hasItems || isCheckoutActionLoading,
@@ -969,7 +973,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   ),
                   const SizedBox(width: 12),
                   _buildCounterActionButton(
-                    text: 'Save Order',
+                    text: 'restaurant.save_order'.tr,
                     shortcutLabel: showShortcuts ? 'F8' : null,
                     color: const Color(0xFFF59E0B),
                     isDisabled: !hasItems || isCheckoutActionLoading,
@@ -980,7 +984,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   if (hasInternet) ...[
                     if (showConfirmAndPrintButton) ...[
                       _buildCounterActionButton(
-                        text: 'Confirm and Print',
+                        text: 'restaurant.confirm_and_print'.tr,
                         shortcutLabel: showShortcuts ? 'F6' : null,
                         color: const Color(0xFF5B8DEF),
                         isDisabled: !canCheckout || disableConfirmActions,
@@ -992,7 +996,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     ],
                     if (showFooterConfirmOrder)
                       _buildCounterActionButton(
-                        text: 'Confirm Order',
+                        text: 'restaurant.confirm_order'.tr,
                         shortcutLabel: showShortcuts ? 'F2' : null,
                         color: const Color(0xFF08C63F),
                         isDisabled: !canCheckout || disableConfirmActions,
@@ -1002,7 +1006,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       ),
                   ] else
                     _buildCounterActionButton(
-                      text: 'Save & Print',
+                      text: 'restaurant.save_print'.tr,
                       shortcutLabel: showShortcuts ? 'F9' : null,
                       color: const Color(0xFFF59E0B),
                       isDisabled: !canCheckout || disableConfirmActions,
@@ -1596,7 +1600,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       if (!widget.storeMode)
         _buildTopBarContextChip(
           icon: Icons.restaurant_rounded,
-          label: _counterDiningLabel(fallback: 'Dining'),
+          label: _counterDiningLabel(fallback: 'restaurant.dining_label'.tr),
           color: const Color(0xFF2563EB),
           isSelected: _hasCounterDiningSelection,
           onTap: _showDiningSelectionModal,
@@ -1607,7 +1611,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         icon: Icons.person_rounded,
         label: _counterCustomerLabel(
           customerSelectionProvider,
-          fallback: 'Customer',
+          fallback: 'restaurant.customer_label'.tr,
         ),
         color: const Color(0xFF7C3AED),
         isSelected: _hasCounterCustomer(customerSelectionProvider),
@@ -1629,7 +1633,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       ),
       _buildTopBarContextChip(
         icon: Icons.payments_rounded,
-        label: _counterPaymentLabel(fallback: 'Payment'),
+        label: _counterPaymentLabel(fallback: 'restaurant.payment_label'.tr),
         color: const Color(0xFFEA580C),
         isSelected: _hasCounterPaymentSelection,
         isCompact: isCompact,
@@ -1650,7 +1654,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       ),
       _buildTopBarContextChip(
         icon: Icons.local_shipping_rounded,
-        label: _counterDeliveryLabel(fallback: 'Delivery'),
+        label: _counterDeliveryLabel(fallback: 'restaurant.delivery_label'.tr),
         color: const Color(0xFF059669),
         isSelected: _hasCounterDeliverySelection,
         isCompact: isCompact,
@@ -1672,7 +1676,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
           if (deliveryMethodId.isNotEmpty) {
             _selectDeliveryMethod(
               deliveryMethodId,
-              deliveryMethod.isNotEmpty ? deliveryMethod : 'Delivery',
+              deliveryMethod.isNotEmpty
+                  ? deliveryMethod
+                  : 'restaurant.delivery_label'.tr,
             );
           } else {
             setState(() {});
@@ -1814,7 +1820,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       return orderNumber != null ? 'Edit Order - #$orderNumber' : 'Edit Order';
     }
 
-    return 'New Order';
+    return 'billing.new_order'.tr;
   }
 
   String? _firstNonEmptyTopBarValue(List<dynamic> values) {
@@ -2196,8 +2202,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     : Colors.grey.shade600,
               ),
               tooltip: keyboardProvider.showKeyboardFeature
-                  ? 'Hide Keyboard'
-                  : 'Show Keyboard',
+                  ? 'billing.keyboard_hide'.tr
+                  : 'billing.keyboard_show'.tr,
               onPressed: () {
                 if (keyboardProvider.showKeyboardFeature) {
                   keyboardProvider.featureOff();
@@ -2370,7 +2376,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         onPressed: _startNewCounterOrder,
         icon: Icon(Icons.add_shopping_cart_rounded, size: isCompact ? 13 : 14),
         label: Text(
-          'New Order',
+          'billing.new_order'.tr,
           style: buildCustomStyle(
             FontWeightManager.bold,
             isCompact ? FontSize.s10 : FontSize.s11,
@@ -2579,8 +2585,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         ),
                       ),
                     ),
-                    const Text(
-                      'View Order',
+                    Text(
+                      'restaurant.view_order'.tr,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 13,
@@ -2622,7 +2628,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             if (widget.storeMode)
               _buildMobileNavItem(
                 icon: Icons.storefront_rounded,
-                label: 'Products',
+                label: 'restaurant.products_tab'.tr,
                 isSelected: _currentMobileView == MobileView.products,
                 onTap: () {
                   if (_currentMobileView != MobileView.products) {
@@ -2633,7 +2639,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             else ...[
               _buildMobileNavItem(
                 icon: Icons.table_restaurant_rounded,
-                label: 'Tables',
+                label: 'restaurant.tables_tab'.tr,
                 isSelected: _currentMobileView == MobileView.tables,
                 onTap: () {
                   if (_currentMobileView != MobileView.tables) {
@@ -2656,7 +2662,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 );
                 return _buildMobileNavItem(
                   icon: Icons.receipt_long_rounded,
-                  label: 'Order',
+                  label: 'restaurant.order_tab'.tr,
                   isSelected: _currentMobileView == MobileView.orders,
                   badgeCount: itemCount,
                   onTap: () {
@@ -2817,7 +2823,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 visualDensity: VisualDensity.compact,
                 icon: const Icon(Icons.arrow_back, color: Color(0xFF2563EB)),
                 tooltip:
-                    widget.storeMode ? 'Back to products' : 'Back to tables',
+                    widget.storeMode ? 'restaurant.back_to_products'.tr : 'restaurant.back_to_tables'.tr,
                 onPressed: () {
                   setState(() {
                     _currentMobileView = widget.storeMode
@@ -3056,7 +3062,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     if (!widget.allowCounterBillingFromAttender) {
       showScaffoldError(
         context: context,
-        message: 'Counter billing is disabled for this screen',
+        message: 'restaurant.counter_billing_disabled'.tr,
       );
       return;
     }
@@ -3233,7 +3239,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     if (_activeTableId == null && _selectedDeliveryMethodId == null) {
       showScaffoldError(
         context: context,
-        message: 'Select a table or delivery method first',
+        message: 'restaurant.select_table_first'.tr,
       );
       return null;
     }
@@ -3248,7 +3254,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       if (cartItems.isEmpty) {
         showScaffoldError(
           context: context,
-          message: 'No items in cart to send to kitchen',
+          message: 'restaurant.no_items_kitchen'.tr,
         );
         return null;
       }
@@ -3578,7 +3584,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       if (orderPanelState == null) {
         showScaffoldError(
           context: context,
-          message: 'Order panel is not ready',
+          message: 'restaurant.order_panel_not_ready'.tr,
         );
         return;
       }
@@ -3599,7 +3605,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     if (_activeTableId == null && _selectedDeliveryMethodId == null) {
       showScaffoldError(
         context: context,
-        message: 'Select a table or delivery method first',
+        message: 'restaurant.select_table_first'.tr,
       );
       return;
     }
@@ -3728,7 +3734,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
         showScaffold(
           context: context,
-          message: 'Order sent to kitchen! Order: $orderNumber',
+          message: '${'restaurant.order_sent_kitchen'.tr}$orderNumber',
         );
 
         // Clear the local cart after successful submission
@@ -3804,13 +3810,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
         showScaffoldError(
           context: context,
           message:
-              'Failed to send order: ${response["message"] ?? "Unknown error"}',
+              '${'restaurant.failed_send_order'.tr}: ${response["message"] ?? "Unknown error"}',
         );
       }
     } catch (e) {
       showScaffoldError(
         context: context,
-        message: 'Failed to print order: ${e.toString()}',
+        message: '${'restaurant.failed_print_order'.tr}: ${e.toString()}',
       );
     } finally {
       if (mounted) {
