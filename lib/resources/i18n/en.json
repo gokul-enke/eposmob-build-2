@@ -173,5 +173,119 @@
     "last_sync": "Last sync",
     "tap_to_sync_again": "Tap to sync again",
     "sync_all_data": "Sync all data"
+  },
+  "dashboard": {
+    "title": {
+      "sales_executive": "Sales Executive Dashboard",
+      "welcome_back": "Welcome back!",
+      "welcome_user": "Welcome"
+    },
+    "sections": {
+      "sales_overview": "Sales Overview",
+      "company_overview": "Company Account Overview",
+      "your_overview": "Your Account Overview",
+      "sales_graph": "Sales Graph",
+      "works_team": "Works Team"
+    },
+    "periods": {
+      "today": "Today",
+      "week": "This Week",
+      "month": "This Month",
+      "year": "This Year"
+    },
+    "cards": {
+      "count": "Count",
+      "count_sub": "Total Sales",
+      "amount": "Amount",
+      "amount_sub": "Revenue",
+      "customers": "Customers",
+      "customers_sub": "Active Users",
+      "products": "Products",
+      "products_sub": "In Stock",
+      "revenue": "Revenue",
+      "revenue_sub": "Overall Total",
+      "orders": "Orders",
+      "orders_sub": "Overall Count",
+      "bank_account": "Bank Account",
+      "bank_account_sub": "Total Balance",
+      "cash_account": "Cash Account",
+      "cash_account_sub": "Total Balance",
+      "total_revenue": "Total Revenue",
+      "total_revenue_sub": "Company Revenue",
+      "total_customers": "Total Customers",
+      "total_customers_sub": "All Customers",
+      "total_orders": "Total Orders",
+      "total_orders_sub": "All Orders"
+    },
+    "accounts": {
+      "cash_received": "Cash Received",
+      "cash_received_sub": "Your Cash Inflow",
+      "cash_sent": "Cash Sent",
+      "cash_sent_sub": "Your Cash Outflow",
+      "bank_received": "Bank Received",
+      "bank_received_sub": "Your Bank Inflow",
+      "bank_sent": "Bank Sent",
+      "bank_sent_sub": "Your Bank Outflow"
+    },
+    "your_sales": {
+      "title": "Your Sales Performance",
+      "todays_sales": "Today's Sales",
+      "todays_sales_sub": "Today's Revenue",
+      "this_week": "This Week",
+      "this_week_sub": "Weekly Revenue",
+      "this_month": "This Month",
+      "this_month_sub": "Monthly Revenue",
+      "total_sales": "Total Sales",
+      "total_sales_sub": "Overall Performance"
+    },
+    "customers": {
+      "title": "Your Customers"
+    },
+    "customer_stats": {
+      "total_sub": "All Time",
+      "debit": "Debit Customers",
+      "debit_sub": "Pending Payments",
+      "credit": "Credit Customers",
+      "credit_sub": "Balance Available",
+      "crucial": "Crucial Customers",
+      "crucial_sub": "VVIP Clients"
+    },
+    "products": {
+      "title": "Product Overview",
+      "total_products": "Total Products"
+    },
+    "product_stats": {
+      "total_sub": "All Products",
+      "active": "Active Products",
+      "active_sub": "Currently Selling",
+      "low_stock": "Low Stock",
+      "low_stock_sub": "Needs Attention",
+      "total_stock_qty": "Total Stock Qty",
+      "total_stock_qty_sub": "Overall Inventory"
+    },
+    "additional": {
+      "recent_transactions": "Recent Transactions",
+      "top_products": "Top Products",
+      "low_stock_alert": "Low Stock Alert",
+      "payment_methods": "Payment Methods"
+    },
+    "charts": {
+      "card": "Card",
+      "cash": "Cash",
+      "upi": "UPI",
+      "other": "Other",
+      "pos": "POS",
+      "web": "Web",
+      "kiosk": "Kiosk"
+    },
+    "placeholders": {
+      "no_transactions": "No recent transactions data",
+      "no_top_products": "No top products data",
+      "no_low_stock": "No low stock data",
+      "unknown_member": "Unknown"
+    },
+    "messages": {
+      "failed_graph": "Failed to load graph data"
+    }
   }
 }

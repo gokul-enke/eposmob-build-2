@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -354,7 +355,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Sales Executive Dashboard",
+          "dashboard.title.sales_executive".tr,
           style: buildCustomStyle(
             FontWeightManager.semiBold,
             FontSize.s20,
@@ -365,8 +366,8 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
         const SizedBox(height: 4),
         Text(
           dashBoardModelData?.profileDetails?.isNotEmpty == true
-              ? "Welcome, ${dashBoardModelData!.profileDetails![0].name}!"
-              : "Welcome back!",
+              ? "${"dashboard.title.welcome_user".tr}, \u2066${dashBoardModelData!.profileDetails![0].name}!\u2069"
+              : "dashboard.title.welcome_back".tr,
           style: buildCustomStyle(
             FontWeightManager.medium,
             FontSize.s12,
@@ -459,7 +460,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
 
   Widget _buildTodaysSales() {
     return DashboardSectionHeader(
-      title: "Sales Overview",
+      title: "dashboard.sections.sales_overview".tr,
       trailing: BuildBoxShadowContainer(
         padding: const EdgeInsets.symmetric(horizontal: 10),
         height: 38,
@@ -482,7 +483,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
               child: SizedBox(
                 width: double.infinity,
                 child: Text(
-                  value,
+                  "dashboard.periods.${value.toLowerCase()}".tr,
                   textAlign: TextAlign.center,
                   style: buildCustomStyle(
                     FontWeightManager.bold,
@@ -512,7 +513,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
               return Container(
                 alignment: Alignment.center,
                 child: Text(
-                  value,
+                  "dashboard.periods.${value.toLowerCase()}".tr,
                   style: buildCustomStyle(
                     FontWeightManager.bold,
                     FontSize.s12,
@@ -576,27 +577,39 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
 
     return Column(
       children: [
-        const DashboardSectionHeader(title: "Company Account Overview"),
+        DashboardSectionHeader(title: "dashboard.sections.company_overview".tr),
         ResponsiveStatGrid(
           cards: [
             _buildCompanyAccountCard(
-                "Bank Account",
-                "Total Balance",
+                "dashboard.cards.bank_account".tr,
+                "dashboard.cards.bank_account_sub".tr,
                 bankAccountValue,
                 ColorManager.kPrimaryColor,
                 Icons.account_balance),
             _buildCompanyAccountCard(
-                "Cash Account",
-                "Total Balance",
+                "dashboard.cards.cash_account".tr,
+                "dashboard.cards.cash_account_sub".tr,
                 cashAccountValue,
                 ColorManager.kMagentha,
                 Icons.account_balance_wallet),
-            _buildCompanyAccountCard("Total Revenue", "Company Revenue",
-                revenueValue, ColorManager.kOrange, Icons.trending_up),
-            _buildCompanyAccountCard("Total Customers", "All Customers",
-                customersValue, ColorManager.kBlue, Icons.people),
-            _buildCompanyAccountCard("Total Orders", "All Orders", ordersValue,
-                const Color(0xFF4CAF50), Icons.shopping_cart),
+            _buildCompanyAccountCard(
+                "dashboard.cards.total_revenue".tr,
+                "dashboard.cards.total_revenue_sub".tr,
+                revenueValue,
+                ColorManager.kOrange,
+                Icons.trending_up),
+            _buildCompanyAccountCard(
+                "dashboard.cards.total_customers".tr,
+                "dashboard.cards.total_customers_sub".tr,
+                customersValue,
+                ColorManager.kBlue,
+                Icons.people),
+            _buildCompanyAccountCard(
+                "dashboard.cards.total_orders".tr,
+                "dashboard.cards.total_orders_sub".tr,
+                ordersValue,
+                const Color(0xFF4CAF50),
+                Icons.shopping_cart),
           ],
         ),
       ],
@@ -626,21 +639,33 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
 
     return Column(
       children: [
-        const DashboardSectionHeader(title: "Your Account Overview"),
+        DashboardSectionHeader(title: "dashboard.sections.your_overview".tr),
         ResponsiveStatGrid(
           cards: [
             _buildCompanyAccountCard(
-                "Cash Received",
-                "Your Cash Inflow",
+                "dashboard.accounts.cash_received".tr,
+                "dashboard.accounts.cash_received_sub".tr,
                 cashReceivedValue,
                 ColorManager.kPrimaryColor,
                 Icons.call_received),
-            _buildCompanyAccountCard("Cash Sent", "Your Cash Outflow",
-                cashSentValue, ColorManager.kMagentha, Icons.call_made),
-            _buildCompanyAccountCard("Bank Received", "Your Bank Inflow",
-                bankReceivedValue, ColorManager.kOrange, Icons.account_balance),
-            _buildCompanyAccountCard("Bank Sent", "Your Bank Outflow",
-                bankSentValue, ColorManager.kBlue, Icons.call_made),
+            _buildCompanyAccountCard(
+                "dashboard.accounts.cash_sent".tr,
+                "dashboard.accounts.cash_sent_sub".tr,
+                cashSentValue,
+                ColorManager.kMagentha,
+                Icons.call_made),
+            _buildCompanyAccountCard(
+                "dashboard.accounts.bank_received".tr,
+                "dashboard.accounts.bank_received_sub".tr,
+                bankReceivedValue,
+                ColorManager.kOrange,
+                Icons.account_balance),
+            _buildCompanyAccountCard(
+                "dashboard.accounts.bank_sent".tr,
+                "dashboard.accounts.bank_sent_sub".tr,
+                bankSentValue,
+                ColorManager.kBlue,
+                Icons.call_made),
           ],
         ),
       ],
@@ -716,17 +741,33 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
 
     return Column(
       children: [
-        const DashboardSectionHeader(title: "Your Sales Performance"),
+        DashboardSectionHeader(title: "dashboard.your_sales.title".tr),
         ResponsiveStatGrid(
           cards: [
-            _buildCompanyAccountCard("Today's Sales", "Today's Revenue",
-                todaysSalesValue, ColorManager.kPrimaryColor, Icons.today),
-            _buildCompanyAccountCard("This Week", "Weekly Revenue",
-                thisWeekValue, ColorManager.kMagentha, Icons.date_range),
-            _buildCompanyAccountCard("This Month", "Monthly Revenue",
-                thisMonthValue, ColorManager.kOrange, Icons.calendar_month),
-            _buildCompanyAccountCard("Total Sales", "Overall Performance",
-                totalSalesValue, ColorManager.kBlue, Icons.trending_up),
+            _buildCompanyAccountCard(
+                "dashboard.your_sales.todays_sales".tr,
+                "dashboard.your_sales.todays_sales_sub".tr,
+                todaysSalesValue,
+                ColorManager.kPrimaryColor,
+                Icons.today),
+            _buildCompanyAccountCard(
+                "dashboard.your_sales.this_week".tr,
+                "dashboard.your_sales.this_week_sub".tr,
+                thisWeekValue,
+                ColorManager.kMagentha,
+                Icons.date_range),
+            _buildCompanyAccountCard(
+                "dashboard.your_sales.this_month".tr,
+                "dashboard.your_sales.this_month_sub".tr,
+                thisMonthValue,
+                ColorManager.kOrange,
+                Icons.calendar_month),
+            _buildCompanyAccountCard(
+                "dashboard.your_sales.total_sales".tr,
+                "dashboard.your_sales.total_sales_sub".tr,
+                totalSalesValue,
+                ColorManager.kBlue,
+                Icons.trending_up),
           ],
         ),
       ],
@@ -746,7 +787,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
     return Column(
       children: [
         DashboardSectionHeader(
-          title: "Sales Graph",
+          title: "dashboard.sections.sales_graph".tr,
           trailing: BuildBoxShadowContainer(
             padding: const EdgeInsets.symmetric(horizontal: 10),
             height: 38,
@@ -774,13 +815,13 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                 String displayValue = '';
                 switch (value) {
                   case 'today':
-                    displayValue = 'Today';
+                    displayValue = 'dashboard.periods.today'.tr;
                     break;
                   case 'week':
-                    displayValue = 'This Week';
+                    displayValue = 'dashboard.periods.week'.tr;
                     break;
                   case 'month':
-                    displayValue = 'This Month';
+                    displayValue = 'dashboard.periods.month'.tr;
                     break;
                 }
                 return DropdownMenuItem<String>(
@@ -834,36 +875,36 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
   Widget _buildCustomersBySalesExecutive() {
     return Column(
       children: [
-        const DashboardSectionHeader(title: "Your Customers"),
+        DashboardSectionHeader(title: "dashboard.customers.title".tr),
         ResponsiveStatGrid(
           cards: [
             _buildCompanyAccountCard(
-                "Total Customers",
-                "All Time",
+                "dashboard.cards.total_customers".tr,
+                "dashboard.customer_stats.total_sub".tr,
                 customerStats != null
                     ? customerStats!.totalCustomers.toString()
                     : "0",
                 ColorManager.kPrimaryColor,
                 Icons.people),
             _buildCompanyAccountCard(
-                "Debit Customers",
-                "Pending Payments",
+                "dashboard.customer_stats.debit".tr,
+                "dashboard.customer_stats.debit_sub".tr,
                 customerStats != null
                     ? customerStats!.debitCustomers.toString()
                     : "0",
                 ColorManager.kMagentha,
                 Icons.money_off),
             _buildCompanyAccountCard(
-                "Credit Customers",
-                "Balance Available",
+                "dashboard.customer_stats.credit".tr,
+                "dashboard.customer_stats.credit_sub".tr,
                 customerStats != null
                     ? customerStats!.creditCustomers.toString()
                     : "0",
                 ColorManager.kOrange,
                 Icons.account_balance_wallet),
             _buildCompanyAccountCard(
-                "Crucial Customers",
-                "VVIP Clients",
+                "dashboard.customer_stats.crucial".tr,
+                "dashboard.customer_stats.crucial_sub".tr,
                 customerStats != null
                     ? customerStats!.crucialCustomers.toString()
                     : "0",
@@ -878,34 +919,34 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
   Widget _buildProductOverview() {
     return Column(
       children: [
-        const DashboardSectionHeader(title: "Product Overview"),
+        DashboardSectionHeader(title: "dashboard.products.title".tr),
         ResponsiveStatGrid(
           cards: [
             _buildCompanyAccountCard(
-                "Total Products",
-                "All Products",
+                "dashboard.products.total_products".tr,
+                "dashboard.product_stats.total_sub".tr,
                 productStats != null
                     ? productStats!.totalProducts.toString()
                     : "0",
                 ColorManager.kPrimaryColor,
                 Icons.inventory),
             _buildCompanyAccountCard(
-                "Active Products",
-                "Currently Selling",
+                "dashboard.product_stats.active".tr,
+                "dashboard.product_stats.active_sub".tr,
                 productStats != null
                     ? productStats!.activeProducts.toString()
                     : "0",
                 ColorManager.kMagentha,
                 Icons.check_circle),
             _buildCompanyAccountCard(
-                "Low Stock",
-                "Needs Attention",
+                "dashboard.product_stats.low_stock".tr,
+                "dashboard.product_stats.low_stock_sub".tr,
                 productStats != null ? productStats!.lowStock.toString() : "0",
                 ColorManager.kOrange,
                 Icons.warning),
             _buildCompanyAccountCard(
-                "Total Stock Qty",
-                "Overall Inventory",
+                "dashboard.product_stats.total_stock_qty".tr,
+                "dashboard.product_stats.total_stock_qty_sub".tr,
                 productStats != null
                     ? productStats!.totalProductsStockQty.toString()
                     : "0",
@@ -931,7 +972,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        "Recent Transactions",
+                        "dashboard.additional.recent_transactions".tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s15,
@@ -946,8 +987,8 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                     padding: const EdgeInsets.all(15),
                     height: 220,
                     circleRadius: 7,
-                    child: const Center(
-                      child: Text('No recent transactions data'),
+                    child: Center(
+                      child: Text('dashboard.placeholders.no_transactions'.tr),
                     ),
                   ),
                 ],
@@ -963,7 +1004,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        "Top Products",
+                        "dashboard.additional.top_products".tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s15,
@@ -978,8 +1019,8 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                     padding: const EdgeInsets.all(15),
                     height: 220,
                     circleRadius: 7,
-                    child: const Center(
-                      child: Text('No top products data'),
+                    child: Center(
+                      child: Text('dashboard.placeholders.no_top_products'.tr),
                     ),
                   ),
                 ],
@@ -999,7 +1040,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        "Low Stock Alert",
+                        "dashboard.additional.low_stock_alert".tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s15,
@@ -1014,8 +1055,8 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                     padding: const EdgeInsets.all(15),
                     height: 220,
                     circleRadius: 7,
-                    child: const Center(
-                      child: Text('No low stock data'),
+                    child: Center(
+                      child: Text('dashboard.placeholders.no_low_stock'.tr),
                     ),
                   ),
                 ],
@@ -1031,7 +1072,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        "Payment Methods",
+                        "dashboard.additional.payment_methods".tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s15,
@@ -1062,7 +1103,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
       PieChartSectionData(
         color: ColorManager.kPrimaryColor,
         value: 45,
-        title: 'Card\n45%',
+        title: '${'dashboard.charts.card'.tr}\n45%',
         radius: 50,
         titleStyle: const TextStyle(
             fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
@@ -1070,7 +1111,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
       PieChartSectionData(
         color: ColorManager.kOrange,
         value: 30,
-        title: 'Cash\n30%',
+        title: '${'dashboard.charts.cash'.tr}\n30%',
         radius: 50,
         titleStyle: const TextStyle(
             fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
@@ -1078,7 +1119,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
       PieChartSectionData(
         color: ColorManager.kMagentha,
         value: 15,
-        title: 'UPI\n15%',
+        title: '${'dashboard.charts.upi'.tr}\n15%',
         radius: 50,
         titleStyle: const TextStyle(
             fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
@@ -1086,7 +1127,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
       PieChartSectionData(
         color: ColorManager.kBlue,
         value: 10,
-        title: 'Other\n10%',
+        title: '${'dashboard.charts.other'.tr}\n10%',
         radius: 50,
         titleStyle: const TextStyle(
             fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
@@ -1236,14 +1277,14 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                     getTitlesWidget: (double value, TitleMeta meta) {
                       switch (value.toInt()) {
                         case 0:
-                          return const Text('POS',
-                              style: TextStyle(fontSize: 10));
+                          return Text('dashboard.charts.pos'.tr,
+                              style: const TextStyle(fontSize: 10));
                         case 1:
-                          return const Text('Web',
-                              style: TextStyle(fontSize: 10));
+                          return Text('dashboard.charts.web'.tr,
+                              style: const TextStyle(fontSize: 10));
                         case 2:
-                          return const Text('Kiosk',
-                              style: TextStyle(fontSize: 10));
+                          return Text('dashboard.charts.kiosk'.tr,
+                              style: const TextStyle(fontSize: 10));
                         default:
                           return const Text('');
                       }
@@ -1613,11 +1654,10 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
 
   Widget _buildSalesCard(String title, Color color, IconData icon) {
     String valueText = _getSalesValue(title);
-    String subtitle = _getCardSubtitle(title);
 
     return DashboardStatCard(
-      title: title,
-      subtitle: subtitle,
+      title: "dashboard.cards.${title.toLowerCase()}".tr,
+      subtitle: "dashboard.cards.${title.toLowerCase()}_sub".tr,
       value: valueText,
       color: color,
       icon: icon,
@@ -1730,7 +1770,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const DashboardSectionHeader(title: "Works Team"),
+        DashboardSectionHeader(title: "dashboard.sections.works_team".tr),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8),
           height: 120,
@@ -1763,7 +1803,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            member.name ?? "Unknown",
+                            member.name ?? "dashboard.placeholders.unknown_member".tr,
                             style: buildCustomStyle(
                               FontWeightManager.semiBold,
                               FontSize.s14,
@@ -1854,7 +1894,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Failed to load graph data: $error',
+          message: '${'dashboard.messages.failed_graph'.tr}: $error',
         );
       }
     } finally {

@@ -158,5 +158,119 @@
     "last_sync": "آخر مزامنة",
     "tap_to_sync_again": "اضغط للمزامنة مرة أخرى",
     "sync_all_data": "مزامنة جميع البيانات"
+  },
+  "dashboard": {
+    "title": {
+      "sales_executive": "لوحة تحكم مسؤول المبيعات",
+      "welcome_back": "مرحباً بك مجدداً!",
+      "welcome_user": "مرحباً"
+    },
+    "sections": {
+      "sales_overview": "نظرة عامة على المبيعات",
+      "company_overview": "نظرة عامة على حساب الشركة",
+      "your_overview": "نظرة عامة على حسابك",
+      "sales_graph": "رسم بياني للمبيعات",
+      "works_team": "فريق العمل"
+    },
+    "periods": {
+      "today": "اليوم",
+      "week": "هذا الأسبوع",
+      "month": "هذا الشهر",
+      "year": "هذه السنة"
+    },
+    "cards": {
+      "count": "العدد",
+      "count_sub": "إجمالي المبيعات",
+      "amount": "المبلغ",
+      "amount_sub": "الإيرادات",
+      "customers": "العملاء",
+      "customers_sub": "المستخدمون النشطون",
+      "products": "المنتجات",
+      "products_sub": "في المخزن",
+      "revenue": "الإيرادات",
+      "revenue_sub": "الإجمالي العام",
+      "orders": "الطلبات",
+      "orders_sub": "العدد الإجمالي",
+      "bank_account": "الحساب البنكي",
+      "bank_account_sub": "إجمالي الرصيد",
+      "cash_account": "الحساب النقدي",
+      "cash_account_sub": "إجمالي الرصيد",
+      "total_revenue": "إجمالي الإيرادات",
+      "total_revenue_sub": "إيرادات الشركة",
+      "total_customers": "إجمالي العملاء",
+      "total_customers_sub": "جميع العملاء",
+      "total_orders": "إجمالي الطلبات",
+      "total_orders_sub": "جميع الطلبات"
+    },
+    "accounts": {
+      "cash_received": "النقد المستلم",
+      "cash_received_sub": "تدفقك النقدي الوارد",
+      "cash_sent": "النقد المرسل",
+      "cash_sent_sub": "تدفقك النقدي الصادر",
+      "bank_received": "المبالغ البنكية المستلمة",
+      "bank_received_sub": "تدفقك البنكي الوارد",
+      "bank_sent": "المبالغ البنكية المرسلة",
+      "bank_sent_sub": "تدفقك البنكي الصادر"
+    },
+    "your_sales": {
+      "title": "أداء مبيعاتك",
+      "todays_sales": "مبيعات اليوم",
+      "todays_sales_sub": "إيرادات اليوم",
+      "this_week": "هذا الأسبوع",
+      "this_week_sub": "الإيرادات الأسبوعية",
+      "this_month": "هذا الشهر",
+      "this_month_sub": "الإيرادات الشهرية",
+      "total_sales": "إجمالي المبيعات",
+      "total_sales_sub": "الأداء العام"
+    },
+    "customers": {
+      "title": "عملاؤك"
+    },
+    "customer_stats": {
+      "total_sub": "طوال الوقت",
+      "debit": "عملاء الديون",
+      "debit_sub": "المدفوعات المعلقة",
+      "credit": "عملاء الائتمان",
+      "credit_sub": "الرصيد المتاح",
+      "crucial": "العملاء المهمون",
+      "crucial_sub": "عملاء كبار الشخصيات"
+    },
+    "products": {
+      "title": "نظرة عامة على المنتجات",
+      "total_products": "إجمالي المنتجات"
+    },
+    "product_stats": {
+      "total_sub": "جميع المنتجات",
+      "active": "المنتجات النشطة",
+      "active_sub": "تباع حالياً",
+      "low_stock": "مخزون منخفض",
+      "low_stock_sub": "بحاجة إلى اهتمام",
+      "total_stock_qty": "إجمالي كمية المخزون",
+      "total_stock_qty_sub": "المخزون العام"
+    },
+    "additional": {
+      "recent_transactions": "المعاملات الأخيرة",
+      "top_products": "أهم المنتجات",
+      "low_stock_alert": "تنبيه انخفاض المخزون",
+      "payment_methods": "طرق الدفع"
+    },
+    "charts": {
+      "card": "بطاقة",
+      "cash": "نقداً",
+      "upi": "UPI",
+      "other": "أخرى",
+      "pos": "نقاط البيع",
+      "web": "الويب",
+      "kiosk": "كشك"
+    },
+    "placeholders": {
+      "no_transactions": "لا توجد بيانات للمعاملات الأخيرة",
+      "no_top_products": "لا توجد بيانات لأهم المنتجات",
+      "no_low_stock": "لا توجد بيانات للمخزون المنخفض",
+      "unknown_member": "غير معروف"
+    },
+    "messages": {
+      "failed_graph": "فشل تحميل بيانات الرسم البياني"
+    }
   }
 }
