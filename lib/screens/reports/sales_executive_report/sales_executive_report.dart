@@ -43,10 +43,11 @@ class _SalesExecutiveReportScreenState
 
   @override
   void initState() {
-    loadInitData();
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _showFilters = !_isMobile(context));
+      if (!mounted) return;
+      setState(() => _showFilters = !_isMobile(context));
+      loadInitData();
     });
   }
 

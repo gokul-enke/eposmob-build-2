@@ -167,7 +167,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
     Provider.of<GridSelectionProvider>(context, listen: false)
         .getProductListFilesAPI(accessToken: accessToken ?? "")
         .then((value) {
-          debugPrint("IMAGE FILES RESPONSE: $value");
+      debugPrint("IMAGE FILES RESPONSE: $value");
       if (value["status"] == "success") {
         GetProductListFileModel getProductListFileModel =
             GetProductListFileModel.fromJson(value);
@@ -336,8 +336,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                         : Colors.grey.shade300,
                   ),
                 ),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               );
             }).toList(),
           ),
@@ -378,7 +377,8 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
 
         String? accessToken =
             Provider.of<AuthModel>(context, listen: false).token;
-        debugPrint("accessToken From AuthModel $accessToken");
+        debugPrint(
+            "Category request access token present: ${accessToken?.isNotEmpty == true}");
 
         final languageProvider =
             Provider.of<LanguageProvider>(context, listen: false);
@@ -393,22 +393,21 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
 
         categoryProvider
             .addCategory(
-                categoryName: categoryNameController.text,
-                slug: categorySlugController.text,
-                parentCategory: idController.text,
-                categoryNameEnglish: categoryNameEnglishController.text,
-                categoryNameHindi: categoryNameHindiController.text,
-                categoryNameArabic: categoryNameArabicController.text,
-                imagePath: imageFilePathController.text,
-                iconPath: iconFilePathController.text,
-                accessToken: accessToken ?? "",
-                isSellable: _isSellable,
-                isPurchasable: _isPurchasable,
-                categoryLangNames: categoryLangNames,
-                taxIds: _selectedTaxIds.isEmpty
-                    ? null
-                    : List<int>.from(_selectedTaxIds),
-            )
+          categoryName: categoryNameController.text,
+          slug: categorySlugController.text,
+          parentCategory: idController.text,
+          categoryNameEnglish: categoryNameEnglishController.text,
+          categoryNameHindi: categoryNameHindiController.text,
+          categoryNameArabic: categoryNameArabicController.text,
+          imagePath: imageFilePathController.text,
+          iconPath: iconFilePathController.text,
+          accessToken: accessToken ?? "",
+          isSellable: _isSellable,
+          isPurchasable: _isPurchasable,
+          categoryLangNames: categoryLangNames,
+          taxIds:
+              _selectedTaxIds.isEmpty ? null : List<int>.from(_selectedTaxIds),
+        )
             .then((value) async {
           if (value["status"] == "success") {
             if (!context.mounted) return;
@@ -510,8 +509,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
     final double fieldGap = isMobile ? 14.0 : 20.0;
 
     Widget buildActionButtons(double maxWidth) {
-      final double buttonWidth =
-          isMobile ? maxWidth : size.width * 0.19;
+      final double buttonWidth = isMobile ? maxWidth : size.width * 0.19;
 
       if (isMobile) {
         return Column(
@@ -583,236 +581,246 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
 
     return SafeArea(
       child: Container(
-          margin: EdgeInsets.symmetric(
-            horizontal: horizontalMargin,
-            vertical: categoryVerticalMargin(size.width),
+        margin: EdgeInsets.symmetric(
+          horizontal: horizontalMargin,
+          vertical: categoryVerticalMargin(size.width),
+        ),
+        padding: EdgeInsets.all(isMobile ? 4 : 8),
+        decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
+            border: Border.all(color: Colors.grey.withOpacity(0.12)),
+            boxShadow: const [
+              BoxShadow(
+                color: ColorManager.boxShadowColor,
+                blurRadius: 10,
+                offset: Offset(0, 3),
+              ),
+            ],
+            color: Colors.white),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            vertical: isMobile ? 12.0 : 20.0,
+            horizontal: isMobile ? 12.0 : 10.0,
           ),
-          padding: EdgeInsets.all(isMobile ? 4 : 8),
-          decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
-              border: Border.all(color: Colors.grey.withOpacity(0.12)),
-              boxShadow: const [
-                BoxShadow(
-                  color: ColorManager.boxShadowColor,
-                  blurRadius: 10,
-                  offset: Offset(0, 3),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CustomBackButton(
+                  onPressed: () {
+                    sideBarController.index.value = 12;
+                  },
+                  text: 'All Categories',
                 ),
-              ],
-              color: Colors.white),
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              vertical: isMobile ? 12.0 : 20.0,
-              horizontal: isMobile ? 12.0 : 10.0,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CustomBackButton(
-                    onPressed: () {
-                      sideBarController.index.value = 12;
-                    },
-                    text: 'All Categories',
-                  ),
-                  const SizedBox(height: 12),
-                  const CategoryPageHeader(
-                    title: 'Add New Category',
-                    subtitle:
-                        'Fill in the details below to create a new product category.',
-                  ),
-                  SizedBox(height: isMobile ? 16 : 20),
-                  CategoryFormCard(
-                    child: Form(
-                          key: formKey,
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              final double fieldWidth = categoryFieldWidth(
-                                constraints.maxWidth,
-                              );
+                const SizedBox(height: 12),
+                const CategoryPageHeader(
+                  title: 'Add New Category',
+                  subtitle:
+                      'Fill in the details below to create a new product category.',
+                ),
+                SizedBox(height: isMobile ? 16 : 20),
+                CategoryFormCard(
+                  child: Form(
+                    key: formKey,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final double fieldWidth = categoryFieldWidth(
+                          constraints.maxWidth,
+                        );
 
-                              Widget fieldPair({
-                                required Widget first,
-                                required Widget second,
-                              }) {
-                                if (isMobile) {
-                                  return Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      first,
-                                      SizedBox(height: fieldGap),
-                                      second,
-                                    ],
-                                  );
-                                }
-                                return Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(child: first),
-                                    SizedBox(width: fieldGap),
-                                    Expanded(child: second),
-                                  ],
-                                );
-                              }
-
-                              return Column(
+                        Widget fieldPair({
+                          required Widget first,
+                          required Widget second,
+                        }) {
+                          if (isMobile) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                first,
+                                SizedBox(height: fieldGap),
+                                second,
+                              ],
+                            );
+                          }
+                          return Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              ...() {
-                                final languageProvider =
-                                    Provider.of<LanguageProvider>(context);
-                                final activeLanguages =
-                                    languageProvider.languages;
+                              Expanded(child: first),
+                              SizedBox(width: fieldGap),
+                              Expanded(child: second),
+                            ],
+                          );
+                        }
 
-                                _syncLanguageControllers(activeLanguages);
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ...() {
+                              final languageProvider =
+                                  Provider.of<LanguageProvider>(context);
+                              final activeLanguages =
+                                  languageProvider.languages;
 
-                                final List<Widget> leftWidgets = [
-                                  BuildErrorText(
-                                    errorText: _categoryNameError != null
-                                        ? _categoryNameError!
-                                        : "",
-                                    padding: const EdgeInsetsDirectional.only(
-                                        start: 10.0),
-                                    child: buildColumnWidgetForTextFields(
-                                      onchanged: ((value) {
-                                        categoryNameEnglishController.text =
-                                            value ?? '';
-                                        categorySlugController.text =
-                                            categoryNameController.text
-                                                .toLowerCase()
-                                                .replaceAll(
-                                                    RegExp(r'\s+'), '-')
-                                                .replaceAll(
-                                                    RegExp(r'[^a-z0-9-]'), '');
-                                      }),
-                                      isLeft: false,
-                                      isStarRed: true,
-                                      readOnly: false,
-                                      controller: categoryNameController,
-                                      size: size,
-                                      width: fieldWidth,
-                                      title: 'Category Name',
-                                      hintText: 'Category Name',
-                                    ),
+                              _syncLanguageControllers(activeLanguages);
+
+                              final List<Widget> leftWidgets = [
+                                BuildErrorText(
+                                  errorText: _categoryNameError != null
+                                      ? _categoryNameError!
+                                      : "",
+                                  padding: const EdgeInsetsDirectional.only(
+                                      start: 10.0),
+                                  child: buildColumnWidgetForTextFields(
+                                    onchanged: ((value) {
+                                      categoryNameEnglishController.text =
+                                          value ?? '';
+                                      categorySlugController.text =
+                                          categoryNameController.text
+                                              .toLowerCase()
+                                              .replaceAll(RegExp(r'\s+'), '-')
+                                              .replaceAll(
+                                                  RegExp(r'[^a-z0-9-]'), '');
+                                    }),
+                                    isLeft: false,
+                                    isStarRed: true,
+                                    readOnly: false,
+                                    controller: categoryNameController,
+                                    size: size,
+                                    width: fieldWidth,
+                                    title: 'Category Name',
+                                    hintText: 'Category Name',
                                   ),
-                                  if (categoryProvider.allCategories.isNotEmpty)
-                                    _buildParentCategoryField(
-                                        categoryProvider,
-                                        categoryList,
-                                        fieldWidth),
-                                  BuildErrorText(
-                                    errorText: _categorySlugError != null
-                                        ? _categorySlugError!
-                                        : "",
-                                    padding: const EdgeInsetsDirectional.only(
-                                        start: 10.0),
-                                    child: buildColumnWidgetForTextFields(
-                                      onchanged: (value) {},
-                                      isLeft: false,
-                                      controller: categorySlugController,
-                                      size: size,
-                                      width: fieldWidth,
-                                      isStarRed: true,
-                                      title: "Category Slug",
-                                      hintText: 'Url Slug',
-                                      readOnly: true,
-                                    ),
+                                ),
+                                if (categoryProvider.allCategories.isNotEmpty)
+                                  _buildParentCategoryField(categoryProvider,
+                                      categoryList, fieldWidth),
+                                BuildErrorText(
+                                  errorText: _categorySlugError != null
+                                      ? _categorySlugError!
+                                      : "",
+                                  padding: const EdgeInsetsDirectional.only(
+                                      start: 10.0),
+                                  child: buildColumnWidgetForTextFields(
+                                    onchanged: (value) {},
+                                    isLeft: false,
+                                    controller: categorySlugController,
+                                    size: size,
+                                    width: fieldWidth,
+                                    isStarRed: true,
+                                    title: "Category Slug",
+                                    hintText: 'Url Slug',
+                                    readOnly: true,
                                   ),
-                                  _buildTaxSelector(),
-                                ];
+                                ),
+                                _buildTaxSelector(),
+                              ];
 
-                                final List<Widget> rightWidgets = [];
+                              final List<Widget> rightWidgets = [];
 
-                                for (final language in activeLanguages) {
-                                  if (language.code.toLowerCase() == 'en') continue; // skip English
-                                  if (!language.active) continue; // skip inactive
+                              for (final language in activeLanguages) {
+                                if (language.code.toLowerCase() == 'en')
+                                  continue; // skip English
+                                if (!language.active) continue; // skip inactive
 
-                                  final controller =
-                                      _languageNameControllers[language.id]!;
+                                final controller =
+                                    _languageNameControllers[language.id]!;
 
-                                  rightWidgets.add(
-                                    Row(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      children: [
-                                        Expanded(
-                                          child: buildColumnWidgetForTextFields(
-                                            onchanged: (value) {},
-                                            isLeft: false,
-                                            controller: controller,
-                                            size: size,
-                                            width: fieldWidth,
-                                            title: "Category Name - ${language.name}(${language.code.toUpperCase()})",
-                                            hintText: 'Enter...',
-                                            readOnly: false,
-                                          ),
+                                rightWidgets.add(
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Expanded(
+                                        child: buildColumnWidgetForTextFields(
+                                          onchanged: (value) {},
+                                          isLeft: false,
+                                          controller: controller,
+                                          size: size,
+                                          width: fieldWidth,
+                                          title:
+                                              "Category Name - ${language.name}(${language.code.toUpperCase()})",
+                                          hintText: 'Enter...',
+                                          readOnly: false,
                                         ),
-                                        const SizedBox(width: 8),
-                                        Padding(
-                                          padding: const EdgeInsets.only(bottom: 4),
-                                          child: SizedBox(
-                                            height: 44,
-                                            width: 44,
-                                            child: Tooltip(
-                                              message: 'Translate to ${language.name}',
-                                              child: ElevatedButton(
-                                                onPressed: _languageTranslating[language.id] == true
-                                                    ? null
-                                                    : () => _translateLanguage(language),
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: ColorManager.kPrimaryColor,
-                                                  padding: EdgeInsets.zero,
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius: BorderRadius.circular(7),
-                                                  ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 4),
+                                        child: SizedBox(
+                                          height: 44,
+                                          width: 44,
+                                          child: Tooltip(
+                                            message:
+                                                'Translate to ${language.name}',
+                                            child: ElevatedButton(
+                                              onPressed: _languageTranslating[
+                                                          language.id] ==
+                                                      true
+                                                  ? null
+                                                  : () => _translateLanguage(
+                                                      language),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor:
+                                                    ColorManager.kPrimaryColor,
+                                                padding: EdgeInsets.zero,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(7),
                                                 ),
-                                                child: _languageTranslating[language.id] == true
-                                                    ? const SizedBox(
-                                                        width: 16,
-                                                        height: 16,
-                                                        child: CircularProgressIndicator(
-                                                          strokeWidth: 2,
-                                                          valueColor: AlwaysStoppedAnimation<Color>(
-                                                              Colors.white),
-                                                        ),
-                                                      )
-                                                    : const Icon(
-                                                        Icons.translate,
-                                                        size: 18,
-                                                        color: Colors.white,
-                                                      ),
                                               ),
+                                              child: _languageTranslating[
+                                                          language.id] ==
+                                                      true
+                                                  ? const SizedBox(
+                                                      width: 16,
+                                                      height: 16,
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                        valueColor:
+                                                            AlwaysStoppedAnimation<
+                                                                    Color>(
+                                                                Colors.white),
+                                                      ),
+                                                    )
+                                                  : const Icon(
+                                                      Icons.translate,
+                                                      size: 18,
+                                                      color: Colors.white,
+                                                    ),
                                             ),
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                  );
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+
+                              final int pairCount =
+                                  leftWidgets.length > rightWidgets.length
+                                      ? leftWidgets.length
+                                      : rightWidgets.length;
+
+                              final List<Widget> pairedRows = [];
+                              for (int i = 0; i < pairCount; i++) {
+                                final Widget left = i < leftWidgets.length
+                                    ? leftWidgets[i]
+                                    : const SizedBox.shrink();
+                                final Widget right = i < rightWidgets.length
+                                    ? rightWidgets[i]
+                                    : const SizedBox.shrink();
+                                pairedRows.add(
+                                  fieldPair(first: left, second: right),
+                                );
+                                if (i < pairCount - 1) {
+                                  pairedRows.add(SizedBox(height: fieldGap));
                                 }
+                              }
 
-                                final int pairCount =
-                                    leftWidgets.length > rightWidgets.length
-                                        ? leftWidgets.length
-                                        : rightWidgets.length;
-
-                                final List<Widget> pairedRows = [];
-                                for (int i = 0; i < pairCount; i++) {
-                                  final Widget left = i < leftWidgets.length
-                                      ? leftWidgets[i]
-                                      : const SizedBox.shrink();
-                                  final Widget right = i < rightWidgets.length
-                                      ? rightWidgets[i]
-                                      : const SizedBox.shrink();
-                                  pairedRows.add(
-                                    fieldPair(first: left, second: right),
-                                  );
-                                  if (i < pairCount - 1) {
-                                    pairedRows.add(SizedBox(height: fieldGap));
-                                  }
-                                }
-
-                                return pairedRows;
-                              }(),
-                              /*
+                              return pairedRows;
+                            }(),
+                            /*
                               Row(
                                 children: [
                                   Column(
@@ -954,61 +962,63 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                 ],
                               ),
                               */
-                              SizedBox(height: fieldGap),
-                              fieldPair(
-                                first: Row(
-                                    children: [
-                                      Switch(
-                                        value: _isSellable,
-                                        onChanged: (val) => setState(() => _isSellable = val),
-                                        activeColor: ColorManager.kPrimaryColor,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'Sellable',
-                                        style: buildCustomStyle(
-                                          FontWeightManager.regular,
-                                          FontSize.s14,
-                                          0.27,
-                                          Colors.black.withOpacity(0.6),
-                                        ),
-                                      ),
-                                    ],
+                            SizedBox(height: fieldGap),
+                            fieldPair(
+                              first: Row(
+                                children: [
+                                  Switch(
+                                    value: _isSellable,
+                                    onChanged: (val) =>
+                                        setState(() => _isSellable = val),
+                                    activeColor: ColorManager.kPrimaryColor,
                                   ),
-                                second: Row(
-                                  children: [
-                                    Switch(
-                                      value: _isPurchasable,
-                                      onChanged: (val) => setState(() => _isPurchasable = val),
-                                      activeColor: ColorManager.kPrimaryColor,
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Sellable',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.regular,
+                                      FontSize.s14,
+                                      0.27,
+                                      Colors.black.withOpacity(0.6),
                                     ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Purchasable',
-                                      style: buildCustomStyle(
-                                        FontWeightManager.regular,
-                                        FontSize.s14,
-                                        0.27,
-                                        Colors.black.withOpacity(0.6),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 25),
-                              buildActionButtons(constraints.maxWidth),
-                              const SizedBox(height: 25),
-                            ],
-                          );
-                            },
-                          ),
-                        ),
-                      ),
-                ],
-              ),
+                              second: Row(
+                                children: [
+                                  Switch(
+                                    value: _isPurchasable,
+                                    onChanged: (val) =>
+                                        setState(() => _isPurchasable = val),
+                                    activeColor: ColorManager.kPrimaryColor,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Purchasable',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.regular,
+                                      FontSize.s14,
+                                      0.27,
+                                      Colors.black.withOpacity(0.6),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 25),
+                            buildActionButtons(constraints.maxWidth),
+                            const SizedBox(height: 25),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
+      ),
     );
   }
 
@@ -1055,7 +1065,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                 ColorManager.textColor.withOpacity(.5),
               ),
             ),
-             items: [
+            items: [
               DropdownMenuItem<Category>(
                 value: null,
                 child: Text(
@@ -1110,10 +1120,9 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                 );
                 debugPrint("onChanged ${selectedCategory.categoryId}");
                 categoryIDController.text = "${selectedCategory.categoryId}";
-                debugPrint(
-                    "categoryIdController ${categoryIDController.text}");
-                categoryProvider.setParentCategory(
-                    "${selectedCategory.categoryId ?? 0}");
+                debugPrint("categoryIdController ${categoryIDController.text}");
+                categoryProvider
+                    .setParentCategory("${selectedCategory.categoryId ?? 0}");
               } else {
                 categoryProvider.selectCategory(-1, '', 0);
                 categoryIDController.text = "0";
@@ -1152,8 +1161,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                   child: BuildBoxShadowContainer(
                       circleRadius: 14,
                       padding: EdgeInsets.all(isPhone ? 12 : 16),
-                      border: Border.all(
-                          color: Colors.grey.withOpacity(0.12)),
+                      border: Border.all(color: Colors.grey.withOpacity(0.12)),
                       color: Colors.white,
                       child: SingleChildScrollView(
                         child: SizedBox(
@@ -1203,7 +1211,8 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                               if (result != null) {
                                                 this.setState(() {
                                                   imageFilePathController.text =
-                                                      result.files.single.path ??
+                                                      result.files.single
+                                                              .path ??
                                                           '';
                                                   _selectedImagePath =
                                                       result.files.single.path;
@@ -1244,7 +1253,8 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                               if (result != null) {
                                                 this.setState(() {
                                                   imageFilePathController.text =
-                                                      result.files.single.path ??
+                                                      result.files.single
+                                                              .path ??
                                                           '';
                                                   _selectedImagePath =
                                                       result.files.single.path;
@@ -1281,8 +1291,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                     child: BuildBoxShadowContainer(
                                       circleRadius: 10,
                                       border: Border.all(
-                                          color:
-                                              Colors.grey.withOpacity(0.12)),
+                                          color: Colors.grey.withOpacity(0.12)),
                                       padding: const EdgeInsets.all(12),
                                       child: Row(
                                         children: [
@@ -1291,8 +1300,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                             groupValue: selectedImageIndex,
                                             onChanged: (int? value) {
                                               setState(() {
-                                                selectedImageIndex =
-                                                    value ?? 0;
+                                                selectedImageIndex = value ?? 0;
                                               });
                                               debugPrint(
                                                   "showDialog $index $selectedImageIndex");
@@ -1335,97 +1343,32 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                   );
                                 }),
                               if (!isPhone)
-                              SizedBox(
-                                width: dialogWidth,
-                                child: Table(
-                                  columnWidths: const {
-                                    0: FractionColumnWidth(0.01),
-                                    1: FractionColumnWidth(0.01),
-                                    2: FractionColumnWidth(0.1),
-                                    3: FractionColumnWidth(0.06),
-                                    4: FractionColumnWidth(0.06),
-                                    5: FractionColumnWidth(0.05),
-                                  },
-                                  border: const TableBorder.symmetric(
-                                      outside: BorderSide(
-                                          color: ColorManager.tableBOrderColor,
-                                          width: 0.3),
-                                      inside: BorderSide(
-                                          color: ColorManager.tableBOrderColor,
-                                          width: 0.8)),
-                                  defaultVerticalAlignment:
-                                      TableCellVerticalAlignment.middle,
-                                  children: [
-                                    TableRow(
-                                        decoration: const BoxDecoration(
-                                            color: ColorManager.tableBGColor),
-                                        children: [
-                                          TableCell(
-                                              verticalAlignment:
-                                                  TableCellVerticalAlignment
-                                                      .middle,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(15.0),
-                                                child: Center(
-                                                    child: Text(
-                                                  "Select",
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.medium,
-                                                    FontSize.s12,
-                                                    0.18,
-                                                    ColorManager.kPrimaryColor,
-                                                  ),
-                                                )),
-                                              )),
-                                          TableCell(
-                                              verticalAlignment:
-                                                  TableCellVerticalAlignment
-                                                      .middle,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(15.0),
-                                                child: Center(
-                                                    child: Text(
-                                                  "Image Title",
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.medium,
-                                                    FontSize.s12,
-                                                    0.18,
-                                                    ColorManager.kPrimaryColor,
-                                                  ),
-                                                )),
-                                              )),
-                                          TableCell(
-                                              verticalAlignment:
-                                                  TableCellVerticalAlignment
-                                                      .middle,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(15.0),
-                                                child: Center(
-                                                    child: Text(
-                                                  "Preview",
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.medium,
-                                                    FontSize.s12,
-                                                    0.18,
-                                                    ColorManager.kPrimaryColor,
-                                                  ),
-                                                )),
-                                              )),
-                                        ]),
-
-                                    // Map your order data to table rows here
-                                    // ...imageFiles!.map((image) {
-                                    if (attachment != null)
-                                      ...attachment
-                                          .asMap()
-                                          .entries
-                                          .map((entry) {
-                                        final index = entry.key;
-                                        final image = entry.value;
-                                        return TableRow(
+                                SizedBox(
+                                  width: dialogWidth,
+                                  child: Table(
+                                    columnWidths: const {
+                                      0: FractionColumnWidth(0.01),
+                                      1: FractionColumnWidth(0.01),
+                                      2: FractionColumnWidth(0.1),
+                                      3: FractionColumnWidth(0.06),
+                                      4: FractionColumnWidth(0.06),
+                                      5: FractionColumnWidth(0.05),
+                                    },
+                                    border: const TableBorder.symmetric(
+                                        outside: BorderSide(
+                                            color:
+                                                ColorManager.tableBOrderColor,
+                                            width: 0.3),
+                                        inside: BorderSide(
+                                            color:
+                                                ColorManager.tableBOrderColor,
+                                            width: 0.8)),
+                                    defaultVerticalAlignment:
+                                        TableCellVerticalAlignment.middle,
+                                    children: [
+                                      TableRow(
+                                          decoration: const BoxDecoration(
+                                              color: ColorManager.tableBGColor),
                                           children: [
                                             TableCell(
                                                 verticalAlignment:
@@ -1435,32 +1378,16 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                                   padding: const EdgeInsets.all(
                                                       15.0),
                                                   child: Center(
-                                                    child: Radio<int>(
-                                                      value: index,
-                                                      groupValue:
-                                                          selectedImageIndex,
-                                                      onChanged: (int? value) {
-                                                        // Set the selected image index
-                                                        setState(() {
-                                                          selectedImageIndex =
-                                                              value ?? 0;
-                                                        });
-
-                                                        debugPrint(
-                                                            "showDialog $index $selectedImageIndex");
-                                                        imageFilePathController
-                                                                .text =
-                                                            image.id.toString();
-                                                        imageAltController
-                                                                .text =
-                                                            image.alt ?? "";
-                                                        imageTitleController
-                                                                .text =
-                                                            image.title ?? "";
-                                                        // Perform any other action if needed
-                                                      },
+                                                      child: Text(
+                                                    "Select",
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.medium,
+                                                      FontSize.s12,
+                                                      0.18,
+                                                      ColorManager
+                                                          .kPrimaryColor,
                                                     ),
-                                                  ),
+                                                  )),
                                                 )),
                                             TableCell(
                                                 verticalAlignment:
@@ -1470,47 +1397,140 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                                   padding: const EdgeInsets.all(
                                                       15.0),
                                                   child: Center(
-                                                    child: Text(
-                                                      "${image.title}",
-                                                      style: buildCustomStyle(
-                                                        FontWeightManager
-                                                            .medium,
-                                                        FontSize.s9,
-                                                        0.13,
-                                                        Colors.black,
+                                                      child: Text(
+                                                    "Image Title",
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.medium,
+                                                      FontSize.s12,
+                                                      0.18,
+                                                      ColorManager
+                                                          .kPrimaryColor,
+                                                    ),
+                                                  )),
+                                                )),
+                                            TableCell(
+                                                verticalAlignment:
+                                                    TableCellVerticalAlignment
+                                                        .middle,
+                                                child: Padding(
+                                                  padding: const EdgeInsets.all(
+                                                      15.0),
+                                                  child: Center(
+                                                      child: Text(
+                                                    "Preview",
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.medium,
+                                                      FontSize.s12,
+                                                      0.18,
+                                                      ColorManager
+                                                          .kPrimaryColor,
+                                                    ),
+                                                  )),
+                                                )),
+                                          ]),
+
+                                      // Map your order data to table rows here
+                                      // ...imageFiles!.map((image) {
+                                      if (attachment != null)
+                                        ...attachment
+                                            .asMap()
+                                            .entries
+                                            .map((entry) {
+                                          final index = entry.key;
+                                          final image = entry.value;
+                                          return TableRow(
+                                            children: [
+                                              TableCell(
+                                                  verticalAlignment:
+                                                      TableCellVerticalAlignment
+                                                          .middle,
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            15.0),
+                                                    child: Center(
+                                                      child: Radio<int>(
+                                                        value: index,
+                                                        groupValue:
+                                                            selectedImageIndex,
+                                                        onChanged:
+                                                            (int? value) {
+                                                          // Set the selected image index
+                                                          setState(() {
+                                                            selectedImageIndex =
+                                                                value ?? 0;
+                                                          });
+
+                                                          debugPrint(
+                                                              "showDialog $index $selectedImageIndex");
+                                                          imageFilePathController
+                                                                  .text =
+                                                              image.id
+                                                                  .toString();
+                                                          imageAltController
+                                                                  .text =
+                                                              image.alt ?? "";
+                                                          imageTitleController
+                                                                  .text =
+                                                              image.title ?? "";
+                                                          // Perform any other action if needed
+                                                        },
                                                       ),
                                                     ),
-                                                  ),
-                                                )),
-                                            TableCell(
-                                                verticalAlignment:
-                                                    TableCellVerticalAlignment
-                                                        .middle,
-                                                child: Padding(
-                                                  padding: const EdgeInsets.all(
-                                                      15.0),
-                                                  child: Center(
-                                                    child:
-                                                        BuildBoxShadowContainer(
-                                                            margin:
-                                                                const EdgeInsets
-                                                                    .only(
-                                                                    left: 5,
-                                                                    right: 5),
-                                                            circleRadius: 5,
-                                                            child:
-                                                                Image.network(
-                                                              image.s3Url ?? "",
-                                                              fit: BoxFit.cover,
-                                                            )),
-                                                  ),
-                                                )),
-                                          ],
-                                        );
-                                      }).toList(),
-                                  ],
+                                                  )),
+                                              TableCell(
+                                                  verticalAlignment:
+                                                      TableCellVerticalAlignment
+                                                          .middle,
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            15.0),
+                                                    child: Center(
+                                                      child: Text(
+                                                        "${image.title}",
+                                                        style: buildCustomStyle(
+                                                          FontWeightManager
+                                                              .medium,
+                                                          FontSize.s9,
+                                                          0.13,
+                                                          Colors.black,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  )),
+                                              TableCell(
+                                                  verticalAlignment:
+                                                      TableCellVerticalAlignment
+                                                          .middle,
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            15.0),
+                                                    child: Center(
+                                                      child:
+                                                          BuildBoxShadowContainer(
+                                                              margin:
+                                                                  const EdgeInsets
+                                                                      .only(
+                                                                      left: 5,
+                                                                      right: 5),
+                                                              circleRadius: 5,
+                                                              child:
+                                                                  Image.network(
+                                                                image.s3Url ??
+                                                                    "",
+                                                                fit: BoxFit
+                                                                    .cover,
+                                                              )),
+                                                    ),
+                                                  )),
+                                            ],
+                                          );
+                                        }).toList(),
+                                    ],
+                                  ),
                                 ),
-                              ),
                               Padding(
                                 padding: const EdgeInsets.only(top: 12.0),
                                 child: isPhone
@@ -1619,8 +1639,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                   child: BuildBoxShadowContainer(
                       circleRadius: 14,
                       padding: EdgeInsets.all(isPhone ? 12 : 16),
-                      border: Border.all(
-                          color: Colors.grey.withOpacity(0.12)),
+                      border: Border.all(color: Colors.grey.withOpacity(0.12)),
                       color: Colors.white,
                       child: SingleChildScrollView(
                         child: SizedBox(
@@ -1670,7 +1689,8 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                               if (result != null) {
                                                 this.setState(() {
                                                   iconFilePathController.text =
-                                                      result.files.single.path ??
+                                                      result.files.single
+                                                              .path ??
                                                           '';
                                                   _selectedIconPath =
                                                       result.files.single.path;
@@ -1711,7 +1731,8 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                               if (result != null) {
                                                 this.setState(() {
                                                   iconFilePathController.text =
-                                                      result.files.single.path ??
+                                                      result.files.single
+                                                              .path ??
                                                           '';
                                                   _selectedIconPath =
                                                       result.files.single.path;
@@ -1748,8 +1769,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                     child: BuildBoxShadowContainer(
                                       circleRadius: 10,
                                       border: Border.all(
-                                          color:
-                                              Colors.grey.withOpacity(0.12)),
+                                          color: Colors.grey.withOpacity(0.12)),
                                       padding: const EdgeInsets.all(12),
                                       child: Row(
                                         children: [
@@ -1758,8 +1778,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                             groupValue: selectedIconIndex,
                                             onChanged: (int? value) {
                                               setState(() {
-                                                selectedIconIndex =
-                                                    value ?? 0;
+                                                selectedIconIndex = value ?? 0;
                                               });
                                               debugPrint(
                                                   "showDialog $index $selectedIconIndex");
@@ -1802,97 +1821,32 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                   );
                                 }),
                               if (!isPhone)
-                              SizedBox(
-                                width: dialogWidth,
-                                child: Table(
-                                  columnWidths: const {
-                                    0: FractionColumnWidth(0.01),
-                                    1: FractionColumnWidth(0.01),
-                                    2: FractionColumnWidth(0.1),
-                                    3: FractionColumnWidth(0.06),
-                                    4: FractionColumnWidth(0.06),
-                                    5: FractionColumnWidth(0.05),
-                                  },
-                                  border: const TableBorder.symmetric(
-                                      outside: BorderSide(
-                                          color: ColorManager.tableBOrderColor,
-                                          width: 0.3),
-                                      inside: BorderSide(
-                                          color: ColorManager.tableBOrderColor,
-                                          width: 0.8)),
-                                  defaultVerticalAlignment:
-                                      TableCellVerticalAlignment.middle,
-                                  children: [
-                                    TableRow(
-                                        decoration: const BoxDecoration(
-                                            color: ColorManager.tableBGColor),
-                                        children: [
-                                          TableCell(
-                                              verticalAlignment:
-                                                  TableCellVerticalAlignment
-                                                      .middle,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(15.0),
-                                                child: Center(
-                                                    child: Text(
-                                                  "Select",
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.medium,
-                                                    FontSize.s12,
-                                                    0.18,
-                                                    ColorManager.kPrimaryColor,
-                                                  ),
-                                                )),
-                                              )),
-                                          TableCell(
-                                              verticalAlignment:
-                                                  TableCellVerticalAlignment
-                                                      .middle,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(15.0),
-                                                child: Center(
-                                                    child: Text(
-                                                  "Image Title",
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.medium,
-                                                    FontSize.s12,
-                                                    0.18,
-                                                    ColorManager.kPrimaryColor,
-                                                  ),
-                                                )),
-                                              )),
-                                          TableCell(
-                                              verticalAlignment:
-                                                  TableCellVerticalAlignment
-                                                      .middle,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(15.0),
-                                                child: Center(
-                                                    child: Text(
-                                                  "Preview",
-                                                  style: buildCustomStyle(
-                                                    FontWeightManager.medium,
-                                                    FontSize.s12,
-                                                    0.18,
-                                                    ColorManager.kPrimaryColor,
-                                                  ),
-                                                )),
-                                              )),
-                                        ]),
-
-                                    // Map your order data to table rows here
-                                    // ...imageFiles!.map((image) {
-                                    if (attachment != null)
-                                      ...attachment
-                                          .asMap()
-                                          .entries
-                                          .map((entry) {
-                                        final index = entry.key;
-                                        final image = entry.value;
-                                        return TableRow(
+                                SizedBox(
+                                  width: dialogWidth,
+                                  child: Table(
+                                    columnWidths: const {
+                                      0: FractionColumnWidth(0.01),
+                                      1: FractionColumnWidth(0.01),
+                                      2: FractionColumnWidth(0.1),
+                                      3: FractionColumnWidth(0.06),
+                                      4: FractionColumnWidth(0.06),
+                                      5: FractionColumnWidth(0.05),
+                                    },
+                                    border: const TableBorder.symmetric(
+                                        outside: BorderSide(
+                                            color:
+                                                ColorManager.tableBOrderColor,
+                                            width: 0.3),
+                                        inside: BorderSide(
+                                            color:
+                                                ColorManager.tableBOrderColor,
+                                            width: 0.8)),
+                                    defaultVerticalAlignment:
+                                        TableCellVerticalAlignment.middle,
+                                    children: [
+                                      TableRow(
+                                          decoration: const BoxDecoration(
+                                              color: ColorManager.tableBGColor),
                                           children: [
                                             TableCell(
                                                 verticalAlignment:
@@ -1902,31 +1856,16 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                                   padding: const EdgeInsets.all(
                                                       15.0),
                                                   child: Center(
-                                                    child: Radio<int>(
-                                                      value: index,
-                                                      groupValue:
-                                                          selectedIconIndex,
-                                                      onChanged: (int? value) {
-                                                        // Set the selected image index
-                                                        setState(() {
-                                                          selectedIconIndex =
-                                                              value ?? 0;
-                                                        });
-
-                                                        debugPrint(
-                                                            "showDialog $index $selectedIconIndex");
-                                                        iconFilePathController
-                                                                .text =
-                                                            image.id.toString();
-                                                        iconAltController.text =
-                                                            image.alt ?? "";
-                                                        iconTitleController
-                                                                .text =
-                                                            image.title ?? "";
-                                                        // Perform any other action if needed
-                                                      },
+                                                      child: Text(
+                                                    "Select",
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.medium,
+                                                      FontSize.s12,
+                                                      0.18,
+                                                      ColorManager
+                                                          .kPrimaryColor,
                                                     ),
-                                                  ),
+                                                  )),
                                                 )),
                                             TableCell(
                                                 verticalAlignment:
@@ -1936,47 +1875,140 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                                   padding: const EdgeInsets.all(
                                                       15.0),
                                                   child: Center(
-                                                    child: Text(
-                                                      "${image.title}",
-                                                      style: buildCustomStyle(
-                                                        FontWeightManager
-                                                            .medium,
-                                                        FontSize.s9,
-                                                        0.13,
-                                                        Colors.black,
+                                                      child: Text(
+                                                    "Image Title",
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.medium,
+                                                      FontSize.s12,
+                                                      0.18,
+                                                      ColorManager
+                                                          .kPrimaryColor,
+                                                    ),
+                                                  )),
+                                                )),
+                                            TableCell(
+                                                verticalAlignment:
+                                                    TableCellVerticalAlignment
+                                                        .middle,
+                                                child: Padding(
+                                                  padding: const EdgeInsets.all(
+                                                      15.0),
+                                                  child: Center(
+                                                      child: Text(
+                                                    "Preview",
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.medium,
+                                                      FontSize.s12,
+                                                      0.18,
+                                                      ColorManager
+                                                          .kPrimaryColor,
+                                                    ),
+                                                  )),
+                                                )),
+                                          ]),
+
+                                      // Map your order data to table rows here
+                                      // ...imageFiles!.map((image) {
+                                      if (attachment != null)
+                                        ...attachment
+                                            .asMap()
+                                            .entries
+                                            .map((entry) {
+                                          final index = entry.key;
+                                          final image = entry.value;
+                                          return TableRow(
+                                            children: [
+                                              TableCell(
+                                                  verticalAlignment:
+                                                      TableCellVerticalAlignment
+                                                          .middle,
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            15.0),
+                                                    child: Center(
+                                                      child: Radio<int>(
+                                                        value: index,
+                                                        groupValue:
+                                                            selectedIconIndex,
+                                                        onChanged:
+                                                            (int? value) {
+                                                          // Set the selected image index
+                                                          setState(() {
+                                                            selectedIconIndex =
+                                                                value ?? 0;
+                                                          });
+
+                                                          debugPrint(
+                                                              "showDialog $index $selectedIconIndex");
+                                                          iconFilePathController
+                                                                  .text =
+                                                              image.id
+                                                                  .toString();
+                                                          iconAltController
+                                                                  .text =
+                                                              image.alt ?? "";
+                                                          iconTitleController
+                                                                  .text =
+                                                              image.title ?? "";
+                                                          // Perform any other action if needed
+                                                        },
                                                       ),
                                                     ),
-                                                  ),
-                                                )),
-                                            TableCell(
-                                                verticalAlignment:
-                                                    TableCellVerticalAlignment
-                                                        .middle,
-                                                child: Padding(
-                                                  padding: const EdgeInsets.all(
-                                                      15.0),
-                                                  child: Center(
-                                                    child:
-                                                        BuildBoxShadowContainer(
-                                                            margin:
-                                                                const EdgeInsets
-                                                                    .only(
-                                                                    left: 5,
-                                                                    right: 5),
-                                                            circleRadius: 5,
-                                                            child:
-                                                                Image.network(
-                                                              image.s3Url ?? "",
-                                                              fit: BoxFit.cover,
-                                                            )),
-                                                  ),
-                                                )),
-                                          ],
-                                        );
-                                      }).toList(),
-                                  ],
+                                                  )),
+                                              TableCell(
+                                                  verticalAlignment:
+                                                      TableCellVerticalAlignment
+                                                          .middle,
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            15.0),
+                                                    child: Center(
+                                                      child: Text(
+                                                        "${image.title}",
+                                                        style: buildCustomStyle(
+                                                          FontWeightManager
+                                                              .medium,
+                                                          FontSize.s9,
+                                                          0.13,
+                                                          Colors.black,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  )),
+                                              TableCell(
+                                                  verticalAlignment:
+                                                      TableCellVerticalAlignment
+                                                          .middle,
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            15.0),
+                                                    child: Center(
+                                                      child:
+                                                          BuildBoxShadowContainer(
+                                                              margin:
+                                                                  const EdgeInsets
+                                                                      .only(
+                                                                      left: 5,
+                                                                      right: 5),
+                                                              circleRadius: 5,
+                                                              child:
+                                                                  Image.network(
+                                                                image.s3Url ??
+                                                                    "",
+                                                                fit: BoxFit
+                                                                    .cover,
+                                                              )),
+                                                    ),
+                                                  )),
+                                            ],
+                                          );
+                                        }).toList(),
+                                    ],
+                                  ),
                                 ),
-                              ),
                               Padding(
                                 padding: const EdgeInsets.only(top: 12.0),
                                 child: isPhone

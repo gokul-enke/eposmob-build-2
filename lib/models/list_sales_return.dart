@@ -140,7 +140,7 @@ class SalesReturnOrder {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])
           : DateTime.now(),
-      items: (json['items'] as List?)
+      items: ((json['items'] ?? json['return_items']) as List?)
               ?.map((item) => SalesReturnItem.fromJson(item))
               .toList() ??
           [],
@@ -173,6 +173,27 @@ class SalesReturnItem {
   });
 
   factory SalesReturnItem.fromJson(Map<String, dynamic> json) {
+    final rawCartItem = json['cart_item'];
+    final cartItem = rawCartItem is Map
+        ? Map<String, dynamic>.from(rawCartItem)
+        : <String, dynamic>{};
+
+    // Some API responses put the product fields on the return item instead
+    // of hydrating cart_item.product. Merge both shapes before parsing so the
+    // detail table still has meaningful product/quantity/price values.
+    final cartItemPayload = <String, dynamic>{
+      ...json,
+      ...cartItem,
+      if (cartItem['unit_price'] == null && json['price'] != null)
+        'unit_price': json['price'],
+      if (cartItem['total_price'] == null && json['total_price'] != null)
+        'total_price': json['total_price'],
+      if (cartItem['product_name'] == null && json['product_name'] != null)
+        'product_name': json['product_name'],
+      if (cartItem['product'] == null && json['product'] is Map)
+        'product': json['product'],
+    };
+
     return SalesReturnItem(
       id: json['id'] is int
           ? json['id']
@@ -194,7 +215,7 @@ class SalesReturnItem {
       updatedAt: json['updated_at'] != null
           ? DateTime.tryParse(json['updated_at'].toString()) ?? DateTime.now()
           : DateTime.now(),
-      cartItem: CartItem.fromJson(json['cart_item']),
+      cartItem: CartItem.fromJson(cartItemPayload),
     );
   }
 }
@@ -213,6 +234,7 @@ class CartItem {
   final DateTime createdAt;
   final DateTime updatedAt;
   final Product? product;
+  final String? productName;
 
   CartItem({
     required this.id,
@@ -228,7 +250,14 @@ class CartItem {
     required this.createdAt,
     required this.updatedAt,
     this.product,
+    this.productName,
   });
+
+  String get displayName => product?.name.trim().isNotEmpty == true
+      ? product!.name
+      : (productName?.trim().isNotEmpty == true
+          ? productName!
+          : 'Unknown Product');
 
   factory CartItem.fromJson(Map<String, dynamic> json) {
     return CartItem(
@@ -262,6 +291,8 @@ class CartItem {
           : DateTime.now(),
       product:
           json['product'] != null ? Product.fromJson(json['product']) : null,
+      productName: (json['product_name'] ?? json['item_name'] ?? json['name'])
+          ?.toString(),
     );
   }
 }
@@ -314,7 +345,9 @@ class Product {
           ? json['category_id']
           : int.tryParse(json['category_id']?.toString() ?? '0') ?? 0,
       barcode: json['barcode']?.toString(),
-      name: json['name']?.toString() ?? '',
+      name: (json['name'] ?? json['product_name'] ?? json['item_name'])
+              ?.toString() ??
+          '',
       description: json['description']?.toString(),
       slug: json['slug']?.toString() ?? '',
       active: json['active'] is int

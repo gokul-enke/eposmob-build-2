@@ -1365,7 +1365,10 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   }
 
   void _syncCreditAmountWithRemaining() {
-    if (toCustomerCreditEnabled) {
+    // A partial collected payment must not silently become a credit sale.
+    // Credit is an explicit payment method and must be selected by the user;
+    // otherwise the checkout validator correctly rejects the unpaid remainder.
+    if (toCustomerCreditEnabled || !isCreditSelected) {
       return;
     }
 

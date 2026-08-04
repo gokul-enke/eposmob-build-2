@@ -704,7 +704,8 @@ class GridSelectionProvider extends ChangeNotifier {
     }
 
     debugPrint("apiBodyData ${apiBodyData.toString()}");
-    debugPrint("accessToken ${accessToken.toString()}");
+    debugPrint(
+        "Product request access token present: ${accessToken.isNotEmpty}");
 
     final url = Uri.parse(APPUrl.createProductUrl);
 
@@ -787,7 +788,8 @@ class GridSelectionProvider extends ChangeNotifier {
     }
 
     debugPrint("apiBodyData ${apiBodyData.toString()}");
-    debugPrint("accessToken ${accessToken.toString()}");
+    debugPrint(
+        "Product request access token present: ${accessToken.isNotEmpty}");
 
     final url = Uri.parse(APPUrl.createProductUrl);
     // Get API key from SharedPreferences
@@ -1253,9 +1255,9 @@ class GridSelectionProvider extends ChangeNotifier {
         'X-Tenant': apiKey,
       });
 
-      debugPrint('FILES API URL: $url');           
-      debugPrint('FILES API STATUS: ${response.statusCode}');  
-      debugPrint('FILES API BODY: ${response.body}');        
+      debugPrint('FILES API URL: $url');
+      debugPrint('FILES API STATUS: ${response.statusCode}');
+      debugPrint('FILES API BODY: ${response.body}');
 
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {

@@ -292,8 +292,13 @@ class OrderPanelState extends State<OrderPanel> {
   @override
   void initState() {
     super.initState();
-    _hydrateCustomerListFromProviderCache();
+    // OrderPanel can be created while RestaurantPage is still building.
+    // Hydrating here can notify CustomerSelectionProvider during that build.
     _customersInitialized = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _hydrateCustomerListFromProviderCache();
+    });
 
     // Apply preselected delivery method from tables panel if provided
     if (widget.preselectedDeliveryMethodId != null &&
@@ -342,7 +347,10 @@ class OrderPanelState extends State<OrderPanel> {
     // Initialize customer list from provider cache once
     if (!_customersInitialized) {
       _customersInitialized = true;
-      _hydrateCustomerListFromProviderCache();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _hydrateCustomerListFromProviderCache();
+      });
     }
 
     // React when tableId or delivery method changes

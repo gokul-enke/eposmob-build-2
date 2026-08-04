@@ -18,9 +18,7 @@ class DiscountProvider with ChangeNotifier {
   bool get hasError => _errorMessage != null;
 
   Future<void> fetchDiscounts({bool forceRefresh = false}) async {
-    if (_discounts.isNotEmpty &&
-        !forceRefresh &&
-        _lastFetchTime != null) {
+    if (_discounts.isNotEmpty && !forceRefresh && _lastFetchTime != null) {
       final age = DateTime.now().difference(_lastFetchTime!);
       if (age < _cacheValidityDuration) {
         debugPrint('🎫 Using cached discounts (age: ${age.inMinutes} min)');
@@ -56,8 +54,8 @@ class DiscountProvider with ChangeNotifier {
       if (activeStoreId != null) {
         queryParams['store_id'] = activeStoreId.toString();
       }
-      final url = Uri.parse(APPUrl.listDiscounts)
-          .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+      final url = Uri.parse(APPUrl.listDiscounts).replace(
+          queryParameters: queryParams.isNotEmpty ? queryParams : null);
 
       final headers = {
         'Content-Type': 'application/json',
@@ -68,21 +66,21 @@ class DiscountProvider with ChangeNotifier {
       debugPrint('🎫 Request Headers: $headers');
       debugPrint('🎫 Request URL: $url');
       debugPrint('🎫 Request Method: GET');
-      debugPrint('🎫 Access Token: ${accessToken?.substring(0, accessToken.length > 20 ? 20 : accessToken.length)}...');
+      debugPrint('🎫 Access token present: ${accessToken?.isNotEmpty == true}');
 
       final response = await http.get(url, headers: headers);
 
       debugPrint('🎫 Response Status Code: ${response.statusCode}');
       debugPrint('🎫 Response Body Length: ${response.body.length} chars');
-      debugPrint('🎫 Response Body Preview: ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}...');
+      debugPrint(
+          '🎫 Response Body Preview: ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}...');
       debugPrint('🎫 ===============================================');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final discountModel = DiscountListModel.fromJson(data);
 
-        if (discountModel.status == 'success' &&
-            discountModel.data != null) {
+        if (discountModel.status == 'success' && discountModel.data != null) {
           _discounts = discountModel.data!.data;
           _lastFetchTime = DateTime.now();
           debugPrint('✅ Loaded ${_discounts.length} discounts');
@@ -104,7 +102,8 @@ class DiscountProvider with ChangeNotifier {
     }
   }
 
-  DiscountValidity getValidityForDiscount(DiscountData discount, double cartTotal) {
+  DiscountValidity getValidityForDiscount(
+      DiscountData discount, double cartTotal) {
     return discount.checkValidity(cartTotal, DateTime.now());
   }
 

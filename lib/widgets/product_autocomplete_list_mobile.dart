@@ -131,10 +131,12 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
 
       //  only active variants' SKUs surface a product in billing search.
       final variantSkuMatch = product.variants?.any((variant) {
-        if (!variant.active) return false;
-        final varSku = variant.sku ?? '';
-        return varSku.isNotEmpty && varSku.toLowerCase().contains(lowerQuery);
-      }) ?? false;
+            if (!variant.active) return false;
+            final varSku = variant.sku ?? '';
+            return varSku.isNotEmpty &&
+                varSku.toLowerCase().contains(lowerQuery);
+          }) ??
+          false;
       if (variantSkuMatch) return true;
 
       if (itemCodeEnabled) {
@@ -421,51 +423,55 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
                             isHighlighted ? Colors.blue.shade50 : Colors.white,
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: ListTile(
-                        dense: true,
-                        visualDensity: VisualDensity.compact,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8, // Slightly more padding for mobile
-                        ),
-                        title: Text(
-                          option.productName ?? '',
-                          maxLines: 2,
-                          style: TextStyle(
-                            fontSize: 14, // Slightly larger for mobile
-                            color: isHighlighted
-                                ? Colors.blue.shade800
-                                : Colors.black87,
-                            fontWeight: isHighlighted
-                                ? FontWeight.w500
-                                : FontWeight.normal,
+                      child: Material(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(4),
+                        child: ListTile(
+                          dense: true,
+                          visualDensity: VisualDensity.compact,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8, // Slightly more padding for mobile
                           ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: (itemCodeEnabled &&
-                                (option.itemCode ?? '').isNotEmpty)
-                            ? Text(
-                                option.itemCode!,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: isHighlighted
-                                      ? Colors.blue.shade600
-                                      : Colors.grey.shade600,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              )
-                            : null,
-                        trailing: Text(
-                          '${option.price?.price ?? ''} ${option.currency ?? ''}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: isHighlighted
-                                ? Colors.blue.shade900
-                                : Colors.black87,
+                          title: Text(
+                            option.productName ?? '',
+                            maxLines: 2,
+                            style: TextStyle(
+                              fontSize: 14, // Slightly larger for mobile
+                              color: isHighlighted
+                                  ? Colors.blue.shade800
+                                  : Colors.black87,
+                              fontWeight: isHighlighted
+                                  ? FontWeight.w500
+                                  : FontWeight.normal,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
+                          subtitle: (itemCodeEnabled &&
+                                  (option.itemCode ?? '').isNotEmpty)
+                              ? Text(
+                                  option.itemCode!,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isHighlighted
+                                        ? Colors.blue.shade600
+                                        : Colors.grey.shade600,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                )
+                              : null,
+                          trailing: Text(
+                            '${option.price?.price ?? ''} ${option.currency ?? ''}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: isHighlighted
+                                  ? Colors.blue.shade900
+                                  : Colors.black87,
+                            ),
+                          ),
+                          onTap: () => onSelected(option),
                         ),
-                        onTap: () => onSelected(option),
                       ),
                     ),
                   );
