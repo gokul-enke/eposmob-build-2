@@ -971,6 +971,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
   bool isSubmitting = false;
   DailySalesCloseSummary? summary;
   String? errorMessage;
+  int _currentStep = 0; // 0 = Cash Closing form, 1 = Confirm Close
   final TextEditingController _businessDateController =
       TextEditingController();
   final TextEditingController _shiftNameController = TextEditingController();
@@ -1110,6 +1111,40 @@ class _DayCloseModalState extends State<DayCloseModal> {
     }
     return breakdown;
   }
+
+  // Mirrors the same controller-vs-summary fallback used in _submitDayClose,
+  // so the Confirm Close preview always matches what will actually be sent.
+  num get _liveOpeningCashInHand =>
+      num.tryParse(_openingCashInHandController.text.trim()) ??
+      summary?.openingCashInHand ??
+      0;
+
+  num get _liveCashRefunds =>
+      num.tryParse(_cashRefundsController.text.trim()) ??
+      summary?.cashRefunds ??
+      0;
+
+  num get _liveCashDropAmount =>
+      num.tryParse(_cashDropAmountController.text.trim()) ??
+      summary?.cashDropAmount ??
+      0;
+
+  num get _cashSales =>
+      num.tryParse((summary?.cashSales ?? '0').replaceAll(',', '')) ?? 0;
+
+  num get _cashExpensesForFormula => summary?.cashExpenses ?? 0;
+
+  // expected_closing_cash = opening_cash_in_hand + cash_sales
+  //     - cash_refunds - cash_expenses - cash_drop_amount
+  // (confirmed against the live daily-sales-close API response)
+  num get _expectedClosingCash =>
+      _liveOpeningCashInHand +
+      _cashSales -
+      _liveCashRefunds -
+      _cashExpensesForFormula -
+      _liveCashDropAmount;
+
+  num get _todayCashCollection => _expectedClosingCash - _liveOpeningCashInHand;
 
   @override
   void dispose() {
@@ -1558,6 +1593,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
     required String label,
     required TextEditingController controller,
     bool enabled = true,
+    ValueChanged<String>? onChanged,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1581,6 +1617,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
           child: TextFormField(
             controller: controller,
             enabled: enabled,
+            onChanged: onChanged,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             cursorColor: ColorManager.kPrimaryColor,
             decoration: InputDecoration(
@@ -2217,7 +2254,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Day Close',
+                              _currentStep == 0 ? 'Day Close' : 'Confirm Close',
                               style: buildCustomStyle(
                                 FontWeightManager.bold,
                                 FontSize.s18,
@@ -2227,7 +2264,9 @@ class _DayCloseModalState extends State<DayCloseModal> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Summary of today\'s activities',
+                              _currentStep == 0
+                                  ? 'Summary of today\'s activities'
+                                  : 'Review expected closing cash and today\'s collection before final closure',
                               style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s11,
@@ -2297,11 +2336,36 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                 final currency =
                                     appSettingsProvider.appSettings?.currency ??
                                         'INR';
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // User Name & Store Info Section
-                                    Text(
+                                return _currentStep == 0
+                                    ? _buildCashClosingStepContent(
+                                        currency, isNarrow, constraints)
+                                    : _buildConfirmCloseStepContent(currency);
+                              },
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Footer buttons
+                  _buildFooter(isNarrow),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCashClosingStepContent(
+      String currency, bool isNarrow, BoxConstraints constraints) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // User Name & Store Info Section
+        Text(
                                       'Session Information',
                                       style: buildCustomStyle(
                                         FontWeightManager.semiBold,
@@ -2480,11 +2544,13 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                       label: 'Opening Cash In Hand',
                                       controller: _openingCashInHandController,
                                       enabled: !_openingPrefilled,
+                                      onChanged: (_) => setState(() {}),
                                     ),
                                     const SizedBox(height: 12),
                                     _buildAmountField(
                                       label: 'Closing Cash In Hand',
                                       controller: _closingCashInHandController,
+                                      onChanged: (_) => setState(() {}),
                                     ),
                                     const SizedBox(height: 16),
 
@@ -2561,11 +2627,13 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                     _buildAmountField(
                                       label: 'Cash Refunds',
                                       controller: _cashRefundsController,
+                                      onChanged: (_) => setState(() {}),
                                     ),
                                     const SizedBox(height: 12),
                                     _buildAmountField(
                                       label: 'Cash Drop Amount',
                                       controller: _cashDropAmountController,
+                                      onChanged: (_) => setState(() {}),
                                     ),
                                     const SizedBox(height: 12),
                                     _buildTextAreaField(
@@ -2573,183 +2641,174 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                       controller: _notesController,
                                       maxLines: 3,
                                     ),
-                                  ],
-                                );
-                              },
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+      ],
+    );
+  }
 
-                  // Footer buttons
-                  if (isNarrow)
-                    Column(
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          child: TextButton(
-                            onPressed: isSubmitting
-                                ? null
-                                : () => Navigator.of(context).pop(),
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              backgroundColor: Colors.grey.shade100,
-                            ),
-                            child: Text(
-                              'Cancel',
-                              style: buildCustomStyle(
-                                FontWeightManager.semiBold,
-                                FontSize.s13,
-                                0.18,
-                                Colors.grey.shade700,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: ColorManager.kSuccessColor
-                                      .withOpacity(0.3),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: ElevatedButton(
-                              onPressed: isSubmitting ||
-                                      isLoadingSummary ||
-                                      errorMessage != null
-                                  ? null
-                                  : _submitDayClose,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: ColorManager.kSuccessColor,
-                                foregroundColor: Colors.white,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: isSubmitting
-                                  ? const SizedBox(
-                                      height: 18,
-                                      width: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : Text(
-                                      'Close Day',
-                                      style: buildCustomStyle(
-                                        FontWeightManager.bold,
-                                        FontSize.s13,
-                                        0.18,
-                                        Colors.white,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  else
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextButton(
-                            onPressed: isSubmitting
-                                ? null
-                                : () => Navigator.of(context).pop(),
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              backgroundColor: Colors.grey.shade100,
-                            ),
-                            child: Text(
-                              'Cancel',
-                              style: buildCustomStyle(
-                                FontWeightManager.semiBold,
-                                FontSize.s13,
-                                0.18,
-                                Colors.grey.shade700,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: ColorManager.kSuccessColor
-                                      .withOpacity(0.3),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: ElevatedButton(
-                              onPressed: isSubmitting ||
-                                      isLoadingSummary ||
-                                      errorMessage != null
-                                  ? null
-                                  : _submitDayClose,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: ColorManager.kSuccessColor,
-                                foregroundColor: Colors.white,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: isSubmitting
-                                  ? const SizedBox(
-                                      height: 18,
-                                      width: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : Text(
-                                      'Close Day',
-                                      style: buildCustomStyle(
-                                        FontWeightManager.bold,
-                                        FontSize.s13,
-                                        0.18,
-                                        Colors.white,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
+  Widget _buildConfirmCloseStepContent(String currency) {
+    final expected = _expectedClosingCash;
+    final todayCollection = _todayCashCollection;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Cash Summary',
+          style: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s12,
+            0.21,
+            Colors.grey.shade800,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF9FAFB),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            children: [
+              _buildConfirmSummaryRow(
+                'Expected Closing Cash',
+                '$currency ${expected.toStringAsFixed(2)}',
               ),
-            );
-          },
+              const SizedBox(height: 10),
+              _buildConfirmSummaryRow(
+                'Today Cash Collection',
+                '$currency ${todayCollection.toStringAsFixed(2)}',
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildConfirmSummaryRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s11,
+            0.18,
+            Colors.grey.shade600,
+          ),
+        ),
+        Text(
+          value,
+          style: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s13,
+            0.18,
+            ColorManager.kTitleTextColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFooter(bool isNarrow) {
+    final bool onConfirmStep = _currentStep == 1;
+    final String leftLabel = onConfirmStep ? 'Back' : 'Cancel';
+    final VoidCallback? leftOnPressed = isSubmitting
+        ? null
+        : onConfirmStep
+            ? () => setState(() => _currentStep = 0)
+            : () => Navigator.of(context).pop();
+
+    final String rightLabel = onConfirmStep ? 'Confirm & Close Day' : 'Next';
+    final bool rightDisabled =
+        isSubmitting || isLoadingSummary || errorMessage != null;
+    final VoidCallback? rightOnPressed = rightDisabled
+        ? null
+        : onConfirmStep
+            ? _submitDayClose
+            : () => setState(() => _currentStep = 1);
+
+    final leftButton = TextButton(
+      onPressed: leftOnPressed,
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        backgroundColor: Colors.grey.shade100,
+      ),
+      child: Text(
+        leftLabel,
+        style: buildCustomStyle(
+          FontWeightManager.semiBold,
+          FontSize.s13,
+          0.18,
+          Colors.grey.shade700,
         ),
       ),
+    );
+
+    final rightButton = Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: ColorManager.kSuccessColor.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: rightOnPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: ColorManager.kSuccessColor,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: isSubmitting && onConfirmStep
+            ? const SizedBox(
+                height: 18,
+                width: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : Text(
+                rightLabel,
+                style: buildCustomStyle(
+                  FontWeightManager.bold,
+                  FontSize.s13,
+                  0.18,
+                  Colors.white,
+                ),
+              ),
+      ),
+    );
+
+    if (isNarrow) {
+      return Column(
+        children: [
+          SizedBox(width: double.infinity, child: leftButton),
+          const SizedBox(height: 12),
+          SizedBox(width: double.infinity, child: rightButton),
+        ],
+      );
+    }
+    return Row(
+      children: [
+        Expanded(child: leftButton),
+        const SizedBox(width: 16),
+        Expanded(child: rightButton),
+      ],
     );
   }
 }

@@ -377,6 +377,7 @@ class CashSummary {
   String? openingCashInHand;
   List<dynamic>? openingCashBreakdown;
   String? expectedClosingCash;
+  String? todayCashCollection;
   String? closingCashInHand;
   List<dynamic>? closingCashBreakdown;
   String? shortCash;
@@ -396,6 +397,7 @@ class CashSummary {
     this.openingCashInHand,
     this.openingCashBreakdown,
     this.expectedClosingCash,
+    this.todayCashCollection,
     this.closingCashInHand,
     this.closingCashBreakdown,
     this.shortCash,
@@ -420,6 +422,7 @@ class CashSummary {
         ? List<dynamic>.from(json['opening_cash_breakdown'] as List)
         : null;
     expectedClosingCash = json['expected_closing_cash']?.toString();
+    todayCashCollection = json['today_cash_collection']?.toString();
     closingCashInHand = json['closing_cash_in_hand']?.toString();
     closingCashBreakdown = json['closing_cash_breakdown'] is List
         ? List<dynamic>.from(json['closing_cash_breakdown'] as List)

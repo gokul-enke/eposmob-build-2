@@ -224,6 +224,12 @@ class DailyCloseThermalPrinter {
         isBold: true,
       ));
 
+      rows.add(_ReportKeyValueRow(
+        'Today Collection:',
+        data.cashSummary?.todayCashCollection?.toString() ?? '0.00',
+        scale: getNormalScale(is58mm),
+      ));
+
       rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.5));
       rows.add(_ReportDividerRow(char: '─'));
       rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.5));
