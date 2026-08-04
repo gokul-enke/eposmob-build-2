@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_payment_row.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
@@ -90,7 +91,7 @@ class CheckoutFooter extends StatelessWidget {
         children: [
           // Net Amount
           BuildPaymentRow(
-            title: 'Net Amount',
+            title: 'billing.net_amount'.tr,
             amount: '$currency ${AmountHelper.formatAmount(priceSummary!.netTotal ?? 0)}',
             color: ColorManager.textColor,
             padding: EdgeInsets.zero,
@@ -100,7 +101,7 @@ class CheckoutFooter extends StatelessWidget {
           if (showDiscount && discount > 0) ...[
             const SizedBox(height: 6),
             BuildPaymentRow(
-              title: 'Discount',
+              title: 'billing.discount'.tr,
               amount: '-$currency ${AmountHelper.formatAmount(discount)}',
               color: ColorManager.kButtonRed,
               padding: EdgeInsets.zero,
@@ -113,7 +114,7 @@ class CheckoutFooter extends StatelessWidget {
           GestureDetector(
             onTap: enableTaxTap ? onTaxTap : null,
             child: BuildPaymentRow(
-              title: 'Tax',
+              title: 'billing.tax'.tr,
               amount: '$currency ${AmountHelper.formatAmount(priceSummary!.totalTax ?? 0)}',
               color: ColorManager.kGreyColor,
               padding: EdgeInsets.zero,
@@ -126,7 +127,7 @@ class CheckoutFooter extends StatelessWidget {
           
           // Total Payable
           BuildPaymentRow(
-            title: 'Total Payable',
+            title: 'billing.total_payable_label'.tr,
             amount: '$currency ${AmountHelper.formatAmount(priceSummary!.netPayable ?? 0)}',
             color: ColorManager.kPrimaryColor,
             padding: EdgeInsets.zero,
@@ -150,7 +151,7 @@ class CheckoutFooter extends StatelessWidget {
           if (showTotalPaid) ...[
             const SizedBox(height: 8),
             BuildPaymentRow(
-              title: 'Total Paid',
+              title: 'billing.total_paid'.tr,
               amount: '$currency ${AmountHelper.formatAmount(totalPaid)}',
               color: ColorManager.textColor,
               padding: EdgeInsets.zero,
@@ -161,7 +162,7 @@ class CheckoutFooter extends StatelessWidget {
           if (showBalance) ...[
             const SizedBox(height: 6),
             BuildPaymentRow(
-              title: 'Balance',
+              title: 'billing.balance'.tr,
               amount: '$currency ${AmountHelper.formatAmount(balance)}',
               color: balance > 0
                   ? ColorManager.kButtonRed

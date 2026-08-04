@@ -2451,7 +2451,7 @@ class BillingPageState extends State<BillingPage>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    isEditingOrder ? '${'Edit'.tr} - ' : 'New'.tr,
+                    isEditingOrder ? '${'billing.edit_order'.tr} - ' : '${'billing.new_order'.tr} - ',
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s18, 0.25, ColorManager.textColor),
                   ),

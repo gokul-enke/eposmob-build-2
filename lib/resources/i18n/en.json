@@ -140,7 +140,8 @@
     "tax": "Tax",
     "total_payable_label": "Total Payable",
     "empty_cart_hint": "Add products using the search bar above",
-    "customer": "Customer"
+    "customer": "Customer",
+    "item_code": "Item Code"
   },
   "customers": {
     "title": "Customers"
