@@ -72,3 +72,4 @@ Todo.md
 # Local QA/analyzer output (generated, never release source)
 /analysis_qa.txt
 /tmp
+/artifacts

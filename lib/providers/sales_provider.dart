@@ -648,6 +648,18 @@ class SalesProvider with ChangeNotifier {
     required String reason,
     bool isDeliveryRefundable = false,
   }) async {
+    if (orderId <= 0) {
+      throw Exception(
+        'Cannot submit this return because the sales order ID is missing.',
+      );
+    }
+    if (cartItemId <= 0) {
+      throw Exception(
+        'Cannot submit this return because the cart item ID is missing. '
+        'Please refresh the order and try again.',
+      );
+    }
+
     final url =
         Uri.parse(APPUrl.salesReturn); // Update with your server base URL
 
@@ -701,6 +713,13 @@ class SalesProvider with ChangeNotifier {
     bool? hasPayment,
     bool isDeliveryRefundable = false,
   }) async {
+    if (returnOrderId <= 0) {
+      throw Exception(
+        'Cannot complete this return because the return order ID is missing. '
+        'Please submit a return item first.',
+      );
+    }
+
     final url = Uri.parse(
         APPUrl.completeSalesReturn); // Update with your server base URL
 

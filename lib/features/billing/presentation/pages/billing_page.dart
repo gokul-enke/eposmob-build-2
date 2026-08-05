@@ -452,6 +452,7 @@ class BillingPageState extends State<BillingPage>
               '  - New discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}');
         }
         _syncStockEnabledSetting();
+        _refreshTotalsAfterSettingsChange(appSettingsProvider);
       };
       appSettingsProvider.addListener(_appSettingsDebugListener!);
 
@@ -644,6 +645,31 @@ class BillingPageState extends State<BillingPage>
     }
 
     return true;
+  }
+
+  bool _ensureAuthoritativeAppSettings() {
+    final settingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    if (settingsProvider.isReady) return true;
+
+    showScaffoldError(
+      context: context,
+      message: settingsProvider.loading
+          ? 'Company settings are still loading. Please try again shortly.'
+          : 'Company settings could not be loaded. Refresh settings before confirming the order.',
+    );
+    return false;
+  }
+
+  void _refreshTotalsAfterSettingsChange(
+    AppSettingsProvider settingsProvider,
+  ) {
+    if (!mounted || !settingsProvider.isReady) return;
+
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    localProductProvider.cartTotal;
+    setState(() {});
   }
 
   // Function to initialize the connectivity listener
@@ -6538,6 +6564,9 @@ class BillingPageState extends State<BillingPage>
   }
 
   Future<void> _createOrderAndPrint() async {
+    if (!_ensureAuthoritativeAppSettings()) {
+      return;
+    }
     if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
       return;
     }
@@ -6897,6 +6926,9 @@ class BillingPageState extends State<BillingPage>
   }
 
   Future<void> _confirmOrder() async {
+    if (!_ensureAuthoritativeAppSettings()) {
+      return;
+    }
     if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
       return;
     }

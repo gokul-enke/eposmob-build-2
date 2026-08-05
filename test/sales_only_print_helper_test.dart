@@ -67,4 +67,25 @@ void main() {
     expect(result, hasLength(1));
     expect(result.single.quantity, 1);
   });
+
+  test('preserves fractional returned quantities', () {
+    final result = buildSalesOnlyCartItems(
+      <OrderDetailsModelDataCartItem>[
+        cartItem(
+          name: 'Flour',
+          quantity: 2,
+          unitPrice: '10.00',
+          totalPrice: '20.00',
+          taxAmount: '3.00',
+        ),
+      ],
+      <OrderReturnItem>[
+        OrderReturnItem(productName: 'Flour', quantity: 0.5),
+      ],
+    );
+
+    expect(result.single.quantity, 1.5);
+    expect(result.single.totalPrice, '15.00');
+    expect(result.single.taxAmount, '2.25');
+  });
 }

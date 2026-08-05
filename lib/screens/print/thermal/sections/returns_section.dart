@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/order_details.dart';
@@ -244,7 +244,7 @@ class ReturnsSectionBuilder {
         final totalReturnAmount =
             double.tryParse(orderReturns.returnTotalAmount ?? '0.00') ?? 0.0;
 
-        int totalQuantity = 0;
+        num totalQuantity = 0;
         for (var item in orderReturns.returnItems!) {
           totalQuantity += item.quantity ?? 0;
         }

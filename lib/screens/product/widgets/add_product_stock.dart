@@ -46,7 +46,6 @@ import 'package:pos_machine/models/master_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
-import 'package:pos_machine/helpers/purchase_price_permission.dart';
 
 /// Hive box name for draft stock items persistence
 const String _kDraftStockBoxName = 'draft_stock_items';
@@ -206,9 +205,6 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           .appSettings
           ?.productVariantEnabled ??
       false;
-
-  bool _canViewPurchasePrice({bool listen = false}) =>
-      canViewPurchasePrice(context, listen: listen);
 
   bool _requiresVariant(StockItem item) =>
       _variantFeatureEnabled() &&
@@ -2934,22 +2930,6 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
-
-    if (!_canViewPurchasePrice(listen: true)) {
-      return SafeArea(
-        child: Center(
-          child: Text(
-            'Purchase permission is required to add product stock.',
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s14,
-              0.27,
-              ColorManager.textColor,
-            ),
-          ),
-        ),
-      );
-    }
 
     // Calculate total stock value only when needed
     if (_needsRecalculation) {

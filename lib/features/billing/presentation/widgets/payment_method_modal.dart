@@ -2073,6 +2073,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       creditAmountController.clear();
       _pristineMethod = null;
       _pristineAmount = '';
+      _syncCreditAmountWithRemaining();
       _calculateBalance();
       _notifyChanges();
     });
