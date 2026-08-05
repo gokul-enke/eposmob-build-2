@@ -519,5 +519,31 @@
     "na": "غير متاح",
     "payment_display": "دفع @name",
     "payment_hash": "دفع #@id"
+  },
+  "sales_return": {
+    "title": "طلبات إرجاع المبيعات",
+    "subtitle": "عرض وإدارة معاملات الإرجاع المكتملة",
+    "err_load": "فشل في تحميل مرتجعات المبيعات",
+    "err_load_items": "تعذر تحميل تفاصيل العناصر المرتجعة.",
+    "no_returns_found": "لا توجد مرتجعات مبيعات بعد",
+    "start_return_hint": "ابدأ إرجاعًا من المبيعات ← إجراءات الطلب ← إرجاع",
+    "copy_success": "تم نسخ رقم الطلب إلى الحافظة",
+    "status_completed": "مكتمل",
+    "status_pending": "معلق",
+    "return_amount": "مبلغ الإرجاع",
+    "total_return_amount": "إجمالي مبلغ الإرجاع",
+    "total_quantity": "إجمالي الكمية",
+    "print_bill_tooltip": "طباعة فاتورة الإرجاع",
+    "details_title": "تفاصيل الإرجاع",
+    "order_info": "معلومات الطلب",
+    "grand_total": "المجموع الكلي",
+    "return_total": "إجمالي الإرجاع",
+    "status_prefix": "الحالة: ",
+    "return_items": "العناصر المرتجعة",
+    "no_items_available": "لا تتوفر تفاصيل للعناصر المرتجعة.",
+    "reason": "السبب",
+    "unknown_product": "منتج غير معروف",
+    "reason_returned_fallback": "مرتجع",
+    "action": "الإجراء"
   }
 }

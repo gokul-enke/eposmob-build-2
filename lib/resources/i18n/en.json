@@ -522,5 +522,31 @@
     "na": "N/A",
     "payment_display": "@name Payment",
     "payment_hash": "Payment #@id"
+  },
+  "sales_return": {
+    "title": "Sales Return Orders",
+    "subtitle": "View and manage completed return transactions",
+    "err_load": "Failed to load sales returns",
+    "err_load_items": "Unable to load return item details.",
+    "no_returns_found": "No sales returns yet",
+    "start_return_hint": "Start a return from Sales → order actions → Return",
+    "copy_success": "Order number copied to clipboard",
+    "status_completed": "Completed",
+    "status_pending": "Pending",
+    "return_amount": "Return Amount",
+    "total_return_amount": "Total Return Amount",
+    "total_quantity": "Total Quantity",
+    "print_bill_tooltip": "Print return bill",
+    "details_title": "Return Details",
+    "order_info": "ORDER INFORMATION",
+    "grand_total": "Grand Total",
+    "return_total": "Return Total",
+    "status_prefix": "Status: ",
+    "return_items": "Return Items",
+    "no_items_available": "No return item details available.",
+    "reason": "Reason",
+    "unknown_product": "Unknown Product",
+    "reason_returned_fallback": "Returned",
+    "action": "Action"
   }
 }

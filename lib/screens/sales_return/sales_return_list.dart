@@ -66,7 +66,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
           _isLoading = false;
           _loadError = e is Exception
               ? e.toString().replaceFirst('Exception: ', '')
-              : 'Failed to load sales returns';
+              : 'sales_return.err_load'.tr;
         });
         showScaffoldError(
           context: context,
@@ -103,7 +103,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
           _isLoading = false;
           _loadError = e is Exception
               ? e.toString().replaceFirst('Exception: ', '')
-              : 'Failed to load sales returns';
+              : 'sales_return.err_load'.tr;
         });
         showScaffoldError(
           context: context,
@@ -122,9 +122,9 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SalesReturnPageHeader(
-            title: 'Sales Return Orders',
-            subtitle: 'View and manage completed return transactions',
+          SalesReturnPageHeader(
+            title: 'sales_return.title'.tr,
+            subtitle: 'sales_return.subtitle'.tr,
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -167,7 +167,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
         title: _loadError!,
         titleColor: Colors.red.shade700,
         action: CustomRoundButton(
-          title: 'Retry',
+          title: 'restaurant.retry'.tr,
           fct: _fetchSalesReturns,
           fontSize: 12,
           height: 44,
@@ -180,9 +180,9 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
       return _buildEmptyState(
         icon: Icons.assignment_return_outlined,
         iconColor: Colors.grey.shade400,
-        title: 'No sales returns yet',
+        title: 'sales_return.no_returns_found'.tr,
         titleColor: Colors.grey.shade600,
-        subtitle: 'Start a return from Sales → order actions → Return',
+        subtitle: 'sales_return.start_return_hint'.tr,
         subtitleColor: Colors.grey.shade500,
       );
     }
@@ -306,7 +306,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                                   ClipboardData(text: orderNumber));
                               showScaffold(
                                 context: context,
-                                message: 'Order number copied to clipboard',
+                                message: 'sales_return.copy_success'.tr,
                               );
                             },
                             child: const Icon(
@@ -332,7 +332,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                 ),
               ),
               SalesReturnStatusBadge(
-                label: isCompleted ? 'Completed' : 'Pending',
+                label: isCompleted ? 'sales_return.status_completed'.tr : 'sales_return.status_pending'.tr,
                 isCompleted: isCompleted,
               ),
             ],
@@ -342,7 +342,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
             children: [
               Expanded(
                 child: _buildMobileMetric(
-                  'Qty',
+                  'billing.table_qty'.tr,
                   totalQuantity.toString(),
                 ),
               ),
@@ -355,7 +355,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                     final amount =
                         parsed != null ? parsed.toStringAsFixed(2) : raw;
                     return _buildMobileMetric(
-                      'Return Amount',
+                      'sales_return.return_amount'.tr,
                       '$currency $amount',
                     );
                   },
@@ -372,7 +372,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                 backgroundColor:
                     ColorManager.kPrimaryColor.withOpacity(0.9),
                 iconColor: Colors.white,
-                tooltip: 'View details',
+                tooltip: 'billing.view_details'.tr,
                 onPressed: () {
                   showDialog(
                     context: context,
@@ -387,7 +387,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                 icon: Icons.print,
                 backgroundColor: Colors.green.withOpacity(0.9),
                 iconColor: Colors.white,
-                tooltip: 'Print return bill',
+                tooltip: 'sales_return.print_bill_tooltip'.tr,
                 onPressed: () {
                   List<OrderReturnItem> returnItems = order.items.map((item) {
                     return OrderReturnItem(
@@ -515,12 +515,12 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
   TableRow _buildTableHeader() {
     return TableRow(
       children: [
-        'Order Number',
-        'Total Quantity',
-        'Total Return Amount',
-        'Status',
-        'Date',
-        'Action',
+        'sales.order_number_hint'.tr,
+        'sales_return.total_quantity'.tr,
+        'sales_return.total_return_amount'.tr,
+        'sales.status'.tr,
+        'sales.date_col'.tr,
+        'sales_return.action'.tr,
       ]
           .map((title) => TableCell(
                 verticalAlignment: TableCellVerticalAlignment.middle,
@@ -585,7 +585,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                             order.orderId.toString()));
                     showScaffold(
                       context: context,
-                      message: 'Order number copied to clipboard',
+                      message: 'sales_return.copy_success'.tr,
                     );
                   },
                   child: const Icon(
@@ -643,7 +643,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                     backgroundColor:
                         ColorManager.kPrimaryColor.withOpacity(0.9),
                     iconColor: Colors.white,
-                    tooltip: 'View details',
+                    tooltip: 'billing.view_details'.tr,
                     onPressed: () {
                       showDialog(
                         context: context,
@@ -658,7 +658,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                     icon: Icons.print,
                     backgroundColor: Colors.green.withOpacity(0.9),
                     iconColor: Colors.white,
-                    tooltip: 'Print return bill',
+                    tooltip: 'sales_return.print_bill_tooltip'.tr,
                     onPressed: () {
                       List<OrderReturnItem> returnItems =
                           order.items.map((item) {
@@ -704,7 +704,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
         padding: const EdgeInsetsDirectional.all(14),
         child: Center(
           child: SalesReturnStatusBadge(
-            label: isCompleted ? 'Completed' : 'Pending',
+            label: isCompleted ? 'sales_return.status_completed'.tr : 'sales_return.status_pending'.tr,
             isCompleted: isCompleted,
           ),
         ),

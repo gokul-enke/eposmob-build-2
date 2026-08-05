@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/list_sales_return.dart';
@@ -102,7 +103,7 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
           id: item.cartItemId,
           productName: item.productName,
           quantity: returnedQuantity.toInt(),
-          reason: reason ?? (item.isReturned ? 'Returned' : ''),
+          reason: reason ?? (item.isReturned ? 'sales_return.reason_returned_fallback'.tr : ''),
         );
       }).toList();
     }
@@ -149,7 +150,7 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Return Details',
+                      'sales_return.details_title'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         FontSize.s20,
@@ -179,15 +180,15 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SalesReturnLabelPill(label: 'ORDER INFORMATION'),
+                            SalesReturnLabelPill(label: 'sales_return.order_info'.tr),
                             const SizedBox(height: 14),
                             _buildInfoRow(
-                              'Order Number',
+                              'sales.order_number_hint'.tr,
                               order.order?.orderNumber ?? '#${order.orderId}',
                             ),
                             _buildInfoRow(
-                              'Customer',
-                              order.order?.customer?.user?.name ?? 'N/A',
+                              'billing.customer'.tr,
+                              order.order?.customer?.user?.name ?? 'confirmed_orders.na'.tr,
                             ),
                             Consumer<AppSettingsProvider>(
                               builder: (context, settings, _) {
@@ -199,15 +200,15 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                                     ? parsed.toStringAsFixed(2)
                                     : raw;
                                 return _buildInfoRow(
-                                    'Grand Total', '$currency $amount');
+                                    'sales_return.grand_total'.tr, '$currency $amount');
                               },
                             ),
                             _buildInfoRow(
-                              'Payment Method',
-                              order.order?.paymentMethod?.join(', ') ?? 'N/A',
+                              'confirmed_orders.payment_method'.tr,
+                              order.order?.paymentMethod?.join(', ') ?? 'confirmed_orders.na'.tr,
                             ),
                             _buildInfoRow(
-                              'Date',
+                              'sales.date_col'.tr,
                               DateHelper.formatDate(order.createdAt).toString(),
                             ),
                             Consumer<AppSettingsProvider>(
@@ -220,14 +221,14 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                                     ? parsed.toStringAsFixed(2)
                                     : order.totalAmount;
                                 return _buildInfoRow(
-                                    'Return Total', '$currency $amount');
+                                    'sales_return.return_total'.tr, '$currency $amount');
                               },
                             ),
                             const SizedBox(height: 8),
                             Row(
                               children: [
                                 Text(
-                                  'Status: ',
+                                  'sales_return.status_prefix'.tr,
                                   style: buildCustomStyle(
                                     FontWeightManager.medium,
                                     FontSize.s13,
@@ -237,8 +238,8 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                                 ),
                                 SalesReturnStatusBadge(
                                   label: order.status.toString() == '1'
-                                      ? 'Completed'
-                                      : 'Pending',
+                                      ? 'sales_return.status_completed'.tr
+                                      : 'sales_return.status_pending'.tr,
                                   isCompleted: order.status.toString() == '1',
                                 ),
                               ],
@@ -248,7 +249,7 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Return Items',
+                        'sales_return.return_items'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s16,
@@ -274,8 +275,8 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                           padding: const EdgeInsets.all(20),
                           child: Text(
                             _itemsError == null
-                                ? 'No return item details available.'
-                                : 'Unable to load return item details.',
+                                ? 'sales_return.no_items_available'.tr
+                                : 'sales_return.err_load_items'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.medium,
                               FontSize.s12,
@@ -309,14 +310,14 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                         ),
                       );
                     },
-                    title: 'Print',
+                    title: 'general.print'.tr,
                     fontSize: FontSize.s12,
                     height: 44,
                     width: isPhone ? double.infinity : 100,
                   ),
                   CustomRoundButton(
                     fct: () => Navigator.of(context).pop(),
-                    title: 'Close',
+                    title: 'confirmed_orders.close'.tr,
                     fontSize: FontSize.s12,
                     height: 44,
                     width: isPhone ? double.infinity : 100,
@@ -424,7 +425,7 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
           Row(
             children: [
               Expanded(
-                child: _buildItemMetric('Qty', item.quantity.toString()),
+                child: _buildItemMetric('billing.table_qty'.tr, item.quantity.toString()),
               ),
               Expanded(
                 child: Consumer<AppSettingsProvider>(
@@ -434,7 +435,7 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                     final parsed = double.tryParse(raw);
                     final amount =
                         parsed != null ? parsed.toStringAsFixed(2) : raw;
-                    return _buildItemMetric('Price', '$currency $amount');
+                    return _buildItemMetric('sales.price'.tr, '$currency $amount');
                   },
                 ),
               ),
@@ -442,7 +443,7 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Reason: ${item.reason}',
+            '${'sales_return.reason'.tr}: ${item.reason}',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: buildCustomStyle(
@@ -506,11 +507,11 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                 ? item.returnedQuantity
                 : double.tryParse(item.quantity) ?? 0;
             final reason = resolveSalesReturnItemReason(item, order.items) ??
-                (item.isReturned ? 'Returned' : '—');
+                (item.isReturned ? 'sales_return.reason_returned_fallback'.tr : '—');
             return TableRow(children: [
               _buildTableValue(
                 item.productName.trim().isEmpty
-                    ? 'Unknown Product'
+                    ? 'sales_return.unknown_product'.tr
                     : item.productName,
               ),
               _buildTableValue(quantity.toString()),
@@ -577,17 +578,17 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
   }
 
   TableRow _buildItemsHeaderRow() {
-    return const TableRow(
-      decoration: BoxDecoration(
+    return TableRow(
+      decoration: const BoxDecoration(
         border: Border(
           bottom: BorderSide(color: Color(0xFFE0E0E0)),
         ),
       ),
       children: [
-        _SalesReturnTableHeaderCell('Product'),
-        _SalesReturnTableHeaderCell('Qty'),
-        _SalesReturnTableHeaderCell('Price'),
-        _SalesReturnTableHeaderCell('Reason'),
+        _SalesReturnTableHeaderCell('confirmed_orders.product'.tr),
+        _SalesReturnTableHeaderCell('billing.table_qty'.tr),
+        _SalesReturnTableHeaderCell('sales.price'.tr),
+        _SalesReturnTableHeaderCell('sales_return.reason'.tr),
       ],
     );
   }
