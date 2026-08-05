@@ -82,6 +82,7 @@ class StockItem {
   bool isSuccessfullyAdded; // Add this field to track successful addition
   Map<String, dynamic>? apiResponse; // Add this field to store API response
   bool taxInclude; // Add this field for tax inclusion toggle
+  bool taxIncludePurchase; // Purchase tax inclusion is independent
 
   String retailPriceTax; // Add this for retail price with tax
   String wholesalePriceTax; // Add this for wholesale price with tax
@@ -119,6 +120,7 @@ class StockItem {
     this.isSuccessfullyAdded = false,
     this.apiResponse,
     this.taxInclude = true,
+    this.taxIncludePurchase = true,
     this.retailPriceTax = '0.00',
     this.wholesalePriceTax = '0.00',
     this.calculatedTaxData,
@@ -557,6 +559,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       'purchaseConversionRate': item.purchaseConversionRate,
       'selectedRack': item.selectedRack,
       'taxInclude': item.taxInclude,
+      'taxIncludePurchase': item.taxIncludePurchase,
       'productId': item.productData?.productId,
       'productVariantId':
           _variantFeatureEnabled() ? item.productVariantId : null,
@@ -590,6 +593,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       purchaseConversionRate: map['purchaseConversionRate'],
       selectedRack: map['selectedRack'],
       taxInclude: map['taxInclude'] ?? true,
+      taxIncludePurchase:
+          map['taxIncludePurchase'] ?? map['taxInclude'] ?? true,
       productVariantId: map['productVariantId'] is int
           ? map['productVariantId']
           : int.tryParse(map['productVariantId']?.toString() ?? ''),
@@ -1016,6 +1021,19 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     return _parsePositiveDouble(item.quantity, fallback: 0.0);
   }
 
+  double _getPurchaseTotal(StockItem item) {
+    double purchaseRate = double.tryParse(item.purchaseRate) ?? 0.0;
+    if (!item.taxIncludePurchase && item.calculatedTaxData != null) {
+      final effectiveRate =
+          (item.calculatedTaxData!['price_including_tax_purchase'] as num?)
+              ?.toDouble();
+      if (effectiveRate != null && effectiveRate > 0) {
+        purchaseRate = effectiveRate;
+      }
+    }
+    return _getPricingQuantity(item) * purchaseRate;
+  }
+
   void _configurePurchaseUnitForProductSelection(
     int index,
     GetProduct product, {
@@ -1383,6 +1401,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       isSuccessfullyAdded:
           true, // Mark as successfully added since it's from pending
       taxInclude: pendingData['taxInclude'] == true,
+      taxIncludePurchase:
+          pendingData['taxIncludePurchase'] ?? pendingData['taxInclude'] ?? true,
       retailPriceTax: (pendingData['retailPriceTax'] ?? '0.00').toString(),
       wholesalePriceTax:
           (pendingData['wholesalePriceTax'] ?? '0.00').toString(),
@@ -1625,6 +1645,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           oldItem.wholesale != currentItem.wholesale ||
           oldItem.purchaseRate != currentItem.purchaseRate ||
           oldItem.taxInclude != currentItem.taxInclude ||
+          oldItem.taxIncludePurchase != currentItem.taxIncludePurchase ||
           oldItem.batchNumber != currentItem.batchNumber ||
           oldItem.rack != currentItem.rack ||
           oldItem.selectedUnit != currentItem.selectedUnit ||
@@ -1755,6 +1776,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         'purchaseDate': DateFormat('yyyy-MM-dd').format(selectedPurchaseDate),
         'purchaseNumber': null,
         'taxInclude': item.taxInclude,
+        'taxIncludePurchase': item.taxIncludePurchase,
         'initialRetailPrice': item.salePrice,
         'initialWholesalePrice':
             item.wholesale.isNotEmpty ? item.wholesale : item.salePrice,
@@ -1953,6 +1975,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         purchaseConversionRate: item.purchaseConversionRate,
         selectedRack: item.selectedRack,
         taxInclude: item.taxInclude,
+        taxIncludePurchase: item.taxIncludePurchase,
         retailPriceTax: item.retailPriceTax,
         wholesalePriceTax: item.wholesalePriceTax,
         calculatedTaxData: item.calculatedTaxData,
@@ -2099,6 +2122,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           'date': DateFormat('yyyy-MM-dd').format(selectedDate),
           'purchaseDate': DateFormat('yyyy-MM-dd').format(selectedPurchaseDate),
           'taxInclude': item.taxInclude,
+          'taxIncludePurchase': item.taxIncludePurchase,
           'initialRetailPrice': item.salePrice,
           'initialWholesalePrice':
               item.wholesale.isNotEmpty ? item.wholesale : item.salePrice,
@@ -2335,6 +2359,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       'purchaseDate': DateFormat('yyyy-MM-dd').format(selectedPurchaseDate),
       'purchaseNumber': null,
       'taxInclude': item.taxInclude,
+      'taxIncludePurchase': item.taxIncludePurchase,
       'initialRetailPrice': item.salePrice,
       'initialWholesalePrice':
           item.wholesale.isNotEmpty ? item.wholesale : item.salePrice,
@@ -2497,7 +2522,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     for (final item in stockItems) {
       if (!item.isSuccessfullyAdded || item.isHidden) continue;
 
-      if (!item.taxInclude) {
+      if (!item.taxIncludePurchase) {
         final quantity = _getPricingQuantity(item);
         final taxPerUnit =
             (item.calculatedTaxData?['purchaseTaxAmount'] as num?)
@@ -3318,6 +3343,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           _buildHeaderCell("Unit", flex: 1),
           _buildHeaderCell("Qty", flex: 1, width: 40),
           _buildHeaderCell("Purchase Rate", flex: 2),
+          _buildHeaderCell("Purchase Total", flex: 2),
           _buildHeaderCell("Retail Price", flex: 2),
           _buildHeaderCell("MRP", flex: 1),
           _buildHeaderCell("Actions", flex: 2, isLast: true),
@@ -3560,7 +3586,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                             const SizedBox(height: 4),
                             Builder(
                               builder: (context) {
-                                if (!item.taxInclude &&
+                                if (!item.taxIncludePurchase &&
                                     item.calculatedTaxData != null) {
                                   final effective = (item.calculatedTaxData![
                                               'price_including_tax_purchase']
@@ -3674,6 +3700,40 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.green.shade200),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Purchase Total',
+                          style: buildCustomStyle(
+                            FontWeightManager.medium,
+                            11,
+                            0.15,
+                            Colors.green.shade700,
+                          ),
+                        ),
+                        Text(
+                          _getPurchaseTotal(item).toStringAsFixed(2),
+                          style: buildCustomStyle(
+                            FontWeightManager.semiBold,
+                            12,
+                            0.15,
+                            Colors.green.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             );
@@ -3758,7 +3818,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         child: Builder(
                           builder: (context) {
                             // Show effective (tax-inclusive) purchase rate when tax is excluded
-                            if (!item.taxInclude &&
+                            if (!item.taxIncludePurchase &&
                                 item.calculatedTaxData != null) {
                               final effective = (item.calculatedTaxData![
                                       'price_including_tax_purchase'] as num?)
@@ -3782,6 +3842,19 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                   originalIndex, 'purchaseRate', val),
                             );
                           },
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          _getPurchaseTotal(item).toStringAsFixed(2),
+                          style: buildCustomStyle(
+                            FontWeightManager.semiBold,
+                            11,
+                            0.21,
+                            Colors.green.shade700,
+                          ),
+                          textAlign: TextAlign.start,
                         ),
                       ),
                       Expanded(
@@ -4012,7 +4085,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
         // Calculate item total including tax if tax is not included in the price
         double itemTotal = purchaseRate * pricingQuantity;
-        if (!item.taxInclude) {
+        if (!item.taxIncludePurchase) {
           final taxPerUnit =
               (item.calculatedTaxData?['purchaseTaxAmount'] as num?)
                       ?.toDouble() ??
@@ -4920,7 +4993,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         if (item.salePrice.isNotEmpty)
                           _buildDetailChip(
                               "Retail",
-                              !item.taxInclude && item.calculatedTaxData != null
+                              !item.taxIncludePurchase &&
+                                      item.calculatedTaxData != null
                                   ? ((item.calculatedTaxData![
                                                   'price_including_tax_retail']
                                               as num?)
@@ -4975,7 +5049,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       double purchasePrice =
                           double.tryParse(item.purchaseRate) ?? 0;
                       // Use effective (tax-inclusive) purchase rate when tax is excluded
-                      if (!item.taxInclude && item.calculatedTaxData != null) {
+                      if (!item.taxIncludePurchase &&
+                          item.calculatedTaxData != null) {
                         final effective = (item.calculatedTaxData![
                                 'price_including_tax_purchase'] as num?)
                             ?.toDouble();
@@ -6841,10 +6916,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           children: [
             // Tax Settings on the left
             Expanded(
-              flex: 1,
+              flex: 2,
               child: Container(
                 height: 80,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
                   borderRadius: BorderRadius.circular(8),
@@ -6855,12 +6930,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        "Including Tax",
+                        "Purchase Tax",
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: buildCustomStyle(
                           FontWeightManager.regular,
-                          FontSize.s11,
+                          FontSize.s10,
                           0.27,
                           Colors.grey.shade600,
                         ),
@@ -6870,16 +6945,43 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     Transform.scale(
                       scale: 0.75,
                       child: Switch(
-                        value: item.taxInclude,
+                        value: item.taxIncludePurchase,
                         onChanged: (bool value) {
                           setState(() {
-                            item.taxInclude = value;
+                            item.taxIncludePurchase = value;
                             debugPrint(
                                 '🧮 [StockTax] Tax include toggled for item $index -> $value');
-                            _calculateTaxForStockItem(index, isRetail: true);
-                            _calculateTaxForStockItem(index, isRetail: false);
                             _calculateTaxForStockItem(index, isPurchase: true);
                           });
+                          _updatePendingStockItem(index);
+                        },
+                        activeThumbColor: ColorManager.kPrimaryColor,
+                        inactiveThumbColor: Colors.white,
+                        inactiveTrackColor: Colors.grey.shade300,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        "Selling Tax",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s10,
+                          0.27,
+                          Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                    Transform.scale(
+                      scale: 0.75,
+                      child: Switch(
+                        value: item.taxInclude,
+                        onChanged: (bool value) {
+                          setState(() => item.taxInclude = value);
+                          _calculateTaxForStockItem(index, isRetail: true);
+                          _calculateTaxForStockItem(index, isRetail: false);
                           _updatePendingStockItem(index);
                         },
                         activeThumbColor: ColorManager.kPrimaryColor,
@@ -6925,12 +7027,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               child: _buildTaxCard(
                 "Purchase Rate",
                 "3",
-                item.taxInclude
+                item.taxIncludePurchase
                     ? '${(item.calculatedTaxData?['price_including_tax_purchase'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}'
                     : '${(item.calculatedTaxData?['price_excluding_tax_purchase'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"} + ${(item.calculatedTaxData?['purchaseTaxAmount'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}',
                 'Tax: ${(item.calculatedTaxData?['tax_rate_purchase'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
                 Colors.green,
-                item.taxInclude,
+                item.taxIncludePurchase,
+                headerTrailingText:
+                    'Total: ${_getPurchaseTotal(item).toStringAsFixed(2)}',
               ),
             ),
           ],
@@ -6959,8 +7063,15 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     );
   }
 
-  Widget _buildTaxCard(String title, String badgeText, String priceText,
-      String taxText, Color color, bool isIncluding) {
+  Widget _buildTaxCard(
+    String title,
+    String badgeText,
+    String priceText,
+    String taxText,
+    Color color,
+    bool isIncluding, {
+    String? headerTrailingText,
+  }) {
     return Container(
       height: 80,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -7008,6 +7119,20 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   ),
                 ),
               ),
+              if (headerTrailingText != null) ...[
+                const SizedBox(width: 6),
+                Text(
+                  headerTrailingText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s11,
+                    0.27,
+                    color,
+                  ),
+                ),
+              ],
             ],
           ),
           Row(
@@ -7100,6 +7225,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         : (isRetail
             ? (double.tryParse(item.salePrice) ?? 0.0)
             : (double.tryParse(item.wholesale) ?? 0.0));
+    final bool taxInclude =
+        isPurchase ? item.taxIncludePurchase : item.taxInclude;
 
     debugPrint(
         '🧮 [StockTax] Payload | item=$index | type=$calculationType | productId=${item.productData!.productId} | categoryId=${item.categoryData!.categoryId} | price=$priceToCalculate | taxInclude=${item.taxInclude}');
@@ -7119,7 +7246,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         price: priceToCalculate,
         productId: item.productData!.productId!,
         categoryId: item.categoryData!.categoryId!,
-        taxInclude: item.taxInclude,
+        taxInclude: taxInclude,
       );
 
       if (taxData != null && mounted) {
