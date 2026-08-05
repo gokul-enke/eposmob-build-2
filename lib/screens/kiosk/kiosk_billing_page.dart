@@ -20,6 +20,7 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/kiosk/kiosk.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 
 import '../../extensions/widget_functions.dart';
 
@@ -502,6 +503,9 @@ class KioskBillingPageState extends State<KioskBillingPage> {
   }
 
   Future<void> _saveSales() async {
+    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
+      return;
+    }
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
     final provider = Provider.of<CartProvider>(context, listen: false);
     int? cartId = provider.getCartIDForOrder;
@@ -515,7 +519,13 @@ class KioskBillingPageState extends State<KioskBillingPage> {
         totalPrice: provider.priceSummary!.netTotal.toString(),
         customerId: Provider.of<AuthModel>(context, listen: false).userId!,
       )
-          .then((response) {
+          .then((response) async {
+        if (await SubscriptionActionGuard.handleBackendResponse(
+          context,
+          response,
+        )) {
+          return;
+        }
         AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(response);
         if (response["status"] == "success") {
           showScaffold(context: context, message: "${addToOrderModel.message}");

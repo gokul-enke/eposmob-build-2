@@ -77,6 +77,8 @@ import 'package:pos_machine/features/realtime_sync/data/realtime_entity_api.dart
 import 'package:pos_machine/features/realtime_sync/data/realtime_sync_repository.dart';
 import 'package:pos_machine/features/realtime_sync/presentation/realtime_sync_lifecycle.dart';
 import 'package:pos_machine/features/realtime_sync/presentation/realtime_sync_provider.dart';
+import 'package:pos_machine/features/subscription/presentation/subscription_lifecycle.dart';
+import 'package:pos_machine/features/subscription/presentation/subscription_provider.dart';
 
 void main() async {
   if (kDebugMode) {
@@ -337,6 +339,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CarouselProvider()),
         ChangeNotifierProvider(create: (_) => SalesProvider()),
         ChangeNotifierProvider(create: (_) => AuthModel()),
+        ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
         ChangeNotifierProvider(create: (_) => PurchaseProvider()),
         ChangeNotifierProvider(create: (_) => InvoiceProvider()),
         ChangeNotifierProvider(create: (_) => LocationProvider()),
@@ -421,52 +424,54 @@ class MyApp extends StatelessWidget {
               ),
         ),
       ],
-      child: RealtimeSyncLifecycle(
-        child: OrientationLock(
-          child: KeyboardDispatcher(
-            child: Consumer<KeyboardFocusHighlightProvider>(
-              builder: (context, focusHighlightProvider, child) {
-                return GetMaterialApp(
-                  debugShowCheckedModeBanner: false,
-                  title: 'CLOUDPOS',
-                  theme: _buildAppTheme(focusHighlightProvider.enabled),
-                  translations:
-                      AppTranslations(LocalizationService.translations),
-                  locale: LocalizationService.locale,
-                  fallbackLocale: LocalizationService.fallbackLocale,
-                  builder: (context, child) {
-                    final screenSize = MediaQuery.of(context).size;
-                    final platform = Theme.of(context).platform;
+      child: SubscriptionLifecycle(
+        child: RealtimeSyncLifecycle(
+          child: OrientationLock(
+            child: KeyboardDispatcher(
+              child: Consumer<KeyboardFocusHighlightProvider>(
+                builder: (context, focusHighlightProvider, child) {
+                  return GetMaterialApp(
+                    debugShowCheckedModeBanner: false,
+                    title: 'CLOUDPOS',
+                    theme: _buildAppTheme(focusHighlightProvider.enabled),
+                    translations:
+                        AppTranslations(LocalizationService.translations),
+                    locale: LocalizationService.locale,
+                    fallbackLocale: LocalizationService.fallbackLocale,
+                    builder: (context, child) {
+                      final screenSize = MediaQuery.of(context).size;
+                      final platform = Theme.of(context).platform;
 
-                    // Phone only: Column layout so keyboard pushes content up.
-                    // Tablets + Desktop: Stack overlay for floating draggable keyboard.
-                    final isPhone = (platform == TargetPlatform.android ||
-                            platform == TargetPlatform.iOS) &&
-                        screenSize.width < 600; // Phone threshold
+                      // Phone only: Column layout so keyboard pushes content up.
+                      // Tablets + Desktop: Stack overlay for floating draggable keyboard.
+                      final isPhone = (platform == TargetPlatform.android ||
+                              platform == TargetPlatform.iOS) &&
+                          screenSize.width < 600; // Phone threshold
 
-                    if (isPhone) {
-                      return Column(
+                      if (isPhone) {
+                        return Column(
+                          children: [
+                            Expanded(child: child ?? const SizedBox.shrink()),
+                            const GlobalVirtualKeyboard(),
+                          ],
+                        );
+                      }
+
+                      return Stack(
                         children: [
-                          Expanded(child: child ?? const SizedBox.shrink()),
+                          child ?? const SizedBox.shrink(),
                           const GlobalVirtualKeyboard(),
                         ],
                       );
-                    }
-
-                    return Stack(
-                      children: [
-                        child ?? const SizedBox.shrink(),
-                        const GlobalVirtualKeyboard(),
-                      ],
-                    );
-                  },
-                  home: const BaseUrlWrapper(),
-                  routes: {
-                    '/login': (context) => const SignInScreen(),
-                    '/api-key': (context) => const ApiKeyScreen(),
-                  },
-                );
-              },
+                    },
+                    home: const BaseUrlWrapper(),
+                    routes: {
+                      '/login': (context) => const SignInScreen(),
+                      '/api-key': (context) => const ApiKeyScreen(),
+                    },
+                  );
+                },
+              ),
             ),
           ),
         ),

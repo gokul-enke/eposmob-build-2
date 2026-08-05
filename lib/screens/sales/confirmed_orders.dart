@@ -15,6 +15,7 @@ import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/services/print_service.dart';
 import 'package:pos_machine/screens/sales/widgets/confirmed_order_detail_modal.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 
@@ -36,7 +37,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
     final subtotal = order.items.fold<double>(
       0.0,
       (sum, item) =>
-          sum + ((item.price ?? item.product.price?.price ?? 0.0) * item.quantity),
+          sum +
+          ((item.price ?? item.product.price?.price ?? 0.0) * item.quantity),
     );
 
     final flatDiscount = order.flatDiscount ?? 0.0;
@@ -525,6 +527,9 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
 
   /// Syncs all confirmed orders with the database
   void _syncConfirmedOrders(BuildContext context) async {
+    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
+      return;
+    }
     final provider = Provider.of<LocalProductProvider>(context, listen: false);
 
     // Create a copy of the orders list to avoid modification during iteration
@@ -916,6 +921,14 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           address: order.address,
           deliveryCharge: order.deliveryCharge,
         );
+
+        if (await SubscriptionActionGuard.handleBackendResponse(
+          context,
+          response,
+        )) {
+          failureCount += confirmedOrders.length - i;
+          break;
+        }
 
         // AFTER the API call completes, update the index
         setState(() {

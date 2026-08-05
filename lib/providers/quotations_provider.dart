@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos_machine/features/subscription/presentation/subscription_provider.dart';
 
 import '../models/quotation_model.dart';
 import '../resources/app_url.dart';
@@ -235,6 +236,10 @@ class QuotationsProvider with ChangeNotifier {
     num? shippingCost,
     int? deliveryMethodId,
   }) async {
+    final subscriptionRejection =
+        SubscriptionAccessRegistry.rejectedOrderResponse();
+    if (subscriptionRejection != null) return subscriptionRejection;
+
     final uri = Uri.parse(APPUrl.convertQuotationToOrder);
     final body = <String, dynamic>{
       'quotation_id': quotationId,

@@ -14,6 +14,7 @@ import 'package:pos_machine/screens/customers/add_customer_modal.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
+import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 
 import '../components/build_payment_row.dart';
 import '../models/add_to_order.dart';
@@ -989,7 +990,8 @@ class _OrderListState extends State<OrderList> {
                                 children: [
                                   WebsafeSvg.asset(
                                     ImageAssets.cashIcon,
-                                    colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),
+                                    colorFilter: const ColorFilter.mode(
+                                        Colors.black, BlendMode.srcIn),
                                     fit: BoxFit.none,
                                   ),
                                   Text(
@@ -1024,7 +1026,8 @@ class _OrderListState extends State<OrderList> {
                                 children: [
                                   WebsafeSvg.asset(
                                     ImageAssets.creditCardIcon,
-                                    colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),
+                                    colorFilter: const ColorFilter.mode(
+                                        Colors.black, BlendMode.srcIn),
                                     fit: BoxFit.none,
                                   ),
                                   Text(
@@ -1059,7 +1062,8 @@ class _OrderListState extends State<OrderList> {
                                 children: [
                                   WebsafeSvg.asset(
                                     ImageAssets.creditCardIcon,
-                                    colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),
+                                    colorFilter: const ColorFilter.mode(
+                                        Colors.black, BlendMode.srcIn),
                                     fit: BoxFit.none,
                                   ),
                                   Text(
@@ -1162,6 +1166,11 @@ class _OrderListState extends State<OrderList> {
                                               listen: false);
                                       int? cartId = provider.getCartIDForOrder;
                                       // debugPrint("$cartId");
+                                      if (!await SubscriptionActionGuard
+                                          .ensureOrderSubmissionAllowed(
+                                              context)) {
+                                        return;
+                                      }
                                       try {
                                         await Provider.of<CartProvider>(context,
                                                 listen: false)
@@ -1181,7 +1190,12 @@ class _OrderListState extends State<OrderList> {
                                                   listen: false)
                                               .userId!,
                                         )
-                                            .then((response) {
+                                            .then((response) async {
+                                          if (await SubscriptionActionGuard
+                                              .handleBackendResponse(
+                                                  context, response)) {
+                                            return;
+                                          }
                                           AddToOrderModel addToOrderModel =
                                               AddToOrderModel.fromJson(
                                                   response);
@@ -1251,9 +1265,16 @@ class _OrderListState extends State<OrderList> {
                                           builder: (context) => PrintPage(
                                             cartItems: cartProductItems!,
                                             formattedTotal: formattedTotal,
-                                            discountAmount: Provider.of<CartProvider>(context, listen: false)
-                                                .priceSummary?.discount?.toString() ?? "0.00",
-                                            orderDate: DateHelper.now().toIso8601String(),
+                                            discountAmount:
+                                                Provider.of<CartProvider>(
+                                                            context,
+                                                            listen: false)
+                                                        .priceSummary
+                                                        ?.discount
+                                                        ?.toString() ??
+                                                    "0.00",
+                                            orderDate: DateHelper.now()
+                                                .toIso8601String(),
                                             orderNumber: "#000000",
                                             // storeName: cartProductItems,
                                           ),
@@ -1265,7 +1286,8 @@ class _OrderListState extends State<OrderList> {
                                       children: [
                                         WebsafeSvg.asset(
                                           ImageAssets.printIcon,
-                                          colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                                          colorFilter: const ColorFilter.mode(
+                                              Colors.white, BlendMode.srcIn),
                                           fit: BoxFit.none,
                                         ),
                                         Text(
