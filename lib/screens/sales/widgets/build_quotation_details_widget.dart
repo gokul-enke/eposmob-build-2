@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_payment_row.dart';
 import 'package:pos_machine/models/quotation_model.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -40,7 +41,7 @@ class QuotationDetailWidget extends StatelessWidget {
         children: [
           if (isPhone) ...[
             SelectableText(
-              "Quotation # ${data.quotationNumber ?? ''}",
+              'quotations.quotation_hash'.trParams({'number': data.quotationNumber ?? ''}),
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s16,
@@ -57,7 +58,7 @@ class QuotationDetailWidget extends StatelessWidget {
               children: [
                 Expanded(
                   child: SelectableText(
-                    "Quotation # ${data.quotationNumber ?? ''}",
+                    'quotations.quotation_hash'.trParams({'number': data.quotationNumber ?? ''}),
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s18,
@@ -73,30 +74,30 @@ class QuotationDetailWidget extends StatelessWidget {
           Divider(color: Colors.grey.withOpacity(0.15)),
           if (isPhone) ...[
             QuotationsInfoChip(
-              label: 'Customer',
+              label: 'quotations.customer_col'.tr,
               value: data.customer?.name ?? 'NA',
             ),
             const SizedBox(height: 10),
             QuotationsInfoChip(
-              label: 'Store',
+              label: 'quotations.store_col'.tr,
               value: data.store?.name ?? 'NA',
             ),
             const SizedBox(height: 10),
             QuotationsTwoColumnLayout(
               start: QuotationsInfoChip(
-                label: 'Date',
+                label: 'quotations.date'.tr,
                 value: data.quotationDate ?? 'NA',
               ),
               end: QuotationsInfoChip(
-                label: 'Expiry',
+                label: 'quotations.expiry'.tr,
                 value: data.expiryDate ?? 'NA',
               ),
             ),
           ] else ...[
-            _infoRow("Customer", data.customer?.name ?? 'NA'),
-            _infoRow("Store", data.store?.name ?? 'NA'),
-            _infoRow("Date", data.quotationDate ?? 'NA'),
-            _infoRow("Expiry", data.expiryDate ?? 'NA'),
+            _infoRow('quotations.customer_col'.tr, data.customer?.name ?? 'NA'),
+            _infoRow('quotations.store_col'.tr, data.store?.name ?? 'NA'),
+            _infoRow('quotations.date'.tr, data.quotationDate ?? 'NA'),
+            _infoRow('quotations.expiry'.tr, data.expiryDate ?? 'NA'),
           ],
         ],
       ),
@@ -173,9 +174,9 @@ class QuotationDetailWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsetsDirectional.fromSTEB(16, 16, 16, 8),
-            child: QuotationsSectionTitle(title: 'Items'),
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 8),
+            child: QuotationsSectionTitle(title: 'quotations.items'.tr),
           ),
           ClipRRect(
             borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
@@ -193,7 +194,12 @@ class QuotationDetailWidget extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: ColorManager.kPrimaryColor.withOpacity(0.05),
                       ),
-                      children: ['Product', 'Qty', 'Price', 'Total']
+                      children: [
+                        'confirmed_orders.product'.tr,
+                        'billing.table_qty'.tr,
+                        'sales.price'.tr,
+                        'billing.total'.tr,
+                      ]
                           .map(
                             (t) => Padding(
                               padding: const EdgeInsets.all(12),
@@ -292,7 +298,7 @@ class QuotationDetailWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const QuotationsSectionTitle(title: 'Items'),
+          QuotationsSectionTitle(title: 'quotations.items'.tr),
           const SizedBox(height: 12),
           for (int i = 0; i < items.length; i++) ...[
             if (i > 0) const SizedBox(height: 10),
@@ -330,15 +336,15 @@ class QuotationDetailWidget extends StatelessWidget {
           QuotationsDetailGrid(
             children: [
               QuotationsInfoChip(
-                label: 'Qty',
+                label: 'billing.table_qty'.tr,
                 value: item.quantity?.toString() ?? '0',
               ),
               QuotationsInfoChip(
-                label: 'Price',
+                label: 'sales.price'.tr,
                 value: '$currency ${item.unitPrice ?? '0'}',
               ),
               QuotationsInfoChip(
-                label: 'Total',
+                label: 'billing.total'.tr,
                 value: '$currency ${item.totalPrice ?? '0'}',
               ),
             ],
@@ -354,24 +360,24 @@ class QuotationDetailWidget extends StatelessWidget {
       child: Column(
         children: [
           BuildPaymentRow(
-            title: "Sub Total",
+            title: 'quotations.sub_total'.tr,
             amount: "$currency ${data.subTotal ?? '0.00'}",
             color: ColorManager.textColor,
           ),
           BuildPaymentRow(
-            title: "Tax",
+            title: 'billing.tax'.tr,
             amount: "$currency ${data.tax ?? '0.00'}",
             color: ColorManager.textColor,
           ),
           if (data.discount != null)
             BuildPaymentRow(
-              title: "Discount",
+              title: 'billing.discount'.tr,
               amount: "$currency ${data.discount}",
               color: ColorManager.textColor,
             ),
           Divider(color: Colors.grey.withOpacity(0.15)),
           BuildPaymentRow(
-            title: "Grand Total",
+            title: 'quotations.grand_total'.tr,
             amount: "$currency ${data.grandTotal ?? '0.00'}",
             color: ColorManager.kPrimaryColor,
             firstRowTextStyle: const TextStyle(
