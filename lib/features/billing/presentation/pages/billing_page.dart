@@ -6767,6 +6767,12 @@ class BillingPageState extends State<BillingPage>
             Map<String, dynamic>? paymentBreakdown =
                 orderDetails.data?.payments;
 
+            debugPrint('[BillingPrint] Order number: ${ordersId}');
+            debugPrint('[BillingPrint] Payment method: $paymentMethod');
+            debugPrint('[BillingPrint] Payment breakdown: $paymentBreakdown');
+            debugPrint(
+                '[BillingPrint] Payment breakdown keys: ${paymentBreakdown?.keys.toList()}');
+
             String? orderComment;
             if (orderDetails.data?.orderProps != null) {
               try {
@@ -6795,8 +6801,27 @@ class BillingPageState extends State<BillingPage>
             double? oldBalance =
                 isDefaultCustomer ? null : selectedCustomer?.balance;
             double totalPaid = _getTotalPaidAmount();
+            if (totalPaid <= 0 && paymentBreakdown != null) {
+              const excludedPaymentKeys = {'DEBIT', 'CREDIT', 'BALANCE'};
+              totalPaid = paymentBreakdown.entries
+                  .where((entry) => !excludedPaymentKeys
+                      .contains(entry.key.trim().toUpperCase()))
+                  .fold<double>(0.0, (sum, entry) {
+                final value = entry.value;
+                return sum +
+                    (value is num
+                        ? value.toDouble()
+                        : double.tryParse(value.toString()) ?? 0.0);
+              });
+              debugPrint(
+                  '[BillingPrint] Derived total paid from payment breakdown: $totalPaid');
+            }
             double? currentBalance;
-            if (oldBalance != null) {
+            final apiBalance =
+                _orderBalanceFromProps(orderDetails.data?.orderProps);
+            if (apiBalance != null) {
+              currentBalance = apiBalance;
+            } else if (oldBalance != null) {
               double cartTotal = double.tryParse(formattedTotal!) ?? 0.0;
               // Current balance = Old balance - (Cart Total - Amount Paid)
               // If customer paid less than cart total, their balance decreases (they owe more)
@@ -6810,6 +6835,12 @@ class BillingPageState extends State<BillingPage>
                 "💰 Customer Old Balanceance: $oldBalance, Paid: $totalPaid, Current Balance: $currentBalance");
 
             Future<bool> printOnce() {
+              debugPrint(
+                  '[BillingPrint] Sending payment method to PrintPage: $paymentMethod');
+              debugPrint(
+                  '[BillingPrint] Sending payment breakdown to PrintPage: $paymentBreakdown');
+              debugPrint(
+                  '[BillingPrint] Sending paid amount to PrintPage: ${totalPaid > 0 ? totalPaid : null}');
               return _printOrderDetailsWithFallback(
                 storeName: storeName,
                 cartItems: orderDetails.data!.cart!.cartItems!,
@@ -9369,6 +9400,16 @@ class BillingPageState extends State<BillingPage>
     }
 
     return autoPrintSuccess;
+  }
+
+  double? _orderBalanceFromProps(List<OrderDetailsModelDataOrderProp>? props) {
+    if (props == null) return null;
+    for (final prop in props) {
+      if (prop.propsCode?.toUpperCase() == 'BALANCE') {
+        return double.tryParse(prop.propsValue ?? '');
+      }
+    }
+    return null;
   }
 
   Future<void> printFromSavedOrder(SavedOrder savedOrder) async {

@@ -176,6 +176,10 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                   'quantity': i.quantity,
                   'unit_price': i.unitPrice,
                   'total_price': i.totalPrice,
+                  'calculated_purchase_rate': i.calculatedPurchaseRate,
+                  'tax_include': i.taxInclude ?? true,
+                  'tax_include_purchase':
+                      i.taxIncludePurchase ?? i.taxInclude ?? true,
                   'expiry_date': i.expiryDate,
                   'batch_number': i.batchNumber,
                   'unit': i.unit,
@@ -316,7 +320,8 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
     if (!canViewPurchasePrice(context)) {
       return const SafeArea(
         child: Center(
-          child: Text('Purchase permission is required to view purchase orders.'),
+          child:
+              Text('Purchase permission is required to view purchase orders.'),
         ),
       );
     }

@@ -7020,6 +7020,30 @@ class OrderPanelState extends State<OrderPanel> {
         (double.tryParse(_codAmount) ?? 0.0);
   }
 
+  double _sumPaymentBreakdown(Map<String, dynamic> payments) {
+    const excludedKeys = {'DEBIT', 'CREDIT', 'BALANCE'};
+    return payments.entries
+        .where(
+            (entry) => !excludedKeys.contains(entry.key.trim().toUpperCase()))
+        .fold<double>(0.0, (sum, entry) {
+      final value = entry.value;
+      return sum +
+          (value is num
+              ? value.toDouble()
+              : double.tryParse(value.toString()) ?? 0.0);
+    });
+  }
+
+  double? _orderBalanceFromProps(List<OrderDetailsModelDataOrderProp>? props) {
+    if (props == null) return null;
+    for (final prop in props) {
+      if (prop.propsCode?.toUpperCase() == 'BALANCE') {
+        return double.tryParse(prop.propsValue ?? '');
+      }
+    }
+    return null;
+  }
+
   double _calculateBalanceAmount() {
     final totalPaid = _getTotalPaidAmountFromState();
     final payableTotal = _getEffectiveOrderTotal();
@@ -7166,11 +7190,19 @@ class OrderPanelState extends State<OrderPanel> {
         cart?.priceSummary?.netTotal.toString() ??
         _getEffectiveOrderTotal().toStringAsFixed(2);
     final savedTotal = cart?.priceSummary?.savedTotal.toString();
-    final totalPaid = _getTotalPaidAmountFromState();
+    var totalPaid = _getTotalPaidAmountFromState();
+    if (totalPaid <= 0 && detailsData?.payments != null) {
+      totalPaid = _sumPaymentBreakdown(detailsData!.payments!);
+      debugPrint(
+          '[RestaurantPrint] Derived total paid from payment breakdown: $totalPaid');
+    }
     final isDefaultCustomer = _isDefaultCustomer(_selectedCustomer);
     final oldBalance = isDefaultCustomer ? null : _selectedCustomer?.balance;
     double? currentBalance;
-    if (oldBalance != null) {
+    final apiBalance = _orderBalanceFromProps(detailsData?.orderProps);
+    if (apiBalance != null) {
+      currentBalance = apiBalance;
+    } else if (oldBalance != null) {
       final cartTotal = double.tryParse(formattedTotal) ?? 0.0;
       currentBalance = oldBalance - (cartTotal - totalPaid);
     }

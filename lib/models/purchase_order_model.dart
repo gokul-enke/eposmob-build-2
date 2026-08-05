@@ -94,6 +94,9 @@ class PurchaseOrderItemData {
   String? quantity;
   String? unitPrice;
   String? totalPrice;
+  String? calculatedPurchaseRate;
+  bool? taxInclude;
+  bool? taxIncludePurchase;
   String? expiryDate;
   String? batchNumber;
   String? status;
@@ -111,6 +114,9 @@ class PurchaseOrderItemData {
     this.quantity,
     this.unitPrice,
     this.totalPrice,
+    this.calculatedPurchaseRate,
+    this.taxInclude,
+    this.taxIncludePurchase,
     this.expiryDate,
     this.batchNumber,
     this.status,
@@ -133,10 +139,37 @@ class PurchaseOrderItemData {
     quantity = json['quantity']?.toString();
     unitPrice = json['unit_price']?.toString();
     totalPrice = json['total_price']?.toString();
+    calculatedPurchaseRate = json['calculated_purchase_rate']?.toString();
+    taxInclude = _parseBool(json['tax_include']);
+    taxIncludePurchase = _parseBool(
+      json['tax_include_purchase'],
+      fallback: taxInclude,
+    );
     expiryDate = json['expiry_date']?.toString();
     batchNumber = json['batch_number']?.toString();
     status = json['status'];
     unit = json['unit']?.toString();
+  }
+
+  static bool? _parseBool(dynamic value, {bool? fallback}) {
+    if (value == null) return fallback;
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+
+    switch (value.toString().trim().toLowerCase()) {
+      case 'true':
+      case '1':
+      case 'yes':
+      case 'y':
+        return true;
+      case 'false':
+      case '0':
+      case 'no':
+      case 'n':
+        return false;
+      default:
+        return fallback;
+    }
   }
 }
 
