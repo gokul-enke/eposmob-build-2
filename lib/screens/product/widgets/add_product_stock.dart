@@ -3847,15 +3847,32 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       ),
                       Expanded(
                         flex: 2,
-                        child: Text(
-                          _getPurchaseTotal(item).toStringAsFixed(2),
-                          style: buildCustomStyle(
-                            FontWeightManager.semiBold,
-                            11,
-                            0.21,
-                            Colors.green.shade700,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: Colors.green.shade200,
+                              ),
+                            ),
+                            child: Text(
+                              _getPurchaseTotal(item).toStringAsFixed(2),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: buildCustomStyle(
+                                FontWeightManager.bold,
+                                FontSize.s12,
+                                0.21,
+                                Colors.green.shade800,
+                              ),
+                            ),
                           ),
-                          textAlign: TextAlign.start,
                         ),
                       ),
                       Expanded(
@@ -6915,7 +6932,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         // Tax calculation cards with tax settings on the left
         Row(
           children: [
-            // Tax Settings on the left
+            /* Removed shared retail/wholesale tax toggle; each price card has
+               its own Incl. tax toggle now.
             Expanded(
               flex: 2,
               child: Container(
@@ -6966,7 +6984,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 12), */
             Expanded(
               flex: 2,
               child: _buildTaxCard(
@@ -6978,6 +6996,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 'Tax: ${(item.calculatedTaxData?['tax_rate_retail'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
                 Colors.blue,
                 item.taxInclude,
+                toggleLabel: 'Incl. tax',
+                toggleValue: item.taxInclude,
+                onToggleChanged: (value) {
+                  setState(() => item.taxInclude = value);
+                  _calculateTaxForStockItem(index, isRetail: true);
+                  _calculateTaxForStockItem(index, isRetail: false);
+                  _updatePendingStockItem(index);
+                },
               ),
             ),
             const SizedBox(width: 12),
@@ -6992,6 +7018,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 'Tax: ${(item.calculatedTaxData?['tax_rate_wholesale'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
                 Colors.orange,
                 item.taxInclude,
+                toggleLabel: 'Incl. tax',
+                toggleValue: item.taxInclude,
+                onToggleChanged: (value) {
+                  setState(() => item.taxInclude = value);
+                  _calculateTaxForStockItem(index, isRetail: true);
+                  _calculateTaxForStockItem(index, isRetail: false);
+                  _updatePendingStockItem(index);
+                },
               ),
             ),
             const SizedBox(width: 12),
@@ -7174,15 +7208,23 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               ),
               if (footerTrailingText != null) ...[
                 const SizedBox(width: 8),
-                Text(
-                  footerTrailingText,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s10,
-                    0.27,
-                    color,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.14),
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(color: color.withOpacity(0.35)),
+                  ),
+                  child: Text(
+                    footerTrailingText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.bold,
+                      FontSize.s11,
+                      0.27,
+                      color,
+                    ),
                   ),
                 ),
               ],
