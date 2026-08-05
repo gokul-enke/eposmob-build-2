@@ -71,7 +71,7 @@ class _AddCategoryModalState extends State<AddCategoryModal> {
       }
 
       final response = await http.get(
-        Uri.parse(APPUrl.listTax),
+        Uri.parse('${APPUrl.listTax}?active_only=true'),
         headers: {
           'Authorization': 'Bearer $token',
           'X-Tenant': apiKey,
