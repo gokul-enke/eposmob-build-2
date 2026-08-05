@@ -1401,8 +1401,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       isSuccessfullyAdded:
           true, // Mark as successfully added since it's from pending
       taxInclude: pendingData['taxInclude'] == true,
-      taxIncludePurchase:
-          pendingData['taxIncludePurchase'] ?? pendingData['taxInclude'] ?? true,
+      taxIncludePurchase: pendingData['taxIncludePurchase'] ??
+          pendingData['taxInclude'] ??
+          true,
       retailPriceTax: (pendingData['retailPriceTax'] ?? '0.00').toString(),
       wholesalePriceTax:
           (pendingData['wholesalePriceTax'] ?? '0.00').toString(),
@@ -4993,8 +4994,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         if (item.salePrice.isNotEmpty)
                           _buildDetailChip(
                               "Retail",
-                              !item.taxIncludePurchase &&
-                                      item.calculatedTaxData != null
+                              !item.taxInclude && item.calculatedTaxData != null
                                   ? ((item.calculatedTaxData![
                                                   'price_including_tax_retail']
                                               as num?)
@@ -5007,7 +5007,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         if (item.purchaseRate.isNotEmpty)
                           _buildDetailChip(
                               "Purchase",
-                              !item.taxInclude && item.calculatedTaxData != null
+                              !item.taxIncludePurchase &&
+                                      item.calculatedTaxData != null
                                   ? ((item.calculatedTaxData![
                                                   'price_including_tax_purchase']
                                               as num?)
@@ -6930,7 +6931,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        "Purchase Tax",
+                        "Retail & wholesale incl. tax",
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: buildCustomStyle(
@@ -6945,41 +6946,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     Transform.scale(
                       scale: 0.75,
                       child: Switch(
-                        value: item.taxIncludePurchase,
-                        onChanged: (bool value) {
-                          setState(() {
-                            item.taxIncludePurchase = value;
-                            debugPrint(
-                                '🧮 [StockTax] Tax include toggled for item $index -> $value');
-                            _calculateTaxForStockItem(index, isPurchase: true);
-                          });
-                          _updatePendingStockItem(index);
-                        },
-                        activeThumbColor: ColorManager.kPrimaryColor,
-                        inactiveThumbColor: Colors.white,
-                        inactiveTrackColor: Colors.grey.shade300,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        "Selling Tax",
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: buildCustomStyle(
-                          FontWeightManager.regular,
-                          FontSize.s10,
-                          0.27,
-                          Colors.grey.shade600,
-                        ),
-                      ),
-                    ),
-                    Transform.scale(
-                      scale: 0.75,
-                      child: Switch(
                         value: item.taxInclude,
                         onChanged: (bool value) {
-                          setState(() => item.taxInclude = value);
+                          setState(() {
+                            item.taxInclude = value;
+                            debugPrint(
+                                '🧮 [StockTax] Tax include toggled for item $index -> $value');
+                          });
                           _calculateTaxForStockItem(index, isRetail: true);
                           _calculateTaxForStockItem(index, isRetail: false);
                           _updatePendingStockItem(index);
@@ -7023,7 +6996,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              flex: 2,
+              flex: 3,
               child: _buildTaxCard(
                 "Purchase Rate",
                 "3",
@@ -7033,8 +7006,15 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 'Tax: ${(item.calculatedTaxData?['tax_rate_purchase'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
                 Colors.green,
                 item.taxIncludePurchase,
-                headerTrailingText:
+                footerTrailingText:
                     'Total: ${_getPurchaseTotal(item).toStringAsFixed(2)}',
+                toggleLabel: 'Incl. tax',
+                toggleValue: item.taxIncludePurchase,
+                onToggleChanged: (value) {
+                  setState(() => item.taxIncludePurchase = value);
+                  _calculateTaxForStockItem(index, isPurchase: true);
+                  _updatePendingStockItem(index);
+                },
               ),
             ),
           ],
@@ -7071,6 +7051,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     Color color,
     bool isIncluding, {
     String? headerTrailingText,
+    String? footerTrailingText,
+    String? toggleLabel,
+    bool? toggleValue,
+    ValueChanged<bool>? onToggleChanged,
   }) {
     return Container(
       height: 80,
@@ -7133,6 +7117,28 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   ),
                 ),
               ],
+              if (toggleValue != null && onToggleChanged != null) ...[
+                const SizedBox(width: 4),
+                Text(
+                  toggleLabel ?? 'Incl. tax',
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s9,
+                    0.27,
+                    color,
+                  ),
+                ),
+                Transform.scale(
+                  scale: 0.6,
+                  child: Switch(
+                    value: toggleValue,
+                    onChanged: onToggleChanged,
+                    activeThumbColor: color,
+                    inactiveThumbColor: Colors.white,
+                    inactiveTrackColor: Colors.grey.shade300,
+                  ),
+                ),
+              ],
             ],
           ),
           Row(
@@ -7166,6 +7172,20 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   ),
                 ),
               ),
+              if (footerTrailingText != null) ...[
+                const SizedBox(width: 8),
+                Text(
+                  footerTrailingText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s10,
+                    0.27,
+                    color,
+                  ),
+                ),
+              ],
             ],
           ),
         ],
@@ -7229,7 +7249,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         isPurchase ? item.taxIncludePurchase : item.taxInclude;
 
     debugPrint(
-        '🧮 [StockTax] Payload | item=$index | type=$calculationType | productId=${item.productData!.productId} | categoryId=${item.categoryData!.categoryId} | price=$priceToCalculate | taxInclude=${item.taxInclude}');
+        '🧮 [StockTax] Payload | item=$index | type=$calculationType | productId=${item.productData!.productId} | categoryId=${item.categoryData!.categoryId} | price=$priceToCalculate | taxInclude=$taxInclude');
 
     final String? accessToken =
         Provider.of<AuthModel>(context, listen: false).token;

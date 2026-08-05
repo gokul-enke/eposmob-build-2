@@ -516,11 +516,16 @@ class StockProvider extends ChangeNotifier {
               ? int.parse(stockItem['wholesaleMinUnit'].toString())
               : 0,
           'tax_include': stockItem['taxInclude'] ?? false,
+          'tax_include_purchase': stockItem['taxIncludePurchase'] ??
+              stockItem['taxInclude'] ??
+              false,
           'rack': stockItem['rack']?.toString() ?? '',
           'tax_amount_retail':
               _parseNullableDouble(stockItem['taxAmountRetail']),
           'tax_amount_wholesale':
               _parseNullableDouble(stockItem['taxAmountWholesale']),
+          'tax_amount_purchase':
+              _parseNullableDouble(stockItem['taxAmountPurchase']),
           'initial_retail_price': stockItem['initialRetailPrice'] != null &&
                   stockItem['initialRetailPrice'].toString().isNotEmpty
               ? double.parse(stockItem['initialRetailPrice'].toString())
@@ -746,6 +751,7 @@ class StockProvider extends ChangeNotifier {
     String? purchaseId,
     String? taxAmountRetail,
     String? taxAmountWholesale,
+    String? taxAmountPurchase,
     required String wholesaleMinUnit,
     required String rack,
     required String barcode,
@@ -754,6 +760,7 @@ class StockProvider extends ChangeNotifier {
     required String purchaseDate,
     String? purchaseNumber,
     required bool taxInclude,
+    required bool taxIncludePurchase,
     required String initialRetailPrice,
     required String initialWholesalePrice,
     String? retailPriceTax,
@@ -780,6 +787,7 @@ class StockProvider extends ChangeNotifier {
       'purchase_id': purchaseId,
       'tax_amount_retail': taxAmountRetail,
       'tax_amount_wholesale': taxAmountWholesale,
+      'tax_amount_purchase': taxAmountPurchase,
       'wholesale_min_unit':
           wholesaleMinUnit.isNotEmpty ? int.parse(wholesaleMinUnit) : 1,
       'rack': rack,
@@ -789,6 +797,7 @@ class StockProvider extends ChangeNotifier {
       'purchase_date': purchaseDate,
       'purchase_number': purchaseNumber,
       'tax_include': taxInclude,
+      'tax_include_purchase': taxIncludePurchase,
       'initial_retail_price': double.parse(initialRetailPrice),
       'initial_wholesale_price': initialWholesalePrice.isNotEmpty
           ? double.parse(initialWholesalePrice)
