@@ -2508,6 +2508,36 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Text(
+              'Include tax for all prices',
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s11,
+                0.2,
+                ColorManager.textColor,
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 40,
+              height: 24,
+              child: FittedBox(
+                fit: BoxFit.fill,
+                child: Switch(
+                  value: includeTax,
+                  onChanged: _setSynchronizedTaxInclusion,
+                  activeThumbColor: ColorManager.kPrimaryColor,
+                  inactiveThumbColor: Colors.white,
+                  inactiveTrackColor: Colors.grey.shade300,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
           children: [
             Expanded(
               flex: 2,
@@ -2522,9 +2552,6 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                 retailTax,
                 Colors.blue,
                 includeTax,
-                toggleLabel: 'Incl. tax',
-                toggleValue: includeTax,
-                onToggleChanged: _setSynchronizedTaxInclusion,
               ),
             ),
             const SizedBox(width: 12),
@@ -2541,9 +2568,6 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                 wholesaleTax,
                 Colors.orange,
                 includeTax,
-                toggleLabel: 'Incl. tax',
-                toggleValue: includeTax,
-                onToggleChanged: _setSynchronizedTaxInclusion,
               ),
             ),
             const SizedBox(width: 12),
@@ -2562,9 +2586,6 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                 includeTaxPurchase,
                 footerTrailingText:
                     'Total: ${_purchaseLineTotal(item).toStringAsFixed(2)}',
-                toggleLabel: 'Incl. tax',
-                toggleValue: includeTaxPurchase,
-                onToggleChanged: _setSynchronizedTaxInclusion,
               ),
             ),
           ],
@@ -2583,9 +2604,6 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
     Color color,
     bool isIncluding, {
     String? footerTrailingText,
-    String? toggleLabel,
-    bool? toggleValue,
-    ValueChanged<bool>? onToggleChanged,
   }) {
     // When tax is NOT included, show price + tax amount in big font
     final displayPrice = !isIncluding
@@ -2593,7 +2611,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         : priceText;
 
     return Container(
-      height: 80,
+      height: 88,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: color.withOpacity(0.08),
@@ -2646,28 +2664,6 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                   ),
                 ),
               ),
-              if (toggleValue != null && onToggleChanged != null) ...[
-                const SizedBox(width: 4),
-                Text(
-                  toggleLabel ?? 'Incl. tax',
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s9,
-                    0.2,
-                    color.withOpacity(0.8),
-                  ),
-                ),
-                Transform.scale(
-                  scale: 0.6,
-                  child: Switch(
-                    value: toggleValue,
-                    onChanged: onToggleChanged,
-                    activeThumbColor: color,
-                    inactiveThumbColor: Colors.white,
-                    inactiveTrackColor: Colors.grey.shade300,
-                  ),
-                ),
-              ],
             ],
           ),
           const SizedBox(height: 6),
