@@ -556,15 +556,23 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
                 children: [
                   Expanded(child: _buildDetailItem('Opening Cash In Hand', '$currency ${cashSummary.openingCashInHand ?? '0.00'}')),
                   Expanded(child: _buildDetailItem('Expected Closing Cash', '$currency ${cashSummary.expectedClosingCash ?? '0.00'}')),
-                  Expanded(child: _buildDetailItem('Closing Cash In Hand', '$currency ${cashSummary.closingCashInHand ?? '0.00'}')),
+                  Expanded(child: _buildDetailItem('Today Cash Collection', '$currency ${cashSummary.todayCashCollection ?? '0.00'}')),
                 ],
               ),
               const SizedBox(height: 20),
               Row(
                 children: [
+                  Expanded(child: _buildDetailItem('Closing Cash In Hand', '$currency ${cashSummary.closingCashInHand ?? '0.00'}')),
                   Expanded(child: _buildDetailItem('Short Cash', '$currency ${cashSummary.shortCash ?? '0.00'}', valueColor: Colors.red)),
                   Expanded(child: _buildDetailItem('Excess Cash', '$currency ${cashSummary.excessCash ?? '0.00'}', valueColor: ColorManager.kSuccessColor)),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
                   Expanded(child: _buildDetailItem('Notes', cashSummary.notes ?? '-')),
+                  const Expanded(child: SizedBox.shrink()),
+                  const Expanded(child: SizedBox.shrink()),
                 ],
               ),
             ],
