@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
@@ -207,7 +208,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
             const Icon(Icons.warning_amber_rounded, color: Colors.orange),
             const SizedBox(width: 10),
             Text(
-              "Confirm Delete",
+              'product.confirm_delete_title'.tr,
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s18,
@@ -222,7 +223,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Are you sure you want to delete this product?",
+              'product.confirm_delete_message'.tr,
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s14,
@@ -241,7 +242,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Product: ${product.productName}",
+                    'product.delete_product_label'.tr.replaceAll('@name', '${product.productName}'),
                     style: buildCustomStyle(
                       FontWeightManager.medium,
                       FontSize.s14,
@@ -251,7 +252,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   ),
                   if (product.barcode != null && product.barcode!.isNotEmpty)
                     Text(
-                      "Barcode: ${product.barcode}",
+                      'product.barcode_label'.tr.replaceAll('@code', '${product.barcode}'),
                       style: buildCustomStyle(
                         FontWeightManager.regular,
                         FontSize.s12,
@@ -261,7 +262,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     ),
                   if (product.itemCode != null && product.itemCode!.isNotEmpty)
                     Text(
-                      "Item Code: ${product.itemCode}",
+                      'product.item_code_label'.tr.replaceAll('@code', '${product.itemCode}'),
                       style: buildCustomStyle(
                         FontWeightManager.regular,
                         FontSize.s12,
@@ -270,7 +271,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       ),
                     ),
                   Text(
-                    "Price: ${product.price?.price ?? 'N/A'}",
+                    'product.price_label'.tr.replaceAll('@price', '${product.price?.price ?? 'product.na'.tr}'),
                     style: buildCustomStyle(
                       FontWeightManager.regular,
                       FontSize.s12,
@@ -287,7 +288,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             child: Text(
-              "Cancel",
+              'general.cancel'.tr,
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s14,
@@ -318,8 +319,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
               if (success) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Product deleted successfully"),
+                    SnackBar(
+                      content: Text('product.deleted_success'.tr),
                       backgroundColor: Colors.green,
                     ),
                   );
@@ -327,8 +328,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
               } else {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Failed to delete product"),
+                    SnackBar(
+                      content: Text('product.delete_failed'.tr),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -336,7 +337,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
               }
             },
             child: Text(
-              "Delete",
+              'product.delete'.tr,
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s14,
@@ -391,7 +392,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 _showFilters = !_showFilters;
               });
             },
-            tooltip: _showFilters ? 'Hide Filters' : 'Show Filters',
+            tooltip: _showFilters ? 'product.hide_filters'.tr : 'product.show_filters'.tr,
           ),
           if (hasFilters)
             PositionedDirectional(
@@ -456,7 +457,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      "Product List",
+                                      'product.title'.tr,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: buildCustomStyle(
@@ -472,7 +473,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               ),
                               const SizedBox(height: 12),
                               CustomRoundButton(
-                                title: "Add Product",
+                                title: 'product.add'.tr,
                                 fct: () async {
                                   await showDialog(
                                     context: context,
@@ -491,7 +492,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  "Product List",
+                                  'product.title'.tr,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: buildCustomStyle(
@@ -503,7 +504,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                 ),
                               ),
                               CustomRoundButton(
-                                title: "Add Product",
+                                title: 'product.add'.tr,
                                 fct: () async {
                                   await showDialog(
                                     context: context,
@@ -568,7 +569,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                         },
                                         controller: productNameController,
                                         size: size,
-                                        hintText: 'Product Name',
+                                        hintText: 'product.product_name'.tr,
                                       )),
                                       wrapField(Consumer<CategoryProvider>(
                                         builder:
@@ -584,7 +585,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                         },
                                         controller: amountController,
                                         size: size,
-                                        hintText: 'Price',
+                                        hintText: 'product.price'.tr,
                                       )),
                                       wrapField(buildColumnWidgetForTextFields(
                                         height: 45,
@@ -593,7 +594,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                         },
                                         controller: barcodeController,
                                         size: size,
-                                        hintText: 'Barcode',
+                                        hintText: 'product.barcode'.tr,
                                       )),
                                       wrapField(buildColumnWidgetForTextFields(
                                         height: 45,
@@ -602,12 +603,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                         },
                                         controller: hsnCodeController,
                                         size: size,
-                                        hintText: 'HSN Code',
+                                        hintText: 'product.hsn_code'.tr,
                                       )),
                                       wrapField(BuildDropDownWithSearch<String>(
                                         title: null,
                                         showName: false,
-                                        hintText: 'Select Property',
+                                        hintText: 'product.select_property'.tr,
                                         value: selectedProperty,
                                         items: propertyList,
                                         onChanged: (String? newValue) {
@@ -641,7 +642,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                             },
                                             controller: itemCodeController,
                                             size: size,
-                                            hintText: 'Item Code',
+                                            hintText: 'product.item_code'.tr,
                                           ));
                                         },
                                       ),
@@ -661,7 +662,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                             },
                                             controller: productNameController,
                                             size: size,
-                                            hintText: 'Product Name',
+                                            hintText: 'product.product_name'.tr,
                                           )),
                                           const SizedBox(width: 15),
                                           wrapField(Consumer<CategoryProvider>(
@@ -680,7 +681,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                             },
                                             controller: amountController,
                                             size: size,
-                                            hintText: 'Price',
+                                            hintText: 'product.price'.tr,
                                           )),
                                           const SizedBox(width: 15),
                                           wrapField(
@@ -693,7 +694,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                 .only(start: 5),
                                             controller: barcodeController,
                                             size: size,
-                                            hintText: 'Barcode',
+                                            hintText: 'product.barcode'.tr,
                                           )),
                                         ],
                                       ),
@@ -710,14 +711,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                             },
                                             controller: hsnCodeController,
                                             size: size,
-                                            hintText: 'HSN Code',
+                                            hintText: 'product.hsn_code'.tr,
                                           )),
                                           const SizedBox(width: 15),
                                           wrapField(
                                               BuildDropDownWithSearch<String>(
                                             title: null,
                                             showName: false,
-                                            hintText: 'Select Property',
+                                            hintText: 'product.select_property'.tr,
                                             value: selectedProperty,
                                             items: propertyList,
                                             onChanged: (String? newValue) {
@@ -757,7 +758,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                 controller:
                                                     itemCodeController,
                                                 size: size,
-                                                hintText: 'Item Code',
+                                                hintText: 'product.item_code'.tr,
                                               ));
                                             },
                                           ),
@@ -774,7 +775,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                   ? Alignment.center
                                   : Alignment.centerRight,
                               child: CustomRoundButton(
-                                title: "Reset",
+                                title: 'general.reset'.tr,
                                 boxColor: Colors.white,
                                 textColor: ColorManager.kPrimaryColor,
                                 fct: resetSearch,
@@ -811,17 +812,17 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                 ?.itemCodeEnabled ?? false;
 
                             if (initLoading) {
-                              return const Center(
+                              return Center(
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    CircularProgressIndicator(
+                                    const CircularProgressIndicator(
                                       color: ColorManager.kPrimaryColor,
                                     ),
-                                    SizedBox(height: 14),
+                                    const SizedBox(height: 14),
                                     Text(
-                                      "Loading products...",
-                                      style: TextStyle(
+                                      'product.loading'.tr,
+                                      style: const TextStyle(
                                         color: ColorManager.kGreyColor,
                                         fontSize: 13,
                                       ),
@@ -852,7 +853,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                     ),
                                     const SizedBox(height: 16),
                                     Text(
-                                      "No products found",
+                                      'product.no_products'.tr,
                                       style: buildCustomStyle(
                                         FontWeightManager.semiBold,
                                         FontSize.s16,
@@ -873,8 +874,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                 itemBuilder: (context, index) {
                                   final product = productList[index];
                                   final categoryName = product.category != null
-                                      ? product.category!.name ?? 'Unknown'
-                                      : 'No Category';
+                                      ? product.category!.name ?? 'product.unknown'.tr
+                                      : 'product.no_category'.tr;
                                   final serialNumber =
                                       productProvider.paginationFrom + index;
                                   return _buildMobileProductCard(
@@ -932,19 +933,19 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                       children: [
                                         TableRow(
                                           children: [
-                                            _buildTableHeader("No"),
-                                            _buildTableHeader("Product Name"),
+                                            _buildTableHeader('product.col_no'.tr),
+                                            _buildTableHeader('product.product_name'.tr),
                                             _buildTableHeader(
                                                 itemCodeEnabled
-                                                    ? "Item Code"
+                                                    ? 'product.item_code'.tr
                                                     : ""),
-                                            _buildTableHeader("Category Name"),
-                                            _buildTableHeader("Price"),
-                                            _buildTableHeader("MRP"),
-                                            _buildTableHeader("Purchase Price"),
-                                            _buildTableHeader("Unit"),
-                                            _buildTableHeader("Barcode"),
-                                            _buildTableHeader("Action"),
+                                            _buildTableHeader('product.category_name'.tr),
+                                            _buildTableHeader('product.price'.tr),
+                                            _buildTableHeader('product.mrp'.tr),
+                                            _buildTableHeader('product.purchase_price'.tr),
+                                            _buildTableHeader('product.unit'.tr),
+                                            _buildTableHeader('product.barcode'.tr),
+                                            _buildTableHeader('product.action'.tr),
                                           ],
                                         ),
                                       ],
@@ -1007,8 +1008,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                     product.category != null
                                                         ? product.category!
                                                                 .name ??
-                                                            'Unknown'
-                                                        : 'No Category';
+                                                            'product.unknown'.tr
+                                                        : 'product.no_category'.tr;
 
                                                 // Calculate serial number based on pagination
                                                 int serialNumber =
@@ -1077,7 +1078,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                                         text: product.itemCode!));
                                                                     showScaffold(
                                                                       context: context,
-                                                                      message: 'Item code copied to clipboard',
+                                                                      message: 'product.item_code_copied'.tr,
                                                                     );
                                                                   },
                                                                   child: const Icon(
@@ -1112,9 +1113,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                       ),
                                                     ),
                                                     _buildTableCell(
-                                                        "${product.price?.price ?? 'N/A'}"),
+                                                        "${product.price?.price ?? 'product.na'.tr}"),
                                                     _buildTableCell(
-                                                        "${product.mrp ?? 'N/A'}"),
+                                                        "${product.mrp ?? 'product.na'.tr}"),
                                                     _buildTableCell(() {
                                                       // Debug purchase price resolution
                                                       final productPurchasePrice =
@@ -1132,7 +1133,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                       final finalPrice =
                                                           productPurchasePrice ??
                                                               stockPurchasePrice ??
-                                                              'N/A';
+                                                              'product.na'.tr;
 
                                                       debugPrint(
                                                           "🔍 PURCHASE PRICE DEBUG for ${product.productName}:");
@@ -1149,7 +1150,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                           .toString();
                                                     }()),
                                                     _buildTableCell(
-                                                        product.unit ?? 'N/A'),
+                                                        product.unit ?? 'product.na'.tr),
                                                     TableCell(
                                                       verticalAlignment:
                                                           TableCellVerticalAlignment.middle,
@@ -1162,7 +1163,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                             children: [
                                                               Flexible(
                                                                 child: Text(
-                                                                  product.barcode ?? 'N/A',
+                                                                  product.barcode ?? 'product.na'.tr,
                                                                   maxLines: 2,
                                                                   overflow: TextOverflow.ellipsis,
                                                                   textAlign: TextAlign.center,
@@ -1182,7 +1183,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                                         text: product.barcode!));
                                                                     showScaffold(
                                                                       context: context,
-                                                                      message: 'Barcode copied to clipboard',
+                                                                      message: 'product.barcode_copied'.tr,
                                                                     );
                                                                   },
                                                                   child: const Icon(
@@ -1328,7 +1329,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     return BuildDropDownWithSearch<Category>(
       title: null,
       showName: false,
-      hintText: 'Please Select',
+      hintText: 'product.please_select'.tr,
       value: selectedCategory,
       items: categoryList != null && categoryList.isNotEmpty
           ? categoryList
@@ -1343,7 +1344,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           searchProducts(1);
         }
       },
-      displayText: (category) => category.categoryName ?? 'Unknown',
+      displayText: (category) => category.categoryName ?? 'product.unknown'.tr,
       searchController: categorySearchController,
       height: 45,
       margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
@@ -1373,7 +1374,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
               children: [
                 Expanded(
                   child: SelectableText(
-                    product.productName ?? 'Unnamed',
+                    product.productName ?? 'product.unnamed'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s14,
@@ -1412,7 +1413,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   children: [
                     Flexible(
                       child: Text(
-                        'Item: ${product.itemCode}',
+                        'product.item_label'.tr.replaceAll('@code', '${product.itemCode}'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: buildCustomStyle(
@@ -1430,7 +1431,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             text: product.itemCode!));
                         showScaffold(
                           context: context,
-                          message: 'Item code copied to clipboard',
+                          message: 'product.item_code_copied'.tr,
                         );
                       },
                       child: const Icon(
@@ -1449,7 +1450,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   children: [
                     Flexible(
                       child: Text(
-                        'Barcode: ${product.barcode}',
+                        'product.barcode_label'.tr.replaceAll('@code', '${product.barcode}'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: buildCustomStyle(
@@ -1467,7 +1468,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             text: product.barcode!));
                         showScaffold(
                           context: context,
-                          message: 'Barcode copied to clipboard',
+                          message: 'product.barcode_copied'.tr,
                         );
                       },
                       child: const Icon(
@@ -1487,7 +1488,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'Price: ${product.price?.price ?? 'N/A'}',
+                      'product.price_label'.tr.replaceAll('@price', '${product.price?.price ?? 'product.na'.tr}'),
                       maxLines: 1,
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,

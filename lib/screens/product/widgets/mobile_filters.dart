@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
@@ -82,11 +83,11 @@ class ProductMobileFilters extends StatelessWidget {
 
   Widget _buildPropertyDropdown() {
     return _buildFilterField(
-      label: "Property",
+      label: 'product.property'.tr,
       child: BuildDropDownWithSearch<String>(
         title: null,
         showName: false,
-        hintText: 'Select Property',
+        hintText: 'product.select_property'.tr,
         value: selectedProperty,
         items: propertyList,
         onChanged: onPropertyChanged,
@@ -106,34 +107,34 @@ class ProductMobileFilters extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildTextFilter(
-          label: "Product Name",
-          hint: 'Product Name',
+          label: 'product.product_name'.tr,
+          hint: 'product.product_name'.tr,
           controller: productNameController,
           size: size,
         ),
         const SizedBox(height: 12),
         _buildFilterField(
-          label: "Category",
+          label: 'product.category'.tr,
           child: categoryField,
         ),
         const SizedBox(height: 12),
         _buildTextFilter(
-          label: "Price",
-          hint: 'Price',
+          label: 'product.price'.tr,
+          hint: 'product.price'.tr,
           controller: amountController,
           size: size,
         ),
         const SizedBox(height: 12),
         _buildTextFilter(
-          label: "Barcode",
-          hint: 'Barcode',
+          label: 'product.barcode'.tr,
+          hint: 'product.barcode'.tr,
           controller: barcodeController,
           size: size,
         ),
         const SizedBox(height: 12),
         _buildTextFilter(
-          label: "HSN Code",
-          hint: 'HSN Code',
+          label: 'product.hsn_code'.tr,
+          hint: 'product.hsn_code'.tr,
           controller: hsnCodeController,
           size: size,
         ),
@@ -151,8 +152,8 @@ class ProductMobileFilters extends StatelessWidget {
               children: [
                 const SizedBox(height: 12),
                 _buildTextFilter(
-                  label: "Item Code",
-                  hint: 'Item Code',
+                  label: 'product.item_code'.tr,
+                  hint: 'product.item_code'.tr,
                   controller: itemCodeController,
                   size: size,
                 ),
@@ -162,7 +163,7 @@ class ProductMobileFilters extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         CustomRoundButton(
-          title: "Reset Filters",
+          title: 'product.reset_filters'.tr,
           boxColor: Colors.white,
           textColor: ColorManager.kPrimaryColor,
           fct: onReset,
