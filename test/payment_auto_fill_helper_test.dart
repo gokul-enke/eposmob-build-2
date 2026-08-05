@@ -2,6 +2,48 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_machine/helpers/payment_auto_fill_helper.dart';
 
 void main() {
+  group('PaymentAutoFillHelper.autoCreditRemainder', () {
+    test('uses the full total when no payment or only zero is collected', () {
+      final amount = PaymentAutoFillHelper.autoCreditRemainder(
+        cartTotal: 50,
+        totalCollected: 0,
+        toCustomerCreditEnabled: false,
+      );
+
+      expect(amount, '50.00');
+    });
+
+    test('uses the unpaid remainder after a partial payment', () {
+      final amount = PaymentAutoFillHelper.autoCreditRemainder(
+        cartTotal: 50,
+        totalCollected: 20,
+        toCustomerCreditEnabled: false,
+      );
+
+      expect(amount, '30.00');
+    });
+
+    test('clears credit when selected payments cover the order', () {
+      final amount = PaymentAutoFillHelper.autoCreditRemainder(
+        cartTotal: 50,
+        totalCollected: 50,
+        toCustomerCreditEnabled: false,
+      );
+
+      expect(amount, '');
+    });
+
+    test('does not alter credit sale during To Customer Credit flow', () {
+      final amount = PaymentAutoFillHelper.autoCreditRemainder(
+        cartTotal: 50,
+        totalCollected: 0,
+        toCustomerCreditEnabled: true,
+      );
+
+      expect(amount, isNull);
+    });
+  });
+
   group('PaymentAutoFillHelper.autoFillSingleMethod', () {
     test('subtracts extra method amounts when filling a typed method', () {
       final amount = PaymentAutoFillHelper.autoFillSingleMethod(
@@ -18,7 +60,8 @@ void main() {
       expect(amount, '');
     });
 
-    test('fills remaining after another extra method already holds part of total',
+    test(
+        'fills remaining after another extra method already holds part of total',
         () {
       final amount = PaymentAutoFillHelper.autoFillSingleMethod(
         paymentType: 'card',
@@ -34,7 +77,8 @@ void main() {
       expect(amount, '55.00');
     });
 
-    test('autoFillRemaining supports split between typed and extra methods', () {
+    test('autoFillRemaining supports split between typed and extra methods',
+        () {
       final amount = PaymentAutoFillHelper.autoFillRemaining(
         targetMethodKey: 'extra_8010',
         targetCurrentAmount: '',

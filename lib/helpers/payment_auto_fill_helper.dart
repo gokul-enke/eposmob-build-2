@@ -13,6 +13,24 @@ class PaymentAutoFillResult {
 }
 
 class PaymentAutoFillHelper {
+  /// Returns the unpaid amount that should be posted as a credit sale.
+  ///
+  /// A `null` result means the separate "To Customer Credit" flow is active,
+  /// so the credit-sale selection must not be changed. An empty result means
+  /// collected payments already cover the order.
+  static String? autoCreditRemainder({
+    required double cartTotal,
+    required double totalCollected,
+    required bool toCustomerCreditEnabled,
+  }) {
+    if (toCustomerCreditEnabled) {
+      return null;
+    }
+
+    final remaining = cartTotal - totalCollected;
+    return remaining > 0 ? remaining.toStringAsFixed(2) : '';
+  }
+
   static PaymentAutoFillResult remapAmountsAfterDiscount({
     required bool isCashSelected,
     required bool isCardSelected,
@@ -120,10 +138,14 @@ class PaymentAutoFillHelper {
       return currentTargetAmount;
     }
 
-    final cash = paymentType == 'cash' ? 0.0 : (double.tryParse(cashAmount) ?? 0.0);
-    final card = paymentType == 'card' ? 0.0 : (double.tryParse(cardAmount) ?? 0.0);
-    final upi = paymentType == 'upi' ? 0.0 : (double.tryParse(upiAmount) ?? 0.0);
-    final cod = paymentType == 'cod' ? 0.0 : (double.tryParse(codAmount) ?? 0.0);
+    final cash =
+        paymentType == 'cash' ? 0.0 : (double.tryParse(cashAmount) ?? 0.0);
+    final card =
+        paymentType == 'card' ? 0.0 : (double.tryParse(cardAmount) ?? 0.0);
+    final upi =
+        paymentType == 'upi' ? 0.0 : (double.tryParse(upiAmount) ?? 0.0);
+    final cod =
+        paymentType == 'cod' ? 0.0 : (double.tryParse(codAmount) ?? 0.0);
 
     var extraTotal = 0.0;
     for (final entry in extraAmounts?.entries ?? const Iterable.empty()) {

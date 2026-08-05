@@ -8,6 +8,7 @@ import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/mobile_detail_section.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/mobile_sheet_header.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/product_variant_details_section.dart';
+import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/features/products/domain/variant_form_payload.dart';
 import 'package:pos_machine/features/products/presentation/variant_editor_section.dart';
 import 'package:pos_machine/models/category_list.dart';
@@ -21,7 +22,6 @@ import 'package:pos_machine/providers/language_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
-import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -47,7 +47,7 @@ Future<void> showMobileProductDetailsSheet({
   int? selectedVariantId,
   String currency = '',
   VoidCallback? onAdd,
-  bool useBillingProductPermissions = false,
+  bool useBillingProductPermissions = true,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -84,7 +84,7 @@ class _MobileProductDetailsSheet extends StatefulWidget {
     this.selectedVariantId,
     this.currency = '',
     this.onAdd,
-    this.useBillingProductPermissions = false,
+    this.useBillingProductPermissions = true,
   });
 
   final GetProduct? product;
@@ -116,8 +116,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
 
   bool _canViewPurchasePrice() {
     if (!widget.useBillingProductPermissions) return true;
-    return Provider.of<RoleProvider>(context, listen: false)
-        .currentUserHasPermissionSync('menu.purchase.orders.access');
+    return canViewPurchasePrice(context);
   }
 
   bool _showMrp() {
@@ -1850,6 +1849,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
             controller: _variantController,
             properties: productProvider.productProperties,
             isLoadingProperties: _isLoadingVariantProperties,
+            showPurchasePrice: _canViewPurchasePrice(),
             onRetryLoadProperties: _retryFetchVariantProperties,
             onGenerateBarcode: _generateVariantBarcode,
           ),

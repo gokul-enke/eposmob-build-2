@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart'
     as pagination;
+import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/models/supplier_voucher.dart';
 import 'package:pos_machine/providers/supplier_voucher_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -122,8 +122,18 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
         .listAllSupplierVouchers(accessToken: accessToken);
   }
 
-@override
+  @override
   Widget build(BuildContext context) {
+    if (!canViewPurchasePrice(context)) {
+      return const SafeArea(
+        child: Center(
+          child: Text(
+            'Purchase permission is required to view supplier vouchers.',
+          ),
+        ),
+      );
+    }
+
     Size size = MediaQuery.of(context).size;
     final bool isMobile = size.width < 700;
 

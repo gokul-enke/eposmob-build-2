@@ -5,6 +5,7 @@ import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
+import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
@@ -312,6 +313,14 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!canViewPurchasePrice(context)) {
+      return const SafeArea(
+        child: Center(
+          child: Text('Purchase permission is required to view purchase orders.'),
+        ),
+      );
+    }
+
     final provider = Provider.of<PurchaseProvider>(context);
     final appSettings = Provider.of<AppSettingsProvider>(context).appSettings;
     final currency = (appSettings?.currency.trim().isNotEmpty ?? false)

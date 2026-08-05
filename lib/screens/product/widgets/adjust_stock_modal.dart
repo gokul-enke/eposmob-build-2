@@ -9,6 +9,7 @@ import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/models/list_stock.dart';
+import 'package:pos_machine/helpers/purchase_price_permission.dart';
 
 class AdjustStockModal extends StatefulWidget {
   final ListStockModelData stock;
@@ -45,6 +46,7 @@ class _AdjustStockModalState extends State<AdjustStockModal> {
 
   @override
   Widget build(BuildContext context) {
+    final canShowPurchasePrice = canViewPurchasePrice(context);
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
@@ -113,11 +115,13 @@ class _AdjustStockModalState extends State<AdjustStockModal> {
                   Expanded(
                     child: _buildField('MRP', mrpController),
                   ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child:
-                        _buildField('Purchase Price', purchasePriceController),
-                  ),
+                  if (canShowPurchasePrice) ...[
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: _buildField(
+                          'Purchase Price', purchasePriceController),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 20),

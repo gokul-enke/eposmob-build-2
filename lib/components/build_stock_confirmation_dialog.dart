@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_dynamic_payment_selector.dart';
+import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/models/master_data.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -197,6 +198,21 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
 
   @override
   Widget build(BuildContext context) {
+    if (!canViewPurchasePrice(context)) {
+      return AlertDialog(
+        title: const Text('Purchase permission required'),
+        content: const Text(
+          'You do not have permission to view purchase details.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Close'),
+          ),
+        ],
+      );
+    }
+
     final bool hasPayment =
         widget.paymentData != null && widget.paymentData!.hasPaymentMethods;
     final double paidAmount = widget.paymentData?.totalAmount ?? 0;

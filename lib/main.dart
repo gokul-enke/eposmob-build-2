@@ -82,7 +82,19 @@ import 'package:pos_machine/features/subscription/presentation/subscription_prov
 
 void main() async {
   if (kDebugMode) {
-    MarionetteBinding.ensureInitialized();
+    final logCollector = PrintLogCollector();
+
+    MarionetteBinding.ensureInitialized(
+      MarionetteConfiguration(logCollector: logCollector),
+    );
+
+    final originalDebugPrint = debugPrint;
+    debugPrint = (message, {wrapWidth}) {
+      if (message != null) {
+        logCollector.addLog(message);
+      }
+      originalDebugPrint(message, wrapWidth: wrapWidth);
+    };
   } else {
     WidgetsFlutterBinding.ensureInitialized();
   }

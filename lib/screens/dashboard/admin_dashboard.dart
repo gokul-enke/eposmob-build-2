@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:provider/provider.dart';
@@ -178,6 +179,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     final double horizontalPadding = size.width < 600 ? 4.0 : 12.0;
+    final canShowPurchaseCosts = canViewPurchasePrice(context);
     return Scaffold(
       backgroundColor: Colors.white,
       body: isInitialLoading
@@ -199,8 +201,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     _buildHeader(size),
                     const SizedBox(height: 20),
                     _buildSupplierOverview(),
-                    const SizedBox(height: 20),
-                    _buildSuppliersPurchaseGraph(),
+                    if (canShowPurchaseCosts) ...[
+                      const SizedBox(height: 20),
+                      _buildSuppliersPurchaseGraph(),
+                    ],
                     const SizedBox(height: 20),
                     _buildSupplierTransactionsGraph(),
                     const SizedBox(height: 20),

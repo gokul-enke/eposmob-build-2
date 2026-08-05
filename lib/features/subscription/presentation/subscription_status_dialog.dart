@@ -13,8 +13,6 @@ class SubscriptionStatusDialog extends StatelessWidget {
     required this.title,
     required this.message,
     required this.companyName,
-    required this.secondaryLabel,
-    required this.onSecondaryPressed,
     required this.primaryLabel,
     required this.onPrimaryPressed,
     this.logoFilePath,
@@ -28,8 +26,6 @@ class SubscriptionStatusDialog extends StatelessWidget {
   final String companyName;
   final String? logoFilePath;
   final String? logoUrl;
-  final String secondaryLabel;
-  final VoidCallback onSecondaryPressed;
   final String primaryLabel;
   final VoidCallback onPrimaryPressed;
 
@@ -136,35 +132,9 @@ class SubscriptionStatusDialog extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 26),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final stackActions = constraints.maxWidth < 330;
-                    final secondary = _SecondaryButton(
-                      label: secondaryLabel,
-                      onPressed: onSecondaryPressed,
-                    );
-                    final primary = _PrimaryButton(
-                      label: primaryLabel,
-                      onPressed: onPrimaryPressed,
-                    );
-                    if (stackActions) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          primary,
-                          const SizedBox(height: 8),
-                          secondary,
-                        ],
-                      );
-                    }
-                    return Row(
-                      children: [
-                        Expanded(child: secondary),
-                        const SizedBox(width: 12),
-                        Expanded(flex: 2, child: primary),
-                      ],
-                    );
-                  },
+                _PrimaryButton(
+                  label: primaryLabel,
+                  onPressed: onPrimaryPressed,
                 ),
               ],
             ),
@@ -288,28 +258,6 @@ class _PrimaryButton extends StatelessWidget {
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-      ),
-      child: Text(label, textAlign: TextAlign.center),
-    );
-  }
-}
-
-class _SecondaryButton extends StatelessWidget {
-  const _SecondaryButton({required this.label, required this.onPressed});
-
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 48),
-        foregroundColor: const Color(0xFF4B5565),
-        side: const BorderSide(color: Color(0xFFD8DFE8)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       ),
       child: Text(label, textAlign: TextAlign.center),
     );

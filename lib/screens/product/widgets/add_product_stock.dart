@@ -46,6 +46,7 @@ import 'package:pos_machine/models/master_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
+import 'package:pos_machine/helpers/purchase_price_permission.dart';
 
 /// Hive box name for draft stock items persistence
 const String _kDraftStockBoxName = 'draft_stock_items';
@@ -202,9 +203,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
   bool _variantFeatureEnabled({bool listen = false}) =>
       Provider.of<AppSettingsProvider>(context, listen: listen)
-              .appSettings
-              ?.productVariantEnabled ??
-          false;
+          .appSettings
+          ?.productVariantEnabled ??
+      false;
+
+  bool _canViewPurchasePrice({bool listen = false}) =>
+      canViewPurchasePrice(context, listen: listen);
 
   bool _requiresVariant(StockItem item) =>
       _variantFeatureEnabled() &&
@@ -258,11 +262,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     item.barcode = variant?.barcode?.trim().isNotEmpty == true
         ? variant!.barcode!.trim()
         : (product.barcode ?? '');
-    item.salePrice =
-        (variant?.price ?? productPrice).toStringAsFixed(2);
-    item.mrp =
-        (variant?.mrp ?? productMrp ?? variant?.price ?? productPrice)
-            .toStringAsFixed(2);
+    item.salePrice = (variant?.price ?? productPrice).toStringAsFixed(2);
+    item.mrp = (variant?.mrp ?? productMrp ?? variant?.price ?? productPrice)
+        .toStringAsFixed(2);
     item.purchaseRate =
         (variant?.purchasePrice ?? productPurchase ?? 0).toStringAsFixed(2);
 
@@ -2879,6 +2881,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           selectedStock: null, // Stock items don't have selectedStock
           isCompact: false,
           currency: currency,
+          enforcePurchasePricePermission: true,
         );
       },
     );
@@ -2908,9 +2911,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             }
           }
           stockItems[index].productVariantId = refreshedVariant?.id;
-          stockItems[index].variantName = refreshedVariant == null
-              ? null
-              : _variantLabel(refreshedVariant);
+          stockItems[index].variantName =
+              refreshedVariant == null ? null : _variantLabel(refreshedVariant);
           stockItems[index].barcode =
               refreshedVariant?.barcode ?? updatedProduct.barcode ?? '';
 
@@ -2932,6 +2934,22 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
+
+    if (!_canViewPurchasePrice(listen: true)) {
+      return SafeArea(
+        child: Center(
+          child: Text(
+            'Purchase permission is required to add product stock.',
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s14,
+              0.27,
+              ColorManager.textColor,
+            ),
+          ),
+        ),
+      );
+    }
 
     // Calculate total stock value only when needed
     if (_needsRecalculation) {
@@ -3426,9 +3444,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                                color:
+                                    ColorManager.kPrimaryColor.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
@@ -3563,7 +3583,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                 if (!item.taxInclude &&
                                     item.calculatedTaxData != null) {
                                   final effective = (item.calculatedTaxData![
-                                          'price_including_tax_purchase'] as num?)
+                                              'price_including_tax_purchase']
+                                          as num?)
                                       ?.toDouble();
                                   if (effective != null && effective > 0) {
                                     return Container(
@@ -4419,142 +4440,194 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         children: [
           // Main row content
           stockIsPhone(context)
-              ? _buildStockRowMobile(index, visibleIndex, isEditingInputRow, item)
+              ? _buildStockRowMobile(
+                  index, visibleIndex, isEditingInputRow, item)
               : Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                // Row Number Indicator (centered circle, no square)
-                SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        width: 20,
-                        height: 20,
-                        decoration: BoxDecoration(
-                          color: item.isSuccessfullyAdded
-                              ? Colors.green
-                              : Colors.blue,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            '${visibleIndex + 1}',
-                            style: buildCustomStyle(
-                              FontWeightManager.semiBold,
-                              FontSize.s10,
-                              0.27,
-                              Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      // Updated indicator - Yellow badge showing "Edited"
-                      if (item.isSuccessfullyAdded &&
-                          item.apiResponse != null &&
-                          item.apiResponse!['localId'] != null) ...[
-                        Consumer<StockProvider>(
-                          builder: (context, stockProvider, child) {
-                            final pendingItem =
-                                stockProvider.getPendingStockItem(
-                                    item.apiResponse!['localId']);
-                            final bool isUpdated = pendingItem != null &&
-                                pendingItem['updatedAt'] != null;
-
-                            if (!isUpdated) return const SizedBox.shrink();
-
-                            return Positioned(
-                              top: -4,
-                              right: -8,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 4, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.amber,
-                                  borderRadius: BorderRadius.circular(4),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
-                                      blurRadius: 2,
-                                      offset: const Offset(0, 1),
-                                    ),
-                                  ],
-                                ),
-                                child: const Text(
-                                  'Edited',
-                                  style: TextStyle(
-                                    color: Colors.black87,
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.bold,
+                      // Row Number Indicator (centered circle, no square)
+                      SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Container(
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                color: item.isSuccessfullyAdded
+                                    ? Colors.green
+                                    : Colors.blue,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${visibleIndex + 1}',
+                                  style: buildCustomStyle(
+                                    FontWeightManager.semiBold,
+                                    FontSize.s10,
+                                    0.27,
+                                    Colors.white,
                                   ),
                                 ),
                               ),
-                            );
-                          },
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Barcode Text Field with Add Product Button
-                Expanded(
-                  flex: 2,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: BuildBoxShadowContainer(
-                          circleRadius: 5,
-                          height: 40,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          child: TextFormField(
-                            controller: _getBarcodeController(index),
-                            focusNode: _getBarcodeFocusNode(index),
-                            decoration: const InputDecoration(
-                              hintText: 'Barcode',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 8),
                             ),
-                            style: buildCustomStyle(
-                              FontWeightManager.regular,
-                              FontSize.s11,
-                              0.27,
-                              ColorManager.textColor,
-                            ),
-                            onTap: () {
-                              // Select all text when field is tapped
-                              _getBarcodeController(index).selection =
-                                  TextSelection(
-                                baseOffset: 0,
-                                extentOffset:
-                                    _getBarcodeController(index).text.length,
-                              );
-                            },
-                            onFieldSubmitted: (value) {
-                              // Update and auto-fill only on submit
-                              stockItems[index].barcode = value;
-                              _autoFillFromBarcode(index, value);
-                              _updatePendingStockItem(index);
-                              if (mounted) setState(() {});
-                            },
-                          ),
+                            // Updated indicator - Yellow badge showing "Edited"
+                            if (item.isSuccessfullyAdded &&
+                                item.apiResponse != null &&
+                                item.apiResponse!['localId'] != null) ...[
+                              Consumer<StockProvider>(
+                                builder: (context, stockProvider, child) {
+                                  final pendingItem =
+                                      stockProvider.getPendingStockItem(
+                                          item.apiResponse!['localId']);
+                                  final bool isUpdated = pendingItem != null &&
+                                      pendingItem['updatedAt'] != null;
+
+                                  if (!isUpdated)
+                                    return const SizedBox.shrink();
+
+                                  return Positioned(
+                                    top: -4,
+                                    right: -8,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 4, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber,
+                                        borderRadius: BorderRadius.circular(4),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color:
+                                                Colors.black.withOpacity(0.2),
+                                            blurRadius: 2,
+                                            offset: const Offset(0, 1),
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Text(
+                                        'Edited',
+                                        style: TextStyle(
+                                          color: Colors.black87,
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Add Product Button
-                      Tooltip(
-                        message: "Create new product",
-                        child: Container(
+                      // Barcode Text Field with Add Product Button
+                      Expanded(
+                        flex: 2,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: BuildBoxShadowContainer(
+                                circleRadius: 5,
+                                height: 40,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8),
+                                child: TextFormField(
+                                  controller: _getBarcodeController(index),
+                                  focusNode: _getBarcodeFocusNode(index),
+                                  decoration: const InputDecoration(
+                                    hintText: 'Barcode',
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 8),
+                                  ),
+                                  style: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    FontSize.s11,
+                                    0.27,
+                                    ColorManager.textColor,
+                                  ),
+                                  onTap: () {
+                                    // Select all text when field is tapped
+                                    _getBarcodeController(index).selection =
+                                        TextSelection(
+                                      baseOffset: 0,
+                                      extentOffset: _getBarcodeController(index)
+                                          .text
+                                          .length,
+                                    );
+                                  },
+                                  onFieldSubmitted: (value) {
+                                    // Update and auto-fill only on submit
+                                    stockItems[index].barcode = value;
+                                    _autoFillFromBarcode(index, value);
+                                    _updatePendingStockItem(index);
+                                    if (mounted) setState(() {});
+                                  },
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Add Product Button
+                            Tooltip(
+                              message: "Create new product",
+                              child: Container(
+                                height: 40,
+                                width: 40,
+                                decoration: BoxDecoration(
+                                  color: Colors.green,
+                                  borderRadius: BorderRadius.circular(5),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: ColorManager.boxShadowColor,
+                                      blurRadius: 3,
+                                      offset: Offset(1, 1),
+                                    ),
+                                  ],
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.add,
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: () => _showAddProductModal(index),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 40,
+                                    minHeight: 40,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      // Product Dropdown with Search (maximum width)
+                      Expanded(
+                        flex: 6,
+                        child: SizedBox(
+                          height: 40,
+                          child: _buildProductDropdown(index),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      // Info Button for Product Details
+                      if (stockItems[index].productData != null) ...[
+                        Container(
                           height: 40,
                           width: 40,
                           decoration: BoxDecoration(
-                            color: Colors.green,
+                            color: Colors.blue.shade50,
                             borderRadius: BorderRadius.circular(5),
+                            border:
+                                Border.all(color: Colors.blue.withOpacity(0.3)),
                             boxShadow: const [
                               BoxShadow(
                                 color: ColorManager.boxShadowColor,
@@ -4565,316 +4638,277 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           ),
                           child: IconButton(
                             icon: const Icon(
-                              Icons.add,
+                              Icons.info_outline,
                               size: 18,
-                              color: Colors.white,
+                              color: Colors.blue,
                             ),
-                            onPressed: () => _showAddProductModal(index),
+                            onPressed: () => _showProductDetailsModal(index),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(
                               minWidth: 40,
                               minHeight: 40,
                             ),
+                            tooltip: "View product details",
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 4),
-                // Product Dropdown with Search (maximum width)
-                Expanded(
-                  flex: 6,
-                  child: SizedBox(
-                    height: 40,
-                    child: _buildProductDropdown(index),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                // Info Button for Product Details
-                if (stockItems[index].productData != null) ...[
-                  Container(
-                    height: 40,
-                    width: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(5),
-                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: ColorManager.boxShadowColor,
-                          blurRadius: 3,
-                          offset: Offset(1, 1),
-                        ),
+                        const SizedBox(width: 4),
                       ],
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.info_outline,
-                        size: 18,
-                        color: Colors.blue,
-                      ),
-                      onPressed: () => _showProductDetailsModal(index),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: 40,
-                        minHeight: 40,
-                      ),
-                      tooltip: "View product details",
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                ],
-                // Quantity Text Field (smaller and right-aligned) - Hidden for multi-unit products
-                if (!_hasPurchaseUnits(item)) ...[
-                  SizedBox(
-                    width: 80, // Fixed width instead of flex
-                    child: BuildBoxShadowContainer(
-                      circleRadius: 5,
-                      height: 40,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: TextFormField(
-                        controller: _getQuantityController(index),
-                        focusNode: _getQuantityFocusNode(index),
-                        keyboardType: TextInputType.number,
-                        inputFormatters:
-                            quantityInputFormattersForUnit(item.unit),
-                        textAlign: TextAlign.right, // Right-aligned text
-                        decoration: const InputDecoration(
-                          hintText: 'Qty',
-                          border: InputBorder.none,
-                          contentPadding:
-                              EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                        ),
-                        style: buildCustomStyle(
-                          FontWeightManager.regular,
-                          FontSize.s11,
-                          0.27,
-                          ColorManager.textColor,
-                        ),
-                        onTap: () {
-                          // Select all text when field is tapped
-                          _getQuantityController(index).selection =
-                              TextSelection(
-                            baseOffset: 0,
-                            extentOffset:
-                                _getQuantityController(index).text.length,
-                          );
-                        },
-                        onChanged: (value) {
-                          // Update the value immediately for responsive UI
-                          stockItems[index].quantity = value;
-                          final selectedSaleUnit =
-                              _getSelectedPurchaseSaleUnit(stockItems[index]);
-                          if (selectedSaleUnit != null) {
-                            final baseQuantity =
-                                _parsePositiveDouble(value, fallback: 0.0);
-                            final conversionRate = _parsePositiveDouble(
-                              selectedSaleUnit.conversionRate,
-                              fallback: 1.0,
-                            );
-                            if (baseQuantity > 0 && conversionRate > 0) {
-                              stockItems[index].purchaseQty =
-                                  _formatNumber(baseQuantity / conversionRate);
-                              _getPurchaseQtyController(index).text =
-                                  stockItems[index].purchaseQty;
-                            }
-                          }
+                      // Quantity Text Field (smaller and right-aligned) - Hidden for multi-unit products
+                      if (!_hasPurchaseUnits(item)) ...[
+                        SizedBox(
+                          width: 80, // Fixed width instead of flex
+                          child: BuildBoxShadowContainer(
+                            circleRadius: 5,
+                            height: 40,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: TextFormField(
+                              controller: _getQuantityController(index),
+                              focusNode: _getQuantityFocusNode(index),
+                              keyboardType: TextInputType.number,
+                              inputFormatters:
+                                  quantityInputFormattersForUnit(item.unit),
+                              textAlign: TextAlign.right, // Right-aligned text
+                              decoration: const InputDecoration(
+                                hintText: 'Qty',
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 8),
+                              ),
+                              style: buildCustomStyle(
+                                FontWeightManager.regular,
+                                FontSize.s11,
+                                0.27,
+                                ColorManager.textColor,
+                              ),
+                              onTap: () {
+                                // Select all text when field is tapped
+                                _getQuantityController(index).selection =
+                                    TextSelection(
+                                  baseOffset: 0,
+                                  extentOffset:
+                                      _getQuantityController(index).text.length,
+                                );
+                              },
+                              onChanged: (value) {
+                                // Update the value immediately for responsive UI
+                                stockItems[index].quantity = value;
+                                final selectedSaleUnit =
+                                    _getSelectedPurchaseSaleUnit(
+                                        stockItems[index]);
+                                if (selectedSaleUnit != null) {
+                                  final baseQuantity = _parsePositiveDouble(
+                                      value,
+                                      fallback: 0.0);
+                                  final conversionRate = _parsePositiveDouble(
+                                    selectedSaleUnit.conversionRate,
+                                    fallback: 1.0,
+                                  );
+                                  if (baseQuantity > 0 && conversionRate > 0) {
+                                    stockItems[index].purchaseQty =
+                                        _formatNumber(
+                                            baseQuantity / conversionRate);
+                                    _getPurchaseQtyController(index).text =
+                                        stockItems[index].purchaseQty;
+                                  }
+                                }
 
-                          // Debounce the heavy operations
-                          _quantityDebounceTimer?.cancel();
-                          _quantityDebounceTimer =
-                              Timer(const Duration(milliseconds: 300), () {
-                            if (mounted) {
-                              setState(() {
-                                // Update pending item if already added
-                                _updatePendingStockItem(index);
-                                // Mark for recalculation
-                                _markForRecalculation();
-                              });
-                            }
-                          });
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                // Actions - Add Stock Button + Clear/Delete Button + Expand Button
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Clear/Delete Button (Conditional)
-                    if (item.productData != null ||
-                        item.isSuccessfullyAdded) ...[
-                      Tooltip(
-                        message: isEditingInputRow
-                            ? "Cancel edit"
-                            : item.isSuccessfullyAdded
-                                ? "Delete stock item"
-                                : "Clear product selection",
-                        child: Container(
-                          height: 40,
-                          width: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(5),
-                            border:
-                                Border.all(color: Colors.red.withOpacity(0.3)),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: ColorManager.boxShadowColor,
-                                blurRadius: 3,
-                                offset: Offset(1, 1),
-                              ),
-                            ],
+                                // Debounce the heavy operations
+                                _quantityDebounceTimer?.cancel();
+                                _quantityDebounceTimer = Timer(
+                                    const Duration(milliseconds: 300), () {
+                                  if (mounted) {
+                                    setState(() {
+                                      // Update pending item if already added
+                                      _updatePendingStockItem(index);
+                                      // Mark for recalculation
+                                      _markForRecalculation();
+                                    });
+                                  }
+                                });
+                              },
+                            ),
                           ),
-                          child: IconButton(
-                            icon: Icon(
-                              isEditingInputRow
-                                  ? Icons.close
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      // Actions - Add Stock Button + Clear/Delete Button + Expand Button
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Clear/Delete Button (Conditional)
+                          if (item.productData != null ||
+                              item.isSuccessfullyAdded) ...[
+                            Tooltip(
+                              message: isEditingInputRow
+                                  ? "Cancel edit"
                                   : item.isSuccessfullyAdded
-                                      ? Icons.delete
-                                      : Icons.clear,
-                              size: 18,
-                              color: Colors.red,
-                            ),
-                            onPressed: () {
-                              if (item.isSuccessfullyAdded) {
-                                _deleteStockItem(index);
-                              } else {
-                                _clearStockItem(index);
-                              }
-                            },
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                              minWidth: 40,
-                              minHeight: 40,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                    // Spacing between delete and add buttons
-                    if (item.productData != null || item.isSuccessfullyAdded)
-                      const SizedBox(width: 8),
-                    // Add Stock Button (Only show if not already added)
-                    if (!item.isSuccessfullyAdded) ...[
-                      Tooltip(
-                        message: _isLoading
-                            ? (isEditingInputRow ? "Saving..." : "Adding...")
-                            : (isEditingInputRow
-                                ? "Save changes"
-                                : "Add stock item"),
-                        child: Container(
-                          height: 40,
-                          width: 40,
-                          decoration: BoxDecoration(
-                            color: _isLoading
-                                ? Colors.grey
-                                : ColorManager.kPrimaryColor,
-                            borderRadius: BorderRadius.circular(5),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: ColorManager.boxShadowColor,
-                                blurRadius: 3,
-                                offset: Offset(1, 1),
+                                      ? "Delete stock item"
+                                      : "Clear product selection",
+                              child: Container(
+                                height: 40,
+                                width: 40,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(5),
+                                  border: Border.all(
+                                      color: Colors.red.withOpacity(0.3)),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: ColorManager.boxShadowColor,
+                                      blurRadius: 3,
+                                      offset: Offset(1, 1),
+                                    ),
+                                  ],
+                                ),
+                                child: IconButton(
+                                  icon: Icon(
+                                    isEditingInputRow
+                                        ? Icons.close
+                                        : item.isSuccessfullyAdded
+                                            ? Icons.delete
+                                            : Icons.clear,
+                                    size: 18,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () {
+                                    if (item.isSuccessfullyAdded) {
+                                      _deleteStockItem(index);
+                                    } else {
+                                      _clearStockItem(index);
+                                    }
+                                  },
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 40,
+                                    minHeight: 40,
+                                  ),
+                                ),
                               ),
-                            ],
-                          ),
-                          child: IconButton(
-                            icon: Icon(
-                              _isLoading
-                                  ? Icons.hourglass_empty
-                                  : (isEditingInputRow
-                                      ? Icons.save
-                                      : Icons.add),
-                              size: 18,
-                              color: Colors.white,
-                            ),
-                            onPressed: _isLoading
-                                ? null
-                                : () => _addStockForSingleItem(index),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                              minWidth: 40,
-                              minHeight: 40,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    // Expand Button with Tooltip
-                    Tooltip(
-                      message: item.isExpanded
-                          ? "Hide details"
-                          : "Show prices, expiry & tax details",
-                      child: Container(
-                        height: 40,
-                        width: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(5),
-                          border: Border.all(
-                              color: item.isExpanded
-                                  ? ColorManager.kPrimaryColor
-                                  : Colors.grey.withOpacity(0.3)),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: ColorManager.boxShadowColor,
-                              blurRadius: 3,
-                              offset: Offset(1, 1),
                             ),
                           ],
-                        ),
-                        child: IconButton(
-                          icon: Icon(
-                            item.isExpanded
-                                ? Icons.expand_less
-                                : Icons.expand_more,
-                            size: 18,
-                            color: item.isExpanded
-                                ? ColorManager.kPrimaryColor
-                                : Colors.grey.shade600,
+                          // Spacing between delete and add buttons
+                          if (item.productData != null ||
+                              item.isSuccessfullyAdded)
+                            const SizedBox(width: 8),
+                          // Add Stock Button (Only show if not already added)
+                          if (!item.isSuccessfullyAdded) ...[
+                            Tooltip(
+                              message: _isLoading
+                                  ? (isEditingInputRow
+                                      ? "Saving..."
+                                      : "Adding...")
+                                  : (isEditingInputRow
+                                      ? "Save changes"
+                                      : "Add stock item"),
+                              child: Container(
+                                height: 40,
+                                width: 40,
+                                decoration: BoxDecoration(
+                                  color: _isLoading
+                                      ? Colors.grey
+                                      : ColorManager.kPrimaryColor,
+                                  borderRadius: BorderRadius.circular(5),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: ColorManager.boxShadowColor,
+                                      blurRadius: 3,
+                                      offset: Offset(1, 1),
+                                    ),
+                                  ],
+                                ),
+                                child: IconButton(
+                                  icon: Icon(
+                                    _isLoading
+                                        ? Icons.hourglass_empty
+                                        : (isEditingInputRow
+                                            ? Icons.save
+                                            : Icons.add),
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: _isLoading
+                                      ? null
+                                      : () => _addStockForSingleItem(index),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 40,
+                                    minHeight: 40,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          // Expand Button with Tooltip
+                          Tooltip(
+                            message: item.isExpanded
+                                ? "Hide details"
+                                : "Show prices, expiry & tax details",
+                            child: Container(
+                              height: 40,
+                              width: 40,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(5),
+                                border: Border.all(
+                                    color: item.isExpanded
+                                        ? ColorManager.kPrimaryColor
+                                        : Colors.grey.withOpacity(0.3)),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: ColorManager.boxShadowColor,
+                                    blurRadius: 3,
+                                    offset: Offset(1, 1),
+                                  ),
+                                ],
+                              ),
+                              child: IconButton(
+                                icon: Icon(
+                                  item.isExpanded
+                                      ? Icons.expand_less
+                                      : Icons.expand_more,
+                                  size: 18,
+                                  color: item.isExpanded
+                                      ? ColorManager.kPrimaryColor
+                                      : Colors.grey.shade600,
+                                ),
+                                onPressed: () => _toggleExpanded(index),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 40,
+                                  minHeight: 40,
+                                ),
+                              ),
+                            ),
                           ),
-                          onPressed: () => _toggleExpanded(index),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 40,
-                            minHeight: 40,
-                          ),
-                        ),
+                          // if (stockItems.length > 1) ...[
+                          //   const SizedBox(width: 8),
+                          //   BuildBoxShadowContainer(
+                          //     circleRadius: 7,
+                          //     height: 40,
+                          //     width: 40,
+                          //     child: IconButton(
+                          //       icon: item.isSuccessfullyAdded
+                          //           ? const Icon(Icons.check_circle,
+                          //               size: 18, color: Colors.green)
+                          //           : const Icon(Icons.delete,
+                          //               size: 18, color: Colors.red),
+                          //       onPressed: item.isSuccessfullyAdded
+                          //           ? null // Disable button for successfully added rows
+                          //           : () => _removeStockRow(index),
+                          //       padding: EdgeInsets.zero,
+                          //       constraints: const BoxConstraints(
+                          //         minWidth: 40,
+                          //         minHeight: 40,
+                          //       ),
+                          //     ),
+                          //   ),
+                          // ],
+                        ],
                       ),
-                    ),
-                    // if (stockItems.length > 1) ...[
-                    //   const SizedBox(width: 8),
-                    //   BuildBoxShadowContainer(
-                    //     circleRadius: 7,
-                    //     height: 40,
-                    //     width: 40,
-                    //     child: IconButton(
-                    //       icon: item.isSuccessfullyAdded
-                    //           ? const Icon(Icons.check_circle,
-                    //               size: 18, color: Colors.green)
-                    //           : const Icon(Icons.delete,
-                    //               size: 18, color: Colors.red),
-                    //       onPressed: item.isSuccessfullyAdded
-                    //           ? null // Disable button for successfully added rows
-                    //           : () => _removeStockRow(index),
-                    //       padding: EdgeInsets.zero,
-                    //       constraints: const BoxConstraints(
-                    //         minWidth: 40,
-                    //         minHeight: 40,
-                    //       ),
-                    //     ),
-                    //   ),
-                    // ],
-                  ],
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          ),
           _buildVariantSelector(index),
           // Quick preview for collapsed items with data - Single Row Layout
           if (!item.isExpanded &&
@@ -5011,7 +5045,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     );
   }
 
-  Widget _buildStockRowMobile(int index, int visibleIndex, bool isEditingInputRow, StockItem item) {
+  Widget _buildStockRowMobile(
+      int index, int visibleIndex, bool isEditingInputRow, StockItem item) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       child: Column(
@@ -5053,9 +5088,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         item.apiResponse!['localId'] != null) ...[
                       Consumer<StockProvider>(
                         builder: (context, stockProvider, child) {
-                          final pendingItem =
-                              stockProvider.getPendingStockItem(
-                                  item.apiResponse!['localId']);
+                          final pendingItem = stockProvider.getPendingStockItem(
+                              item.apiResponse!['localId']);
                           final bool isUpdated = pendingItem != null &&
                               pendingItem['updatedAt'] != null;
 
@@ -5174,7 +5208,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             ],
           ),
           const SizedBox(height: 10),
-          
+
           // Product Dropdown & Info Button Row
           Row(
             children: [
@@ -5235,12 +5269,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       controller: _getQuantityController(index),
                       focusNode: _getQuantityFocusNode(index),
                       keyboardType: TextInputType.number,
-                      inputFormatters: quantityInputFormattersForUnit(item.unit),
+                      inputFormatters:
+                          quantityInputFormattersForUnit(item.unit),
                       textAlign: TextAlign.right,
                       decoration: const InputDecoration(
                         hintText: 'Qty',
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                       ),
                       style: buildCustomStyle(
                         FontWeightManager.regular,
@@ -5249,8 +5285,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         ColorManager.textColor,
                       ),
                       onTap: () {
-                        _getQuantityController(index).selection =
-                            TextSelection(
+                        _getQuantityController(index).selection = TextSelection(
                           baseOffset: 0,
                           extentOffset:
                               _getQuantityController(index).text.length,
@@ -5293,7 +5328,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               ] else ...[
                 const Expanded(child: SizedBox.shrink()),
               ],
-              
+
               // Actions
               Row(
                 mainAxisSize: MainAxisSize.min,
@@ -5311,7 +5346,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(5),
-                          border: Border.all(color: Colors.red.withOpacity(0.3)),
+                          border:
+                              Border.all(color: Colors.red.withOpacity(0.3)),
                           boxShadow: const [
                             BoxShadow(
                               color: ColorManager.boxShadowColor,
@@ -5375,9 +5411,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           icon: Icon(
                             _isLoading
                                 ? Icons.hourglass_empty
-                                : (isEditingInputRow
-                                    ? Icons.save
-                                    : Icons.add),
+                                : (isEditingInputRow ? Icons.save : Icons.add),
                             size: 18,
                             color: Colors.white,
                           ),
@@ -5569,10 +5603,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         }
 
 // Auto-fill expanded fields
-        stockItems[index].salePrice =
-            matchedVariant?.price?.toString() ??
-                localProduct.price?.price?.toString() ??
-                '0';
+        stockItems[index].salePrice = matchedVariant?.price?.toString() ??
+            localProduct.price?.price?.toString() ??
+            '0';
         stockItems[index].mrp = matchedVariant?.mrp?.toString() ??
             localProduct.mrp?.toString() ??
             localProduct.price?.price?.toString() ??
@@ -7265,9 +7298,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   // Match purchase summary: Total Due Amount = total purchase
                   // amount for this stock batch + additional excluded tax + current supplier balance.
                   final double supplierBalance = _getSupplierBalance();
-                  final double totalDueAmount = totalStockValue +
-                      additionalPurchaseTax +
-                      supplierBalance;
+                  final double totalDueAmount =
+                      totalStockValue + additionalPurchaseTax + supplierBalance;
 
                   // Check if payment data is provided
                   final bool hasPayment =
@@ -7301,7 +7333,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           '❌ PAYMENT VALIDATION FAILED: One or more payment amounts are zero or negative');
                       showScaffoldError(
                           context: context,
-                          message: 'Payment amounts must be greater than zero.');
+                          message:
+                              'Payment amounts must be greater than zero.');
                       return;
                     }
 
@@ -7359,8 +7392,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     }
 
                     // Process all pending stock items
-                    final batchResult = await stockProvider
-                        .processPendingStockItems(
+                    final batchResult =
+                        await stockProvider.processPendingStockItems(
                       accessToken,
                       variantsEnabled: _variantFeatureEnabled(),
                     );
@@ -7440,7 +7473,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         for (var item in successfulItems) {
                           if (item['apiResponse'] != null &&
                               item['apiResponse']['data'] != null &&
-                              item['apiResponse']['data']['purchase_voucher_id'] !=
+                              item['apiResponse']['data']
+                                      ['purchase_voucher_id'] !=
                                   null) {
                             purchaseId = item['apiResponse']['data']
                                     ['purchase_voucher_id']
@@ -7456,10 +7490,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                               '🚀 CALLING FINISH PURCHASE ORDER API WITH PURCHASE VOUCHER ID: $purchaseId');
 
                           try {
-                            final result =
-                                await Provider.of<PurchaseProvider>(context,
-                                        listen: false)
-                                    .finishPurchaseOrder(
+                            final result = await Provider.of<PurchaseProvider>(
+                                    context,
+                                    listen: false)
+                                .finishPurchaseOrder(
                               accessToken: accessToken,
                               purchaseVoucherId: purchaseId,
                               paymentMethods: paymentMethods,
@@ -7511,7 +7545,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                   }
 
                                   // Step 2: Full comprehensive sync for complete data consistency
-                                  debugPrint('🔄 Starting comprehensive sync...');
+                                  debugPrint(
+                                      '🔄 Starting comprehensive sync...');
                                   await syncProvider.syncAllData(context);
                                   debugPrint(
                                       '✅ COMPREHENSIVE SYNC COMPLETED SUCCESSFULLY');
@@ -7527,7 +7562,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                       'Purchase order completion failed. Stock items were added but order was not finalized.');
                             }
                           } catch (e) {
-                            debugPrint('💥 ERROR COMPLETING PURCHASE ORDER: $e');
+                            debugPrint(
+                                '💥 ERROR COMPLETING PURCHASE ORDER: $e');
                             showScaffoldError(
                                 context: context,
                                 message:

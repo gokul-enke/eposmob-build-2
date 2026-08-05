@@ -5,6 +5,7 @@ import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/models/list_purchase_voucher.dart';
+import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:provider/provider.dart';
 
 import '../../components/build_container_box.dart';
@@ -101,6 +102,14 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!canViewPurchasePrice(context)) {
+      return const SafeArea(
+        child: Center(
+          child: Text('Purchase permission is required to view vouchers.'),
+        ),
+      );
+    }
+
     Size size = MediaQuery.of(context).size;
     PurchaseProvider purchaseProvider =
         Provider.of<PurchaseProvider>(context, listen: false);

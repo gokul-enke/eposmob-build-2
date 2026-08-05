@@ -8,6 +8,7 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
+import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/supplier_voucher_provider.dart';
 import 'package:pos_machine/resources/app_url.dart';
@@ -328,6 +329,16 @@ class _CreateSupplierVoucherScreenState
 
   @override
   Widget build(BuildContext context) {
+    if (!canViewPurchasePrice(context)) {
+      return const SafeArea(
+        child: Center(
+          child: Text(
+            'Purchase permission is required to create supplier vouchers.',
+          ),
+        ),
+      );
+    }
+
     final size = MediaQuery.of(context).size;
     final isMobile = size.width < 700;
     return SafeArea(

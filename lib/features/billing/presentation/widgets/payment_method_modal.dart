@@ -1365,18 +1365,20 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   }
 
   void _syncCreditAmountWithRemaining() {
-    // A partial collected payment must not silently become a credit sale.
-    // Credit is an explicit payment method and must be selected by the user;
-    // otherwise the checkout validator correctly rejects the unpaid remainder.
-    if (toCustomerCreditEnabled || !isCreditSelected) {
+    // Any unpaid remainder is automatically treated as a credit sale.
+    // `To Customer Credit` is a separate flow for allocating excess payment.
+    final creditRemainder = PaymentAutoFillHelper.autoCreditRemainder(
+      cartTotal: widget.cartTotal,
+      totalCollected: _getTotalCollectedAmount(),
+      toCustomerCreditEnabled: toCustomerCreditEnabled,
+    );
+    if (creditRemainder == null) {
       return;
     }
 
-    final remainingAmount = widget.cartTotal - _getTotalCollectedAmount();
-
-    if (remainingAmount > 0) {
+    if (creditRemainder.isNotEmpty) {
       isCreditSelected = true;
-      creditAmountController.text = remainingAmount.toStringAsFixed(2);
+      creditAmountController.text = creditRemainder;
     } else {
       isCreditSelected = false;
       creditAmountController.clear();

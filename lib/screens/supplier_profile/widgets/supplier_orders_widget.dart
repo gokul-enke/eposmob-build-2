@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/models/supplier.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -32,6 +33,14 @@ class _SupplierOrdersWidgetState extends State<SupplierOrdersWidget> {
 
   @override
   Widget build(BuildContext context) {
+    if (!canViewPurchasePrice(context)) {
+      return const Expanded(
+        child: Center(
+          child: Text('Purchase permission is required to view orders.'),
+        ),
+      );
+    }
+
     return Expanded(
       child: BuildBoxShadowContainer(
         margin: const EdgeInsets.all(24),
