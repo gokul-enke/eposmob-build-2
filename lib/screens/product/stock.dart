@@ -96,7 +96,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
 
       if (accessToken == null || accessToken.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Authentication token is missing")),
+          SnackBar(content: Text('stock.auth_token_missing'.tr)),
         );
         return;
       }
@@ -253,9 +253,9 @@ class _AddStockScreenState extends State<AddStockScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Stock Details',
-                    style: TextStyle(
+                  Text(
+                    'stock.details_title'.tr,
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
@@ -273,30 +273,30 @@ class _AddStockScreenState extends State<AddStockScreen> {
                   shrinkWrap: true,
                   physics: const BouncingScrollPhysics(),
                   children: [
-                    _buildDetailRow('Product Name', stock.productName ?? 'N/A'),
+                    _buildDetailRow('stock.product_name'.tr, stock.productName ?? 'stock.na'.tr),
                     if (_variantFeatureEnabled() &&
                         stock.productVariantId != null)
                       _buildDetailRow(
-                        'Product Variant',
+                        'stock.product_variant'.tr,
                         stock.variantName?.trim().isNotEmpty == true
                             ? stock.variantName!
                             : 'Variant #${stock.productVariantId}',
                       ),
-                    _buildDetailRow('Category', stock.categoryName ?? 'N/A'),
-                    _buildDetailRow('Store Name', stock.storeName ?? 'N/A'),
-                    _buildDetailRow('Supplier', stock.supplierName ?? 'N/A'),
-                    _buildDetailRow('Unit', stock.unit ?? 'N/A'),
+                    _buildDetailRow('stock.category'.tr, stock.categoryName ?? 'stock.na'.tr),
+                    _buildDetailRow('stock.store_name'.tr, stock.storeName ?? 'stock.na'.tr),
+                    _buildDetailRow('stock.supplier'.tr, stock.supplierName ?? 'stock.na'.tr),
+                    _buildDetailRow('stock.unit'.tr, stock.unit ?? 'stock.na'.tr),
                     _buildDetailRow(
-                        'Retail Price', stock.retailPrice?.toString() ?? 'N/A'),
-                    _buildDetailRow('MRP', stock.mrp?.toString() ?? 'N/A'),
+                        'stock.retail_price'.tr, stock.retailPrice?.toString() ?? 'stock.na'.tr),
+                    _buildDetailRow('stock.mrp'.tr, stock.mrp?.toString() ?? 'stock.na'.tr),
                     if (_canViewPurchasePrice())
-                      _buildDetailRow('Purchase Price',
-                          stock.purchaseRate?.toString() ?? 'N/A'),
-                    _buildDetailRow('Quantity', stock.qty?.toString() ?? 'N/A'),
-                    _buildDetailRow('Rack', stock.rack ?? 'N/A'),
-                    _buildDetailRow('Barcode', stock.barCode ?? 'N/A'),
-                    _buildDetailRow('Wholesale Price',
-                        stock.wholesalePrice?.toString() ?? 'N/A'),
+                      _buildDetailRow('stock.purchase_price'.tr,
+                          stock.purchaseRate?.toString() ?? 'stock.na'.tr),
+                    _buildDetailRow('stock.quantity'.tr, stock.qty?.toString() ?? 'stock.na'.tr),
+                    _buildDetailRow('stock.rack'.tr, stock.rack ?? 'stock.na'.tr),
+                    _buildDetailRow('stock.barcode'.tr, stock.barCode ?? 'stock.na'.tr),
+                    _buildDetailRow('stock.wholesale_price'.tr,
+                        stock.wholesalePrice?.toString() ?? 'stock.na'.tr),
                   ],
                 ),
               ),
@@ -305,7 +305,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   CustomRoundButton(
-                    title: "Close",
+                    title: 'stock.close'.tr,
                     boxColor: Colors.white,
                     textColor: ColorManager.kPrimaryColor,
                     borderColor: ColorManager.kPrimaryColor,
@@ -327,7 +327,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
     if (stock.stockId == null) {
       showScaffoldError(
         context: context,
-        message: 'Stock id missing. Unable to edit this row.',
+        message: 'stock.edit_missing_id'.tr,
       );
       return;
     }
@@ -590,12 +590,12 @@ class _AddStockScreenState extends State<AddStockScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Product Stock List",
+          'stock.title'.tr,
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
               0.30, ColorManager.textColor),
         ),
         CustomRoundButton(
-          title: "Add Stock",
+          title: 'stock.add'.tr,
           fct: () async {
             sideBarController.index.value = 18;
           },
@@ -615,7 +615,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
           children: [
             Expanded(
               child: Text(
-                "Product Stock List",
+                'stock.title'.tr,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: buildCustomStyle(
@@ -647,7 +647,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                     onPressed: () {
                       setState(() => _showFilters = !_showFilters);
                     },
-                    tooltip: _showFilters ? 'Hide Filters' : 'Show Filters',
+                    tooltip: _showFilters ? 'stock.hide_filters'.tr : 'stock.show_filters'.tr,
                   ),
                   if (_hasActiveFilters())
                     PositionedDirectional(
@@ -669,7 +669,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
         ),
         const SizedBox(height: 12),
         CustomRoundButton(
-          title: "Add Stock",
+          title: 'stock.add'.tr,
           fct: () async {
             sideBarController.index.value = 18;
           },
@@ -695,7 +695,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
             children: [
               Expanded(
                 child: Text(
-                  'Filters',
+                  'stock.filters_title'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.semiBold,
                     FontSize.s14,
@@ -715,7 +715,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                     minHeight: 44,
                   ),
                   onPressed: () => setState(() => _showFilters = false),
-                  tooltip: 'Hide Filters',
+                  tooltip: 'stock.hide_filters'.tr,
                 ),
               ),
             ],
@@ -734,7 +734,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
           _buildStockStatusDropdown(),
           const SizedBox(height: 12),
           CustomRoundButton(
-            title: "Reset",
+            title: 'general.reset'.tr,
             boxColor: Colors.white,
             textColor: ColorManager.kPrimaryColor,
             borderColor: ColorManager.kPrimaryColor,
@@ -774,7 +774,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
             const SizedBox(width: 15),
             Expanded(
               child: CustomRoundButton(
-                title: "Reset",
+                title: 'general.reset'.tr,
                 boxColor: Colors.white,
                 textColor: ColorManager.kPrimaryColor,
                 borderColor: ColorManager.kPrimaryColor,
@@ -802,7 +802,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
           searchStocks();
         },
         decoration: InputDecoration(
-          hintText: 'Stock Name',
+          hintText: 'stock.stock_name'.tr,
           hintStyle: buildCustomStyle(
             FontWeightManager.medium,
             FontSize.s12,
@@ -826,7 +826,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
     return BuildDropDownWithSearch<String>(
       title: null,
       showName: false,
-      hintText: 'Please Select',
+      hintText: 'stock.please_select'.tr,
       value: categoryController.text == "All Categories"
           ? null
           : categoryController.text,
@@ -857,7 +857,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
           searchStocks();
         },
         decoration: InputDecoration(
-          hintText: 'Barcode',
+          hintText: 'stock.barcode'.tr,
           hintStyle: buildCustomStyle(
             FontWeightManager.medium,
             FontSize.s12,
@@ -889,7 +889,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
           searchStocks();
         },
         decoration: InputDecoration(
-          hintText: 'Rack Number',
+          hintText: 'stock.rack_number'.tr,
           hintStyle: buildCustomStyle(
             FontWeightManager.medium,
             FontSize.s12,
@@ -913,7 +913,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
     return BuildDropDownWithSearch<String>(
       title: null,
       showName: false,
-      hintText: 'Select Store',
+      hintText: 'stock.select_store'.tr,
       value: storeController.text == "All Stores" ? null : storeController.text,
       items: stores.where((store) => store != "All Stores").toList(),
       onChanged: (String? newValue) {
@@ -933,7 +933,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
     return BuildDropDownWithSearch<String>(
       title: null,
       showName: false,
-      hintText: 'Stock Status',
+      hintText: 'stock.stock_status'.tr,
       value: stockStatusController.text == "All Statuses"
           ? null
           : stockStatusController.text,
@@ -952,15 +952,15 @@ class _AddStockScreenState extends State<AddStockScreen> {
   }
 
   Widget _buildLoadingState() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator.adaptive(),
-          SizedBox(height: 14),
+          const CircularProgressIndicator.adaptive(),
+          const SizedBox(height: 14),
           Text(
-            'Loading stock...',
-            style: TextStyle(
+            'stock.loading'.tr,
+            style: const TextStyle(
               color: ColorManager.kGreyColor,
               fontSize: 13,
             ),
@@ -994,8 +994,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
             const SizedBox(height: 16),
             Text(
               hasFilters
-                  ? 'No stock matches your filters'
-                  : 'No stock data available',
+                  ? 'stock.no_stock_filtered'.tr
+                  : 'stock.no_stock_data'.tr,
               textAlign: TextAlign.center,
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
@@ -1007,7 +1007,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
             if (hasFilters) ...[
               const SizedBox(height: 8),
               Text(
-                'Try adjusting or clearing your filters.',
+                'stock.try_adjusting_filters'.tr,
                 textAlign: TextAlign.center,
                 style: buildCustomStyle(
                   FontWeightManager.regular,
@@ -1018,7 +1018,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
               ),
               const SizedBox(height: 16),
               CustomRoundButton(
-                title: 'Reset filters',
+                title: 'stock.reset_filters_btn'.tr,
                 boxColor: Colors.white,
                 textColor: ColorManager.kPrimaryColor,
                 borderColor: ColorManager.kPrimaryColor,
@@ -1050,7 +1050,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
   List<Widget> _buildMobileStockActionButtons(ListStockModelData stock) {
     return [
       Tooltip(
-        message: 'Edit stock',
+        message: 'stock.edit_stock_tooltip'.tr,
         child: SizedBox(
           width: 30,
           height: 30,
@@ -1068,7 +1068,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
       ),
       const SizedBox(width: 6),
       Tooltip(
-        message: 'View details',
+        message: 'stock.view_details_tooltip'.tr,
         child: SizedBox(
           width: 30,
           height: 30,
@@ -1110,15 +1110,15 @@ class _AddStockScreenState extends State<AddStockScreen> {
                 _showWithdrawStockModal(stock);
               }
             },
-            itemBuilder: (BuildContext context) => const [
+            itemBuilder: (BuildContext context) => [
               PopupMenuItem<String>(
                 value: 'adjust',
                 child: Row(
                   children: [
-                    Icon(Icons.sync,
+                    const Icon(Icons.sync,
                         size: 18, color: ColorManager.kPrimaryColor),
-                    SizedBox(width: 8),
-                    Text('Adjust Stock'),
+                    const SizedBox(width: 8),
+                    Text('stock.adjust_stock'.tr),
                   ],
                 ),
               ),
@@ -1126,10 +1126,10 @@ class _AddStockScreenState extends State<AddStockScreen> {
                 value: 'move',
                 child: Row(
                   children: [
-                    Icon(Icons.arrow_forward,
+                    const Icon(Icons.arrow_forward,
                         size: 18, color: ColorManager.kPrimaryColor),
-                    SizedBox(width: 8),
-                    Text('Move Stock'),
+                    const SizedBox(width: 8),
+                    Text('stock.move_stock'.tr),
                   ],
                 ),
               ),
@@ -1137,10 +1137,10 @@ class _AddStockScreenState extends State<AddStockScreen> {
                 value: 'withdraw',
                 child: Row(
                   children: [
-                    Icon(Icons.arrow_downward,
+                    const Icon(Icons.arrow_downward,
                         size: 18, color: ColorManager.kPrimaryColor),
-                    SizedBox(width: 8),
-                    Text('Withdraw Stock'),
+                    const SizedBox(width: 8),
+                    Text('stock.withdraw_stock'.tr),
                   ],
                 ),
               ),
@@ -1213,7 +1213,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                         ),
                       ),
                     ),
-                    if (copyable && value.isNotEmpty && value != 'N/A') ...[
+                    if (copyable && value.isNotEmpty && value != 'stock.na'.tr) ...[
                       const SizedBox(width: 6),
                       Builder(
                         builder: (context) => GestureDetector(
@@ -1221,7 +1221,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                             Clipboard.setData(ClipboardData(text: value));
                             showScaffold(
                               context: context,
-                              message: '$label copied to clipboard',
+                              message: 'stock.copied_to_clipboard'.tr.replaceAll('@label', label),
                             );
                           },
                           child: const Icon(
@@ -1240,7 +1240,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
   }
 
   Widget _buildMobileStockCard(ListStockModelData stock) {
-    final barcode = stock.barCode ?? 'N/A';
+    final barcode = stock.barCode ?? 'stock.na'.tr;
     final qtyColors = _quantityColors(stock);
     final orderDate = DateHelper.formatISODate(stock.orderDate ?? '');
 
@@ -1258,7 +1258,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SelectableText(
-                      stock.productName ?? 'Unnamed',
+                      stock.productName ?? 'stock.unnamed'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         FontSize.s14,
@@ -1310,14 +1310,14 @@ class _AddStockScreenState extends State<AddStockScreen> {
             children: [
               Expanded(
                 child: _buildCompactFieldBox(
-                  label: 'Retail',
-                  value: '${stock.retailPrice ?? 'N/A'}',
+                  label: 'stock.retail_short'.tr,
+                  value: '${stock.retailPrice ?? 'stock.na'.tr}',
                 ),
               ),
               const SizedBox(width: 6),
               Expanded(
                 child: _buildCompactFieldBox(
-                  label: 'Qty',
+                  label: 'stock.qty_short'.tr,
                   value: '${stock.qty}',
                   valueColor: qtyColors.$1,
                   valueBgColor: qtyColors.$2,
@@ -1330,7 +1330,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
             children: [
               Expanded(
                 child: _buildCompactFieldBox(
-                  label: 'Barcode',
+                  label: 'stock.barcode'.tr,
                   value: barcode,
                   copyable: true,
                 ),
@@ -1338,7 +1338,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
               const SizedBox(width: 6),
               Expanded(
                 child: _buildCompactFieldBox(
-                  label: 'Order Date',
+                  label: 'stock.order_date'.tr,
                   value: orderDate,
                 ),
               ),
@@ -1415,14 +1415,14 @@ class _AddStockScreenState extends State<AddStockScreen> {
               _showWithdrawStockModal(stock);
             }
           },
-          itemBuilder: (BuildContext context) => const [
+          itemBuilder: (BuildContext context) => [
             PopupMenuItem<String>(
               value: 'adjust',
               child: Row(
                 children: [
-                  Icon(Icons.sync, size: 18, color: ColorManager.kPrimaryColor),
-                  SizedBox(width: 8),
-                  Text('Adjust Stock'),
+                  const Icon(Icons.sync, size: 18, color: ColorManager.kPrimaryColor),
+                  const SizedBox(width: 8),
+                  Text('stock.adjust_stock'.tr),
                 ],
               ),
             ),
@@ -1430,10 +1430,10 @@ class _AddStockScreenState extends State<AddStockScreen> {
               value: 'move',
               child: Row(
                 children: [
-                  Icon(Icons.arrow_forward,
+                  const Icon(Icons.arrow_forward,
                       size: 18, color: ColorManager.kPrimaryColor),
-                  SizedBox(width: 8),
-                  Text('Move Stock'),
+                  const SizedBox(width: 8),
+                  Text('stock.move_stock'.tr),
                 ],
               ),
             ),
@@ -1441,10 +1441,10 @@ class _AddStockScreenState extends State<AddStockScreen> {
               value: 'withdraw',
               child: Row(
                 children: [
-                  Icon(Icons.arrow_downward,
+                  const Icon(Icons.arrow_downward,
                       size: 18, color: ColorManager.kPrimaryColor),
-                  SizedBox(width: 8),
-                  Text('Withdraw Stock'),
+                  const SizedBox(width: 8),
+                  Text('stock.withdraw_stock'.tr),
                 ],
               ),
             ),
@@ -1502,17 +1502,17 @@ class _AddStockScreenState extends State<AddStockScreen> {
               children: [
                 TableRow(
                   children: [
-                    _buildTableHeader('Product'),
-                    _buildTableHeader('Barcode'),
-                    _buildTableHeader('Retail Price'),
-                    _buildTableHeader('MRP'),
+                    _buildTableHeader('stock.col_product'.tr),
+                    _buildTableHeader('stock.barcode'.tr),
+                    _buildTableHeader('stock.retail_price'.tr),
+                    _buildTableHeader('stock.mrp'.tr),
                     if (canViewPurchasePrice)
-                      _buildTableHeader('Purchase Price'),
-                    _buildTableHeader('Quantity'),
-                    _buildTableHeader('Unit'),
-                    _buildTableHeader('Rack'),
-                    _buildTableHeader('Order Date'),
-                    _buildTableHeader('Action'),
+                      _buildTableHeader('stock.purchase_price'.tr),
+                    _buildTableHeader('stock.quantity'.tr),
+                    _buildTableHeader('stock.unit'.tr),
+                    _buildTableHeader('stock.rack'.tr),
+                    _buildTableHeader('stock.order_date'.tr),
+                    _buildTableHeader('stock.action'.tr),
                   ],
                 ),
               ],
@@ -1542,7 +1542,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                       ...listStockModelDataList.asMap().entries.map((entry) {
                         final int index = entry.key;
                         final stock = entry.value;
-                        final barcode = stock.barCode ?? 'N/A';
+                        final barcode = stock.barCode ?? 'stock.na'.tr;
                         debugPrint(
                             '🔍 DISPLAY BARCODE: "$barcode" for product: ${stock.productName}');
                         final qtyColors = _quantityColors(stock);
@@ -1625,7 +1625,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                         ),
                                       ),
                                       if (barcode.isNotEmpty &&
-                                          barcode != 'N/A') ...[
+                                          barcode != 'stock.na'.tr) ...[
                                         const SizedBox(width: 6),
                                         GestureDetector(
                                           onTap: () {
@@ -1633,8 +1633,9 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                                 ClipboardData(text: barcode));
                                             showScaffold(
                                               context: context,
-                                              message:
-                                                  'Barcode copied to clipboard',
+                                              message: 'stock.copied_to_clipboard'
+                                                  .tr
+                                                  .replaceAll('@label', 'stock.barcode'.tr),
                                             );
                                           },
                                           child: const Icon(
@@ -1650,16 +1651,16 @@ class _AddStockScreenState extends State<AddStockScreen> {
                               ),
                             ),
                             _buildTableCell('${stock.retailPrice}'),
-                            _buildTableCell(stock.mrp ?? "N/A"),
+                            _buildTableCell(stock.mrp ?? 'stock.na'.tr),
                             if (canViewPurchasePrice)
-                              _buildTableCell(stock.purchaseRate ?? "N/A"),
+                              _buildTableCell(stock.purchaseRate ?? 'stock.na'.tr),
                             _buildTableCell(
                               '${stock.qty}',
                               textColor: qtyColors.$1 ?? Colors.black,
                               bgColor: qtyColors.$2,
                             ),
                             _buildTableCell('${stock.unit}'),
-                            _buildTableCell(stock.rack ?? "N/A"),
+                            _buildTableCell(stock.rack ?? 'stock.na'.tr),
                             _buildTableCell(
                               DateHelper.formatISODate(stock.orderDate ?? ""),
                             ),
