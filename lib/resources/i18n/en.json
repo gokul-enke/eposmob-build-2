@@ -720,5 +720,16 @@
     "items": "Items",
     "sub_total": "Sub Total",
     "grand_total": "Grand Total"
+  },
+  "category": {
+    "title": "Category List",
+    "add": "Add Category",
+    "search_label": "Search Category",
+    "search_hint": "Type to search...",
+    "no_categories": "No categories available",
+    "col_no": "No",
+    "col_name": "Category Name",
+    "col_slug": "Slug",
+    "action": "Action"
   }
 }
