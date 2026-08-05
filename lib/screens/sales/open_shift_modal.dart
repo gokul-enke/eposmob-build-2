@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_container_box.dart';
@@ -143,7 +144,7 @@ class _OpenShiftModalState extends State<OpenShiftModal> {
   Future<void> _saveOpeningDraft() async {
     if (_openingTimeController.text.trim().isEmpty) {
       setState(() {
-        _errorMessage = 'Opening Time is required';
+        _errorMessage = 'daily_sales_close.err_opening_time_required'.tr;
       });
       return;
     }
@@ -187,13 +188,13 @@ class _OpenShiftModalState extends State<OpenShiftModal> {
       if (mounted) {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Shift opened successfully')),
+            SnackBar(content: Text('daily_sales_close.msg_shift_opened'.tr)),
           );
           Navigator.of(context).pop();
           widget.onSuccess();
         } else {
           setState(() {
-            _errorMessage = 'Failed to open shift. Please try again.';
+            _errorMessage = 'daily_sales_close.err_open_shift_failed'.tr;
           });
         }
       }
@@ -247,7 +248,7 @@ class _OpenShiftModalState extends State<OpenShiftModal> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Open Shift',
+                              'daily_sales_close.btn_open_shift'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.bold,
                                 FontSize.s18,
@@ -257,7 +258,7 @@ class _OpenShiftModalState extends State<OpenShiftModal> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Capture opening time and opening cash before starting sales.',
+                              'daily_sales_close.open_shift_subtitle'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s11,
@@ -288,15 +289,15 @@ class _OpenShiftModalState extends State<OpenShiftModal> {
                           // Store Name (disabled)
                           _buildDisabledStoreField(),
                           const SizedBox(height: 12),
-                          // Shift Name & Business Date
+                           // Shift Name & Business Date
                           _buildTwoColumnRow(
                             isNarrow: isNarrow,
                             left: _buildAmountField(
-                              label: 'Shift Name',
+                              label: 'daily_sales_close.shift_name'.tr,
                               controller: _shiftNameController,
                             ),
                             right: _buildDateField(
-                              label: 'Business Date',
+                              label: 'daily_sales_close.business_date'.tr,
                               controller: _businessDateController,
                             ),
                           ),
@@ -305,11 +306,11 @@ class _OpenShiftModalState extends State<OpenShiftModal> {
                           _buildTwoColumnRow(
                             isNarrow: isNarrow,
                             left: _buildTimePickerField(
-                              label: 'Opening Time*',
+                              label: 'daily_sales_close.opening_time_req'.tr,
                               controller: _openingTimeController,
                             ),
                             right: _buildAmountField(
-                              label: 'Opening Cash Balance ($currency)',
+                              label: 'daily_sales_close.opening_cash_balance'.tr.replaceAll('@currency', currency),
                               controller: _openingCashInHandController,
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
                             ),
@@ -317,7 +318,7 @@ class _OpenShiftModalState extends State<OpenShiftModal> {
                           const SizedBox(height: 20),
                           // Breakdown Section
                           _buildBreakdownSection(
-                            title: 'Opening Cash Breakdown',
+                            title: 'daily_sales_close.opening_cash_breakdown'.tr,
                             denominationControllers: _denominationControllers,
                             countControllers: _countControllers,
                             isNarrow: isNarrow,
@@ -339,7 +340,7 @@ class _OpenShiftModalState extends State<OpenShiftModal> {
                           const SizedBox(height: 20),
                           // Notes
                           _buildTextAreaField(
-                            label: 'Notes',
+                            label: 'daily_sales_close.notes'.tr,
                             controller: _notesController,
                             maxLines: 3,
                           ),
@@ -378,7 +379,7 @@ class _OpenShiftModalState extends State<OpenShiftModal> {
                           backgroundColor: Colors.grey.shade100,
                         ),
                         child: Text(
-                          'Cancel',
+                          'daily_sales_close.cancel'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.semiBold,
                             FontSize.s12,
@@ -409,7 +410,7 @@ class _OpenShiftModalState extends State<OpenShiftModal> {
                                 ),
                               )
                             : Text(
-                                'Save Opening Draft',
+                                'daily_sales_close.save_opening_draft'.tr,
                                 style: buildCustomStyle(
                                   FontWeightManager.bold,
                                   FontSize.s12,
@@ -434,7 +435,7 @@ class _OpenShiftModalState extends State<OpenShiftModal> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Store',
+          'daily_sales_close.store'.tr,
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s12,
@@ -650,7 +651,7 @@ class _OpenShiftModalState extends State<OpenShiftModal> {
             ),
             TextButton(
               onPressed: onAddRow,
-              child: const Text('Add Row'),
+              child: Text('daily_sales_close.add_row'.tr),
             ),
           ],
         ),
@@ -678,7 +679,7 @@ class _OpenShiftModalState extends State<OpenShiftModal> {
                           child: IconButton(
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
-                            tooltip: 'Remove row',
+                            tooltip: 'daily_sales_close.remove_row'.tr,
                             onPressed: denominationControllers.length == 1
                                 ? null
                                 : () {
@@ -716,7 +717,7 @@ class _OpenShiftModalState extends State<OpenShiftModal> {
                         child: IconButton(
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
-                          tooltip: 'Remove row',
+                          tooltip: 'daily_sales_close.remove_row'.tr,
                           onPressed: denominationControllers.length == 1
                               ? null
                               : () {
@@ -760,7 +761,7 @@ class _OpenShiftModalState extends State<OpenShiftModal> {
                   ),
                   const SizedBox(height: 6),
                   _buildCompactField(
-                    label: 'Count',
+                    label: 'daily_sales_close.count'.tr,
                     controller: countController,
                     keyboardType: TextInputType.number,
                     onChanged: (_) => _recalculateOpeningCash(),
@@ -779,7 +780,7 @@ class _OpenShiftModalState extends State<OpenShiftModal> {
                   const SizedBox(width: 6),
                   Expanded(
                     child: _buildCompactField(
-                      label: 'Count',
+                      label: 'daily_sales_close.count'.tr,
                       controller: countController,
                       keyboardType: TextInputType.number,
                       onChanged: (_) => _recalculateOpeningCash(),
@@ -804,7 +805,7 @@ class _OpenShiftModalState extends State<OpenShiftModal> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Denomination',
+          'daily_sales_close.denomination'.tr,
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s12,
@@ -833,7 +834,7 @@ class _OpenShiftModalState extends State<OpenShiftModal> {
                     isDense: true,
                     value: selectedValue,
                     hint: Text(
-                      'Select',
+                      'daily_sales_close.select'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s10,

@@ -276,17 +276,17 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
               children: [
                 TableRow(
                   children: [
-                    _buildTableHeader('Sales Executive'),
-                    _buildTableHeader('Phone'),
-                    _buildTableHeader('Store'),
-                    _buildTableHeader('Business Date'),
-                    _buildTableHeader('Total Orders'),
-                    _buildTableHeader('Total Sales'),
-                    _buildTableHeader('Online Sales'),
-                    _buildTableHeader('Cash Sales'),
-                    _buildTableHeader('Credit Amount'),
-                    _buildTableHeader('Status'),
-                    _buildTableHeader('Action'),
+                    _buildTableHeader('daily_sales_close.sales_executive'.tr),
+                    _buildTableHeader('daily_sales_close.phone'.tr),
+                    _buildTableHeader('daily_sales_close.store'.tr),
+                    _buildTableHeader('daily_sales_close.business_date'.tr),
+                    _buildTableHeader('daily_sales_close.total_orders'.tr),
+                    _buildTableHeader('daily_sales_close.total_sales'.tr),
+                    _buildTableHeader('daily_sales_close.online_sales'.tr),
+                    _buildTableHeader('daily_sales_close.cash_sales'.tr),
+                    _buildTableHeader('daily_sales_close.credit_amount'.tr),
+                    _buildTableHeader('sales.status'.tr),
+                    _buildTableHeader('sales_return.action'.tr),
                   ],
                 ),
               ],
@@ -458,18 +458,18 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
             color: Colors.grey[400],
           ),
           const SizedBox(height: 16),
-          const Text(
-            'No Daily Sales Closes Found',
-            style: TextStyle(
+          Text(
+            'daily_sales_close.no_closes_found'.tr,
+            style: const TextStyle(
               fontSize: 18,
               color: Colors.grey,
               fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Try adjusting your filters or date range',
-            style: TextStyle(
+          Text(
+            'daily_sales_close.adjust_filters_hint'.tr,
+            style: const TextStyle(
               fontSize: 14,
               color: Colors.grey,
             ),
@@ -482,6 +482,7 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
   Widget _buildStatusChip(String status) {
     Color backgroundColor;
     Color textColor;
+    String statusText;
 
     switch (status.toLowerCase()) {
       case 'closed':
@@ -498,6 +499,26 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
       default:
         backgroundColor = Colors.green.withOpacity(0.1);
         textColor = Colors.green.shade700;
+    }
+
+    switch (status.toLowerCase()) {
+      case 'draft':
+        statusText = 'daily_sales_close.status_draft'.tr;
+        break;
+      case 'closed':
+        statusText = 'daily_sales_close.status_closed'.tr;
+        break;
+      case 'open':
+        statusText = 'daily_sales_close.status_open'.tr;
+        break;
+      case 'pending':
+        statusText = 'daily_sales_close.status_pending'.tr;
+        break;
+      case 'completed':
+        statusText = 'daily_sales_close.status_completed'.tr;
+        break;
+      default:
+        statusText = status.toUpperCase();
     }
 
     return Container(
@@ -520,7 +541,7 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
           ),
           const SizedBox(width: 6),
           Text(
-            status.toUpperCase(),
+            statusText,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s9,
@@ -572,7 +593,7 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Daily Sales Closes",
+                            'daily_sales_close.title'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.semiBold,
                               FontSize.s20,
@@ -597,7 +618,7 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                                       icon: const Icon(Icons.lock_open,
                                           size: 18, color: Colors.white),
                                       label: Text(
-                                        "Open Shift",
+                                        'daily_sales_close.btn_open_shift'.tr,
                                         style: buildCustomStyle(
                                           FontWeightManager.medium,
                                           FontSize.s12,
@@ -620,7 +641,7 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                                       icon: const Icon(Icons.access_time,
                                           size: 18, color: Colors.white),
                                       label: Text(
-                                        "Day Close",
+                                        'daily_sales_close.btn_day_close'.tr,
                                         style: buildCustomStyle(
                                           FontWeightManager.medium,
                                           FontSize.s12,
@@ -657,8 +678,8 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                                           salesProvider.toggleFilters();
                                         },
                                         tooltip: salesProvider.showFilters
-                                            ? 'Hide Filters'
-                                            : 'Show Filters',
+                                            ? 'daily_sales_close.hide_filters'.tr
+                                            : 'daily_sales_close.show_filters'.tr,
                                       ),
                                       if (hasFilters)
                                         Positioned(
@@ -684,8 +705,8 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            "Daily Sales Closes",
+                           Text(
+                            'daily_sales_close.title'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.semiBold,
                               FontSize.s20,
@@ -703,7 +724,7 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                                 icon: const Icon(Icons.lock_open,
                                     size: 18, color: Colors.white),
                                 label: Text(
-                                  "Open Shift",
+                                  'daily_sales_close.btn_open_shift'.tr,
                                   style: buildCustomStyle(
                                     FontWeightManager.medium,
                                     FontSize.s12,
@@ -727,7 +748,7 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                                 icon: const Icon(Icons.access_time,
                                     size: 18, color: Colors.white),
                                 label: Text(
-                                  "Day Close",
+                                  'daily_sales_close.btn_day_close'.tr,
                                   style: buildCustomStyle(
                                     FontWeightManager.medium,
                                     FontSize.s12,
@@ -762,8 +783,8 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                                           salesProvider.toggleFilters();
                                         },
                                         tooltip: salesProvider.showFilters
-                                            ? 'Hide Filters'
-                                            : 'Show Filters',
+                                            ? 'daily_sales_close.hide_filters'.tr
+                                            : 'daily_sales_close.show_filters'.tr,
                                       ),
                                       if (hasFilters)
                                         Positioned(
@@ -811,7 +832,7 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                                   Padding(
                                     padding: const EdgeInsets.all(8.0),
                                     child: Text(
-                                      "Date",
+                                      'sales.date_col'.tr,
                                       style: buildCustomStyle(
                                         FontWeightManager.regular,
                                         FontSize.s14,
@@ -826,7 +847,7 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                                     child: Center(
                                       child: CalendarPickerTableCell(
                                         key: calendarPickerKey,
-                                        hintText: 'Select Date',
+                                        hintText: 'daily_sales_close.select_date'.tr,
                                         onDateSelected: (DateTime date) {
                                           setState(() {
                                             selectedDate = date;
@@ -850,7 +871,7 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                               child: Padding(
                                 padding: const EdgeInsets.only(top: 35.0),
                                 child: CustomRoundButton(
-                                  title: "Reset",
+                                  title: 'general.reset'.tr,
                                   boxColor: Colors.white,
                                   textColor: ColorManager.kPrimaryColor,
                                   fct: resetSearch,
@@ -1825,7 +1846,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
             if (!isReadOnly)
               TextButton(
                 onPressed: onAddRow,
-                child: const Text('Add Row'),
+                child: Text('daily_sales_close.add_row'.tr),
               ),
           ],
         ),
@@ -1857,7 +1878,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                             child: IconButton(
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
-                              tooltip: 'Remove row',
+                              tooltip: 'daily_sales_close.remove_row'.tr,
                               onPressed: denominationControllers.length == 1
                                   ? null
                                   : () {
@@ -1903,7 +1924,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                           child: IconButton(
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
-                            tooltip: 'Remove row',
+                            tooltip: 'daily_sales_close.remove_row'.tr,
                             onPressed: denominationControllers.length == 1
                               ? null
                               : () {
@@ -1956,7 +1977,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                   ),
                   const SizedBox(height: 6),
                   _buildCompactField(
-                    label: 'Count',
+                    label: 'daily_sales_close.count'.tr,
                     controller: countController,
                     keyboardType: TextInputType.number,
                     enabled: !isReadOnly,
@@ -1978,7 +1999,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                   const SizedBox(width: 6),
                   Expanded(
                     child: _buildCompactField(
-                      label: 'Count',
+                      label: 'daily_sales_close.count'.tr,
                       controller: countController,
                       keyboardType: TextInputType.number,
                       enabled: !isReadOnly,
@@ -2009,7 +2030,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Denomination',
+          'daily_sales_close.denomination'.tr,
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s12,
@@ -2052,7 +2073,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                           )
                         : null,
                     hint: Text(
-                      'Select',
+                      'daily_sales_close.select'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s10,
@@ -2217,7 +2238,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Day Close',
+                              'daily_sales_close.btn_day_close'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.bold,
                                 FontSize.s18,
@@ -2227,7 +2248,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Summary of today\'s activities',
+                              'daily_sales_close.day_close_subtitle'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s11,
@@ -2285,7 +2306,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                     const SizedBox(height: 16),
                                     ElevatedButton(
                                       onPressed: _fetchSummary,
-                                      child: const Text('Retry'),
+                                      child: Text('restaurant.retry'.tr),
                                     ),
                                   ],
                                 ),
@@ -2302,7 +2323,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                   children: [
                                     // User Name & Store Info Section
                                     Text(
-                                      'Session Information',
+                                      'daily_sales_close.session_info'.tr,
                                       style: buildCustomStyle(
                                         FontWeightManager.semiBold,
                                         FontSize.s12,
@@ -2323,17 +2344,17 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                         children: [
                                           _buildInfoRow(
                                               Icons.person_outline,
-                                              'User',
+                                              'daily_sales_close.user'.tr,
                                               summary?.userName ?? '-'),
                                           const SizedBox(height: 10),
                                           _buildInfoRow(
                                               Icons.calendar_today_outlined,
-                                              'Opening',
+                                              'daily_sales_close.opening'.tr,
                                               '${summary?.openingDate ?? '-'} at ${summary?.openingTime ?? '-'}'),
                                           const SizedBox(height: 10),
                                           _buildInfoRow(
                                               Icons.event_available_outlined,
-                                              'Closing',
+                                              'daily_sales_close.closing'.tr,
                                               '${summary?.closingDate ?? '-'} at ${summary?.closingTime ?? '-'}'),
                                         ],
                                       ),
@@ -2342,11 +2363,11 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                     _buildTwoColumnRow(
                                       isNarrow: isNarrow,
                                       left: _buildDateField(
-                                        label: 'Business Date',
+                                        label: 'daily_sales_close.business_date'.tr,
                                         controller: _businessDateController,
                                       ),
                                       right: _buildAmountField(
-                                        label: 'Shift Name',
+                                        label: 'daily_sales_close.shift_name'.tr,
                                         controller: _shiftNameController,
                                         enabled: true,
                                       ),
@@ -2355,18 +2376,18 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                     _buildTwoColumnRow(
                                       isNarrow: isNarrow,
                                       left: _buildTimePickerField(
-                                        label: 'Opening Time',
+                                        label: 'daily_sales_close.opening_time'.tr,
                                         controller: _openingTimeController,
                                       ),
                                       right: _buildTimePickerField(
-                                        label: 'Closing Time',
+                                        label: 'daily_sales_close.closing_time'.tr,
                                         controller: _closingTimeController,
                                       ),
                                     ),
                                     const SizedBox(height: 20),
 
                                     Text(
-                                      'Transaction Overview',
+                                      'daily_sales_close.tx_overview'.tr,
                                       style: buildCustomStyle(
                                         FontWeightManager.semiBold,
                                         FontSize.s12,
@@ -2386,7 +2407,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                               ? double.infinity
                                               : (constraints.maxWidth - 12) / 2,
                                           child: _buildSummaryCard(
-                                            'TOTAL ORDERS',
+                                            'daily_sales_close.total_orders_cap'.tr,
                                             summary?.totalOrders?.toString() ??
                                                 '0',
                                             icon: Icons.shopping_bag_outlined,
@@ -2397,7 +2418,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                               ? double.infinity
                                               : (constraints.maxWidth - 12) / 2,
                                           child: _buildSummaryCard(
-                                            'TOTAL SALES',
+                                            'daily_sales_close.total_sales_cap'.tr,
                                             '$currency ${summary?.totalSales ?? '0.00'}',
                                             color: ColorManager.kPrimaryColor,
                                             icon: Icons
@@ -2418,7 +2439,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                               ? double.infinity
                                               : (constraints.maxWidth - 12) / 2,
                                           child: _buildSummaryCard(
-                                            'PAYMENT RECEIVED',
+                                            'daily_sales_close.payment_received_cap'.tr,
                                             '$currency ${summary?.paymentReceived ?? '0.00'}',
                                             icon: Icons.check_circle_outline,
                                           ),
@@ -2428,7 +2449,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                               ? double.infinity
                                               : (constraints.maxWidth - 12) / 2,
                                           child: _buildSummaryCard(
-                                            'COLLECTED ON SALE',
+                                            'daily_sales_close.collected_on_sale_cap'.tr,
                                             '$currency ${summary?.collectedOnSale ?? '0.00'}',
                                             icon: Icons.monetization_on_outlined,
                                           ),
@@ -2439,35 +2460,35 @@ class _DayCloseModalState extends State<DayCloseModal> {
 
                                     // Small summary rows
                                     _buildSmallSummaryRow(
-                                      'CASH SALES',
+                                      'daily_sales_close.cash_sales_cap'.tr,
                                       '$currency ${summary?.cashSales ?? '0.00'}',
-                                      'ONLINE SALES',
+                                      'daily_sales_close.online_sales_cap'.tr,
                                       '$currency ${summary?.onlineSales ?? '0.00'}',
                                     ),
                                     const SizedBox(height: 10),
                                     _buildSmallSummaryRow(
-                                      'CREDIT AMOUNT',
+                                      'daily_sales_close.credit_amount_cap'.tr,
                                       '$currency ${summary?.creditAmount ?? '0.00'}',
-                                      'CREDIT COLLECTED',
+                                      'daily_sales_close.credit_collected_cap'.tr,
                                       '$currency ${summary?.creditCollected ?? '0.00'}',
                                     ),
                                     const SizedBox(height: 10),
                                     _buildSmallSummaryRow(
-                                      'CASH EXPENSES',
+                                      'daily_sales_close.cash_expenses_cap'.tr,
                                       '$currency ${_expenseCash.toStringAsFixed(2)}',
-                                      'BANK EXPENSES',
+                                      'daily_sales_close.bank_expenses_cap'.tr,
                                       '$currency ${_expenseBank.toStringAsFixed(2)}',
                                     ),
                                     const SizedBox(height: 10),
                                     _buildSmallSummaryItem(
-                                      'TOTAL EXPENSE',
+                                      'daily_sales_close.total_expense_cap'.tr,
                                       '$currency ${_expenseTotal.toStringAsFixed(2)}',
                                       color: Colors.red.shade700,
                                     ),
                                     const SizedBox(height: 16),
 
                                     Text(
-                                      'Cash In Hand',
+                                      'daily_sales_close.cash_in_hand'.tr,
                                       style: buildCustomStyle(
                                         FontWeightManager.semiBold,
                                         FontSize.s12,
@@ -2477,20 +2498,20 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                     ),
                                     const SizedBox(height: 12),
                                     _buildAmountField(
-                                      label: 'Opening Cash In Hand',
+                                      label: 'daily_sales_close.opening_cash_in_hand'.tr,
                                       controller: _openingCashInHandController,
                                       enabled: !_openingPrefilled,
                                     ),
                                     const SizedBox(height: 12),
                                     _buildAmountField(
-                                      label: 'Closing Cash In Hand',
+                                      label: 'daily_sales_close.closing_cash_in_hand'.tr,
                                       controller: _closingCashInHandController,
                                     ),
                                     const SizedBox(height: 16),
 
                                     // Returns & Refunds Section
                                     Text(
-                                      'Returns & Refunds',
+                                      'daily_sales_close.returns_refunds'.tr,
                                       style: buildCustomStyle(
                                         FontWeightManager.semiBold,
                                         FontSize.s12,
@@ -2500,16 +2521,16 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                     ),
                                     const SizedBox(height: 12),
                                     _buildSmallSummaryRow(
-                                      'TOTAL RETURNS',
+                                      'daily_sales_close.total_returns_cap'.tr,
                                       '$currency ${summary?.totalReturns ?? '0.00'}',
-                                      'TOTAL REFUNDS',
+                                      'daily_sales_close.total_refunds_cap'.tr,
                                       '$currency ${summary?.totalRefunds ?? '0.00'}',
                                       color1: Colors.red.shade600,
                                       color2: Colors.red.shade600,
                                     ),
                                     const SizedBox(height: 20),
                                     _buildBreakdownSection(
-                                      title: 'Opening Cash Breakdown',
+                                      title: 'daily_sales_close.opening_cash_breakdown'.tr,
                                       denominationControllers:
                                           _openingDenominationControllers,
                                       countControllers:
@@ -2533,7 +2554,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                     ),
                                     const SizedBox(height: 20),
                                     _buildBreakdownSection(
-                                      title: 'Closing Cash Breakdown',
+                                      title: 'daily_sales_close.closing_cash_breakdown'.tr,
                                       onDenominationChanged: (_) => _recalculateClosingCash(),
                                       onCountChanged: (_) => _recalculateClosingCash(),
                                       onRowRemoved: () => _recalculateClosingCash(),
@@ -2559,17 +2580,17 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                     ),
                                     const SizedBox(height: 12),
                                     _buildAmountField(
-                                      label: 'Cash Refunds',
+                                      label: 'daily_sales_close.cash_refunds'.tr,
                                       controller: _cashRefundsController,
                                     ),
                                     const SizedBox(height: 12),
                                     _buildAmountField(
-                                      label: 'Cash Drop Amount',
+                                      label: 'daily_sales_close.cash_drop_amount'.tr,
                                       controller: _cashDropAmountController,
                                     ),
                                     const SizedBox(height: 12),
                                     _buildTextAreaField(
-                                      label: 'Notes',
+                                      label: 'daily_sales_close.notes'.tr,
                                       controller: _notesController,
                                       maxLines: 3,
                                     ),
@@ -2601,7 +2622,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                               backgroundColor: Colors.grey.shade100,
                             ),
                             child: Text(
-                              'Cancel',
+                              'daily_sales_close.cancel'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.semiBold,
                                 FontSize.s13,
@@ -2652,7 +2673,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                       ),
                                     )
                                   : Text(
-                                      'Close Day',
+                                      'daily_sales_close.close_day'.tr,
                                       style: buildCustomStyle(
                                         FontWeightManager.bold,
                                         FontSize.s13,
@@ -2681,7 +2702,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                               backgroundColor: Colors.grey.shade100,
                             ),
                             child: Text(
-                              'Cancel',
+                              'daily_sales_close.cancel'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.semiBold,
                                 FontSize.s13,
@@ -2731,7 +2752,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                       ),
                                     )
                                   : Text(
-                                      'Close Day',
+                                      'daily_sales_close.close_day'.tr,
                                       style: buildCustomStyle(
                                         FontWeightManager.bold,
                                         FontSize.s13,
@@ -2822,7 +2843,7 @@ class _DayCloseMobileCard extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    'Orders: ${data.totalOrders ?? 0}',
+                    'daily_sales_close.orders_prefix'.tr + '${data.totalOrders ?? 0}',
                     style: buildCustomStyle(
                       FontWeightManager.medium,
                       FontSize.s11, 0.16,
@@ -2830,7 +2851,7 @@ class _DayCloseMobileCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 16),
                   Text(
-                    'Cash: $currency ${data.totalCash ?? "0"}',
+                    'daily_sales_close.cash_prefix'.tr + '$currency ${data.totalCash ?? "0"}',
                     style: buildCustomStyle(
                       FontWeightManager.medium,
                       FontSize.s11, 0.16,
@@ -2843,7 +2864,7 @@ class _DayCloseMobileCard extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    'Online: $currency ${data.totalOnline ?? "0"}',
+                    'daily_sales_close.online_prefix'.tr + '$currency ${data.totalOnline ?? "0"}',
                     style: buildCustomStyle(
                       FontWeightManager.medium,
                       FontSize.s11, 0.16,
@@ -2851,7 +2872,7 @@ class _DayCloseMobileCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 16),
                   Text(
-                    'Credit: $currency ${data.totalCredit ?? "0"}',
+                    'daily_sales_close.credit_prefix'.tr + '$currency ${data.totalCredit ?? "0"}',
                     style: buildCustomStyle(
                       FontWeightManager.medium,
                       FontSize.s11, 0.16,
@@ -2864,7 +2885,7 @@ class _DayCloseMobileCard extends StatelessWidget {
               const SizedBox(height: 6),
               // Business date
               Text(
-                'Business Date: ${data.businessDate ?? "-"}',
+                'daily_sales_close.business_date_prefix'.tr + '${data.businessDate ?? "-"}',
                 style: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s11, 0.16,
