@@ -1047,6 +1047,36 @@ class StockProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void mergeRealtimeStocks(
+    List<stock_models.ListStockModelData> changedStocks, {
+    required Set<int> deletedStockIds,
+  }) {
+    final merged =
+        List<stock_models.ListStockModelData>.from(_allStocks ?? const []);
+    final indexById = <int, int>{};
+    for (var i = 0; i < merged.length; i++) {
+      final id = merged[i].stockId;
+      if (id != null) indexById[id] = i;
+    }
+    for (final stock in changedStocks) {
+      final id = stock.stockId;
+      final index = id == null ? null : indexById[id];
+      if (index == null) {
+        merged.add(stock);
+        if (id != null) indexById[id] = merged.length - 1;
+      } else {
+        merged[index] = stock;
+      }
+    }
+    if (deletedStockIds.isNotEmpty) {
+      merged.removeWhere(
+        (stock) =>
+            stock.stockId != null && deletedStockIds.contains(stock.stockId),
+      );
+    }
+    applyRealtimeStocks(merged);
+  }
+
   /// Apply local pagination and filtering for stocks
   void applyStockFiltersLocally({
     String? filterName,

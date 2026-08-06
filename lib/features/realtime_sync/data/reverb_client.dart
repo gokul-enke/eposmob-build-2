@@ -147,12 +147,23 @@ class ReverbClient {
   Future<void> disconnect() async {
     _closedByClient = true;
     _subscribed = false;
+    _connecting = false;
     final subscription = _subscription;
     final channel = _channel;
     _subscription = null;
     _channel = null;
-    await subscription?.cancel();
-    await channel?.sink.close();
+    try {
+      await Future.wait<void>([
+        if (subscription != null) subscription.cancel(),
+        if (channel != null) channel.sink.close(),
+      ]).timeout(const Duration(seconds: 2));
+    } on TimeoutException {
+      // Local state is already detached. A stuck platform socket must not
+      // block store switching, logout, or application lifecycle changes.
+    } catch (_) {
+      // Socket cleanup is best-effort because the remote endpoint may be
+      // absent, already closed, or unreachable.
+    }
   }
 
   bool _isSameSession(

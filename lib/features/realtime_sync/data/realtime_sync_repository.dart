@@ -31,6 +31,8 @@ class RealtimeSyncRepository {
   Future<void> apply({
     required RealtimeSyncSession session,
     required RealtimeChangeSet changes,
+    required String? updatedFrom,
+    required String updatedTo,
     required bool Function() isCurrent,
   }) async {
     if (!changes.hasChanges) return;
@@ -41,30 +43,54 @@ class RealtimeSyncRepository {
       );
     }
 
+    final hasProductBaseline = _localProducts.products.isNotEmpty;
+    final hasCustomerBaseline = _customers.allCustomers?.isNotEmpty ?? false;
+    final hasStockBaseline = _stocks.allStocks?.isNotEmpty ?? false;
+    final canUseRange =
+        updatedFrom != null && DateTime.tryParse(updatedFrom) != null;
+
     RealtimeCatalogSnapshot? catalog;
     if (changes.hasCatalogChanges) {
-      catalog = await _entityApi.fetchCatalog(session);
+      catalog = await _entityApi.fetchCatalog(
+        session,
+        updatedFrom: canUseRange && hasProductBaseline ? updatedFrom : null,
+        updatedTo: canUseRange && hasProductBaseline ? updatedTo : null,
+      );
       if (!isCurrent()) return;
     }
 
     if (changes.customers.hasChanges) {
-      final customers = await _entityApi.fetchCustomers(session);
+      final customers = await _entityApi.fetchCustomers(
+        session,
+        updatedFrom: canUseRange && hasCustomerBaseline ? updatedFrom : null,
+        updatedTo: canUseRange && hasCustomerBaseline ? updatedTo : null,
+      );
       if (!isCurrent()) return;
-      await _customers.applyRealtimeCustomers(
+      await _customers.mergeRealtimeCustomers(
         customers,
         storeId: session.storeId,
+        deletedCustomerIds: changes.customers.deleted.toSet(),
       );
-      _customerSelection.reconcileWithCustomers(customers);
+      _customerSelection.reconcileWithCustomers(
+        _customers.allCustomers ?? const [],
+      );
     }
 
     if (changes.stocks.hasChanges) {
-      final stocks = await _entityApi.fetchStocks(session);
+      final stocks = await _entityApi.fetchStocks(
+        session,
+        updatedFrom: canUseRange && hasStockBaseline ? updatedFrom : null,
+        updatedTo: canUseRange && hasStockBaseline ? updatedTo : null,
+      );
       if (!isCurrent()) return;
-      _stocks.applyRealtimeStocks(stocks);
+      _stocks.mergeRealtimeStocks(
+        stocks,
+        deletedStockIds: changes.stocks.deleted.toSet(),
+      );
     }
 
     if (catalog != null && isCurrent()) {
-      await _localProducts.applyRealtimeCatalog(
+      await _localProducts.mergeRealtimeCatalog(
         catalog.products,
         deletedProductIds: {
           ...catalog.deletedProductIds,

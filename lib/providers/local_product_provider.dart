@@ -2131,6 +2131,35 @@ class LocalProductProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Merges a realtime delta into the current catalog, then delegates to the
+  /// authoritative apply path so cart reservations and Hive persistence keep
+  /// their existing behavior.
+  Future<void> mergeRealtimeCatalog(
+    List<GetProduct> changedProducts, {
+    required Set<int> deletedProductIds,
+  }) async {
+    final merged = List<GetProduct>.from(_products);
+    final indexById = <int, int>{};
+    for (var i = 0; i < merged.length; i++) {
+      final id = merged[i].productId;
+      if (id != null) indexById[id] = i;
+    }
+    for (final product in changedProducts) {
+      final id = product.productId;
+      final index = id == null ? null : indexById[id];
+      if (index == null) {
+        merged.add(product);
+        if (id != null) indexById[id] = merged.length - 1;
+      } else {
+        merged[index] = product;
+      }
+    }
+    await applyRealtimeCatalog(
+      merged,
+      deletedProductIds: deletedProductIds,
+    );
+  }
+
   /// Fetch products from API with pagination
   Future<void> fetchProductsFromAPI({
     bool refresh = false,
