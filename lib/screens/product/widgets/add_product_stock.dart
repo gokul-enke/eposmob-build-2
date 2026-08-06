@@ -1642,7 +1642,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         });
         showScaffold(
           context: context,
-          message: 'No changes made - edit cancelled',
+          message: 'add_stock.no_changes_edit_cancelled'.tr,
         );
         return; // Exit early - don't add anything
       }
@@ -1681,13 +1681,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
     if (selectedStore == null) {
       debugPrint('❌ STORE VALIDATION FAILED: No store selected');
-      showScaffoldError(context: context, message: 'Please select a store');
+      showScaffoldError(context: context, message: 'add_stock.select_store_error'.tr);
       return;
     }
 
     if (selectedSupplier == null || selectedSupplier!.id == 0) {
       debugPrint('❌ SUPPLIER VALIDATION FAILED: No supplier selected');
-      showScaffoldError(context: context, message: 'Please select a supplier');
+      showScaffoldError(context: context, message: 'add_stock.select_supplier_error'.tr);
       return;
     }
 
@@ -1698,7 +1698,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           '❌ ITEM HIDDEN: Stock item ${index + 1} is hidden and cannot be added');
       showScaffoldError(
           context: context,
-          message: 'This stock item has been deleted and cannot be added');
+          message: 'add_stock.item_deleted_cannot_add'.tr);
       return;
     }
 
@@ -1707,7 +1707,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           '❌ ITEM ALREADY ADDED: Stock item ${index + 1} is already successfully added');
       showScaffoldError(
           context: context,
-          message: 'This stock item has already been added successfully');
+          message: 'add_stock.item_already_added'.tr);
       return;
     }
 
@@ -1800,7 +1800,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         _markForRecalculation();
         _calculateTotalStockValue();
         showScaffold(
-            context: context, message: 'Stock item added to pending list');
+            context: context, message: 'add_stock.stock_item_added_pending'.tr);
         debugPrint('✅ SINGLE STOCK ITEM MARKED AS SUCCESSFULLY ADDED LOCALLY');
 
         // Automatically add a new empty row after successful stock addition
@@ -1829,7 +1829,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
         // Get validation errors from stock provider
         final validationErrors = stockProvider.validateStockItem(stockItemData);
-        String errorMessage = 'Please complete all required fields:';
+        String errorMessage = 'add_stock.complete_required_fields'.tr;
 
         validationErrors.forEach((field, error) {
           if (error != null) {
@@ -2031,7 +2031,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
     showScaffold(
       context: context,
-      message: 'Edit cancelled',
+      message: 'add_stock.edit_cancelled'.tr,
     );
     debugPrint('🔄 Edit mode cancelled');
   }
@@ -2395,7 +2395,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Confirm Delete',
+                  'add_stock.confirm_delete_title'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.semiBold,
                     FontSize.s16,
@@ -2407,7 +2407,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             ],
           ),
           content: Text(
-            'Are you sure you want to delete this stock item? This action cannot be undone.',
+            'add_stock.confirm_delete_message'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,
@@ -2421,7 +2421,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 Navigator.of(context).pop();
               },
               child: Text(
-                'Cancel',
+                'add_stock.cancel'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s14,
@@ -2453,11 +2453,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
                 showScaffold(
                     context: context,
-                    message: 'Stock item deleted successfully');
+                    message: 'add_stock.stock_item_deleted'.tr);
                 debugPrint('🗑️ DELETED STOCK ITEM AT INDEX $index');
               },
               child: Text(
-                'Delete',
+                'add_stock.delete'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s14,
@@ -2582,7 +2582,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Batch Processing Results',
+                  'add_stock.batch_title'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.semiBold,
                     FontSize.s16,
@@ -2622,7 +2622,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                               ),
                             ),
                             Text(
-                              'Total',
+                              'add_stock.batch_total'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.medium,
                                 FontSize.s12,
@@ -2655,7 +2655,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                               ),
                             ),
                             Text(
-                              'Successful',
+                              'add_stock.batch_successful'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.medium,
                                 FontSize.s12,
@@ -2688,7 +2688,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                               ),
                             ),
                             Text(
-                              'Failed',
+                              'add_stock.batch_failed'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.medium,
                                 FontSize.s12,
@@ -2704,7 +2704,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Detailed Results:',
+                  'add_stock.detailed_results'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.semiBold,
                     FontSize.s14,
@@ -2762,7 +2762,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    isSuccess ? 'Success' : 'Failed',
+                                    isSuccess ? 'add_stock.success'.tr : 'add_stock.failed'.tr,
                                     style: buildCustomStyle(
                                       FontWeightManager.semiBold,
                                       FontSize.s12,
@@ -2774,7 +2774,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    result['message'] ?? 'No message',
+                                    result['message'] ?? 'add_stock.no_message'.tr,
                                     style: buildCustomStyle(
                                       FontWeightManager.regular,
                                       FontSize.s11,
@@ -2813,7 +2813,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                             showScaffold(
                                 context: context,
                                 message:
-                                    'Failed items reset for retry. Click Finish to try again.');
+                                    'add_stock.retry_reset_message'.tr);
                           },
                     icon: Icon(
                       Icons.refresh,
@@ -2823,7 +2823,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           : Colors.orange.shade600,
                     ),
                     label: Text(
-                      'Retry Failed',
+                      'add_stock.retry_failed'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s14,
@@ -2842,7 +2842,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 Navigator.of(context).pop();
               },
               child: Text(
-                'Close',
+                'add_stock.close'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s14,
@@ -2985,7 +2985,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   //   width: 10,
                   // ),
                   Text(
-                    'Add Product Stock',
+                    'add_stock.title'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s20,
@@ -3051,7 +3051,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildDateField("Date", selectedDate,
+            _buildDateField('add_stock.date'.tr, selectedDate,
                 (date) => setState(() => selectedDate = date)),
             const SizedBox(height: 12),
             _buildStoreDropdown(size),
@@ -3068,7 +3068,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-              child: _buildDateField("Date", selectedDate,
+              child: _buildDateField('add_stock.date'.tr, selectedDate,
                   (date) => setState(() => selectedDate = date))),
           const SizedBox(width: 20),
           Expanded(child: _buildStoreDropdown(size)),
@@ -3103,8 +3103,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           child: CalendarPickerTableCell(
             initialDate: selectedDate,
             onDateSelected: onDateSelected,
-            hintText: "Select $title",
-            isRequired: title.toLowerCase().contains('date'),
+            hintText: 'add_stock.select_field'.tr.replaceAll('@field', title),
+            isRequired: true,
             firstDate:
                 DateTime(2020), // Allow past dates for all general date fields
             lastDate: DateTime(2030),
@@ -3150,7 +3150,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    selectedStore?.name ?? 'Loading active store...',
+                    selectedStore?.name ?? 'add_stock.loading_active_store'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.medium,
                       FontSize.s14,
@@ -3190,7 +3190,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 Expanded(
                   child: BuildDropDownWithSearch<Supplier>(
                     // title: "Supplier",
-                    hintText: "Select Supplier",
+                    hintText: 'add_stock.select_supplier'.tr,
                     value: selectedSupplier,
                     items: supplierList,
                     onChanged: (value) {
@@ -3201,7 +3201,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     displayText: (supplier) => supplier.name,
                     searchController: supplierSearchController,
                     isRequired: true,
-                    searchHintText: "Search for supplier...",
+                    searchHintText: 'add_stock.search_supplier'.tr,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -3314,15 +3314,15 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       ),
       child: Row(
         children: [
-          _buildHeaderCell("No.", flex: 1, width: 40),
-          _buildHeaderCell("Barcode", flex: 2),
-          _buildHeaderCell("Product", flex: 4),
-          _buildHeaderCell("Unit", flex: 1),
-          _buildHeaderCell("Qty", flex: 1, width: 40),
-          _buildHeaderCell("Purchase Rate", flex: 2),
-          _buildHeaderCell("Retail Price", flex: 2),
-          _buildHeaderCell("MRP", flex: 1),
-          _buildHeaderCell("Actions", flex: 2, isLast: true),
+          _buildHeaderCell('add_stock.col_no'.tr, flex: 1, width: 40),
+          _buildHeaderCell('add_stock.barcode'.tr, flex: 2),
+          _buildHeaderCell('add_stock.product'.tr, flex: 4),
+          _buildHeaderCell('add_stock.unit'.tr, flex: 1),
+          _buildHeaderCell('add_stock.qty'.tr, flex: 1, width: 40),
+          _buildHeaderCell('add_stock.purchase_rate'.tr, flex: 2),
+          _buildHeaderCell('add_stock.retail_price'.tr, flex: 2),
+          _buildHeaderCell('add_stock.mrp'.tr, flex: 1),
+          _buildHeaderCell('add_stock.actions'.tr, flex: 2, isLast: true),
           // _buildHeaderCell("No.", flex: 0, width: 40),
           // _buildHeaderCell("Barcode", flex: 2),
           // _buildHeaderCell("Category", flex: 2),
@@ -3494,7 +3494,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Barcode: ${item.barcode.isEmpty ? "-" : item.barcode}',
+                        'add_stock.barcode_prefix'.tr.replaceAll('@code', item.barcode.isEmpty ? "-" : item.barcode),
                         style: buildCustomStyle(
                           FontWeightManager.regular,
                           11,
@@ -3503,7 +3503,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         ),
                       ),
                       Text(
-                        'Unit: ${item.unit}',
+                        'add_stock.unit_prefix'.tr.replaceAll('@unit', item.unit),
                         style: buildCustomStyle(
                           FontWeightManager.regular,
                           11,
@@ -3523,7 +3523,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Qty',
+                              'add_stock.qty'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 10,
@@ -3534,7 +3534,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                             const SizedBox(height: 4),
                             _InlineEditableField(
                               value: item.quantity,
-                              hintText: 'Qty',
+                              hintText: 'add_stock.qty'.tr,
                               inputFormatters:
                                   quantityInputFormattersForUnit(item.unit),
                               onChanged: (val) => _updateStockItemFieldInline(
@@ -3549,7 +3549,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Purchase Rate',
+                              'add_stock.purchase_rate'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 10,
@@ -3583,7 +3583,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                 }
                                 return _InlineEditableField(
                                   value: item.purchaseRate,
-                                  hintText: 'Rate',
+                                  hintText: 'add_stock.rate_hint'.tr,
                                   onChanged: (val) =>
                                       _updateStockItemFieldInline(
                                           originalIndex, 'purchaseRate', val),
@@ -3603,7 +3603,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Retail Price',
+                              'add_stock.retail_price'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 10,
@@ -3637,7 +3637,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                 }
                                 return _InlineEditableField(
                                   value: item.salePrice,
-                                  hintText: 'Price',
+                                  hintText: 'add_stock.price_hint'.tr,
                                   onChanged: (val) =>
                                       _updateStockItemFieldInline(
                                           originalIndex, 'salePrice', val),
@@ -3653,7 +3653,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'MRP',
+                              'add_stock.mrp'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 10,
@@ -3664,7 +3664,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                             const SizedBox(height: 4),
                             _InlineEditableField(
                               value: item.mrp,
-                              hintText: 'MRP',
+                              hintText: 'add_stock.mrp'.tr,
                               onChanged: (val) => _updateStockItemFieldInline(
                                   originalIndex, 'mrp', val),
                             ),
@@ -3745,7 +3745,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         flex: 1,
                         child: _InlineEditableField(
                           value: item.quantity,
-                          hintText: 'Qty',
+                          hintText: 'add_stock.qty'.tr,
                           inputFormatters:
                               quantityInputFormattersForUnit(item.unit),
                           onChanged: (val) => _updateStockItemFieldInline(
@@ -3776,7 +3776,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                             }
                             return _InlineEditableField(
                               value: item.purchaseRate,
-                              hintText: 'Rate',
+                              hintText: 'add_stock.rate_hint'.tr,
                               onChanged: (val) => _updateStockItemFieldInline(
                                   originalIndex, 'purchaseRate', val),
                             );
@@ -3807,7 +3807,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                             }
                             return _InlineEditableField(
                               value: item.salePrice,
-                              hintText: 'Price',
+                              hintText: 'add_stock.price_hint'.tr,
                               onChanged: (val) => _updateStockItemFieldInline(
                                   originalIndex, 'salePrice', val),
                             );
@@ -3818,7 +3818,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         flex: 1,
                         child: _InlineEditableField(
                           value: item.mrp,
-                          hintText: 'MRP',
+                          hintText: 'add_stock.mrp'.tr,
                           onChanged: (val) => _updateStockItemFieldInline(
                               originalIndex, 'mrp', val),
                         ),
@@ -3945,7 +3945,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Pending Items Ready',
+                            'add_stock.pending_items_ready'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.semiBold,
                               FontSize.s14,
@@ -3955,7 +3955,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${stockProvider.pendingStockItemsCount} stock items are ready to be processed. Click "Finish" to process all items via API.',
+                            'add_stock.pending_items_ready_desc'.tr.replaceAll('@count', stockProvider.pendingStockItemsCount.toString()),
                             style: buildCustomStyle(
                               FontWeightManager.regular,
                               FontSize.s12,
@@ -3979,7 +3979,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
             // Dynamic payment method selector using API payment methods
             BuildDynamicPaymentSelector(
-              title: "Select Payment Method",
+              title: 'add_stock.select_payment_method'.tr,
               paymentMethods: _paymentMethods,
               isLoading: _isLoadingPaymentMethods,
               onPaymentChanged: (data) {
@@ -4027,7 +4027,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
     // Get supplier information
     final double additionalPurchaseTax = _getAdditionalPurchaseTaxTotal();
-    String supplierName = selectedSupplier?.name ?? 'No Supplier';
+    String supplierName = selectedSupplier?.name ?? 'add_stock.no_supplier'.tr;
     double supplierBalance =
         _getSupplierBalance(); // Helper method to get balance
     double totalPayable = totalPurchaseAmount + supplierBalance;
@@ -4059,7 +4059,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Purchase Summary',
+                      'add_stock.purchase_summary'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         FontSize.s16,
@@ -4069,7 +4069,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Supplier: $supplierName',
+                      'add_stock.supplier_prefix'.tr.replaceAll('@name', supplierName),
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s12,
@@ -4099,7 +4099,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       children: [
                         Expanded(
                           child: _buildSummaryCard(
-                            'Total Items',
+                            'add_stock.total_items'.tr,
                             totalItems.toString(),
                             Icons.inventory_2_outlined,
                             Colors.blue.shade600,
@@ -4108,7 +4108,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: _buildSummaryCard(
-                            'Total Purchase Amount',
+                            'add_stock.total_purchase_amount'.tr,
                             '${totalPurchaseAmount.toStringAsFixed(2)}',
                             Icons.shopping_cart_outlined,
                             Colors.green.shade600,
@@ -4121,7 +4121,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       children: [
                         Expanded(
                           child: _buildSummaryCard(
-                            'Total Quantity',
+                            'add_stock.total_quantity'.tr,
                             _formatNumber(totalQuantity),
                             Icons.format_list_numbered_outlined,
                             Colors.orange.shade600,
@@ -4130,7 +4130,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: _buildSummaryCard(
-                            'Total Due Amount',
+                            'add_stock.total_due_amount'.tr,
                             '${totalPayable.toStringAsFixed(2)}',
                             Icons.payment_outlined,
                             totalPayable >= 0
@@ -4149,7 +4149,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 children: [
                   Expanded(
                     child: _buildSummaryCard(
-                      'Total Items',
+                      'add_stock.total_items'.tr,
                       totalItems.toString(),
                       Icons.inventory_2_outlined,
                       Colors.blue.shade600,
@@ -4158,7 +4158,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildSummaryCard(
-                      'Total Purchase Amount',
+                      'add_stock.total_purchase_amount'.tr,
                       '${totalPurchaseAmount.toStringAsFixed(2)}',
                       Icons.shopping_cart_outlined,
                       Colors.green.shade600,
@@ -4167,7 +4167,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildSummaryCard(
-                      'Total Quantity',
+                      'add_stock.total_quantity'.tr,
                       _formatNumber(totalQuantity),
                       Icons.format_list_numbered_outlined,
                       Colors.orange.shade600,
@@ -4176,7 +4176,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildSummaryCard(
-                      'Total Due Amount',
+                      'add_stock.total_due_amount'.tr,
                       '${totalPayable.toStringAsFixed(2)}',
                       Icons.payment_outlined,
                       totalPayable >= 0
@@ -4194,7 +4194,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             Align(
               alignment: Alignment.centerRight,
               child: Text(
-                'Additional purchase tax: ${additionalPurchaseTax.toStringAsFixed(2)}',
+                'add_stock.additional_purchase_tax'.tr.replaceAll('@amount', additionalPurchaseTax.toStringAsFixed(2)),
                 style: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s11,
@@ -4250,7 +4250,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Supplier Balance',
+                'add_stock.supplier_balance'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s10,
@@ -4368,10 +4368,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             : Colors.black;
 
     String balanceLabel = isToPay
-        ? 'Amount to Pay'
+        ? 'add_stock.amount_to_pay'.tr
         : isToReceive
-            ? 'Amount to Receive'
-            : 'Current Balance';
+            ? 'add_stock.amount_to_receive'.tr
+            : 'add_stock.current_balance'.tr;
 
     IconData icon = isToPay
         ? Icons.arrow_upward
@@ -4484,8 +4484,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                     ),
                                   ],
                                 ),
-                                child: const Text(
-                                  'Edited',
+                                child: Text(
+                                  'add_stock.edited'.tr,
                                   style: TextStyle(
                                     color: Colors.black87,
                                     fontSize: 8,
@@ -4514,8 +4514,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           child: TextFormField(
                             controller: _getBarcodeController(index),
                             focusNode: _getBarcodeFocusNode(index),
-                            decoration: const InputDecoration(
-                              hintText: 'Barcode',
+                            decoration: InputDecoration(
+                              hintText: 'add_stock.barcode'.tr,
                               border: InputBorder.none,
                               contentPadding: EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 8),
@@ -4548,7 +4548,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       const SizedBox(width: 8),
                       // Add Product Button
                       Tooltip(
-                        message: "Create new product",
+                        message: 'add_stock.create_new_product'.tr,
                         child: Container(
                           height: 40,
                           width: 40,
@@ -4620,7 +4620,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         minWidth: 40,
                         minHeight: 40,
                       ),
-                      tooltip: "View product details",
+                      tooltip: 'add_stock.view_product_details'.tr,
                     ),
                   ),
                   const SizedBox(width: 4),
@@ -4640,8 +4640,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         inputFormatters:
                             quantityInputFormattersForUnit(item.unit),
                         textAlign: TextAlign.right, // Right-aligned text
-                        decoration: const InputDecoration(
-                          hintText: 'Qty',
+                        decoration: InputDecoration(
+                          hintText: 'add_stock.qty'.tr,
                           border: InputBorder.none,
                           contentPadding:
                               EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -4709,10 +4709,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         item.isSuccessfullyAdded) ...[
                       Tooltip(
                         message: isEditingInputRow
-                            ? "Cancel edit"
+                            ? 'add_stock.cancel_edit'.tr
                             : item.isSuccessfullyAdded
-                                ? "Delete stock item"
-                                : "Clear product selection",
+                                ? 'add_stock.delete_stock_item'.tr
+                                : 'add_stock.clear_product_selection'.tr,
                         child: Container(
                           height: 40,
                           width: 40,
@@ -4762,10 +4762,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     if (!item.isSuccessfullyAdded) ...[
                       Tooltip(
                         message: _isLoading
-                            ? (isEditingInputRow ? "Saving..." : "Adding...")
+                            ? (isEditingInputRow ? 'add_stock.saving'.tr : 'add_stock.adding'.tr)
                             : (isEditingInputRow
-                                ? "Save changes"
-                                : "Add stock item"),
+                                ? 'add_stock.save_changes'.tr
+                                : 'add_stock.add_stock_item'.tr),
                         child: Container(
                           height: 40,
                           width: 40,
@@ -4808,8 +4808,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     // Expand Button with Tooltip
                     Tooltip(
                       message: item.isExpanded
-                          ? "Hide details"
-                          : "Show prices, expiry & tax details",
+                          ? 'add_stock.hide_details'.tr
+                          : 'add_stock.show_details'.tr,
                       child: Container(
                         height: 40,
                         width: 40,
@@ -4898,14 +4898,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         if (_variantFeatureEnabled() &&
                             item.variantName?.isNotEmpty == true)
                           _buildDetailChip(
-                            'Variant',
+                            'add_stock.variant'.tr,
                             item.variantName!,
                             Icons.tune,
                             Colors.deepPurple.shade600,
                           ),
                         if (item.salePrice.isNotEmpty)
                           _buildDetailChip(
-                              "Retail",
+                              'add_stock.retail'.tr,
                               !item.taxInclude && item.calculatedTaxData != null
                                   ? ((item.calculatedTaxData![
                                                   'price_including_tax_retail']
@@ -4918,7 +4918,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                               Colors.blue.shade600),
                         if (item.purchaseRate.isNotEmpty)
                           _buildDetailChip(
-                              "Purchase",
+                              'add_stock.purchase'.tr,
                               !item.taxInclude && item.calculatedTaxData != null
                                   ? ((item.calculatedTaxData![
                                                   'price_including_tax_purchase']
@@ -4930,26 +4930,26 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                               Icons.shopping_cart,
                               Colors.green.shade600),
                         if (item.mrp.isNotEmpty)
-                          _buildDetailChip("MRP", "${item.mrp}",
+                          _buildDetailChip('add_stock.mrp'.tr, "${item.mrp}",
                               Icons.local_offer, Colors.orange.shade600),
                         if (item.wholesale.isNotEmpty)
-                          _buildDetailChip("Wholesale", "${item.wholesale}",
+                          _buildDetailChip('add_stock.wholesale'.tr, "${item.wholesale}",
                               Icons.store, Colors.purple.shade600),
                         if (item.unit.isNotEmpty)
-                          _buildDetailChip("Unit", item.unit, Icons.straighten,
+                          _buildDetailChip('add_stock.unit'.tr, item.unit, Icons.straighten,
                               Colors.indigo.shade600),
                         if (item.purchaseUnitName != null &&
                             item.purchaseUnitName!.isNotEmpty)
                           _buildDetailChip(
-                              "Purchase Unit",
+                              'add_stock.purchase_unit'.tr,
                               '${item.purchaseUnitName} x ${item.purchaseQty}',
                               Icons.inventory_2_outlined,
                               Colors.deepOrange.shade600),
                         if (item.rack.isNotEmpty)
-                          _buildDetailChip("Rack", item.rack, Icons.shelves,
+                          _buildDetailChip('add_stock.rack'.tr, item.rack, Icons.shelves,
                               Colors.teal.shade600),
                         if (item.batchNumber.isNotEmpty)
-                          _buildDetailChip("Min Wholesale", item.batchNumber,
+                          _buildDetailChip('add_stock.min_wholesale'.tr, item.batchNumber,
                               Icons.numbers, Colors.brown.shade600),
                       ],
                     ),
@@ -4979,7 +4979,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           border: Border.all(color: Colors.green.shade200),
                         ),
                         child: Text(
-                          "Total: ${purchaseTotal.toStringAsFixed(2)}",
+                          'add_stock.total_colon'.tr.replaceAll('@amount', purchaseTotal.toStringAsFixed(2)),
                           style: buildCustomStyle(
                             FontWeightManager.semiBold,
                             FontSize.s10,
@@ -5078,8 +5078,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                   ),
                                 ],
                               ),
-                              child: const Text(
-                                'Edited',
+                              child: Text(
+                                'add_stock.edited'.tr,
                                 style: TextStyle(
                                   color: Colors.black87,
                                   fontSize: 8,
@@ -5107,8 +5107,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         child: TextFormField(
                           controller: _getBarcodeController(index),
                           focusNode: _getBarcodeFocusNode(index),
-                          decoration: const InputDecoration(
-                            hintText: 'Barcode',
+                          decoration: InputDecoration(
+                            hintText: 'add_stock.barcode'.tr,
                             border: InputBorder.none,
                             contentPadding: EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 8),
@@ -5138,7 +5138,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     ),
                     const SizedBox(width: 8),
                     Tooltip(
-                      message: "Create new product",
+                      message: 'add_stock.create_new_product'.tr,
                       child: Container(
                         height: 40,
                         width: 40,
@@ -5213,7 +5213,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       minWidth: 40,
                       minHeight: 40,
                     ),
-                    tooltip: "View product details",
+                    tooltip: 'add_stock.view_product_details'.tr,
                   ),
                 ),
               ],
@@ -5237,8 +5237,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       keyboardType: TextInputType.number,
                       inputFormatters: quantityInputFormattersForUnit(item.unit),
                       textAlign: TextAlign.right,
-                      decoration: const InputDecoration(
-                        hintText: 'Qty',
+                      decoration: InputDecoration(
+                        hintText: 'add_stock.qty'.tr,
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                       ),
@@ -5301,10 +5301,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   if (item.productData != null || item.isSuccessfullyAdded) ...[
                     Tooltip(
                       message: isEditingInputRow
-                          ? "Cancel edit"
+                          ? 'add_stock.cancel_edit'.tr
                           : item.isSuccessfullyAdded
-                              ? "Delete stock item"
-                              : "Clear product selection",
+                              ? 'add_stock.delete_stock_item'.tr
+                              : 'add_stock.clear_product_selection'.tr,
                       child: Container(
                         height: 40,
                         width: 40,
@@ -5351,10 +5351,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   if (!item.isSuccessfullyAdded) ...[
                     Tooltip(
                       message: _isLoading
-                          ? (isEditingInputRow ? "Saving..." : "Adding...")
+                          ? (isEditingInputRow ? 'add_stock.saving'.tr : 'add_stock.adding'.tr)
                           : (isEditingInputRow
-                              ? "Save changes"
-                              : "Add stock item"),
+                              ? 'add_stock.save_changes'.tr
+                              : 'add_stock.add_stock_item'.tr),
                       child: Container(
                         height: 40,
                         width: 40,
@@ -5396,8 +5396,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   ],
                   Tooltip(
                     message: item.isExpanded
-                        ? "Hide details"
-                        : "Show prices, expiry & tax details",
+                        ? 'add_stock.hide_details'.tr
+                        : 'add_stock.show_details'.tr,
                     child: Container(
                       height: 40,
                       width: 40,
@@ -5753,7 +5753,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               children: [
                 Expanded(
                   child: _buildExpandedTextField(
-                    "Purchase Rate",
+                    'add_stock.purchase_rate'.tr,
                     item.purchaseRate,
                     (value) {
                       setState(() {
@@ -5772,7 +5772,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _buildExpandedTextField(
-                    "Retail Price",
+                    'add_stock.retail_price'.tr,
                     item.salePrice,
                     (value) {
                       setState(() {
@@ -5797,7 +5797,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               children: [
                 Expanded(
                   child: _buildExpandedTextField(
-                    "MRP",
+                    'add_stock.mrp'.tr,
                     item.mrp,
                     (value) {
                       setState(() {
@@ -5837,7 +5837,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 children: [
                   Expanded(
                     child: _buildReadOnlyInfoField(
-                      "Conversion Rate",
+                      'add_stock.conversion_rate'.tr,
                       item.purchaseConversionRate?.isNotEmpty == true
                           ? item.purchaseConversionRate!
                           : '-',
@@ -5846,7 +5846,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _buildReadOnlyInfoField(
-                      "Base Quantity",
+                      'add_stock.base_quantity'.tr,
                       item.quantity.isNotEmpty ? item.quantity : '-',
                     ),
                   ),
@@ -5860,7 +5860,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               children: [
                 Expanded(
                   child: _buildExpandedDatePicker(
-                    "Expiry Date",
+                    'add_stock.expiry_date'.tr,
                     item.expDate,
                     (date) {
                       setState(() => stockItems[index].expDate = date);
@@ -5871,7 +5871,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _buildExpandedTextField(
-                    "Wholesale Price",
+                    'add_stock.wholesale_price'.tr,
                     item.wholesale,
                     (value) {
                       setState(() {
@@ -5894,7 +5894,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               children: [
                 Expanded(
                   child: _buildExpandedTextField(
-                    "Minimum Units for Wholesale",
+                    'add_stock.minimum_units_wholesale'.tr,
                     item.batchNumber, // Reusing batchNumber field for minimum units
                     (value) {
                       setState(() => stockItems[index].batchNumber = value);
@@ -5936,7 +5936,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               const SizedBox(width: 6),
               Expanded(
                 child: _buildExpandedTextField(
-                  "Purchase Rate",
+                  'add_stock.purchase_rate'.tr,
                   item.purchaseRate,
                   (value) {
                     setState(() {
@@ -5955,7 +5955,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               const SizedBox(width: 6),
               Expanded(
                 child: _buildExpandedTextField(
-                  "Retail Price",
+                  'add_stock.retail_price'.tr,
                   item.salePrice,
                   (value) {
                     setState(() {
@@ -5974,7 +5974,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               const SizedBox(width: 6),
               Expanded(
                 child: _buildExpandedTextField(
-                  "MRP",
+                  'add_stock.mrp'.tr,
                   item.mrp,
                   (value) {
                     setState(() {
@@ -6004,7 +6004,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 const SizedBox(width: 6),
                 Expanded(
                   child: _buildReadOnlyInfoField(
-                    "Conversion Rate",
+                    'add_stock.conversion_rate'.tr,
                     item.purchaseConversionRate?.isNotEmpty == true
                         ? item.purchaseConversionRate!
                         : '-',
@@ -6013,7 +6013,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 const SizedBox(width: 6),
                 Expanded(
                   child: _buildReadOnlyInfoField(
-                    "Base Quantity",
+                    'add_stock.base_quantity'.tr,
                     item.quantity.isNotEmpty ? item.quantity : '-',
                   ),
                 ),
@@ -6026,7 +6026,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             children: [
               Expanded(
                 child: _buildExpandedDatePicker(
-                  "Expiry Date",
+                  'add_stock.expiry_date'.tr,
                   item.expDate,
                   (date) {
                     setState(() => stockItems[index].expDate = date);
@@ -6037,7 +6037,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               const SizedBox(width: 6),
               Expanded(
                 child: _buildExpandedTextField(
-                  "Wholesale Price",
+                  'add_stock.wholesale_price'.tr,
                   item.wholesale,
                   (value) {
                     setState(() {
@@ -6054,7 +6054,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               const SizedBox(width: 6),
               Expanded(
                 child: _buildExpandedTextField(
-                  "Minimum Units for Wholesale",
+                  'add_stock.minimum_units_wholesale'.tr,
                   item.batchNumber, // Reusing batchNumber field for minimum units
                   (value) {
                     setState(() => stockItems[index].batchNumber = value);
@@ -6129,7 +6129,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               ColorManager.textColor,
             ),
             decoration: InputDecoration(
-              hintText: "Enter $label",
+              hintText: 'add_stock.enter_field'.tr.replaceAll('@field', label),
               border: InputBorder.none,
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -6187,16 +6187,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           child: CalendarPickerTableCell(
             initialDate: selectedDate,
             onDateSelected: onDateSelected,
-            hintText: "Select $label",
-            isRequired: label.toLowerCase().contains('expiry'),
+            hintText: 'add_stock.select_field'.tr.replaceAll('@field', label),
+            isRequired: true,
             firstDate: DateTime.now(), // Expiry dates should be in the future
             lastDate: DateTime.now()
                 .add(const Duration(days: 3650)), // 10 years from now
             showQuickActions:
                 true, // Enable quick date selection for expiry dates
-            isForExpiry: label
-                .toLowerCase()
-                .contains('expiry'), // Show quick actions only for expiry dates
+            isForExpiry: true, // Show quick actions only for expiry dates
             isAllowEdit: true, // Allow text editing for expiry dates
           ),
         ),
@@ -6209,7 +6207,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Category",
+          'add_stock.category'.tr,
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s11,
@@ -6232,7 +6230,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
               return BuildDropDownWithSearch<Category>(
                 title: null,
-                hintText: "Select category",
+                hintText: 'add_stock.select_category'.tr,
                 value: stockItems[index].categoryData,
                 items: filteredCategories,
                 onChanged: (category) {
@@ -6259,7 +6257,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 searchController: _getCategorySearchController(index),
                 isRequired: false,
                 height: 40,
-                searchHintText: "Search category...",
+                searchHintText: 'add_stock.search_category'.tr,
               );
             },
           ),
@@ -6292,7 +6290,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Product Variant *',
+                'add_stock.product_variant_required'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s11,
@@ -6306,8 +6304,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 child: BuildDropDownWithSearch<ProductVariant>(
                   title: null,
                   hintText: variants.isEmpty
-                      ? 'No active variants'
-                      : 'Select product variant',
+                      ? 'add_stock.no_active_variants'.tr
+                      : 'add_stock.select_product_variant'.tr,
                   value: selected,
                   items: variants,
                   onChanged: (variant) {
@@ -6325,7 +6323,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   displayText: _variantLabel,
                   isRequired: true,
                   height: 40,
-                  searchHintText: 'Search variant...',
+                  searchHintText: 'add_stock.search_variant'.tr,
                 ),
               ),
             ],
@@ -6400,7 +6398,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
         return BuildDropDownWithSearch<GetProduct>(
           title: null,
-          hintText: "Select product",
+          hintText: 'add_stock.select_product'.tr,
           value: selectedProduct,
           items: uniqueProducts,
           onChanged: (product) {
@@ -6594,7 +6592,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           searchController: _getProductSearchController(index),
           isRequired: false,
           height: 40,
-          searchHintText: "Search product...",
+          searchHintText: 'add_stock.search_product'.tr,
         );
       },
     );
@@ -6613,7 +6611,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             Row(
               children: [
                 Text(
-                  "Unit",
+                  'add_stock.unit'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.regular,
                     FontSize.s11,
@@ -6635,7 +6633,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             const SizedBox(height: 2),
             BuildDropDownWithSearch<String>(
               title: null,
-              hintText: "Select Unit",
+              hintText: 'add_stock.select_unit'.tr,
               value: stockItems[index].selectedUnit,
               items: unitKeys,
               onChanged: (String? newValue) {
@@ -6651,7 +6649,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   TextEditingController(), // Consider reusing controllers
               isRequired: false,
               height: 40,
-              searchHintText: "Search unit...",
+              searchHintText: 'add_stock.search_unit'.tr,
             ),
           ],
         );
@@ -6670,7 +6668,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         Row(
           children: [
             Text(
-              "Purchase Unit",
+              'add_stock.purchase_unit'.tr,
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s11,
@@ -6683,7 +6681,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         const SizedBox(height: 2),
         BuildDropDownWithSearch<SaleUnit>(
           title: null,
-          hintText: "Select Purchase Unit",
+          hintText: 'add_stock.select_purchase_unit'.tr,
           value: selectedSaleUnit,
           items: purchaseUnits,
           onChanged: (SaleUnit? newValue) {
@@ -6697,7 +6695,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             final unitName = saleUnit.unitName?.trim();
             final conversionRate = saleUnit.conversionRate?.trim();
             if (unitName == null || unitName.isEmpty) {
-              return 'Unknown Unit';
+              return 'add_stock.unknown_unit'.tr;
             }
             if (conversionRate == null || conversionRate.isEmpty) {
               return unitName;
@@ -6707,7 +6705,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           searchController: _getPurchaseUnitSearchController(index),
           isRequired: false,
           height: 40,
-          searchHintText: "Search purchase unit...",
+          searchHintText: 'add_stock.search_purchase_unit'.tr,
         ),
       ],
     );
@@ -6716,7 +6714,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   Widget _buildExpandedPurchaseQtyField(int index) {
     final item = stockItems[index];
     return _buildExpandedTextField(
-      "Purchase Qty",
+      'add_stock.purchase_qty'.tr,
       item.purchaseQty,
       (value) {
         setState(() {
@@ -6781,7 +6779,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             Row(
               children: [
                 Text(
-                  "Rack",
+                  'add_stock.rack'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.regular,
                     FontSize.s11,
@@ -6794,7 +6792,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             const SizedBox(height: 2),
             BuildDropDownWithSearch<String>(
               title: null,
-              hintText: "Select Rack",
+              hintText: 'add_stock.select_rack'.tr,
               value: stockItems[index].selectedRack,
               items: rackKeys,
               onChanged: (String? newValue) {
@@ -6809,7 +6807,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   TextEditingController(), // Consider reusing controllers
               isRequired: false,
               height: 40,
-              searchHintText: "Search rack...",
+              searchHintText: 'add_stock.search_rack'.tr,
             ),
           ],
         );
@@ -6842,7 +6840,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        "Including Tax",
+                        'add_stock.including_tax'.tr,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: buildCustomStyle(
@@ -6882,12 +6880,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             Expanded(
               flex: 2,
               child: _buildTaxCard(
-                "Retail Price",
+                'add_stock.retail_price'.tr,
                 "1",
                 item.taxInclude
                     ? '${(item.calculatedTaxData?['price_including_tax_retail'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}'
                     : '${(item.calculatedTaxData?['price_excluding_tax_retail'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"} + ${(item.calculatedTaxData?['retailTaxAmount'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}',
-                'Tax: ${(item.calculatedTaxData?['tax_rate_retail'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
+                'add_stock.tax_percent'.tr.replaceAll('@rate', (item.calculatedTaxData?['tax_rate_retail'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"),
                 Colors.blue,
                 item.taxInclude,
               ),
@@ -6896,12 +6894,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             Expanded(
               flex: 2,
               child: _buildTaxCard(
-                "Wholesale Price",
+                'add_stock.wholesale_price'.tr,
                 "2",
                 item.taxInclude
                     ? '${(item.calculatedTaxData?['price_including_tax_wholesale'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}'
                     : '${(item.calculatedTaxData?['price_excluding_tax_wholesale'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"} + ${(item.calculatedTaxData?['wholesaleTaxAmount'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}',
-                'Tax: ${(item.calculatedTaxData?['tax_rate_wholesale'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
+                'add_stock.tax_percent'.tr.replaceAll('@rate', (item.calculatedTaxData?['tax_rate_wholesale'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"),
                 Colors.orange,
                 item.taxInclude,
               ),
@@ -6910,12 +6908,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             Expanded(
               flex: 2,
               child: _buildTaxCard(
-                "Purchase Rate",
+                'add_stock.purchase_rate'.tr,
                 "3",
                 item.taxInclude
                     ? '${(item.calculatedTaxData?['price_including_tax_purchase'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}'
                     : '${(item.calculatedTaxData?['price_excluding_tax_purchase'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"} + ${(item.calculatedTaxData?['purchaseTaxAmount'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}',
-                'Tax: ${(item.calculatedTaxData?['tax_rate_purchase'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
+                'add_stock.tax_percent'.tr.replaceAll('@rate', (item.calculatedTaxData?['tax_rate_purchase'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"),
                 Colors.green,
                 item.taxInclude,
               ),
@@ -7232,8 +7230,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       builder: (context, stockProvider, child) {
         return CustomRoundButton(
           title: stockProvider.batchProcessingLoading
-              ? "Processing..."
-              : "Finish (${stockProvider.pendingStockItemsCount} items)",
+              ? 'add_stock.processing'.tr
+              : 'add_stock.finish_button'.tr.replaceAll('@count', stockProvider.pendingStockItemsCount.toString()),
           isLoading: stockProvider.batchProcessingLoading,
           fct: stockProvider.batchProcessingLoading
               ? () {}
@@ -7246,7 +7244,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     showScaffoldError(
                         context: context,
                         message:
-                            'No stock items have been added to pending list. Please add some stock items first.');
+                            'add_stock.no_pending_items'.tr);
                     return;
                   }
 
@@ -7285,7 +7283,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       showScaffoldError(
                           context: context,
                           message:
-                              'Please specify payment amounts for selected payment methods.');
+                              'add_stock.specify_payment_amounts'.tr);
                       return;
                     }
 
@@ -7301,7 +7299,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           '❌ PAYMENT VALIDATION FAILED: One or more payment amounts are zero or negative');
                       showScaffoldError(
                           context: context,
-                          message: 'Payment amounts must be greater than zero.');
+                          message: 'add_stock.payment_amounts_positive'.tr);
                       return;
                     }
 
@@ -7355,7 +7353,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     final String? accessToken =
                         Provider.of<AuthModel>(context, listen: false).token;
                     if (accessToken == null) {
-                      throw Exception('Access token not found');
+                      throw Exception('add_stock.access_token_not_found'.tr);
                     }
 
                     // Process all pending stock items
@@ -7388,13 +7386,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         showScaffold(
                             context: context,
                             message:
-                                '$failed items failed and remain in pending list. You can retry by clicking Finish again.');
+                                'add_stock.failed_items_remain'.tr.replaceAll('@count', failed.toString()));
                       } else {
                         // All successful - just show success message
                         showScaffold(
                             context: context,
                             message:
-                                'All $successful stock items processed successfully!');
+                                'add_stock.all_items_success'.tr.replaceAll('@count', successful.toString()));
                       }
 
                       // If we have successful items, try to complete the purchase order
@@ -7524,14 +7522,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                               showScaffoldError(
                                   context: context,
                                   message:
-                                      'Purchase order completion failed. Stock items were added but order was not finalized.');
+                                      'add_stock.purchase_order_completion_failed'.tr);
                             }
                           } catch (e) {
                             debugPrint('💥 ERROR COMPLETING PURCHASE ORDER: $e');
                             showScaffoldError(
                                 context: context,
                                 message:
-                                    'Error completing purchase order: ${e.toString()}');
+                                    'add_stock.error_completing_purchase_order'.tr.replaceAll('@error', e.toString()));
                           }
                         } else {
                           debugPrint(
@@ -7539,7 +7537,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           showScaffoldError(
                               context: context,
                               message:
-                                  'Stock items were processed but purchase order could not be completed.');
+                                  'add_stock.purchase_order_not_completed'.tr);
                         }
                       }
                     } else {
@@ -7547,14 +7545,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       showScaffoldError(
                           context: context,
                           message: batchResult['message'] ??
-                              'Batch processing failed');
+                              'add_stock.batch_processing_failed'.tr);
                     }
                   } catch (e) {
                     debugPrint('💥 ERROR IN BATCH PROCESSING: $e');
                     showScaffoldError(
                         context: context,
                         message:
-                            'Error processing stock items: ${e.toString()}');
+                            'add_stock.error_processing_stock_items'.tr.replaceAll('@error', e.toString()));
                   }
                 },
           height: 50,
@@ -7567,7 +7565,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     );
 
     Widget cancelButton = CustomRoundButton(
-      title: "Cancel",
+      title: 'add_stock.cancel'.tr,
       fct: () {
         sideBarController.index.value = 15;
       },
