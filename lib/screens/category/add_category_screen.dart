@@ -31,6 +31,7 @@ import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import 'widgets/category_responsive.dart';
+import 'category_form_mixin.dart';
 
 class AddCategoryPageScreen extends StatefulWidget {
   const AddCategoryPageScreen({super.key});
@@ -39,39 +40,16 @@ class AddCategoryPageScreen extends StatefulWidget {
   State<AddCategoryPageScreen> createState() => _AddCategoryPageScreenState();
 }
 
-class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
-  final TextEditingController categoryNameEnglishController =
-      TextEditingController();
-  final TextEditingController categoryNameController = TextEditingController();
-  final TextEditingController categoryNameArabicController =
-      TextEditingController();
-  final TextEditingController categoryNameHindiController =
-      TextEditingController();
-  final TextEditingController categorySlugController = TextEditingController();
+class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with CategoryFormMixin {
   final TextEditingController idController = TextEditingController(text: "0");
   final TextEditingController categoryIDController =
       TextEditingController(text: "0");
 
-  final Map<int, bool> _languageTranslating = {};
-  final Map<int, TextEditingController> _languageNameControllers = {};
-
   @override
   void dispose() {
-    // Dispose of the controllers when the widget is disposed
-    categoryNameEnglishController.dispose();
-    categoryNameController.dispose();
-    categoryNameArabicController.dispose();
-    categoryNameHindiController.dispose();
-    categorySlugController.dispose();
     idController.dispose();
     categoryIDController.dispose();
-    for (final controller in _languageNameControllers.values) {
-      if (controller != categoryNameArabicController &&
-          controller != categoryNameEnglishController &&
-          controller != categoryNameHindiController) {
-        controller.dispose();
-      }
-    }
+    disposeCategoryForm();
     super.dispose();
   }
 
@@ -89,77 +67,17 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
   String? _selectedIconPath;
   bool _isSellable = true;
   bool _isPurchasable = true;
-  bool _languagesRequested = false;
-
-  // Tax multi-select state
-  List<_TaxItem> _availableTaxes = [];
-  final List<int> _selectedTaxIds = [];
-  bool _taxesLoading = false;
 
   @override
   void initState() {
     super.initState();
     getData();
-    _fetchLanguages();
-    _fetchTaxes();
+    fetchLanguages();
+    fetchTaxes();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<CategoryProvider>(context, listen: false)
           .ensureCategories(CategoryListScope.all);
     });
-  }
-
-  Future<void> _fetchTaxes() async {
-    setState(() => _taxesLoading = true);
-    try {
-      final authModel = Provider.of<AuthModel>(context, listen: false);
-      final token = authModel.token ?? '';
-      final prefs = await SharedPreferences.getInstance();
-      final apiKey = prefs.getString('api_key') ?? '';
-
-      if (token.isEmpty || apiKey.isEmpty) {
-        return;
-      }
-
-      final response = await http.get(
-        Uri.parse('${APPUrl.listTax}?active_only=true'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'X-Tenant': apiKey,
-          'Accept': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 10));
-
-      if (!mounted) return;
-      if (response.statusCode == 200) {
-        final decoded = json.decode(response.body);
-        final rawData = decoded['data'];
-        final list = (rawData as List? ?? []);
-        setState(() {
-          _availableTaxes = list
-              .map((e) => _TaxItem(
-                    id: (e['id'] as num).toInt(),
-                    name: e['name']?.toString() ?? '',
-                  ))
-              .toList();
-        });
-      }
-    } catch (e) {
-      debugPrint('[TaxFetch] Exception: $e');
-    } finally {
-      if (mounted) setState(() => _taxesLoading = false);
-    }
-  }
-
-  Future<void> _fetchLanguages() async {
-    if (_languagesRequested) return;
-    _languagesRequested = true;
-
-    final accessToken =
-        Provider.of<AuthModel>(context, listen: false).token ?? '';
-    final languageProvider =
-        Provider.of<LanguageProvider>(context, listen: false);
-
-    await languageProvider.fetchLanguages(accessToken: accessToken);
   }
 
   void getData() {
@@ -175,80 +93,6 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
         debugPrint("IMAGE FILES COUNT: ${imageFiles?.length}");
       } else {}
     });
-  }
-
-  void _syncLanguageControllers(List<Language> languages) {
-    for (final language in languages) {
-      if (!_languageNameControllers.containsKey(language.id)) {
-        if (language.code.toLowerCase() == 'ar') {
-          _languageNameControllers[language.id] = categoryNameArabicController;
-        } else if (language.code.toLowerCase() == 'hi') {
-          _languageNameControllers[language.id] = categoryNameHindiController;
-        } else if (language.code.toLowerCase() == 'en') {
-          _languageNameControllers[language.id] = categoryNameEnglishController;
-        } else {
-          _languageNameControllers[language.id] = TextEditingController();
-        }
-      }
-      _languageTranslating.putIfAbsent(language.id, () => false);
-    }
-  }
-
-  Future<void> _translateLanguage(Language language) async {
-    final baseText = categoryNameController.text.trim();
-    if (baseText.isEmpty) {
-      showScaffoldError(
-        context: context,
-        message: 'Please enter Category Name before translating.',
-      );
-      return;
-    }
-
-    if (_languageTranslating[language.id] == true) return;
-
-    setState(() {
-      _languageTranslating[language.id] = true;
-    });
-
-    try {
-      final accessToken =
-          Provider.of<AuthModel>(context, listen: false).token ?? '';
-      final languageProvider =
-          Provider.of<LanguageProvider>(context, listen: false);
-
-      final translated = await languageProvider.translateText(
-        accessToken: accessToken,
-        targetLang: language.code,
-        text: baseText,
-      );
-
-      if (!mounted) return;
-
-      if (translated != null && translated.isNotEmpty) {
-        _languageNameControllers[language.id]?.text = translated;
-        showScaffold(
-          context: context,
-          message: 'Translated to ${language.name}',
-        );
-      } else {
-        showScaffoldError(
-          context: context,
-          message: 'Translation failed. Please try again.',
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      showScaffoldError(
-        context: context,
-        message: 'Translation failed. Please try again.',
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _languageTranslating[language.id] = false;
-        });
-      }
-    }
   }
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
@@ -276,7 +120,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
           ),
         ),
         const SizedBox(height: 4),
-        if (_taxesLoading)
+        if (taxesLoading)
           const SizedBox(
             height: 36,
             child: Center(
@@ -287,7 +131,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
               ),
             ),
           )
-        else if (_availableTaxes.isEmpty)
+        else if (availableTaxes.isEmpty)
           Text(
             'No taxes available',
             style: buildCustomStyle(
@@ -301,8 +145,8 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
           Wrap(
             spacing: 6,
             runSpacing: 4,
-            children: _availableTaxes.map((tax) {
-              final selected = _selectedTaxIds.contains(tax.id);
+            children: availableTaxes.map((tax) {
+              final selected = selectedTaxIds.contains(tax.id);
               return FilterChip(
                 label: Text(
                   tax.name,
@@ -319,9 +163,9 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                 onSelected: (val) {
                   setState(() {
                     if (val) {
-                      _selectedTaxIds.add(tax.id);
+                      selectedTaxIds.add(tax.id);
                     } else {
-                      _selectedTaxIds.remove(tax.id);
+                      selectedTaxIds.remove(tax.id);
                     }
                   });
                 },
@@ -384,31 +228,22 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
             Provider.of<LanguageProvider>(context, listen: false);
         final Map<String, String> categoryLangNames = {};
         for (final language in languageProvider.languages) {
-          final controller = _languageNameControllers[language.id];
+          final controller = languageNameControllers[language.id];
           final text = controller?.text.trim() ?? '';
           if (text.isNotEmpty) {
             categoryLangNames[language.code] = text;
           }
         }
 
-        categoryProvider
-            .addCategory(
-          categoryName: categoryNameController.text,
-          slug: categorySlugController.text,
+        submitCategory(
+          context: context,
           parentCategory: idController.text,
-          categoryNameEnglish: categoryNameEnglishController.text,
-          categoryNameHindi: categoryNameHindiController.text,
-          categoryNameArabic: categoryNameArabicController.text,
-          imagePath: imageFilePathController.text,
-          iconPath: iconFilePathController.text,
-          accessToken: accessToken ?? "",
+          categoryLangNames: categoryLangNames,
           isSellable: _isSellable,
           isPurchasable: _isPurchasable,
-          categoryLangNames: categoryLangNames,
-          taxIds:
-              _selectedTaxIds.isEmpty ? null : List<int>.from(_selectedTaxIds),
-        )
-            .then((value) async {
+          imagePath: imageFilePathController.text,
+          iconPath: iconFilePathController.text,
+        ).then((value) async {
           if (value["status"] == "success") {
             if (!context.mounted) return;
             Navigator.pop(context);
@@ -495,7 +330,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
       categoryNameEnglishController.clear();
       categoryNameHindiController.clear();
       categorySlugController.clear();
-      for (final controller in _languageNameControllers.values) {
+      for (final controller in languageNameControllers.values) {
         if (controller != categoryNameArabicController &&
             controller != categoryNameEnglishController &&
             controller != categoryNameHindiController) {
@@ -661,7 +496,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                               final activeLanguages =
                                   languageProvider.languages;
 
-                              _syncLanguageControllers(activeLanguages);
+                              syncLanguageControllers(activeLanguages);
 
                               final List<Widget> leftWidgets = [
                                 BuildErrorText(
@@ -671,16 +506,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                   padding: const EdgeInsetsDirectional.only(
                                       start: 10.0),
                                   child: buildColumnWidgetForTextFields(
-                                    onchanged: ((value) {
-                                      categoryNameEnglishController.text =
-                                          value ?? '';
-                                      categorySlugController.text =
-                                          categoryNameController.text
-                                              .toLowerCase()
-                                              .replaceAll(RegExp(r'\s+'), '-')
-                                              .replaceAll(
-                                                  RegExp(r'[^a-z0-9-]'), '');
-                                    }),
+                                    onchanged: handleNameChanged,
                                     isLeft: false,
                                     isStarRed: true,
                                     readOnly: false,
@@ -723,7 +549,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                 if (!language.active) continue; // skip inactive
 
                                 final controller =
-                                    _languageNameControllers[language.id]!;
+                                    languageNameControllers[language.id]!;
 
                                 rightWidgets.add(
                                   Row(
@@ -753,11 +579,11 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                             message:
                                                 'Translate to ${language.name}',
                                             child: ElevatedButton(
-                                              onPressed: _languageTranslating[
+                                              onPressed: languageTranslating[
                                                           language.id] ==
                                                       true
                                                   ? null
-                                                  : () => _translateLanguage(
+                                                  : () => translateLanguage(
                                                       language),
                                               style: ElevatedButton.styleFrom(
                                                 backgroundColor:
@@ -768,7 +594,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                                       BorderRadius.circular(7),
                                                 ),
                                               ),
-                                              child: _languageTranslating[
+                                              child: languageTranslating[
                                                           language.id] ==
                                                       true
                                                   ? const SizedBox(
@@ -2092,9 +1918,4 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
   }
 }
 
-/// Minimal tax record used only within [AddCategoryPageScreen].
-class _TaxItem {
-  final int id;
-  final String name;
-  const _TaxItem({required this.id, required this.name});
-}
+// deleted duplicate class _TaxItem
