@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -154,8 +155,8 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
   bool _validateBeforeConfirm() {
     if (!printItems.any((item) => item.quantity > 0)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Enter a quantity for at least one item.')),
+        SnackBar(
+            content: Text('product_barcode.enter_quantity_error'.tr)),
       );
       return false;
     }
@@ -166,7 +167,7 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Expiry date cannot be before manufacturing date for ${item.product.productName ?? 'a product'}.',
+              'product_barcode.expiry_before_mfg_error'.tr.replaceAll('@product', item.product.productName ?? 'product_barcode.a_product_fallback'.tr),
             ),
           ),
         );
@@ -197,7 +198,7 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Sticker Size',
+          'product_barcode.sticker_size'.tr,
           style: buildCustomStyle(
             FontWeightManager.medium,
             FontSize.s12,
@@ -239,7 +240,7 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Stickers Per Row',
+          'product_barcode.stickers_per_row'.tr,
           style: buildCustomStyle(
             FontWeightManager.medium,
             FontSize.s12,
@@ -309,7 +310,7 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                       color: Colors.orangeAccent, size: 28),
                   const SizedBox(width: 12),
                   Text(
-                    "Confirm Barcode Print",
+                    'product_barcode.confirm_print_title'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.bold,
                       FontSize.s18,
@@ -367,16 +368,16 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                                 children: [
                                   Expanded(
                                       flex: 3,
-                                      child: _buildTableHeader("PRODUCT")),
+                                      child: _buildTableHeader('product_barcode.table_product'.tr)),
                                   Expanded(
                                       flex: 1,
-                                      child: _buildTableHeader("QUANTITY")),
+                                      child: _buildTableHeader('product_barcode.table_quantity'.tr)),
                                   Expanded(
                                       flex: 1,
-                                      child: _buildTableHeader("MFG DATE")),
+                                      child: _buildTableHeader('product_barcode.table_mfg_date'.tr)),
                                   Expanded(
                                       flex: 1,
-                                      child: _buildTableHeader("EXP DATE")),
+                                      child: _buildTableHeader('product_barcode.table_exp_date'.tr)),
                                 ],
                               ),
                             ),
@@ -391,11 +392,11 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                                   final mfgStr = item.mfgDate != null
                                       ? DateFormat('yyyy-MM-dd')
                                           .format(item.mfgDate!)
-                                      : "Select Date";
+                                      : 'product_barcode.select_date'.tr;
                                   final expStr = item.expDate != null
                                       ? DateFormat('yyyy-MM-dd')
                                           .format(item.expDate!)
-                                      : "Select Date";
+                                      : 'product_barcode.select_date'.tr;
 
                                   return Padding(
                                     padding: const EdgeInsets.symmetric(
@@ -405,7 +406,7 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                                         Expanded(
                                           flex: 3,
                                           child: Text(
-                                            item.product.productName ?? 'N/A',
+                                            item.product.productName ?? 'product_barcode.na'.tr,
                                             style: buildCustomStyle(
                                                 FontWeightManager.medium,
                                                 FontSize.s13,
@@ -522,7 +523,7 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   CustomRoundButton(
-                    title: "Cancel",
+                    title: 'general.cancel'.tr,
                     boxColor: const Color(0xFFD32F2F),
                     textColor: Colors.white,
                     borderColor: const Color(0xFFD32F2F),
@@ -533,7 +534,7 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                   ),
                   const SizedBox(width: 12),
                   CustomRoundButton(
-                    title: "Confirm",
+                    title: 'product_barcode.confirm_btn'.tr,
                     boxColor: const Color(0xFF2962FF),
                     textColor: Colors.white,
                     borderColor: const Color(0xFF2962FF),

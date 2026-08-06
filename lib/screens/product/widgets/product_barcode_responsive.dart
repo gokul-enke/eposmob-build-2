@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -168,7 +169,7 @@ class ProductBarcodeSelectionBadge extends StatelessWidget {
         ),
       ),
       child: Text(
-        '$count selected',
+        'product_barcode.selected_count'.tr.replaceAll('@count', count.toString()),
         style: buildCustomStyle(
           FontWeightManager.medium,
           FontSize.s11,
@@ -378,7 +379,7 @@ class ProductBarcodeInfoChip extends StatelessWidget {
                   ),
                 ),
               ),
-              if (copyable && value.isNotEmpty && value != 'N/A') ...[
+              if (copyable && value.isNotEmpty && value != 'product_barcode.na'.tr) ...[
                 const SizedBox(width: 6),
                 Builder(
                   builder: (context) => GestureDetector(
@@ -386,7 +387,7 @@ class ProductBarcodeInfoChip extends StatelessWidget {
                       Clipboard.setData(ClipboardData(text: value));
                       showScaffold(
                         context: context,
-                        message: '$label copied to clipboard',
+                        message: 'product_barcode.copied_to_clipboard'.tr.replaceAll('@label', label),
                       );
                     },
                     child: const Icon(
@@ -407,11 +408,11 @@ class ProductBarcodeInfoChip extends StatelessWidget {
 
 /// Polished loading state.
 class ProductBarcodeLoadingState extends StatelessWidget {
-  final String message;
+  final String? message;
 
   const ProductBarcodeLoadingState({
     super.key,
-    this.message = 'Loading products...',
+    this.message,
   });
 
   @override
@@ -425,7 +426,7 @@ class ProductBarcodeLoadingState extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            message,
+            message ?? 'product_barcode.loading_products'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s13,
@@ -441,12 +442,12 @@ class ProductBarcodeLoadingState extends StatelessWidget {
 
 /// Polished empty state.
 class ProductBarcodeEmptyState extends StatelessWidget {
-  final String title;
+  final String? title;
   final String? subtitle;
 
   const ProductBarcodeEmptyState({
     super.key,
-    this.title = 'No products found',
+    this.title,
     this.subtitle,
   });
 
@@ -474,7 +475,7 @@ class ProductBarcodeEmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              title,
+              title ?? 'product_barcode.no_products_found'.tr,
               textAlign: TextAlign.center,
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
@@ -534,7 +535,7 @@ class ProductBarcodeFilterToggle extends StatelessWidget {
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             onPressed: onToggle,
-            tooltip: showFilters ? 'Hide Filters' : 'Show Filters',
+            tooltip: showFilters ? 'product_barcode.hide_filters'.tr : 'product_barcode.show_filters'.tr,
           ),
           if (hasActiveFilters)
             PositionedDirectional(

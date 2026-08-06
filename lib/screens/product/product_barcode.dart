@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
@@ -137,7 +138,7 @@ class BarcodeRow {
       }
       return '0';
     }
-    return product.numberOfProductsAvailable ?? 'N/A';
+    return product.numberOfProductsAvailable ?? 'product_barcode.na'.tr;
   }
 
   String get priceDisplay {
@@ -145,7 +146,7 @@ class BarcodeRow {
       //  treat zero variant price as invalid — fall back to base.
       final v = variant!;
       final vPrice = (v.price != null && v.price! > 0) ? v.price : null;
-      return (vPrice ?? product.price?.price)?.toString() ?? 'N/A';
+      return (vPrice ?? product.price?.price)?.toString() ?? 'product_barcode.na'.tr;
     }
     if (saleUnit != null) {
       //  reuse the shared resolution chain (batch override →
@@ -154,9 +155,9 @@ class BarcodeRow {
         product: product,
         saleUnit: saleUnit!,
       );
-      return resolved?.toString() ?? product.price?.price?.toString() ?? 'N/A';
+      return resolved?.toString() ?? product.price?.price?.toString() ?? 'product_barcode.na'.tr;
     }
-    return product.price?.price?.toString() ?? 'N/A';
+    return product.price?.price?.toString() ?? 'product_barcode.na'.tr;
   }
 
   String get mrpDisplay {
@@ -164,9 +165,9 @@ class BarcodeRow {
       //  treat zero variant MRP as invalid — fall back to base.
       final v = variant!;
       final vMrp = (v.mrp != null && v.mrp! > 0) ? v.mrp : null;
-      return (vMrp ?? product.mrp)?.toString() ?? 'N/A';
+      return (vMrp ?? product.mrp)?.toString() ?? 'product_barcode.na'.tr;
     }
-    return product.mrp?.toString() ?? 'N/A';
+    return product.mrp?.toString() ?? 'product_barcode.na'.tr;
   }
 
   /// Stable, unique key for selection tracking.
@@ -339,7 +340,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
 
       if (accessToken == null || accessToken.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Authentication token is missing")),
+          SnackBar(content: Text('product_barcode.auth_token_missing'.tr)),
         );
         if (mounted) setState(() => initLoading = false);
         return;
@@ -371,7 +372,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
       debugPrint("Error loading products: $error");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error loading products: $error")),
+          SnackBar(content: Text('product_barcode.error_loading_products'.tr.replaceAll('@error', error.toString()))),
         );
         setState(() => initLoading = false);
       }
@@ -531,7 +532,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Stock Details',
+                      'product_barcode.stock_details'.tr,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: buildCustomStyle(
@@ -558,13 +559,13 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                   shrinkWrap: true,
                   physics: const BouncingScrollPhysics(),
                   children: [
-                    _buildDetailRow('Product Name', row.displayName),
-                    _buildDetailRow('Category', row.product.category?.name ?? 'N/A'),
-                    _buildDetailRow('Unit', row.product.unit ?? 'N/A'),
-                    _buildDetailRow('Retail Price', row.priceDisplay),
-                    _buildDetailRow('MRP', row.mrpDisplay),
-                    _buildDetailRow('Quantity', row.quantity),
-                    _buildDetailRow('Barcode', row.barcode ?? 'N/A'),
+                    _buildDetailRow('product_barcode.product_name'.tr, row.displayName),
+                    _buildDetailRow('product_barcode.category'.tr, row.product.category?.name ?? 'product_barcode.na'.tr),
+                    _buildDetailRow('product_barcode.unit'.tr, row.product.unit ?? 'product_barcode.na'.tr),
+                    _buildDetailRow('product_barcode.retail_price'.tr, row.priceDisplay),
+                    _buildDetailRow('product_barcode.mrp'.tr, row.mrpDisplay),
+                    _buildDetailRow('product_barcode.quantity'.tr, row.quantity),
+                    _buildDetailRow('product_barcode.barcode'.tr, row.barcode ?? 'product_barcode.na'.tr),
                   ],
                 ),
               ),
@@ -572,7 +573,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
               Align(
                 alignment: AlignmentDirectional.centerEnd,
                 child: CustomRoundButton(
-                  title: "Close",
+                  title: 'product_barcode.close'.tr,
                   boxColor: Colors.white,
                   textColor: ColorManager.kPrimaryColor,
                   borderColor: ColorManager.kPrimaryColor,
@@ -602,19 +603,19 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
         final bool shouldContinue = await showDialog(
               context: context,
               builder: (context) => AlertDialog(
-                title: const Text('Missing Barcode'),
+                title: Text('product_barcode.missing_barcode_title'.tr),
                 content: Text(validRows.isEmpty
-                    ? 'These products don\'t have a barcode.'
-                    : 'Some products don\'t have a barcode. Skip and continue?'),
+                    ? 'product_barcode.no_barcode_plural'.tr
+                    : 'product_barcode.no_barcode_skip'.tr),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context, false),
-                    child: Text(validRows.isEmpty ? 'Close' : 'Cancel'),
+                    child: Text(validRows.isEmpty ? 'product_barcode.close'.tr : 'general.cancel'.tr),
                   ),
                   if (validRows.isNotEmpty)
                     TextButton(
                       onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Continue'),
+                      child: Text('product_barcode.continue_btn'.tr),
                     ),
                 ],
               ),
@@ -664,12 +665,12 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
         await showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Missing Barcode'),
-            content: const Text('This product doesn\'t have a barcode.'),
+            title: Text('product_barcode.missing_barcode_title'.tr),
+            content: Text('product_barcode.no_barcode_single'.tr),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: Text('general.cancel'.tr),
               ),
             ],
           ),
@@ -719,7 +720,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     return BuildDropDownWithSearch<String>(
       title: null,
       showName: false,
-      hintText: 'Category',
+      hintText: 'product_barcode.category'.tr,
       value: categoryController.text == "All Categories"
           ? null
           : categoryController.text,
@@ -833,8 +834,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
 
     final printButton = CustomRoundButton(
       title: _isPrinting
-          ? 'Printing...'
-          : "Print Selected (${_selectedProductKeys.length})",
+          ? 'product_barcode.printing'.tr
+          : 'product_barcode.print_selected'.tr.replaceAll('@count', _selectedProductKeys.length.toString()),
       fct: () {
         if (_isPrinting) return;
         final selectedRows = _selectedProductsByKey.values.toList();
@@ -846,7 +847,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     );
 
     final clearButton = CustomRoundButton(
-      title: "Clear Selected",
+      title: 'product_barcode.clear_selected'.tr,
       fct: () {
         setState(() {
           _selectedProductKeys.clear();
@@ -915,7 +916,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
           },
           controller: productNameController,
           size: size,
-          hintText: 'Product Name',
+          hintText: 'product_barcode.product_name'.tr,
         ),
         buildColumnWidgetForTextFields(
           height: 45,
@@ -924,10 +925,10 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
           },
           controller: barcodeController,
           size: size,
-          hintText: 'Barcode',
+          hintText: 'product_barcode.barcode'.tr,
         ),
         CustomRoundButton(
-          title: "Reset",
+          title: 'product_barcode.reset'.tr,
           boxColor: Colors.white,
           textColor: ColorManager.kPrimaryColor,
           borderColor: ColorManager.kPrimaryColor,
@@ -980,7 +981,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                   ),
                 ),
               ),
-              if (copyable && value.isNotEmpty && value != 'N/A') ...[
+              if (copyable && value.isNotEmpty && value != 'product_barcode.na'.tr) ...[
                 const SizedBox(width: 6),
                 Builder(
                   builder: (context) => GestureDetector(
@@ -988,7 +989,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                       Clipboard.setData(ClipboardData(text: value));
                       showScaffold(
                         context: context,
-                        message: '$label copied to clipboard',
+                        message: 'product_barcode.copied_to_clipboard'.tr.replaceAll('@label', label),
                       );
                     },
                     child: const Icon(
@@ -1092,15 +1093,15 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
               children: [
                 Expanded(
                   child: _buildCompactFieldBox(
-                    label: 'Barcode',
-                    value: row.barcode ?? 'N/A',
+                    label: 'product_barcode.barcode'.tr,
+                    value: row.barcode ?? 'product_barcode.na'.tr,
                     copyable: true,
                   ),
                 ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: _buildCompactFieldBox(
-                    label: 'Qty',
+                    label: 'product_barcode.qty'.tr,
                     value: row.quantity,
                   ),
                 ),
@@ -1153,7 +1154,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
             children: [
               TableRow(
                 children: [
-                  _buildTableHeader('No'),
+                  _buildTableHeader('product_barcode.col_no'.tr),
                   Center(
                     child: Checkbox(
                       value: allSelected,
@@ -1167,14 +1168,14 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                       activeColor: ColorManager.kPrimaryColor,
                     ),
                   ),
-                  _buildTableHeader('Product Name'),
-                  _buildTableHeader('Barcode'),
-                  _buildTableHeader('Category'),
-                  _buildTableHeader('Qty'),
-                  _buildTableHeader('Price'),
-                  _buildTableHeader('MRP'),
-                  _buildTableHeader('SKU'),
-                  _buildTableHeader('Action'),
+                  _buildTableHeader('product_barcode.product_name'.tr),
+                  _buildTableHeader('product_barcode.barcode'.tr),
+                  _buildTableHeader('product_barcode.category'.tr),
+                  _buildTableHeader('product_barcode.qty'.tr),
+                  _buildTableHeader('product_barcode.col_price'.tr),
+                  _buildTableHeader('product_barcode.mrp'.tr),
+                  _buildTableHeader('product_barcode.col_sku'.tr),
+                  _buildTableHeader('product_barcode.col_action'.tr),
                 ],
               ),
             ],
@@ -1268,7 +1269,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                   children: [
                                     Flexible(
                                       child: Text(
-                                        row.barcode ?? 'N/A',
+                                        row.barcode ?? 'product_barcode.na'.tr,
                                         textAlign: TextAlign.center,
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
@@ -1282,7 +1283,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                     ),
                                     if (row.barcode != null &&
                                         row.barcode!.isNotEmpty &&
-                                        row.barcode != 'N/A') ...[
+                                        row.barcode != 'product_barcode.na'.tr) ...[
                                       const SizedBox(width: 6),
                                       GestureDetector(
                                         onTap: () {
@@ -1291,7 +1292,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                           showScaffold(
                                             context: context,
                                             message:
-                                                'Barcode copied to clipboard',
+                                                'product_barcode.barcode_copied'.tr,
                                           );
                                         },
                                         child: const Icon(
@@ -1320,7 +1321,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: SelectableText(
-                                    row.product.category?.name ?? 'N/A',
+                                    row.product.category?.name ?? 'product_barcode.na'.tr,
                                     textAlign: TextAlign.center,
                                     style: buildCustomStyle(
                                       FontWeightManager.medium,
@@ -1336,7 +1337,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                           _buildTableCell(row.quantity),
                           _buildTableCell(row.priceDisplay),
                           _buildTableCell(row.mrpDisplay),
-                          _buildTableCell(row.sku ?? 'N/A'),
+                          _buildTableCell(row.sku ?? 'product_barcode.na'.tr),
                           Center(
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -1345,7 +1346,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                   icon: Icons.visibility,
                                   iconColor: ColorManager.kPrimaryColor
                                       .withValues(alpha: 0.9),
-                                  tooltip: 'View Details',
+                                  tooltip: 'product_barcode.view_details'.tr,
                                   onPressed: () =>
                                       _showProductDetails(row),
                                 ),
@@ -1353,7 +1354,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                 ProductBarcodeIconAction(
                                   icon: Icons.print,
                                   iconColor: ColorManager.kPrimaryColor,
-                                  tooltip: 'Print Barcode',
+                                  tooltip: 'product_barcode.print_barcode_tooltip'.tr,
                                   onPressed: () =>
                                       _handlePrintSingle(row),
                                 ),
@@ -1411,7 +1412,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
               ),
               const SizedBox(width: 8),
               Text(
-                'Select all on page',
+                'product_barcode.select_all_page'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s12,
@@ -1480,10 +1481,10 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
               if (isMobile)
                 Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: ProductBarcodePageHeader(
-                        title: 'Print Barcodes',
-                        subtitle: 'Select products to print barcode labels',
+                        title: 'product_barcode.title'.tr,
+                        subtitle: 'product_barcode.subtitle'.tr,
                       ),
                     ),
                     ProductBarcodeFilterToggle(
@@ -1499,8 +1500,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                 )
               else
                 ProductBarcodePageHeader(
-                  title: 'Print Barcodes',
-                  subtitle: 'Select products to print barcode labels',
+                  title: 'product_barcode.title'.tr,
+                  subtitle: 'product_barcode.subtitle'.tr,
                   trailing: _buildHeaderActions(false),
                 ),
               if (isMobile) ...[
@@ -1537,10 +1538,10 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                 final pageRows = _currentPageRows;
 
                                 if (_allBarcodeRows.isEmpty) {
-                                  return const ProductBarcodeEmptyState(
-                                    title: 'No product data available',
+                                  return ProductBarcodeEmptyState(
+                                    title: 'product_barcode.no_product_data'.tr,
                                     subtitle:
-                                        'Try adjusting your filters or search terms',
+                                        'product_barcode.adjust_filters'.tr,
                                   );
                                 }
 
