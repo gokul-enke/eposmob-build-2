@@ -1149,7 +1149,7 @@ class _SideMenuState extends State<SideMenu> {
             icon: fa.FontAwesomeIcons.signOutAlt,
             title: 'Logout',
             onTap: () async {
-              String token = authModel.token ?? '';
+              final token = authModel.token ?? '';
               showDialog(
                   context: context,
                   barrierDismissible: false,
@@ -1158,30 +1158,30 @@ class _SideMenuState extends State<SideMenu> {
                       child: CircularProgressIndicator.adaptive(),
                     );
                   });
-              await AuthenticationProvider()
-                  .logout(token, context)
-                  .then((value) async {
-                if (value["status"] == "success") {
-                  await SessionResetService.resetAfterLogout(context);
 
-                  showScaffold(
-                    context: context,
-                    message: '${value["message"]}',
-                  );
-                  Navigator.pop(context);
-                  await Future.delayed(const Duration(seconds: 0)).then(
-                      (value) => Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const SignInScreen())));
-                } else {
-                  Navigator.pop(context);
-                  showScaffoldError(
-                    context: context,
-                    message: '${value["message"]}',
-                  );
+              String message = 'Logged out successfully';
+              try {
+                final value =
+                    await AuthenticationProvider().logout(token, context);
+                if (value is Map && value['message'] != null) {
+                  message = value['message'].toString();
                 }
-              });
+              } catch (error) {
+                // Server logout is best-effort. The user must still be able to
+                // leave the local session when the network is unavailable.
+                debugPrint('Server logout deferred: $error');
+                message = 'Logged out locally';
+              }
+
+              await SessionResetService.resetAfterLogout(context);
+              if (!context.mounted) return;
+
+              Navigator.pop(context);
+              showScaffold(context: context, message: message);
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const SignInScreen()),
+              );
             },
             selected: false,
           ),
