@@ -738,7 +738,7 @@ class BillingMobileCartController {
     }
 
     final enteredBase = item.toBaseAmount(displayPrice) ?? displayPrice;
-    final minBase = provider.minimumSalePriceForProduct(item.product);
+    final minBase = provider.minimumSalePriceForCartItem(item);
 
     if (minBase != null && enteredBase < minBase - 0.001) {
       provider.updateItemPrice(
@@ -884,7 +884,7 @@ class BillingMobileCartController {
       return const MobileHistoricalPriceResult(applied: false);
     }
 
-    final minBase = provider.minimumSalePriceForProduct(item.product);
+    final minBase = provider.minimumSalePriceForCartItem(item);
     if (minBase != null && historicalBasePrice < minBase - 0.001) {
       return MobileHistoricalPriceResult(
         applied: false,

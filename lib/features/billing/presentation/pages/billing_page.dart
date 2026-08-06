@@ -4520,7 +4520,7 @@ class BillingPageState extends State<BillingPage>
 
       // Enforce the product's minimum sale price (discount floor).
       final double? minBase =
-          localProductProvider.minimumSalePriceForProduct(item.product);
+          localProductProvider.minimumSalePriceForCartItem(item);
       if (minBase != null && selectedPrice < minBase - 0.001) {
         showScaffoldError(
           context: context,

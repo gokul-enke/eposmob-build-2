@@ -893,6 +893,17 @@ class LocalProductProvider extends ChangeNotifier {
     );
     item.taxRate = effectiveTaxRate;
     item.taxAmount = _calculateTaxAmount(item.price ?? 0.0, effectiveTaxRate);
+    _clampManualCartItemToMinimumPrice(item);
+  }
+
+  void _clampManualCartItemToMinimumPrice(LocalCartItem item) {
+    if (!item.isManualPriceOverride) return;
+    final minimumPrice = minimumSalePriceForCartItem(item);
+    if (minimumPrice == null || (item.price ?? 0.0) >= minimumPrice - 0.001) {
+      return;
+    }
+    item.price = minimumPrice;
+    item.taxAmount = _calculateTaxAmount(minimumPrice, item.taxRate ?? 0.0);
   }
 
   List<int> _normalizeStockGroupIds(List<int>? stockGroupIds) {
@@ -3063,6 +3074,7 @@ class LocalProductProvider extends ChangeNotifier {
                 ? null
                 : Map<String, dynamic>.from(variantAttributes),
           ));
+      _clampManualCartItemToMinimumPrice(_cartItems.first);
     }
 
     resetSelectedProduct();
@@ -3295,8 +3307,8 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
-  /// Minimum allowed sale price (in base units) for a product. Acts as a
-  /// discount floor off the catalog selling price, derived from two optional
+  /// Minimum allowed sale price (in base units) for a pricing selection. Acts
+  /// as a discount floor off the effective selling price, derived from two optional
   /// configurations:
   ///
   ///   • `min_margin_percentage` → percentage discount floor:
@@ -3306,10 +3318,28 @@ class LocalProductProvider extends ChangeNotifier {
   ///
   /// When both are configured, the most restrictive (higher) floor wins.
   ///
-  /// Returns `null` when no floor is configured (no/zero margins or no selling
-  /// price), meaning the price may be lowered freely.
-  double? minimumSalePriceForProduct(GetProduct product) {
-    final sellingPrice = _parseAmount(product.price?.price?.toString());
+  /// [referencePrice] can be supplied for open/manual-price products which have
+  /// no configured selling price. Configured sale-unit, variant, wholesale,
+  /// stock, and product prices still take precedence in that order.
+  ///
+  /// Returns `null` when no floor is configured (no/zero margins or no effective
+  /// selling price), meaning the price may be lowered freely.
+  double? minimumSalePriceForProduct(
+    GetProduct product, {
+    num quantity = 1,
+    Stock? selectedStock,
+    int? saleUnitId,
+    int? variantId,
+    double? referencePrice,
+  }) {
+    final sellingPrice = _resolveUnitPrice(
+      product: product,
+      quantity: quantity,
+      selectedStock: selectedStock,
+      fallbackPrice: referencePrice,
+      saleUnitId: saleUnitId,
+      variantId: variantId,
+    );
     if (sellingPrice == null || sellingPrice <= 0) {
       return null;
     }
@@ -3337,6 +3367,19 @@ class LocalProductProvider extends ChangeNotifier {
     }
 
     return floor < 0 ? 0.0 : floor;
+  }
+
+  /// Minimum allowed base-unit price for the exact pricing context represented
+  /// by a cart line.
+  double? minimumSalePriceForCartItem(LocalCartItem item) {
+    return minimumSalePriceForProduct(
+      item.product,
+      quantity: item.quantity,
+      selectedStock: item.selectedStock,
+      saleUnitId: item.saleUnitId,
+      variantId: item.variantId,
+      referencePrice: item.price,
+    );
   }
 
   void updateItemPrice(int productId, Stock? selectedStock, double newPrice,
