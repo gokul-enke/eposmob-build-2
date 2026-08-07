@@ -76,8 +76,8 @@ class _ConsumedStocksReportScreenState
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        const SnackBar(
-          content: Text('Consumed stock report is currently unavailable.'),
+        SnackBar(
+          content: Text('consumed_stocks_report.unavailable'.tr),
           backgroundColor: Colors.red,
         ),
       );
@@ -180,7 +180,7 @@ class _ConsumedStocksReportScreenState
       children: [
         Expanded(
           child: Text(
-            "Consumed Stocks Report",
+            'consumed_stocks_report.title'.tr,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s20,
@@ -198,7 +198,7 @@ class _ConsumedStocksReportScreenState
               color: ColorManager.kPrimaryColor,
             ),
             label: Text(
-              _showFilters ? 'Hide' : 'Filters',
+              _showFilters ? 'consumed_stocks_report.hide'.tr : 'consumed_stocks_report.filters'.tr,
               style: const TextStyle(
                   color: ColorManager.kPrimaryColor, fontSize: 12),
             ),
@@ -210,10 +210,10 @@ class _ConsumedStocksReportScreenState
   Widget _buildFilters(
       List<dynamic> reportData, LocalProductProvider productProvider) {
     final productDropdown = _buildFilterField(
-      label: "Product",
+      label: 'consumed_stocks_report.product'.tr,
       child: BuildDropDownWithSearch<dynamic>(
         title: null,
-        hintText: "All Products",
+        hintText: 'consumed_stocks_report.all_products'.tr,
         value: selectedProductId != null
             ? productProvider.products.firstWhereOrNull(
                 (p) => p.productId.toString() == selectedProductId)
@@ -227,15 +227,15 @@ class _ConsumedStocksReportScreenState
           setState(() => selectedProductId = p?.productId.toString());
           searchConsumedStocks();
         },
-        searchHintText: 'Search Product...',
+        searchHintText: 'consumed_stocks_report.search_product'.tr,
       ),
     );
 
     final storeDropdown = _buildFilterField(
-      label: "Store",
+      label: 'consumed_stocks_report.store'.tr,
       child: BuildDropDownWithSearch<dynamic>(
         title: null,
-        hintText: "All Stores",
+        hintText: 'consumed_stocks_report.all_stores'.tr,
         value: selectedStoreId != null
             ? stores
                 .firstWhereOrNull((s) => s['id'].toString() == selectedStoreId)
@@ -249,12 +249,12 @@ class _ConsumedStocksReportScreenState
           setState(() => selectedStoreId = s?['id'].toString());
           searchConsumedStocks();
         },
-        searchHintText: 'Search Store...',
+        searchHintText: 'consumed_stocks_report.search_store'.tr,
       ),
     );
 
     final fromDateField = _buildFilterField(
-      label: "From Date",
+      label: 'consumed_stocks_report.from_date'.tr,
       child: BuildBorderContainer(
         height: 45,
         width: double.infinity,
@@ -268,7 +268,7 @@ class _ConsumedStocksReportScreenState
     );
 
     final untilDateField = _buildFilterField(
-      label: "Until Date",
+      label: 'consumed_stocks_report.until_date'.tr,
       child: BuildBorderContainer(
         height: 45,
         width: double.infinity,
@@ -282,7 +282,7 @@ class _ConsumedStocksReportScreenState
     );
 
     final resetButton = CustomRoundButton(
-      title: "Reset",
+      title: 'general.reset'.tr,
       boxColor: Colors.white,
       textColor: ColorManager.kPrimaryColor,
       borderColor: ColorManager.kPrimaryColor,
@@ -369,9 +369,9 @@ class _ConsumedStocksReportScreenState
             const Divider(height: 12),
             Row(
               children: [
-                _buildMobileCardStat('Store', item.store ?? '-',
+                _buildMobileCardStat('consumed_stocks_report.store_stat'.tr, item.store ?? '-',
                     selectable: true),
-                _buildMobileCardStat('Withdrawn By', item.withdrawnBy ?? '-',
+                _buildMobileCardStat('consumed_stocks_report.withdrawn_by_stat'.tr, item.withdrawnBy ?? '-',
                     selectable: true),
               ],
             ),
@@ -379,8 +379,8 @@ class _ConsumedStocksReportScreenState
             Row(
               children: [
                 _buildMobileCardStat(
-                    'Qty Withdrawn', item.quantityWithdrawn ?? '-'),
-                _buildMobileCardStat('New Qty', '${item.newQuantity ?? 0}'),
+                    'consumed_stocks_report.qty_withdrawn_stat'.tr, item.quantityWithdrawn ?? '-'),
+                _buildMobileCardStat('consumed_stocks_report.new_qty_stat'.tr, '${item.newQuantity ?? 0}'),
               ],
             ),
             const SizedBox(height: 8),
@@ -490,13 +490,13 @@ class _ConsumedStocksReportScreenState
                 children: [
                   TableRow(
                     children: [
-                      _buildTableHeader("No"),
-                      _buildTableHeader("Product"),
-                      _buildTableHeader("Store"),
-                      _buildTableHeader("Quantity Withdrawn"),
-                      _buildTableHeader("New Quantity"),
-                      _buildTableHeader("Withdrawn By"),
-                      _buildTableHeader("Date & Time"),
+                      _buildTableHeader('consumed_stocks_report.col_no'.tr),
+                      _buildTableHeader('consumed_stocks_report.col_product'.tr),
+                      _buildTableHeader('consumed_stocks_report.col_store'.tr),
+                      _buildTableHeader('consumed_stocks_report.col_quantity_withdrawn'.tr),
+                      _buildTableHeader('consumed_stocks_report.col_new_quantity'.tr),
+                      _buildTableHeader('consumed_stocks_report.col_withdrawn_by'.tr),
+                      _buildTableHeader('consumed_stocks_report.col_date_time'.tr),
                     ],
                   ),
                 ],
@@ -688,7 +688,7 @@ class _ConsumedStocksReportScreenState
           ),
           const SizedBox(height: 15),
           Text(
-            'No records found',
+            'consumed_stocks_report.no_records_found'.tr,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s18,
@@ -698,7 +698,7 @@ class _ConsumedStocksReportScreenState
           ),
           const SizedBox(height: 8),
           Text(
-            'Try adjusting your filters',
+            'consumed_stocks_report.try_adjusting_filters'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,

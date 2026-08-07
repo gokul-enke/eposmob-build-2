@@ -1556,5 +1556,32 @@
     "col_unit": "Unit",
     "col_status": "Status",
     "no_data_found": "No data found"
+  },
+  "consumed_stocks_report": {
+    "title": "Consumed Stocks Report",
+    "unavailable": "Consumed stock report is currently unavailable.",
+    "hide": "Hide",
+    "filters": "Filters",
+    "product": "Product",
+    "all_products": "All Products",
+    "search_product": "Search Product...",
+    "store": "Store",
+    "all_stores": "All Stores",
+    "search_store": "Search Store...",
+    "from_date": "From Date",
+    "until_date": "Until Date",
+    "store_stat": "Store",
+    "withdrawn_by_stat": "Withdrawn By",
+    "qty_withdrawn_stat": "Qty Withdrawn",
+    "new_qty_stat": "New Qty",
+    "col_no": "No",
+    "col_product": "Product",
+    "col_store": "Store",
+    "col_quantity_withdrawn": "Quantity Withdrawn",
+    "col_new_quantity": "New Quantity",
+    "col_withdrawn_by": "Withdrawn By",
+    "col_date_time": "Date & Time",
+    "no_records_found": "No records found",
+    "try_adjusting_filters": "Try adjusting your filters"
   }
 }

@@ -1553,5 +1553,32 @@
     "col_unit": "الوحدة",
     "col_status": "الحالة",
     "no_data_found": "لا توجد بيانات"
+  },
+  "consumed_stocks_report": {
+    "title": "تقرير المخزون المستهلك",
+    "unavailable": "تقرير المخزون المستهلك غير متاح حاليًا.",
+    "hide": "إخفاء",
+    "filters": "الفلاتر",
+    "product": "المنتج",
+    "all_products": "جميع المنتجات",
+    "search_product": "بحث عن منتج...",
+    "store": "المتجر",
+    "all_stores": "جميع المتاجر",
+    "search_store": "بحث عن متجر...",
+    "from_date": "من تاريخ",
+    "until_date": "حتى تاريخ",
+    "store_stat": "المتجر",
+    "withdrawn_by_stat": "سُحب بواسطة",
+    "qty_withdrawn_stat": "الكمية المسحوبة",
+    "new_qty_stat": "الكمية الجديدة",
+    "col_no": "رقم",
+    "col_product": "المنتج",
+    "col_store": "المتجر",
+    "col_quantity_withdrawn": "الكمية المسحوبة",
+    "col_new_quantity": "الكمية الجديدة",
+    "col_withdrawn_by": "سُحب بواسطة",
+    "col_date_time": "التاريخ والوقت",
+    "no_records_found": "لا توجد سجلات",
+    "try_adjusting_filters": "حاول تعديل الفلاتر"
   }
 }
