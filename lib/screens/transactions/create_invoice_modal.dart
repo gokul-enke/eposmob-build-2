@@ -287,7 +287,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
     if (customerId == null) return 0.0;
     final customer = _customerList.firstWhere(
       (c) => c.id?.toString() == customerId,
-      orElse: () => CustomerListModelData(id: 0, name: "Unknown"),
+      orElse: () => CustomerListModelData(id: 0, name: 'general.unknown'.tr),
     );
     return customer.balance ?? 0.0;
   }
@@ -326,7 +326,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
   void _addNewInvoiceItemCard() {
     // Validate new item
     if (_newItemCard.itemNameController.text.isEmpty) {
-      showScaffold(context: context, message: "Please enter item name");
+      showScaffold(context: context, message: 'invoice.enter_item_name'.tr);
       return;
     }
 
@@ -555,12 +555,12 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
   Future<void> _submitInvoice() async {
     // Validate
     if (_selectedCustomer == null) {
-      showScaffoldError(context: context, message: "Please select a customer");
+      showScaffoldError(context: context, message: 'invoice.select_customer_required'.tr);
       return;
     }
     if (_invoiceItemCards.isEmpty) {
       showScaffoldError(
-          context: context, message: "Please add at least one item");
+          context: context, message: 'invoice.add_at_least_one_item'.tr);
       return;
     }
 
@@ -614,17 +614,17 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
         Navigator.pop(context, true);
         showScaffold(
             context: context,
-            message: response["message"] ?? "Invoice created successfully");
+            message: response["message"] ?? 'invoice.created_successfully'.tr);
       } else {
         showScaffoldError(
             context: context,
-            message: response?["message"] ?? "Failed to create invoice");
+            message: response?["message"] ?? 'invoice.create_failed'.tr);
       }
     } catch (e) {
       debugPrint("Error submitting invoice: $e");
       if (mounted) {
         setState(() => _isSubmitting = false);
-        showScaffoldError(context: context, message: "Error: ${e.toString()}");
+        showScaffoldError(context: context, message: 'invoice.error_generic'.tr.replaceAll('@error', e.toString()));
       }
     }
   }
@@ -642,7 +642,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Create Invoice',
+                'invoice.create_title'.tr,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s20, 0.30, ColorManager.textColor),
               ),
@@ -670,10 +670,10 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildLabel("Type"),
+                          _buildLabel('invoice.type_label'.tr),
                           const SizedBox(height: 4),
                           CustomDropDownWithSearch<String>(
-                            hintText: "Select type",
+                            hintText: 'invoice.select_type_hint'.tr,
                             title: "",
                             value: _selectedType,
                             items: const ["order", "other"],
@@ -683,12 +683,14 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                               FocusScope.of(context)
                                   .requestFocus(_dueDateFocus);
                             },
-                            displayText: (item) => item,
+                            displayText: (item) => item == "order"
+                                ? 'invoice.type_order'.tr
+                                : 'invoice.type_other'.tr,
                             showName: false,
                             height: 48,
                           ),
                           const SizedBox(height: 10),
-                          _buildLabel("Due date"),
+                          _buildLabel('invoice.due_date'.tr),
                           const SizedBox(height: 4),
                           CustomCalendarPickerTableCell(
                             initialDate: DateTime.tryParse(_dueDateController.text) ??
@@ -701,12 +703,12 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                               FocusScope.of(context)
                                   .requestFocus(_invoiceDateFocus);
                             },
-                            hintText: "Select due date",
+                            hintText: 'invoice.select_due_date_hint'.tr,
                             height: 48,
                             focusNode: _dueDateFocus,
                           ),
                           const SizedBox(height: 10),
-                          _buildLabel("Invoice date"),
+                          _buildLabel('invoice.invoice_date'.tr),
                           const SizedBox(height: 4),
                           CustomCalendarPickerTableCell(
                             initialDate: DateTime.tryParse(_invoiceDateController.text) ??
@@ -719,7 +721,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                               FocusScope.of(context)
                                   .requestFocus(_statusFocus);
                             },
-                            hintText: "Select invoice date",
+                            hintText: 'invoice.select_invoice_date_hint'.tr,
                             height: 48,
                             focusNode: _invoiceDateFocus,
                           ),
@@ -735,10 +737,10 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildLabel("Type"),
+                              _buildLabel('invoice.type_label'.tr),
                               const SizedBox(height: 4),
                               CustomDropDownWithSearch<String>(
-                                hintText: "Select type",
+                                hintText: 'invoice.select_type_hint'.tr,
                                 title: "",
                                 value: _selectedType,
                                 items: const ["order", "other"],
@@ -748,7 +750,9 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                                   FocusScope.of(context)
                                       .requestFocus(_dueDateFocus);
                                 },
-                                displayText: (item) => item,
+                                displayText: (item) => item == "order"
+                                    ? 'invoice.type_order'.tr
+                                    : 'invoice.type_other'.tr,
                                 showName: false,
                                 height: 48,
                               ),
@@ -765,7 +769,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _buildLabel("Due date"),
+                                    _buildLabel('invoice.due_date'.tr),
                                     const SizedBox(height: 4),
                                     CustomCalendarPickerTableCell(
                                       initialDate: DateTime.tryParse(
@@ -780,7 +784,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                                         FocusScope.of(context)
                                             .requestFocus(_invoiceDateFocus);
                                       },
-                                      hintText: "Select due date",
+                                      hintText: 'invoice.select_due_date_hint'.tr,
                                       height: 48,
                                       focusNode: _dueDateFocus,
                                     ),
@@ -792,7 +796,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _buildLabel("Invoice date"),
+                                    _buildLabel('invoice.invoice_date'.tr),
                                     const SizedBox(height: 4),
                                     CustomCalendarPickerTableCell(
                                       initialDate: DateTime.tryParse(
@@ -806,7 +810,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                                         FocusScope.of(context)
                                             .requestFocus(_statusFocus);
                                       },
-                                      hintText: "Select invoice date",
+                                      hintText: 'invoice.select_invoice_date_hint'.tr,
                                       height: 48,
                                       focusNode: _invoiceDateFocus,
                                     ),
@@ -828,12 +832,12 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildLabel("Customer", isRequired: true),
+                    _buildLabel('invoice.customer_label'.tr, isRequired: true),
                     const SizedBox(height: 4),
                     CustomDropDownWithSearch<String>(
                       hintText: _isLoadingCustomers
-                          ? "Loading customers..."
-                          : "select a customer",
+                          ? 'invoice.loading_customers'.tr
+                          : 'invoice.select_customer_hint'.tr,
                       title: "",
                       value: _selectedCustomer,
                       items: _customerList.map((c) => c.id.toString()).toList(),
@@ -848,9 +852,9 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                         final customer = _customerList.firstWhere(
                           (c) => c.id?.toString() == item,
                           orElse: () =>
-                              CustomerListModelData(id: 0, name: "Unknown"),
+                              CustomerListModelData(id: 0, name: 'general.unknown'.tr),
                         );
-                        return customer.name ?? "Unknown";
+                        return customer.name ?? 'general.unknown'.tr;
                       },
                       showName: false,
                       height: 48,
@@ -869,7 +873,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                           balanceColor = Colors.grey;
                         }
                         return Text(
-                          "Balance: ${balance.toStringAsFixed(2)}",
+                          'invoice.balance_prefix'.tr.replaceAll('@balance', balance.toStringAsFixed(2)),
                           style: buildCustomStyle(
                             FontWeightManager.medium,
                             FontSize.s12,
@@ -888,7 +892,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
 
           // Invoice Items Section
           Text(
-            'Invoice items',
+            'invoice.items_section_title'.tr,
             style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s16,
                 0.30, ColorManager.textColor),
           ),
@@ -910,11 +914,11 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                     const SizedBox(height: 5),
                     Row(
                       children: [
-                        _buildTableHeader("Item name", flex: 2),
-                        _buildTableHeader("Unit amount"),
-                        _buildTableHeader("Tax %"),
-                        _buildTableHeader("Quantity"),
-                        _buildTableHeader("Total"),
+                        _buildTableHeader('invoice.col_item_name'.tr, flex: 2),
+                        _buildTableHeader('invoice.col_unit_amount'.tr),
+                        _buildTableHeader('invoice.col_tax_percent'.tr),
+                        _buildTableHeader('invoice.col_quantity'.tr),
+                        _buildTableHeader('invoice.col_total'.tr),
                       ],
                     ),
                 const SizedBox(height: 5),
@@ -1104,10 +1108,10 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildLabel("Status"),
+                      _buildLabel('invoice.status_label'.tr),
                       const SizedBox(height: 4),
                       CustomDropDownWithSearch<String>(
-                        hintText: "Select status",
+                        hintText: 'invoice.select_status_hint'.tr,
                         title: "",
                         value: _selectedStatus,
                         items: const ["Paid", "Pending"],
@@ -1116,17 +1120,19 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                           setState(() => _selectedStatus = value);
                           FocusScope.of(context).requestFocus(_paymentMethodFocus);
                         },
-                        displayText: (item) => item,
+                        displayText: (item) => item == "Paid"
+                            ? 'invoice.status_paid'.tr
+                            : 'invoice.status_pending'.tr,
                         showName: false,
                         height: 48,
                       ),
                       const SizedBox(height: 10),
-                      _buildLabel("Payment Method"),
+                      _buildLabel('invoice.payment_method_label'.tr),
                       const SizedBox(height: 4),
                       CustomDropDownWithSearch<String>(
                         hintText: _isLoadingPaymentMethods
-                            ? "Loading..."
-                            : "Payment Method",
+                            ? 'invoice.loading'.tr
+                            : 'invoice.payment_method_label'.tr,
                         title: "",
                         value: _selectedPaymentMethod,
                         items: _paymentMethods.map((m) => m.value).toList(),
@@ -1201,7 +1207,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                               const Icon(Icons.discount_outlined,
                                   size: 18, color: Colors.blue),
                               const SizedBox(width: 10),
-                              Text('Discount',
+                              Text('invoice.discount'.tr,
                                   style: buildCustomStyle(FontWeightManager.medium,
                                       FontSize.s14, 0.14, Colors.blue)),
                             ],
@@ -1209,16 +1215,16 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      _buildSummaryRow('Total Amount', _netTotal),
+                      _buildSummaryRow('invoice.total_amount'.tr, _netTotal),
                       const SizedBox(height: 5),
-                      _buildSummaryRow('All Tax Amount', _totalTax),
+                      _buildSummaryRow('invoice.all_tax_amount'.tr, _totalTax),
                       const SizedBox(height: 5),
-                      _buildSummaryRow('Discount', _discount, isDiscount: true),
+                      _buildSummaryRow('invoice.discount'.tr, _discount, isDiscount: true),
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 10.0),
                         child: Divider(thickness: 1, height: 1),
                       ),
-                      _buildNetTotalRow('Total Payable', _totalPayable),
+                      _buildNetTotalRow('invoice.total_payable'.tr, _totalPayable),
                     ],
                   );
                 }
@@ -1234,10 +1240,10 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                _buildLabel("Status"),
+                                _buildLabel('invoice.status_label'.tr),
                                 const SizedBox(height: 4),
                                 CustomDropDownWithSearch<String>(
-                                  hintText: "Select status",
+                                  hintText: 'invoice.select_status_hint'.tr,
                                   title: "",
                                   value: _selectedStatus,
                                   items: const [
@@ -1250,7 +1256,9 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                                     FocusScope.of(context)
                                         .requestFocus(_paymentMethodFocus);
                                   },
-                                  displayText: (item) => item,
+                                  displayText: (item) => item == "Paid"
+                                      ? 'invoice.status_paid'.tr
+                                      : 'invoice.status_pending'.tr,
                                   showName: false,
                                   height: 48,
                                 ),
@@ -1263,12 +1271,12 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                _buildLabel("Payment Method"),
+                                _buildLabel('invoice.payment_method_label'.tr),
                                 const SizedBox(height: 4),
                                 CustomDropDownWithSearch<String>(
                                   hintText: _isLoadingPaymentMethods
-                                      ? "Loading..."
-                                      : "Payment Method",
+                                      ? 'invoice.loading'.tr
+                                      : 'invoice.payment_method_label'.tr,
                                   title: "",
                                   value: _selectedPaymentMethod,
                                   items: _paymentMethods.map((m) => m.value).toList(),
@@ -1367,7 +1375,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                                       ),
                                       const SizedBox(width: 10),
                                       Text(
-                                        'Discount',
+                                        'invoice.discount'.tr,
                                         style: buildCustomStyle(
                                           FontWeightManager.medium,
                                           FontSize.s14,
@@ -1391,16 +1399,16 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          _buildSummaryRow('Total Amount', _netTotal),
+                          _buildSummaryRow('invoice.total_amount'.tr, _netTotal),
                           const SizedBox(height: 5),
-                          _buildSummaryRow('All Tax Amount', _totalTax),
+                          _buildSummaryRow('invoice.all_tax_amount'.tr, _totalTax),
                           const SizedBox(height: 5),
-                          _buildSummaryRow('Discount', _discount, isDiscount: true),
+                          _buildSummaryRow('invoice.discount'.tr, _discount, isDiscount: true),
                           const Padding(
                             padding: EdgeInsets.symmetric(vertical: 10.0),
                             child: Divider(thickness: 1, height: 1),
                           ),
-                          _buildNetTotalRow('Total Payable', _totalPayable),
+                          _buildNetTotalRow('invoice.total_payable'.tr, _totalPayable),
                         ],
                       ),
                     )
@@ -1424,7 +1432,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               CustomRoundButtonAdvanced(
-                title: "Cancel",
+                title: 'general.cancel'.tr,
                 fct: _isSubmitting ? () {} : () => Navigator.pop(context),
                 width: 100,
                 height: 45,
@@ -1435,7 +1443,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
               ),
               const SizedBox(width: 10),
               CustomRoundButtonAdvanced(
-                title: _isSubmitting ? "Submitting..." : "Submit",
+                title: _isSubmitting ? 'invoice.submitting'.tr : 'invoice.submit'.tr,
                 fct: _isSubmitting ? () {} : _submitInvoice,
                 width: _isSubmitting ? 130 : 100,
                 height: 45,

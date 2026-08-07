@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import '../../../../resources/color_manager.dart';
 import '../../../../resources/font_manager.dart';
 import '../../../../resources/style_manager.dart';
@@ -49,7 +50,7 @@ class CommonDetailsDialog extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: SelectableText(
-              value.isNotEmpty ? value : 'N/A',
+              value.isNotEmpty ? value : 'common_details_dialog.na'.tr,
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s14,
@@ -199,7 +200,7 @@ class CommonDetailsDialog extends StatelessWidget {
                         if (extraActions != null) ...extraActions!,
                         if (extraActions != null) const SizedBox(width: 12),
                         CustomRoundButton(
-                          title: "Close",
+                          title: 'common_details_dialog.close'.tr,
                           boxColor: ColorManager.kPrimaryColor,
                           textColor: Colors.white,
                           fct: () => Navigator.pop(context),

@@ -196,12 +196,12 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         debugPrint(
             '[ZATCA][Phase2 Send With PDF] ERROR: Missing authentication token');
         showScaffoldError(
-            context: context, message: 'Missing authentication token');
+            context: context, message: 'invoice.missing_token'.tr);
         return;
       }
 
-      showScaffold(context: context, message: 'Processing ZATCA Phase 2...');
-      showLoadingOverlay(context, message: 'Processing...');
+      showScaffold(context: context, message: 'invoice.processing_zatca_phase2'.tr);
+      showLoadingOverlay(context, message: 'invoice.processing'.tr);
 
       final provider = Provider.of<InvoiceProvider>(context, listen: false);
       final result = await provider.zatcaPhase2InvoicePrint(
@@ -224,7 +224,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         }
         showScaffold(
           context: context,
-          message: 'Invoice $invoiceNumber processed under ZATCA Phase 2.',
+          message: 'invoice.processed_phase2'.tr.replaceAll('@number', invoiceNumber),
         );
         // Flip row UI immediately
         Provider.of<InvoiceProvider>(context, listen: false)
@@ -241,13 +241,13 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         }
       } else {
         final msg = (result is Map ? result['message'] : null) ??
-            'Failed to process ZATCA Phase 2';
+            'invoice.process_phase2_failed'.tr;
         debugPrint('[ZATCA][Phase2 Send With PDF] ERROR: $msg');
         showScaffoldError(context: context, message: msg.toString());
       }
     } catch (e) {
       debugPrint('[ZATCA][Phase2 Send With PDF] EXCEPTION: $e');
-      showScaffoldError(context: context, message: 'Error: $e');
+      showScaffoldError(context: context, message: 'invoice.error_generic'.tr.replaceAll('@error', e.toString()));
     } finally {
       hideLoadingOverlay();
     }
@@ -263,13 +263,13 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         debugPrint(
             '[ZATCA][Phase2 Resync] ERROR: Missing authentication token');
         showScaffoldError(
-            context: context, message: 'Missing authentication token');
+            context: context, message: 'invoice.missing_token'.tr);
         return;
       }
 
       showScaffold(
-          context: context, message: 'Resyncing invoice with ZATCA...');
-      showLoadingOverlay(context, message: 'Resyncing...');
+          context: context, message: 'invoice.resyncing_with_zatca'.tr);
+      showLoadingOverlay(context, message: 'invoice.resyncing'.tr);
 
       final provider = Provider.of<InvoiceProvider>(context, listen: false);
       final result = await provider.zatcaPhase2InvoiceResync(
@@ -291,8 +291,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         if (ok) {
           showScaffold(
             context: context,
-            message:
-                'Invoice $invoiceNumber resynced with status: $resyncStatus',
+            message: 'invoice.resynced_with_status'.tr
+                .replaceAll('@number', invoiceNumber)
+                .replaceAll('@status', resyncStatus),
           );
           // Flip row UI immediately if resync is successful
           Provider.of<InvoiceProvider>(context, listen: false)
@@ -313,20 +314,22 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   .replaceAll(RegExp(r'<[^>]*>'), ' ')
                   .replaceAll(RegExp(r'\s+'), ' ')
                   .trim()
-              : (result['message']?.toString() ?? 'Failed to resync invoice');
+              : (result['message']?.toString() ?? 'invoice.resync_failed_generic'.tr);
           if (detail.length > 220) detail = '${detail.substring(0, 220)}...';
-          final errMsg =
-              'Resync failed for $invoiceNumber (status: $resyncStatus). $detail';
+          final errMsg = 'invoice.resync_failed_detail'.tr
+              .replaceAll('@number', invoiceNumber)
+              .replaceAll('@status', resyncStatus)
+              .replaceAll('@detail', detail);
           debugPrint('[ZATCA][Phase2 Resync] ERROR: $errMsg');
           showScaffoldError(context: context, message: errMsg);
         }
       } else {
         showScaffoldError(
-            context: context, message: 'Failed to resync invoice');
+            context: context, message: 'invoice.resync_failed_generic'.tr);
       }
     } catch (e) {
       debugPrint('[ZATCA][Phase2 Resync] EXCEPTION: $e');
-      showScaffoldError(context: context, message: 'Error: $e');
+      showScaffoldError(context: context, message: 'invoice.error_generic'.tr.replaceAll('@error', e.toString()));
     } finally {
       hideLoadingOverlay();
     }
@@ -369,7 +372,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.12),
               child: const Icon(Icons.share, color: ColorManager.kPrimaryColor),
             ),
-            title: const Text('Share'),
+            title: Text('invoice.share_action'.tr),
             onTap: () async {
               Navigator.pop(ctx);
               await ShareHelper.showShareInvoiceSheet(
@@ -395,7 +398,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 backgroundColor: Colors.green.withOpacity(0.12),
                 child: const Icon(Icons.qr_code, color: Colors.green),
               ),
-              title: const Text('Phase 1 Print'),
+              title: Text('invoice.phase1_print_action'.tr),
               onTap: () async {
                 Navigator.pop(ctx);
                 await _performZatcaPhase1Print(invoice);
@@ -414,7 +417,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   backgroundColor: Colors.orange.withOpacity(0.12),
                   child: const Icon(Icons.description, color: Colors.orange),
                 ),
-                title: const Text('Phase 2 Print'),
+                title: Text('invoice.phase2_print_action'.tr),
                 onTap: () async {
                   Navigator.pop(ctx);
                   await _performZatcaPhase2SendWithPdf(invoice);
@@ -433,7 +436,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   backgroundColor: Colors.purple.withOpacity(0.12),
                   child: const Icon(Icons.sync, color: Colors.purple),
                 ),
-                title: const Text('Resync Invoice (Warning)'),
+                title: Text('invoice.resync_warning_action'.tr),
                 onTap: () async {
                   Navigator.pop(ctx);
                   await _performZatcaPhase2Resync(invoice);
@@ -454,7 +457,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   backgroundColor: Colors.purple.withOpacity(0.12),
                   child: const Icon(Icons.sync, color: Colors.purple),
                 ),
-                title: const Text('Resync Invoice'),
+                title: Text('invoice.resync_action'.tr),
                 onTap: () async {
                   Navigator.pop(ctx);
                   await _performZatcaPhase2Resync(invoice);
@@ -473,7 +476,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   backgroundColor: Colors.purple.withOpacity(0.12),
                   child: const Icon(Icons.sync, color: Colors.purple),
                 ),
-                title: const Text('Resync Invoice (Failed)'),
+                title: Text('invoice.resync_failed_action'.tr),
                 onTap: () async {
                   Navigator.pop(ctx);
                   await _performZatcaPhase2Resync(invoice);
@@ -492,7 +495,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   backgroundColor: Colors.purple.withOpacity(0.12),
                   child: const Icon(Icons.sync, color: Colors.purple),
                 ),
-                title: const Text('Resync Invoice (Pending)'),
+                title: Text('invoice.resync_pending_action'.tr),
                 onTap: () async {
                   Navigator.pop(ctx);
                   await _performZatcaPhase2Resync(invoice);
@@ -512,7 +515,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   child:
                       const Icon(Icons.send, color: ColorManager.kPrimaryColor),
                 ),
-                title: const Text('Send to ZATCA'),
+                title: Text('invoice.send_to_zatca_action'.tr),
                 onTap: () async {
                   Navigator.pop(ctx);
                   await _performZatcaPhase2Send(invoice);
@@ -536,10 +539,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'More Options',
+                    Text(
+                      'invoice.more_options_title'.tr,
                       style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close, size: 20),
@@ -566,7 +569,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       if (token == null || token.isEmpty) {
         debugPrint('[ZATCA][Phase2 Send] ERROR: Missing authentication token');
         showScaffoldError(
-            context: context, message: 'Missing authentication token');
+            context: context, message: 'invoice.missing_token'.tr);
         return;
       }
 
@@ -576,8 +579,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           invoice.zatcaStatus?.toLowerCase() == 'sent') {
         showScaffold(
           context: context,
-          message:
-              "This invoice #${invoice.invoiceNumber} has already been successfully sent to ZATCA.",
+          message: 'invoice.already_sent_zatca'.tr.replaceAll('@number', invoice.invoiceNumber),
         );
         return;
       }
@@ -586,8 +588,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       final shouldSend = await _showZatcaConfirmationDialog(count: 1);
       if (shouldSend != true) return;
 
-      showScaffold(context: context, message: 'Sending to ZATCA...');
-      showLoadingOverlay(context, message: 'Sending...');
+      showScaffold(context: context, message: 'invoice.sending_to_zatca'.tr);
+      showLoadingOverlay(context, message: 'invoice.sending'.tr);
 
       final provider = Provider.of<InvoiceProvider>(context, listen: false);
       final result = await provider.zatcaPhase2InvoicePrint(
@@ -606,7 +608,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         // Do NOT open PDF here per requirement. Just inform the user.
         showScaffold(
           context: context,
-          message: 'Invoice $invoiceNumber submitted to ZATCA successfully.',
+          message: 'invoice.submitted_to_zatca'.tr.replaceAll('@number', invoiceNumber),
         );
         // Flip row UI immediately
         Provider.of<InvoiceProvider>(context, listen: false)
@@ -623,13 +625,13 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         }
       } else {
         final msg = (result is Map ? result['message'] : null) ??
-            'Failed to send to ZATCA';
+            'invoice.send_to_zatca_failed'.tr;
         debugPrint('[ZATCA][Phase2 Send] ERROR: $msg');
         showScaffoldError(context: context, message: msg.toString());
       }
     } catch (e) {
       debugPrint('[ZATCA][Phase2 Send] EXCEPTION: $e');
-      showScaffoldError(context: context, message: 'Error: $e');
+      showScaffoldError(context: context, message: 'invoice.error_generic'.tr.replaceAll('@error', e.toString()));
     } finally {
       hideLoadingOverlay();
     }
@@ -644,7 +646,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
 
       if (accessToken == null || accessToken.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Authentication token is missing")),
+          SnackBar(content: Text('invoice.auth_token_missing'.tr)),
         );
         return;
       }
@@ -656,7 +658,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       });
     } catch (error) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error loading invoices: $error")),
+        SnackBar(content: Text('invoice.error_loading_invoices'.tr.replaceAll('@error', error.toString()))),
       );
     }
   }
@@ -897,12 +899,12 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Invoice List",
+          'invoice.list_title'.tr,
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
               0.30, ColorManager.textColor),
         ),
         CustomRoundButton(
-          title: "Create invoice",
+          title: 'invoice.create_invoice_button'.tr,
           fct: () async {
             final result = await showCreateInvoiceModal(context, size);
             debugPrint("[InvoiceList] Modal closed with result: $result");
@@ -988,7 +990,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 child: Padding(
                   padding: const EdgeInsets.only(left: 10),
                   child: CustomRoundButton(
-                    title: "Reset",
+                    title: 'general.reset'.tr,
                     boxColor: Colors.white,
                     textColor: ColorManager.kPrimaryColor,
                     fct: resetSearch,
@@ -1016,7 +1018,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     if (syncType == 'selected' && idsToSync.isEmpty) {
       showScaffold(
         context: context,
-        message: "No invoices to sync.",
+        message: 'invoice.no_invoices_to_sync'.tr,
       );
       return;
     }
@@ -1024,18 +1026,17 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     String confirmationMessage;
     switch (syncType) {
       case 'all':
-        confirmationMessage =
-            'This will sync all NOT SENT and FAILED invoices.';
+        confirmationMessage = 'invoice.confirm_sync_all'.tr;
         break;
       case 'failed':
-        confirmationMessage = 'This will sync all FAILED invoices.';
+        confirmationMessage = 'invoice.confirm_sync_failed'.tr;
         break;
       case 'not_sent':
-        confirmationMessage = 'This will sync all NOT SENT invoices.';
+        confirmationMessage = 'invoice.confirm_sync_not_sent'.tr;
         break;
       default:
-        confirmationMessage =
-            'You are about to sync ${idsToSync.length} selected invoice(s) to ZATCA. Do you want to continue?';
+        confirmationMessage = 'invoice.confirm_sync_selected'.tr
+            .replaceAll('@count', idsToSync.length.toString());
     }
 
     // Show confirmation dialog
@@ -1087,18 +1088,18 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       if (result != null && result['status'] == 'success') {
         showScaffold(
           context: context,
-          message: result['message'] ?? "ZATCA sync successful",
+          message: result['message'] ?? 'invoice.sync_success_fallback'.tr,
         );
         setState(() {
           selectedInvoiceIds.clear();
         });
         await refreshData();
       } else {
-        final errorMsg = result?['message'] ?? "ZATCA sync failed";
+        final errorMsg = result?['message'] ?? 'invoice.sync_failed_fallback'.tr;
         showScaffoldError(context: context, message: errorMsg);
       }
     } catch (e) {
-      showScaffoldError(context: context, message: "An error occurred: $e");
+      showScaffoldError(context: context, message: 'invoice.bulk_sync_error'.tr.replaceAll('@error', e.toString()));
     } finally {
       if (mounted) {
         setState(() {
@@ -1153,7 +1154,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           Row(
             children: [
               CustomRoundButton(
-                title: "Sync ALL",
+                title: 'invoice.sync_all_button'.tr,
                 boxColor: Colors.blueAccent,
                 textColor: Colors.white,
                 borderColor: Colors.transparent,
@@ -1173,7 +1174,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               ),
               const SizedBox(width: 8),
               CustomRoundButton(
-                title: "Sync Failed",
+                title: 'invoice.sync_failed_button'.tr,
                 boxColor: Colors.redAccent,
                 textColor: Colors.white,
                 borderColor: Colors.transparent,
@@ -1193,7 +1194,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               ),
               const SizedBox(width: 8),
               CustomRoundButton(
-                title: "Sync Not Send",
+                title: 'invoice.sync_not_send_button'.tr,
                 boxColor: Colors.orangeAccent,
                 textColor: Colors.white,
                 borderColor: Colors.transparent,
@@ -1213,7 +1214,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               ),
               const SizedBox(width: 8),
               CustomRoundButton(
-                title: "Sync Selected",
+                title: 'invoice.sync_selected_button'.tr,
                 boxColor: hasSelection ? Colors.lightBlue : Colors.grey,
                 textColor: Colors.white,
                 borderColor: Colors.transparent,
@@ -1238,7 +1239,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               const Spacer(),
               // Selection info on the right
               Text(
-                "${selectedInvoiceIds.length} records selected",
+                'invoice.records_selected'.tr.replaceAll('@count', selectedInvoiceIds.length.toString()),
                 style: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s14,
@@ -1263,7 +1264,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                         "[DEBUG] Bulk Select: Found ${currentInvoices.length}, Selected ${selectedInvoiceIds.length}");
                   },
                   child: Text(
-                    "Select Page",
+                    'invoice.select_page'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.bold,
                       FontSize.s11,
@@ -1281,7 +1282,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   });
                 },
                 child: Text(
-                  "Unselect",
+                  'invoice.unselect'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.bold,
                     FontSize.s11,
@@ -1326,7 +1327,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
                 0.18, ColorManager.textColor),
             decoration: decoration.copyWith(
-              hintText: "Invoice No",
+              hintText: 'invoice.search_invoice_no_hint'.tr,
               hintStyle: buildCustomStyle(FontWeightManager.medium,
                   FontSize.s10, 0.18, ColorManager.textColor),
               prefixIconColor: Colors.black,
@@ -1377,7 +1378,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
                   0.18, ColorManager.textColor),
               decoration: decoration.copyWith(
-                hintText: "Phone",
+                hintText: 'invoice.search_phone_hint'.tr,
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor),
                 prefixIconColor: Colors.black,
@@ -1472,7 +1473,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                     style: buildCustomStyle(FontWeightManager.medium,
                         FontSize.s10, 0.18, ColorManager.textColor),
                     decoration: decoration.copyWith(
-                      hintText: "YYYY-MM-DD HH:MM:SS",
+                      hintText: 'invoice.date_range_hint'.tr,
                       hintStyle: buildCustomStyle(
                           FontWeightManager.medium,
                           FontSize.s10,
@@ -1533,7 +1534,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                     style: buildCustomStyle(FontWeightManager.medium,
                         FontSize.s10, 0.18, ColorManager.textColor),
                     decoration: decoration.copyWith(
-                      hintText: "YYYY-MM-DD HH:MM:SS",
+                      hintText: 'invoice.date_range_hint'.tr,
                       hintStyle: buildCustomStyle(
                           FontWeightManager.medium,
                           FontSize.s10,
@@ -1693,11 +1694,11 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     final String? token = Provider.of<AuthModel>(context, listen: false).token;
     if (token == null || token.isEmpty) {
       showScaffoldError(
-          context: context, message: 'Missing authentication token');
+          context: context, message: 'invoice.missing_token'.tr);
       return;
     }
 
-    showLoadingOverlay(context, message: 'Loading details...');
+    showLoadingOverlay(context, message: 'invoice.loading_details'.tr);
     try {
       final provider = Provider.of<InvoiceProvider>(context, listen: false);
       await provider.callDetailsOfInvoice(id: invoice.id, accessToken: token);
@@ -1705,7 +1706,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       hideLoadingOverlay();
 
       if (details == null) {
-        showScaffoldError(context: context, message: 'Failed to load details');
+        showScaffoldError(context: context, message: 'invoice.failed_load_details'.tr);
         return;
       }
 
@@ -1714,29 +1715,29 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       showDialog(
         context: context,
         builder: (context) => CommonDetailsDialog(
-          title: 'Invoice details',
+          title: 'invoice.details_title'.tr,
           gridColumns: [
             [
               CommonDetailsDialog.buildKeyValueRow(
-                  'Invoice Number', details.invoiceNumber,
+                  'invoice.field_invoice_number'.tr, details.invoiceNumber,
                   copyable: true),
               CommonDetailsDialog.buildKeyValueRow(
-                  'Customer Name', details.customer.name),
+                  'invoice.field_customer_name'.tr, details.customer.name),
               CommonDetailsDialog.buildKeyValueRow(
-                  'Customer Phone', details.customer.phone,
+                  'invoice.field_customer_phone'.tr, details.customer.phone,
                   copyable: true),
-              CommonDetailsDialog.buildKeyValueRow('Amount', details.amount),
-              CommonDetailsDialog.buildKeyValueRow('Type', details.type),
+              CommonDetailsDialog.buildKeyValueRow('invoice.field_amount'.tr, details.amount),
+              CommonDetailsDialog.buildKeyValueRow('invoice.field_type'.tr, details.type),
             ],
             [
               CommonDetailsDialog.buildKeyValueRow(
-                  'Invoice Date', details.invoiceDate),
-              CommonDetailsDialog.buildKeyValueRow('Due Date', details.dueDate),
-              CommonDetailsDialog.buildKeyValueRow('Status', details.status),
-              CommonDetailsDialog.buildKeyValueRow('Order Number', 'N/A'),
+                  'invoice.field_invoice_date'.tr, details.invoiceDate),
+              CommonDetailsDialog.buildKeyValueRow('invoice.field_due_date'.tr, details.dueDate),
+              CommonDetailsDialog.buildKeyValueRow('invoice.field_status'.tr, details.status),
+              CommonDetailsDialog.buildKeyValueRow('invoice.field_order_number'.tr, 'common_details_dialog.na'.tr),
             ],
           ],
-          sectionTitle: 'Items',
+          sectionTitle: 'invoice.items_title'.tr,
           tableContent: Column(
             children: [
               // Table Header
@@ -1752,7 +1753,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                     Expanded(
                       flex: 4,
                       child: Text(
-                        'Item',
+                        'invoice.col_item'.tr,
                         style: TextStyle(
                           fontWeight: FontWeightManager.bold,
                           fontSize: FontSize.s12,
@@ -1763,7 +1764,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                     Expanded(
                       flex: 2,
                       child: Text(
-                        'Quantity',
+                        'invoice.col_quantity'.tr,
                         style: TextStyle(
                           fontWeight: FontWeightManager.bold,
                           fontSize: FontSize.s12,
@@ -1775,7 +1776,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                     Expanded(
                       flex: 2,
                       child: Text(
-                        'Price',
+                        'invoice.col_price'.tr,
                         style: TextStyle(
                           fontWeight: FontWeightManager.bold,
                           fontSize: FontSize.s12,
@@ -1787,7 +1788,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                     Expanded(
                       flex: 2,
                       child: Text(
-                        'Total',
+                        'invoice.col_total'.tr,
                         style: TextStyle(
                           fontWeight: FontWeightManager.bold,
                           fontSize: FontSize.s12,
@@ -1865,7 +1866,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     } catch (e) {
       hideLoadingOverlay();
       showScaffoldError(
-          context: context, message: 'Error loading invoice details: $e');
+          context: context, message: 'invoice.error_loading_details'.tr.replaceAll('@error', e.toString()));
     }
   }
 
@@ -1993,7 +1994,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
                   0.18, ColorManager.textColor),
               decoration: decoration.copyWith(
-                hintText: "Name",
+                hintText: 'invoice.search_name_hint'.tr,
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor),
                 prefixIconColor: Colors.black,
@@ -2069,15 +2070,15 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                 TableRow(
                                   children: [
                                     _buildTableHeader(""), // Selection Checkbox
-                                    _buildTableHeader("Invoice Number"),
-                                    _buildTableHeader("Amount"),
-                                    _buildTableHeader("Name"),
-                                    _buildTableHeader("Invoice Date"),
-                                    _buildTableHeader("Type"),
-                                    _buildTableHeader("Due Date"),
-                                    _buildTableHeader("Status"),
-                                    _buildTableHeader("ZATCA Status"),
-                                    _buildTableHeader("Action"),
+                                    _buildTableHeader('invoice.field_invoice_number'.tr),
+                                    _buildTableHeader('invoice.col_amount'.tr),
+                                    _buildTableHeader('invoice.col_name'.tr),
+                                    _buildTableHeader('invoice.field_invoice_date'.tr),
+                                    _buildTableHeader('invoice.field_type'.tr),
+                                    _buildTableHeader('invoice.field_due_date'.tr),
+                                    _buildTableHeader('invoice.field_status'.tr),
+                                    _buildTableHeader('invoice.col_zatca_status'.tr),
+                                    _buildTableHeader('invoice.col_action'.tr),
                                   ],
                                 ),
                               ],
@@ -2210,7 +2211,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                                             showScaffold(
                                                               context: context,
                                                               message:
-                                                                  'Invoice number copied to clipboard',
+                                                                  'invoice.invoice_number_copied'.tr,
                                                             );
                                                           },
                                                           child: Icon(
@@ -2392,12 +2393,12 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       if (token == null || token.isEmpty) {
         debugPrint('[ZATCA][Phase1 Print] ERROR: Missing authentication token');
         showScaffoldError(
-            context: context, message: 'Missing authentication token');
+            context: context, message: 'invoice.missing_token'.tr);
         return;
       }
 
-      showScaffold(context: context, message: 'Processing ZATCA Print...');
-      showLoadingOverlay(context, message: 'Processing...');
+      showScaffold(context: context, message: 'invoice.processing_zatca_print'.tr);
+      showLoadingOverlay(context, message: 'invoice.processing'.tr);
 
       final provider = Provider.of<InvoiceProvider>(context, listen: false);
       final result = await provider.zatcaPhase1InvoicePrint(
@@ -2418,18 +2419,18 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         } else {
           showScaffold(
             context: context,
-            message: (result['message']?.toString() ?? 'ZATCA Print completed'),
+            message: (result['message']?.toString() ?? 'invoice.zatca_print_completed'.tr),
           );
         }
       } else {
         final msg = (result is Map ? result['message'] : null) ??
-            'Failed to trigger ZATCA Print';
+            'invoice.zatca_print_failed'.tr;
         debugPrint('[ZATCA][Phase1 Print] ERROR: $msg');
         showScaffoldError(context: context, message: msg.toString());
       }
     } catch (e) {
       debugPrint('[ZATCA][Phase1 Print] EXCEPTION: $e');
-      showScaffoldError(context: context, message: 'Error: $e');
+      showScaffoldError(context: context, message: 'invoice.error_generic'.tr.replaceAll('@error', e.toString()));
     } finally {
       hideLoadingOverlay();
     }
@@ -2440,7 +2441,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     try {
       if (kIsWeb) {
         await launchUrlString(url, mode: LaunchMode.externalApplication);
-        showScaffold(context: context, message: 'Opened PDF in browser');
+        showScaffold(context: context, message: 'invoice.opened_pdf_browser'.tr);
         return;
       }
 
@@ -2463,13 +2464,13 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       );
 
       await OpenFile.open(savePath);
-      showScaffold(context: context, message: 'PDF downloaded');
+      showScaffold(context: context, message: 'invoice.pdf_downloaded'.tr);
     } catch (e) {
       debugPrint('[ZATCA][PDF] ERROR while downloading/opening: $e');
       try {
         await launchUrlString(url, mode: LaunchMode.externalApplication);
       } catch (_) {}
-      showScaffoldError(context: context, message: 'Failed to open PDF');
+      showScaffoldError(context: context, message: 'invoice.failed_open_pdf'.tr);
     }
   }
 
@@ -2516,7 +2517,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   }
 
   Widget _buildZatcaStatusChip(Invoice invoice) {
-    String label = "NOT SENT";
+    String label = 'invoice.zatca_status_not_sent'.tr;
     Color backgroundColor = Colors.orange.withOpacity(0.12);
     Color textColor = Colors.orange;
 
@@ -2533,15 +2534,15 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         (zatcaRequestStatus == 'pending' || zatcaRequestStatus == 'processing');
 
     if (isZatcaPass) {
-      label = "SENT";
+      label = 'invoice.zatca_status_sent'.tr;
       backgroundColor = Colors.green.withOpacity(0.12);
       textColor = Colors.green;
     } else if (isRequestFailed) {
-      label = "FAILED";
+      label = 'invoice.zatca_status_failed'.tr;
       backgroundColor = Colors.red.withOpacity(0.12);
       textColor = Colors.red;
     } else if (isRequestPending) {
-      label = "PENDING";
+      label = 'invoice.zatca_status_pending'.tr;
       backgroundColor = Colors.blue.withOpacity(0.12);
       textColor = Colors.blue;
     }
@@ -2613,7 +2614,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    "Send Invoices to ZATCA",
+                    'invoice.send_invoices_to_zatca_title'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.bold,
                       FontSize.s18,
@@ -2624,7 +2625,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   const SizedBox(height: 12),
                   Text(
                     message ??
-                        "You are about to send $count invoice(s) to ZATCA. Do you want to continue?",
+                        'invoice.send_zatca_confirm_message'.tr.replaceAll('@count', count.toString()),
                     textAlign: TextAlign.center,
                     softWrap: true,
                     maxLines: null,
@@ -2650,7 +2651,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
                           child: Text(
-                            "Cancel",
+                            'general.cancel'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.semiBold,
                               FontSize.s14,
@@ -2673,7 +2674,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                             elevation: 0,
                           ),
                           child: Text(
-                            "Send to ZATCA",
+                            'invoice.send_to_zatca_action'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.semiBold,
                               FontSize.s14,
@@ -2709,7 +2710,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           ),
           const SizedBox(height: 15),
           Text(
-            'No invoices found',
+            'invoice.no_invoices_found'.tr,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s18,
@@ -2719,7 +2720,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Try adjusting your search criteria',
+            'invoice.try_adjusting_search'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,
