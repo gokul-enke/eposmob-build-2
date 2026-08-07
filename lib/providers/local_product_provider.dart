@@ -1512,23 +1512,36 @@ class LocalProductProvider extends ChangeNotifier {
     final items = <Map<String, dynamic>>[];
 
     for (final item in cartItems) {
-      num reservedQuantity = 0;
+      final positiveReservations = item.stockReservations
+          .where((reservation) => reservation.quantity > 0)
+          .toList(growable: false);
+      final reservedQuantity = positiveReservations.fold<num>(
+        0,
+        (sum, reservation) => sum + reservation.quantity,
+      );
+      final unreservedQuantity = item.quantity - reservedQuantity;
 
-      for (final reservation in item.stockReservations) {
-        if (reservation.quantity <= 0) {
-          continue;
-        }
+      for (var index = 0; index < positiveReservations.length; index++) {
+        final reservation = positiveReservations[index];
+        final isLastReservation = index == positiveReservations.length - 1;
 
-        final payloadQuantity = item
-                .canUseSaleUnitPayloadFor(reservation.quantity)
-            ? item.toDisplayQuantity(reservation.quantity)
+        // When negative stock is supported, charge an oversold remainder to
+        // the final batch used by the allocator instead of emitting a
+        // stock_id:null line. Combining before unit conversion also lets a
+        // partial reservation plus its overflow become a whole PACK/CASE.
+        final baseQuantity = isLastReservation && unreservedQuantity > 0
+            ? reservation.quantity + unreservedQuantity
+            : reservation.quantity;
+
+        final payloadQuantity = item.canUseSaleUnitPayloadFor(baseQuantity)
+            ? item.toDisplayQuantity(baseQuantity)
             // Base-unit line: guard against fractional reservations on
             // non-decimal units (e.g. legacy persisted 1.3 splits).
-            : normalizeQuantityForUnit(reservation.quantity, item.product.unit);
-        final payloadPrice = item.canUseSaleUnitPayloadFor(reservation.quantity)
+            : normalizeQuantityForUnit(baseQuantity, item.product.unit);
+        final payloadPrice = item.canUseSaleUnitPayloadFor(baseQuantity)
             ? item.toDisplayAmount(item.price)
             : item.price;
-        final payloadMrp = item.canUseSaleUnitPayloadFor(reservation.quantity)
+        final payloadMrp = item.canUseSaleUnitPayloadFor(baseQuantity)
             ? item.toDisplayAmount(item.mrp)
             : item.mrp;
 
@@ -1538,20 +1551,17 @@ class LocalProductProvider extends ChangeNotifier {
           'price': payloadPrice,
           'mrp': payloadMrp,
           'stock_id': reservation.stockId,
-          if (item.canUseSaleUnitPayloadFor(reservation.quantity)) ...{
+          if (item.canUseSaleUnitPayloadFor(baseQuantity)) ...{
             'sale_unit_id': item.saleUnitId,
             'product_sale_unit_id': item.saleUnitId,
           },
           if (item.variantId != null) 'product_variant_id': item.variantId,
           'warranty_enabled': item.warrantyEnabled,
         });
-        reservedQuantity += reservation.quantity;
       }
 
-      final unreservedQuantity = item.quantity - reservedQuantity;
-      if (unreservedQuantity > 0 || item.stockReservations.isEmpty) {
-        final baseQuantity =
-            item.stockReservations.isEmpty ? item.quantity : unreservedQuantity;
+      if (positiveReservations.isEmpty) {
+        final baseQuantity = item.quantity;
         final canUseSaleUnitPayload =
             item.canUseSaleUnitPayloadFor(baseQuantity);
 
@@ -1565,8 +1575,7 @@ class LocalProductProvider extends ChangeNotifier {
               : item.price,
           'mrp':
               canUseSaleUnitPayload ? item.toDisplayAmount(item.mrp) : item.mrp,
-          'stock_id':
-              item.stockReservations.isEmpty ? item.selectedStock?.id : null,
+          'stock_id': item.selectedStock?.id,
           if (canUseSaleUnitPayload) ...{
             'sale_unit_id': item.saleUnitId,
             'product_sale_unit_id': item.saleUnitId,

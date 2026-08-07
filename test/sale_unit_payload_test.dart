@@ -225,7 +225,7 @@ void main() {
       expect(payload, isEmpty);
     });
 
-    test('includes stock_id null for unreserved overflow quantity', () {
+    test('merges unreserved overflow into the final stock reservation', () {
       final item = LocalCartItem(
         product: buildProduct(),
         quantity: 10,
@@ -237,11 +237,43 @@ void main() {
       );
 
       final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
-      expect(payload.length, 2);
-      expect(payload[0]['stock_id'], 1);
-      expect(payload[0]['quantity'], 6);
-      expect(payload[1]['stock_id'], isNull);
-      expect(payload[1]['quantity'], 4);
+      expect(payload.length, 1);
+      expect(payload.single['stock_id'], 1);
+      expect(payload.single['quantity'], 10);
+    });
+
+    test('keeps multi-stock rows and adds overflow to the final stock', () {
+      final item = LocalCartItem(
+        product: buildProduct(),
+        quantity: 12,
+        price: 10,
+        mrp: 12,
+        stockReservations: [
+          StockReservation(stockId: 101, quantity: 5),
+          StockReservation(stockId: 102, quantity: 4),
+        ],
+      );
+
+      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+
+      expect(payload, [
+        {
+          'product_id': 1,
+          'quantity': 5,
+          'price': 10.0,
+          'mrp': 12.0,
+          'stock_id': 101,
+          'warranty_enabled': false,
+        },
+        {
+          'product_id': 1,
+          'quantity': 7,
+          'price': 10.0,
+          'mrp': 12.0,
+          'stock_id': 102,
+          'warranty_enabled': false,
+        },
+      ]);
     });
 
     test(
@@ -282,7 +314,7 @@ void main() {
       expect(payload.first.containsKey('sale_unit_id'), isFalse);
     });
 
-    test('uses base units when 2 CASE is split as 16 reserved and 8 unreserved',
+    test('merges overflow into the last stock and restores whole CASE payload',
         () {
       final item = LocalCartItem(
         product: buildProduct(),
@@ -303,18 +335,12 @@ void main() {
       expect(payload, [
         {
           'product_id': 1,
-          'quantity': 16,
-          'price': 10.0,
-          'mrp': 12.0,
+          'quantity': 2,
+          'price': 120.0,
+          'mrp': 144.0,
           'stock_id': 1,
-          'warranty_enabled': false,
-        },
-        {
-          'product_id': 1,
-          'quantity': 8,
-          'price': 10.0,
-          'mrp': 12.0,
-          'stock_id': null,
+          'sale_unit_id': 10,
+          'product_sale_unit_id': 10,
           'warranty_enabled': false,
         },
       ]);
@@ -351,8 +377,7 @@ void main() {
       ]);
     });
 
-    test('uses base units when 1 CASE is split as 4 reserved and 8 unreserved',
-        () {
+    test('merges partial reservation and overflow into one whole CASE', () {
       final item = LocalCartItem(
         product: buildProduct(),
         quantity: 12,
@@ -372,18 +397,12 @@ void main() {
       expect(payload, [
         {
           'product_id': 1,
-          'quantity': 4,
-          'price': 10.0,
-          'mrp': 12.0,
+          'quantity': 1,
+          'price': 120.0,
+          'mrp': 144.0,
           'stock_id': 1,
-          'warranty_enabled': false,
-        },
-        {
-          'product_id': 1,
-          'quantity': 8,
-          'price': 10.0,
-          'mrp': 12.0,
-          'stock_id': null,
+          'sale_unit_id': 10,
+          'product_sale_unit_id': 10,
           'warranty_enabled': false,
         },
       ]);
@@ -411,18 +430,12 @@ void main() {
       expect(payload, [
         {
           'product_id': 1,
-          'quantity': 6,
-          'price': 10.0,
-          'mrp': 12.0,
+          'quantity': 1,
+          'price': 250.0,
+          'mrp': 300.0,
           'stock_id': 1,
-          'warranty_enabled': false,
-        },
-        {
-          'product_id': 1,
-          'quantity': 19,
-          'price': 10.0,
-          'mrp': 12.0,
-          'stock_id': null,
+          'sale_unit_id': 10,
+          'product_sale_unit_id': 10,
           'warranty_enabled': false,
         },
       ]);
@@ -469,7 +482,7 @@ void main() {
       ]);
     });
 
-    test('floors fractional unreserved overflow for non-decimal units', () {
+    test('merges fractional overflow before normalizing non-decimal units', () {
       final item = LocalCartItem(
         product: buildProduct(), // unit PCS
         quantity: 2,
@@ -482,14 +495,14 @@ void main() {
 
       final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
 
-      // reserved 0.5 -> floored to 0 (dropped); unreserved 1.5 -> floored to 1.
+      // 0.5 reserved + 1.5 overflow becomes 2 on the reserved stock.
       expect(payload, [
         {
           'product_id': 1,
-          'quantity': 1,
+          'quantity': 2,
           'price': 10.0,
           'mrp': 12.0,
-          'stock_id': null,
+          'stock_id': 1,
           'warranty_enabled': false,
         },
       ]);
