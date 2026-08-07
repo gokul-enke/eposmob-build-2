@@ -132,8 +132,8 @@ class _StockReportScreenState extends State<StockReportScreen> {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(
-            const SnackBar(
-              content: Text('Stock report is currently unavailable.'),
+            SnackBar(
+              content: Text('stock_report.unavailable'.tr),
               backgroundColor: Colors.red,
             ),
           );
@@ -226,7 +226,7 @@ class _StockReportScreenState extends State<StockReportScreen> {
       children: [
         Expanded(
           child: Text(
-            "Stock Report",
+            'stock_report.title'.tr,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s20,
@@ -246,7 +246,7 @@ class _StockReportScreenState extends State<StockReportScreen> {
                   color: ColorManager.kPrimaryColor,
                 ),
                 label: Text(
-                  _showFilters ? 'Hide' : 'Filters',
+                  _showFilters ? 'stock_report.hide'.tr : 'stock_report.filters'.tr,
                   style: const TextStyle(
                       color: ColorManager.kPrimaryColor, fontSize: 12),
                 ),
@@ -281,11 +281,11 @@ class _StockReportScreenState extends State<StockReportScreen> {
             direction: isNarrow ? Axis.vertical : Axis.horizontal,
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildSummaryItem("Total Stocked Units", totalUnits, Icons.inventory_2_outlined),
+              _buildSummaryItem('stock_report.total_stocked_units'.tr, totalUnits, Icons.inventory_2_outlined),
               if (isNarrow) const Divider(height: 16),
-              _buildSummaryItem("Total Stock Value (Cost)", "$totalStockValue", Icons.monetization_on_outlined),
+              _buildSummaryItem('stock_report.total_stock_value'.tr, "$totalStockValue", Icons.monetization_on_outlined),
               if (isNarrow) const Divider(height: 16),
-              _buildSummaryItem("Total Retail Value (Sale)", "$totalRetailValue", Icons.shopping_bag_outlined),
+              _buildSummaryItem('stock_report.total_retail_value'.tr, "$totalRetailValue", Icons.shopping_bag_outlined),
             ],
           );
         },
@@ -339,7 +339,7 @@ class _StockReportScreenState extends State<StockReportScreen> {
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(
-            "View Stock As Of",
+            'stock_report.view_stock_as_of'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,
@@ -358,7 +358,7 @@ class _StockReportScreenState extends State<StockReportScreen> {
               child: CalendarPickerTableCell(
                 key: ValueKey('snapshot_$_datePickerResetKey'),
                 initialDate: selectedSnapshotDate,
-                hintText: "Leave blank to show current stock",
+                hintText: 'stock_report.snapshot_hint'.tr,
                 onDateSelected: (date) {
                   setState(() {
                     selectedSnapshotDate = date;
@@ -392,8 +392,8 @@ class _StockReportScreenState extends State<StockReportScreen> {
     );
 
     final storeDropdown = _buildFilterDropdown<Store>(
-      label: "Store",
-      hint: "All Stores",
+      label: 'stock_report.store'.tr,
+      hint: 'stock_report.all_stores'.tr,
       value: selectedStoreId != null
           ? storeProvider.availableStores
               .firstWhereOrNull((s) => s.storeId == selectedStoreId)
@@ -411,8 +411,8 @@ class _StockReportScreenState extends State<StockReportScreen> {
     );
 
     final categoryDropdown = _buildFilterDropdown<Category>(
-      label: "Category",
-      hint: "All Categories",
+      label: 'stock_report.category'.tr,
+      hint: 'stock_report.all_categories'.tr,
       value: selectedCategoryId != null
           ? categoryProvider.category
               ?.firstWhereOrNull((c) => c.categoryId == selectedCategoryId)
@@ -430,8 +430,8 @@ class _StockReportScreenState extends State<StockReportScreen> {
     );
 
     final productDropdown = _buildFilterDropdown<GetProduct>(
-      label: "Product",
-      hint: "All Products",
+      label: 'stock_report.product'.tr,
+      hint: 'stock_report.all_products'.tr,
       value: selectedProductName != null
           ? productProvider.products
               .firstWhereOrNull((p) => p.productName == selectedProductName)
@@ -448,8 +448,8 @@ class _StockReportScreenState extends State<StockReportScreen> {
     );
 
     final stockLevelDropdown = _buildFilterDropdown<String>(
-      label: "Stock Level",
-      hint: "All Levels",
+      label: 'stock_report.stock_level'.tr,
+      hint: 'stock_report.all_levels'.tr,
       value: selectedStockLevel,
       items: const ['All', 'Below Reorder'],
       displayText: (val) => val,
@@ -463,8 +463,8 @@ class _StockReportScreenState extends State<StockReportScreen> {
     );
 
     final expiryDropdown = _buildFilterDropdown<String>(
-      label: "Expiry Filter",
-      hint: "All Expiries",
+      label: 'stock_report.expiry_filter'.tr,
+      hint: 'stock_report.all_expiries'.tr,
       value: selectedExpiryFilter,
       items: const ['All', '1 Month', '3 Months', '6 Months', '1 Year'],
       displayText: (val) => val,
@@ -483,7 +483,7 @@ class _StockReportScreenState extends State<StockReportScreen> {
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(
-            "From Date",
+            'stock_report.from_date'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,
@@ -517,7 +517,7 @@ class _StockReportScreenState extends State<StockReportScreen> {
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(
-            "Until Date",
+            'stock_report.until_date'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,
@@ -574,7 +574,7 @@ class _StockReportScreenState extends State<StockReportScreen> {
           ]),
           const SizedBox(height: 12),
           CustomRoundButton(
-            title: "Reset",
+            title: 'general.reset'.tr,
             boxColor: Colors.white,
             textColor: ColorManager.kPrimaryColor,
             fct: _resetFilters,
@@ -615,7 +615,7 @@ class _StockReportScreenState extends State<StockReportScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 45),
               child: CustomRoundButton(
-                title: "Reset",
+                title: 'general.reset'.tr,
                 boxColor: Colors.white,
                 textColor: ColorManager.kPrimaryColor,
                 fct: _resetFilters,
@@ -663,7 +663,7 @@ class _StockReportScreenState extends State<StockReportScreen> {
           height: 45,
           margin: EdgeInsets.zero,
           onChanged: onChanged,
-          searchHintText: 'Search...',
+          searchHintText: 'stock_report.search_hint'.tr,
           width: double.infinity,
         ),
       ],
@@ -734,13 +734,13 @@ class _StockReportScreenState extends State<StockReportScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                _buildMobileCardStat('Category', item.categoryName ?? '-',
+                _buildMobileCardStat('stock_report.category_stat'.tr, item.categoryName ?? '-',
                     selectable: true),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Stores',
+                      Text('stock_report.stores_stat'.tr,
                           style: buildCustomStyle(FontWeightManager.regular,
                               FontSize.s10, 0.15, Colors.grey)),
                       const SizedBox(height: 2),
@@ -754,28 +754,28 @@ class _StockReportScreenState extends State<StockReportScreen> {
             Row(
               children: [
                 _buildMobileCardStat(
-                    'Stock', "${item.totalQuantity ?? 0} ${item.unit ?? 'PCS'}"),
-                _buildMobileCardStat('Expiry', expDate),
+                    'stock_report.stock_stat'.tr, "${item.totalQuantity ?? 0} ${item.unit ?? 'PCS'}"),
+                _buildMobileCardStat('stock_report.expiry_stat'.tr, expDate),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                _buildMobileCardStat('Retail Price', retailPriceVal),
-                _buildMobileCardStat('MRP', mrpVal),
+                _buildMobileCardStat('stock_report.retail_price_stat'.tr, retailPriceVal),
+                _buildMobileCardStat('stock_report.mrp_stat'.tr, mrpVal),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                _buildMobileCardStat('Purchase Price', purchasePriceVal),
-                _buildMobileCardStat('Stock Value', stockVal),
+                _buildMobileCardStat('stock_report.purchase_price_stat'.tr, purchasePriceVal),
+                _buildMobileCardStat('stock_report.stock_value_stat'.tr, stockVal),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                _buildMobileCardStat('Retail Value', retailVal),
+                _buildMobileCardStat('stock_report.retail_value_stat'.tr, retailVal),
                 const Expanded(child: SizedBox.shrink()),
               ],
             ),
@@ -897,18 +897,18 @@ class _StockReportScreenState extends State<StockReportScreen> {
                           children: [
                             TableRow(
                               children: [
-                                _buildTableHeaderCell("No"),
-                                _buildTableHeaderCell("Product Name"),
-                                _buildTableHeaderCell("Category"),
-                                _buildTableHeaderCell("Stores"),
-                                _buildTableHeaderCell("Barcode"),
-                                _buildTableHeaderCell("Retail\nPrice"),
-                                _buildTableHeaderCell("MRP"),
-                                _buildTableHeaderCell("Purchase\nPrice"),
-                                _buildTableHeaderCell("Current\nStock"),
-                                _buildTableHeaderCell("Stock\nValue"),
-                                _buildTableHeaderCell("Retail\nValue"),
-                                _buildTableHeaderCell("Expiry\nDate"),
+                                _buildTableHeaderCell('stock_report.col_no'.tr),
+                                _buildTableHeaderCell('stock_report.col_product_name'.tr),
+                                _buildTableHeaderCell('stock_report.col_category'.tr),
+                                _buildTableHeaderCell('stock_report.col_stores'.tr),
+                                _buildTableHeaderCell('stock_report.col_barcode'.tr),
+                                _buildTableHeaderCell('stock_report.col_retail_price'.tr),
+                                _buildTableHeaderCell('stock_report.col_mrp'.tr),
+                                _buildTableHeaderCell('stock_report.col_purchase_price'.tr),
+                                _buildTableHeaderCell('stock_report.col_current_stock'.tr),
+                                _buildTableHeaderCell('stock_report.col_stock_value'.tr),
+                                _buildTableHeaderCell('stock_report.col_retail_value'.tr),
+                                _buildTableHeaderCell('stock_report.col_expiry_date'.tr),
                               ],
                             ),
                           ],
@@ -1090,9 +1090,9 @@ class _StockReportScreenState extends State<StockReportScreen> {
                         ScaffoldMessenger.of(context)
                           ..hideCurrentSnackBar()
                           ..showSnackBar(
-                            const SnackBar(
-                              content: Text('Barcode copied to clipboard'),
-                              duration: Duration(seconds: 1),
+                            SnackBar(
+                              content: Text('stock_report.barcode_copied'.tr),
+                              duration: const Duration(seconds: 1),
                             ),
                           );
                       },
@@ -1163,7 +1163,7 @@ class _StockReportScreenState extends State<StockReportScreen> {
               size: 64, color: Colors.grey.shade300),
           const SizedBox(height: 16),
           Text(
-            "No data found",
+            'stock_report.no_data_found'.tr,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s16,
