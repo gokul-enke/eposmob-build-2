@@ -739,7 +739,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
 
   void _addItem() {
     if (currentItem.productData == null) {
-      _showErrorMessage("Please select a product to add");
+      _showErrorMessage('purchase_order.please_select_product'.tr);
       return;
     }
 
@@ -781,7 +781,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
     final item = orderItems[index];
 
     if (_isReceiveMode && item.alreadyReceived) {
-      _showErrorMessage("This item is already received and cannot be edited");
+      _showErrorMessage('purchase_order.item_already_received_edit'.tr);
       return;
     }
 
@@ -954,7 +954,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       children: [
         const SizedBox(height: 8),
         Text(
-          'Select Variant *',
+          'purchase_order.select_variant_required'.tr,
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s12,
@@ -965,7 +965,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         const SizedBox(height: 4),
         BuildDropDownWithSearch<ProductVariant>(
           title: null,
-          hintText: 'Select product variant',
+          hintText: 'purchase_order.select_product_variant_hint'.tr,
           value: selected,
           items: variants,
           onChanged: (variant) {
@@ -1017,7 +1017,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         }
       });
     }
-    return parts.isNotEmpty ? parts.join(' | ') : 'Variant ${v.id}';
+    return parts.isNotEmpty ? parts.join(' | ') : 'purchase_order.variant_fallback'.tr.replaceAll('@id', v.id.toString());
   }
 
   String get _currency {
@@ -1267,17 +1267,17 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
     final isReceiveMode = _isReceiveMode;
 
     if (selectedSupplier == null) {
-      _showErrorMessage("Please select Supplier");
+      _showErrorMessage('purchase_order.please_select_supplier'.tr);
       return;
     }
 
     if (selectedStore == null) {
-      _showErrorMessage("Please select Store");
+      _showErrorMessage('purchase_order.please_select_store'.tr);
       return;
     }
 
     if (orderItems.isEmpty) {
-      _showErrorMessage("Please add at least one item from the form above");
+      _showErrorMessage('purchase_order.add_at_least_one_item'.tr);
       return;
     }
 
@@ -1304,7 +1304,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       }
 
       if (!isReceiveMode && i.productData?.productId == null) {
-        _showErrorMessage("Each item must have a valid product");
+        _showErrorMessage('purchase_order.item_must_have_valid_product'.tr);
         return;
       }
 
@@ -1401,7 +1401,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
     }
 
     if (isReceiveMode && apiItems.isEmpty) {
-      _showErrorMessage("Please select at least one pending item to receive");
+      _showErrorMessage('purchase_order.select_at_least_one_pending'.tr);
       return;
     }
 
@@ -1420,7 +1420,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
 
     final token = Provider.of<AuthModel>(context, listen: false).token;
     if (token == null || token.isEmpty) {
-      _showErrorMessage("Session expired. Please login again.");
+      _showErrorMessage('purchase_order.session_expired'.tr);
       return;
     }
 
@@ -1469,8 +1469,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         await _clearDraftFromHive();
         _showSuccessMessage(result['message'] ??
             (isReceiveMode
-                ? "Purchase order received"
-                : "Purchase order created"));
+                ? 'purchase_order.order_received'.tr
+                : 'purchase_order.order_created'.tr));
 
         await provider.listPurchaseOrders(
           accessToken: token,
@@ -1482,10 +1482,10 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         sideBarController.index.value = 81;
       } else {
         _showErrorMessage(result?['message'] ??
-            (isReceiveMode ? "Failed to receive items" : "Failed to create"));
+            (isReceiveMode ? 'purchase_order.failed_receive_items'.tr : 'purchase_order.failed_create'.tr));
       }
     } catch (e) {
-      _showErrorMessage("Failed to submit purchase order: $e");
+      _showErrorMessage('purchase_order.failed_submit_order'.tr.replaceAll('@error', e.toString()));
     } finally {
       if (mounted) {
         setState(() {
@@ -1520,13 +1520,13 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                 children: [
                   CustomBackButton(
                     onPressed: () => sideBarController.index.value = 81,
-                    text: "Back to Purchase Orders",
+                    text: 'purchase_order.back_to_purchase_orders'.tr,
                   ),
                   const SizedBox(height: 10),
                   Text(
                       _isReceiveMode
-                          ? "Receive Purchase Order"
-                          : "Create New Purchase Order",
+                          ? 'purchase_order.receive_purchase_order'.tr
+                          : 'purchase_order.create_new_purchase_order'.tr,
                       style: buildCustomStyle(FontWeightManager.semiBold,
                           FontSize.s20, 0.3, ColorManager.textColor)),
                   const SizedBox(height: 20),
@@ -1585,7 +1585,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
           children: [
             Expanded(
               child: _buildFieldColumn(
-                "Purchase Date",
+                'purchase_order.purchase_date'.tr,
                 _disableInteraction(
                   CalendarPickerTableCell(
                     onDateSelected: (date) {
@@ -1601,7 +1601,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
             const SizedBox(width: 15),
             Expanded(
               child: _buildFieldColumn(
-                "Voucher Number",
+                'purchase_order.voucher_number'.tr,
                 _buildInlineField(voucherNumberController, "", (v) {},
                     readOnly: _isHeaderLockedForReceive),
               ),
@@ -1609,12 +1609,12 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
             const SizedBox(width: 15),
             Expanded(
               child: _buildFieldColumn(
-                "Store",
+                'purchase_order.store'.tr,
                 _disableInteraction(
                   BuildDropDownWithSearch<GetStoreModelData>(
                     title: null,
                     showName: false,
-                    hintText: "Select Store",
+                    hintText: 'purchase_order.select_store'.tr,
                     value: selectedStore,
                     items: purchaseProvider.getStoreList ?? [],
                     onChanged: (val) {
@@ -1642,7 +1642,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildFieldColumn(
-                    "Supplier",
+                    'purchase_order.supplier'.tr,
                     _disableInteraction(
                       Row(
                         children: [
@@ -1651,7 +1651,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                                 BuildDropDownWithSearch<GetSuppliersModelData>(
                               title: null,
                               showName: false,
-                              hintText: "Select Supplier",
+                              hintText: 'purchase_order.select_supplier'.tr,
                               value: selectedSupplier,
                               items: purchaseProvider.getSupplierList ?? [],
                               onChanged: (val) {
@@ -1741,7 +1741,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
             const SizedBox(width: 15),
             Expanded(
               child: _buildFieldColumn(
-                "Invoice Reference",
+                'purchase_order.invoice_reference'.tr,
                 _buildInlineField(invoiceRefController, "", (v) {},
                     readOnly: _isHeaderLockedForReceive),
               ),
@@ -1764,7 +1764,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         border: Border.all(color: ColorManager.kPrimaryColor.withOpacity(0.30)),
       ),
       child: Text(
-        _isReceiveMode ? "Pending Item Editor" : "Product Details",
+        _isReceiveMode ? 'purchase_order.pending_item_editor'.tr : 'purchase_order.product_details'.tr,
         style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s14, 0.27,
             ColorManager.kPrimaryColor),
       ),
@@ -1805,7 +1805,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                 flex: 2,
                 child: _buildInlineField(
                   barcodeController,
-                  "Barcode",
+                  'purchase_order.barcode'.tr,
                   (v) => item.barcode = v,
                   onSubmitted: _autoFillFromBarcode,
                   textInputAction: TextInputAction.done,
@@ -1832,7 +1832,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                 child: BuildDropDownWithSearch<GetProduct>(
                   title: null,
                   showName: false,
-                  hintText: "Select product",
+                  hintText: 'purchase_order.select_product'.tr,
                   value: item.productData,
                   items: localProductProvider.products
                       .where((p) =>
@@ -1853,7 +1853,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
               SizedBox(
                 width: 70,
                 child: _buildInlineField(quantityController,
-                    item.selectedPurchaseUnit != null ? "P. Qty" : "1",
+                    item.selectedPurchaseUnit != null ? 'purchase_order.p_qty_hint'.tr : "1",
                     (v) {
                       setState(() {
                         if (item.selectedPurchaseUnit != null) {
@@ -1932,11 +1932,11 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                 Expanded(
                   flex: 3,
                   child: _buildFieldColumn(
-                    "Category",
+                    'purchase_order.category'.tr,
                     BuildDropDownWithSearch<Category>(
                       title: null,
                       showName: false,
-                      hintText: "Select category",
+                      hintText: 'purchase_order.select_category'.tr,
                       value: item.categoryData,
                       items: categoryProvider.category ?? [],
                       onChanged: (val) {
@@ -1944,7 +1944,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                         _saveDraftToHive();
                       },
                       displayText: (val) =>
-                          val.categoryName ?? val.categorySlug ?? "Unknown",
+                          val.categoryName ?? val.categorySlug ?? 'purchase_order.unknown'.tr,
                       searchController: categorySearchController,
                       height: 40,
                     ),
@@ -1954,7 +1954,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                 Expanded(
                   flex: 3,
                   child: _buildFieldColumn(
-                    "Unit",
+                    'purchase_order.unit'.tr,
                     _buildUnitDropdownField(item),
                   ),
                 ),
@@ -1962,7 +1962,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                 Expanded(
                   flex: 3,
                   child: _buildFieldColumn(
-                    "Purchase Rate",
+                    'purchase_order.purchase_rate'.tr,
                     _buildInlineField(rateController, "0", (v) {
                       setState(() => item.purchaseRate = v);
                       _triggerTaxRecalculation();
@@ -1979,8 +1979,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
               children: [
                 Expanded(
                   child: _buildFieldColumn(
-                    "Retail price",
-                    _buildInlineField(retailPriceController, "Retail price",
+                    'purchase_order.retail_price_lower'.tr,
+                    _buildInlineField(retailPriceController, 'purchase_order.retail_price_lower'.tr,
                         (v) {
                       setState(() {
                         item.retailPrice = v;
@@ -1993,15 +1993,15 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                 const SizedBox(width: 15),
                 Expanded(
                   child: _buildFieldColumn(
-                    "Mrp",
-                    _buildInlineField(mrpController, "MRP", (v) => item.mrp = v,
+                    'purchase_order.mrp_label'.tr,
+                    _buildInlineField(mrpController, 'purchase_order.mrp'.tr, (v) => item.mrp = v,
                         isNumber: true, prefixText: '$_currency '),
                   ),
                 ),
                 const SizedBox(width: 15),
                 Expanded(
                   child: _buildFieldColumn(
-                    "Expiry Date",
+                    'purchase_order.expiry_date'.tr,
                     CalendarPickerTableCell(
                       onDateSelected: (date) {
                         setState(() => item.expDate = date);
@@ -2020,9 +2020,9 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
               children: [
                 Expanded(
                   child: _buildFieldColumn(
-                    "Wholesale price",
+                    'purchase_order.wholesale_price_lower'.tr,
                     _buildInlineField(
-                        wholesalePriceController, "Wholesale price", (v) {
+                        wholesalePriceController, 'purchase_order.wholesale_price_lower'.tr, (v) {
                       setState(() {
                         item.wholesalePrice = v;
                       });
@@ -2033,10 +2033,10 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                 const SizedBox(width: 15),
                 Expanded(
                   child: _buildFieldColumn(
-                    "Minimum Units for Wholesale",
+                    'purchase_order.minimum_units_wholesale'.tr,
                     _buildInlineField(
                         wholesaleMinUnitController,
-                        "Enter minimum wholesale units",
+                        'purchase_order.enter_min_wholesale_units'.tr,
                         (v) => item.wholesaleMinUnit = v,
                         isNumber: true,
                         inputFormatters:
@@ -2046,7 +2046,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                 const SizedBox(width: 15),
                 Expanded(
                   child: _buildFieldColumn(
-                    "Rack",
+                    'purchase_order.rack'.tr,
                     _buildRackDropdownField(item),
                   ),
                 ),
@@ -2150,7 +2150,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       children: [
         const SizedBox(height: 8),
         Text(
-          'Select Purchase Unit',
+          'purchase_order.select_purchase_unit_label'.tr,
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s12,
@@ -2161,7 +2161,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         const SizedBox(height: 4),
         BuildDropDownWithSearch<SaleUnit>(
           title: null,
-          hintText: 'Select purchase unit',
+          hintText: 'purchase_order.select_purchase_unit_hint'.tr,
           value: selectedUnit,
           items: saleUnits,
           onChanged: (val) {
@@ -2174,7 +2174,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         if (selectedUnit != null) ...[
           const SizedBox(height: 4),
           Text(
-            "Stock Qty: $stockQtyStr ${baseUnitName.isNotEmpty ? baseUnitName : 'PC'}",
+            'purchase_order.stock_qty_prefix'.tr.replaceAll('@qty', stockQtyStr).replaceAll('@unit', baseUnitName.isNotEmpty ? baseUnitName : 'purchase_order.pc_fallback'.tr),
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s12,
@@ -2199,7 +2199,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         return BuildDropDownWithSearch<String>(
           title: null,
           showName: false,
-          hintText: "Select rack",
+          hintText: 'purchase_order.select_rack'.tr,
           value: selectedValue,
           items: rackKeys,
           onChanged: (val) {
@@ -2450,7 +2450,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        "Including Tax",
+                        'purchase_order.including_tax'.tr,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: buildCustomStyle(
@@ -2486,13 +2486,13 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
             Expanded(
               flex: 2,
               child: _buildTaxCard(
-                "Retail Price",
+                'purchase_order.retail_price'.tr,
                 "1",
                 includeTax
                     ? retailInclusive.toStringAsFixed(2)
                     : retailExclusive.toStringAsFixed(2),
-                'Tax: ${(item.calculatedTaxData?['tax_rate_retail'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
-                'Base: ${retailExclusive.toStringAsFixed(2)} + Tax: ${retailTax.toStringAsFixed(2)}',
+                'purchase_order.tax_rate_percent'.tr.replaceAll('@rate', (item.calculatedTaxData?['tax_rate_retail'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"),
+                'purchase_order.tax_breakdown'.tr.replaceAll('@base', retailExclusive.toStringAsFixed(2)).replaceAll('@tax', retailTax.toStringAsFixed(2)),
                 retailTax,
                 Colors.blue,
                 includeTax,
@@ -2502,13 +2502,13 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
             Expanded(
               flex: 2,
               child: _buildTaxCard(
-                "Wholesale Price",
+                'purchase_order.wholesale_price'.tr,
                 "2",
                 includeTax
                     ? wholesaleInclusive.toStringAsFixed(2)
                     : wholesaleExclusive.toStringAsFixed(2),
-                'Tax: ${(item.calculatedTaxData?['tax_rate_wholesale'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
-                'Base: ${wholesaleExclusive.toStringAsFixed(2)} + Tax: ${wholesaleTax.toStringAsFixed(2)}',
+                'purchase_order.tax_rate_percent'.tr.replaceAll('@rate', (item.calculatedTaxData?['tax_rate_wholesale'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"),
+                'purchase_order.tax_breakdown'.tr.replaceAll('@base', wholesaleExclusive.toStringAsFixed(2)).replaceAll('@tax', wholesaleTax.toStringAsFixed(2)),
                 wholesaleTax,
                 Colors.orange,
                 includeTax,
@@ -2518,13 +2518,13 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
             Expanded(
               flex: 2,
               child: _buildTaxCard(
-                "Purchase Rate",
+                'purchase_order.purchase_rate'.tr,
                 "3",
                 includeTax
                     ? purchaseInclusive.toStringAsFixed(2)
                     : purchaseExclusive.toStringAsFixed(2),
-                'Tax: ${(item.calculatedTaxData?['tax_rate_purchase'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
-                'Base: ${purchaseExclusive.toStringAsFixed(2)} + Tax: ${purchaseTax.toStringAsFixed(2)}',
+                'purchase_order.tax_rate_percent'.tr.replaceAll('@rate', (item.calculatedTaxData?['tax_rate_purchase'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"),
+                'purchase_order.tax_breakdown'.tr.replaceAll('@base', purchaseExclusive.toStringAsFixed(2)).replaceAll('@tax', purchaseTax.toStringAsFixed(2)),
                 purchaseTax,
                 Colors.green,
                 includeTax,
@@ -2760,7 +2760,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
             border:
                 Border.all(color: ColorManager.kPrimaryColor.withOpacity(0.30)),
           ),
-          child: Text("Items Added",
+          child: Text('purchase_order.items_added'.tr,
               style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s14,
                   0.27, ColorManager.kPrimaryColor)),
         ),
@@ -2776,7 +2776,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                     Icon(Icons.shopping_cart_outlined,
                         size: 50, color: Colors.grey.shade300),
                     const SizedBox(height: 10),
-                    Text("No items added yet",
+                    Text('purchase_order.no_items_added_yet'.tr,
                         style: buildCustomStyle(FontWeightManager.medium,
                             FontSize.s12, 0.2, Colors.grey)),
                   ],
@@ -2888,7 +2888,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                   ),
                 Flexible(
                   child: Text(
-                    "Receive",
+                    'purchase_order.receive_col'.tr,
                     overflow: TextOverflow.ellipsis,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
@@ -2901,16 +2901,16 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
               ],
             ),
           ),
-          _buildPurchaseListCell("Product", width: 220, isHeader: true),
-          _buildPurchaseListCell("Unit", width: 120, isHeader: true),
-          _buildPurchaseListCell("QTY", width: 100, isHeader: true),
-          _buildPurchaseListCell("Purchase Price", width: 170, isHeader: true),
-          _buildPurchaseListCell("Retail Price", width: 170, isHeader: true),
-          _buildPurchaseListCell("MRP", width: 130, isHeader: true),
-          _buildPurchaseListCell("Wholesale Price", width: 190, isHeader: true),
-          _buildPurchaseListCell("Rack", width: 120, isHeader: true),
-          _buildPurchaseListCell("Total", width: 130, isHeader: true),
-          _buildPurchaseListCell("Actions", width: 170, isHeader: true),
+          _buildPurchaseListCell('purchase_order.product_col'.tr, width: 220, isHeader: true),
+          _buildPurchaseListCell('purchase_order.unit'.tr, width: 120, isHeader: true),
+          _buildPurchaseListCell('purchase_order.qty_col'.tr, width: 100, isHeader: true),
+          _buildPurchaseListCell('purchase_order.purchase_price_col'.tr, width: 170, isHeader: true),
+          _buildPurchaseListCell('purchase_order.retail_price'.tr, width: 170, isHeader: true),
+          _buildPurchaseListCell('purchase_order.mrp'.tr, width: 130, isHeader: true),
+          _buildPurchaseListCell('purchase_order.wholesale_price'.tr, width: 190, isHeader: true),
+          _buildPurchaseListCell('purchase_order.rack'.tr, width: 120, isHeader: true),
+          _buildPurchaseListCell('purchase_order.total_col_title'.tr, width: 130, isHeader: true),
+          _buildPurchaseListCell('purchase_order.actions_col'.tr, width: 170, isHeader: true),
         ],
       ),
     );
@@ -2954,7 +2954,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                             size: 14, color: Color(0xFF2E7D32)),
                         const SizedBox(width: 4),
                         Text(
-                          "Received",
+                          'purchase_order.received'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.semiBold,
                             FontSize.s11,
@@ -3104,7 +3104,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                   constraints: const BoxConstraints(minWidth: 30),
                   padding: EdgeInsets.zero,
                   onPressed: canEdit ? () => _editItem(index) : null,
-                  tooltip: canEdit ? 'Edit item' : 'Already received item',
+                  tooltip: canEdit ? 'purchase_order.edit_item_tooltip'.tr : 'purchase_order.already_received_item_tooltip'.tr,
                 ),
                 IconButton(
                   icon: Icon(Icons.delete_outline,
@@ -3113,10 +3113,10 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                   padding: EdgeInsets.zero,
                   onPressed: canDelete ? () => _removeItem(index) : null,
                   tooltip: canDelete
-                      ? 'Delete item'
+                      ? 'purchase_order.delete_item_tooltip'.tr
                       : (_isReceiveMode
-                          ? 'Delete is disabled in receive mode'
-                          : 'Already received item'),
+                          ? 'purchase_order.delete_disabled_receive_mode'.tr
+                          : 'purchase_order.already_received_item_tooltip'.tr),
                 ),
               ],
             ),
@@ -3174,10 +3174,10 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
             : Colors.grey;
 
     final label = isToPay
-        ? 'Amount to Pay'
+        ? 'purchase_order.amount_to_pay'.tr
         : isToReceive
-            ? 'Amount to Receive'
-            : 'No Balance';
+            ? 'purchase_order.amount_to_receive'.tr
+            : 'purchase_order.no_balance'.tr;
 
     final icon = isToPay
         ? Icons.arrow_upward
@@ -3226,7 +3226,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
             border:
                 Border.all(color: ColorManager.kPrimaryColor.withOpacity(0.30)),
           ),
-          child: Text("Items to Receive - Preview",
+          child: Text('purchase_order.items_to_receive_preview'.tr,
               style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s14,
                   0.27, ColorManager.kPrimaryColor)),
         ),
@@ -3267,23 +3267,23 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                           ),
                           child: Row(
                             children: [
-                              _buildPurchaseListCell("Product",
+                              _buildPurchaseListCell('purchase_order.product_col'.tr,
                                   width: colWidth(230), isHeader: true),
-                              _buildPurchaseListCell("Unit",
+                              _buildPurchaseListCell('purchase_order.unit'.tr,
                                   width: colWidth(100), isHeader: true),
-                              _buildPurchaseListCell("QTY",
+                              _buildPurchaseListCell('purchase_order.qty_col'.tr,
                                   width: colWidth(100), isHeader: true),
-                              _buildPurchaseListCell("Purchase Price",
+                              _buildPurchaseListCell('purchase_order.purchase_price_col'.tr,
                                   width: colWidth(170), isHeader: true),
-                              _buildPurchaseListCell("Retail Price",
+                              _buildPurchaseListCell('purchase_order.retail_price'.tr,
                                   width: colWidth(170), isHeader: true),
-                              _buildPurchaseListCell("MRP",
+                              _buildPurchaseListCell('purchase_order.mrp'.tr,
                                   width: colWidth(130), isHeader: true),
-                              _buildPurchaseListCell("Wholesale Price",
+                              _buildPurchaseListCell('purchase_order.wholesale_price'.tr,
                                   width: colWidth(190), isHeader: true),
-                              _buildPurchaseListCell("Rack",
+                              _buildPurchaseListCell('purchase_order.rack'.tr,
                                   width: colWidth(100), isHeader: true),
-                              _buildPurchaseListCell("Total",
+                              _buildPurchaseListCell('purchase_order.total_col_title'.tr,
                                   width: colWidth(110), isHeader: true),
                             ],
                           ),
@@ -3482,7 +3482,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                               _buildPurchaseListCell(
                                 "",
                                 width: colWidth(230),
-                                child: Text("Preview Total",
+                                child: Text('purchase_order.preview_total'.tr,
                                     style: buildCustomStyle(
                                         FontWeightManager.bold,
                                         FontSize.s13,
@@ -3539,7 +3539,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
 
   Widget _buildPaymentSection() {
     return BuildDynamicPaymentSelector(
-      title: "Select Payment Method",
+      title: 'purchase_order.select_payment_method'.tr,
       paymentMethods: _paymentMethods,
       isLoading: _isLoadingPaymentMethods,
       initialData: paymentData,
@@ -3569,12 +3569,12 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
           padding: const EdgeInsets.all(14),
           child: Column(
             children: [
-              _buildTotalSummaryRow("Gross Total", totals.grossAmount),
+              _buildTotalSummaryRow('purchase_order.gross_total'.tr, totals.grossAmount),
               const SizedBox(height: 8),
               _buildDiscountSummaryRow(),
               const Divider(height: 20),
               _buildTotalSummaryRow(
-                "Net Payable",
+                'purchase_order.net_payable'.tr,
                 totals.netPayable,
                 valueColor: ColorManager.kPrimaryColor,
                 emphasize: true,
@@ -3599,7 +3599,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         ),
         const SizedBox(height: 16),
         CustomRoundButton(
-          title: _isReceiveMode ? "Receive Items" : "Finish",
+          title: _isReceiveMode ? 'purchase_order.receive_items_btn'.tr : 'purchase_order.finish_btn'.tr,
           fct: _submitPurchaseOrder,
           width: double.infinity,
           height: 45,
@@ -3615,7 +3615,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Overall Discount",
+          'purchase_order.overall_discount'.tr,
           style: buildCustomStyle(
             FontWeightManager.semiBold,
             FontSize.s12,
