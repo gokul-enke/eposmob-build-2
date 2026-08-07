@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/models/list_receipt.dart';
 import '../../resources/color_manager.dart';
@@ -115,14 +116,14 @@ class _ReceiptMobileViewState extends State<ReceiptMobileView> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'Receipt List',
+          'receipt.list_title'.tr,
           style: buildCustomStyle(
               FontWeightManager.semiBold, FontSize.s16, 0.25, ColorManager.textColor),
         ),
         ElevatedButton.icon(
           onPressed: widget.onCreateReceipt,
           icon: const Icon(Icons.add, size: 16),
-          label: const Text('Create', style: TextStyle(fontSize: 12)),
+          label: Text('receipt.mobile_create_button'.tr, style: const TextStyle(fontSize: 12)),
           style: ElevatedButton.styleFrom(
             backgroundColor: ColorManager.kPrimaryColor,
             foregroundColor: Colors.white,
@@ -149,7 +150,7 @@ class _ReceiptMobileViewState extends State<ReceiptMobileView> {
         onExpansionChanged: (v) => setState(() => _filtersExpanded = v),
         leading: const Icon(Icons.filter_list, size: 18),
         title: Text(
-          _filtersExpanded ? 'Hide Filters' : 'Show Filters',
+          _filtersExpanded ? 'receipt.hide_filters'.tr : 'receipt.show_filters'.tr,
           style: buildCustomStyle(FontWeightManager.medium, FontSize.s12, 0.18, ColorManager.textColor),
         ),
         children: [
@@ -157,15 +158,15 @@ class _ReceiptMobileViewState extends State<ReceiptMobileView> {
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
             child: Column(
               children: [
-                _filterField(widget.receiptNumberController, widget.receiptNoFocusNode, 'Receipt No.'),
+                _filterField(widget.receiptNumberController, widget.receiptNoFocusNode, 'receipt.receipt_no_hint'.tr),
                 const SizedBox(height: 8),
-                _filterField(widget.paymentReferenceController, widget.referenceNoFocusNode, 'Reference No.'),
+                _filterField(widget.paymentReferenceController, widget.referenceNoFocusNode, 'receipt.reference_no_hint'.tr),
                 const SizedBox(height: 8),
-                _filterField(widget.searchTextController, widget.nameFocusNode, 'Name'),
+                _filterField(widget.searchTextController, widget.nameFocusNode, 'receipt.name_hint'.tr),
                 const SizedBox(height: 8),
-                _filterField(widget.phoneController, widget.phoneFocusNode, 'Phone Number'),
+                _filterField(widget.phoneController, widget.phoneFocusNode, 'receipt.phone_hint'.tr),
                 const SizedBox(height: 8),
-                _filterField(widget.emailController, widget.emailFocusNode, 'Email Address'),
+                _filterField(widget.emailController, widget.emailFocusNode, 'receipt.email_hint'.tr),
                 const SizedBox(height: 8),
                 _dropdownField(
                   hint: 'All Status',
@@ -190,7 +191,7 @@ class _ReceiptMobileViewState extends State<ReceiptMobileView> {
                       side: BorderSide(color: ColorManager.kPrimaryColor),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                     ),
-                    child: const Text('Reset Filters'),
+                    child: Text('receipt.reset_filters_button'.tr),
                   ),
                 ),
               ],
@@ -255,10 +256,10 @@ class _ReceiptMobileViewState extends State<ReceiptMobileView> {
           children: [
             Icon(Icons.receipt_long, size: 60, color: ColorManager.kPrimaryColor.withOpacity(0.5)),
             const SizedBox(height: 12),
-            Text('No receipts found',
+            Text('receipt.no_receipts_found'.tr,
                 style: buildCustomStyle(FontWeightManager.medium, FontSize.s16, 0.24, ColorManager.textColor)),
             const SizedBox(height: 6),
-            Text('Try adjusting your filters',
+            Text('receipt.try_adjusting_filters'.tr,
                 style: buildCustomStyle(FontWeightManager.regular, FontSize.s13, 0.19, Colors.grey)),
           ],
         ),
@@ -315,7 +316,7 @@ class _ReceiptCard extends StatelessWidget {
                             ClipboardData(text: receipt.receiptNumber));
                         showScaffold(
                           context: context,
-                          message: 'Copied to clipboard',
+                          message: 'receipt.copied_to_clipboard'.tr,
                         );
                       },
                       child: const Icon(
@@ -356,7 +357,7 @@ class _ReceiptCard extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    'Ref: ${receipt.paymentReference}',
+                    'receipt.ref_prefix'.tr.replaceAll('@reference', receipt.paymentReference),
                     style: buildCustomStyle(FontWeightManager.regular, FontSize.s11, 0.16, Colors.grey),
                   ),
                   const SizedBox(width: 6),
@@ -366,7 +367,7 @@ class _ReceiptCard extends StatelessWidget {
                           ClipboardData(text: receipt.paymentReference));
                       showScaffold(
                         context: context,
-                        message: 'Copied to clipboard',
+                        message: 'receipt.copied_to_clipboard'.tr,
                       );
                     },
                     child: const Icon(
@@ -386,9 +387,9 @@ class _ReceiptCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                _actionBtn(Icons.visibility_outlined, 'View', () => onViewDetails(receipt)),
+                _actionBtn(Icons.visibility_outlined, 'receipt.view_action'.tr, () => onViewDetails(receipt)),
                 const SizedBox(width: 8),
-                _actionBtn(Icons.share_outlined, 'Share', () => onShare(receipt)),
+                _actionBtn(Icons.share_outlined, 'receipt.share_action'.tr, () => onShare(receipt)),
               ],
             ),
           ],
@@ -443,11 +444,11 @@ class _ReceiptCard extends StatelessWidget {
     final generalCount = receipt.receiptPayments.where((p) => p.invoiceId == null).length;
     String label; Color bg, fg;
     if (invoiceCount > 0 && generalCount > 0) {
-      label = 'Mixed'; bg = Colors.orange.withOpacity(0.1); fg = Colors.orange;
+      label = 'receipt.type_mixed'.tr; bg = Colors.orange.withOpacity(0.1); fg = Colors.orange;
     } else if (invoiceCount > 0) {
-      label = 'Invoice Payment'; bg = Colors.blue.withOpacity(0.1); fg = Colors.blue;
+      label = 'receipt.type_invoice_payment'.tr; bg = Colors.blue.withOpacity(0.1); fg = Colors.blue;
     } else {
-      label = 'General Payment'; bg = Colors.green.withOpacity(0.1); fg = Colors.green;
+      label = 'receipt.type_general_payment'.tr; bg = Colors.green.withOpacity(0.1); fg = Colors.green;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
