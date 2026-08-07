@@ -241,7 +241,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'An unexpected error occurred: $error',
+          message: 'dashboard.messages.unexpected_error'.tr.replaceAll('@error', error.toString()),
         );
       }
       setState(() {

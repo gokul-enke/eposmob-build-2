@@ -203,20 +203,20 @@ class _SalesScreenState extends State<SalesScreen> {
       if (response.statusCode == 200) {
         showScaffold(
           context: context,
-          message: 'Invoice downloaded successfully to ${eposDirectory.path}',
+          message: 'sales.invoice_downloaded'.tr.replaceAll('@path', eposDirectory.path),
         );
         debugPrint('File downloaded successfully to $filePath');
       } else if (response.statusCode == 404) {
         showScaffoldError(
           context: context,
           message:
-              'Invoice not found. The order may not have a generated invoice.',
+              'sales.invoice_not_found'.tr,
         );
         debugPrint('Invoice not found: ${response.statusCode}');
       } else {
         showScaffoldError(
           context: context,
-          message: 'Failed to download invoice: Error ${response.statusCode}',
+          message: 'sales.failed_download_invoice'.tr.replaceAll('@code', response.statusCode.toString()),
         );
         debugPrint('Failed to download file: ${response.statusCode}');
       }
@@ -227,22 +227,22 @@ class _SalesScreenState extends State<SalesScreen> {
       }
 
       // More detailed error message based on error type
-      String errorMessage = 'Error downloading file';
+      String errorMessage = 'sales.err_download_file_default'.tr;
       if (e is DioException) {
         if (e.type == DioExceptionType.connectionTimeout) {
           errorMessage =
-              'Connection timeout. Please check your internet connection.';
+              'sales.err_connection_timeout'.tr;
         } else if (e.type == DioExceptionType.connectionError) {
           errorMessage =
-              'Connection error. Please check your internet connection.';
+              'sales.err_connection_error'.tr;
         } else if (e.response?.statusCode == 500) {
           errorMessage =
-              'Server error. The invoice generation service may be unavailable.';
+              'sales.err_server_error'.tr;
         } else {
-          errorMessage = 'Download error: ${e.message}';
+          errorMessage = 'sales.err_download_error'.tr.replaceAll('@message', e.message.toString());
         }
       } else {
-        errorMessage = 'Error downloading file: ${e.toString()}';
+        errorMessage = 'sales.err_downloading_file'.tr.replaceAll('@error', e.toString());
       }
 
       showScaffoldError(
@@ -278,7 +278,7 @@ class _SalesScreenState extends State<SalesScreen> {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: 'Unable to fetch order details for PDF generation.',
+            message: 'sales.unable_fetch_order_details_pdf'.tr,
           );
         }
         return;
@@ -293,7 +293,7 @@ class _SalesScreenState extends State<SalesScreen> {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: 'Order details not available for PDF generation.',
+            message: 'sales.order_details_not_available_pdf'.tr,
           );
         }
         return;
@@ -317,7 +317,7 @@ class _SalesScreenState extends State<SalesScreen> {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: 'App settings or document configuration not loaded.',
+            message: 'sales.app_settings_not_loaded'.tr,
           );
         }
         return;
@@ -386,7 +386,7 @@ class _SalesScreenState extends State<SalesScreen> {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: 'Failed to generate PDF invoice.',
+            message: 'sales.failed_generate_pdf'.tr,
           );
         }
         return;
@@ -429,7 +429,7 @@ class _SalesScreenState extends State<SalesScreen> {
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: 'PDF invoice shared successfully!',
+          message: 'sales.pdf_shared_success'.tr,
         );
       }
     } catch (e) {
@@ -442,7 +442,7 @@ class _SalesScreenState extends State<SalesScreen> {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error generating or sharing PDF invoice. Please try again.',
+          message: 'sales.err_share_pdf'.tr,
         );
       }
     }
@@ -515,7 +515,7 @@ class _SalesScreenState extends State<SalesScreen> {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: 'Unable to fetch order details.',
+            message: 'sales.unable_fetch_order_details'.tr,
           );
         }
         return;
@@ -531,7 +531,7 @@ class _SalesScreenState extends State<SalesScreen> {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: 'Customer phone number not available.',
+            message: 'sales.customer_phone_not_available'.tr,
           );
         }
         return;
@@ -605,13 +605,13 @@ class _SalesScreenState extends State<SalesScreen> {
                   if (success) {
                     showScaffold(
                       context: context,
-                      message: 'Invoice sent via WhatsApp to $customerPhone',
+                      message: 'sales.invoice_sent_whatsapp'.tr.replaceAll('@phone', customerPhone),
                     );
                   } else {
                     showScaffoldError(
                       context: context,
                       message:
-                          'Failed to send WhatsApp message: ${whatsappProvider.lastError}',
+                          'sales.failed_send_whatsapp'.tr.replaceAll('@error', whatsappProvider.lastError),
                     );
                   }
                 }
@@ -646,7 +646,7 @@ class _SalesScreenState extends State<SalesScreen> {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error sending WhatsApp message. Please try again.',
+          message: 'sales.err_sending_whatsapp'.tr,
         );
       }
     }
@@ -678,7 +678,7 @@ class _SalesScreenState extends State<SalesScreen> {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: 'Unable to fetch order details for PDF generation.',
+            message: 'sales.unable_fetch_order_details_pdf'.tr,
           );
         }
         return;
@@ -693,7 +693,7 @@ class _SalesScreenState extends State<SalesScreen> {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: 'Order details not available for PDF generation.',
+            message: 'sales.order_details_not_available_pdf'.tr,
           );
         }
         return;
@@ -717,7 +717,7 @@ class _SalesScreenState extends State<SalesScreen> {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: 'App settings or document configuration not loaded.',
+            message: 'sales.app_settings_not_loaded'.tr,
           );
         }
         return;
@@ -786,7 +786,7 @@ class _SalesScreenState extends State<SalesScreen> {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: 'Failed to generate PDF invoice.',
+            message: 'sales.failed_generate_pdf'.tr,
           );
         }
         return;
@@ -804,7 +804,7 @@ class _SalesScreenState extends State<SalesScreen> {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: 'PDF file was not created properly.',
+            message: 'sales.pdf_not_created'.tr,
           );
         }
         return;
@@ -820,7 +820,7 @@ class _SalesScreenState extends State<SalesScreen> {
           showScaffoldError(
             context: context,
             message:
-                'PDF file appears to be corrupted or empty ($fileSize bytes).',
+                'sales.pdf_corrupted'.tr.replaceAll('@size', fileSize.toString()),
           );
         }
         return;
@@ -840,7 +840,7 @@ class _SalesScreenState extends State<SalesScreen> {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: 'PDF file verification failed: ${e.toString()}',
+            message: 'sales.pdf_verification_failed'.tr.replaceAll('@error', e.toString()),
           );
         }
         return;
@@ -888,7 +888,7 @@ Powered by CloudPOS''',
           showScaffold(
             context: context,
             message:
-                'Invoice PDF sent successfully via WhatsApp to $customerPhone!\n\nFile: ${pdfFile.path.split('/').last}\nSize: ${await pdfFile.length()} bytes',
+                'sales.invoice_pdf_sent_whatsapp'.tr.replaceAll('@phone', customerPhone).replaceAll('@file', pdfFile.path.split('/').last).replaceAll('@size', (await pdfFile.length()).toString()),
           );
 
           // Optionally open the PDF file location
@@ -932,7 +932,7 @@ Powered by CloudPOS''',
             showScaffold(
               context: context,
               message:
-                  'Invoice message sent via WhatsApp to $customerPhone\n\nPDF saved to: ${pdfFile.path}',
+                  'sales.invoice_message_sent_whatsapp'.tr.replaceAll('@phone', customerPhone).replaceAll('@path', pdfFile.path),
             );
           } else {
             showScaffoldError(
@@ -953,7 +953,7 @@ Powered by CloudPOS''',
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error generating or sending PDF. Please try again.',
+          message: 'sales.err_generating_sending_pdf'.tr,
         );
       }
     }
@@ -1005,7 +1005,7 @@ Powered by CloudPOS''',
                     showScaffold(
                       context: context,
                       message:
-                          'File location opened. The PDF is saved in Documents/epos folder.',
+                          'sales.file_location_opened'.tr,
                     );
                   }
                 } catch (e) {
@@ -1029,7 +1029,7 @@ Powered by CloudPOS''',
                     showScaffold(
                       context: context,
                       message:
-                          'PDF opened. You can now share it from your PDF viewer.',
+                          'sales.pdf_opened'.tr,
                     );
                   }
                 } catch (e) {
@@ -1048,7 +1048,7 @@ Powered by CloudPOS''',
                   if (context.mounted) {
                     showScaffold(
                       context: context,
-                      message: 'File path copied to clipboard!',
+                      message: 'sales.file_path_copied'.tr,
                     );
                   }
                 } catch (e) {
@@ -1927,7 +1927,7 @@ Powered by CloudPOS''',
                                   showScaffoldError(
                                     context: context,
                                     message:
-                                        'Invoice not available for sharing.',
+                                        'sales.invoice_not_available_sharing'.tr,
                                   );
                                 }
                                 return;
@@ -2092,7 +2092,7 @@ Powered by CloudPOS''',
                                                   showScaffoldError(
                                                     context: context,
                                                     message:
-                                                        'No email app found to share the invoice.',
+                                                        'sales.no_email_app'.tr,
                                                   );
                                                 }
                                               }
@@ -2150,7 +2150,7 @@ Powered by CloudPOS''',
                                 showScaffoldError(
                                   context: context,
                                   message:
-                                      'Error sharing invoice. Please try again.',
+                                      'sales.err_sharing_invoice'.tr,
                                 );
                               }
                             }
@@ -2198,7 +2198,7 @@ Powered by CloudPOS''',
                                 showScaffold(
                                   context: context,
                                   message:
-                                      'Preparing return for order #${order.orderNumber}',
+                                      'sales.preparing_return'.tr.replaceAll('@number', order.orderNumber.toString()),
                                 );
                               }
                             } catch (error) {
@@ -2208,7 +2208,7 @@ Powered by CloudPOS''',
                                 showScaffoldError(
                                   context: context,
                                   message:
-                                      'Error preparing order return. Please try again.',
+                                      'sales.err_preparing_return'.tr,
                                 );
                               }
                             }
@@ -2255,7 +2255,7 @@ Powered by CloudPOS''',
                                     if (context.mounted) {
                                       showScaffold(
                                         context: context,
-                                        message: "Order cancelled successfully",
+                                        message: 'sales.order_cancelled_success'.tr,
                                       );
                                       // Refresh orders
                                       salesProvider.fetchOrders(
@@ -2269,7 +2269,7 @@ Powered by CloudPOS''',
                                     if (context.mounted) {
                                       showScaffoldError(
                                         context: context,
-                                        message: "Failed to cancel order: $e",
+                                        message: 'sales.failed_cancel_order'.tr.replaceAll('@error', e.toString()),
                                       );
                                     }
                                   }
@@ -2324,7 +2324,7 @@ Powered by CloudPOS''',
                                       showScaffold(
                                         context: context,
                                         message:
-                                            'Order status updated to $newStatus',
+                                            'sales.order_status_updated'.tr.replaceAll('@status', newStatus.toString()),
                                       );
                                       salesProvider.fetchOrders(
                                         accessToken: authModel.token ?? "",
@@ -2336,7 +2336,7 @@ Powered by CloudPOS''',
                                       showScaffoldError(
                                         context: context,
                                         message:
-                                            'Failed to update order status: $e',
+                                            'sales.failed_update_order_status'.tr.replaceAll('@error', e.toString()),
                                       );
                                     }
                                   }
@@ -2383,7 +2383,7 @@ Powered by CloudPOS''',
                                       showScaffold(
                                         context: context,
                                         message:
-                                            'Payment status updated to $newStatus',
+                                            'sales.payment_status_updated'.tr.replaceAll('@status', newStatus.toString()),
                                       );
                                       salesProvider.fetchOrders(
                                         accessToken: authModel.token ?? "",
@@ -2395,7 +2395,7 @@ Powered by CloudPOS''',
                                       showScaffoldError(
                                         context: context,
                                         message:
-                                            'Failed to update payment status: $e',
+                                            'sales.failed_update_payment_status'.tr.replaceAll('@error', e.toString()),
                                       );
                                     }
                                   }
@@ -2656,7 +2656,7 @@ Powered by CloudPOS''',
                                                     showScaffold(
                                                       context: context,
                                                       message:
-                                                          'Order number copied to clipboard',
+                                                          'sales.order_number_copied'.tr,
                                                     );
                                                   },
                                                   child: const Icon(

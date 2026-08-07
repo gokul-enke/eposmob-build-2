@@ -774,7 +774,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         if (!mounted) return;
                         showScaffoldError(
                           context: context,
-                          message: 'Customer selector is not ready yet',
+                          message: 'restaurant.customer_selector_not_ready'.tr,
                         );
                         return;
                       }
@@ -796,7 +796,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         if (!mounted) return;
                         showScaffoldError(
                           context: context,
-                          message: 'Payment selector is not ready yet',
+                          message: 'restaurant.payment_selector_not_ready'.tr,
                         );
                         return;
                       }
@@ -818,7 +818,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         if (!mounted) return;
                         showScaffoldError(
                           context: context,
-                          message: 'Delivery selector is not ready yet',
+                          message: 'restaurant.delivery_selector_not_ready'.tr,
                         );
                         return;
                       }
@@ -1623,7 +1623,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             if (!mounted) return;
             showScaffoldError(
               context: context,
-              message: 'Customer selector is not ready yet',
+              message: 'restaurant.customer_selector_not_ready'.tr,
             );
             return;
           }
@@ -1644,7 +1644,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             if (!mounted) return;
             showScaffoldError(
               context: context,
-              message: 'Payment selector is not ready yet',
+              message: 'restaurant.payment_selector_not_ready'.tr,
             );
             return;
           }
@@ -1665,7 +1665,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             if (!mounted) return;
             showScaffoldError(
               context: context,
-              message: 'Delivery selector is not ready yet',
+              message: 'restaurant.delivery_selector_not_ready'.tr,
             );
             return;
           }
@@ -3154,7 +3154,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           if (mounted) {
             showScaffold(
               context: context,
-              message: 'Added ${product.productName} to existing order',
+              message: 'restaurant.added_to_existing_order'.tr.replaceAll('@product', product.productName ?? ''),
             );
 
             // Wait for server update then refresh the selected order and list silently
@@ -3180,7 +3180,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             showScaffoldError(
               context: context,
               message:
-                  'Failed to add ${product.productName}: ${addResponse?['message'] ?? 'Unknown error'}',
+                  'restaurant.failed_add_product'.tr.replaceAll('@product', product.productName ?? '').replaceAll('@error', (addResponse?['message'] ?? 'Unknown error').toString()),
             );
           }
         }
@@ -3212,8 +3212,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
             showScaffold(
               context: context,
               message: _activeTableId != null
-                  ? 'Added ${product.productName} to Table $_activeTableId'
-                  : 'Added ${product.productName} to order',
+                  ? 'restaurant.added_to_table'.tr.replaceAll('@product', product.productName ?? '').replaceAll('@table', _activeTableId.toString())
+                  : 'restaurant.added_to_order'.tr.replaceAll('@product', product.productName ?? ''),
             );
             // Ensure the OrderPanel shows Current Order immediately
             setState(() {});
@@ -3225,7 +3225,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     } catch (e) {
       showScaffoldError(
         context: context,
-        message: 'Failed to add item: ${e.toString()}',
+        message: 'restaurant.failed_add_item_error'.tr.replaceAll('@error', e.toString()),
       );
     }
 
@@ -3336,7 +3336,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         showScaffold(
           context: context,
           message:
-              'Order for $_activeTableId sent to kitchen successfully! Order ID: ${response["order_id"]}',
+              'restaurant.order_sent_kitchen_success'.tr.replaceAll('@table', _activeTableId.toString()).replaceAll('@orderId', response["order_id"].toString()),
         );
 
         // Clear the local cart after successful submission
@@ -3378,14 +3378,14 @@ class _RestaurantPageState extends State<RestaurantPage> {
         showScaffoldError(
           context: context,
           message:
-              'Failed to send order to kitchen: ${response["message"] ?? "Unknown error"}',
+              'restaurant.failed_send_kitchen_message'.tr.replaceAll('@message', (response["message"] ?? "Unknown error").toString()),
         );
         return null;
       }
     } catch (e) {
       showScaffoldError(
         context: context,
-        message: 'Failed to send order to kitchen: ${e.toString()}',
+        message: 'restaurant.failed_send_kitchen_message'.tr.replaceAll('@message', e.toString()),
       );
       return null;
     }
@@ -3527,7 +3527,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
     showScaffold(
       context: context,
-      message: 'New order started. Cart and context cleared.',
+      message: 'restaurant.new_order_started'.tr,
     );
   }
 
@@ -3561,14 +3561,14 @@ class _RestaurantPageState extends State<RestaurantPage> {
     if (!_isKotBillEnabled(appSettings)) {
       showScaffoldError(
         context: context,
-        message: 'KOT + Bill is disabled in app settings',
+        message: 'restaurant.kot_bill_disabled'.tr,
       );
       return;
     }
     if (!_isKotBillAllowedForCurrentContext(appSettings)) {
       showScaffoldError(
         context: context,
-        message: 'KOT + Bill is not allowed for dine-in/table orders',
+        message: 'restaurant.kot_bill_not_allowed'.tr,
       );
       return;
     }
@@ -3626,7 +3626,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       if (cartItems.isEmpty) {
         showScaffoldError(
           context: context,
-          message: 'No items in cart to print',
+          message: 'restaurant.no_items_cart_print'.tr,
         );
         return;
       }

@@ -3093,7 +3093,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     if (stock.id == null) {
       showScaffoldError(
         context: context,
-        message: 'Stock id missing. Unable to edit this row.',
+        message: 'stock.edit_missing_id'.tr,
       );
       return;
     }

@@ -1380,7 +1380,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
           Navigator.of(context).pop();
           showScaffold(
             context: context,
-            message: result['message'] ?? 'Day close created successfully',
+            message: result['message'] ?? 'daily_sales_close.msg_day_close_created'.tr,
           );
           widget.onSuccess();
         }

@@ -1846,7 +1846,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       debugPrint('   - Exception Message: $e');
       debugPrint('   - Stack Trace: ${StackTrace.current}');
 
-      showScaffoldError(context: context, message: 'Error: ${e.toString()}');
+      showScaffoldError(context: context, message: 'add_stock.error_generic'.tr.replaceAll('@error', e.toString()));
     } finally {
       setState(() {
         _isLoading = false;
