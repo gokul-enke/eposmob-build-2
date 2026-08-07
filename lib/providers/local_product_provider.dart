@@ -206,7 +206,22 @@ class LocalCartItem {
     }
     final displayQuantity = toDisplayQuantity(baseQuantity);
     final reconstructedBase = toBaseQuantity(displayQuantity);
-    return (reconstructedBase - baseQuantity).abs() < _saleUnitEpsilon;
+    if ((reconstructedBase - baseQuantity).abs() >= _saleUnitEpsilon) {
+      return false;
+    }
+
+    // A stock reservation can split one pack into a reserved and an
+    // unreserved part (for example, 6 available pieces out of a 25-piece
+    // pack). PC/PCS products must not serialize those parts as 0.24 PACK and
+    // 0.76 PACK because the order API requires whole quantities for
+    // non-decimal products. Emit those lines in base units instead.
+    if (!allowsDecimalQuantityUnit(product.unit)) {
+      final roundedDisplayQuantity = displayQuantity.round();
+      return (displayQuantity - roundedDisplayQuantity).abs() <
+          _saleUnitEpsilon;
+    }
+
+    return true;
   }
 
   num _normalizeQuantity(num value) {

@@ -88,16 +88,16 @@ void main() {
       expect(item.canUseSaleUnitPayloadFor(36), isTrue);
     });
 
-    test('canUseSaleUnitPayloadFor returns true for most integer combos due to double precision',
+    test(
+        'canUseSaleUnitPayloadFor rejects partial packs for whole-number products',
         () {
       final item = LocalCartItem(
         product: buildProduct(),
         saleUnitId: 10,
         saleUnitConversionRate: 12,
       );
-      // Dart double round-trip (x / 12 * 12) is exact for small integers
-      expect(item.canUseSaleUnitPayloadFor(13), isTrue);
-      expect(item.canUseSaleUnitPayloadFor(5), isTrue);
+      expect(item.canUseSaleUnitPayloadFor(13), isFalse);
+      expect(item.canUseSaleUnitPayloadFor(5), isFalse);
     });
 
     test('canUseSaleUnitPayloadFor returns false without sale unit', () {
@@ -146,7 +146,8 @@ void main() {
           mrp: '12',
         );
 
-    test('uses display quantity and price for clean sale-unit reservations', () {
+    test('uses display quantity and price for clean sale-unit reservations',
+        () {
       final item = LocalCartItem(
         product: buildProduct(),
         quantity: 24,
@@ -243,7 +244,8 @@ void main() {
       expect(payload[1]['quantity'], 4);
     });
 
-    test('empty reservations and no stock selected sends one line with null stock_id',
+    test(
+        'empty reservations and no stock selected sends one line with null stock_id',
         () {
       final item = LocalCartItem(
         product: buildProduct(),
@@ -258,9 +260,8 @@ void main() {
       expect(payload.first['quantity'], 3);
     });
 
-    test('payload uses display units when sale unit is applicable', () {
-      // Even with 13 qty (not a clean multiple of 12), Dart double arithmetic
-      // treats the round-trip as exact, so sale unit payload is used.
+    test('payload falls back to base units for a partial whole-number pack',
+        () {
       final item = LocalCartItem(
         product: buildProduct(),
         quantity: 13,
@@ -276,14 +277,12 @@ void main() {
 
       final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
       expect(payload.length, 1);
-      // Because canUseSaleUnitPayloadFor(13) returns true in Dart doubles
-      expect(payload.first['quantity'], closeTo(1.08333, 0.0001));
-      // displayPrice = basePrice * conversionRate = 10 * 12 = 120 per CASE
-      expect(payload.first['price'], 120.0);
-      expect(payload.first['sale_unit_id'], 10);
+      expect(payload.first['quantity'], 13);
+      expect(payload.first['price'], 10.0);
+      expect(payload.first.containsKey('sale_unit_id'), isFalse);
     });
 
-    test('current payload for 2 CASE split as 16 reserved and 8 unreserved',
+    test('uses base units when 2 CASE is split as 16 reserved and 8 unreserved',
         () {
       final item = LocalCartItem(
         product: buildProduct(),
@@ -304,22 +303,18 @@ void main() {
       expect(payload, [
         {
           'product_id': 1,
-          'quantity': closeTo(1.333333, 0.000001),
-          'price': 120.0,
-          'mrp': 144.0,
+          'quantity': 16,
+          'price': 10.0,
+          'mrp': 12.0,
           'stock_id': 1,
-          'sale_unit_id': 10,
-          'product_sale_unit_id': 10,
           'warranty_enabled': false,
         },
         {
           'product_id': 1,
-          'quantity': closeTo(0.666667, 0.000001),
-          'price': 120.0,
-          'mrp': 144.0,
+          'quantity': 8,
+          'price': 10.0,
+          'mrp': 12.0,
           'stock_id': null,
-          'sale_unit_id': 10,
-          'product_sale_unit_id': 10,
           'warranty_enabled': false,
         },
       ]);
@@ -356,7 +351,7 @@ void main() {
       ]);
     });
 
-    test('current payload for 1 CASE split as 4 reserved and 8 unreserved',
+    test('uses base units when 1 CASE is split as 4 reserved and 8 unreserved',
         () {
       final item = LocalCartItem(
         product: buildProduct(),
@@ -377,25 +372,64 @@ void main() {
       expect(payload, [
         {
           'product_id': 1,
-          'quantity': closeTo(0.333333, 0.000001),
-          'price': 120.0,
-          'mrp': 144.0,
+          'quantity': 4,
+          'price': 10.0,
+          'mrp': 12.0,
           'stock_id': 1,
-          'sale_unit_id': 10,
-          'product_sale_unit_id': 10,
           'warranty_enabled': false,
         },
         {
           'product_id': 1,
-          'quantity': closeTo(0.666667, 0.000001),
-          'price': 120.0,
-          'mrp': 144.0,
+          'quantity': 8,
+          'price': 10.0,
+          'mrp': 12.0,
           'stock_id': null,
-          'sale_unit_id': 10,
-          'product_sale_unit_id': 10,
           'warranty_enabled': false,
         },
       ]);
+    });
+
+    test(
+        '25-piece PACK with only 6 reserved never emits fractional PC quantity',
+        () {
+      final item = LocalCartItem(
+        product: buildProduct(),
+        quantity: 25,
+        price: 10,
+        mrp: 12,
+        selectedStock: Stock(id: 1),
+        saleUnitId: 10,
+        saleUnitName: 'PACK',
+        saleUnitConversionRate: 25,
+        stockReservations: [
+          StockReservation(stockId: 1, quantity: 6),
+        ],
+      );
+
+      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+
+      expect(payload, [
+        {
+          'product_id': 1,
+          'quantity': 6,
+          'price': 10.0,
+          'mrp': 12.0,
+          'stock_id': 1,
+          'warranty_enabled': false,
+        },
+        {
+          'product_id': 1,
+          'quantity': 19,
+          'price': 10.0,
+          'mrp': 12.0,
+          'stock_id': null,
+          'warranty_enabled': false,
+        },
+      ]);
+      expect(
+        payload.every((line) => (line['quantity'] as num) % 1 == 0),
+        isTrue,
+      );
     });
 
     test('current payload for blocked stock case is empty only if item absent',
@@ -485,7 +519,7 @@ void main() {
       expect(payload.map((line) => line['quantity']).toList(), [1.3, 0.7]);
     });
 
-    test('current payload for 2 CASE split across two stock rows', () {
+    test('uses base units when 2 CASE is split across partial stock rows', () {
       final item = LocalCartItem(
         product: buildProduct(),
         quantity: 24,
@@ -505,22 +539,18 @@ void main() {
       expect(payload, [
         {
           'product_id': 1,
-          'quantity': closeTo(1.333333, 0.000001),
-          'price': 120.0,
-          'mrp': 144.0,
+          'quantity': 16,
+          'price': 10.0,
+          'mrp': 12.0,
           'stock_id': 1,
-          'sale_unit_id': 10,
-          'product_sale_unit_id': 10,
           'warranty_enabled': false,
         },
         {
           'product_id': 1,
-          'quantity': closeTo(0.666667, 0.000001),
-          'price': 120.0,
-          'mrp': 144.0,
+          'quantity': 8,
+          'price': 10.0,
+          'mrp': 12.0,
           'stock_id': 2,
-          'sale_unit_id': 10,
-          'product_sale_unit_id': 10,
           'warranty_enabled': false,
         },
       ]);
