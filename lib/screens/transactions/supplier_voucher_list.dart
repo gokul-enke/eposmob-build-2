@@ -70,7 +70,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
 
       if (accessToken == null || accessToken.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Authentication token is missing")),
+          SnackBar(content: Text('supplier_voucher.auth_token_missing'.tr)),
         );
         return;
       }
@@ -82,7 +82,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
       });
     } catch (error) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error loading vouchers: $error")),
+        SnackBar(content: Text('supplier_voucher.error_loading_vouchers'.tr.replaceAll('@error', error.toString()))),
       );
     }
   }
@@ -229,12 +229,12 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Supplier Voucher List",
+          'supplier_voucher.list_title'.tr,
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
               0.30, ColorManager.textColor),
         ),
         CustomRoundButton(
-          title: "Create Supplier Voucher",
+          title: 'supplier_voucher.create_voucher_button'.tr,
           fct: () {
             final controller = Get.find<SideBarController>();
             // If this list was opened via Transactions alias (75), go to 76. Otherwise go to 73.
@@ -273,7 +273,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               CustomRoundButton(
-                title: "Reset",
+                title: 'general.reset'.tr,
                 boxColor: Colors.white,
                 textColor: ColorManager.kPrimaryColor,
                 fct: resetSearch,
@@ -316,7 +316,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
                 focusNode: supplierFocusNode,
                 title: null,
                 showName: false,
-                hintText: 'All Suppliers',
+                hintText: 'supplier_voucher.all_suppliers_hint'.tr,
                 value: selectedSupplierId,
                 items: uniqueSuppliers.keys.toList(),
                 onChanged: (int? newValue) {
@@ -326,8 +326,8 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
                   searchVouchers();
                 },
                 displayText: (int? id) {
-                  if (id == null) return 'All Suppliers';
-                  return uniqueSuppliers[id] ?? 'Unknown';
+                  if (id == null) return 'supplier_voucher.all_suppliers_hint'.tr;
+                  return uniqueSuppliers[id] ?? 'general.unknown'.tr;
                 },
                 height: 45,
                 margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
@@ -367,7 +367,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
                   0.18, ColorManager.textColor),
               decoration: InputDecoration(
                 border: InputBorder.none,
-                hintText: "Voucher No",
+                hintText: 'supplier_voucher.voucher_no_hint'.tr,
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor),
                 contentPadding: const EdgeInsets.only(left: 15),
@@ -501,15 +501,15 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
                               children: [
                                 TableRow(
                                   children: [
-                                    _buildTableHeader("Voucher Number"),
-                                    _buildTableHeader("Supplier Name"),
-                                    _buildTableHeader("Type"),
-                                    _buildTableHeader("Voucher Date"),
-                                    _buildTableHeader("Due Date"),
-                                    _buildTableHeader("Payment Method"),
-                                    _buildTableHeader("Paid Amount"),
-                                    _buildTableHeader("Status"),
-                                    _buildTableHeader("Action"),
+                                    _buildTableHeader('supplier_voucher.col_voucher_number'.tr),
+                                    _buildTableHeader('supplier_voucher.col_supplier_name'.tr),
+                                    _buildTableHeader('supplier_voucher.col_type'.tr),
+                                    _buildTableHeader('supplier_voucher.col_voucher_date'.tr),
+                                    _buildTableHeader('supplier_voucher.col_due_date'.tr),
+                                    _buildTableHeader('supplier_voucher.col_payment_method'.tr),
+                                    _buildTableHeader('supplier_voucher.col_paid_amount'.tr),
+                                    _buildTableHeader('supplier_voucher.col_status'.tr),
+                                    _buildTableHeader('supplier_voucher.col_action'.tr),
                                   ],
                                 ),
                               ],
@@ -577,7 +577,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
                                                    showScaffold(
                                                      context: context,
                                                      message:
-                                                         'Voucher number copied to clipboard',
+                                                         'supplier_voucher.voucher_number_copied'.tr,
                                                    );
                                                  },
                                                  child: const Icon(
@@ -827,7 +827,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
           ),
           const SizedBox(height: 15),
           Text(
-            'No vouchers found',
+            'supplier_voucher.no_vouchers_found'.tr,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s18,
@@ -837,7 +837,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Try adjusting your search criteria',
+            'supplier_voucher.try_adjusting_search'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,
@@ -854,22 +854,22 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
     showDialog(
       context: context,
       builder: (context) => CommonDetailsDialog(
-        title: 'Voucher details',
+        title: 'supplier_voucher.details_title'.tr,
         gridColumns: [
           [
-            CommonDetailsDialog.buildKeyValueRow('Voucher Number', voucher.voucherNumber, copyable: true),
-            CommonDetailsDialog.buildKeyValueRow('Supplier Name', voucher.supplier.name),
-            CommonDetailsDialog.buildKeyValueRow('Supplier Phone', voucher.supplier.phone, copyable: true),
-            CommonDetailsDialog.buildKeyValueRow('Type', voucher.type),
+            CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_voucher_number'.tr, voucher.voucherNumber, copyable: true),
+            CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_supplier_name'.tr, voucher.supplier.name),
+            CommonDetailsDialog.buildKeyValueRow('supplier_voucher.field_supplier_phone'.tr, voucher.supplier.phone, copyable: true),
+            CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_type'.tr, voucher.type),
           ],
           [
-            CommonDetailsDialog.buildKeyValueRow('Voucher Date', voucher.voucherDate),
-            CommonDetailsDialog.buildKeyValueRow('Due Date', voucher.dueDate),
-            CommonDetailsDialog.buildKeyValueRow('Status', voucher.status),
-            CommonDetailsDialog.buildKeyValueRow('Payment Method', voucher.paymentMethod),
+            CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_voucher_date'.tr, voucher.voucherDate),
+            CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_due_date'.tr, voucher.dueDate),
+            CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_status'.tr, voucher.status),
+            CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_payment_method'.tr, voucher.paymentMethod),
           ],
         ],
-        sectionTitle: 'Voucher Items',
+        sectionTitle: 'supplier_voucher.items_section_title'.tr,
         tableContent: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -891,12 +891,12 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
                 children: [
                   TableRow(
                     children: [
-                      _buildTableHeaderCell('VOUCHER'),
-                      _buildTableHeaderCell('ITEM NAME'),
-                      _buildTableHeaderCell('QUANTITY'),
-                      _buildTableHeaderCell('UNIT AMOUNT'),
-                      _buildTableHeaderCell('TAX'),
-                      _buildTableHeaderCell('TOTAL AMOUNT'),
+                      _buildTableHeaderCell('supplier_voucher.col_voucher'.tr),
+                      _buildTableHeaderCell('supplier_voucher.col_item_name'.tr),
+                      _buildTableHeaderCell('supplier_voucher.col_quantity_upper'.tr),
+                      _buildTableHeaderCell('supplier_voucher.col_unit_amount_upper'.tr),
+                      _buildTableHeaderCell('supplier_voucher.col_tax_upper'.tr),
+                      _buildTableHeaderCell('supplier_voucher.col_total_amount_upper'.tr),
                     ],
                   ),
                 ],
@@ -941,7 +941,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                'Grand Total:',
+                'supplier_voucher.grand_total_label'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.semiBold,
                   FontSize.s12,

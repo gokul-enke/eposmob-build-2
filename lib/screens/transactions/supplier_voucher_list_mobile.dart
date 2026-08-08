@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/models/supplier_voucher.dart';
 import 'package:provider/provider.dart';
@@ -115,14 +116,14 @@ class _SupplierVoucherMobileViewState
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'Supplier Vouchers',
+          'supplier_voucher.mobile_header_title'.tr,
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s16,
               0.25, ColorManager.textColor),
         ),
         ElevatedButton.icon(
           onPressed: widget.onCreateVoucher,
           icon: const Icon(Icons.add, size: 16),
-          label: const Text('Create', style: TextStyle(fontSize: 12)),
+          label: Text('supplier_voucher.mobile_create_button'.tr, style: const TextStyle(fontSize: 12)),
           style: ElevatedButton.styleFrom(
             backgroundColor: ColorManager.kPrimaryColor,
             foregroundColor: Colors.white,
@@ -153,7 +154,7 @@ class _SupplierVoucherMobileViewState
         onExpansionChanged: (v) => setState(() => _filtersExpanded = v),
         leading: const Icon(Icons.filter_list, size: 18),
         title: Text(
-          _filtersExpanded ? 'Hide Filters' : 'Show Filters',
+          _filtersExpanded ? 'supplier_voucher.hide_filters'.tr : 'supplier_voucher.show_filters'.tr,
           style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
               0.18, ColorManager.textColor),
         ),
@@ -165,7 +166,7 @@ class _SupplierVoucherMobileViewState
                 // Supplier dropdown
                 _supplierDropdown(),
                 const SizedBox(height: 8),
-                _filterField(widget.voucherNumberController, 'Voucher No.'),
+                _filterField(widget.voucherNumberController, 'supplier_voucher.mobile_voucher_no_hint'.tr),
                 const SizedBox(height: 8),
                 _dropdownField(
                   hint: 'All Types',
@@ -192,7 +193,7 @@ class _SupplierVoucherMobileViewState
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(6)),
                     ),
-                    child: const Text('Reset Filters'),
+                    child: Text('supplier_voucher.reset_filters_button'.tr),
                   ),
                 ),
               ],
@@ -207,14 +208,14 @@ class _SupplierVoucherMobileViewState
     final entries = widget.supplierOptions.entries.toList();
     return DropdownButtonFormField<int>(
       value: widget.selectedSupplierId,
-      hint: Text('All Suppliers',
+      hint: Text('supplier_voucher.all_suppliers_hint'.tr,
           style: buildCustomStyle(
               FontWeightManager.medium, FontSize.s12, 0.18, Colors.grey)),
       items: [
-        const DropdownMenuItem<int>(
+        DropdownMenuItem<int>(
             value: null,
-            child: Text('All Suppliers',
-                style: TextStyle(fontSize: 12))),
+            child: Text('supplier_voucher.all_suppliers_hint'.tr,
+                style: const TextStyle(fontSize: 12))),
         ...entries.map((e) => DropdownMenuItem<int>(
             value: e.key,
             child: Text(e.value,
@@ -297,11 +298,11 @@ class _SupplierVoucherMobileViewState
                 size: 60,
                 color: ColorManager.kPrimaryColor.withOpacity(0.5)),
             const SizedBox(height: 12),
-            Text('No vouchers found',
+            Text('supplier_voucher.no_vouchers_found'.tr,
                 style: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s16, 0.24, ColorManager.textColor)),
             const SizedBox(height: 6),
-            Text('Try adjusting your filters',
+            Text('supplier_voucher.try_adjusting_filters'.tr,
                 style: buildCustomStyle(FontWeightManager.regular,
                     FontSize.s13, 0.19, Colors.grey)),
           ],
@@ -377,7 +378,7 @@ class _SupplierVoucherCard extends StatelessWidget {
                             ClipboardData(text: voucher.voucherNumber));
                         showScaffold(
                           context: context,
-                          message: 'Voucher number copied to clipboard',
+                          message: 'supplier_voucher.voucher_number_copied'.tr,
                         );
                       },
                       child: const Icon(
@@ -417,13 +418,15 @@ class _SupplierVoucherCard extends StatelessWidget {
 
             // Dates + payment method
             Text(
-              'Date: ${voucher.voucherDate}  •  Due: ${voucher.dueDate}',
+              'supplier_voucher.date_due_line'.tr
+                  .replaceAll('@date', voucher.voucherDate)
+                  .replaceAll('@due', voucher.dueDate),
               style: buildCustomStyle(FontWeightManager.regular, FontSize.s11,
                   0.16, Colors.grey),
             ),
             if (voucher.paymentMethod.isNotEmpty)
               Text(
-                'Payment: ${voucher.paymentMethod}',
+                'supplier_voucher.payment_prefix'.tr.replaceAll('@method', voucher.paymentMethod),
                 style: buildCustomStyle(FontWeightManager.regular,
                     FontSize.s11, 0.16, Colors.grey),
               ),
@@ -436,13 +439,13 @@ class _SupplierVoucherCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                _actionBtn(Icons.visibility_outlined, 'View',
+                _actionBtn(Icons.visibility_outlined, 'supplier_voucher.view_action'.tr,
                     () => onViewDetails(voucher)),
                 const SizedBox(width: 6),
-                _actionBtn(Icons.print_outlined, 'Print',
+                _actionBtn(Icons.print_outlined, 'general.print'.tr,
                     () => onPrint(voucher)),
                 const SizedBox(width: 6),
-                _actionBtn(Icons.share_outlined, 'Share',
+                _actionBtn(Icons.share_outlined, 'supplier_voucher.share_action'.tr,
                     () => onShare(voucher)),
               ],
             ),
