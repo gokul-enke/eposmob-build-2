@@ -154,7 +154,9 @@ class TablesPanel extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      showTables ? 'restaurant.tables_tab'.tr : 'restaurant.walk_in_delivery'.tr,
+                      showTables
+                          ? 'restaurant.tables_tab'.tr
+                          : 'restaurant.walk_in_delivery'.tr,
                       style: buildCustomStyle(
                           FontWeightManager.bold,
                           isCompact ? FontSize.s14 : FontSize.s16,
@@ -593,11 +595,8 @@ class TablesPanel extends StatelessWidget {
                         const SizedBox(width: 4),
                         Text(
                           _getStatusText(table.status),
-                          style: buildCustomStyle(
-                              FontWeightManager.semiBold,
-                              FontSize.s9,
-                              0.14,
-                              _tableColor(table.status)),
+                          style: buildCustomStyle(FontWeightManager.semiBold,
+                              FontSize.s9, 0.14, _tableColor(table.status)),
                         ),
                       ],
                     ),

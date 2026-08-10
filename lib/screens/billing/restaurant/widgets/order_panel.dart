@@ -3536,7 +3536,8 @@ class OrderPanelState extends State<OrderPanel> {
               _usesCounterOrderTabs
                   ? 'restaurant.orders'.tr
                   : 'restaurant.saved_orders'.tr,
-              Icons.pending_actions, const Color(0xFFD97706),
+              Icons.pending_actions,
+              const Color(0xFFD97706),
               showBackButton: !_usesCounterOrderTabs && _showSavedOrdersView,
               onBackButtonPressed: () {
             setState(() => _showSavedOrdersView = false);
@@ -7427,7 +7428,8 @@ class OrderPanelState extends State<OrderPanel> {
         Provider.of<LocalProductProvider>(context, listen: false);
     final cartItems = List<LocalCartItem>.from(localProductProvider.cartItems);
     if (cartItems.isEmpty) {
-      showScaffoldError(context: context, message: 'restaurant.no_items_cart'.tr);
+      showScaffoldError(
+          context: context, message: 'restaurant.no_items_cart'.tr);
       return false;
     }
 
@@ -7435,7 +7437,8 @@ class OrderPanelState extends State<OrderPanel> {
     if (_selectedCustomer == null &&
         _selectedCustomerID == null &&
         (customerPhone == null || customerPhone.isEmpty)) {
-      showScaffoldError(context: context, message: 'restaurant.select_customer'.tr);
+      showScaffoldError(
+          context: context, message: 'restaurant.select_customer'.tr);
       return false;
     }
 
@@ -7565,7 +7568,8 @@ class OrderPanelState extends State<OrderPanel> {
         Provider.of<LocalProductProvider>(context, listen: false);
     final cartItems = List<LocalCartItem>.from(localProductProvider.cartItems);
     if (cartItems.isEmpty) {
-      showScaffoldError(context: context, message: 'restaurant.no_items_cart'.tr);
+      showScaffoldError(
+          context: context, message: 'restaurant.no_items_cart'.tr);
       return false;
     }
 
@@ -7573,7 +7577,8 @@ class OrderPanelState extends State<OrderPanel> {
     if (_selectedCustomerID == null &&
         _selectedCustomer?.id == null &&
         (customerPhone == null || customerPhone.isEmpty)) {
-      showScaffoldError(context: context, message: 'restaurant.select_customer'.tr);
+      showScaffoldError(
+          context: context, message: 'restaurant.select_customer'.tr);
       return false;
     }
 
@@ -7646,7 +7651,8 @@ class OrderPanelState extends State<OrderPanel> {
         showScaffoldError(
           context: context,
           message: response is Map
-              ? (response['message']?.toString() ?? 'restaurant.failed_kot_bill'.tr)
+              ? (response['message']?.toString() ??
+                  'restaurant.failed_kot_bill'.tr)
               : 'restaurant.failed_kot_bill'.tr,
         );
         return false;

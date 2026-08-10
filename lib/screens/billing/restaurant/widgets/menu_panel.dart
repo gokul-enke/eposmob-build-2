@@ -866,7 +866,8 @@ class MenuPanelState extends State<MenuPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer3<CategoryProvider, LocalProductProvider, GridSelectionProvider>(
+    return Consumer3<CategoryProvider, LocalProductProvider,
+        GridSelectionProvider>(
       builder: (context, categoryProvider, productProvider, gridProvider, _) {
         final fontProvider =
             Provider.of<AppFontProvider>(context, listen: true);
@@ -882,9 +883,10 @@ class MenuPanelState extends State<MenuPanel> {
         final categories = categoryProvider.category ?? [];
         final selectedCategoryId = widget.activeCategoryId ?? 0;
         final isFavouritesSelected = selectedCategoryId == -1;
-        final bool isProductsLoading =
-            (isFavouritesSelected ? gridProvider.isLoading : productProvider.isLoading) ||
-                _isResyncingProducts;
+        final bool isProductsLoading = (isFavouritesSelected
+                ? gridProvider.isLoading
+                : productProvider.isLoading) ||
+            _isResyncingProducts;
 
         // Get products for selected category - only show sellable products in billing
         List<GetProduct> items = [];
@@ -913,18 +915,18 @@ class MenuPanelState extends State<MenuPanel> {
 
             // Check SKU (always on)
             final sku = product.sku ?? '';
-            if (sku.isNotEmpty &&
-                sku.toLowerCase().contains(_searchQuery)) {
+            if (sku.isNotEmpty && sku.toLowerCase().contains(_searchQuery)) {
               return true;
             }
 
             //  only active variants' SKUs surface a product in search.
             final variantSkuMatch = product.variants?.any((variant) {
-              if (!variant.active) return false;
-              final varSku = variant.sku ?? '';
-              return varSku.isNotEmpty &&
-                  varSku.toLowerCase().contains(_searchQuery);
-            }) ?? false;
+                  if (!variant.active) return false;
+                  final varSku = variant.sku ?? '';
+                  return varSku.isNotEmpty &&
+                      varSku.toLowerCase().contains(_searchQuery);
+                }) ??
+                false;
             if (variantSkuMatch) return true;
 
             if (itemCodeEnabled) {
@@ -987,7 +989,9 @@ class MenuPanelState extends State<MenuPanel> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
-                        widget.storeMode ? Icons.shopping_bag_rounded : Icons.restaurant_menu,
+                        widget.storeMode
+                            ? Icons.shopping_bag_rounded
+                            : Icons.restaurant_menu,
                         color: const Color(0xFF059669),
                         size: widget.isCompact ? 14 : 16,
                       ),
@@ -1150,7 +1154,8 @@ class MenuPanelState extends State<MenuPanel> {
                                         });
                                         if (isFavourites) {
                                           widget.onCategoryChanged(-1);
-                                          gridProvider.listQuickAccessProducts();
+                                          gridProvider
+                                              .listQuickAccessProducts();
                                         } else if (isAll) {
                                           widget.onCategoryChanged(0);
                                           productProvider.refreshProducts();
@@ -1231,8 +1236,7 @@ class MenuPanelState extends State<MenuPanel> {
                                               : Text(
                                                   categoryName,
                                                   style: buildCustomStyle(
-                                                    FontWeightManager
-                                                        .semiBold,
+                                                    FontWeightManager.semiBold,
                                                     widget.isCompact
                                                         ? FontSize.s12
                                                         : FontSize.s13,

@@ -3,7 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
-import 'package:pos_machine/components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
+import 'package:pos_machine/components/build_dialog_box.dart'
+    hide
+        showScaffold,
+        showScaffoldError,
+        showLoadingOverlay,
+        hideLoadingOverlay;
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
@@ -361,8 +366,7 @@ class MobileOrderCard extends StatelessWidget {
             orderDetails.data?.getCustomerAddressForDisplay();
         String? customerAlternatePhone =
             orderDetails.data?.customerDetails?.alternatePhone;
-        String? customerType =
-            orderDetails.data?.customerDetails?.customerType;
+        String? customerType = orderDetails.data?.customerDetails?.customerType;
         String? paymentMethod =
             orderDetails.data?.paymentDetails?.paymentMethod;
 
@@ -429,14 +433,18 @@ class MobileOrderCard extends StatelessWidget {
               orderReturns: orderDetails.data?.orderReturns,
               paidAmount: paidAmount > 0 ? paidAmount : null,
               customerCurrentBalance: customerCurrentBalance,
-              netExcTax: orderDetails.data?.cart?.priceSummary?.netExcTax?.toString(),
+              netExcTax:
+                  orderDetails.data?.cart?.priceSummary?.netExcTax?.toString(),
               isDefaultCustomer:
                   _isDefaultCustomerPhone(context, customerPhone),
               documentConfigType: orderDetails.data?.orderReturns != null &&
-                      (orderDetails.data?.orderReturns?.returnItems?.isNotEmpty ?? false)
+                      (orderDetails
+                              .data?.orderReturns?.returnItems?.isNotEmpty ??
+                          false)
                   ? 'Sales and Return Bill'
                   : 'Bill',
-              apiTotalTax: orderDetails.data?.priceSummary?.totalTax?.toDouble(),
+              apiTotalTax:
+                  orderDetails.data?.priceSummary?.totalTax?.toDouble(),
             ),
           ),
         );
@@ -493,12 +501,13 @@ class MobileOrderCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        if (order.orderNumber != null && order.orderNumber!.isNotEmpty) ...[
+                        if (order.orderNumber != null &&
+                            order.orderNumber!.isNotEmpty) ...[
                           const SizedBox(width: 6),
                           GestureDetector(
                             onTap: () {
-                              Clipboard.setData(ClipboardData(
-                                  text: order.orderNumber!));
+                              Clipboard.setData(
+                                  ClipboardData(text: order.orderNumber!));
                               showScaffold(
                                 context: context,
                                 message: 'Order number copied to clipboard',

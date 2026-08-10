@@ -33,6 +33,7 @@
     "clear_cart": "مسح السلة",
     "apply_save_print": "تطبيق وحفظ وطباعة",
     "apply_confirm": "تطبيق وتأكيد الطلب",
+    "cart": "السلة",
     "products": "المنتجات",
     "orders": "الطلبات",
     "discount": "الخصم",
@@ -176,7 +177,9 @@
     "create_new_order": "إنشاء طلب جديد",
     "no_saved_orders": "لا توجد طلبات محفوظة حتى الآن",
     "create_first_order": "أنشئ طلبك الأول أعلاه",
-    "items": "عناصر"
+    "items": "عناصر",
+    "cancel": "إلغاء",
+    "save": "حفظ"
   },
   "sync": {
     "syncing_data": "جاري مزامنة البيانات...",

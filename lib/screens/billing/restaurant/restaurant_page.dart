@@ -115,7 +115,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
   DeliveryMethodsProvider? _deliveryMethodsProviderForDefaults;
   GeneralSettingsProvider? _generalSettingsProviderForStock;
 
-  String get _menuTitle => widget.storeMode ? 'restaurant.products_tab'.tr : 'restaurant.menu_tab'.tr;
+  String get _menuTitle => widget.storeMode
+      ? 'restaurant.products_tab'.tr
+      : 'restaurant.menu_tab'.tr;
 
   void _syncStockEnabledSetting() {
     final stockEnabled =
@@ -2824,8 +2826,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
               IconButton(
                 visualDensity: VisualDensity.compact,
                 icon: const Icon(Icons.arrow_back, color: Color(0xFF2563EB)),
-                tooltip:
-                    widget.storeMode ? 'restaurant.back_to_products'.tr : 'restaurant.back_to_tables'.tr,
+                tooltip: widget.storeMode
+                    ? 'restaurant.back_to_products'.tr
+                    : 'restaurant.back_to_tables'.tr,
                 onPressed: () {
                   setState(() {
                     _currentMobileView = widget.storeMode

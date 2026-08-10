@@ -56,9 +56,12 @@ class SidebarWidget extends StatelessWidget {
                         onTap: () => onSelectTab(0),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 8, horizontal: 8),
                           decoration: BoxDecoration(
-                            color: selectedTab == 0 ? ColorManager.kPrimaryColor : Colors.transparent,
+                            color: selectedTab == 0
+                                ? ColorManager.kPrimaryColor
+                                : Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -67,7 +70,9 @@ class SidebarWidget extends StatelessWidget {
                               Text(
                                 'billing.products'.tr,
                                 style: TextStyle(
-                                  color: selectedTab == 0 ? Colors.white : Colors.grey.shade700,
+                                  color: selectedTab == 0
+                                      ? Colors.white
+                                      : Colors.grey.shade700,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 12,
                                 ),
@@ -83,9 +88,12 @@ class SidebarWidget extends StatelessWidget {
                         onTap: () => onSelectTab(1),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 8, horizontal: 8),
                           decoration: BoxDecoration(
-                            color: selectedTab == 1 ? ColorManager.kPrimaryColor : Colors.transparent,
+                            color: selectedTab == 1
+                                ? ColorManager.kPrimaryColor
+                                : Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -94,7 +102,9 @@ class SidebarWidget extends StatelessWidget {
                               Text(
                                 'billing.orders'.tr,
                                 style: TextStyle(
-                                  color: selectedTab == 1 ? Colors.white : Colors.grey.shade700,
+                                  color: selectedTab == 1
+                                      ? Colors.white
+                                      : Colors.grey.shade700,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 12,
                                 ),

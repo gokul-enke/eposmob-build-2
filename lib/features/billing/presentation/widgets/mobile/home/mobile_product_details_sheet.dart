@@ -986,8 +986,9 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
             quantity: updatedQty,
             price: result.retailPrice,
             mrp: result.mrp,
-            purchasePrice:
-                _canViewPurchasePrice() ? result.purchasePrice : stock.purchasePrice,
+            purchasePrice: _canViewPurchasePrice()
+                ? result.purchasePrice
+                : stock.purchasePrice,
             rack: result.rack,
           );
         });
@@ -1080,8 +1081,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
 
   Widget _buildStockStatusBadge(ProductStockDisplayStatus status) {
     final isOutOfStock = status == ProductStockDisplayStatus.outOfStock;
-    final atReorderLevel =
-        status == ProductStockDisplayStatus.atReorderLevel;
+    final atReorderLevel = status == ProductStockDisplayStatus.atReorderLevel;
     final color = isOutOfStock
         ? ColorManager.kRed
         : atReorderLevel
@@ -1314,10 +1314,9 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       stockEnabled: stockEnabled,
     );
     final hasStockAlert = stockStatus != ProductStockDisplayStatus.available;
-    final stockAlertColor =
-        stockStatus == ProductStockDisplayStatus.outOfStock
-            ? ColorManager.kRed
-            : ColorManager.kOrange;
+    final stockAlertColor = stockStatus == ProductStockDisplayStatus.outOfStock
+        ? ColorManager.kRed
+        : ColorManager.kOrange;
 
     return ListView(
       padding: const EdgeInsets.only(top: 8, bottom: 24),
@@ -1459,9 +1458,8 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                   ? 'N/A'
                   : formatProductStockNumber(availableQuantity),
               valueColor: hasStockAlert ? stockAlertColor : null,
-              trailing: hasStockAlert
-                  ? _buildStockStatusBadge(stockStatus)
-                  : null,
+              trailing:
+                  hasStockAlert ? _buildStockStatusBadge(stockStatus) : null,
             ),
             MobileDetailRow(
               label: 'Reorder Level',
