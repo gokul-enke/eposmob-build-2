@@ -2476,7 +2476,9 @@ class BillingPageState extends State<BillingPage>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    isEditingOrder ? '${'Edit'.tr} - ' : 'New'.tr,
+                    isEditingOrder
+                        ? '${'billing.edit_order'.tr} - '
+                        : '${'billing.new_order'.tr} - ',
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s18, 0.25, ColorManager.textColor),
                   ),
@@ -3498,7 +3500,7 @@ class BillingPageState extends State<BillingPage>
                         _buildHeaderCell('billing.table_item_name'.tr,
                             flex: 3, alignment: Alignment.centerLeft),
                         if (appSettings?.itemCodeEnabled == true)
-                          _buildHeaderCell('Item Code',
+                          _buildHeaderCell('billing.item_code'.tr,
                               flex: 1, alignment: Alignment.centerLeft),
                         _buildHeaderCell('billing.table_unit'.tr,
                             flex: 1, alignment: Alignment.centerLeft),

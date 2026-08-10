@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
+import 'package:pos_machine/resources/app_translations.dart';
 
 void main() {
   Future<void> pumpPagination(
@@ -8,9 +10,26 @@ void main() {
     required int currentPage,
     required int totalPages,
     required ValueChanged<int> onPageChanged,
+    Locale locale = const Locale('en'),
   }) async {
     await tester.pumpWidget(
-      MaterialApp(
+      GetMaterialApp(
+        translations: AppTranslations({
+          'en': {
+            'pagination.previous': 'Previous',
+            'pagination.next': 'Next',
+            'pagination.page': 'Page',
+            'pagination.of': 'of',
+          },
+          'ar': {
+            'pagination.previous': 'السابق',
+            'pagination.next': 'التالي',
+            'pagination.page': 'صفحة',
+            'pagination.of': 'من',
+          },
+        }),
+        locale: locale,
+        fallbackLocale: const Locale('en'),
         home: Scaffold(
           body: PaginationControl(
             currentPage: currentPage,
@@ -31,6 +50,20 @@ void main() {
     );
 
     expect(find.text('Page 2 of 5'), findsOneWidget);
+  });
+
+  testWidgets('shows Arabic pagination labels', (tester) async {
+    await pumpPagination(
+      tester,
+      currentPage: 2,
+      totalPages: 5,
+      onPageChanged: (_) {},
+      locale: const Locale('ar'),
+    );
+
+    expect(find.text('السابق'), findsOneWidget);
+    expect(find.text('صفحة 2 من 5'), findsOneWidget);
+    expect(find.text('التالي'), findsOneWidget);
   });
 
   testWidgets('Previous requests the preceding page', (tester) async {

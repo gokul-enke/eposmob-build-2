@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -31,13 +32,13 @@ class ActionButtons extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           _buildActionButton(
-            text: 'Clear Cart',
+            text: 'billing.clear_cart'.tr,
             color: ColorManager.kButtonRed,
             onPressed: onClearCart,
             isLoading: bp.isLoadingClearCart,
           ),
           _buildActionButton(
-            text: 'Save Order',
+            text: 'billing.save_order'.tr,
             color: ColorManager.kButtonYellow,
             onPressed: onSaveOrder,
             isLoading: bp.isLoadingSaveOrder,
@@ -48,7 +49,7 @@ class ActionButtons extends StatelessWidget {
                     ?.showConfirmOrderAndPrintButton ??
                 true)
               _buildActionButton(
-                text: 'Confirm and Print',
+                text: 'billing.confirm_and_print'.tr,
                 color: ColorManager.kButtonBlue,
                 onPressed: onCreateOrderAndPrint,
                 isLoading: bp.isLoadingCreateOrder,
@@ -58,7 +59,7 @@ class ActionButtons extends StatelessWidget {
                     ?.showConfirmOrderButton ??
                 true)
               _buildActionButton(
-                text: 'Confirm Order',
+                text: 'billing.confirm_order'.tr,
                 color: ColorManager.kButtonGreen,
                 onPressed: onConfirmOrder,
                 isLoading: bp.isLoadingConfirmOrder,
@@ -66,7 +67,7 @@ class ActionButtons extends StatelessWidget {
           ],
           if (!bp.hasInternet) ...[
             _buildActionButton(
-              text: 'Save and Print',
+              text: 'billing.save_and_print'.tr,
               color: ColorManager.kButtonYellow,
               onPressed: onSaveAndPrint,
               isLoading: bp.isLoadingSaveOrderAndPrint,
