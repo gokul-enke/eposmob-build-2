@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -45,7 +46,7 @@ class HeaderBar extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    isEditingOrder ? 'Edit Order - ' : 'New Order - ',
+                    isEditingOrder ? '${'billing.edit_order'.tr} - ' : '${'billing.new_order'.tr} - ',
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s20,
@@ -152,7 +153,7 @@ class _SelectedCustomerDetails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String displayName =
-        (name == null || name!.trim().isEmpty) ? 'Customer' : name!.trim();
+        (name == null || name!.trim().isEmpty) ? 'billing.customer'.tr : name!.trim();
     final String displayBalance = (balance ?? 0).toStringAsFixed(2);
     final String? displayCustomerType = customerType?.trim().isEmpty == true
         ? null
@@ -188,7 +189,7 @@ class _SelectedCustomerDetails extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Text(
-            'Balance: $displayBalance',
+            '${'billing.balance'.tr}: $displayBalance',
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s12,

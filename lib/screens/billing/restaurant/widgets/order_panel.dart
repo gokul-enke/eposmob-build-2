@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
@@ -3237,7 +3238,7 @@ class OrderPanelState extends State<OrderPanel> {
               ),
               const SizedBox(height: 20),
               Text(
-                'Select a table to start order',
+                'restaurant.select_table_placeholder'.tr,
                 textAlign: TextAlign.center,
                 style: buildCustomStyle(
                     FontWeightManager.semiBold,
@@ -3377,7 +3378,7 @@ class OrderPanelState extends State<OrderPanel> {
           _usesCounterOrderTabs
               ? _buildOrderPanelTabsHeader()
               : _buildPanelHeader(
-                  'Cart',
+                  'restaurant.cart_tab'.tr,
                   Icons.shopping_cart,
                   const Color(0xFF059669),
                   trailing: Row(
@@ -3401,7 +3402,7 @@ class OrderPanelState extends State<OrderPanel> {
                         ),
                         icon: const Icon(Icons.receipt_long_rounded, size: 16),
                         label: Text(
-                          'Ongoing Orders',
+                          'restaurant.ongoing_orders'.tr,
                           style: buildCustomStyle(
                               FontWeightManager.semiBold,
                               widget.isCompact ? FontSize.s11 : FontSize.s12,
@@ -3432,7 +3433,7 @@ class OrderPanelState extends State<OrderPanel> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'No items in current order',
+                          'restaurant.no_items_current_order'.tr,
                           style: buildCustomStyle(
                               FontWeightManager.semiBold,
                               widget.isCompact ? FontSize.s14 : FontSize.s16,
@@ -3531,7 +3532,10 @@ class OrderPanelState extends State<OrderPanel> {
       child: Column(
         children: [
           // Saved Orders Section (local drafts, independent scroll)
-          _buildPanelHeader(_usesCounterOrderTabs ? 'Orders' : 'Saved Orders',
+          _buildPanelHeader(
+              _usesCounterOrderTabs
+                  ? 'restaurant.orders'.tr
+                  : 'restaurant.saved_orders'.tr,
               Icons.pending_actions, const Color(0xFFD97706),
               showBackButton: !_usesCounterOrderTabs && _showSavedOrdersView,
               onBackButtonPressed: () {
@@ -3563,7 +3567,7 @@ class OrderPanelState extends State<OrderPanel> {
                             hasScrollBody: false,
                             child: Center(
                               child: Text(
-                                'No saved orders',
+                                'restaurant.no_saved_orders'.tr,
                                 style: buildCustomStyle(
                                     FontWeightManager.medium,
                                     widget.isCompact
@@ -3608,7 +3612,8 @@ class OrderPanelState extends State<OrderPanel> {
           if (!isNonTableOrderContext) ...[
             const SizedBox(height: 8),
             // Ongoing Orders Section (backend orders, independent scroll)
-            _buildPanelHeader('Ongoing Orders', Icons.receipt, Colors.blue,
+            _buildPanelHeader(
+                'restaurant.ongoing_orders'.tr, Icons.receipt, Colors.blue,
                 itemCount: _savedOrders.length),
             Flexible(
               flex: 2,
@@ -3745,7 +3750,7 @@ class OrderPanelState extends State<OrderPanel> {
                     hasScrollBody: false,
                     child: Center(
                       child: Text(
-                        'No saved orders',
+                        'restaurant.no_saved_orders'.tr,
                         style: buildCustomStyle(
                             FontWeightManager.medium,
                             widget.isCompact ? FontSize.s12 : FontSize.s13,
@@ -3818,7 +3823,7 @@ class OrderPanelState extends State<OrderPanel> {
                       child: Padding(
                         padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
                         child: Text(
-                          'No ongoing orders',
+                          'restaurant.no_ongoing_orders'.tr,
                           textAlign: TextAlign.center,
                           style: buildCustomStyle(
                               FontWeightManager.medium,
@@ -5087,14 +5092,14 @@ class OrderPanelState extends State<OrderPanel> {
               child: Row(
                 children: [
                   segment(
-                    label: 'Cart',
+                    label: 'restaurant.cart_tab'.tr,
                     icon: Icons.shopping_cart_rounded,
                     tab: OrderPanelTab.cart,
                     count: cartCount,
                     showIcon: showIcon,
                   ),
                   segment(
-                    label: 'Saved',
+                    label: 'restaurant.saved_tab'.tr,
                     icon: Icons.receipt_long_rounded,
                     tab: OrderPanelTab.saved,
                     count: _localDrafts.length,
@@ -5102,7 +5107,7 @@ class OrderPanelState extends State<OrderPanel> {
                   ),
                   if (!widget.hideOngoingOrdersTab)
                     segment(
-                      label: 'Ongoing',
+                      label: 'restaurant.ongoing_tab'.tr,
                       icon: Icons.fact_check_rounded,
                       tab: OrderPanelTab.ongoing,
                       count: _savedOrders.length,
@@ -7413,7 +7418,7 @@ class OrderPanelState extends State<OrderPanel> {
     if (!hasOrderContext) {
       showScaffoldError(
         context: context,
-        message: 'Select a table or delivery method first',
+        message: 'restaurant.select_table_first'.tr,
       );
       return false;
     }
@@ -7422,7 +7427,7 @@ class OrderPanelState extends State<OrderPanel> {
         Provider.of<LocalProductProvider>(context, listen: false);
     final cartItems = List<LocalCartItem>.from(localProductProvider.cartItems);
     if (cartItems.isEmpty) {
-      showScaffoldError(context: context, message: 'No items in cart');
+      showScaffoldError(context: context, message: 'restaurant.no_items_cart'.tr);
       return false;
     }
 
@@ -7430,7 +7435,7 @@ class OrderPanelState extends State<OrderPanel> {
     if (_selectedCustomer == null &&
         _selectedCustomerID == null &&
         (customerPhone == null || customerPhone.isEmpty)) {
-      showScaffoldError(context: context, message: 'Please select a customer');
+      showScaffoldError(context: context, message: 'restaurant.select_customer'.tr);
       return false;
     }
 
@@ -7527,8 +7532,8 @@ class OrderPanelState extends State<OrderPanel> {
       showScaffold(
         context: context,
         message: printBill
-            ? 'Offline order saved and printed'
-            : 'Offline order saved',
+            ? 'restaurant.offline_order_saved_printed'.tr
+            : 'restaurant.offline_order_saved'.tr,
       );
       return true;
     } catch (e) {
@@ -7551,7 +7556,7 @@ class OrderPanelState extends State<OrderPanel> {
     if (!widget.allowCounterBilling || !widget.isCounterBillingMode) {
       showScaffoldError(
         context: context,
-        message: 'Quick counter billing is disabled',
+        message: 'restaurant.quick_counter_disabled'.tr,
       );
       return false;
     }
@@ -7560,7 +7565,7 @@ class OrderPanelState extends State<OrderPanel> {
         Provider.of<LocalProductProvider>(context, listen: false);
     final cartItems = List<LocalCartItem>.from(localProductProvider.cartItems);
     if (cartItems.isEmpty) {
-      showScaffoldError(context: context, message: 'No items in cart');
+      showScaffoldError(context: context, message: 'restaurant.no_items_cart'.tr);
       return false;
     }
 
@@ -7568,7 +7573,7 @@ class OrderPanelState extends State<OrderPanel> {
     if (_selectedCustomerID == null &&
         _selectedCustomer?.id == null &&
         (customerPhone == null || customerPhone.isEmpty)) {
-      showScaffoldError(context: context, message: 'Please select a customer');
+      showScaffoldError(context: context, message: 'restaurant.select_customer'.tr);
       return false;
     }
 
@@ -7641,8 +7646,8 @@ class OrderPanelState extends State<OrderPanel> {
         showScaffoldError(
           context: context,
           message: response is Map
-              ? (response['message']?.toString() ?? 'Failed to confirm order')
-              : 'Failed to confirm order',
+              ? (response['message']?.toString() ?? 'restaurant.failed_kot_bill'.tr)
+              : 'restaurant.failed_kot_bill'.tr,
         );
         return false;
       }
@@ -7679,8 +7684,8 @@ class OrderPanelState extends State<OrderPanel> {
       showScaffold(
         context: context,
         message: printBill
-            ? 'Counter order confirmed and printed'
-            : 'Counter order confirmed',
+            ? 'restaurant.counter_order_confirmed_printed'.tr
+            : 'restaurant.counter_order_confirmed'.tr,
       );
       return true;
     } catch (e) {
@@ -7706,7 +7711,7 @@ class OrderPanelState extends State<OrderPanel> {
     if (_selectedOrder == null) {
       showScaffoldError(
         context: context,
-        message: 'No order selected to confirm',
+        message: 'restaurant.no_order_selected_confirm'.tr,
       );
       return false;
     }
@@ -7786,7 +7791,7 @@ class OrderPanelState extends State<OrderPanel> {
               _selectedCustomerPhone!.toString().isEmpty)) {
         showScaffoldError(
           context: context,
-          message: 'Please select a customer',
+          message: 'restaurant.select_customer'.tr,
         );
         if (mounted) {
           setState(() {
@@ -8012,7 +8017,7 @@ class OrderPanelState extends State<OrderPanel> {
       // Update order status or perform any other order update logic
       showScaffold(
         context: context,
-        message: 'Order updated successfully',
+        message: 'restaurant.order_updated_success'.tr,
       );
 
       // Refresh saved orders to show updated status
@@ -8027,7 +8032,7 @@ class OrderPanelState extends State<OrderPanel> {
     } catch (e) {
       showScaffoldError(
         context: context,
-        message: 'Failed to update order: ${e.toString()}',
+        message: '${'restaurant.failed_load_orders'.tr}: ${e.toString()}',
       );
     }
   }
@@ -8264,7 +8269,7 @@ class OrderPanelState extends State<OrderPanel> {
     if (_selectedOrder == null) {
       showScaffoldError(
         context: context,
-        message: 'No ongoing order selected for KOT + Bill',
+        message: 'restaurant.no_ongoing_kot_bill'.tr,
       );
       return;
     }
@@ -8317,7 +8322,7 @@ class OrderPanelState extends State<OrderPanel> {
     if (orderNumber == null || orderNumber.trim().isEmpty) {
       showScaffoldError(
         context: context,
-        message: 'Order number not found for order summary print',
+        message: 'restaurant.order_num_not_found_print'.tr,
       );
       return false;
     }
@@ -8332,7 +8337,7 @@ class OrderPanelState extends State<OrderPanel> {
       if (response == null) {
         showScaffoldError(
           context: context,
-          message: 'Failed to fetch order summary details',
+          message: 'restaurant.failed_fetch_order_summary'.tr,
         );
         return false;
       }
@@ -8384,7 +8389,7 @@ class OrderPanelState extends State<OrderPanel> {
         customerType: details?.customerDetails?.customerType,
         orderComment: _extractOrderLevelComment(selectedOrder),
         deliveryMethod: details?.deliveryMethodName,
-        documentTitleOverride: 'ORDER SUMMARY',
+        documentTitleOverride: 'restaurant.order_summary'.tr,
         isDefaultCustomer: isDefaultCustomer,
         netExcTax: cart?.priceSummary?.netExcTax?.toString(),
       );

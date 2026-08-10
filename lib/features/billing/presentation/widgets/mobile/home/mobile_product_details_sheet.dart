@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/domain/add_product_form_helpers.dart';
 import 'package:pos_machine/features/billing/domain/product_details_helpers.dart';
@@ -1340,7 +1341,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
             ),
             if (itemCodeEnabled)
               MobileDetailRow(
-                label: 'Item Code',
+                label: 'billing.item_code'.tr,
                 value: product.itemCode ?? 'N/A',
                 copyable: true,
               ),
