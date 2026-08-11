@@ -5,6 +5,7 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/features/billing/domain/billing_debug_log.dart';
 import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
+import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 import 'package:pos_machine/helpers/delivery_charge_helper.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
@@ -130,6 +131,9 @@ class CheckoutService {
       );
       return false;
     }
+    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
+      return false;
+    }
 
     billingDebugCheckout('confirmOrder', 'started');
 
@@ -248,7 +252,13 @@ class CheckoutService {
             : null,
         deliveryCharge: deliveryCharge,
       )
-          .then((response) {
+          .then((response) async {
+        if (await SubscriptionActionGuard.handleBackendResponse(
+          context,
+          response,
+        )) {
+          return;
+        }
         billingDebugCheckout(
           'confirmOrder',
           response["order_id"] != null ? 'succeeded' : 'apiFailed',
@@ -325,6 +335,9 @@ class CheckoutService {
         context: context,
         message: BillingMobileErrorMessages.noInternetCreateOrder,
       );
+      return null;
+    }
+    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
       return null;
     }
 
@@ -442,6 +455,12 @@ class CheckoutService {
         deliveryCharge: deliveryCharge,
       )
           .then((response) async {
+        if (await SubscriptionActionGuard.handleBackendResponse(
+          context,
+          response,
+        )) {
+          return;
+        }
         billingDebugCheckout(
           'createOrderAndPrint',
           response["order_id"] != null ? 'succeeded' : 'apiFailed',
@@ -625,6 +644,10 @@ class CheckoutService {
         Provider.of<BillingProvider>(context, listen: false);
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
+
+    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
+      return null;
+    }
 
     billingProvider.setLoadingSaveOrderAndPrint(true);
     try {

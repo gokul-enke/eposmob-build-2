@@ -13,6 +13,7 @@ import 'package:pos_machine/models/invoice_details.dart';
 import 'package:pos_machine/models/list_invoice.dart';
 import 'package:pos_machine/models/list_receipt.dart' as receipt_list;
 import 'package:pos_machine/models/receipt_details.dart';
+import 'package:pos_machine/features/subscription/presentation/subscription_provider.dart';
 
 import '../models/get_payment_method.dart';
 
@@ -1421,6 +1422,10 @@ class InvoiceProvider extends ChangeNotifier {
     double? percentageDiscount,
     double? discountAmount,
   }) async {
+    final subscriptionRejection =
+        SubscriptionAccessRegistry.rejectedOrderResponse();
+    if (subscriptionRejection != null) return subscriptionRejection;
+
     // Build request body
     final Map<String, dynamic> apiBodyData = {
       "customer_id": customerId,
@@ -1475,11 +1480,21 @@ class InvoiceProvider extends ChangeNotifier {
       } else {
         debugPrint("[InvoiceProvider] createInvoice error: ${response.body}");
         try {
-          return json.decode(response.body);
+          final decoded = json.decode(response.body);
+          if (decoded is Map) {
+            return <String, dynamic>{
+              ...decoded.map(
+                (key, value) => MapEntry(key.toString(), value),
+              ),
+              'http_status': response.statusCode,
+            };
+          }
+          return decoded;
         } catch (_) {
           return {
             'status': 'error',
-            'message': 'Failed with status ${response.statusCode}'
+            'message': 'Failed with status ${response.statusCode}',
+            'http_status': response.statusCode,
           };
         }
       }
