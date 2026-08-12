@@ -639,7 +639,7 @@ class SalesProvider with ChangeNotifier {
     }
   }
 
-  Future<void> submitSalesReturn({
+  Future<int> submitSalesReturn({
     required String accessToken,
     required int orderId,
     required double price,
@@ -701,8 +701,20 @@ class SalesProvider with ChangeNotifier {
       response.body,
       fallback: 'Failed to submit sales return',
     );
+    final responseData = json.decode(response.body);
+    final rawReturnOrder = responseData is Map ? responseData['data'] : null;
+    final returnOrderId = rawReturnOrder is Map
+        ? int.tryParse(rawReturnOrder['id']?.toString() ?? '')
+        : null;
+    if (returnOrderId == null || returnOrderId <= 0) {
+      throw Exception(
+        'The return item was submitted, but its return order ID was missing. '
+        'Please refresh the order before completing the return.',
+      );
+    }
     _storeRefundBreakdownFromBody(response.body);
     notifyListeners();
+    return returnOrderId;
   }
 
   Future<void> completeSalesReturn({

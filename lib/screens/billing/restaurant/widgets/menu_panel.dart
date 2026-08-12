@@ -12,6 +12,7 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/helpers/product_search_helper.dart';
 import '../../../../components/build_container_box.dart';
 import '../../../../components/build_dialog_box.dart';
 import '../../../../components/build_round_button.dart';
@@ -497,83 +498,6 @@ class MenuPanelState extends State<MenuPanel> {
     });
   }
 
-  List<GetProduct> _rankSearchMatches(
-    List<GetProduct> products,
-    String query,
-  ) {
-    if (query.isEmpty) return products;
-
-    final normalizedQuery = query.trim().toLowerCase();
-    final indexedProducts = products.indexed.toList();
-
-    int matchRank(GetProduct product) {
-      final productNames = _productSearchNames(product)
-          .map((name) => name.trim().toLowerCase())
-          .where((name) => name.isNotEmpty);
-      if (productNames.any((name) => name.startsWith(normalizedQuery))) {
-        return 0;
-      }
-      return 1;
-    }
-
-    indexedProducts.sort((first, second) {
-      final rankCompare = matchRank(first.$2).compareTo(matchRank(second.$2));
-      if (rankCompare != 0) return rankCompare;
-      return first.$1.compareTo(second.$1);
-    });
-
-    return indexedProducts.map((entry) => entry.$2).toList();
-  }
-
-  List<String> _productSearchNames(GetProduct product) {
-    final names = <String>[];
-
-    void addName(dynamic value) {
-      if (value == null) return;
-      final text = value.toString().trim();
-      if (text.isNotEmpty) {
-        names.add(text);
-      }
-    }
-
-    void extractNames(dynamic value) {
-      if (value == null) return;
-
-      if (value is String || value is num || value is bool) {
-        addName(value);
-        return;
-      }
-
-      if (value is Map) {
-        for (final key in const ['name', 'product_name', 'value', 'text']) {
-          if (value.containsKey(key)) {
-            addName(value[key]);
-          }
-        }
-
-        for (final entry in value.entries) {
-          final entryKey = entry.key?.toString().toLowerCase() ?? '';
-          if (entryKey.contains('language') || entryKey == 'id') {
-            continue;
-          }
-          extractNames(entry.value);
-        }
-        return;
-      }
-
-      if (value is Iterable) {
-        for (final item in value) {
-          extractNames(item);
-        }
-      }
-    }
-
-    addName(product.productName);
-    extractNames(product.names);
-
-    return names.toSet().toList();
-  }
-
   void _clearSearch() {
     setState(() {
       _searchQuery = '';
@@ -904,41 +828,7 @@ class MenuPanelState extends State<MenuPanel> {
 
         // Apply search filter
         if (_searchQuery.isNotEmpty) {
-          final appSettingsProvider =
-              Provider.of<AppSettingsProvider>(context, listen: true);
-          final itemCodeEnabled =
-              appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
-          items = items.where((product) {
-            final nameMatch = _productSearchNames(product)
-                .any((name) => name.toLowerCase().contains(_searchQuery));
-            if (nameMatch) return true;
-
-            // Check SKU (always on)
-            final sku = product.sku ?? '';
-            if (sku.isNotEmpty && sku.toLowerCase().contains(_searchQuery)) {
-              return true;
-            }
-
-            //  only active variants' SKUs surface a product in search.
-            final variantSkuMatch = product.variants?.any((variant) {
-                  if (!variant.active) return false;
-                  final varSku = variant.sku ?? '';
-                  return varSku.isNotEmpty &&
-                      varSku.toLowerCase().contains(_searchQuery);
-                }) ??
-                false;
-            if (variantSkuMatch) return true;
-
-            if (itemCodeEnabled) {
-              final itemCode = product.itemCode ?? '';
-              if (itemCode.isNotEmpty &&
-                  itemCode.toLowerCase().contains(_searchQuery)) {
-                return true;
-              }
-            }
-            return false;
-          }).toList();
-          items = _rankSearchMatches(items, _searchQuery);
+          items = ProductSearchHelper.search(items, _searchQuery);
         }
 
         final int fontLevel = fontProvider.fontSizeLevel;

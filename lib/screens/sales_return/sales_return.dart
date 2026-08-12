@@ -17,6 +17,7 @@ import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/models/list_sales_return_items.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/helpers/sales_return_calculation_helper.dart';
+import 'package:pos_machine/helpers/sales_return_order_id_helper.dart';
 import 'package:pos_machine/models/sales_return_refund_breakdown.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -73,6 +74,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
   bool isOrderSelected = false;
   bool initLoading = false;
   List<SalesReturnCart> _salesReturnItems = [];
+  int? _activeReturnOrderId;
 
   // Payment related variables
   String selectedPaymentMethod = 'CASH';
@@ -270,6 +272,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       selectedOrderId = null;
       selectedOrderNumber = null;
       orderDetailsModelData = null;
+      _activeReturnOrderId = null;
     });
     loadInitData();
   }
@@ -280,12 +283,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     }
   }
 
-  int? get _draftReturnOrderId {
-    for (final item in _salesReturnItems) {
-      if (item.returnOrderId != 0) return item.returnOrderId;
-    }
-    return null;
-  }
+  int? get _draftReturnOrderId =>
+      SalesReturnOrderIdHelper.forCompletion(_activeReturnOrderId);
 
   bool get _canCompleteReturn =>
       !initLoading &&
@@ -426,6 +425,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
 
       // Only reset initial state when loading a NEW order, not after individual return submissions
       if (resetInitialState) {
+        _activeReturnOrderId = null;
         Provider.of<SalesProvider>(context, listen: false)
             .clearServerRefundBreakdown();
         _initialReturnedQuantities.clear();
@@ -1534,9 +1534,11 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                                   listen: false)
                                               .token;
 
-                                      await Provider.of<SalesProvider>(context,
-                                              listen: false)
-                                          .submitSalesReturn(
+                                      final returnOrderId =
+                                          await Provider.of<SalesProvider>(
+                                                  context,
+                                                  listen: false)
+                                              .submitSalesReturn(
                                         accessToken: accessToken ?? '',
                                         orderId: parsedOrderId,
                                         price: double.parse(unitPrice),
@@ -1546,6 +1548,12 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                         isDeliveryRefundable:
                                             _deliveryChargeRefundable,
                                       );
+
+                                      if (mounted) {
+                                        setState(() {
+                                          _activeReturnOrderId = returnOrderId;
+                                        });
+                                      }
 
                                       if (!dialogContext.mounted) return;
 
@@ -2148,13 +2156,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                       return;
                     }
 
-                    // Find the first item with a valid return_order_id
-                    final validReturnItem = _salesReturnItems.firstWhere(
-                      (item) => item.returnOrderId != 0,
-                      orElse: () => _salesReturnItems.first,
-                    );
-
-                    if (validReturnItem.returnOrderId == 0) {
+                    final returnOrderId = _draftReturnOrderId;
+                    if (returnOrderId == null) {
                       showScaffoldError(
                         context: context,
                         message:
@@ -2219,7 +2222,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                       await Provider.of<SalesProvider>(context, listen: false)
                           .completeSalesReturn(
                         accessToken: accessToken ?? '',
-                        returnOrderId: validReturnItem.returnOrderId,
+                        returnOrderId: returnOrderId,
                         paymentMethod:
                             hasPayment ? selectedPaymentMethod : null,
                         paidAmount: hasPayment ? paidAmount : null,

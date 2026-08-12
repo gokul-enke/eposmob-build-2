@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/quantity_input_helper.dart';
+import 'package:pos_machine/helpers/product_search_helper.dart';
 import 'package:pos_machine/features/billing/domain/product_variant_selection.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -2529,57 +2530,11 @@ class LocalProductProvider extends ChangeNotifier {
     }
 
     if (filterName != null && filterName.isNotEmpty) {
-      final normalizedFilterName = filterName.toLowerCase();
-      result = result.where((p) {
-        final nameMatch = _productSearchNames(p)
-            .any((name) => name.toLowerCase().contains(normalizedFilterName));
-        if (nameMatch) return true;
-
-        // Check SKU (always on)
-        final sku = p.sku ?? '';
-        if (sku.isNotEmpty &&
-            sku.toLowerCase().contains(normalizedFilterName)) {
-          return true;
-        }
-
-        // Issue 6: only active variants' SKUs surface a product.
-        final variantSkuMatch = p.variants?.any((variant) {
-              if (!variant.active) return false;
-              final varSku = variant.sku ?? '';
-              return varSku.isNotEmpty &&
-                  varSku.toLowerCase().contains(normalizedFilterName);
-            }) ??
-            false;
-        if (variantSkuMatch) return true;
-
-        return false;
-      }).toList();
-      result = _rankProductNameMatches(result, filterName);
+      result = ProductSearchHelper.search(result, filterName);
     }
 
     if (filterBarcode != null && filterBarcode.isNotEmpty) {
-      result = result.where((p) {
-        if (p.barcode != null &&
-            p.barcode!.toLowerCase().contains(filterBarcode.toLowerCase())) {
-          return true;
-        }
-        // Issue 6: only active variants' barcodes surface a product.
-        final variantMatch = p.variants?.any((v) =>
-                v.active &&
-                v.barcode != null &&
-                v.barcode!
-                    .toLowerCase()
-                    .contains(filterBarcode.toLowerCase())) ??
-            false;
-        if (variantMatch) return true;
-        final saleUnitMatch = p.saleUnits?.any((u) =>
-                u.barcode != null &&
-                u.barcode!
-                    .toLowerCase()
-                    .contains(filterBarcode.toLowerCase())) ??
-            false;
-        return saleUnitMatch;
-      }).toList();
+      result = ProductSearchHelper.searchBarcodes(result, filterBarcode);
     }
 
     // HSN Code filter - check both product level and stock level HSN codes
@@ -2642,105 +2597,7 @@ class LocalProductProvider extends ChangeNotifier {
     if (query.isEmpty) {
       return _filteredProducts;
     }
-    final normalizedQuery = query.toLowerCase();
-    final matches = _filteredProducts.where((p) {
-      final nameMatch = _productSearchNames(p)
-          .any((name) => name.toLowerCase().contains(normalizedQuery));
-      if (nameMatch) return true;
-
-      // Check SKU (always on)
-      final sku = p.sku ?? '';
-      if (sku.isNotEmpty && sku.toLowerCase().contains(normalizedQuery)) {
-        return true;
-      }
-
-      // Issue 6: only active variants' SKUs surface a product.
-      final variantSkuMatch = p.variants?.any((variant) {
-            if (!variant.active) return false;
-            final varSku = variant.sku ?? '';
-            return varSku.isNotEmpty &&
-                varSku.toLowerCase().contains(normalizedQuery);
-          }) ??
-          false;
-      if (variantSkuMatch) return true;
-
-      return false;
-    }).toList();
-    return _rankProductNameMatches(matches, query);
-  }
-
-  List<GetProduct> _rankProductNameMatches(
-    List<GetProduct> products,
-    String query,
-  ) {
-    final normalizedQuery = query.trim().toLowerCase();
-    if (normalizedQuery.isEmpty) return products;
-
-    final indexedProducts = products.indexed.toList();
-    indexedProducts.sort((first, second) {
-      final rankCompare = _productNameMatchRank(first.$2, normalizedQuery)
-          .compareTo(_productNameMatchRank(second.$2, normalizedQuery));
-      if (rankCompare != 0) return rankCompare;
-      return first.$1.compareTo(second.$1);
-    });
-    return indexedProducts.map((entry) => entry.$2).toList();
-  }
-
-  int _productNameMatchRank(GetProduct product, String normalizedQuery) {
-    final productNames = _productSearchNames(product)
-        .map((name) => name.trim().toLowerCase())
-        .where((name) => name.isNotEmpty);
-    if (productNames.any((name) => name.startsWith(normalizedQuery))) return 0;
-    return 1;
-  }
-
-  List<String> _productSearchNames(GetProduct product) {
-    final names = <String>[];
-
-    void addName(dynamic value) {
-      if (value == null) return;
-      final text = value.toString().trim();
-      if (text.isNotEmpty) {
-        names.add(text);
-      }
-    }
-
-    void extractNames(dynamic value) {
-      if (value == null) return;
-
-      if (value is String || value is num || value is bool) {
-        addName(value);
-        return;
-      }
-
-      if (value is Map) {
-        for (final key in const ['name', 'product_name', 'value', 'text']) {
-          if (value.containsKey(key)) {
-            addName(value[key]);
-          }
-        }
-
-        for (final entry in value.entries) {
-          final entryKey = entry.key?.toString().toLowerCase() ?? '';
-          if (entryKey.contains('language') || entryKey == 'id') {
-            continue;
-          }
-          extractNames(entry.value);
-        }
-        return;
-      }
-
-      if (value is Iterable) {
-        for (final item in value) {
-          extractNames(item);
-        }
-      }
-    }
-
-    addName(product.productName);
-    extractNames(product.names);
-
-    return names.toSet().toList();
+    return ProductSearchHelper.search(_filteredProducts, query);
   }
 
   /// Adds a product to the local products list.
