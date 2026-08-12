@@ -26,11 +26,13 @@ class BarcodePrintRequest {
   final List<BarcodePrintItem> items;
   final String stickerSize;
   final int stickersPerRow;
+  final int printRotationDegrees;
 
   const BarcodePrintRequest({
     required this.items,
     required this.stickerSize,
     required this.stickersPerRow,
+    this.printRotationDegrees = 0,
   });
 }
 
@@ -48,6 +50,7 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
   late List<BarcodePrintItem> printItems;
   String stickerSize = '50x25mm';
   int stickersPerRow = 1;
+  int printRotationDegrees = 0;
 
   /// Hard cap for the free-text per-row field; the settings slider only goes
   /// to 3, but typed input and saved JSON must not produce meter-wide pages.
@@ -121,6 +124,7 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
         stickerSize = settings.stickerSize;
       }
       stickersPerRow = settings.stickersPerRow.clamp(1, _maxStickersPerRow);
+      printRotationDegrees = settings.printRotationDegrees;
       _stickersPerRowController.text = stickersPerRow.toString();
     });
   }
@@ -269,6 +273,52 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
     );
   }
 
+  Widget _buildRotationField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Print Rotation',
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s12,
+            0.2,
+            Colors.grey.shade700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 45,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.blue.shade300),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<int>(
+              value: printRotationDegrees,
+              isExpanded: true,
+              icon: const Icon(Icons.keyboard_arrow_down),
+              items: const [0, 90, 270]
+                  .map(
+                    (value) => DropdownMenuItem(
+                      value: value,
+                      child: Text(value == 0 ? 'None (0°)' : '$value°'),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (newValue) {
+                if (newValue == null) return;
+                _userAdjustedLayout = true;
+                setState(() => printRotationDegrees = newValue);
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -331,12 +381,16 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                       _buildStickerSizeField(),
                       const SizedBox(height: 12),
                       _buildStickersPerRowField(),
+                      const SizedBox(height: 12),
+                      _buildRotationField(),
                     ] else
                       Row(
                         children: [
                           Expanded(child: _buildStickerSizeField()),
                           const SizedBox(width: 24),
                           Expanded(child: _buildStickersPerRowField()),
+                          const SizedBox(width: 24),
+                          Expanded(child: _buildRotationField()),
                         ],
                       ),
 
@@ -547,6 +601,7 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                           items: printItems,
                           stickerSize: stickerSize,
                           stickersPerRow: safeStickersPerRow,
+                          printRotationDegrees: printRotationDegrees,
                         ),
                       );
                     },

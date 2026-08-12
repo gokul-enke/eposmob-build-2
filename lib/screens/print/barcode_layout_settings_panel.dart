@@ -262,6 +262,30 @@ class _BarcodeLayoutSettingsPanelState
           ),
           const SizedBox(height: 16),
 
+          // ---- PDF print rotation correction ----
+          _sectionLabel('Print Rotation Correction'),
+          const SizedBox(height: 8),
+          _dropdownRow(
+            value: _settings.printRotationDegrees.toString(),
+            items: const ['0', '90', '270'],
+            itemLabel: (value) => value == '0' ? 'None (0°)' : '$value°',
+            onChanged: (v) => _update(
+              (s) => s.copyWith(printRotationDegrees: int.parse(v)),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Optional correction for label drivers that rotate silent PDF '
+            'prints. Leave at 0° for normal printers.',
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s10,
+              0.10,
+              Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 16),
+
           // ---- Element Spacing ----
           _sectionLabel('Element Spacing (pt)'),
           const SizedBox(height: 8),
@@ -343,7 +367,7 @@ class _BarcodeLayoutSettingsPanelState
           const SizedBox(height: 10),
           PrinterInfoStrip(
             text:
-                'Size: ${_settings.stickerSize}  ·  ${_settings.stickersPerRow} per row  ·  Barcode: ${_settings.barcodeWidthPercent.round()}% × ${_settings.barcodeHeight.round()}pt  ·  ${_settings.rasterDpi} DPI',
+                'Size: ${_settings.stickerSize}  ·  ${_settings.stickersPerRow} per row  ·  Barcode: ${_settings.barcodeWidthPercent.round()}% × ${_settings.barcodeHeight.round()}pt  ·  ${_settings.rasterDpi} DPI  ·  Rotation: ${_settings.printRotationDegrees}°',
             icon: Icons.straighten_rounded,
           ),
           const SizedBox(height: 20),

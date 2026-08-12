@@ -2,7 +2,7 @@ import 'dart:convert';
 
 /// Holds all user-configurable barcode sticker layout settings.
 class BarcodeLayoutSettings {
-  static const int currentSchemaVersion = 2;
+  static const int currentSchemaVersion = 3;
   static const double defaultBarcodeHeight = 15;
 
   static const List<String> supportedStickerSizes = [
@@ -49,6 +49,11 @@ class BarcodeLayoutSettings {
   // Source raster density used before the printer/driver performs final output.
   final int rasterDpi;
 
+  // Optional PDF page rotation used to compensate for Windows label drivers
+  // that rotate landscape labels during silent printing. Zero preserves the
+  // legacy output exactly.
+  final int printRotationDegrees;
+
   /// Default gap between sticker elements. 1.5pt reproduces the 2%-of-height
   /// gap the renderer used before this became configurable.
   static const double defaultElementSpacing = 1.5;
@@ -67,6 +72,7 @@ class BarcodeLayoutSettings {
     this.barcodeWidthPercent = 70,
     this.elementSpacing = defaultElementSpacing,
     this.rasterDpi = 300,
+    this.printRotationDegrees = 0,
   });
 
   Map<String, dynamic> toJson() => {
@@ -84,11 +90,13 @@ class BarcodeLayoutSettings {
         'barcodeWidthPercent': barcodeWidthPercent,
         'elementSpacing': elementSpacing,
         'rasterDpi': rasterDpi,
+        'printRotationDegrees': printRotationDegrees,
       };
 
   factory BarcodeLayoutSettings.fromJson(Map<String, dynamic> json) {
     final rawStickerSize = json['stickerSize']?.toString() ?? '50x25mm';
     final rawDpi = (json['rasterDpi'] as num?)?.round() ?? 300;
+    final rawRotation = (json['printRotationDegrees'] as num?)?.round() ?? 0;
     return BarcodeLayoutSettings(
       stickerSize: supportedStickerSizes.contains(rawStickerSize)
           ? rawStickerSize
@@ -131,6 +139,8 @@ class BarcodeLayoutSettings {
           .clamp(0, 8)
           .toDouble(),
       rasterDpi: rawDpi == 203 ? 203 : 300,
+      printRotationDegrees:
+          const [0, 90, 270].contains(rawRotation) ? rawRotation : 0,
     );
   }
 
@@ -155,6 +165,7 @@ class BarcodeLayoutSettings {
     double? barcodeWidthPercent,
     double? elementSpacing,
     int? rasterDpi,
+    int? printRotationDegrees,
   }) {
     return BarcodeLayoutSettings(
       stickerSize: stickerSize ?? this.stickerSize,
@@ -171,6 +182,7 @@ class BarcodeLayoutSettings {
       barcodeWidthPercent: barcodeWidthPercent ?? this.barcodeWidthPercent,
       elementSpacing: elementSpacing ?? this.elementSpacing,
       rasterDpi: rasterDpi ?? this.rasterDpi,
+      printRotationDegrees: printRotationDegrees ?? this.printRotationDegrees,
     );
   }
 

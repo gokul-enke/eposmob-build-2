@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
@@ -54,6 +55,16 @@ class _DirectPrintResult {
   final String message;
 
   const _DirectPrintResult(this.status, this.message);
+}
+
+class _RenderedBarcodeSticker {
+  final Uint8List pngBytes;
+  final pw.Widget widget;
+
+  const _RenderedBarcodeSticker({
+    required this.pngBytes,
+    required this.widget,
+  });
 }
 
 /// Barcode Printer Service
@@ -386,11 +397,65 @@ class BarcodePrinterService {
     }
   }
 
+  Uint8List _buildRotatedBarcodePage({
+    required List<_RenderedBarcodeSticker> stickers,
+    required double pageWidthMm,
+    required double pageHeightMm,
+    required double stickerWidthMm,
+    required double stickerHeightMm,
+    required double pageMarginMm,
+    required double gapMm,
+    required int dpi,
+    required int rotationDegrees,
+  }) {
+    int pixels(double mm) => (mm * dpi / 25.4).round().clamp(1, 100000);
+
+    final page = img.Image(
+      width: pixels(pageWidthMm),
+      height: pixels(pageHeightMm),
+      numChannels: 4,
+    );
+    img.fill(page, color: img.ColorRgb8(255, 255, 255));
+
+    final stickerWidthPx = pixels(stickerWidthMm);
+    final stickerHeightPx = pixels(stickerHeightMm);
+    final marginPx = (pageMarginMm * dpi / 25.4).round();
+    final gapPx = (gapMm * dpi / 25.4).round();
+
+    for (var index = 0; index < stickers.length; index++) {
+      final decoded = img.decodeImage(stickers[index].pngBytes);
+      if (decoded == null) continue;
+      final normalized =
+          decoded.width == stickerWidthPx && decoded.height == stickerHeightPx
+              ? decoded
+              : img.copyResize(
+                  decoded,
+                  width: stickerWidthPx,
+                  height: stickerHeightPx,
+                  interpolation: img.Interpolation.nearest,
+                );
+      img.compositeImage(
+        page,
+        normalized,
+        dstX: marginPx + index * (stickerWidthPx + gapPx),
+        dstY: marginPx,
+      );
+    }
+
+    final rotated = img.copyRotate(
+      page,
+      angle: rotationDegrees,
+      interpolation: img.Interpolation.nearest,
+    );
+    return Uint8List.fromList(img.encodePng(rotated));
+  }
+
   /// Generate a barcode sticker PDF and open/share it.
   Future<BarcodePrintResult> printBarcodes({
     required List<BarcodePrintItem> printItems,
     String stickerSize = '50x25mm',
     int stickersPerRow = 1,
+    int printRotationDegrees = 0,
   }) async {
     if (printItems.isEmpty) {
       if (context.mounted) {
@@ -442,7 +507,7 @@ class BarcodePrinterService {
     try {
       debugPrint('========== BARCODE PRINT DEBUG START ==========');
       debugPrint(
-          '[BarcodePrint] Request -> items=${printItems.length}, stickerSize=$stickerSize, stickersPerRow=$stickersPerRow');
+          '[BarcodePrint] Request -> items=${printItems.length}, stickerSize=$stickerSize, stickersPerRow=$stickersPerRow, rotation=$printRotationDegrees');
 
       if (context.mounted) {
         showLoadingOverlay(
@@ -509,6 +574,11 @@ class BarcodePrinterService {
 
       // Load user-configured barcode layout settings
       final layoutSettings = await loadBarcodeLayoutSettings();
+      final effectiveRotation = const [0, 90, 270].contains(
+        printRotationDegrees,
+      )
+          ? printRotationDegrees
+          : 0;
 
       for (final item in printItems.where((item) => item.quantity > 0)) {
         final barcodeValue = item.product.barcode!.trim();
@@ -525,7 +595,7 @@ class BarcodePrinterService {
         }
       }
 
-      if (!Platform.isWindows) {
+      if (!Platform.isWindows && effectiveRotation == 0) {
         final directResult = await _tryDirectPrintToSelectedPrinter(
           printItems: printItems,
           stickerSize: stickerSize,
@@ -613,6 +683,9 @@ class BarcodePrinterService {
       final double pageWidth = rowWidth + (pageMargin * 2);
       final double pageHeight = stickerH + (pageMargin * 2);
       final pageFormat = PdfPageFormat(pageWidth, pageHeight);
+      final printPageFormat = effectiveRotation == 0
+          ? pageFormat
+          : PdfPageFormat(pageHeight, pageWidth);
 
       debugPrint(
           '[BarcodePrint] Sticker(mm) -> width=${(stickerW / PdfPageFormat.mm).toStringAsFixed(2)}, height=${(stickerH / PdfPageFormat.mm).toStringAsFixed(2)}');
@@ -622,7 +695,7 @@ class BarcodePrinterService {
       // Build flat list of sticker widgets respecting quantity. Each unique
       // item is rasterized once via Flutter's text engine (exact line-height
       // control the pdf package lacks), then reused for all its copies.
-      final List<pw.Widget> stickers = [];
+      final List<_RenderedBarcodeSticker> stickers = [];
       for (int idx = 0; idx < printItems.length; idx++) {
         final item = printItems[idx];
         final product = item.product;
@@ -685,9 +758,17 @@ class BarcodePrinterService {
         }
 
         final stickerImage = pw.MemoryImage(pngBytes);
+        final stickerWidget = pw.Image(
+          stickerImage,
+          width: stickerW,
+          height: stickerH,
+        );
         for (int i = 0; i < item.quantity; i++) {
           stickers.add(
-            pw.Image(stickerImage, width: stickerW, height: stickerH),
+            _RenderedBarcodeSticker(
+              pngBytes: pngBytes,
+              widget: stickerWidget,
+            ),
           );
         }
       }
@@ -727,30 +808,52 @@ class BarcodePrinterService {
         debugPrint(
             '[BarcodePrint] Building page $pageNo with ${rowStickers.length} sticker(s).');
 
-        pdf.addPage(
-          pw.Page(
-            pageFormat: pageFormat,
-            margin: pw.EdgeInsets.all(pageMargin),
-            build: (pw.Context ctx) {
-              // Gap only BETWEEN stickers: a full row then measures exactly
-              // n*W + (n-1)*gap, matching the page width. Anchor top-left so a
-              // partial last row keeps the same column positions as full rows
-              // (die-cut label stock needs identical x offsets on every row).
-              return pw.Align(
-                alignment: pw.Alignment.topLeft,
-                child: pw.Row(
-                  mainAxisSize: pw.MainAxisSize.min,
-                  children: [
-                    for (int i = 0; i < rowStickers.length; i++) ...[
-                      if (i > 0) pw.SizedBox(width: gap),
-                      rowStickers[i],
+        if (effectiveRotation == 0) {
+          // Keep the legacy page construction untouched for existing users.
+          pdf.addPage(
+            pw.Page(
+              pageFormat: pageFormat,
+              margin: pw.EdgeInsets.all(pageMargin),
+              build: (pw.Context ctx) {
+                return pw.Align(
+                  alignment: pw.Alignment.topLeft,
+                  child: pw.Row(
+                    mainAxisSize: pw.MainAxisSize.min,
+                    children: [
+                      for (int i = 0; i < rowStickers.length; i++) ...[
+                        if (i > 0) pw.SizedBox(width: gap),
+                        rowStickers[i].widget,
+                      ],
                     ],
-                  ],
-                ),
-              );
-            },
-          ),
-        );
+                  ),
+                );
+              },
+            ),
+          );
+        } else {
+          final rotatedPageBytes = _buildRotatedBarcodePage(
+            stickers: rowStickers,
+            pageWidthMm: pageWidth / PdfPageFormat.mm,
+            pageHeightMm: pageHeight / PdfPageFormat.mm,
+            stickerWidthMm: stickerW / PdfPageFormat.mm,
+            stickerHeightMm: stickerH / PdfPageFormat.mm,
+            pageMarginMm: pageMargin / PdfPageFormat.mm,
+            gapMm: gap / PdfPageFormat.mm,
+            dpi: layoutSettings.rasterDpi,
+            rotationDegrees: effectiveRotation,
+          );
+          pdf.addPage(
+            pw.Page(
+              pageFormat: printPageFormat,
+              margin: pw.EdgeInsets.zero,
+              build: (pw.Context ctx) => pw.Image(
+                pw.MemoryImage(rotatedPageBytes),
+                width: printPageFormat.width,
+                height: printPageFormat.height,
+              ),
+            ),
+          );
+        }
       }
 
       // Save PDF
@@ -767,7 +870,7 @@ class BarcodePrinterService {
       if (Platform.isWindows) {
         return _handleWindowsPdf(
           file,
-          pageFormat: pageFormat,
+          pageFormat: printPageFormat,
           stickerSize: stickerSize,
           stickersPerRow: safeStickersPerRow,
           totalPages: totalPages,
