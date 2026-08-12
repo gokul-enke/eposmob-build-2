@@ -1785,12 +1785,17 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
     final sectionHeadingStyle = pw.TextStyle(
         font: fontBold, fontSize: fs(9), fontWeight: pw.FontWeight.bold);
 
+    final hasCreditNoteConfig = retLabels?.creditNoteNumber != null ||
+        retLabels?.creditNoteDate != null;
+
     final widgets = <pw.Widget>[
       pw.SizedBox(height: 6),
       pw.Divider(height: 0, thickness: 0.8),
       pw.SizedBox(height: 4),
-      pw.Text(params.returnsSectionHeading, style: titleStyle),
-      pw.SizedBox(height: 4),
+      if (!hasCreditNoteConfig) ...[
+        pw.Text(params.returnsSectionHeading, style: titleStyle),
+        pw.SizedBox(height: 4),
+      ],
     ];
 
     // — Credit Note Details section —
@@ -1853,10 +1858,15 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
           'Billing Address:', params.customerAddress!, labelStyle, valueStyle));
     }
     if (custRows.isNotEmpty) {
-      widgets.add(pw.Text('CUSTOMER DETAILS', style: sectionHeadingStyle));
+      widgets.add(pw.Text(retLabels?.customerHeading ?? 'CUSTOMER DETAILS', style: sectionHeadingStyle));
       widgets.add(pw.SizedBox(height: 2));
       widgets.addAll(custRows);
       widgets.add(pw.SizedBox(height: 4));
+    }
+
+if (retLabels?.itemsHeading != null) {
+      widgets.add(pw.Text(retLabels!.itemsHeading!, style: sectionHeadingStyle));
+      widgets.add(pw.SizedBox(height: 2));
     }
 
     if (tableRows.isNotEmpty) {
@@ -1904,6 +1914,12 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
           pw.Text(_formatMoney(currency, returnRateTotal), style: valueStyle),
         ],
       ));
+    }
+
+    if (hasCreditNoteConfig) {
+      widgets.add(pw.SizedBox(height: 4));
+      widgets.addAll(_amountInWords(
+          returnRateTotal, currency, false, null, labelStyle));
     }
 
     return widgets;

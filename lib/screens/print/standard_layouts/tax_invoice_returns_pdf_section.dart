@@ -21,8 +21,10 @@ class TaxInvoiceReturnsPdfSection {
     String currency,
     pw.Font font,
     pw.Font fontBold,
-    bool isA5,
-  ) {
+    bool isA5, {
+    bool isDualLanguage = false,
+    String? configLang,
+  }) {
     final orderReturns = params.orderReturns!;
     if (orderReturns.returnItems == null || orderReturns.returnItems!.isEmpty) {
       return [];
@@ -199,12 +201,17 @@ class TaxInvoiceReturnsPdfSection {
     final sectionHeadingStyle = pw.TextStyle(
         font: fontBold, fontSize: fs(9), fontWeight: pw.FontWeight.bold);
 
+    final hasCreditNoteConfig = retLabels?.creditNoteNumber != null ||
+        retLabels?.creditNoteDate != null;
+
     final widgets = <pw.Widget>[
       pw.SizedBox(height: 6),
       pw.Divider(height: 0, thickness: 0.8),
       pw.SizedBox(height: 4),
-      pw.Text(params.returnsSectionHeading, style: titleStyle),
-      pw.SizedBox(height: 4),
+      if (!hasCreditNoteConfig) ...[
+        pw.Text(params.returnsSectionHeading, style: titleStyle),
+        pw.SizedBox(height: 4),
+      ],
     ];
 
     // — Credit Note Details section —
@@ -267,10 +274,15 @@ class TaxInvoiceReturnsPdfSection {
           labelStyle, valueStyle));
     }
     if (custRows.isNotEmpty) {
-      widgets.add(pw.Text('CUSTOMER DETAILS', style: sectionHeadingStyle));
+      widgets.add(pw.Text(retLabels?.customerHeading ?? 'CUSTOMER DETAILS', style: sectionHeadingStyle));
       widgets.add(pw.SizedBox(height: 2));
       widgets.addAll(custRows);
       widgets.add(pw.SizedBox(height: 4));
+    }
+
+    if (retLabels?.itemsHeading != null) {
+      widgets.add(pw.Text(retLabels!.itemsHeading!, style: sectionHeadingStyle));
+      widgets.add(pw.SizedBox(height: 2));
     }
 
     if (tableRows.isNotEmpty) {
@@ -320,6 +332,12 @@ class TaxInvoiceReturnsPdfSection {
           pw.Text(formatMoney(currency, returnRateTotal), style: valueStyle),
         ],
       ));
+    }
+
+    if (hasCreditNoteConfig) {
+      widgets.add(pw.SizedBox(height: 4));
+      widgets.addAll(_amountInWords(
+          returnRateTotal, currency, isDualLanguage, configLang, labelStyle));
     }
 
     return widgets;

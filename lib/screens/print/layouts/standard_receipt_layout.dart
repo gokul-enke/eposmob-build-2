@@ -2177,15 +2177,19 @@ class StandardReceiptLayout implements ReceiptLayout {
     final bool is58mm = params.is58mm;
     final double scale = is58mm ? 0.85 : 1.0;
 
+    final retDc = params.returnBillDisplayConfig;
+    final retLabels = params.returnBillResolvedLabels;
+    final hasCreditNoteConfig = retLabels?.creditNoteNumber != null ||
+        retLabels?.creditNoteDate != null;
+
     rows.add(SpacingRow(_sectionGap));
     rows.add(StandardThinDividerRow());
     rows.add(SpacingRow(_itemGap));
-    rows.add(TextRow(params.returnsSectionHeading, isBold: true, scale: 1.1));
+    if (!hasCreditNoteConfig)
+      rows.add(TextRow(params.returnsSectionHeading, isBold: true, scale: 1.1));
     rows.add(SpacingRow(_itemGap));
 
     // — Credit Note Details section —
-    final retDc = params.returnBillDisplayConfig;
-    final retLabels = params.returnBillResolvedLabels;
     if (retLabels?.creditNoteNumber != null ||
         retLabels?.creditNoteDate != null) {
       final detailsHeading = _getLabel(retDc, 'showCreditNoteOrder',
@@ -2227,7 +2231,7 @@ class StandardReceiptLayout implements ReceiptLayout {
 
     // — Customer Details section —
     if (params.customerName != null && params.customerName!.trim().isNotEmpty) {
-      rows.add(TextRow('CUSTOMER DETAILS', isBold: true, scale: scale));
+      rows.add(TextRow(retLabels?.customerHeading ?? 'CUSTOMER DETAILS', isBold: true, scale: scale));
       rows.add(SpacingRow(_itemGap));
       final custLabel = isEnglish ? 'Customer Name:' : 'اسم العميل:';
       rows.add(ReceiptTableRow([
@@ -2252,6 +2256,11 @@ class StandardReceiptLayout implements ReceiptLayout {
               weight: 0.55, align: TextAlign.left, scale: scale),
         ]));
       }
+      rows.add(SpacingRow(_itemGap));
+    }
+
+    if (retLabels?.itemsHeading != null) {
+      rows.add(TextRow(retLabels!.itemsHeading!, isBold: true, scale: scale));
       rows.add(SpacingRow(_itemGap));
     }
 
@@ -2470,6 +2479,17 @@ class StandardReceiptLayout implements ReceiptLayout {
       }
       rows.add(SpacingRow(_itemGap));
       rows.add(StandardBoxedTotalsRow(items: returnSummaryItems));
+
+      if (hasCreditNoteConfig) {
+        final language =
+            (params.billDocumentConfig.language ?? 'en').toLowerCase();
+        final amountText = AmountHelper().convertNumberToWords(returnRateTotal,
+            currency: currency, language: language);
+        final suffix = language == 'ar' ? ' فقط.' : ' Only.';
+        rows.add(SpacingRow(_itemGap));
+        rows.add(TextRow('Amount in Words:', isBold: true, scale: 0.9));
+        rows.add(TextRow('$amountText$suffix', isBold: false, scale: 0.85));
+      }
     }
   }
 

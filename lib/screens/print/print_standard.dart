@@ -617,10 +617,13 @@ class StandardPrinter {
                 displayConfig: updatedSettings),
 
             // Customer Information Section - if available
-            if (customerName != null ||
+            // Hidden when return-only with credit note config (customer shown in returns section)
+            if ((customerName != null ||
                 customerPhone != null ||
                 customerEmail != null ||
-                customerAddress != null)
+                customerAddress != null) &&
+                !(isReturnOnly && (billDocumentConfig?.resolvedLabels?.creditNoteNumber != null ||
+                    billDocumentConfig?.resolvedLabels?.creditNoteDate != null)))
               _buildCustomerDetailsPDF(
                 selectedPaperSize,
                 customerName,
@@ -2016,6 +2019,8 @@ class StandardPrinter {
     // Credit Note / Customer config helpers
     final retDc = billDocumentConfig?.displayConfiguration?.options;
     final retLabels = billDocumentConfig?.resolvedLabels;
+    final hasCreditNoteConfig = retLabels?.creditNoteNumber != null ||
+        retLabels?.creditNoteDate != null;
     String retLbl(String key, String? resolved, String def) {
       final v = retDc?[key]?.visible == true
           ? (retDc?[key]?.value as String?)
@@ -2276,8 +2281,10 @@ class StandardPrinter {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text(returnsLabel, style: subheaderStyle),
-          pw.SizedBox(height: 10),
+          if (!hasCreditNoteConfig) ...[
+            pw.Text(returnsLabel, style: subheaderStyle),
+            pw.SizedBox(height: 10),
+          ],
 
           // — Credit Note Details —
           if (retLabels?.creditNoteNumber != null ||
@@ -2319,7 +2326,7 @@ class StandardPrinter {
 
           // — Customer Details —
           if (customerName != null && customerName.trim().isNotEmpty) ...[
-            pw.Text('CUSTOMER DETAILS', style: subheaderStyle),
+            pw.Text(retLabels?.customerHeading ?? 'CUSTOMER DETAILS', style: subheaderStyle),
             pw.SizedBox(height: 3),
             _buildLabelValueRow(
               'Customer Name:',
@@ -2334,6 +2341,11 @@ class StandardPrinter {
               _buildLabelValueRow('Billing Address:', customerAddress,
                   summaryStyle, isRtl: isRtl),
             pw.SizedBox(height: 8),
+          ],
+
+          if (retLabels?.itemsHeading != null) ...[
+            pw.Text(retLabels!.itemsHeading!, style: subheaderStyle),
+            pw.SizedBox(height: 3),
           ],
 
           // Return Items Table
@@ -2378,8 +2390,10 @@ class StandardPrinter {
             pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text(returnSummaryLabel, style: subheaderStyle),
-                pw.SizedBox(height: 3),
+                if (!hasCreditNoteConfig) ...[
+                  pw.Text(returnSummaryLabel, style: subheaderStyle),
+                  pw.SizedBox(height: 3),
+                ],
                 // Display Item Count
                 if (displayConfig?['showReturnItemsCount']?.visible == true ||
                     retLabels?.creditNoteItemsCount != null) ...[
@@ -2445,6 +2459,14 @@ class StandardPrinter {
                 ],
               ],
             ),
+          if (hasCreditNoteConfig) ...[
+            pw.SizedBox(height: 4),
+            pw.Text('Amount in Words:', style: subheaderStyle),
+            pw.Text(
+              '${AmountHelper().convertNumberToWords(calculatedReturnTotal, language: isRtl ? 'ar' : 'en')}${isRtl ? ' فقط.' : ' Only.'}',
+              style: summaryStyle,
+            ),
+          ],
           pw.SizedBox(height: 15),
         ],
       ),

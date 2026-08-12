@@ -2166,23 +2166,26 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
     final double scale = is58mm ? 0.85 : 1.0;
     final bool isBilingual = _isBilingualContent(params);
 
+    final retDc = params.returnBillDisplayConfig;
+    final retLabels = params.returnBillResolvedLabels;
+    final hasCreditNoteConfig = retLabels?.creditNoteNumber != null ||
+        retLabels?.creditNoteDate != null;
+
     rows.add(SpacingRow(_sectionGap));
     rows.add(ThinDividerRow());
     rows.add(SpacingRow(_itemGap));
-    rows.add(TextRow(
-      isBilingual
-          ? _getBilingualText(arabic: params.returnsSectionHeadingArabic, english: params.returnsSectionHeading)
-          : (isEnglish ? params.returnsSectionHeading : params.returnsSectionHeadingArabic),
-      isBold: true,
-      scale: 1.1,
-    ));
+    if (!hasCreditNoteConfig)
+      rows.add(TextRow(
+        isBilingual
+            ? _getBilingualText(arabic: params.returnsSectionHeadingArabic, english: params.returnsSectionHeading)
+            : (isEnglish ? params.returnsSectionHeading : params.returnsSectionHeadingArabic),
+        isBold: true,
+        scale: 1.1,
+      ));
     rows.add(SpacingRow(_itemGap));
 
     // — Credit Note Details section —
-    final retDc = params.returnBillDisplayConfig;
-    final retLabels = params.returnBillResolvedLabels;
-    if (retLabels?.creditNoteNumber != null ||
-        retLabels?.creditNoteDate != null) {
+    if (hasCreditNoteConfig) {
       final detailsHeading = isBilingual
           ? _getBilingualText(
               arabic: (retDc?['showCreditNoteOrder']?.value as String?)?.isNotEmpty == true
@@ -2228,8 +2231,8 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
     // — Customer Details section —
     if (params.customerName != null && params.customerName!.trim().isNotEmpty) {
       final custHeading = isBilingual
-          ? _getBilingualText(arabic: 'تفاصيل العميل', english: 'CUSTOMER DETAILS')
-          : (isEnglish ? 'CUSTOMER DETAILS' : 'تفاصيل العميل');
+          ? _getBilingualText(arabic: retLabels?.customerHeading ?? 'تفاصيل العميل', english: retLabels?.customerHeading ?? 'CUSTOMER DETAILS')
+          : (isEnglish ? (retLabels?.customerHeading ?? 'CUSTOMER DETAILS') : (retLabels?.customerHeading ?? 'تفاصيل العميل'));
       rows.add(TextRow(custHeading, isBold: true, scale: scale));
       rows.add(SpacingRow(_itemGap));
       final custNameLabel = isBilingual
@@ -2263,6 +2266,11 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
               weight: 0.55, align: TextAlign.left, scale: scale),
         ]));
       }
+      rows.add(SpacingRow(_itemGap));
+    }
+
+    if (retLabels?.itemsHeading != null) {
+      rows.add(TextRow(retLabels!.itemsHeading!, isBold: true, scale: scale));
       rows.add(SpacingRow(_itemGap));
     }
 
@@ -2690,6 +2698,17 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
 
       rows.add(SpacingRow(_itemGap));
       rows.add(BoxedTotalsRow(items: returnSummaryItems));
+
+      if (hasCreditNoteConfig) {
+        final arabicText = AmountHelper()
+            .convertNumberToWords(returnRateTotal, currency: currency, language: 'ar');
+        final englishText = AmountHelper()
+            .convertNumberToWords(returnRateTotal, currency: currency, language: 'en');
+        rows.add(SpacingRow(_itemGap));
+        rows.add(TextRow('Amount in Words:', isBold: true, scale: 0.9));
+        rows.add(TextRow(englishText, isBold: false, scale: 0.85));
+        rows.add(TextRow(arabicText, isBold: false, scale: 0.85));
+      }
     }
   }
 

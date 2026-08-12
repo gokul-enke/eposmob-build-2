@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
+import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/order_details.dart';
 import '../font_config.dart';
@@ -38,22 +39,26 @@ class ReturnsSectionBuilder {
     debugPrint("===== BUILD ORDER RETURNS SECTION =====");
     debugPrint("Return items count: ${orderReturns.returnItems!.length}");
 
-    // Returns heading
-    bytes += generator.text(
-      returnsSectionHeading,
-      styles: PosStyles(
-        fontType: fontType,
-        align: PosAlign.center,
-        bold: true,
-        height: ThermalFontConfig.textSizeSmall,
-        width: ThermalFontConfig.textSizeSmall,
-      ),
-    );
-    bytes += generator.emptyLines(1);
-
     // — Credit Note Details —
     final retDc = billDocumentConfig?.displayConfiguration?.options;
     final retLabels = billDocumentConfig?.resolvedLabels;
+    final hasCreditNoteConfig = retLabels?.creditNoteNumber != null ||
+        retLabels?.creditNoteDate != null;
+
+    // Returns heading — hidden when credit note config is active
+    if (!hasCreditNoteConfig) {
+      bytes += generator.text(
+        returnsSectionHeading,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.center,
+          bold: true,
+          height: ThermalFontConfig.textSizeSmall,
+          width: ThermalFontConfig.textSizeSmall,
+        ),
+      );
+      bytes += generator.emptyLines(1);
+    }
     String retLbl(String key, String? resolved, String def) {
       final v = retDc?[key]?.visible == true
           ? (retDc?[key]?.value as String?)
@@ -106,7 +111,7 @@ class ReturnsSectionBuilder {
 
     // — Customer Details —
     if (customerName != null && customerName.trim().isNotEmpty) {
-      bytes += generator.text('CUSTOMER DETAILS',
+      bytes += generator.text(retLabels?.customerHeading ?? 'CUSTOMER DETAILS',
           styles: PosStyles(
               fontType: fontType,
               align: PosAlign.left,
@@ -133,6 +138,17 @@ class ReturnsSectionBuilder {
                 align: PosAlign.left,
                 height: ThermalFontConfig.textSizeSmall));
       }
+      bytes += generator.emptyLines(1);
+    }
+
+    if (retLabels?.itemsHeading != null) {
+      bytes += generator.text(retLabels!.itemsHeading!,
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.left,
+              bold: true,
+              height: ThermalFontConfig.textSizeSmall,
+              width: ThermalFontConfig.textSizeSmall));
       bytes += generator.emptyLines(1);
     }
 
@@ -575,6 +591,29 @@ class ReturnsSectionBuilder {
         ),
       ),
     ]);
+
+    if (hasCreditNoteConfig) {
+      final amountText = AmountHelper().convertNumberToWords(
+          calculatedReturnTotal, language: 'en');
+      bytes += generator.emptyLines(1);
+      bytes += generator.text(
+        'Amount in Words:',
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.left,
+          bold: true,
+          height: ThermalFontConfig.textSizeSmall,
+        ),
+      );
+      bytes += generator.text(
+        '$amountText Only.',
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.left,
+          height: ThermalFontConfig.textSizeSmall,
+        ),
+      );
+    }
 
     debugPrint("===== END BUILD ORDER RETURNS SECTION =====");
     return bytes;
