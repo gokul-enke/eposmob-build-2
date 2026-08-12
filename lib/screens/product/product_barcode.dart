@@ -644,6 +644,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
           stickerSize: result.stickerSize,
           stickersPerRow: result.stickersPerRow,
           printRotationDegrees: result.printRotationDegrees,
+          invertPrintColors: result.invertPrintColors,
         );
 
         if (mounted && printResult.isSuccess) {
@@ -695,6 +696,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
           stickerSize: result.stickerSize,
           stickersPerRow: result.stickersPerRow,
           printRotationDegrees: result.printRotationDegrees,
+          invertPrintColors: result.invertPrintColors,
         );
 
         if (mounted && printResult.isSuccess) {

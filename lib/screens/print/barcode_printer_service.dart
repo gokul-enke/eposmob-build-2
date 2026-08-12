@@ -407,6 +407,7 @@ class BarcodePrinterService {
     required double gapMm,
     required int dpi,
     required int rotationDegrees,
+    required bool invertPrintColors,
   }) {
     int pixels(double mm) => (mm * dpi / 25.4).round().clamp(1, 100000);
 
@@ -442,11 +443,14 @@ class BarcodePrinterService {
       );
     }
 
-    final rotated = img.copyRotate(
-      page,
-      angle: rotationDegrees,
-      interpolation: img.Interpolation.nearest,
-    );
+    final colorAdjusted = invertPrintColors ? img.invert(page) : page;
+    final rotated = rotationDegrees == 0
+        ? colorAdjusted
+        : img.copyRotate(
+            colorAdjusted,
+            angle: rotationDegrees,
+            interpolation: img.Interpolation.nearest,
+          );
     return Uint8List.fromList(img.encodePng(rotated));
   }
 
@@ -455,7 +459,8 @@ class BarcodePrinterService {
     required List<BarcodePrintItem> printItems,
     String stickerSize = '50x25mm',
     int stickersPerRow = 1,
-    int printRotationDegrees = 0,
+    int? printRotationDegrees,
+    bool invertPrintColors = false,
   }) async {
     if (printItems.isEmpty) {
       if (context.mounted) {
@@ -574,11 +579,11 @@ class BarcodePrinterService {
 
       // Load user-configured barcode layout settings
       final layoutSettings = await loadBarcodeLayoutSettings();
-      final effectiveRotation = const [0, 90, 270].contains(
+      final effectiveRotation = const [90, 180, 270].contains(
         printRotationDegrees,
       )
           ? printRotationDegrees
-          : 0;
+          : null;
 
       for (final item in printItems.where((item) => item.quantity > 0)) {
         final barcodeValue = item.product.barcode!.trim();
@@ -595,7 +600,9 @@ class BarcodePrinterService {
         }
       }
 
-      if (!Platform.isWindows && effectiveRotation == 0) {
+      if (!Platform.isWindows &&
+          effectiveRotation == null &&
+          !invertPrintColors) {
         final directResult = await _tryDirectPrintToSelectedPrinter(
           printItems: printItems,
           stickerSize: stickerSize,
@@ -683,9 +690,11 @@ class BarcodePrinterService {
       final double pageWidth = rowWidth + (pageMargin * 2);
       final double pageHeight = stickerH + (pageMargin * 2);
       final pageFormat = PdfPageFormat(pageWidth, pageHeight);
-      final printPageFormat = effectiveRotation == 0
-          ? pageFormat
-          : PdfPageFormat(pageHeight, pageWidth);
+      final swapsPageDimensions =
+          effectiveRotation == 90 || effectiveRotation == 270;
+      final printPageFormat = swapsPageDimensions
+          ? PdfPageFormat(pageHeight, pageWidth)
+          : pageFormat;
 
       debugPrint(
           '[BarcodePrint] Sticker(mm) -> width=${(stickerW / PdfPageFormat.mm).toStringAsFixed(2)}, height=${(stickerH / PdfPageFormat.mm).toStringAsFixed(2)}');
@@ -808,7 +817,7 @@ class BarcodePrinterService {
         debugPrint(
             '[BarcodePrint] Building page $pageNo with ${rowStickers.length} sticker(s).');
 
-        if (effectiveRotation == 0) {
+        if (effectiveRotation == null && !invertPrintColors) {
           // Keep the legacy page construction untouched for existing users.
           pdf.addPage(
             pw.Page(
@@ -840,7 +849,8 @@ class BarcodePrinterService {
             pageMarginMm: pageMargin / PdfPageFormat.mm,
             gapMm: gap / PdfPageFormat.mm,
             dpi: layoutSettings.rasterDpi,
-            rotationDegrees: effectiveRotation,
+            rotationDegrees: effectiveRotation ?? 0,
+            invertPrintColors: invertPrintColors,
           );
           pdf.addPage(
             pw.Page(

@@ -2,7 +2,7 @@ import 'dart:convert';
 
 /// Holds all user-configurable barcode sticker layout settings.
 class BarcodeLayoutSettings {
-  static const int currentSchemaVersion = 3;
+  static const int currentSchemaVersion = 4;
   static const double defaultBarcodeHeight = 15;
 
   static const List<String> supportedStickerSizes = [
@@ -50,9 +50,12 @@ class BarcodeLayoutSettings {
   final int rasterDpi;
 
   // Optional PDF page rotation used to compensate for Windows label drivers
-  // that rotate landscape labels during silent printing. Zero preserves the
-  // legacy output exactly.
-  final int printRotationDegrees;
+  // that rotate landscape labels during silent printing. Null preserves the
+  // legacy output exactly and lets the printer decide orientation.
+  final int? printRotationDegrees;
+
+  // Optional color inversion for drivers that output white content on black.
+  final bool invertPrintColors;
 
   /// Default gap between sticker elements. 1.5pt reproduces the 2%-of-height
   /// gap the renderer used before this became configurable.
@@ -72,7 +75,8 @@ class BarcodeLayoutSettings {
     this.barcodeWidthPercent = 70,
     this.elementSpacing = defaultElementSpacing,
     this.rasterDpi = 300,
-    this.printRotationDegrees = 0,
+    this.printRotationDegrees,
+    this.invertPrintColors = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -90,13 +94,15 @@ class BarcodeLayoutSettings {
         'barcodeWidthPercent': barcodeWidthPercent,
         'elementSpacing': elementSpacing,
         'rasterDpi': rasterDpi,
-        'printRotationDegrees': printRotationDegrees,
+        if (printRotationDegrees != null)
+          'printRotationDegrees': printRotationDegrees,
+        if (invertPrintColors) 'invertPrintColors': true,
       };
 
   factory BarcodeLayoutSettings.fromJson(Map<String, dynamic> json) {
     final rawStickerSize = json['stickerSize']?.toString() ?? '50x25mm';
     final rawDpi = (json['rasterDpi'] as num?)?.round() ?? 300;
-    final rawRotation = (json['printRotationDegrees'] as num?)?.round() ?? 0;
+    final rawRotation = (json['printRotationDegrees'] as num?)?.round();
     return BarcodeLayoutSettings(
       stickerSize: supportedStickerSizes.contains(rawStickerSize)
           ? rawStickerSize
@@ -140,7 +146,8 @@ class BarcodeLayoutSettings {
           .toDouble(),
       rasterDpi: rawDpi == 203 ? 203 : 300,
       printRotationDegrees:
-          const [0, 90, 270].contains(rawRotation) ? rawRotation : 0,
+          const [90, 180, 270].contains(rawRotation) ? rawRotation : null,
+      invertPrintColors: json['invertPrintColors'] == true,
     );
   }
 
@@ -166,6 +173,8 @@ class BarcodeLayoutSettings {
     double? elementSpacing,
     int? rasterDpi,
     int? printRotationDegrees,
+    bool usePrinterDefaultRotation = false,
+    bool? invertPrintColors,
   }) {
     return BarcodeLayoutSettings(
       stickerSize: stickerSize ?? this.stickerSize,
@@ -182,7 +191,10 @@ class BarcodeLayoutSettings {
       barcodeWidthPercent: barcodeWidthPercent ?? this.barcodeWidthPercent,
       elementSpacing: elementSpacing ?? this.elementSpacing,
       rasterDpi: rasterDpi ?? this.rasterDpi,
-      printRotationDegrees: printRotationDegrees ?? this.printRotationDegrees,
+      printRotationDegrees: usePrinterDefaultRotation
+          ? null
+          : printRotationDegrees ?? this.printRotationDegrees,
+      invertPrintColors: invertPrintColors ?? this.invertPrintColors,
     );
   }
 

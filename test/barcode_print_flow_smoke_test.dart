@@ -19,7 +19,7 @@ void main() {
 
     expect(result.isSuccess, isTrue);
     expect(BarcodeLayoutSettings().barcodeWidthPercent, 70);
-    expect(BarcodeLayoutSettings().printRotationDegrees, 0);
+    expect(BarcodeLayoutSettings().printRotationDegrees, isNull);
     expect(const PrinterSettings(), isA<PrinterSettings>());
     expect(const ProductBarcodeScreen(), isA<ProductBarcodeScreen>());
     expect(

@@ -26,13 +26,15 @@ class BarcodePrintRequest {
   final List<BarcodePrintItem> items;
   final String stickerSize;
   final int stickersPerRow;
-  final int printRotationDegrees;
+  final int? printRotationDegrees;
+  final bool invertPrintColors;
 
   const BarcodePrintRequest({
     required this.items,
     required this.stickerSize,
     required this.stickersPerRow,
-    this.printRotationDegrees = 0,
+    this.printRotationDegrees,
+    this.invertPrintColors = false,
   });
 }
 
@@ -50,7 +52,8 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
   late List<BarcodePrintItem> printItems;
   String stickerSize = '50x25mm';
   int stickersPerRow = 1;
-  int printRotationDegrees = 0;
+  int? printRotationDegrees;
+  bool invertPrintColors = false;
 
   /// Hard cap for the free-text per-row field; the settings slider only goes
   /// to 3, but typed input and saved JSON must not produce meter-wide pages.
@@ -125,6 +128,7 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
       }
       stickersPerRow = settings.stickersPerRow.clamp(1, _maxStickersPerRow);
       printRotationDegrees = settings.printRotationDegrees;
+      invertPrintColors = settings.invertPrintColors;
       _stickersPerRowController.text = stickersPerRow.toString();
     });
   }
@@ -295,27 +299,47 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
             borderRadius: BorderRadius.circular(8),
           ),
           child: DropdownButtonHideUnderline(
-            child: DropdownButton<int>(
-              value: printRotationDegrees,
+            child: DropdownButton<String>(
+              value: printRotationDegrees?.toString() ?? 'default',
               isExpanded: true,
               icon: const Icon(Icons.keyboard_arrow_down),
-              items: const [0, 90, 270]
+              items: const ['default', '90', '180', '270']
                   .map(
                     (value) => DropdownMenuItem(
                       value: value,
-                      child: Text(value == 0 ? 'None (0°)' : '$value°'),
+                      child: Text(
+                        value == 'default' ? 'Printer default' : '$value°',
+                      ),
                     ),
                   )
                   .toList(),
               onChanged: (newValue) {
                 if (newValue == null) return;
                 _userAdjustedLayout = true;
-                setState(() => printRotationDegrees = newValue);
+                setState(() => printRotationDegrees =
+                    newValue == 'default' ? null : int.parse(newValue));
               },
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildInvertColorsField() {
+    return Material(
+      type: MaterialType.transparency,
+      child: CheckboxListTile(
+        contentPadding: EdgeInsets.zero,
+        controlAffinity: ListTileControlAffinity.leading,
+        title: const Text('Invert Print Colors'),
+        subtitle: const Text('Use for white-on-black printer output only.'),
+        value: invertPrintColors,
+        onChanged: (value) {
+          _userAdjustedLayout = true;
+          setState(() => invertPrintColors = value ?? false);
+        },
+      ),
     );
   }
 
@@ -393,6 +417,8 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                           Expanded(child: _buildRotationField()),
                         ],
                       ),
+
+                    _buildInvertColorsField(),
 
                     const SizedBox(height: 24),
 
@@ -602,6 +628,7 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                           stickerSize: stickerSize,
                           stickersPerRow: safeStickersPerRow,
                           printRotationDegrees: printRotationDegrees,
+                          invertPrintColors: invertPrintColors,
                         ),
                       );
                     },
