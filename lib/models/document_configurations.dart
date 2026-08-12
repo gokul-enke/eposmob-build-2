@@ -322,6 +322,19 @@ class ResolvedLabels {
   final String? returnQty;
   final String? returnRate;
   final String? returnTotal;
+  // Credit Note / Return Bill config fields
+  final String? creditNoteNumber;
+  final String? creditNoteDate;
+  final String? creditNoteOrder;
+  final String? creditNoteReason;
+  final String? detailsHeading;
+  final String? customerHeading;
+  final String? itemsHeading;
+  final String? creditNoteRefund;
+  final String? creditNoteItemsCount;
+  final String? creditNoteTotalAmount;
+  final String? remarks;
+  final String? signatory;
   // Default values for bilingual support (English defaults)
   final String? slNumberDefault;
   final String? particularsDefault;
@@ -361,6 +374,18 @@ class ResolvedLabels {
     this.returnQty,
     this.returnRate,
     this.returnTotal,
+    this.creditNoteNumber,
+    this.creditNoteDate,
+    this.creditNoteOrder,
+    this.creditNoteReason,
+    this.detailsHeading,
+    this.customerHeading,
+    this.itemsHeading,
+    this.creditNoteRefund,
+    this.creditNoteItemsCount,
+    this.creditNoteTotalAmount,
+    this.remarks,
+    this.signatory,
     this.slNumberDefault,
     this.particularsDefault,
     this.mrpDefault,
@@ -401,6 +426,18 @@ class ResolvedLabels {
         returnQty: json["return_qty"],
         returnRate: json["return_rate"],
         returnTotal: json["return_total"],
+        creditNoteNumber: json["credit_note_number"],
+        creditNoteDate: json["credit_note_date"],
+        creditNoteOrder: json["credit_note_order"],
+        creditNoteReason: json["credit_note_reason"],
+        detailsHeading: json["details_heading"],
+        customerHeading: json["customer_heading"],
+        itemsHeading: json["items_heading"],
+        creditNoteRefund: json["credit_note_refund"],
+        creditNoteItemsCount: json["credit_note_items_count"],
+        creditNoteTotalAmount: json["credit_note_total_amount"],
+        remarks: json["remarks"],
+        signatory: json["signatory"],
         slNumberDefault: json["sl_number_default"],
         particularsDefault: json["particulars_default"],
         mrpDefault: json["mrp_default"],
@@ -440,6 +477,18 @@ class ResolvedLabels {
         "return_qty": returnQty,
         "return_rate": returnRate,
         "return_total": returnTotal,
+        "credit_note_number": creditNoteNumber,
+        "credit_note_date": creditNoteDate,
+        "credit_note_order": creditNoteOrder,
+        "credit_note_reason": creditNoteReason,
+        "details_heading": detailsHeading,
+        "customer_heading": customerHeading,
+        "items_heading": itemsHeading,
+        "credit_note_refund": creditNoteRefund,
+        "credit_note_items_count": creditNoteItemsCount,
+        "credit_note_total_amount": creditNoteTotalAmount,
+        "remarks": remarks,
+        "signatory": signatory,
         "sl_number_default": slNumberDefault,
         "particulars_default": particularsDefault,
         "mrp_default": mrpDefault,

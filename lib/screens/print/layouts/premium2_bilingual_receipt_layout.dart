@@ -2171,12 +2171,100 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
     rows.add(SpacingRow(_itemGap));
     rows.add(TextRow(
       isBilingual
-          ? _getBilingualText(arabic: 'المرتجعات', english: 'RETURNS')
-          : (isEnglish ? 'RETURNS' : 'المرتجعات'),
+          ? _getBilingualText(arabic: params.returnsSectionHeadingArabic, english: params.returnsSectionHeading)
+          : (isEnglish ? params.returnsSectionHeading : params.returnsSectionHeadingArabic),
       isBold: true,
       scale: 1.1,
     ));
     rows.add(SpacingRow(_itemGap));
+
+    // — Credit Note Details section —
+    final retDc = params.returnBillDisplayConfig;
+    final retLabels = params.returnBillResolvedLabels;
+    if (retLabels?.creditNoteNumber != null ||
+        retLabels?.creditNoteDate != null) {
+      final detailsHeading = isBilingual
+          ? _getBilingualText(
+              arabic: (retDc?['showCreditNoteOrder']?.value as String?)?.isNotEmpty == true
+                  ? retDc!['showCreditNoteOrder']!.value as String
+                  : 'تفاصيل إشعار الائتمان',
+              english: (retDc?['showCreditNoteOrder']?.value as String?)?.isNotEmpty == true
+                  ? retDc!['showCreditNoteOrder']!.value as String
+                  : 'CREDIT NOTE DETAILS')
+          : (isEnglish
+              ? (retLabels?.detailsHeading?.isNotEmpty == true ? retLabels!.detailsHeading! : 'CREDIT NOTE DETAILS')
+              : 'تفاصيل إشعار الائتمان');
+      rows.add(TextRow(detailsHeading, isBold: true, scale: scale));
+      rows.add(SpacingRow(_itemGap));
+      if (retLabels?.creditNoteNumber != null) {
+        final cnLabelText = retLabels?.creditNoteNumber?.isNotEmpty == true
+            ? retLabels!.creditNoteNumber! : 'Credit Note No:';
+        final cnLabel = isBilingual
+            ? _getBilingualText(arabic: 'رقم إشعار الائتمان:', english: cnLabelText)
+            : (isEnglish ? cnLabelText : 'رقم إشعار الائتمان:');
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(cnLabel,
+              weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
+          ReceiptTableColumn(params.orderNumber,
+              weight: 0.55, align: TextAlign.left, scale: scale),
+        ]));
+      }
+      if (retLabels?.creditNoteDate != null) {
+        final dateLabelText = retLabels?.creditNoteDate?.isNotEmpty == true
+            ? retLabels!.creditNoteDate! : 'Credit Note Date:';
+        final dateLabel = isBilingual
+            ? _getBilingualText(arabic: 'تاريخ إشعار الائتمان:', english: dateLabelText)
+            : (isEnglish ? dateLabelText : 'تاريخ إشعار الائتمان:');
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(dateLabel,
+              weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
+          ReceiptTableColumn(params.orderDate,
+              weight: 0.55, align: TextAlign.left, scale: scale),
+        ]));
+      }
+      rows.add(SpacingRow(_itemGap));
+    }
+
+    // — Customer Details section —
+    if (params.customerName != null && params.customerName!.trim().isNotEmpty) {
+      final custHeading = isBilingual
+          ? _getBilingualText(arabic: 'تفاصيل العميل', english: 'CUSTOMER DETAILS')
+          : (isEnglish ? 'CUSTOMER DETAILS' : 'تفاصيل العميل');
+      rows.add(TextRow(custHeading, isBold: true, scale: scale));
+      rows.add(SpacingRow(_itemGap));
+      final custNameLabel = isBilingual
+          ? _getBilingualText(arabic: 'اسم العميل:', english: 'Customer Name:')
+          : (isEnglish ? 'Customer Name:' : 'اسم العميل:');
+      rows.add(ReceiptTableRow([
+        ReceiptTableColumn(custNameLabel,
+            weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
+        ReceiptTableColumn(params.customerName!,
+            weight: 0.55, align: TextAlign.left, scale: scale),
+      ]));
+      if (params.customerPhone != null && params.customerPhone!.trim().isNotEmpty) {
+        final phoneLabel = isBilingual
+            ? _getBilingualText(arabic: 'الهاتف:', english: 'Phone:')
+            : (isEnglish ? 'Phone:' : 'الهاتف:');
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(phoneLabel,
+              weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
+          ReceiptTableColumn(params.customerPhone!,
+              weight: 0.55, align: TextAlign.left, scale: scale),
+        ]));
+      }
+      if (params.customerAddress != null && params.customerAddress!.trim().isNotEmpty) {
+        final addrLabel = isBilingual
+            ? _getBilingualText(arabic: 'عنوان الفاتورة:', english: 'Billing Address:')
+            : (isEnglish ? 'Billing Address:' : 'عنوان الفاتورة:');
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(addrLabel,
+              weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
+          ReceiptTableColumn(params.customerAddress!,
+              weight: 0.55, align: TextAlign.left, scale: scale),
+        ]));
+      }
+      rows.add(SpacingRow(_itemGap));
+    }
 
     // Extract column labels
     final slLabel = _getModeLabel(
@@ -2495,10 +2583,16 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
 
     // Return items count
     if (displayConfig?['showReturnItemsCount']?.visible == true) {
-      final countLabel = isBilingual
-          ? _getInlineBilingualText(
-              arabic: 'عناصر المرتجع:', english: 'Return Items:')
-          : (isEnglish ? 'Return Items:' : 'عناصر المرتجع:');
+      final bool useCreditNoteItemsCount = retLabels?.creditNoteItemsCount != null;
+      final countLabel = useCreditNoteItemsCount
+          ? (isBilingual
+              ? _getInlineBilingualText(
+                  arabic: 'عناصر إشعار الائتمان:', english: 'Credit Note Items:')
+              : (isEnglish ? 'Credit Note Items:' : 'عناصر إشعار الائتمان:'))
+          : (isBilingual
+              ? _getInlineBilingualText(
+                  arabic: 'عناصر المرتجع:', english: 'Return Items:')
+              : (isEnglish ? 'Return Items:' : 'عناصر المرتجع:'));
       rows.add(ReceiptTableRow([
         ReceiptTableColumn(countLabel,
             weight: 0.6,
@@ -2533,15 +2627,26 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
       final List<BoxedLineItem> returnSummaryItems = [];
 
       if (showReturnTotalAmt) {
-        final label = _getModeLabel(
-          displayConfig: displayConfig,
-          key: 'showReturnTotalAmount',
-          isEnglish: isEnglish,
-          isBilingual: isBilingual,
-          english: 'Return Total:',
-          arabic: 'إجمالي المرتجع:',
-          inlineBilingual: true,
-        );
+        final bool useCreditNoteTotalAmount = retLabels?.creditNoteTotalAmount != null;
+        final label = useCreditNoteTotalAmount
+            ? _getModeLabel(
+                displayConfig: displayConfig,
+                key: 'showReturnTotalAmount',
+                isEnglish: isEnglish,
+                isBilingual: isBilingual,
+                english: 'Credit Note Total:',
+                arabic: 'إجمالي إشعار الائتمان:',
+                inlineBilingual: true,
+              )
+            : _getModeLabel(
+                displayConfig: displayConfig,
+                key: 'showReturnTotalAmount',
+                isEnglish: isEnglish,
+                isBilingual: isBilingual,
+                english: 'Return Total:',
+                arabic: 'إجمالي المرتجع:',
+                inlineBilingual: true,
+              );
         returnSummaryItems.add(BoxedLineItem(
           label: label,
           value: returnRateTotal.toStringAsFixed(2),
@@ -2553,15 +2658,26 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
       }
 
       if (showReturnNetAmt) {
-        final label = _getModeLabel(
-          displayConfig: displayConfig,
-          key: 'showReturnNetAmount',
-          isEnglish: isEnglish,
-          isBilingual: isBilingual,
-          english: 'Return Net Amount:',
-          arabic: 'صافي مبلغ الإرجاع:',
-          inlineBilingual: true,
-        );
+        final bool useCreditNoteRefund = retLabels?.creditNoteRefund != null;
+        final label = useCreditNoteRefund
+            ? _getModeLabel(
+                displayConfig: displayConfig,
+                key: 'showReturnNetAmount',
+                isEnglish: isEnglish,
+                isBilingual: isBilingual,
+                english: 'Credit Note Refund:',
+                arabic: 'استرداد إشعار الائتمان:',
+                inlineBilingual: true,
+              )
+            : _getModeLabel(
+                displayConfig: displayConfig,
+                key: 'showReturnNetAmount',
+                isEnglish: isEnglish,
+                isBilingual: isBilingual,
+                english: 'Return Net Amount:',
+                arabic: 'صافي مبلغ الإرجاع:',
+                inlineBilingual: true,
+              );
         returnSummaryItems.add(BoxedLineItem(
           label: label,
           value: returnRateTotal.toStringAsFixed(2),

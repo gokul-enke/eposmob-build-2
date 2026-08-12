@@ -102,6 +102,7 @@ class ReturnBillLayoutParamsBuilder {
       storePhone: storeSession.activeStore?.phone,
       storeEmail: storeSession.activeStore?.email,
       isReturnOnly: true,
+      returnBillDocumentConfig: returnBillDocumentConfig,
     );
   }
 

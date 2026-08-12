@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/order_details.dart';
@@ -21,8 +21,14 @@ class ReturnsSectionBuilder {
     String selectedPaperSize,
     PosFontType fontType,
     Map<String, DisplayOption>? displayConfig,
-    DocumentConfig? billDocumentConfig,
-  ) {
+    DocumentConfig? billDocumentConfig, {
+    String returnsSectionHeading = 'RETURNS',
+    String? orderNumber,
+    String? orderDate,
+    String? customerName,
+    String? customerPhone,
+    String? customerAddress,
+  }) {
     List<int> bytes = [];
 
     if (orderReturns.returnItems == null || orderReturns.returnItems!.isEmpty) {
@@ -34,7 +40,7 @@ class ReturnsSectionBuilder {
 
     // Returns heading
     bytes += generator.text(
-      'RETURNS',
+      returnsSectionHeading,
       styles: PosStyles(
         fontType: fontType,
         align: PosAlign.center,
@@ -44,6 +50,91 @@ class ReturnsSectionBuilder {
       ),
     );
     bytes += generator.emptyLines(1);
+
+    // — Credit Note Details —
+    final retDc = billDocumentConfig?.displayConfiguration?.options;
+    final retLabels = billDocumentConfig?.resolvedLabels;
+    String retLbl(String key, String? resolved, String def) {
+      final v = retDc?[key]?.visible == true
+          ? (retDc?[key]?.value as String?)
+          : null;
+      if (v != null && v.isNotEmpty) return v;
+      if (resolved != null && resolved.isNotEmpty) return resolved;
+      return def;
+    }
+
+    if (retLabels?.creditNoteNumber != null ||
+        retLabels?.creditNoteDate != null) {
+      final detailsHeading = retLbl(
+          'showCreditNoteOrder', retLabels?.detailsHeading, 'CREDIT NOTE DETAILS');
+      bytes += generator.text(detailsHeading,
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.left,
+              bold: true,
+              height: ThermalFontConfig.textSizeSmall,
+              width: ThermalFontConfig.textSizeSmall));
+      if (retLabels?.creditNoteNumber != null && orderNumber != null) {
+        final cnLabel = retLbl(
+            'showCreditNoteNumber', retLabels?.creditNoteNumber, 'Credit Note No:');
+        bytes += generator.text('$cnLabel $orderNumber',
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                height: ThermalFontConfig.textSizeSmall));
+      }
+      if (retLabels?.creditNoteDate != null && orderDate != null) {
+        final cdLabel = retLbl(
+            'showCreditNoteDate', retLabels?.creditNoteDate, 'Credit Note Date:');
+        bytes += generator.text('$cdLabel $orderDate',
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                height: ThermalFontConfig.textSizeSmall));
+      }
+      if (retLabels?.creditNoteReason != null) {
+        final crLabel = retLbl(
+            'showCreditNoteReason', retLabels?.creditNoteReason, 'Reason:');
+        bytes += generator.text('$crLabel ',
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                height: ThermalFontConfig.textSizeSmall));
+      }
+      bytes += generator.emptyLines(1);
+    }
+
+    // — Customer Details —
+    if (customerName != null && customerName.trim().isNotEmpty) {
+      bytes += generator.text('CUSTOMER DETAILS',
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.left,
+              bold: true,
+              height: ThermalFontConfig.textSizeSmall,
+              width: ThermalFontConfig.textSizeSmall));
+      final custLabel = 'Customer Name:';
+      bytes += generator.text('$custLabel $customerName',
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.left,
+              height: ThermalFontConfig.textSizeSmall));
+      if (customerPhone != null && customerPhone.trim().isNotEmpty) {
+        bytes += generator.text('Phone: $customerPhone',
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                height: ThermalFontConfig.textSizeSmall));
+      }
+      if (customerAddress != null && customerAddress.trim().isNotEmpty) {
+        bytes += generator.text('Billing Address: $customerAddress',
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                height: ThermalFontConfig.textSizeSmall));
+      }
+      bytes += generator.emptyLines(1);
+    }
 
     // Build header for return table
     List<PosColumn> headerColumns = [];
@@ -401,9 +492,13 @@ class ReturnsSectionBuilder {
     bytes += generator.hr();
 
     // Return summary
+    final itemsCountLabel = retLabels?.creditNoteItemsCount != null
+        ? retLbl('showCreditNoteItemsCount', retLabels?.creditNoteItemsCount,
+            'Total Items:')
+        : 'Total Items:';
     bytes += generator.row([
       PosColumn(
-        text: 'Total Items:',
+        text: itemsCountLabel,
         width: 6,
         styles: PosStyles(
           fontType: fontType,
@@ -424,9 +519,14 @@ class ReturnsSectionBuilder {
       ),
     ]);
 
+    final totalAmountLabel =
+        retLabels?.creditNoteTotalAmount != null
+            ? retLbl('showCreditNoteTotalAmount',
+                retLabels?.creditNoteTotalAmount, 'Total Amount:')
+            : 'Total MRP:';
     bytes += generator.row([
       PosColumn(
-        text: 'Total MRP:',
+        text: totalAmountLabel,
         width: 6,
         styles: PosStyles(
           fontType: fontType,
@@ -449,9 +549,13 @@ class ReturnsSectionBuilder {
 
     bytes += generator.hr();
 
+    final netTotalLabel = retLabels?.creditNoteRefund != null
+        ? retLbl('showCreditNoteRefund', retLabels?.creditNoteRefund,
+            'Credit Note Total:')
+        : 'Net Total:';
     bytes += generator.row([
       PosColumn(
-        text: 'Net Total:',
+        text: netTotalLabel,
         width: 6,
         styles: PosStyles(
           fontType: fontType,

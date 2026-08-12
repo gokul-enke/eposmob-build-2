@@ -1185,7 +1185,7 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
         child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text(isRtl ? 'المرتجعات' : 'RETURNS', style: sub),
+              pw.Text(isRtl ? params.returnsSectionHeadingArabic : params.returnsSectionHeading, style: sub),
               pw.SizedBox(height: 5),
               pw.Text('Return Items section...', style: body)
             ]));
