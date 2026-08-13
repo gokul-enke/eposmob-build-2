@@ -57,6 +57,7 @@ class ReceiptLayoutParams {
   // Null for offline/local-storage orders, which fall back to item-level sum.
   final double? apiTotalTax;
   final bool isReturnOnly;
+  final DocumentConfig? returnBillDocumentConfig;
 
   const ReceiptLayoutParams({
     required this.context,
@@ -102,6 +103,7 @@ class ReceiptLayoutParams {
     this.storeEmail,
     this.apiTotalTax,
     this.isReturnOnly = false,
+    this.returnBillDocumentConfig,
   });
 
   /// Get the display configuration options from the document config
@@ -163,6 +165,56 @@ class ReceiptLayoutParams {
               )
             : b2bInvoiceTitle;
     return merged;
+  }
+
+  /// Display configuration options from the Return Bill document config.
+  Map<String, DisplayOption>? get returnBillDisplayConfig =>
+      (returnBillDocumentConfig ?? billDocumentConfig)
+          .displayConfiguration
+          ?.options;
+
+  /// Resolved labels from the Return Bill document config.
+  ResolvedLabels? get returnBillResolvedLabels =>
+      (returnBillDocumentConfig ?? billDocumentConfig).resolvedLabels;
+
+  /// Resolves the returns section heading from the Return Bill document config.
+  ///
+  /// Fallback chain:
+  /// 1. Return Bill config display option `showReturnsHeader` value
+  /// 2. Parent bill display option `showReturnsHeader` value
+  /// 3. Hardcoded 'RETURNS'
+  String get returnsSectionHeading {
+    final retConfig = returnBillDocumentConfig ?? billDocumentConfig;
+    final retDisplay = retConfig.displayConfiguration?.options;
+
+    final retHeaderValue =
+        retDisplay?['showReturnsHeader']?.value?.toString().trim();
+    if (retHeaderValue != null && retHeaderValue.isNotEmpty) {
+      return retHeaderValue;
+    }
+
+    final parentDisplay = billDocumentConfig.displayConfiguration?.options;
+    final parentHeaderValue =
+        parentDisplay?['showReturnsHeader']?.value?.toString().trim();
+    if (parentHeaderValue != null && parentHeaderValue.isNotEmpty) {
+      return parentHeaderValue;
+    }
+
+    return 'RETURNS';
+  }
+
+  /// Arabic fallback for bilingual returns section heading.
+  String get returnsSectionHeadingArabic {
+    final retConfig = returnBillDocumentConfig ?? billDocumentConfig;
+    final retDisplay = retConfig.displayConfiguration?.options;
+
+    final retHeaderValue =
+        retDisplay?['showReturnsHeaderAr']?.value?.toString().trim();
+    if (retHeaderValue != null && retHeaderValue.isNotEmpty) {
+      return retHeaderValue;
+    }
+
+    return 'المرتجعات';
   }
 
   /// Check if the document is configured for RTL (Arabic)

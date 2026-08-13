@@ -1829,13 +1829,94 @@ class SupermarketEnReceiptLayout implements ReceiptLayout {
     final bool is58mm = params.is58mm;
     final double scale = is58mm ? 0.85 : 1.0;
 
+    final retDc = params.returnBillDisplayConfig;
+    final retLabels = params.returnBillResolvedLabels;
+    final hasCreditNoteConfig = retLabels?.creditNoteNumber != null ||
+        retLabels?.creditNoteDate != null;
+
     rows.add(SpacingRow(_sectionGap));
     rows.add(ThinDividerRow());
     rows.add(SpacingRow(_itemGap));
-    rows.add(TextRow('RETURNS', isBold: true, scale: 1.1));
+    if (!hasCreditNoteConfig)
+      rows.add(TextRow(params.returnsSectionHeading, isBold: true, scale: 1.1));
     rows.add(SpacingRow(_itemGap));
 
+    // — Credit Note Details section —
+    if (retLabels?.creditNoteNumber != null ||
+        retLabels?.creditNoteDate != null) {
+      final detailsHeading = _getLabel(retDc, 'showCreditNoteOrder',
+          retLabels?.detailsHeading, 'CREDIT NOTE DETAILS');
+      rows.add(TextRow(detailsHeading, isBold: true, scale: scale));
+      rows.add(SpacingRow(_itemGap));
+      if (retLabels?.creditNoteNumber != null) {
+        final cnLabel = _getLabel(retDc, 'showCreditNoteNumber',
+            retLabels?.creditNoteNumber, isEnglish ? 'Credit Note No:' : 'رقم إشعار الائتمان:');
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(cnLabel,
+              weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
+          ReceiptTableColumn(params.orderNumber,
+              weight: 0.55, align: TextAlign.left, scale: scale),
+        ]));
+      }
+      if (retLabels?.creditNoteDate != null) {
+        final dateLabel = _getLabel(retDc, 'showCreditNoteDate',
+            retLabels?.creditNoteDate, isEnglish ? 'Credit Note Date:' : 'تاريخ إشعار الائتمان:');
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(dateLabel,
+              weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
+          ReceiptTableColumn(params.orderDate,
+              weight: 0.55, align: TextAlign.left, scale: scale),
+        ]));
+      }
+      if (retLabels?.creditNoteReason != null) {
+        final reasonLabel = _getLabel(retDc, 'showCreditNoteReason',
+            retLabels?.creditNoteReason, isEnglish ? 'Reason:' : 'السبب:');
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(reasonLabel,
+              weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
+          ReceiptTableColumn('',
+              weight: 0.55, align: TextAlign.left, scale: scale),
+        ]));
+      }
+      rows.add(SpacingRow(_itemGap));
+    }
+
+    // — Customer Details section —
+    if (params.customerName != null && params.customerName!.trim().isNotEmpty) {
+      rows.add(TextRow(retLabels?.customerHeading ?? 'CUSTOMER DETAILS', isBold: true, scale: scale));
+      rows.add(SpacingRow(_itemGap));
+      final custLabel = isEnglish ? 'Customer Name:' : 'اسم العميل:';
+      rows.add(ReceiptTableRow([
+        ReceiptTableColumn(custLabel,
+            weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
+        ReceiptTableColumn(params.customerName!,
+            weight: 0.55, align: TextAlign.left, scale: scale),
+      ]));
+      if (params.customerPhone != null && params.customerPhone!.trim().isNotEmpty) {
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(isEnglish ? 'Phone:' : 'الهاتف:',
+              weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
+          ReceiptTableColumn(params.customerPhone!,
+              weight: 0.55, align: TextAlign.left, scale: scale),
+        ]));
+      }
+      if (params.customerAddress != null && params.customerAddress!.trim().isNotEmpty) {
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(isEnglish ? 'Billing Address:' : 'عنوان الفاتورة:',
+              weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
+          ReceiptTableColumn(params.customerAddress!,
+              weight: 0.55, align: TextAlign.left, scale: scale),
+        ]));
+      }
+      rows.add(SpacingRow(_itemGap));
+    }
+
     // Extract column labels
+    if (retLabels?.itemsHeading != null) {
+      rows.add(TextRow(retLabels!.itemsHeading!, isBold: true, scale: scale));
+      rows.add(SpacingRow(_itemGap));
+    }
+
     final slLabel = _getLabel(displayConfig, 'showReturnSLNumber',
         resolvedLabels?.returnSlNumber, isEnglish ? 'SL#' : '#');
     final particularsLabel = _getLabel(
@@ -2036,7 +2117,10 @@ class SupermarketEnReceiptLayout implements ReceiptLayout {
 
     // Return items count
     if (displayConfig?['showReturnItemsCount']?.visible == true) {
-      final countLabel = isEnglish ? 'Return Items:' : 'عناصر المرتجع:';
+      final countLabel = (retLabels?.creditNoteItemsCount != null)
+          ? _getLabel(retDc, 'showCreditNoteItemsCount',
+              retLabels?.creditNoteItemsCount, isEnglish ? 'Total Items:' : 'إجمالي العناصر:')
+          : (isEnglish ? 'Return Items:' : 'عناصر المرتجع:');
       rows.add(ReceiptTableRow([
         ReceiptTableColumn(countLabel,
             weight: 0.6, align: TextAlign.left, isBold: true, scale: scale),
@@ -2068,8 +2152,11 @@ class SupermarketEnReceiptLayout implements ReceiptLayout {
       final List<BoxedLineItem> returnSummaryItems = [];
 
       if (showReturnTotalAmt) {
-        final label = _getLabel(displayConfig, 'showReturnTotalAmount', null,
-            isEnglish ? 'Return Total:' : 'إجمالي المرتجع:');
+        final label = (retLabels?.creditNoteTotalAmount != null)
+            ? _getLabel(retDc, 'showCreditNoteTotalAmount',
+                retLabels?.creditNoteTotalAmount, isEnglish ? 'Total Amount:' : 'المبلغ الإجمالي:')
+            : _getLabel(displayConfig, 'showReturnTotalAmount', null,
+                isEnglish ? 'Return Total:' : 'إجمالي المرتجع:');
         returnSummaryItems.add(BoxedLineItem(
           label: label,
           value: returnRateTotal.toStringAsFixed(2),
@@ -2081,8 +2168,11 @@ class SupermarketEnReceiptLayout implements ReceiptLayout {
       }
 
       if (showReturnNetAmt) {
-        final label = _getLabel(displayConfig, 'showReturnNetAmount', null,
-            isEnglish ? 'Return Net Amount:' : 'صافي مبلغ الإرجاع:');
+        final label = (retLabels?.creditNoteRefund != null)
+            ? _getLabel(retDc, 'showCreditNoteRefund',
+                retLabels?.creditNoteRefund, isEnglish ? 'Credit Note Total:' : 'إجمالي إشعار الائتمان:')
+            : _getLabel(displayConfig, 'showReturnNetAmount', null,
+                isEnglish ? 'Return Net Amount:' : 'صافي مبلغ الإرجاع:');
         returnSummaryItems.add(BoxedLineItem(
           label: label,
           value: returnRateTotal.toStringAsFixed(2),
@@ -2095,6 +2185,13 @@ class SupermarketEnReceiptLayout implements ReceiptLayout {
 
       rows.add(SpacingRow(_itemGap));
       rows.add(BoxedTotalsRow(items: returnSummaryItems));
+      if (hasCreditNoteConfig) {
+        final amountText = AmountHelper().convertNumberToWords(returnRateTotal,
+            currency: currency, language: isEnglish ? 'en' : 'ar');
+        rows.add(SpacingRow(_itemGap));
+        rows.add(TextRow('Amount in Words:', isBold: true, scale: 0.9));
+        rows.add(TextRow(amountText, isBold: false, scale: 0.85));
+      }
     }
   }
 

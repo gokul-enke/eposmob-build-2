@@ -225,6 +225,11 @@ class PrintPage extends StatefulWidget {
       debugPrint('[PrintPage] Using cached config: ${billDocumentConfig.type}');
       _debugInvoiceTitleConfig('autoPrint', billDocumentConfig);
 
+      final returnBillDocConfig = hasReturns
+          ? (docConfigProvider.getDocumentConfig("Credit Note") ??
+              docConfigProvider.getDocumentConfig("Return Bill"))
+          : null;
+
       // Get receipt theme
       final theme = await _getReceiptThemeStatic(
         billDocumentConfig,
@@ -292,6 +297,7 @@ class PrintPage extends StatefulWidget {
         storePhone: storeSession.activeStore?.phone,
         storeEmail: storeSession.activeStore?.email,
         apiTotalTax: apiTotalTax,
+        returnBillDocumentConfig: returnBillDocConfig,
       );
       final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
       debugPrint(
@@ -508,6 +514,7 @@ class _PrintPageState extends State<PrintPage> {
   String selectedPaperSize = '80mm';
 
   DocumentConfig? _billDocumentConfig;
+  DocumentConfig? _returnBillDocumentConfig;
 
   static const Color primaryColor = Color(0XFF3C92F5);
   static const Color accentColor = Color(0xFF4CAF50);
@@ -849,6 +856,12 @@ class _PrintPageState extends State<PrintPage> {
             '_loadDocumentConfigurationsFromProvider', _billDocumentConfig!);
       }
 
+      if (hasReturns) {
+        _returnBillDocumentConfig =
+            docConfigProvider.getDocumentConfig("Credit Note") ??
+                docConfigProvider.getDocumentConfig("Return Bill");
+      }
+
       setState(() {
         _isLoading = false;
       });
@@ -882,6 +895,12 @@ class _PrintPageState extends State<PrintPage> {
         debugPrint("SUCCESS: Document configuration loaded from API");
       } else {
         debugPrint("ERROR: Document configuration still null after API fetch");
+      }
+
+      if (hasReturns) {
+        _returnBillDocumentConfig =
+            docConfigProvider.getDocumentConfig("Credit Note") ??
+                docConfigProvider.getDocumentConfig("Return Bill");
       }
 
       setState(() {
@@ -1013,6 +1032,7 @@ class _PrintPageState extends State<PrintPage> {
       storePhone: storeSession.activeStore?.phone,
       storeEmail: storeSession.activeStore?.email,
       apiTotalTax: widget.apiTotalTax,
+      returnBillDocumentConfig: _returnBillDocumentConfig,
     );
     final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
     debugPrint(
@@ -1123,6 +1143,7 @@ class _PrintPageState extends State<PrintPage> {
       storePhone: storeSession.activeStore?.phone,
       storeEmail: storeSession.activeStore?.email,
       apiTotalTax: widget.apiTotalTax,
+      returnBillDocumentConfig: _returnBillDocumentConfig,
     );
     final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
     debugPrint(

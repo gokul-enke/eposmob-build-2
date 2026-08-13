@@ -322,11 +322,12 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
           "Loading Return Bill document configurations from provider...");
 
       _returnBillDocumentConfig =
-          docConfigProvider.getDocumentConfig("Return Bill");
+          docConfigProvider.getDocumentConfig("Credit Note") ??
+              docConfigProvider.getDocumentConfig("Return Bill");
 
       if (_returnBillDocumentConfig == null) {
         debugPrint(
-            "WARNING: Return Bill document configuration not found in provider, may need to load manually");
+            "WARNING: Credit Note/Return Bill document configuration not found in provider, may need to load manually");
         // Fallback: try to load if not available
         String? accessToken =
             Provider.of<AuthModel>(context, listen: false).token;
@@ -359,9 +360,10 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
       await docConfigProvider.fetchDocumentConfigurations(
           accessToken: accessToken);
 
-      debugPrint("Loading 'Return Bill' configuration from API...");
+      debugPrint("Loading 'Credit Note'/'Return Bill' configuration from API...");
       _returnBillDocumentConfig =
-          docConfigProvider.getDocumentConfig("Return Bill");
+          docConfigProvider.getDocumentConfig("Credit Note") ??
+              docConfigProvider.getDocumentConfig("Return Bill");
 
       if (_returnBillDocumentConfig != null) {
         debugPrint(

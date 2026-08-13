@@ -235,6 +235,11 @@ class ThermalPrinter {
           selectedFontType,
           displayConfig,
           billDocumentConfig,
+          orderNumber: orderNumber,
+          orderDate: orderDate,
+          customerName: customerName,
+          customerPhone: customerPhone,
+          customerAddress: customerAddress,
         );
         debugPrint("Order returns section built successfully");
       }
@@ -1169,26 +1174,136 @@ class ThermalPrinter {
     String selectedPaperSize,
     PosFontType fontType,
     Map<String, DisplayOption>? displayConfig,
-    DocumentConfig? billDocumentConfig,
-  ) {
+    DocumentConfig? billDocumentConfig, {
+    String? orderNumber,
+    String? orderDate,
+    String? customerName,
+    String? customerPhone,
+    String? customerAddress,
+  }) {
     List<int> bytes = [];
 
     debugPrint("===== BUILD ORDER RETURNS SECTION =====");
     debugPrint("Return items count: ${orderReturns.returnItems!.length}");
 
-    // Returns heading
-    bytes += generator.text(
-      'RETURNS',
-      styles: PosStyles(
-        fontType: fontType,
-        align: PosAlign.center,
-        bold: true,
-        height: textSizeSmall,
-        width: textSizeSmall,
-      ),
-    );
+    // — Credit Note Details —
+    final retDc = billDocumentConfig?.displayConfiguration?.options;
+    final retLabels = billDocumentConfig?.resolvedLabels;
+    final hasCreditNoteConfig = retLabels?.creditNoteNumber != null ||
+        retLabels?.creditNoteDate != null;
 
-    bytes += generator.emptyLines(1);
+    // Returns heading — hidden when credit note config is active
+    if (!hasCreditNoteConfig) {
+      final returnsHeaderValue =
+          displayConfig?['showReturnsHeader']?.value?.toString().trim();
+      final returnsHeading = (returnsHeaderValue != null &&
+              returnsHeaderValue.isNotEmpty)
+          ? returnsHeaderValue
+          : 'RETURNS';
+      bytes += generator.text(
+        returnsHeading,
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.center,
+          bold: true,
+          height: textSizeSmall,
+          width: textSizeSmall,
+        ),
+      );
+      bytes += generator.emptyLines(1);
+    }
+    String retLbl(String key, String? resolved, String def) {
+      final v = retDc?[key]?.visible == true
+          ? (retDc?[key]?.value as String?)
+          : null;
+      if (v != null && v.isNotEmpty) return v;
+      if (resolved != null && resolved.isNotEmpty) return resolved;
+      return def;
+    }
+
+    if (retLabels?.creditNoteNumber != null ||
+        retLabels?.creditNoteDate != null) {
+      final detailsHeading = retLbl(
+          'showCreditNoteOrder', retLabels?.detailsHeading, 'CREDIT NOTE DETAILS');
+      bytes += generator.text(detailsHeading,
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.left,
+              bold: true,
+              height: textSizeSmall,
+              width: textSizeSmall));
+      if (retLabels?.creditNoteNumber != null && orderNumber != null) {
+        final cnLabel = retLbl(
+            'showCreditNoteNumber', retLabels?.creditNoteNumber, 'Credit Note No:');
+        bytes += generator.text('$cnLabel $orderNumber',
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                height: textSizeSmall));
+      }
+      if (retLabels?.creditNoteDate != null && orderDate != null) {
+        final cdLabel = retLbl(
+            'showCreditNoteDate', retLabels?.creditNoteDate, 'Credit Note Date:');
+        bytes += generator.text('$cdLabel $orderDate',
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                height: textSizeSmall));
+      }
+      if (retLabels?.creditNoteReason != null) {
+        final crLabel = retLbl(
+            'showCreditNoteReason', retLabels?.creditNoteReason, 'Reason:');
+        bytes += generator.text('$crLabel ',
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                height: textSizeSmall));
+      }
+      bytes += generator.emptyLines(1);
+    }
+
+    // — Customer Details —
+    if (customerName != null && customerName.trim().isNotEmpty) {
+      bytes += generator.text(retLabels?.customerHeading ?? 'CUSTOMER DETAILS',
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.left,
+              bold: true,
+              height: textSizeSmall,
+              width: textSizeSmall));
+      final custLabel = 'Customer Name:';
+      bytes += generator.text('$custLabel $customerName',
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.left,
+              height: textSizeSmall));
+      if (customerPhone != null && customerPhone.trim().isNotEmpty) {
+        bytes += generator.text('Phone: $customerPhone',
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                height: textSizeSmall));
+      }
+      if (customerAddress != null && customerAddress.trim().isNotEmpty) {
+        bytes += generator.text('Billing Address: $customerAddress',
+            styles: PosStyles(
+                fontType: fontType,
+                align: PosAlign.left,
+                height: textSizeSmall));
+      }
+      bytes += generator.emptyLines(1);
+    }
+
+    if (retLabels?.itemsHeading != null) {
+      bytes += generator.text(retLabels!.itemsHeading!,
+          styles: PosStyles(
+              fontType: fontType,
+              align: PosAlign.left,
+              bold: true,
+              height: textSizeSmall,
+              width: textSizeSmall));
+      bytes += generator.emptyLines(1);
+    }
 
     // Build dynamic header for return table (same as cart table)
     List<PosColumn> headerColumns = [];
@@ -1556,9 +1671,13 @@ class ThermalPrinter {
     // Return Summary heading removed per request
 
     // Return summary details
+    final itemsCountLabel = retLabels?.creditNoteItemsCount != null
+        ? retLbl('showCreditNoteItemsCount', retLabels?.creditNoteItemsCount,
+            'Total Items:')
+        : 'Total Items:';
     List<PosColumn> returnSummaryColumns1 = [
       PosColumn(
-        text: 'Total Items:',
+        text: itemsCountLabel,
         width: 6,
         styles: PosStyles(
           fontType: fontType,
@@ -1579,9 +1698,14 @@ class ThermalPrinter {
       ),
     ];
 
+    final totalAmountLabel =
+        retLabels?.creditNoteTotalAmount != null
+            ? retLbl('showCreditNoteTotalAmount',
+                retLabels?.creditNoteTotalAmount, 'Total Amount:')
+            : 'Total MRP:';
     List<PosColumn> returnSummaryColumns2 = [
       PosColumn(
-        text: 'Total MRP:',
+        text: totalAmountLabel,
         width: 6,
         styles: PosStyles(
           fontType: fontType,
@@ -1606,9 +1730,13 @@ class ThermalPrinter {
     bytes += generator.row(returnSummaryColumns2);
     bytes += generator.hr();
 
+    final netTotalLabel = retLabels?.creditNoteRefund != null
+        ? retLbl('showCreditNoteRefund', retLabels?.creditNoteRefund,
+            'Credit Note Total:')
+        : 'Net Total:';
     List<PosColumn> returnNetTotalColumns = [
       PosColumn(
-        text: 'Net Total:',
+        text: netTotalLabel,
         width: 6,
         styles: PosStyles(
           fontType: fontType,
@@ -1630,6 +1758,29 @@ class ThermalPrinter {
     ];
 
     bytes += generator.row(returnNetTotalColumns);
+
+    if (hasCreditNoteConfig) {
+      final amountText = AmountHelper().convertNumberToWords(
+          calculatedReturnTotal, language: 'en');
+      bytes += generator.emptyLines(1);
+      bytes += generator.text(
+        'Amount in Words:',
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.left,
+          bold: true,
+          height: textSizeSmall,
+        ),
+      );
+      bytes += generator.text(
+        '$amountText Only.',
+        styles: PosStyles(
+          fontType: fontType,
+          align: PosAlign.left,
+          height: textSizeSmall,
+        ),
+      );
+    }
 
     debugPrint("===== END BUILD ORDER RETURNS SECTION =====");
     return bytes;

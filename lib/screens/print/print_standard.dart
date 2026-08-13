@@ -617,10 +617,13 @@ class StandardPrinter {
                 displayConfig: updatedSettings),
 
             // Customer Information Section - if available
-            if (customerName != null ||
+            // Hidden when return-only with credit note config (customer shown in returns section)
+            if ((customerName != null ||
                 customerPhone != null ||
                 customerEmail != null ||
-                customerAddress != null)
+                customerAddress != null) &&
+                !(isReturnOnly && (billDocumentConfig?.resolvedLabels?.creditNoteNumber != null ||
+                    billDocumentConfig?.resolvedLabels?.creditNoteDate != null)))
               _buildCustomerDetailsPDF(
                 selectedPaperSize,
                 customerName,
@@ -777,6 +780,11 @@ class StandardPrinter {
                 updatedSettings, // Pass displayConfig
                 billDocumentConfig, // Pass billDocumentConfig for resolved_labels
                 isRtl: isRtl,
+                orderNumber: orderNumber,
+                orderDate: orderDate,
+                customerName: customerName,
+                customerPhone: customerPhone,
+                customerAddress: customerAddress,
               ),
             ],
 
@@ -2000,10 +2008,28 @@ class StandardPrinter {
     List<dynamic> cartItems,
     bool isFromLocalStorage,
     Map<String, DisplayOption>? displayConfig,
-    DocumentConfig? billDocumentConfig, // Add this parameter
-    {
+    DocumentConfig? billDocumentConfig, {
     bool isRtl = false,
+    String? orderNumber,
+    String? orderDate,
+    String? customerName,
+    String? customerPhone,
+    String? customerAddress,
   }) {
+    // Credit Note / Customer config helpers
+    final retDc = billDocumentConfig?.displayConfiguration?.options;
+    final retLabels = billDocumentConfig?.resolvedLabels;
+    final hasCreditNoteConfig = retLabels?.creditNoteNumber != null ||
+        retLabels?.creditNoteDate != null;
+    String retLbl(String key, String? resolved, String def) {
+      final v = retDc?[key]?.visible == true
+          ? (retDc?[key]?.value as String?)
+          : null;
+      if (v != null && v.isNotEmpty) return v;
+      if (resolved != null && resolved.isNotEmpty) return resolved;
+      return def;
+    }
+
     // Create headers for the return table using configuration
     final List<String> tableHeaders = [];
     final Map<int, pw.Alignment> cellAlignmentsMap = {};
@@ -2240,9 +2266,7 @@ class StandardPrinter {
         (displayConfig?['showReturnsHeader']?.value as String?)?.isNotEmpty ==
                 true
             ? displayConfig!['showReturnsHeader']!.value as String
-            : (billDocumentConfig?.resolvedLabels?.item?.isNotEmpty == true
-                ? 'RETURNS' // Keep default if no specific label
-                : (isRtl ? 'المرتجعات' : 'RETURNS'));
+            : (isRtl ? 'المرتجعات' : 'RETURNS');
 
     // Get Return Summary section label from config with fallback
     final returnSummaryLabel =
@@ -2257,8 +2281,73 @@ class StandardPrinter {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text(returnsLabel, style: subheaderStyle),
-          pw.SizedBox(height: 10),
+          if (!hasCreditNoteConfig) ...[
+            pw.Text(returnsLabel, style: subheaderStyle),
+            pw.SizedBox(height: 10),
+          ],
+
+          // — Credit Note Details —
+          if (retLabels?.creditNoteNumber != null ||
+              retLabels?.creditNoteDate != null) ...[
+            pw.Text(
+              retLbl('showCreditNoteOrder', retLabels?.detailsHeading,
+                  'CREDIT NOTE DETAILS'),
+              style: subheaderStyle,
+            ),
+            pw.SizedBox(height: 3),
+            if (retLabels?.creditNoteNumber != null &&
+                orderNumber != null)
+              _buildLabelValueRow(
+                retLbl('showCreditNoteNumber', retLabels?.creditNoteNumber,
+                    'Credit Note No:'),
+                orderNumber,
+                summaryStyle,
+                isRtl: isRtl,
+              ),
+            if (retLabels?.creditNoteDate != null &&
+                orderDate != null)
+              _buildLabelValueRow(
+                retLbl('showCreditNoteDate', retLabels?.creditNoteDate,
+                    'Credit Note Date:'),
+                orderDate,
+                summaryStyle,
+                isRtl: isRtl,
+              ),
+            if (retLabels?.creditNoteReason != null)
+              _buildLabelValueRow(
+                retLbl('showCreditNoteReason', retLabels?.creditNoteReason,
+                    'Reason:'),
+                '',
+                summaryStyle,
+                isRtl: isRtl,
+              ),
+            pw.SizedBox(height: 8),
+          ],
+
+          // — Customer Details —
+          if (customerName != null && customerName.trim().isNotEmpty) ...[
+            pw.Text(retLabels?.customerHeading ?? 'CUSTOMER DETAILS', style: subheaderStyle),
+            pw.SizedBox(height: 3),
+            _buildLabelValueRow(
+              'Customer Name:',
+              customerName,
+              summaryStyle,
+              isRtl: isRtl,
+            ),
+            if (customerPhone != null && customerPhone.trim().isNotEmpty)
+              _buildLabelValueRow(
+                  'Phone:', customerPhone, summaryStyle, isRtl: isRtl),
+            if (customerAddress != null && customerAddress.trim().isNotEmpty)
+              _buildLabelValueRow('Billing Address:', customerAddress,
+                  summaryStyle, isRtl: isRtl),
+            pw.SizedBox(height: 8),
+          ],
+
+          if (retLabels?.itemsHeading != null) ...[
+            pw.Text(retLabels!.itemsHeading!, style: subheaderStyle),
+            pw.SizedBox(height: 3),
+          ],
+
           // Return Items Table
           if (tableHeaders.isNotEmpty && tableData.isNotEmpty)
             pw.Table.fromTextArray(
@@ -2294,57 +2383,90 @@ class StandardPrinter {
           // Return Summary
           if (displayConfig?['showReturnNetAmount']?.visible == true ||
               displayConfig?['showReturnTotalAmount']?.visible == true ||
-              displayConfig?['showReturnItemsCount']?.visible == true)
+              displayConfig?['showReturnItemsCount']?.visible == true ||
+              retLabels?.creditNoteItemsCount != null ||
+              retLabels?.creditNoteTotalAmount != null ||
+              retLabels?.creditNoteRefund != null)
             pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text(returnSummaryLabel, style: subheaderStyle),
-                pw.SizedBox(height: 3),
+                if (!hasCreditNoteConfig) ...[
+                  pw.Text(returnSummaryLabel, style: subheaderStyle),
+                  pw.SizedBox(height: 3),
+                ],
                 // Display Item Count
-                if (displayConfig?['showReturnItemsCount']?.visible == true)
+                if (displayConfig?['showReturnItemsCount']?.visible == true ||
+                    retLabels?.creditNoteItemsCount != null) ...[
                   _buildLabelValueRow(
-                      (displayConfig?['showReturnItemsCount']?.value as String?)
-                                  ?.isNotEmpty ==
-                              true
-                          ? displayConfig!['showReturnItemsCount']!.value
-                              as String
-                          : (isRtl ? 'إجمالي العناصر:' : 'Total Items:'),
+                      retLabels?.creditNoteItemsCount != null
+                          ? retLbl('showCreditNoteItemsCount',
+                              retLabels?.creditNoteItemsCount, 'Total Items:')
+                          : ((displayConfig?['showReturnItemsCount']?.value
+                                          as String?)
+                                      ?.isNotEmpty ==
+                                  true
+                              ? displayConfig!['showReturnItemsCount']!.value
+                                  as String
+                              : (isRtl
+                                  ? 'إجمالي العناصر:'
+                                  : 'Total Items:')),
                       orderReturns.returnItems!.length.toString(),
                       summaryStyle,
                       isRtl: isRtl),
-                if (displayConfig?['showReturnItemsCount']?.visible == true)
                   pw.SizedBox(height: 2),
+                ],
                 // Display Total MRP
-                if (displayConfig?['showReturnTotalAmount']?.visible == true)
+                if (displayConfig?['showReturnTotalAmount']?.visible == true ||
+                    retLabels?.creditNoteTotalAmount != null) ...[
                   _buildLabelValueRow(
-                      (displayConfig?['showReturnTotalAmount']?.value
-                                      as String?)
-                                  ?.isNotEmpty ==
-                              true
-                          ? displayConfig!['showReturnTotalAmount']!.value
-                              as String
-                          : (isRtl ? 'إجمالي السعر:' : 'Total MRP:'),
+                      retLabels?.creditNoteTotalAmount != null
+                          ? retLbl(
+                              'showCreditNoteTotalAmount',
+                              retLabels?.creditNoteTotalAmount,
+                              'Total Amount:')
+                          : ((displayConfig?['showReturnTotalAmount']?.value
+                                          as String?)
+                                      ?.isNotEmpty ==
+                                  true
+                              ? displayConfig!['showReturnTotalAmount']!.value
+                                  as String
+                              : (isRtl ? 'إجمالي السعر:' : 'Total MRP:')),
                       calculatedReturnTotal.toStringAsFixed(2),
                       summaryStyle,
                       isRtl: isRtl),
-                if (displayConfig?['showReturnTotalAmount']?.visible == true)
                   pw.SizedBox(height: 2),
+                ],
                 // Display Net Total
-                if (displayConfig?['showReturnNetAmount']?.visible == true) ...[
+                if (displayConfig?['showReturnNetAmount']?.visible == true ||
+                    retLabels?.creditNoteRefund != null) ...[
                   pw.Divider(color: PdfColors.black),
                   _buildLabelValueRow(
-                      (displayConfig?['showReturnNetAmount']?.value as String?)
-                                  ?.isNotEmpty ==
-                              true
-                          ? displayConfig!['showReturnNetAmount']!.value
-                              as String
-                          : (isRtl ? 'المجموع الصافي:' : 'Net Total:'),
+                      retLabels?.creditNoteRefund != null
+                          ? retLbl('showCreditNoteRefund',
+                              retLabels?.creditNoteRefund, 'Credit Note Total:')
+                          : ((displayConfig?['showReturnNetAmount']?.value
+                                          as String?)
+                                      ?.isNotEmpty ==
+                                  true
+                              ? displayConfig!['showReturnNetAmount']!.value
+                                  as String
+                              : (isRtl
+                                  ? 'المجموع الصافي:'
+                                  : 'Net Total:')),
                       calculatedReturnTotal.toStringAsFixed(2),
                       netTotalStyle,
                       isRtl: isRtl),
                 ],
               ],
             ),
+          if (hasCreditNoteConfig) ...[
+            pw.SizedBox(height: 4),
+            pw.Text('Amount in Words:', style: subheaderStyle),
+            pw.Text(
+              '${AmountHelper().convertNumberToWords(calculatedReturnTotal, language: isRtl ? 'ar' : 'en')}${isRtl ? ' فقط.' : ' Only.'}',
+              style: summaryStyle,
+            ),
+          ],
           pw.SizedBox(height: 15),
         ],
       ),
@@ -3324,6 +3446,11 @@ class StandardPrinter {
                     updatedSettings,
                     billDocumentConfig, // Pass billDocumentConfig for resolved_labels
                     isRtl: isRtl,
+                    orderNumber: orderNumber,
+                    orderDate: orderDate,
+                    customerName: customerName,
+                    customerPhone: customerPhone,
+                    customerAddress: customerAddress,
                   ),
                 ],
 
