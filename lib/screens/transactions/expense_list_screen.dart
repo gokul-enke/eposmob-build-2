@@ -141,7 +141,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          'Expenses',
+          'expense.title'.tr,
           style: buildCustomStyle(
             FontWeightManager.medium,
             FontSize.s12,
@@ -151,7 +151,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
         ),
         const Icon(Icons.chevron_right, size: 14, color: Colors.grey),
         Text(
-          'List',
+          'expense.breadcrumb_list'.tr,
           style: buildCustomStyle(
             FontWeightManager.medium,
             FontSize.s12,
@@ -165,7 +165,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
 
   Widget _buildHeader(bool isPhone) {
     return ExpenseListPageHeader(
-      title: 'Expenses',
+      title: 'expense.title'.tr,
       breadcrumb: _buildBreadcrumb(),
       filterAction: isPhone
           ? ExpenseListFilterToggle(
@@ -177,7 +177,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
       trailing: SizedBox(
         width: isPhone ? 108 : 140,
         child: CustomRoundButtonAdvanced(
-          title: 'New Entry',
+          title: 'expense.new_entry'.tr,
           fct: () {
             sideBarController.index.value = 94;
           },
@@ -232,7 +232,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                             child: Padding(
                               padding: const EdgeInsetsDirectional.only(start: 8),
                               child: Text(
-                                'Filters',
+                                'expense.filters'.tr,
                                 style: buildCustomStyle(
                                   FontWeightManager.semiBold,
                                   FontSize.s16,
@@ -245,7 +245,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                           IconButton(
                             icon: const Icon(Icons.close),
                             onPressed: () => Navigator.pop(sheetContext),
-                            tooltip: 'Close',
+                            tooltip: 'expense.close'.tr,
                           ),
                         ],
                       ),
@@ -326,7 +326,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const ExpenseListSectionTitle(title: 'Filters'),
+            ExpenseListSectionTitle(title: 'expense.filters'.tr),
             const SizedBox(height: 12),
             if (isPhone) ...[
               _buildCategoryFilter(categoriesList, provider),
@@ -371,7 +371,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
       order: const NumericFocusOrder(1),
       child: CustomDropDownWithSearch<String>(
         key: const ValueKey('list_category_filter_dropdown'),
-        hintText: 'All Categories',
+        hintText: 'expense.all_categories'.tr,
         value: selectedCategory,
         items: categoriesList,
         onChanged: (val) {
@@ -405,7 +405,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
           cursorHeight: 13,
           decoration: InputDecoration(
             border: InputBorder.none,
-            hintText: 'Reference No',
+            hintText: 'expense.hint_reference_no'.tr,
             hintStyle: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s12,
@@ -433,7 +433,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
       order: const NumericFocusOrder(3),
       child: CustomDropDownWithSearch<String>(
         key: const ValueKey('list_debit_account_filter_dropdown'),
-        hintText: 'All Debit Accounts',
+        hintText: 'expense.all_debit_accounts'.tr,
         value: selectedDebitAccount,
         items: debitAccountsList,
         onChanged: (val) {
@@ -456,7 +456,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
       order: const NumericFocusOrder(4),
       child: CustomDropDownWithSearch<String>(
         key: const ValueKey('list_status_filter_dropdown'),
-        hintText: 'All Status',
+        hintText: 'expense.all_status_hint'.tr,
         value: selectedStatus,
         items: statusOptions,
         onChanged: (val) {
@@ -493,7 +493,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
           return KeyEventResult.ignored;
         },
         child: CustomRoundButtonAdvanced(
-          title: 'Reset',
+          title: 'expense.reset'.tr,
           boxColor: Colors.white,
           textColor: ColorManager.kPrimaryColor,
           borderColor: ColorManager.kPrimaryColor,
@@ -560,7 +560,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    'No Expenses Found',
+                    'expense.no_expenses_found'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s16,
@@ -570,7 +570,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Try adjusting your filters or create a new entry',
+                    'expense.no_expenses_hint'.tr,
                     textAlign: TextAlign.center,
                     style: buildCustomStyle(
                       FontWeightManager.regular,
@@ -588,7 +588,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (!isPhone) const DashboardSectionHeader(title: 'Expense records'),
+            if (!isPhone) DashboardSectionHeader(title: 'expense.expense_records'.tr),
             Expanded(
               child: isPhone
                   ? _buildMobileList(expenseList, currency)
@@ -677,7 +677,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                                   text: exp.referenceNumber));
                               showScaffold(
                                 context: context,
-                                message: 'Reference number copied to clipboard',
+                                message: 'expense.copied_to_clipboard'.tr,
                               );
                             },
                             child: const Icon(
@@ -704,8 +704,8 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                   ],
                 ),
                 Divider(color: Colors.grey.withOpacity(0.08), height: 16),
-                _buildInfoRow('Payment date', dateStr),
-                _buildInfoRow('Category', exp.category),
+                _buildInfoRow('expense.col_payment_date'.tr, dateStr),
+                _buildInfoRow('expense.category'.tr, exp.category),
               ],
             ),
           ),
@@ -738,14 +738,14 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
               children: [
                 TableRow(
                   children: [
-                    _buildTableHeader('Reference number'),
-                    _buildTableHeader('Payment date'),
-                    _buildTableHeader('Category'),
-                    _buildTableHeader('Debit A/c'),
-                    _buildTableHeader('Credit A/c'),
-                    _buildTableHeader('Amount'),
-                    _buildTableHeader('Status', alignment: Alignment.center),
-                    _buildTableHeader('View', alignment: Alignment.center),
+                    _buildTableHeader('expense.col_reference_number'.tr),
+                    _buildTableHeader('expense.col_payment_date'.tr),
+                    _buildTableHeader('expense.category'.tr),
+                    _buildTableHeader('expense.col_debit_ac'.tr),
+                    _buildTableHeader('expense.col_credit_ac'.tr),
+                    _buildTableHeader('expense.amount'.tr),
+                    _buildTableHeader('expense.status'.tr, alignment: Alignment.center),
+                    _buildTableHeader('expense.breadcrumb_view'.tr, alignment: Alignment.center),
                   ],
                 ),
               ],
