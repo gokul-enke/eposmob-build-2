@@ -6,6 +6,7 @@ import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/ma
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/new_order_button.dart';
 import 'package:pos_machine/features/billing/presentation/pages/add_product_mobile.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/helpers/product_search_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -325,9 +326,8 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
   }
 }
 
-/// Category filter via [BillingMobileMarketController]; search (name + optional
-/// item code) applied in-widget so desktop grid parity does not require
-/// controller edits.
+/// Category filter via [BillingMobileMarketController], followed by the shared
+/// catalog search used on desktop and mobile.
 List<GetProduct> filterMarketHomeProducts({
   required BillingMobileMarketController controller,
   required List<GetProduct> products,
@@ -341,23 +341,10 @@ List<GetProduct> filterMarketHomeProducts({
     selectedCategory: selectedCategory,
   );
 
-  final normalizedQuery = query.trim().toLowerCase();
-  if (normalizedQuery.isEmpty) {
+  if (query.trim().isEmpty) {
     return categoryFiltered;
   }
-
-  return categoryFiltered.where((product) {
-    final name = product.productName?.toLowerCase() ?? '';
-    if (name.contains(normalizedQuery)) return true;
-    if (itemCodeEnabled) {
-      final itemCode = product.itemCode ?? '';
-      if (itemCode.isNotEmpty &&
-          itemCode.toLowerCase().contains(normalizedQuery)) {
-        return true;
-      }
-    }
-    return false;
-  }).toList();
+  return ProductSearchHelper.search(categoryFiltered, query);
 }
 
 class _EmptyCatalogLoading extends StatelessWidget {

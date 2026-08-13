@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pos_machine/models/executive.dart';
@@ -281,21 +283,22 @@ class StoreSessionProvider extends ChangeNotifier {
           companyId != null &&
           selectedStoreId != null) {
         await _updateStatus('Starting realtime synchronization...');
-        try {
-          await context.read<RealtimeSyncProvider>().start(
-                RealtimeSyncSession(
-                  backendBaseUrl: APPUrl.baseURL,
-                  companyId: companyId,
-                  storeId: selectedStoreId,
-                  tenantApiKey: prefs,
-                  accessToken: accessToken,
-                ),
-              );
-        } catch (error) {
-          // Realtime is an enhancement: a temporary Reverb outage must not
-          // prevent the user from entering an otherwise healthy POS session.
-          debugPrint('Realtime sync start deferred: $error');
-        }
+        final realtimeSyncProvider = context.read<RealtimeSyncProvider>();
+        final realtimeSession = RealtimeSyncSession(
+          backendBaseUrl: APPUrl.baseURL,
+          companyId: companyId,
+          storeId: selectedStoreId,
+          tenantApiKey: prefs,
+          accessToken: accessToken,
+        );
+
+        // Realtime is an enhancement. Do not hold the store-selection screen
+        // while catch-up and the WebSocket handshake are in progress.
+        unawaited(
+          realtimeSyncProvider.start(realtimeSession).catchError((error) {
+            debugPrint('Realtime sync start deferred: $error');
+          }),
+        );
       }
 
       await _updateStatus('Finishing touches...');
@@ -308,7 +311,9 @@ class StoreSessionProvider extends ChangeNotifier {
 
   Future<void> _updateStatus(String message) async {
     _setStatus(message);
-    await Future.delayed(const Duration(milliseconds: 200));
+    // Yield once so Flutter can paint the new status without adding an
+    // artificial delay to every bootstrap step.
+    await Future<void>.delayed(Duration.zero);
   }
 
   void resetSession() {

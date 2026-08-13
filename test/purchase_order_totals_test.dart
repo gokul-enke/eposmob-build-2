@@ -81,4 +81,46 @@ void main() {
       expect(parsePurchaseAmount('not-a-number'), 0);
     });
   });
+
+  group('resolveEffectivePurchaseRate', () {
+    test('uses entered rate when purchase price includes tax', () {
+      expect(
+        resolveEffectivePurchaseRate(
+          enteredRate: 100,
+          taxIncludePurchase: true,
+          calculatedPurchaseRate: 118,
+        ),
+        100,
+      );
+    });
+
+    test('uses backend-calculated rate when purchase price excludes tax', () {
+      expect(
+        resolveEffectivePurchaseRate(
+          enteredRate: 100,
+          taxIncludePurchase: false,
+          calculatedPurchaseRate: 118,
+        ),
+        118,
+      );
+    });
+
+    test('falls back to entered rate without a valid calculated rate', () {
+      expect(
+        resolveEffectivePurchaseRate(
+          enteredRate: 100,
+          taxIncludePurchase: false,
+        ),
+        100,
+      );
+      expect(
+        resolveEffectivePurchaseRate(
+          enteredRate: 100,
+          taxIncludePurchase: false,
+          calculatedPurchaseRate: 0,
+        ),
+        100,
+      );
+    });
+  });
 }

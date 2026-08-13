@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/sales_return_detail_helper.dart';
 import 'package:pos_machine/models/list_sales_return.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -92,31 +93,7 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
   }
 
   List<OrderReturnItem> _returnItemsForPrint() {
-    if (_loadedItems.isNotEmpty) {
-      return _loadedItems.map((item) {
-        final returnedQuantity = item.returnedQuantity > 0
-            ? item.returnedQuantity
-            : double.tryParse(item.quantity) ?? 0;
-        final reason = resolveSalesReturnItemReason(item, order.items);
-        return OrderReturnItem(
-          id: item.cartItemId,
-          productName: item.productName,
-          quantity: returnedQuantity.toInt(),
-          reason: reason ?? (item.isReturned ? 'Returned' : ''),
-        );
-      }).toList();
-    }
-
-    return order.items.map((item) {
-      return OrderReturnItem(
-        id: item.id,
-        productName: item.cartItem.displayName,
-        quantity: item.quantity is int
-            ? item.quantity as int
-            : (item.quantity as double).toInt(),
-        reason: item.reason,
-      );
-    }).toList();
+    return buildTransactionReturnPrintItems(order.items, _loadedItems);
   }
 
   @override
@@ -257,18 +234,16 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      if (_isLoadingItems)
-                        const Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      else if (_loadedItems.isNotEmpty)
-                        _buildLoadedItemsTable(context, isPhone)
-                      else if (order.items.isNotEmpty)
+                      if (order.items.isNotEmpty)
                         if (isPhone)
                           ...order.items.map(_buildMobileItemCard)
                         else
                           _buildItemsTable(context)
+                      else if (_isLoadingItems)
+                        const Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
                       else
                         Padding(
                           padding: const EdgeInsets.all(20),
@@ -410,7 +385,7 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            item.cartItem.displayName,
+            salesReturnItemDisplayName(item, _loadedItems),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: buildCustomStyle(
@@ -430,7 +405,7 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                 child: Consumer<AppSettingsProvider>(
                   builder: (context, settings, _) {
                     final currency = settings.appSettings?.currency ?? 'INR';
-                    final raw = item.price;
+                    final raw = salesReturnItemUnitPrice(item, _loadedItems);
                     final parsed = double.tryParse(raw);
                     final amount =
                         parsed != null ? parsed.toStringAsFixed(2) : raw;
@@ -442,7 +417,7 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Reason: ${item.reason}',
+            'Reason: ${salesReturnItemReason(item, _loadedItems)}',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: buildCustomStyle(
@@ -547,13 +522,13 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
           _buildItemsHeaderRow(),
           ...order.items.map((item) {
             return TableRow(children: [
-              _buildTableValue(item.cartItem.displayName),
+              _buildTableValue(salesReturnItemDisplayName(item, _loadedItems)),
               _buildTableValue(item.quantity.toString()),
               _buildTableValueWidget(
                 Consumer<AppSettingsProvider>(
                   builder: (context, settings, _) {
                     final currency = settings.appSettings?.currency ?? 'INR';
-                    final raw = item.price;
+                    final raw = salesReturnItemUnitPrice(item, _loadedItems);
                     final parsed = double.tryParse(raw);
                     final amount =
                         parsed != null ? parsed.toStringAsFixed(2) : raw;
@@ -561,7 +536,7 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                   },
                 ),
               ),
-              _buildTableValue(item.reason),
+              _buildTableValue(salesReturnItemReason(item, _loadedItems)),
             ]);
           }),
         ],

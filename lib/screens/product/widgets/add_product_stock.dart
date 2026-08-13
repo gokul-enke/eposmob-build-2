@@ -82,6 +82,7 @@ class StockItem {
   bool isSuccessfullyAdded; // Add this field to track successful addition
   Map<String, dynamic>? apiResponse; // Add this field to store API response
   bool taxInclude; // Add this field for tax inclusion toggle
+  bool taxIncludePurchase; // Purchase tax inclusion is independent
 
   String retailPriceTax; // Add this for retail price with tax
   String wholesalePriceTax; // Add this for wholesale price with tax
@@ -119,6 +120,7 @@ class StockItem {
     this.isSuccessfullyAdded = false,
     this.apiResponse,
     this.taxInclude = true,
+    this.taxIncludePurchase = true,
     this.retailPriceTax = '0.00',
     this.wholesalePriceTax = '0.00',
     this.calculatedTaxData,
@@ -202,9 +204,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
   bool _variantFeatureEnabled({bool listen = false}) =>
       Provider.of<AppSettingsProvider>(context, listen: listen)
-              .appSettings
-              ?.productVariantEnabled ??
-          false;
+          .appSettings
+          ?.productVariantEnabled ??
+      false;
 
   bool _requiresVariant(StockItem item) =>
       _variantFeatureEnabled() &&
@@ -258,11 +260,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     item.barcode = variant?.barcode?.trim().isNotEmpty == true
         ? variant!.barcode!.trim()
         : (product.barcode ?? '');
-    item.salePrice =
-        (variant?.price ?? productPrice).toStringAsFixed(2);
-    item.mrp =
-        (variant?.mrp ?? productMrp ?? variant?.price ?? productPrice)
-            .toStringAsFixed(2);
+    item.salePrice = (variant?.price ?? productPrice).toStringAsFixed(2);
+    item.mrp = (variant?.mrp ?? productMrp ?? variant?.price ?? productPrice)
+        .toStringAsFixed(2);
     item.purchaseRate =
         (variant?.purchasePrice ?? productPurchase ?? 0).toStringAsFixed(2);
 
@@ -559,6 +559,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       'purchaseConversionRate': item.purchaseConversionRate,
       'selectedRack': item.selectedRack,
       'taxInclude': item.taxInclude,
+      'taxIncludePurchase': item.taxIncludePurchase,
       'productId': item.productData?.productId,
       'productVariantId':
           _variantFeatureEnabled() ? item.productVariantId : null,
@@ -592,6 +593,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       purchaseConversionRate: map['purchaseConversionRate'],
       selectedRack: map['selectedRack'],
       taxInclude: map['taxInclude'] ?? true,
+      taxIncludePurchase:
+          map['taxIncludePurchase'] ?? map['taxInclude'] ?? true,
       productVariantId: map['productVariantId'] is int
           ? map['productVariantId']
           : int.tryParse(map['productVariantId']?.toString() ?? ''),
@@ -1018,6 +1021,19 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     return _parsePositiveDouble(item.quantity, fallback: 0.0);
   }
 
+  double _getPurchaseTotal(StockItem item) {
+    double purchaseRate = double.tryParse(item.purchaseRate) ?? 0.0;
+    if (!item.taxIncludePurchase && item.calculatedTaxData != null) {
+      final effectiveRate =
+          (item.calculatedTaxData!['price_including_tax_purchase'] as num?)
+              ?.toDouble();
+      if (effectiveRate != null && effectiveRate > 0) {
+        purchaseRate = effectiveRate;
+      }
+    }
+    return _getPricingQuantity(item) * purchaseRate;
+  }
+
   void _configurePurchaseUnitForProductSelection(
     int index,
     GetProduct product, {
@@ -1385,6 +1401,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       isSuccessfullyAdded:
           true, // Mark as successfully added since it's from pending
       taxInclude: pendingData['taxInclude'] == true,
+      taxIncludePurchase: pendingData['taxIncludePurchase'] ??
+          pendingData['taxInclude'] ??
+          true,
       retailPriceTax: (pendingData['retailPriceTax'] ?? '0.00').toString(),
       wholesalePriceTax:
           (pendingData['wholesalePriceTax'] ?? '0.00').toString(),
@@ -1627,6 +1646,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           oldItem.wholesale != currentItem.wholesale ||
           oldItem.purchaseRate != currentItem.purchaseRate ||
           oldItem.taxInclude != currentItem.taxInclude ||
+          oldItem.taxIncludePurchase != currentItem.taxIncludePurchase ||
           oldItem.batchNumber != currentItem.batchNumber ||
           oldItem.rack != currentItem.rack ||
           oldItem.selectedUnit != currentItem.selectedUnit ||
@@ -1757,6 +1777,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         'purchaseDate': DateFormat('yyyy-MM-dd').format(selectedPurchaseDate),
         'purchaseNumber': null,
         'taxInclude': item.taxInclude,
+        'taxIncludePurchase': item.taxIncludePurchase,
         'initialRetailPrice': item.salePrice,
         'initialWholesalePrice':
             item.wholesale.isNotEmpty ? item.wholesale : item.salePrice,
@@ -1955,6 +1976,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         purchaseConversionRate: item.purchaseConversionRate,
         selectedRack: item.selectedRack,
         taxInclude: item.taxInclude,
+        taxIncludePurchase: item.taxIncludePurchase,
         retailPriceTax: item.retailPriceTax,
         wholesalePriceTax: item.wholesalePriceTax,
         calculatedTaxData: item.calculatedTaxData,
@@ -2101,6 +2123,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           'date': DateFormat('yyyy-MM-dd').format(selectedDate),
           'purchaseDate': DateFormat('yyyy-MM-dd').format(selectedPurchaseDate),
           'taxInclude': item.taxInclude,
+          'taxIncludePurchase': item.taxIncludePurchase,
           'initialRetailPrice': item.salePrice,
           'initialWholesalePrice':
               item.wholesale.isNotEmpty ? item.wholesale : item.salePrice,
@@ -2337,6 +2360,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       'purchaseDate': DateFormat('yyyy-MM-dd').format(selectedPurchaseDate),
       'purchaseNumber': null,
       'taxInclude': item.taxInclude,
+      'taxIncludePurchase': item.taxIncludePurchase,
       'initialRetailPrice': item.salePrice,
       'initialWholesalePrice':
           item.wholesale.isNotEmpty ? item.wholesale : item.salePrice,
@@ -2499,7 +2523,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     for (final item in stockItems) {
       if (!item.isSuccessfullyAdded || item.isHidden) continue;
 
-      if (!item.taxInclude) {
+      if (!item.taxIncludePurchase) {
         final quantity = _getPricingQuantity(item);
         final taxPerUnit =
             (item.calculatedTaxData?['purchaseTaxAmount'] as num?)
@@ -2879,6 +2903,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           selectedStock: null, // Stock items don't have selectedStock
           isCompact: false,
           currency: currency,
+          enforcePurchasePricePermission: true,
         );
       },
     );
@@ -2908,9 +2933,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             }
           }
           stockItems[index].productVariantId = refreshedVariant?.id;
-          stockItems[index].variantName = refreshedVariant == null
-              ? null
-              : _variantLabel(refreshedVariant);
+          stockItems[index].variantName =
+              refreshedVariant == null ? null : _variantLabel(refreshedVariant);
           stockItems[index].barcode =
               refreshedVariant?.barcode ?? updatedProduct.barcode ?? '';
 
@@ -3320,6 +3344,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           _buildHeaderCell("Unit", flex: 1),
           _buildHeaderCell("Qty", flex: 1, width: 40),
           _buildHeaderCell("Purchase Rate", flex: 2),
+          _buildHeaderCell("Purchase Total", flex: 2),
           _buildHeaderCell("Retail Price", flex: 2),
           _buildHeaderCell("MRP", flex: 1),
           _buildHeaderCell("Actions", flex: 2, isLast: true),
@@ -3426,9 +3451,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                                color:
+                                    ColorManager.kPrimaryColor.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
@@ -3560,10 +3587,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                             const SizedBox(height: 4),
                             Builder(
                               builder: (context) {
-                                if (!item.taxInclude &&
+                                if (!item.taxIncludePurchase &&
                                     item.calculatedTaxData != null) {
                                   final effective = (item.calculatedTaxData![
-                                          'price_including_tax_purchase'] as num?)
+                                              'price_including_tax_purchase']
+                                          as num?)
                                       ?.toDouble();
                                   if (effective != null && effective > 0) {
                                     return Container(
@@ -3673,6 +3701,40 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.green.shade200),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Purchase Total',
+                          style: buildCustomStyle(
+                            FontWeightManager.medium,
+                            11,
+                            0.15,
+                            Colors.green.shade700,
+                          ),
+                        ),
+                        Text(
+                          _getPurchaseTotal(item).toStringAsFixed(2),
+                          style: buildCustomStyle(
+                            FontWeightManager.semiBold,
+                            12,
+                            0.15,
+                            Colors.green.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             );
@@ -3757,7 +3819,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         child: Builder(
                           builder: (context) {
                             // Show effective (tax-inclusive) purchase rate when tax is excluded
-                            if (!item.taxInclude &&
+                            if (!item.taxIncludePurchase &&
                                 item.calculatedTaxData != null) {
                               final effective = (item.calculatedTaxData![
                                       'price_including_tax_purchase'] as num?)
@@ -3781,6 +3843,36 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                   originalIndex, 'purchaseRate', val),
                             );
                           },
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: Colors.green.shade200,
+                              ),
+                            ),
+                            child: Text(
+                              _getPurchaseTotal(item).toStringAsFixed(2),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: buildCustomStyle(
+                                FontWeightManager.bold,
+                                FontSize.s12,
+                                0.21,
+                                Colors.green.shade800,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                       Expanded(
@@ -4011,7 +4103,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
         // Calculate item total including tax if tax is not included in the price
         double itemTotal = purchaseRate * pricingQuantity;
-        if (!item.taxInclude) {
+        if (!item.taxIncludePurchase) {
           final taxPerUnit =
               (item.calculatedTaxData?['purchaseTaxAmount'] as num?)
                       ?.toDouble() ??
@@ -4419,142 +4511,194 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         children: [
           // Main row content
           stockIsPhone(context)
-              ? _buildStockRowMobile(index, visibleIndex, isEditingInputRow, item)
+              ? _buildStockRowMobile(
+                  index, visibleIndex, isEditingInputRow, item)
               : Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                // Row Number Indicator (centered circle, no square)
-                SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        width: 20,
-                        height: 20,
-                        decoration: BoxDecoration(
-                          color: item.isSuccessfullyAdded
-                              ? Colors.green
-                              : Colors.blue,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            '${visibleIndex + 1}',
-                            style: buildCustomStyle(
-                              FontWeightManager.semiBold,
-                              FontSize.s10,
-                              0.27,
-                              Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      // Updated indicator - Yellow badge showing "Edited"
-                      if (item.isSuccessfullyAdded &&
-                          item.apiResponse != null &&
-                          item.apiResponse!['localId'] != null) ...[
-                        Consumer<StockProvider>(
-                          builder: (context, stockProvider, child) {
-                            final pendingItem =
-                                stockProvider.getPendingStockItem(
-                                    item.apiResponse!['localId']);
-                            final bool isUpdated = pendingItem != null &&
-                                pendingItem['updatedAt'] != null;
-
-                            if (!isUpdated) return const SizedBox.shrink();
-
-                            return Positioned(
-                              top: -4,
-                              right: -8,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 4, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.amber,
-                                  borderRadius: BorderRadius.circular(4),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
-                                      blurRadius: 2,
-                                      offset: const Offset(0, 1),
-                                    ),
-                                  ],
-                                ),
-                                child: const Text(
-                                  'Edited',
-                                  style: TextStyle(
-                                    color: Colors.black87,
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.bold,
+                      // Row Number Indicator (centered circle, no square)
+                      SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Container(
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                color: item.isSuccessfullyAdded
+                                    ? Colors.green
+                                    : Colors.blue,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${visibleIndex + 1}',
+                                  style: buildCustomStyle(
+                                    FontWeightManager.semiBold,
+                                    FontSize.s10,
+                                    0.27,
+                                    Colors.white,
                                   ),
                                 ),
                               ),
-                            );
-                          },
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Barcode Text Field with Add Product Button
-                Expanded(
-                  flex: 2,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: BuildBoxShadowContainer(
-                          circleRadius: 5,
-                          height: 40,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          child: TextFormField(
-                            controller: _getBarcodeController(index),
-                            focusNode: _getBarcodeFocusNode(index),
-                            decoration: const InputDecoration(
-                              hintText: 'Barcode',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 8),
                             ),
-                            style: buildCustomStyle(
-                              FontWeightManager.regular,
-                              FontSize.s11,
-                              0.27,
-                              ColorManager.textColor,
-                            ),
-                            onTap: () {
-                              // Select all text when field is tapped
-                              _getBarcodeController(index).selection =
-                                  TextSelection(
-                                baseOffset: 0,
-                                extentOffset:
-                                    _getBarcodeController(index).text.length,
-                              );
-                            },
-                            onFieldSubmitted: (value) {
-                              // Update and auto-fill only on submit
-                              stockItems[index].barcode = value;
-                              _autoFillFromBarcode(index, value);
-                              _updatePendingStockItem(index);
-                              if (mounted) setState(() {});
-                            },
-                          ),
+                            // Updated indicator - Yellow badge showing "Edited"
+                            if (item.isSuccessfullyAdded &&
+                                item.apiResponse != null &&
+                                item.apiResponse!['localId'] != null) ...[
+                              Consumer<StockProvider>(
+                                builder: (context, stockProvider, child) {
+                                  final pendingItem =
+                                      stockProvider.getPendingStockItem(
+                                          item.apiResponse!['localId']);
+                                  final bool isUpdated = pendingItem != null &&
+                                      pendingItem['updatedAt'] != null;
+
+                                  if (!isUpdated)
+                                    return const SizedBox.shrink();
+
+                                  return Positioned(
+                                    top: -4,
+                                    right: -8,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 4, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber,
+                                        borderRadius: BorderRadius.circular(4),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color:
+                                                Colors.black.withOpacity(0.2),
+                                            blurRadius: 2,
+                                            offset: const Offset(0, 1),
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Text(
+                                        'Edited',
+                                        style: TextStyle(
+                                          color: Colors.black87,
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Add Product Button
-                      Tooltip(
-                        message: "Create new product",
-                        child: Container(
+                      // Barcode Text Field with Add Product Button
+                      Expanded(
+                        flex: 2,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: BuildBoxShadowContainer(
+                                circleRadius: 5,
+                                height: 40,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8),
+                                child: TextFormField(
+                                  controller: _getBarcodeController(index),
+                                  focusNode: _getBarcodeFocusNode(index),
+                                  decoration: const InputDecoration(
+                                    hintText: 'Barcode',
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 8),
+                                  ),
+                                  style: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    FontSize.s11,
+                                    0.27,
+                                    ColorManager.textColor,
+                                  ),
+                                  onTap: () {
+                                    // Select all text when field is tapped
+                                    _getBarcodeController(index).selection =
+                                        TextSelection(
+                                      baseOffset: 0,
+                                      extentOffset: _getBarcodeController(index)
+                                          .text
+                                          .length,
+                                    );
+                                  },
+                                  onFieldSubmitted: (value) {
+                                    // Update and auto-fill only on submit
+                                    stockItems[index].barcode = value;
+                                    _autoFillFromBarcode(index, value);
+                                    _updatePendingStockItem(index);
+                                    if (mounted) setState(() {});
+                                  },
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Add Product Button
+                            Tooltip(
+                              message: "Create new product",
+                              child: Container(
+                                height: 40,
+                                width: 40,
+                                decoration: BoxDecoration(
+                                  color: Colors.green,
+                                  borderRadius: BorderRadius.circular(5),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: ColorManager.boxShadowColor,
+                                      blurRadius: 3,
+                                      offset: Offset(1, 1),
+                                    ),
+                                  ],
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.add,
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: () => _showAddProductModal(index),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 40,
+                                    minHeight: 40,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      // Product Dropdown with Search (maximum width)
+                      Expanded(
+                        flex: 6,
+                        child: SizedBox(
+                          height: 40,
+                          child: _buildProductDropdown(index),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      // Info Button for Product Details
+                      if (stockItems[index].productData != null) ...[
+                        Container(
                           height: 40,
                           width: 40,
                           decoration: BoxDecoration(
-                            color: Colors.green,
+                            color: Colors.blue.shade50,
                             borderRadius: BorderRadius.circular(5),
+                            border:
+                                Border.all(color: Colors.blue.withOpacity(0.3)),
                             boxShadow: const [
                               BoxShadow(
                                 color: ColorManager.boxShadowColor,
@@ -4565,316 +4709,277 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           ),
                           child: IconButton(
                             icon: const Icon(
-                              Icons.add,
+                              Icons.info_outline,
                               size: 18,
-                              color: Colors.white,
+                              color: Colors.blue,
                             ),
-                            onPressed: () => _showAddProductModal(index),
+                            onPressed: () => _showProductDetailsModal(index),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(
                               minWidth: 40,
                               minHeight: 40,
                             ),
+                            tooltip: "View product details",
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 4),
-                // Product Dropdown with Search (maximum width)
-                Expanded(
-                  flex: 6,
-                  child: SizedBox(
-                    height: 40,
-                    child: _buildProductDropdown(index),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                // Info Button for Product Details
-                if (stockItems[index].productData != null) ...[
-                  Container(
-                    height: 40,
-                    width: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(5),
-                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: ColorManager.boxShadowColor,
-                          blurRadius: 3,
-                          offset: Offset(1, 1),
-                        ),
+                        const SizedBox(width: 4),
                       ],
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.info_outline,
-                        size: 18,
-                        color: Colors.blue,
-                      ),
-                      onPressed: () => _showProductDetailsModal(index),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: 40,
-                        minHeight: 40,
-                      ),
-                      tooltip: "View product details",
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                ],
-                // Quantity Text Field (smaller and right-aligned) - Hidden for multi-unit products
-                if (!_hasPurchaseUnits(item)) ...[
-                  SizedBox(
-                    width: 80, // Fixed width instead of flex
-                    child: BuildBoxShadowContainer(
-                      circleRadius: 5,
-                      height: 40,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: TextFormField(
-                        controller: _getQuantityController(index),
-                        focusNode: _getQuantityFocusNode(index),
-                        keyboardType: TextInputType.number,
-                        inputFormatters:
-                            quantityInputFormattersForUnit(item.unit),
-                        textAlign: TextAlign.right, // Right-aligned text
-                        decoration: const InputDecoration(
-                          hintText: 'Qty',
-                          border: InputBorder.none,
-                          contentPadding:
-                              EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                        ),
-                        style: buildCustomStyle(
-                          FontWeightManager.regular,
-                          FontSize.s11,
-                          0.27,
-                          ColorManager.textColor,
-                        ),
-                        onTap: () {
-                          // Select all text when field is tapped
-                          _getQuantityController(index).selection =
-                              TextSelection(
-                            baseOffset: 0,
-                            extentOffset:
-                                _getQuantityController(index).text.length,
-                          );
-                        },
-                        onChanged: (value) {
-                          // Update the value immediately for responsive UI
-                          stockItems[index].quantity = value;
-                          final selectedSaleUnit =
-                              _getSelectedPurchaseSaleUnit(stockItems[index]);
-                          if (selectedSaleUnit != null) {
-                            final baseQuantity =
-                                _parsePositiveDouble(value, fallback: 0.0);
-                            final conversionRate = _parsePositiveDouble(
-                              selectedSaleUnit.conversionRate,
-                              fallback: 1.0,
-                            );
-                            if (baseQuantity > 0 && conversionRate > 0) {
-                              stockItems[index].purchaseQty =
-                                  _formatNumber(baseQuantity / conversionRate);
-                              _getPurchaseQtyController(index).text =
-                                  stockItems[index].purchaseQty;
-                            }
-                          }
+                      // Quantity Text Field (smaller and right-aligned) - Hidden for multi-unit products
+                      if (!_hasPurchaseUnits(item)) ...[
+                        SizedBox(
+                          width: 80, // Fixed width instead of flex
+                          child: BuildBoxShadowContainer(
+                            circleRadius: 5,
+                            height: 40,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: TextFormField(
+                              controller: _getQuantityController(index),
+                              focusNode: _getQuantityFocusNode(index),
+                              keyboardType: TextInputType.number,
+                              inputFormatters:
+                                  quantityInputFormattersForUnit(item.unit),
+                              textAlign: TextAlign.right, // Right-aligned text
+                              decoration: const InputDecoration(
+                                hintText: 'Qty',
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 8),
+                              ),
+                              style: buildCustomStyle(
+                                FontWeightManager.regular,
+                                FontSize.s11,
+                                0.27,
+                                ColorManager.textColor,
+                              ),
+                              onTap: () {
+                                // Select all text when field is tapped
+                                _getQuantityController(index).selection =
+                                    TextSelection(
+                                  baseOffset: 0,
+                                  extentOffset:
+                                      _getQuantityController(index).text.length,
+                                );
+                              },
+                              onChanged: (value) {
+                                // Update the value immediately for responsive UI
+                                stockItems[index].quantity = value;
+                                final selectedSaleUnit =
+                                    _getSelectedPurchaseSaleUnit(
+                                        stockItems[index]);
+                                if (selectedSaleUnit != null) {
+                                  final baseQuantity = _parsePositiveDouble(
+                                      value,
+                                      fallback: 0.0);
+                                  final conversionRate = _parsePositiveDouble(
+                                    selectedSaleUnit.conversionRate,
+                                    fallback: 1.0,
+                                  );
+                                  if (baseQuantity > 0 && conversionRate > 0) {
+                                    stockItems[index].purchaseQty =
+                                        _formatNumber(
+                                            baseQuantity / conversionRate);
+                                    _getPurchaseQtyController(index).text =
+                                        stockItems[index].purchaseQty;
+                                  }
+                                }
 
-                          // Debounce the heavy operations
-                          _quantityDebounceTimer?.cancel();
-                          _quantityDebounceTimer =
-                              Timer(const Duration(milliseconds: 300), () {
-                            if (mounted) {
-                              setState(() {
-                                // Update pending item if already added
-                                _updatePendingStockItem(index);
-                                // Mark for recalculation
-                                _markForRecalculation();
-                              });
-                            }
-                          });
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                // Actions - Add Stock Button + Clear/Delete Button + Expand Button
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Clear/Delete Button (Conditional)
-                    if (item.productData != null ||
-                        item.isSuccessfullyAdded) ...[
-                      Tooltip(
-                        message: isEditingInputRow
-                            ? "Cancel edit"
-                            : item.isSuccessfullyAdded
-                                ? "Delete stock item"
-                                : "Clear product selection",
-                        child: Container(
-                          height: 40,
-                          width: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(5),
-                            border:
-                                Border.all(color: Colors.red.withOpacity(0.3)),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: ColorManager.boxShadowColor,
-                                blurRadius: 3,
-                                offset: Offset(1, 1),
-                              ),
-                            ],
+                                // Debounce the heavy operations
+                                _quantityDebounceTimer?.cancel();
+                                _quantityDebounceTimer = Timer(
+                                    const Duration(milliseconds: 300), () {
+                                  if (mounted) {
+                                    setState(() {
+                                      // Update pending item if already added
+                                      _updatePendingStockItem(index);
+                                      // Mark for recalculation
+                                      _markForRecalculation();
+                                    });
+                                  }
+                                });
+                              },
+                            ),
                           ),
-                          child: IconButton(
-                            icon: Icon(
-                              isEditingInputRow
-                                  ? Icons.close
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      // Actions - Add Stock Button + Clear/Delete Button + Expand Button
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Clear/Delete Button (Conditional)
+                          if (item.productData != null ||
+                              item.isSuccessfullyAdded) ...[
+                            Tooltip(
+                              message: isEditingInputRow
+                                  ? "Cancel edit"
                                   : item.isSuccessfullyAdded
-                                      ? Icons.delete
-                                      : Icons.clear,
-                              size: 18,
-                              color: Colors.red,
-                            ),
-                            onPressed: () {
-                              if (item.isSuccessfullyAdded) {
-                                _deleteStockItem(index);
-                              } else {
-                                _clearStockItem(index);
-                              }
-                            },
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                              minWidth: 40,
-                              minHeight: 40,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                    // Spacing between delete and add buttons
-                    if (item.productData != null || item.isSuccessfullyAdded)
-                      const SizedBox(width: 8),
-                    // Add Stock Button (Only show if not already added)
-                    if (!item.isSuccessfullyAdded) ...[
-                      Tooltip(
-                        message: _isLoading
-                            ? (isEditingInputRow ? "Saving..." : "Adding...")
-                            : (isEditingInputRow
-                                ? "Save changes"
-                                : "Add stock item"),
-                        child: Container(
-                          height: 40,
-                          width: 40,
-                          decoration: BoxDecoration(
-                            color: _isLoading
-                                ? Colors.grey
-                                : ColorManager.kPrimaryColor,
-                            borderRadius: BorderRadius.circular(5),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: ColorManager.boxShadowColor,
-                                blurRadius: 3,
-                                offset: Offset(1, 1),
+                                      ? "Delete stock item"
+                                      : "Clear product selection",
+                              child: Container(
+                                height: 40,
+                                width: 40,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(5),
+                                  border: Border.all(
+                                      color: Colors.red.withOpacity(0.3)),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: ColorManager.boxShadowColor,
+                                      blurRadius: 3,
+                                      offset: Offset(1, 1),
+                                    ),
+                                  ],
+                                ),
+                                child: IconButton(
+                                  icon: Icon(
+                                    isEditingInputRow
+                                        ? Icons.close
+                                        : item.isSuccessfullyAdded
+                                            ? Icons.delete
+                                            : Icons.clear,
+                                    size: 18,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () {
+                                    if (item.isSuccessfullyAdded) {
+                                      _deleteStockItem(index);
+                                    } else {
+                                      _clearStockItem(index);
+                                    }
+                                  },
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 40,
+                                    minHeight: 40,
+                                  ),
+                                ),
                               ),
-                            ],
-                          ),
-                          child: IconButton(
-                            icon: Icon(
-                              _isLoading
-                                  ? Icons.hourglass_empty
-                                  : (isEditingInputRow
-                                      ? Icons.save
-                                      : Icons.add),
-                              size: 18,
-                              color: Colors.white,
-                            ),
-                            onPressed: _isLoading
-                                ? null
-                                : () => _addStockForSingleItem(index),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                              minWidth: 40,
-                              minHeight: 40,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    // Expand Button with Tooltip
-                    Tooltip(
-                      message: item.isExpanded
-                          ? "Hide details"
-                          : "Show prices, expiry & tax details",
-                      child: Container(
-                        height: 40,
-                        width: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(5),
-                          border: Border.all(
-                              color: item.isExpanded
-                                  ? ColorManager.kPrimaryColor
-                                  : Colors.grey.withOpacity(0.3)),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: ColorManager.boxShadowColor,
-                              blurRadius: 3,
-                              offset: Offset(1, 1),
                             ),
                           ],
-                        ),
-                        child: IconButton(
-                          icon: Icon(
-                            item.isExpanded
-                                ? Icons.expand_less
-                                : Icons.expand_more,
-                            size: 18,
-                            color: item.isExpanded
-                                ? ColorManager.kPrimaryColor
-                                : Colors.grey.shade600,
+                          // Spacing between delete and add buttons
+                          if (item.productData != null ||
+                              item.isSuccessfullyAdded)
+                            const SizedBox(width: 8),
+                          // Add Stock Button (Only show if not already added)
+                          if (!item.isSuccessfullyAdded) ...[
+                            Tooltip(
+                              message: _isLoading
+                                  ? (isEditingInputRow
+                                      ? "Saving..."
+                                      : "Adding...")
+                                  : (isEditingInputRow
+                                      ? "Save changes"
+                                      : "Add stock item"),
+                              child: Container(
+                                height: 40,
+                                width: 40,
+                                decoration: BoxDecoration(
+                                  color: _isLoading
+                                      ? Colors.grey
+                                      : ColorManager.kPrimaryColor,
+                                  borderRadius: BorderRadius.circular(5),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: ColorManager.boxShadowColor,
+                                      blurRadius: 3,
+                                      offset: Offset(1, 1),
+                                    ),
+                                  ],
+                                ),
+                                child: IconButton(
+                                  icon: Icon(
+                                    _isLoading
+                                        ? Icons.hourglass_empty
+                                        : (isEditingInputRow
+                                            ? Icons.save
+                                            : Icons.add),
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: _isLoading
+                                      ? null
+                                      : () => _addStockForSingleItem(index),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 40,
+                                    minHeight: 40,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          // Expand Button with Tooltip
+                          Tooltip(
+                            message: item.isExpanded
+                                ? "Hide details"
+                                : "Show prices, expiry & tax details",
+                            child: Container(
+                              height: 40,
+                              width: 40,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(5),
+                                border: Border.all(
+                                    color: item.isExpanded
+                                        ? ColorManager.kPrimaryColor
+                                        : Colors.grey.withOpacity(0.3)),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: ColorManager.boxShadowColor,
+                                    blurRadius: 3,
+                                    offset: Offset(1, 1),
+                                  ),
+                                ],
+                              ),
+                              child: IconButton(
+                                icon: Icon(
+                                  item.isExpanded
+                                      ? Icons.expand_less
+                                      : Icons.expand_more,
+                                  size: 18,
+                                  color: item.isExpanded
+                                      ? ColorManager.kPrimaryColor
+                                      : Colors.grey.shade600,
+                                ),
+                                onPressed: () => _toggleExpanded(index),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 40,
+                                  minHeight: 40,
+                                ),
+                              ),
+                            ),
                           ),
-                          onPressed: () => _toggleExpanded(index),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 40,
-                            minHeight: 40,
-                          ),
-                        ),
+                          // if (stockItems.length > 1) ...[
+                          //   const SizedBox(width: 8),
+                          //   BuildBoxShadowContainer(
+                          //     circleRadius: 7,
+                          //     height: 40,
+                          //     width: 40,
+                          //     child: IconButton(
+                          //       icon: item.isSuccessfullyAdded
+                          //           ? const Icon(Icons.check_circle,
+                          //               size: 18, color: Colors.green)
+                          //           : const Icon(Icons.delete,
+                          //               size: 18, color: Colors.red),
+                          //       onPressed: item.isSuccessfullyAdded
+                          //           ? null // Disable button for successfully added rows
+                          //           : () => _removeStockRow(index),
+                          //       padding: EdgeInsets.zero,
+                          //       constraints: const BoxConstraints(
+                          //         minWidth: 40,
+                          //         minHeight: 40,
+                          //       ),
+                          //     ),
+                          //   ),
+                          // ],
+                        ],
                       ),
-                    ),
-                    // if (stockItems.length > 1) ...[
-                    //   const SizedBox(width: 8),
-                    //   BuildBoxShadowContainer(
-                    //     circleRadius: 7,
-                    //     height: 40,
-                    //     width: 40,
-                    //     child: IconButton(
-                    //       icon: item.isSuccessfullyAdded
-                    //           ? const Icon(Icons.check_circle,
-                    //               size: 18, color: Colors.green)
-                    //           : const Icon(Icons.delete,
-                    //               size: 18, color: Colors.red),
-                    //       onPressed: item.isSuccessfullyAdded
-                    //           ? null // Disable button for successfully added rows
-                    //           : () => _removeStockRow(index),
-                    //       padding: EdgeInsets.zero,
-                    //       constraints: const BoxConstraints(
-                    //         minWidth: 40,
-                    //         minHeight: 40,
-                    //       ),
-                    //     ),
-                    //   ),
-                    // ],
-                  ],
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          ),
           _buildVariantSelector(index),
           // Quick preview for collapsed items with data - Single Row Layout
           if (!item.isExpanded &&
@@ -4919,7 +5024,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         if (item.purchaseRate.isNotEmpty)
                           _buildDetailChip(
                               "Purchase",
-                              !item.taxInclude && item.calculatedTaxData != null
+                              !item.taxIncludePurchase &&
+                                      item.calculatedTaxData != null
                                   ? ((item.calculatedTaxData![
                                                   'price_including_tax_purchase']
                                               as num?)
@@ -4961,7 +5067,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       double purchasePrice =
                           double.tryParse(item.purchaseRate) ?? 0;
                       // Use effective (tax-inclusive) purchase rate when tax is excluded
-                      if (!item.taxInclude && item.calculatedTaxData != null) {
+                      if (!item.taxIncludePurchase &&
+                          item.calculatedTaxData != null) {
                         final effective = (item.calculatedTaxData![
                                 'price_including_tax_purchase'] as num?)
                             ?.toDouble();
@@ -5011,7 +5118,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     );
   }
 
-  Widget _buildStockRowMobile(int index, int visibleIndex, bool isEditingInputRow, StockItem item) {
+  Widget _buildStockRowMobile(
+      int index, int visibleIndex, bool isEditingInputRow, StockItem item) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       child: Column(
@@ -5053,9 +5161,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         item.apiResponse!['localId'] != null) ...[
                       Consumer<StockProvider>(
                         builder: (context, stockProvider, child) {
-                          final pendingItem =
-                              stockProvider.getPendingStockItem(
-                                  item.apiResponse!['localId']);
+                          final pendingItem = stockProvider.getPendingStockItem(
+                              item.apiResponse!['localId']);
                           final bool isUpdated = pendingItem != null &&
                               pendingItem['updatedAt'] != null;
 
@@ -5174,7 +5281,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
             ],
           ),
           const SizedBox(height: 10),
-          
+
           // Product Dropdown & Info Button Row
           Row(
             children: [
@@ -5235,12 +5342,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       controller: _getQuantityController(index),
                       focusNode: _getQuantityFocusNode(index),
                       keyboardType: TextInputType.number,
-                      inputFormatters: quantityInputFormattersForUnit(item.unit),
+                      inputFormatters:
+                          quantityInputFormattersForUnit(item.unit),
                       textAlign: TextAlign.right,
                       decoration: const InputDecoration(
                         hintText: 'Qty',
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                       ),
                       style: buildCustomStyle(
                         FontWeightManager.regular,
@@ -5249,8 +5358,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         ColorManager.textColor,
                       ),
                       onTap: () {
-                        _getQuantityController(index).selection =
-                            TextSelection(
+                        _getQuantityController(index).selection = TextSelection(
                           baseOffset: 0,
                           extentOffset:
                               _getQuantityController(index).text.length,
@@ -5293,7 +5401,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               ] else ...[
                 const Expanded(child: SizedBox.shrink()),
               ],
-              
+
               // Actions
               Row(
                 mainAxisSize: MainAxisSize.min,
@@ -5311,7 +5419,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(5),
-                          border: Border.all(color: Colors.red.withOpacity(0.3)),
+                          border:
+                              Border.all(color: Colors.red.withOpacity(0.3)),
                           boxShadow: const [
                             BoxShadow(
                               color: ColorManager.boxShadowColor,
@@ -5375,9 +5484,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           icon: Icon(
                             _isLoading
                                 ? Icons.hourglass_empty
-                                : (isEditingInputRow
-                                    ? Icons.save
-                                    : Icons.add),
+                                : (isEditingInputRow ? Icons.save : Icons.add),
                             size: 18,
                             color: Colors.white,
                           ),
@@ -5569,10 +5676,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         }
 
 // Auto-fill expanded fields
-        stockItems[index].salePrice =
-            matchedVariant?.price?.toString() ??
-                localProduct.price?.price?.toString() ??
-                '0';
+        stockItems[index].salePrice = matchedVariant?.price?.toString() ??
+            localProduct.price?.price?.toString() ??
+            '0';
         stockItems[index].mrp = matchedVariant?.mrp?.toString() ??
             localProduct.mrp?.toString() ??
             localProduct.price?.price?.toString() ??
@@ -6826,12 +6932,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         // Tax calculation cards with tax settings on the left
         Row(
           children: [
-            // Tax Settings on the left
+            /* Removed shared retail/wholesale tax toggle; each price card has
+               its own Incl. tax toggle now.
             Expanded(
-              flex: 1,
+              flex: 2,
               child: Container(
                 height: 80,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
                   borderRadius: BorderRadius.circular(8),
@@ -6842,12 +6949,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        "Including Tax",
+                        "Retail & wholesale incl. tax",
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: buildCustomStyle(
                           FontWeightManager.regular,
-                          FontSize.s11,
+                          FontSize.s10,
                           0.27,
                           Colors.grey.shade600,
                         ),
@@ -6863,10 +6970,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                             item.taxInclude = value;
                             debugPrint(
                                 '🧮 [StockTax] Tax include toggled for item $index -> $value');
-                            _calculateTaxForStockItem(index, isRetail: true);
-                            _calculateTaxForStockItem(index, isRetail: false);
-                            _calculateTaxForStockItem(index, isPurchase: true);
                           });
+                          _calculateTaxForStockItem(index, isRetail: true);
+                          _calculateTaxForStockItem(index, isRetail: false);
                           _updatePendingStockItem(index);
                         },
                         activeThumbColor: ColorManager.kPrimaryColor,
@@ -6878,7 +6984,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 12), */
             Expanded(
               flex: 2,
               child: _buildTaxCard(
@@ -6890,6 +6996,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 'Tax: ${(item.calculatedTaxData?['tax_rate_retail'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
                 Colors.blue,
                 item.taxInclude,
+                toggleLabel: 'Incl. tax',
+                toggleValue: item.taxInclude,
+                onToggleChanged: (value) {
+                  setState(() => item.taxInclude = value);
+                  _calculateTaxForStockItem(index, isRetail: true);
+                  _calculateTaxForStockItem(index, isRetail: false);
+                  _updatePendingStockItem(index);
+                },
               ),
             ),
             const SizedBox(width: 12),
@@ -6904,20 +7018,37 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 'Tax: ${(item.calculatedTaxData?['tax_rate_wholesale'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
                 Colors.orange,
                 item.taxInclude,
+                toggleLabel: 'Incl. tax',
+                toggleValue: item.taxInclude,
+                onToggleChanged: (value) {
+                  setState(() => item.taxInclude = value);
+                  _calculateTaxForStockItem(index, isRetail: true);
+                  _calculateTaxForStockItem(index, isRetail: false);
+                  _updatePendingStockItem(index);
+                },
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              flex: 2,
+              flex: 3,
               child: _buildTaxCard(
                 "Purchase Rate",
                 "3",
-                item.taxInclude
+                item.taxIncludePurchase
                     ? '${(item.calculatedTaxData?['price_including_tax_purchase'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}'
                     : '${(item.calculatedTaxData?['price_excluding_tax_purchase'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"} + ${(item.calculatedTaxData?['purchaseTaxAmount'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}',
                 'Tax: ${(item.calculatedTaxData?['tax_rate_purchase'] as num?)?.toDouble().toStringAsFixed(2) ?? "0.00"}%',
                 Colors.green,
-                item.taxInclude,
+                item.taxIncludePurchase,
+                footerTrailingText:
+                    'Total: ${_getPurchaseTotal(item).toStringAsFixed(2)}',
+                toggleLabel: 'Incl. tax',
+                toggleValue: item.taxIncludePurchase,
+                onToggleChanged: (value) {
+                  setState(() => item.taxIncludePurchase = value);
+                  _calculateTaxForStockItem(index, isPurchase: true);
+                  _updatePendingStockItem(index);
+                },
               ),
             ),
           ],
@@ -6946,8 +7077,19 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     );
   }
 
-  Widget _buildTaxCard(String title, String badgeText, String priceText,
-      String taxText, Color color, bool isIncluding) {
+  Widget _buildTaxCard(
+    String title,
+    String badgeText,
+    String priceText,
+    String taxText,
+    Color color,
+    bool isIncluding, {
+    String? headerTrailingText,
+    String? footerTrailingText,
+    String? toggleLabel,
+    bool? toggleValue,
+    ValueChanged<bool>? onToggleChanged,
+  }) {
     return Container(
       height: 80,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -6995,6 +7137,42 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   ),
                 ),
               ),
+              if (headerTrailingText != null) ...[
+                const SizedBox(width: 6),
+                Text(
+                  headerTrailingText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s11,
+                    0.27,
+                    color,
+                  ),
+                ),
+              ],
+              if (toggleValue != null && onToggleChanged != null) ...[
+                const SizedBox(width: 4),
+                Text(
+                  toggleLabel ?? 'Incl. tax',
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s9,
+                    0.27,
+                    color,
+                  ),
+                ),
+                Transform.scale(
+                  scale: 0.6,
+                  child: Switch(
+                    value: toggleValue,
+                    onChanged: onToggleChanged,
+                    activeThumbColor: color,
+                    inactiveThumbColor: Colors.white,
+                    inactiveTrackColor: Colors.grey.shade300,
+                  ),
+                ),
+              ],
             ],
           ),
           Row(
@@ -7028,6 +7206,28 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   ),
                 ),
               ),
+              if (footerTrailingText != null) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.14),
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(color: color.withOpacity(0.35)),
+                  ),
+                  child: Text(
+                    footerTrailingText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.bold,
+                      FontSize.s11,
+                      0.27,
+                      color,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ],
@@ -7087,9 +7287,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         : (isRetail
             ? (double.tryParse(item.salePrice) ?? 0.0)
             : (double.tryParse(item.wholesale) ?? 0.0));
+    final bool taxInclude =
+        isPurchase ? item.taxIncludePurchase : item.taxInclude;
 
     debugPrint(
-        '🧮 [StockTax] Payload | item=$index | type=$calculationType | productId=${item.productData!.productId} | categoryId=${item.categoryData!.categoryId} | price=$priceToCalculate | taxInclude=${item.taxInclude}');
+        '🧮 [StockTax] Payload | item=$index | type=$calculationType | productId=${item.productData!.productId} | categoryId=${item.categoryData!.categoryId} | price=$priceToCalculate | taxInclude=$taxInclude');
 
     final String? accessToken =
         Provider.of<AuthModel>(context, listen: false).token;
@@ -7106,7 +7308,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         price: priceToCalculate,
         productId: item.productData!.productId!,
         categoryId: item.categoryData!.categoryId!,
-        taxInclude: item.taxInclude,
+        taxInclude: taxInclude,
       );
 
       if (taxData != null && mounted) {
@@ -7265,9 +7467,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   // Match purchase summary: Total Due Amount = total purchase
                   // amount for this stock batch + additional excluded tax + current supplier balance.
                   final double supplierBalance = _getSupplierBalance();
-                  final double totalDueAmount = totalStockValue +
-                      additionalPurchaseTax +
-                      supplierBalance;
+                  final double totalDueAmount =
+                      totalStockValue + additionalPurchaseTax + supplierBalance;
 
                   // Check if payment data is provided
                   final bool hasPayment =
@@ -7301,7 +7502,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           '❌ PAYMENT VALIDATION FAILED: One or more payment amounts are zero or negative');
                       showScaffoldError(
                           context: context,
-                          message: 'Payment amounts must be greater than zero.');
+                          message:
+                              'Payment amounts must be greater than zero.');
                       return;
                     }
 
@@ -7359,8 +7561,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     }
 
                     // Process all pending stock items
-                    final batchResult = await stockProvider
-                        .processPendingStockItems(
+                    final batchResult =
+                        await stockProvider.processPendingStockItems(
                       accessToken,
                       variantsEnabled: _variantFeatureEnabled(),
                     );
@@ -7440,7 +7642,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         for (var item in successfulItems) {
                           if (item['apiResponse'] != null &&
                               item['apiResponse']['data'] != null &&
-                              item['apiResponse']['data']['purchase_voucher_id'] !=
+                              item['apiResponse']['data']
+                                      ['purchase_voucher_id'] !=
                                   null) {
                             purchaseId = item['apiResponse']['data']
                                     ['purchase_voucher_id']
@@ -7456,10 +7659,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                               '🚀 CALLING FINISH PURCHASE ORDER API WITH PURCHASE VOUCHER ID: $purchaseId');
 
                           try {
-                            final result =
-                                await Provider.of<PurchaseProvider>(context,
-                                        listen: false)
-                                    .finishPurchaseOrder(
+                            final result = await Provider.of<PurchaseProvider>(
+                                    context,
+                                    listen: false)
+                                .finishPurchaseOrder(
                               accessToken: accessToken,
                               purchaseVoucherId: purchaseId,
                               paymentMethods: paymentMethods,
@@ -7511,7 +7714,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                   }
 
                                   // Step 2: Full comprehensive sync for complete data consistency
-                                  debugPrint('🔄 Starting comprehensive sync...');
+                                  debugPrint(
+                                      '🔄 Starting comprehensive sync...');
                                   await syncProvider.syncAllData(context);
                                   debugPrint(
                                       '✅ COMPREHENSIVE SYNC COMPLETED SUCCESSFULLY');
@@ -7527,7 +7731,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                       'Purchase order completion failed. Stock items were added but order was not finalized.');
                             }
                           } catch (e) {
-                            debugPrint('💥 ERROR COMPLETING PURCHASE ORDER: $e');
+                            debugPrint(
+                                '💥 ERROR COMPLETING PURCHASE ORDER: $e');
                             showScaffoldError(
                                 context: context,
                                 message:

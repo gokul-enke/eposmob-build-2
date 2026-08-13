@@ -18,7 +18,7 @@ void showProductDetails(
   bool isCompact = true,
   String currency = '',
   VoidCallback? onAdd,
-  bool useBillingProductPermissions = false,
+  bool useBillingProductPermissions = true,
 }) {
   final width = MediaQuery.sizeOf(context).width;
   if (Breakpoints.isMobileWidth(width)) {

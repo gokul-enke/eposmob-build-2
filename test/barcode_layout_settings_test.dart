@@ -23,6 +23,8 @@ void main() {
       expect(decoded.barcodeWidthPercent, fresh.barcodeWidthPercent);
       expect(decoded.elementSpacing, fresh.elementSpacing);
       expect(decoded.rasterDpi, fresh.rasterDpi);
+      expect(decoded.printRotationDegrees, isNull);
+      expect(decoded.invertPrintColors, isFalse);
     });
 
     test('defaults are one sticker per row with the legacy element gap', () {
@@ -47,6 +49,7 @@ void main() {
         barcodeWidthPercent: 55,
         elementSpacing: 0.5,
         rasterDpi: 203,
+        printRotationDegrees: 270,
       );
 
       final decoded = BarcodeLayoutSettings.decode(original.encode());
@@ -90,6 +93,7 @@ void main() {
         'barcodeHeight': 200,
         'barcodeWidthPercent': 5,
         'rasterDpi': 1200,
+        'printRotationDegrees': 45,
       });
 
       expect(decoded.stickerSize, '50x25mm');
@@ -99,6 +103,48 @@ void main() {
       expect(decoded.barcodeHeight, 60);
       expect(decoded.barcodeWidthPercent, 30);
       expect(decoded.rasterDpi, 300);
+      expect(decoded.printRotationDegrees, isNull);
+    });
+
+    test('print rotation is opt-in and accepts supported corrections', () {
+      expect(BarcodeLayoutSettings().printRotationDegrees, isNull);
+      expect(
+        BarcodeLayoutSettings.fromJson(
+          const {'printRotationDegrees': 90},
+        ).printRotationDegrees,
+        90,
+      );
+      expect(
+        BarcodeLayoutSettings.fromJson(
+          const {'printRotationDegrees': 270},
+        ).printRotationDegrees,
+        270,
+      );
+      expect(
+        BarcodeLayoutSettings.fromJson(
+          const {'printRotationDegrees': 180},
+        ).printRotationDegrees,
+        180,
+      );
+      expect(
+        BarcodeLayoutSettings.fromJson(
+          const {'printRotationDegrees': 0},
+        ).printRotationDegrees,
+        isNull,
+      );
+    });
+
+    test('default transform settings are omitted from saved JSON', () {
+      final defaults = BarcodeLayoutSettings().toJson();
+      expect(defaults.containsKey('printRotationDegrees'), isFalse);
+      expect(defaults.containsKey('invertPrintColors'), isFalse);
+
+      final transformed = BarcodeLayoutSettings(
+        printRotationDegrees: 180,
+        invertPrintColors: true,
+      ).toJson();
+      expect(transformed['printRotationDegrees'], 180);
+      expect(transformed['invertPrintColors'], isTrue);
     });
 
     test('barcode height supports 5pt while retaining a 15pt default', () {

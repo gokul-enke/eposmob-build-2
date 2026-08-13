@@ -11,6 +11,7 @@ import '../../../components/build_round_button.dart';
 import '../../../controllers/sidebar_controller.dart';
 
 import '../../../providers/stock_provider.dart';
+import '../../../helpers/purchase_price_permission.dart';
 
 import '../../../resources/color_manager.dart';
 import '../../../resources/font_manager.dart';
@@ -23,8 +24,8 @@ class StockDetailsWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     SideBarController sideBarController = Get.put(SideBarController());
-    StockProvider stockProvider =
-        Provider.of<StockProvider>(context);
+    StockProvider stockProvider = Provider.of<StockProvider>(context);
+    final canShowPurchasePrice = canViewPurchasePrice(context);
 
     stock_models.ListStockModelData? stockDetails =
         stockProvider.viewStockModelData;
@@ -175,8 +176,10 @@ class StockDetailsWidget extends StatelessWidget {
                       BuildDetailRow(
                         title1: "Product Unit",
                         content1: stockDetails?.unit ?? "",
-                        title2: "Purchase Rate",
-                        content2: stockDetails?.purchaseRate?.toString() ?? "",
+                        title2: canShowPurchasePrice ? "Purchase Rate" : "",
+                        content2: canShowPurchasePrice
+                            ? stockDetails?.purchaseRate?.toString() ?? ""
+                            : "",
                       ),
                       BuildDetailRow(
                         title1: "Retail Price",

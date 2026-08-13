@@ -328,6 +328,36 @@ class CustomerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> mergeRealtimeCustomers(
+    List<CustomerListModelData> changedCustomers, {
+    required int? storeId,
+    required Set<int> deletedCustomerIds,
+  }) async {
+    final merged = List<CustomerListModelData>.from(_allCustomers ?? const []);
+    final indexById = <int, int>{};
+    for (var i = 0; i < merged.length; i++) {
+      final id = merged[i].id;
+      if (id != null) indexById[id] = i;
+    }
+    for (final customer in changedCustomers) {
+      final id = customer.id;
+      final index = id == null ? null : indexById[id];
+      if (index == null) {
+        merged.add(customer);
+        if (id != null) indexById[id] = merged.length - 1;
+      } else {
+        merged[index] = customer;
+      }
+    }
+    if (deletedCustomerIds.isNotEmpty) {
+      merged.removeWhere(
+        (customer) =>
+            customer.id != null && deletedCustomerIds.contains(customer.id),
+      );
+    }
+    await applyRealtimeCustomers(merged, storeId: storeId);
+  }
+
   Future<dynamic> listCustomer({
     required String accessToken,
     String? filterName,

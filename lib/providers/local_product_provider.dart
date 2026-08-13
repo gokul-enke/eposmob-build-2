@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/quantity_input_helper.dart';
+import 'package:pos_machine/helpers/product_search_helper.dart';
 import 'package:pos_machine/features/billing/domain/product_variant_selection.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -206,7 +207,22 @@ class LocalCartItem {
     }
     final displayQuantity = toDisplayQuantity(baseQuantity);
     final reconstructedBase = toBaseQuantity(displayQuantity);
-    return (reconstructedBase - baseQuantity).abs() < _saleUnitEpsilon;
+    if ((reconstructedBase - baseQuantity).abs() >= _saleUnitEpsilon) {
+      return false;
+    }
+
+    // A stock reservation can split one pack into a reserved and an
+    // unreserved part (for example, 6 available pieces out of a 25-piece
+    // pack). PC/PCS products must not serialize those parts as 0.24 PACK and
+    // 0.76 PACK because the order API requires whole quantities for
+    // non-decimal products. Emit those lines in base units instead.
+    if (!allowsDecimalQuantityUnit(product.unit)) {
+      final roundedDisplayQuantity = displayQuantity.round();
+      return (displayQuantity - roundedDisplayQuantity).abs() <
+          _saleUnitEpsilon;
+    }
+
+    return true;
   }
 
   num _normalizeQuantity(num value) {
@@ -893,6 +909,17 @@ class LocalProductProvider extends ChangeNotifier {
     );
     item.taxRate = effectiveTaxRate;
     item.taxAmount = _calculateTaxAmount(item.price ?? 0.0, effectiveTaxRate);
+    _clampManualCartItemToMinimumPrice(item);
+  }
+
+  void _clampManualCartItemToMinimumPrice(LocalCartItem item) {
+    if (!item.isManualPriceOverride) return;
+    final minimumPrice = minimumSalePriceForCartItem(item);
+    if (minimumPrice == null || (item.price ?? 0.0) >= minimumPrice - 0.001) {
+      return;
+    }
+    item.price = minimumPrice;
+    item.taxAmount = _calculateTaxAmount(minimumPrice, item.taxRate ?? 0.0);
   }
 
   List<int> _normalizeStockGroupIds(List<int>? stockGroupIds) {
@@ -1486,23 +1513,36 @@ class LocalProductProvider extends ChangeNotifier {
     final items = <Map<String, dynamic>>[];
 
     for (final item in cartItems) {
-      num reservedQuantity = 0;
+      final positiveReservations = item.stockReservations
+          .where((reservation) => reservation.quantity > 0)
+          .toList(growable: false);
+      final reservedQuantity = positiveReservations.fold<num>(
+        0,
+        (sum, reservation) => sum + reservation.quantity,
+      );
+      final unreservedQuantity = item.quantity - reservedQuantity;
 
-      for (final reservation in item.stockReservations) {
-        if (reservation.quantity <= 0) {
-          continue;
-        }
+      for (var index = 0; index < positiveReservations.length; index++) {
+        final reservation = positiveReservations[index];
+        final isLastReservation = index == positiveReservations.length - 1;
 
-        final payloadQuantity = item
-                .canUseSaleUnitPayloadFor(reservation.quantity)
-            ? item.toDisplayQuantity(reservation.quantity)
+        // When negative stock is supported, charge an oversold remainder to
+        // the final batch used by the allocator instead of emitting a
+        // stock_id:null line. Combining before unit conversion also lets a
+        // partial reservation plus its overflow become a whole PACK/CASE.
+        final baseQuantity = isLastReservation && unreservedQuantity > 0
+            ? reservation.quantity + unreservedQuantity
+            : reservation.quantity;
+
+        final payloadQuantity = item.canUseSaleUnitPayloadFor(baseQuantity)
+            ? item.toDisplayQuantity(baseQuantity)
             // Base-unit line: guard against fractional reservations on
             // non-decimal units (e.g. legacy persisted 1.3 splits).
-            : normalizeQuantityForUnit(reservation.quantity, item.product.unit);
-        final payloadPrice = item.canUseSaleUnitPayloadFor(reservation.quantity)
+            : normalizeQuantityForUnit(baseQuantity, item.product.unit);
+        final payloadPrice = item.canUseSaleUnitPayloadFor(baseQuantity)
             ? item.toDisplayAmount(item.price)
             : item.price;
-        final payloadMrp = item.canUseSaleUnitPayloadFor(reservation.quantity)
+        final payloadMrp = item.canUseSaleUnitPayloadFor(baseQuantity)
             ? item.toDisplayAmount(item.mrp)
             : item.mrp;
 
@@ -1512,20 +1552,17 @@ class LocalProductProvider extends ChangeNotifier {
           'price': payloadPrice,
           'mrp': payloadMrp,
           'stock_id': reservation.stockId,
-          if (item.canUseSaleUnitPayloadFor(reservation.quantity)) ...{
+          if (item.canUseSaleUnitPayloadFor(baseQuantity)) ...{
             'sale_unit_id': item.saleUnitId,
             'product_sale_unit_id': item.saleUnitId,
           },
           if (item.variantId != null) 'product_variant_id': item.variantId,
           'warranty_enabled': item.warrantyEnabled,
         });
-        reservedQuantity += reservation.quantity;
       }
 
-      final unreservedQuantity = item.quantity - reservedQuantity;
-      if (unreservedQuantity > 0 || item.stockReservations.isEmpty) {
-        final baseQuantity =
-            item.stockReservations.isEmpty ? item.quantity : unreservedQuantity;
+      if (positiveReservations.isEmpty) {
+        final baseQuantity = item.quantity;
         final canUseSaleUnitPayload =
             item.canUseSaleUnitPayloadFor(baseQuantity);
 
@@ -1539,8 +1576,7 @@ class LocalProductProvider extends ChangeNotifier {
               : item.price,
           'mrp':
               canUseSaleUnitPayload ? item.toDisplayAmount(item.mrp) : item.mrp,
-          'stock_id':
-              item.stockReservations.isEmpty ? item.selectedStock?.id : null,
+          'stock_id': item.selectedStock?.id,
           if (canUseSaleUnitPayload) ...{
             'sale_unit_id': item.saleUnitId,
             'product_sale_unit_id': item.saleUnitId,
@@ -2120,6 +2156,35 @@ class LocalProductProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Merges a realtime delta into the current catalog, then delegates to the
+  /// authoritative apply path so cart reservations and Hive persistence keep
+  /// their existing behavior.
+  Future<void> mergeRealtimeCatalog(
+    List<GetProduct> changedProducts, {
+    required Set<int> deletedProductIds,
+  }) async {
+    final merged = List<GetProduct>.from(_products);
+    final indexById = <int, int>{};
+    for (var i = 0; i < merged.length; i++) {
+      final id = merged[i].productId;
+      if (id != null) indexById[id] = i;
+    }
+    for (final product in changedProducts) {
+      final id = product.productId;
+      final index = id == null ? null : indexById[id];
+      if (index == null) {
+        merged.add(product);
+        if (id != null) indexById[id] = merged.length - 1;
+      } else {
+        merged[index] = product;
+      }
+    }
+    await applyRealtimeCatalog(
+      merged,
+      deletedProductIds: deletedProductIds,
+    );
+  }
+
   /// Fetch products from API with pagination
   Future<void> fetchProductsFromAPI({
     bool refresh = false,
@@ -2465,57 +2530,11 @@ class LocalProductProvider extends ChangeNotifier {
     }
 
     if (filterName != null && filterName.isNotEmpty) {
-      final normalizedFilterName = filterName.toLowerCase();
-      result = result.where((p) {
-        final nameMatch = _productSearchNames(p)
-            .any((name) => name.toLowerCase().contains(normalizedFilterName));
-        if (nameMatch) return true;
-
-        // Check SKU (always on)
-        final sku = p.sku ?? '';
-        if (sku.isNotEmpty &&
-            sku.toLowerCase().contains(normalizedFilterName)) {
-          return true;
-        }
-
-        // Issue 6: only active variants' SKUs surface a product.
-        final variantSkuMatch = p.variants?.any((variant) {
-              if (!variant.active) return false;
-              final varSku = variant.sku ?? '';
-              return varSku.isNotEmpty &&
-                  varSku.toLowerCase().contains(normalizedFilterName);
-            }) ??
-            false;
-        if (variantSkuMatch) return true;
-
-        return false;
-      }).toList();
-      result = _rankProductNameMatches(result, filterName);
+      result = ProductSearchHelper.search(result, filterName);
     }
 
     if (filterBarcode != null && filterBarcode.isNotEmpty) {
-      result = result.where((p) {
-        if (p.barcode != null &&
-            p.barcode!.toLowerCase().contains(filterBarcode.toLowerCase())) {
-          return true;
-        }
-        // Issue 6: only active variants' barcodes surface a product.
-        final variantMatch = p.variants?.any((v) =>
-                v.active &&
-                v.barcode != null &&
-                v.barcode!
-                    .toLowerCase()
-                    .contains(filterBarcode.toLowerCase())) ??
-            false;
-        if (variantMatch) return true;
-        final saleUnitMatch = p.saleUnits?.any((u) =>
-                u.barcode != null &&
-                u.barcode!
-                    .toLowerCase()
-                    .contains(filterBarcode.toLowerCase())) ??
-            false;
-        return saleUnitMatch;
-      }).toList();
+      result = ProductSearchHelper.searchBarcodes(result, filterBarcode);
     }
 
     // HSN Code filter - check both product level and stock level HSN codes
@@ -2578,105 +2597,7 @@ class LocalProductProvider extends ChangeNotifier {
     if (query.isEmpty) {
       return _filteredProducts;
     }
-    final normalizedQuery = query.toLowerCase();
-    final matches = _filteredProducts.where((p) {
-      final nameMatch = _productSearchNames(p)
-          .any((name) => name.toLowerCase().contains(normalizedQuery));
-      if (nameMatch) return true;
-
-      // Check SKU (always on)
-      final sku = p.sku ?? '';
-      if (sku.isNotEmpty && sku.toLowerCase().contains(normalizedQuery)) {
-        return true;
-      }
-
-      // Issue 6: only active variants' SKUs surface a product.
-      final variantSkuMatch = p.variants?.any((variant) {
-            if (!variant.active) return false;
-            final varSku = variant.sku ?? '';
-            return varSku.isNotEmpty &&
-                varSku.toLowerCase().contains(normalizedQuery);
-          }) ??
-          false;
-      if (variantSkuMatch) return true;
-
-      return false;
-    }).toList();
-    return _rankProductNameMatches(matches, query);
-  }
-
-  List<GetProduct> _rankProductNameMatches(
-    List<GetProduct> products,
-    String query,
-  ) {
-    final normalizedQuery = query.trim().toLowerCase();
-    if (normalizedQuery.isEmpty) return products;
-
-    final indexedProducts = products.indexed.toList();
-    indexedProducts.sort((first, second) {
-      final rankCompare = _productNameMatchRank(first.$2, normalizedQuery)
-          .compareTo(_productNameMatchRank(second.$2, normalizedQuery));
-      if (rankCompare != 0) return rankCompare;
-      return first.$1.compareTo(second.$1);
-    });
-    return indexedProducts.map((entry) => entry.$2).toList();
-  }
-
-  int _productNameMatchRank(GetProduct product, String normalizedQuery) {
-    final productNames = _productSearchNames(product)
-        .map((name) => name.trim().toLowerCase())
-        .where((name) => name.isNotEmpty);
-    if (productNames.any((name) => name.startsWith(normalizedQuery))) return 0;
-    return 1;
-  }
-
-  List<String> _productSearchNames(GetProduct product) {
-    final names = <String>[];
-
-    void addName(dynamic value) {
-      if (value == null) return;
-      final text = value.toString().trim();
-      if (text.isNotEmpty) {
-        names.add(text);
-      }
-    }
-
-    void extractNames(dynamic value) {
-      if (value == null) return;
-
-      if (value is String || value is num || value is bool) {
-        addName(value);
-        return;
-      }
-
-      if (value is Map) {
-        for (final key in const ['name', 'product_name', 'value', 'text']) {
-          if (value.containsKey(key)) {
-            addName(value[key]);
-          }
-        }
-
-        for (final entry in value.entries) {
-          final entryKey = entry.key?.toString().toLowerCase() ?? '';
-          if (entryKey.contains('language') || entryKey == 'id') {
-            continue;
-          }
-          extractNames(entry.value);
-        }
-        return;
-      }
-
-      if (value is Iterable) {
-        for (final item in value) {
-          extractNames(item);
-        }
-      }
-    }
-
-    addName(product.productName);
-    extractNames(product.names);
-
-    return names.toSet().toList();
+    return ProductSearchHelper.search(_filteredProducts, query);
   }
 
   /// Adds a product to the local products list.
@@ -3063,6 +2984,7 @@ class LocalProductProvider extends ChangeNotifier {
                 ? null
                 : Map<String, dynamic>.from(variantAttributes),
           ));
+      _clampManualCartItemToMinimumPrice(_cartItems.first);
     }
 
     resetSelectedProduct();
@@ -3295,8 +3217,8 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
-  /// Minimum allowed sale price (in base units) for a product. Acts as a
-  /// discount floor off the catalog selling price, derived from two optional
+  /// Minimum allowed sale price (in base units) for a pricing selection. Acts
+  /// as a discount floor off the effective selling price, derived from two optional
   /// configurations:
   ///
   ///   • `min_margin_percentage` → percentage discount floor:
@@ -3306,10 +3228,28 @@ class LocalProductProvider extends ChangeNotifier {
   ///
   /// When both are configured, the most restrictive (higher) floor wins.
   ///
-  /// Returns `null` when no floor is configured (no/zero margins or no selling
-  /// price), meaning the price may be lowered freely.
-  double? minimumSalePriceForProduct(GetProduct product) {
-    final sellingPrice = _parseAmount(product.price?.price?.toString());
+  /// [referencePrice] can be supplied for open/manual-price products which have
+  /// no configured selling price. Configured sale-unit, variant, wholesale,
+  /// stock, and product prices still take precedence in that order.
+  ///
+  /// Returns `null` when no floor is configured (no/zero margins or no effective
+  /// selling price), meaning the price may be lowered freely.
+  double? minimumSalePriceForProduct(
+    GetProduct product, {
+    num quantity = 1,
+    Stock? selectedStock,
+    int? saleUnitId,
+    int? variantId,
+    double? referencePrice,
+  }) {
+    final sellingPrice = _resolveUnitPrice(
+      product: product,
+      quantity: quantity,
+      selectedStock: selectedStock,
+      fallbackPrice: referencePrice,
+      saleUnitId: saleUnitId,
+      variantId: variantId,
+    );
     if (sellingPrice == null || sellingPrice <= 0) {
       return null;
     }
@@ -3337,6 +3277,19 @@ class LocalProductProvider extends ChangeNotifier {
     }
 
     return floor < 0 ? 0.0 : floor;
+  }
+
+  /// Minimum allowed base-unit price for the exact pricing context represented
+  /// by a cart line.
+  double? minimumSalePriceForCartItem(LocalCartItem item) {
+    return minimumSalePriceForProduct(
+      item.product,
+      quantity: item.quantity,
+      selectedStock: item.selectedStock,
+      saleUnitId: item.saleUnitId,
+      variantId: item.variantId,
+      referencePrice: item.price,
+    );
   }
 
   void updateItemPrice(int productId, Stock? selectedStock, double newPrice,

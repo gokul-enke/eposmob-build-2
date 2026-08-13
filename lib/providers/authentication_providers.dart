@@ -121,7 +121,11 @@ class AuthenticationProvider {
 
 //                 *********************** LOGOUT API ***************************************************
 
-  Future<dynamic> logout(String accessToken, BuildContext context) async {
+  Future<dynamic> logout(
+    String accessToken,
+    BuildContext context, {
+    Duration timeout = const Duration(seconds: 8),
+  }) async {
     // debugPrint("logout");
 
     final url = Uri.parse(APPUrl.logoutUrl);
@@ -137,7 +141,7 @@ class AuthenticationProvider {
         'Authorization': 'Bearer $accessToken',
         'Content-Type': 'application/json',
         'X-Tenant': apiKey,
-      });
+      }).timeout(timeout);
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
         // debugPrint(json.decode(response.body).toString());

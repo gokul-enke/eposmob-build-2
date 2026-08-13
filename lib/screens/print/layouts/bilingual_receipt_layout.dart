@@ -2182,7 +2182,7 @@ class BilingualReceiptLayout implements ReceiptLayout {
 
     for (var i = 0; i < orderReturns.returnItems!.length; i++) {
       final returnItem = orderReturns.returnItems![i];
-      final int itemQty = returnItem.quantity ?? 0;
+      final num itemQty = returnItem.quantity ?? 0;
       final String productName = returnItem.productName ?? '';
       double itemMrp = 0.0, itemRate = 0.0;
       for (var cartItem in params.cartItems) {
@@ -2214,7 +2214,7 @@ class BilingualReceiptLayout implements ReceiptLayout {
       if (itemRate == 0.0) {
         final totalReturnAmount =
             double.tryParse(orderReturns.returnTotalAmount ?? '0') ?? 0.0;
-        int totalQty = 0;
+        num totalQty = 0;
         for (var ri in orderReturns.returnItems!) {
           totalQty += ri.quantity ?? 0;
         }
@@ -2335,7 +2335,7 @@ class BilingualReceiptLayout implements ReceiptLayout {
 
     double returnTotal = 0.0;
     for (final returnItem in orderReturns.returnItems!) {
-      final int itemQty = returnItem.quantity ?? 0;
+      final num itemQty = returnItem.quantity ?? 0;
       double itemRate = 0.0;
       for (var cartItem in params.cartItems) {
         String cartName = '';
@@ -2363,7 +2363,7 @@ class BilingualReceiptLayout implements ReceiptLayout {
       if (itemRate == 0.0) {
         final totalReturnAmount =
             double.tryParse(orderReturns.returnTotalAmount ?? '0') ?? 0.0;
-        int totalQty = 0;
+        num totalQty = 0;
         for (var ri in orderReturns.returnItems!) {
           totalQty += ri.quantity ?? 0;
         }

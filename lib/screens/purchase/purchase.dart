@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
+import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/models/get_suppliers.dart';
 import 'package:provider/provider.dart';
@@ -175,6 +176,14 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
   // Build UI
   @override
   Widget build(BuildContext context) {
+    if (!canViewPurchasePrice(context)) {
+      return const SafeArea(
+        child: Center(
+          child: Text('Purchase permission is required to view purchases.'),
+        ),
+      );
+    }
+
     debugPrint("PurchaseScreen build method called");
     Size size = MediaQuery.of(context).size;
     PurchaseProvider? purchaseProvider;

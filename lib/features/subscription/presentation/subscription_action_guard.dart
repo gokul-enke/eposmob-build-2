@@ -73,8 +73,6 @@ class SubscriptionActionGuard {
         companyName: branding.companyName,
         logoFilePath: branding.logoFilePath,
         logoUrl: branding.logoUrl,
-        secondaryLabel: 'Cancel',
-        onSecondaryPressed: () => Navigator.of(dialogContext).pop(false),
         primaryLabel: 'Continue',
         onPrimaryPressed: () => Navigator.of(dialogContext).pop(true),
       ),
@@ -99,8 +97,6 @@ class SubscriptionActionGuard {
         companyName: branding.companyName,
         logoFilePath: branding.logoFilePath,
         logoUrl: branding.logoUrl,
-        secondaryLabel: 'Close',
-        onSecondaryPressed: () => Navigator.of(dialogContext).pop(),
         primaryLabel: subscription.manageSubscriptionUrl != null
             ? 'Manage Subscription'
             : 'Contact Administrator',
@@ -134,8 +130,6 @@ class SubscriptionActionGuard {
         companyName: branding.companyName,
         logoFilePath: branding.logoFilePath,
         logoUrl: branding.logoUrl,
-        secondaryLabel: 'Cancel',
-        onSecondaryPressed: () => Navigator.of(dialogContext).pop(false),
         primaryLabel: 'Retry',
         onPrimaryPressed: () => Navigator.of(dialogContext).pop(true),
       ),

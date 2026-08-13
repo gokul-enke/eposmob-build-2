@@ -107,8 +107,8 @@ class _PriceTextFieldState extends State<PriceTextField> {
     final parsedPrice = double.tryParse(controller.text);
     if (parsedPrice == null) return false;
 
-    final double? minBase = widget.localProductProvider
-        .minimumSalePriceForProduct(widget.item.product);
+    final double? minBase =
+        widget.localProductProvider.minimumSalePriceForCartItem(widget.item);
     if (minBase == null) return false;
 
     final enteredBase = _toBasePrice(parsedPrice);
