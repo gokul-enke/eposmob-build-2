@@ -351,7 +351,7 @@ class ReturnsSectionBuilder {
         final totalReturnAmount =
             double.tryParse(orderReturns.returnTotalAmount ?? '0.00') ?? 0.0;
 
-        int totalQuantity = 0;
+        num totalQuantity = 0;
         for (var item in orderReturns.returnItems!) {
           totalQuantity += item.quantity ?? 0;
         }

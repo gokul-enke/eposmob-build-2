@@ -23,6 +23,7 @@ import 'package:pos_machine/models/get_stock_report_model.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_border.dart';
+import 'package:pos_machine/helpers/purchase_price_permission.dart';
 
 class StockReportScreen extends StatefulWidget {
   const StockReportScreen({super.key});
@@ -37,6 +38,9 @@ class _StockReportScreenState extends State<StockReportScreen> {
   bool _showFilters = true;
 
   bool _isMobile(BuildContext ctx) => MediaQuery.of(ctx).size.width < 768;
+
+  bool _canViewPurchasePrice({bool listen = false}) =>
+      canViewPurchasePrice(context, listen: listen);
 
   // Filter variables
   int? selectedStoreId;
@@ -114,8 +118,9 @@ class _StockReportScreenState extends State<StockReportScreen> {
         categoryId: selectedCategoryId,
         stockLevel: stockLevelParam,
         expiringWithin: expiringParam,
-        snapshotDate:
-            selectedSnapshotDate != null ? df.format(selectedSnapshotDate!) : null,
+        snapshotDate: selectedSnapshotDate != null
+            ? df.format(selectedSnapshotDate!)
+            : null,
         from: selectedFromDate != null ? df.format(selectedFromDate!) : null,
         until: selectedUntilDate != null ? df.format(selectedUntilDate!) : null,
         page: page ?? _currentPage,
@@ -259,12 +264,17 @@ class _StockReportScreenState extends State<StockReportScreen> {
 
   Widget _buildSummaryBlock(ReportsProvider provider) {
     final summary = provider.stockReport?.summary;
+    final canShowPurchaseCosts = _canViewPurchasePrice();
     final totalUnits = summary?.totalUnits?.toString() ?? '0';
     final totalStockValue = summary?.totalStockValue != null
-        ? double.tryParse(summary!.totalStockValue.toString())?.toStringAsFixed(2) ?? '0.00'
+        ? double.tryParse(summary!.totalStockValue.toString())
+                ?.toStringAsFixed(2) ??
+            '0.00'
         : '0.00';
     final totalRetailValue = summary?.totalRetailValue != null
-        ? double.tryParse(summary!.totalRetailValue.toString())?.toStringAsFixed(2) ?? '0.00'
+        ? double.tryParse(summary!.totalRetailValue.toString())
+                ?.toStringAsFixed(2) ??
+            '0.00'
         : '0.00';
 
     return Container(
@@ -281,11 +291,17 @@ class _StockReportScreenState extends State<StockReportScreen> {
             direction: isNarrow ? Axis.vertical : Axis.horizontal,
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildSummaryItem("Total Stocked Units", totalUnits, Icons.inventory_2_outlined),
-              if (isNarrow) const Divider(height: 16),
-              _buildSummaryItem("Total Stock Value (Cost)", "$totalStockValue", Icons.monetization_on_outlined),
-              if (isNarrow) const Divider(height: 16),
-              _buildSummaryItem("Total Retail Value (Sale)", "$totalRetailValue", Icons.shopping_bag_outlined),
+              _buildSummaryItem("Total Stocked Units", totalUnits,
+                  Icons.inventory_2_outlined),
+              if (canShowPurchaseCosts && isNarrow)
+                const Divider(height: 16),
+              if (canShowPurchaseCosts)
+                _buildSummaryItem("Total Stock Value (Cost)",
+                    "$totalStockValue", Icons.monetization_on_outlined),
+              if (canShowPurchaseCosts && isNarrow)
+                const Divider(height: 16),
+              _buildSummaryItem("Total Retail Value (Sale)",
+                  "$totalRetailValue", Icons.shopping_bag_outlined),
             ],
           );
         },
@@ -670,14 +686,15 @@ class _StockReportScreenState extends State<StockReportScreen> {
     );
   }
 
-
-
   Widget _buildMobileStockCard(int index, StockReportData item) {
+    final canShowPurchasePrice = _canViewPurchasePrice();
     final stockVal = item.stockValue != null
-        ? double.tryParse(item.stockValue.toString())?.toStringAsFixed(2) ?? '0.00'
+        ? double.tryParse(item.stockValue.toString())?.toStringAsFixed(2) ??
+            '0.00'
         : '0.00';
     final retailVal = item.retailValue != null
-        ? double.tryParse(item.retailValue.toString())?.toStringAsFixed(2) ?? '0.00'
+        ? double.tryParse(item.retailValue.toString())?.toStringAsFixed(2) ??
+            '0.00'
         : '0.00';
 
     final expDate = item.expiryDate != null && item.expiryDate!.isNotEmpty
@@ -685,13 +702,15 @@ class _StockReportScreenState extends State<StockReportScreen> {
         : '-';
 
     final retailPriceVal = item.retailPrice != null
-        ? double.tryParse(item.retailPrice.toString())?.toStringAsFixed(2) ?? '0.00'
+        ? double.tryParse(item.retailPrice.toString())?.toStringAsFixed(2) ??
+            '0.00'
         : '0.00';
     final mrpVal = item.mrp != null
         ? double.tryParse(item.mrp.toString())?.toStringAsFixed(2) ?? '0.00'
         : '0.00';
     final purchasePriceVal = item.purchasePrice != null
-        ? double.tryParse(item.purchasePrice.toString())?.toStringAsFixed(2) ?? '0.00'
+        ? double.tryParse(item.purchasePrice.toString())?.toStringAsFixed(2) ??
+            '0.00'
         : '0.00';
 
     return Card(
@@ -726,8 +745,8 @@ class _StockReportScreenState extends State<StockReportScreen> {
                 ),
                 Text(
                   item.barcode ?? '-',
-                  style: buildCustomStyle(
-                      FontWeightManager.medium, FontSize.s11, 0.16, Colors.grey),
+                  style: buildCustomStyle(FontWeightManager.medium,
+                      FontSize.s11, 0.16, Colors.grey),
                 ),
               ],
             ),
@@ -753,8 +772,8 @@ class _StockReportScreenState extends State<StockReportScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                _buildMobileCardStat(
-                    'Stock', "${item.totalQuantity ?? 0} ${item.unit ?? 'PCS'}"),
+                _buildMobileCardStat('Stock',
+                    "${item.totalQuantity ?? 0} ${item.unit ?? 'PCS'}"),
                 _buildMobileCardStat('Expiry', expDate),
               ],
             ),
@@ -765,13 +784,15 @@ class _StockReportScreenState extends State<StockReportScreen> {
                 _buildMobileCardStat('MRP', mrpVal),
               ],
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                _buildMobileCardStat('Purchase Price', purchasePriceVal),
-                _buildMobileCardStat('Stock Value', stockVal),
-              ],
-            ),
+            if (canShowPurchasePrice) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  _buildMobileCardStat('Purchase Price', purchasePriceVal),
+                  _buildMobileCardStat('Stock Value', stockVal),
+                ],
+              ),
+            ],
             const SizedBox(height: 8),
             Row(
               children: [
@@ -817,6 +838,7 @@ class _StockReportScreenState extends State<StockReportScreen> {
   }
 
   Widget _buildReportTable(ReportsProvider reportsProvider) {
+    final canShowPurchasePrice = _canViewPurchasePrice(listen: true);
     if (initLoading) {
       if (_isMobile(context)) {
         return const Center(
@@ -852,9 +874,8 @@ class _StockReportScreenState extends State<StockReportScreen> {
         color: Colors.white,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final tableWidth = constraints.maxWidth > 1200
-                ? constraints.maxWidth
-                : 1200.0;
+            final tableWidth =
+                constraints.maxWidth > 1200 ? constraints.maxWidth : 1200.0;
             return Scrollbar(
               thumbVisibility: true,
               trackVisibility: true,
@@ -879,21 +900,10 @@ class _StockReportScreenState extends State<StockReportScreen> {
                           ],
                         ),
                         child: Table(
-                          columnWidths: const {
-                            0: FlexColumnWidth(0.4), // No
-                            1: FlexColumnWidth(1.8), // Product Name
-                            2: FlexColumnWidth(1.2), // Category
-                            3: FlexColumnWidth(1.1), // Stores Count
-                            4: FlexColumnWidth(1.1), // Barcode
-                            5: FlexColumnWidth(1.0), // Retail Price
-                            6: FlexColumnWidth(1.0), // MRP
-                            7: FlexColumnWidth(1.0), // Purchase Price
-                            8: FlexColumnWidth(1.0), // Current Stock
-                            9: FlexColumnWidth(1.0), // Stock Value
-                            10: FlexColumnWidth(1.0), // Retail Value
-                            11: FlexColumnWidth(1.0), // Expiry Date
-                          },
-                          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                          columnWidths:
+                              _reportColumnWidths(canShowPurchasePrice),
+                          defaultVerticalAlignment:
+                              TableCellVerticalAlignment.middle,
                           children: [
                             TableRow(
                               children: [
@@ -904,9 +914,11 @@ class _StockReportScreenState extends State<StockReportScreen> {
                                 _buildTableHeaderCell("Barcode"),
                                 _buildTableHeaderCell("Retail\nPrice"),
                                 _buildTableHeaderCell("MRP"),
-                                _buildTableHeaderCell("Purchase\nPrice"),
+                                if (canShowPurchasePrice)
+                                  _buildTableHeaderCell("Purchase\nPrice"),
                                 _buildTableHeaderCell("Current\nStock"),
-                                _buildTableHeaderCell("Stock\nValue"),
+                                if (canShowPurchasePrice)
+                                  _buildTableHeaderCell("Stock\nValue"),
                                 _buildTableHeaderCell("Retail\nValue"),
                                 _buildTableHeaderCell("Expiry\nDate"),
                               ],
@@ -920,7 +932,8 @@ class _StockReportScreenState extends State<StockReportScreen> {
                                 reportsProvider.stockReport!.data.isEmpty
                             ? _buildNoDataFoundUI()
                             : ScrollConfiguration(
-                                behavior: ScrollConfiguration.of(context).copyWith(
+                                behavior:
+                                    ScrollConfiguration.of(context).copyWith(
                                   dragDevices: {
                                     PointerDeviceKind.mouse,
                                     PointerDeviceKind.touch,
@@ -931,27 +944,17 @@ class _StockReportScreenState extends State<StockReportScreen> {
                                 child: SingleChildScrollView(
                                   physics: const BouncingScrollPhysics(),
                                   child: Table(
-                                    columnWidths: const {
-                                      0: FlexColumnWidth(0.4),
-                                      1: FlexColumnWidth(1.8),
-                                      2: FlexColumnWidth(1.2),
-                                      3: FlexColumnWidth(1.1),
-                                      4: FlexColumnWidth(1.1),
-                                      5: FlexColumnWidth(1.0),
-                                      6: FlexColumnWidth(1.0),
-                                      7: FlexColumnWidth(1.0),
-                                      8: FlexColumnWidth(1.0),
-                                      9: FlexColumnWidth(1.0),
-                                      10: FlexColumnWidth(1.0),
-                                      11: FlexColumnWidth(1.0),
-                                    },
+                                    columnWidths: _reportColumnWidths(
+                                        canShowPurchasePrice),
                                     defaultVerticalAlignment:
                                         TableCellVerticalAlignment.middle,
                                     children: reportsProvider.stockReport!.data
                                         .asMap()
                                         .entries
                                         .map((entry) => _buildDataRow(
-                                            entry.key, entry.value, context))
+                                            entry.key, entry.value, context,
+                                            showPurchasePrice:
+                                                canShowPurchasePrice))
                                         .toList(),
                                   ),
                                 ),
@@ -966,6 +969,23 @@ class _StockReportScreenState extends State<StockReportScreen> {
         ),
       ),
     );
+  }
+
+  Map<int, TableColumnWidth> _reportColumnWidths(bool showPurchasePrice) {
+    return {
+      0: const FlexColumnWidth(0.4),
+      1: const FlexColumnWidth(1.8),
+      2: const FlexColumnWidth(1.2),
+      3: const FlexColumnWidth(1.1),
+      4: const FlexColumnWidth(1.1),
+      5: const FlexColumnWidth(1.0),
+      6: const FlexColumnWidth(1.0),
+      if (showPurchasePrice) 7: const FlexColumnWidth(1.0),
+      showPurchasePrice ? 8 : 7: const FlexColumnWidth(1.0),
+      if (showPurchasePrice) 9: const FlexColumnWidth(1.0),
+      showPurchasePrice ? 10 : 8: const FlexColumnWidth(1.0),
+      showPurchasePrice ? 11 : 9: const FlexColumnWidth(1.0),
+    };
   }
 
   Widget _buildTableHeaderCell(String title) {
@@ -984,13 +1004,15 @@ class _StockReportScreenState extends State<StockReportScreen> {
     );
   }
 
-  TableRow _buildDataRow(
-      int index, StockReportData item, BuildContext context) {
+  TableRow _buildDataRow(int index, StockReportData item, BuildContext context,
+      {required bool showPurchasePrice}) {
     final stockVal = item.stockValue != null
-        ? double.tryParse(item.stockValue.toString())?.toStringAsFixed(2) ?? '0.00'
+        ? double.tryParse(item.stockValue.toString())?.toStringAsFixed(2) ??
+            '0.00'
         : '0.00';
     final retailVal = item.retailValue != null
-        ? double.tryParse(item.retailValue.toString())?.toStringAsFixed(2) ?? '0.00'
+        ? double.tryParse(item.retailValue.toString())?.toStringAsFixed(2) ??
+            '0.00'
         : '0.00';
 
     final expDate = item.expiryDate != null && item.expiryDate!.isNotEmpty
@@ -998,13 +1020,15 @@ class _StockReportScreenState extends State<StockReportScreen> {
         : '-';
 
     final retailPriceVal = item.retailPrice != null
-        ? double.tryParse(item.retailPrice.toString())?.toStringAsFixed(2) ?? '0.00'
+        ? double.tryParse(item.retailPrice.toString())?.toStringAsFixed(2) ??
+            '0.00'
         : '0.00';
     final mrpVal = item.mrp != null
         ? double.tryParse(item.mrp.toString())?.toStringAsFixed(2) ?? '0.00'
         : '0.00';
     final purchasePriceVal = item.purchasePrice != null
-        ? double.tryParse(item.purchasePrice.toString())?.toStringAsFixed(2) ?? '0.00'
+        ? double.tryParse(item.purchasePrice.toString())?.toStringAsFixed(2) ??
+            '0.00'
         : '0.00';
 
     return TableRow(
@@ -1110,9 +1134,9 @@ class _StockReportScreenState extends State<StockReportScreen> {
         ),
         _buildTableCell(retailPriceVal),
         _buildTableCell(mrpVal),
-        _buildTableCell(purchasePriceVal),
+        if (showPurchasePrice) _buildTableCell(purchasePriceVal),
         _buildTableCell("${item.totalQuantity ?? 0} ${item.unit ?? 'PCS'}"),
-        _buildTableCell(stockVal),
+        if (showPurchasePrice) _buildTableCell(stockVal),
         _buildTableCell(retailVal),
         _buildTableCell(expDate),
       ],

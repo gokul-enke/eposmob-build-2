@@ -94,8 +94,22 @@ class PurchaseOrderItemData {
   String? quantity;
   String? unitPrice;
   String? totalPrice;
+  String? calculatedPurchaseRate;
+  bool? taxInclude;
+  bool? taxIncludePurchase;
+  String? retailPrice;
+  String? wholesalePrice;
+  String? mrp;
+  String? rack;
+  String? wholesaleMinUnit;
+  String? pkgMfg;
   String? expiryDate;
   String? batchNumber;
+  int? purchaseUnitId;
+  String? purchaseUnitType;
+  String? purchaseUnitConversionRate;
+  String? purchaseQty;
+  List<Map<String, dynamic>> unitPrices = const [];
   String? status;
   String? unit;
 
@@ -111,32 +125,103 @@ class PurchaseOrderItemData {
     this.quantity,
     this.unitPrice,
     this.totalPrice,
+    this.calculatedPurchaseRate,
+    this.taxInclude,
+    this.taxIncludePurchase,
+    this.retailPrice,
+    this.wholesalePrice,
+    this.mrp,
+    this.rack,
+    this.wholesaleMinUnit,
+    this.pkgMfg,
     this.expiryDate,
     this.batchNumber,
+    this.purchaseUnitId,
+    this.purchaseUnitType,
+    this.purchaseUnitConversionRate,
+    this.purchaseQty,
+    this.unitPrices = const [],
     this.status,
     this.unit,
   });
 
   PurchaseOrderItemData.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    categoryId = json['category_id'];
-    productId = json['product_id'];
+    id = _parseInt(json['id']);
+    categoryId = _parseInt(json['category_id']);
+    productId = _parseInt(json['product_id']);
     productName = json['product_name'];
-    productVariantId = json['product_variant_id'] is int
-        ? json['product_variant_id'] as int
-        : json['product_variant_id'] != null
-            ? int.tryParse(json['product_variant_id'].toString())
-            : null;
+    productVariantId = _parseInt(json['product_variant_id']);
     variantName = json['variant_name']?.toString();
-    storeId = json['store_id'];
-    supplierId = json['supplier_id'];
+    storeId = _parseInt(json['store_id']);
+    supplierId = _parseInt(json['supplier_id']);
     quantity = json['quantity']?.toString();
     unitPrice = json['unit_price']?.toString();
     totalPrice = json['total_price']?.toString();
+    calculatedPurchaseRate = json['calculated_purchase_rate']?.toString();
+    taxInclude = _parseBool(json['tax_include']);
+    taxIncludePurchase = _parseBool(
+      json['tax_include_purchase'],
+      fallback: taxInclude,
+    );
+    retailPrice = json['retail_price']?.toString();
+    wholesalePrice = json['wholesale_price']?.toString();
+    mrp = json['mrp']?.toString();
+    rack = json['rack']?.toString();
+    wholesaleMinUnit = json['wholesale_min_unit']?.toString();
+    pkgMfg = json['pkg_mfg']?.toString();
     expiryDate = json['expiry_date']?.toString();
     batchNumber = json['batch_number']?.toString();
+    purchaseUnitId = _parseInt(json['purchase_unit_id']);
+    purchaseUnitType = json['purchase_unit_type']?.toString();
+    purchaseUnitConversionRate =
+        json['purchase_unit_conversion_rate']?.toString();
+    purchaseQty = json['purchase_qty']?.toString();
+    unitPrices = _parseUnitPrices(json['unit_prices']);
     status = json['status'];
     unit = json['unit']?.toString();
+  }
+
+  static bool? _parseBool(dynamic value, {bool? fallback}) {
+    if (value == null) return fallback;
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+
+    switch (value.toString().trim().toLowerCase()) {
+      case 'true':
+      case '1':
+      case 'yes':
+      case 'y':
+        return true;
+      case 'false':
+      case '0':
+      case 'no':
+      case 'n':
+        return false;
+      default:
+        return fallback;
+    }
+  }
+
+  static int? _parseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString());
+  }
+
+  static List<Map<String, dynamic>> _parseUnitPrices(dynamic value) {
+    if (value is! List) return const [];
+    return value
+        .whereType<Map>()
+        .map((entry) => Map<String, dynamic>.from(entry))
+        .where((entry) =>
+            _parseInt(entry['sale_unit_id']) != null &&
+            double.tryParse(entry['price']?.toString() ?? '') != null)
+        .map((entry) => {
+              'sale_unit_id': _parseInt(entry['sale_unit_id']),
+              'price': double.parse(entry['price'].toString()),
+            })
+        .toList();
   }
 }
 

@@ -18,7 +18,7 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
-import 'package:pos_machine/providers/role_provider.dart';
+import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/widgets/edit_stock_dialog.dart';
 import 'package:provider/provider.dart';
 
@@ -59,8 +59,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
       false;
 
   bool _canViewPurchasePrice({bool listen = false}) =>
-      Provider.of<RoleProvider>(context, listen: listen)
-          .currentUserHasPermissionSync('menu.purchase.orders.access');
+      canViewPurchasePrice(context, listen: listen);
   ListStockModelData? selectedStock;
   bool initLoading = false;
   bool isInitialized = false;

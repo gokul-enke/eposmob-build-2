@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/features/realtime_sync/domain/realtime_sync_models.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -37,24 +38,41 @@ class RealtimeEntityApi {
       };
 
   Future<RealtimeCatalogSnapshot> fetchCatalog(
-    RealtimeSyncSession session,
-  ) async {
+    RealtimeSyncSession session, {
+    String? updatedFrom,
+    String? updatedTo,
+    bool allowFullFallback = true,
+  }) async {
     final products = <GetProduct>[];
     final deleted = <int>{};
     var page = 1;
 
     while (true) {
+      final queryParameters = <String, String>{
+        'store_id': session.storeId.toString(),
+        'page': page.toString(),
+        'per_page': pageSize.toString(),
+      };
+      _addUpdatedAtRange(
+        queryParameters,
+        updatedFrom: updatedFrom,
+        updatedTo: updatedTo,
+      );
       final uri = Uri.parse(
         '${APPUrl.normalizeBaseUrl(session.backendBaseUrl)}'
         '/api/v1/product/executive/list-products',
       ).replace(
-        queryParameters: {
-          'store_id': session.storeId.toString(),
-          'page': page.toString(),
-          'per_page': pageSize.toString(),
-        },
+        queryParameters: queryParameters,
       );
-      final json = await _getObject(uri, session);
+      Map<String, dynamic> json;
+      try {
+        json = await _getObject(uri, session);
+      } on _DeltaRangeUnsupported {
+        if (updatedFrom != null && allowFullFallback) {
+          return fetchCatalog(session, allowFullFallback: false);
+        }
+        rethrow;
+      }
       final model = GetProductModel.fromJson(json);
       products.addAll(model.product ?? const <GetProduct>[]);
       deleted.addAll(model.deletedProductIds ?? const <int>[]);
@@ -73,39 +91,72 @@ class RealtimeEntityApi {
   }
 
   Future<List<CustomerListModelData>> fetchCustomers(
-    RealtimeSyncSession session,
-  ) async {
+    RealtimeSyncSession session, {
+    String? updatedFrom,
+    String? updatedTo,
+    bool allowFullFallback = true,
+  }) async {
+    final queryParameters = <String, String>{
+      'store_id': session.storeId.toString(),
+      'page': '1',
+      'per_page': pageSize.toString(),
+    };
+    _addUpdatedAtRange(
+      queryParameters,
+      updatedFrom: updatedFrom,
+      updatedTo: updatedTo,
+    );
     final uri = Uri.parse(
       '${APPUrl.normalizeBaseUrl(session.backendBaseUrl)}'
       '/api/v1/customer/customer-searchbar',
     ).replace(
-      queryParameters: {
-        'store_id': session.storeId.toString(),
-        'page': '1',
-        'per_page': pageSize.toString(),
-      },
+      queryParameters: queryParameters,
     );
-    return CustomerListModel.fromJson(await _getObject(uri, session)).data ??
-        const <CustomerListModelData>[];
+    try {
+      return CustomerListModel.fromJson(await _getObject(uri, session)).data ??
+          const <CustomerListModelData>[];
+    } on _DeltaRangeUnsupported {
+      if (updatedFrom != null && allowFullFallback) {
+        return fetchCustomers(session, allowFullFallback: false);
+      }
+      rethrow;
+    }
   }
 
   Future<List<ListStockModelData>> fetchStocks(
-    RealtimeSyncSession session,
-  ) async {
+    RealtimeSyncSession session, {
+    String? updatedFrom,
+    String? updatedTo,
+    bool allowFullFallback = true,
+  }) async {
     final stocks = <ListStockModelData>[];
     var page = 1;
     while (true) {
+      final queryParameters = <String, String>{
+        'store_id': session.storeId.toString(),
+        'page': page.toString(),
+        'per_page': pageSize.toString(),
+      };
+      _addUpdatedAtRange(
+        queryParameters,
+        updatedFrom: updatedFrom,
+        updatedTo: updatedTo,
+      );
       final uri = Uri.parse(
         '${APPUrl.normalizeBaseUrl(session.backendBaseUrl)}'
         '/api/v1/product/list-stocks',
       ).replace(
-        queryParameters: {
-          'store_id': session.storeId.toString(),
-          'page': page.toString(),
-          'per_page': pageSize.toString(),
-        },
+        queryParameters: queryParameters,
       );
-      final model = ListStockModel.fromJson(await _getObject(uri, session));
+      ListStockModel model;
+      try {
+        model = ListStockModel.fromJson(await _getObject(uri, session));
+      } on _DeltaRangeUnsupported {
+        if (updatedFrom != null && allowFullFallback) {
+          return fetchStocks(session, allowFullFallback: false);
+        }
+        rethrow;
+      }
       stocks.addAll(model.data ?? const <ListStockModelData>[]);
       if (model.pagination == null) break;
       final pagination = model.pagination!;
@@ -130,6 +181,11 @@ class RealtimeEntityApi {
         terminal: true,
       );
     }
+    if (response.statusCode == 400 || response.statusCode == 422) {
+      throw _DeltaRangeUnsupported(
+        'Entity endpoint rejected updated_at_range (${response.statusCode}).',
+      );
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw RealtimeSyncException(
         'Entity refresh failed (${response.statusCode}) for ${uri.path}.',
@@ -145,4 +201,23 @@ class RealtimeEntityApi {
   void close() {
     if (_ownsClient) _client.close();
   }
+
+  void _addUpdatedAtRange(
+    Map<String, String> queryParameters, {
+    required String? updatedFrom,
+    required String? updatedTo,
+  }) {
+    if (updatedFrom == null || updatedTo == null) return;
+    if (DateTime.tryParse(updatedFrom) == null ||
+        DateTime.tryParse(updatedTo) == null) {
+      return;
+    }
+    final normalizedFrom = DateHelper.normalizeToApiDateTime(updatedFrom);
+    final normalizedTo = DateHelper.normalizeToApiDateTime(updatedTo);
+    queryParameters['updated_at_range'] = '$normalizedFrom,$normalizedTo';
+  }
+}
+
+class _DeltaRangeUnsupported extends RealtimeSyncException {
+  const _DeltaRangeUnsupported(super.message);
 }

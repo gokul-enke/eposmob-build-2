@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -11,6 +12,7 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/helpers/product_search_helper.dart';
 import '../../../../components/build_container_box.dart';
 import '../../../../components/build_dialog_box.dart';
 import '../../../../components/build_round_button.dart';
@@ -496,83 +498,6 @@ class MenuPanelState extends State<MenuPanel> {
     });
   }
 
-  List<GetProduct> _rankSearchMatches(
-    List<GetProduct> products,
-    String query,
-  ) {
-    if (query.isEmpty) return products;
-
-    final normalizedQuery = query.trim().toLowerCase();
-    final indexedProducts = products.indexed.toList();
-
-    int matchRank(GetProduct product) {
-      final productNames = _productSearchNames(product)
-          .map((name) => name.trim().toLowerCase())
-          .where((name) => name.isNotEmpty);
-      if (productNames.any((name) => name.startsWith(normalizedQuery))) {
-        return 0;
-      }
-      return 1;
-    }
-
-    indexedProducts.sort((first, second) {
-      final rankCompare = matchRank(first.$2).compareTo(matchRank(second.$2));
-      if (rankCompare != 0) return rankCompare;
-      return first.$1.compareTo(second.$1);
-    });
-
-    return indexedProducts.map((entry) => entry.$2).toList();
-  }
-
-  List<String> _productSearchNames(GetProduct product) {
-    final names = <String>[];
-
-    void addName(dynamic value) {
-      if (value == null) return;
-      final text = value.toString().trim();
-      if (text.isNotEmpty) {
-        names.add(text);
-      }
-    }
-
-    void extractNames(dynamic value) {
-      if (value == null) return;
-
-      if (value is String || value is num || value is bool) {
-        addName(value);
-        return;
-      }
-
-      if (value is Map) {
-        for (final key in const ['name', 'product_name', 'value', 'text']) {
-          if (value.containsKey(key)) {
-            addName(value[key]);
-          }
-        }
-
-        for (final entry in value.entries) {
-          final entryKey = entry.key?.toString().toLowerCase() ?? '';
-          if (entryKey.contains('language') || entryKey == 'id') {
-            continue;
-          }
-          extractNames(entry.value);
-        }
-        return;
-      }
-
-      if (value is Iterable) {
-        for (final item in value) {
-          extractNames(item);
-        }
-      }
-    }
-
-    addName(product.productName);
-    extractNames(product.names);
-
-    return names.toSet().toList();
-  }
-
   void _clearSearch() {
     setState(() {
       _searchQuery = '';
@@ -865,7 +790,8 @@ class MenuPanelState extends State<MenuPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer3<CategoryProvider, LocalProductProvider, GridSelectionProvider>(
+    return Consumer3<CategoryProvider, LocalProductProvider,
+        GridSelectionProvider>(
       builder: (context, categoryProvider, productProvider, gridProvider, _) {
         final fontProvider =
             Provider.of<AppFontProvider>(context, listen: true);
@@ -881,9 +807,10 @@ class MenuPanelState extends State<MenuPanel> {
         final categories = categoryProvider.category ?? [];
         final selectedCategoryId = widget.activeCategoryId ?? 0;
         final isFavouritesSelected = selectedCategoryId == -1;
-        final bool isProductsLoading =
-            (isFavouritesSelected ? gridProvider.isLoading : productProvider.isLoading) ||
-                _isResyncingProducts;
+        final bool isProductsLoading = (isFavouritesSelected
+                ? gridProvider.isLoading
+                : productProvider.isLoading) ||
+            _isResyncingProducts;
 
         // Get products for selected category - only show sellable products in billing
         List<GetProduct> items = [];
@@ -901,41 +828,7 @@ class MenuPanelState extends State<MenuPanel> {
 
         // Apply search filter
         if (_searchQuery.isNotEmpty) {
-          final appSettingsProvider =
-              Provider.of<AppSettingsProvider>(context, listen: true);
-          final itemCodeEnabled =
-              appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
-          items = items.where((product) {
-            final nameMatch = _productSearchNames(product)
-                .any((name) => name.toLowerCase().contains(_searchQuery));
-            if (nameMatch) return true;
-
-            // Check SKU (always on)
-            final sku = product.sku ?? '';
-            if (sku.isNotEmpty &&
-                sku.toLowerCase().contains(_searchQuery)) {
-              return true;
-            }
-
-            //  only active variants' SKUs surface a product in search.
-            final variantSkuMatch = product.variants?.any((variant) {
-              if (!variant.active) return false;
-              final varSku = variant.sku ?? '';
-              return varSku.isNotEmpty &&
-                  varSku.toLowerCase().contains(_searchQuery);
-            }) ?? false;
-            if (variantSkuMatch) return true;
-
-            if (itemCodeEnabled) {
-              final itemCode = product.itemCode ?? '';
-              if (itemCode.isNotEmpty &&
-                  itemCode.toLowerCase().contains(_searchQuery)) {
-                return true;
-              }
-            }
-            return false;
-          }).toList();
-          items = _rankSearchMatches(items, _searchQuery);
+          items = ProductSearchHelper.search(items, _searchQuery);
         }
 
         final int fontLevel = fontProvider.fontSizeLevel;
@@ -986,7 +879,9 @@ class MenuPanelState extends State<MenuPanel> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
-                        widget.storeMode ? Icons.shopping_bag_rounded : Icons.restaurant_menu,
+                        widget.storeMode
+                            ? Icons.shopping_bag_rounded
+                            : Icons.restaurant_menu,
                         color: const Color(0xFF059669),
                         size: widget.isCompact ? 14 : 16,
                       ),
@@ -1021,7 +916,7 @@ class MenuPanelState extends State<MenuPanel> {
                             onEditingComplete: focusMenuGrid,
                             onChanged: _onSearchChanged,
                             decoration: InputDecoration(
-                              hintText: 'Search items',
+                              hintText: 'restaurant.search_items'.tr,
                               hintStyle: buildCustomStyle(
                                 FontWeightManager.medium,
                                 FontSize.s13,
@@ -1120,9 +1015,9 @@ class MenuPanelState extends State<MenuPanel> {
                                 ? 0
                                 : (isFavourites ? -1 : category!.categoryId);
                             final categoryName = isAll
-                                ? 'All'
+                                ? 'restaurant.all_categories'.tr
                                 : (isFavourites
-                                    ? 'Fav'
+                                    ? 'restaurant.fav_categories'.tr
                                     : category!.categoryName ?? 'Unknown');
                             final active = isAll
                                 ? selectedCategoryId == 0
@@ -1149,7 +1044,8 @@ class MenuPanelState extends State<MenuPanel> {
                                         });
                                         if (isFavourites) {
                                           widget.onCategoryChanged(-1);
-                                          gridProvider.listQuickAccessProducts();
+                                          gridProvider
+                                              .listQuickAccessProducts();
                                         } else if (isAll) {
                                           widget.onCategoryChanged(0);
                                           productProvider.refreshProducts();
@@ -1230,8 +1126,7 @@ class MenuPanelState extends State<MenuPanel> {
                                               : Text(
                                                   categoryName,
                                                   style: buildCustomStyle(
-                                                    FontWeightManager
-                                                        .semiBold,
+                                                    FontWeightManager.semiBold,
                                                     widget.isCompact
                                                         ? FontSize.s12
                                                         : FontSize.s13,
@@ -1300,8 +1195,8 @@ class MenuPanelState extends State<MenuPanel> {
                                 const SizedBox(height: 16),
                                 Text(
                                   isFavouritesSelected
-                                      ? 'No favourites added yet'
-                                      : 'No items in this category',
+                                      ? 'restaurant.no_favourites'.tr
+                                      : 'restaurant.no_items_category'.tr,
                                   style: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s14,
@@ -1312,8 +1207,8 @@ class MenuPanelState extends State<MenuPanel> {
                                   const SizedBox(height: 12),
                                   CustomRoundButton(
                                     title: _isResyncingProducts
-                                        ? 'Resyncing...'
-                                        : 'Resync Products',
+                                        ? 'restaurant.resyncing'.tr
+                                        : 'restaurant.resync_products'.tr,
                                     fct: _isResyncingProducts
                                         ? () {}
                                         : _resyncProductsFromEmptyState,
@@ -1557,10 +1452,10 @@ class MenuPanelState extends State<MenuPanel> {
                                 children: [
                                   ..._buildFoodTypeTags(item, false),
                                   if (!_hasFoodType(item) && isAvailable)
-                                    _buildCompactTag('Available',
+                                    _buildCompactTag('restaurant.available'.tr,
                                         const Color(0xFF059669), false),
                                   if (!isAvailable)
-                                    _buildCompactTag('No Stock',
+                                    _buildCompactTag('restaurant.no_stock'.tr,
                                         const Color(0xFF6B7280), false),
                                 ],
                               ),
@@ -1706,7 +1601,7 @@ class MenuPanelState extends State<MenuPanel> {
                                     Border.all(color: const Color(0xFFCBD5E1)),
                               ),
                               child: Text(
-                                'No Stock',
+                                'restaurant.no_stock'.tr,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: buildCustomStyle(
@@ -1932,10 +1827,10 @@ class MenuPanelState extends State<MenuPanel> {
                                 // Show unit if no food type is available
                                 if ((extraDense || !_hasFoodType(item)) &&
                                     isAvailable)
-                                  _buildCompactTag('Available',
+                                  _buildCompactTag('restaurant.available'.tr,
                                       const Color(0xFF059669), true),
                                 if (!isAvailable)
-                                  _buildCompactTag('No Stock',
+                                  _buildCompactTag('restaurant.no_stock'.tr,
                                       const Color(0xFF6B7280), true),
                               ],
                             ),

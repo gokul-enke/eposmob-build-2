@@ -14,6 +14,7 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/features/products/domain/variant_form_payload.dart';
 import 'package:pos_machine/features/products/presentation/variant_editor_section.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -122,6 +123,9 @@ class _AddProductWithBarcodeModalState
   final VariantEditorController _variantController = VariantEditorController();
   bool _variantPropertiesRequested = false;
   bool _isLoadingVariantProperties = false;
+
+  bool _canViewPurchasePrice({bool listen = false}) =>
+      canViewPurchasePrice(context, listen: listen);
 
   @override
   void initState() {
@@ -1298,6 +1302,7 @@ class _AddProductWithBarcodeModalState
     List<Category>? categoryList = categoryProvider.category;
 
     final languageProvider = Provider.of<LanguageProvider>(context);
+    final canShowPurchasePrice = canViewPurchasePrice(context, listen: true);
     return Focus(
       autofocus: false,
       canRequestFocus: false,
@@ -1448,19 +1453,21 @@ class _AddProductWithBarcodeModalState
                       Expanded(
                         child: _buildUnitDropdown(size, unitList),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildTextField(
-                          "Purchase Price",
-                          _productPurchasePriceController,
-                          TextInputType.number,
-                          size,
-                          isRequired: true,
-                          inputFormatter: FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d*\.?\d{0,2}$')),
-                          focusNode: _purchasePriceFocusNode,
+                      if (canShowPurchasePrice) ...[
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildTextField(
+                            "Purchase Price",
+                            _productPurchasePriceController,
+                            TextInputType.number,
+                            size,
+                            isRequired: true,
+                            inputFormatter: FilteringTextInputFormatter.allow(
+                                RegExp(r'^\d*\.?\d{0,2}$')),
+                            focusNode: _purchasePriceFocusNode,
+                          ),
                         ),
-                      ),
+                      ],
                       const SizedBox(width: 8),
                       Expanded(
                         child: _buildTextField(
@@ -2213,6 +2220,7 @@ class _AddProductWithBarcodeModalState
             controller: _variantController,
             properties: productProvider.productProperties,
             isLoadingProperties: _isLoadingVariantProperties,
+            showPurchasePrice: _canViewPurchasePrice(),
             onRetryLoadProperties: _retryFetchVariantProperties,
             onGenerateBarcode: (target, setLoading) =>
                 _generateBarcodeIntoController(
@@ -2875,7 +2883,9 @@ class _AddProductWithBarcodeModalState
           quantity: _productQuantityController.text,
           barcode: _productBarcodeController.text,
           accessToken: accessToken ?? "",
-          purchasePrice: _productPurchasePriceController.text,
+          purchasePrice: _canViewPurchasePrice()
+              ? _productPurchasePriceController.text
+              : '0',
           productNames: productNames.isNotEmpty ? productNames : null,
           saleUnits: saleUnits.isNotEmpty ? saleUnits : null,
           variants: variants.isNotEmpty ? variants : null,

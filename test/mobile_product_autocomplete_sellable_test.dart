@@ -75,7 +75,8 @@ void main() {
   late Directory hiveDir;
 
   setUpAll(() async {
-    hiveDir = await Directory.systemTemp.createTemp('epos_autocomplete_sellable_');
+    hiveDir =
+        await Directory.systemTemp.createTemp('epos_autocomplete_sellable_');
     Hive.init(hiveDir.path);
     if (!Hive.isAdapterRegistered(0)) {
       Hive.registerAdapter(HiveStringValueAdapter());
@@ -106,7 +107,8 @@ void main() {
   tearDownAll(() => closeHiveAndDeleteTestDir(hiveDir));
 
   group('MobileProductAutocomplete sellable parity', () {
-    test('LocalProductProvider.sellableProducts excludes non-sellable catalog rows',
+    test(
+        'LocalProductProvider.sellableProducts excludes non-sellable catalog rows',
         () {
       final provider = LocalProductProvider();
       provider.addProduct(_namedProduct(id: 1, name: 'Retail Item'));
@@ -122,7 +124,8 @@ void main() {
       );
     });
 
-    testWidgets('suggestions come only from productList (sellable), not all products',
+    testWidgets(
+        'suggestions come only from productList (sellable), not all products',
         (tester) async {
       final sellable = _namedProduct(id: 1, name: 'Sellable Tea');
       final nonSellable =
@@ -231,7 +234,7 @@ void main() {
       expect(result.map((p) => p.productId), [1]);
     });
 
-    test('ignores item code when itemCodeEnabled is false', () {
+    test('still matches item code when its display setting is false', () {
       final products = [
         GetProduct(
           productId: 1,
@@ -249,7 +252,7 @@ void main() {
         itemCodeEnabled: false,
       );
 
-      expect(result, isEmpty);
+      expect(result.map((product) => product.productId), [1]);
     });
   });
 }

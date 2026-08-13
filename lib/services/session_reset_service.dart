@@ -73,7 +73,14 @@ class SessionResetService {
   ];
 
   static Future<void> resetAfterLogout(BuildContext context) async {
-    await context.read<RealtimeSyncProvider>().stop();
+    try {
+      await context
+          .read<RealtimeSyncProvider>()
+          .stop()
+          .timeout(const Duration(seconds: 2));
+    } catch (error) {
+      debugPrint('Realtime shutdown deferred during logout: $error');
+    }
     final prefs = await SharedPreferences.getInstance();
     for (final key in _authScopedKeys) {
       await prefs.remove(key);

@@ -639,7 +639,7 @@ class SalesProvider with ChangeNotifier {
     }
   }
 
-  Future<void> submitSalesReturn({
+  Future<int> submitSalesReturn({
     required String accessToken,
     required int orderId,
     required double price,
@@ -648,6 +648,18 @@ class SalesProvider with ChangeNotifier {
     required String reason,
     bool isDeliveryRefundable = false,
   }) async {
+    if (orderId <= 0) {
+      throw Exception(
+        'Cannot submit this return because the sales order ID is missing.',
+      );
+    }
+    if (cartItemId <= 0) {
+      throw Exception(
+        'Cannot submit this return because the cart item ID is missing. '
+        'Please refresh the order and try again.',
+      );
+    }
+
     final url =
         Uri.parse(APPUrl.salesReturn); // Update with your server base URL
 
@@ -689,8 +701,20 @@ class SalesProvider with ChangeNotifier {
       response.body,
       fallback: 'Failed to submit sales return',
     );
+    final responseData = json.decode(response.body);
+    final rawReturnOrder = responseData is Map ? responseData['data'] : null;
+    final returnOrderId = rawReturnOrder is Map
+        ? int.tryParse(rawReturnOrder['id']?.toString() ?? '')
+        : null;
+    if (returnOrderId == null || returnOrderId <= 0) {
+      throw Exception(
+        'The return item was submitted, but its return order ID was missing. '
+        'Please refresh the order before completing the return.',
+      );
+    }
     _storeRefundBreakdownFromBody(response.body);
     notifyListeners();
+    return returnOrderId;
   }
 
   Future<void> completeSalesReturn({
@@ -701,6 +725,13 @@ class SalesProvider with ChangeNotifier {
     bool? hasPayment,
     bool isDeliveryRefundable = false,
   }) async {
+    if (returnOrderId <= 0) {
+      throw Exception(
+        'Cannot complete this return because the return order ID is missing. '
+        'Please submit a return item first.',
+      );
+    }
+
     final url = Uri.parse(
         APPUrl.completeSalesReturn); // Update with your server base URL
 

@@ -115,7 +115,7 @@ class TaxInvoiceReturnsPdfSection {
 
     for (int i = 0; i < orderReturns.returnItems!.length; i++) {
       final ri = orderReturns.returnItems![i];
-      final int qty = ri.quantity ?? 0;
+      final num qty = ri.quantity ?? 0;
       final String name = ri.productName ?? '';
 
       double itemRate = 0.0;
@@ -153,7 +153,7 @@ class TaxInvoiceReturnsPdfSection {
       if (itemRate == 0.0) {
         final totalRet =
             double.tryParse(orderReturns.returnTotalAmount ?? '0') ?? 0.0;
-        int totalQty = 0;
+        num totalQty = 0;
         for (var ri2 in orderReturns.returnItems!) {
           totalQty += ri2.quantity ?? 0;
         }
@@ -408,7 +408,7 @@ class TaxInvoiceReturnsPdfSection {
 
     double returnTotal = 0.0;
     for (final ri in orderReturns.returnItems!) {
-      final int qty = ri.quantity ?? 0;
+      final num qty = ri.quantity ?? 0;
       double itemRate = 0.0;
       for (var cartItem in params.cartItems) {
         String cartName = '';
@@ -437,7 +437,7 @@ class TaxInvoiceReturnsPdfSection {
       if (itemRate == 0.0) {
         final totalRet =
             double.tryParse(orderReturns.returnTotalAmount ?? '0') ?? 0.0;
-        int totalQty = 0;
+        num totalQty = 0;
         for (var ri2 in orderReturns.returnItems!) {
           totalQty += ri2.quantity ?? 0;
         }

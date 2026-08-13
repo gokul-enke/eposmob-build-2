@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 import 'package:pos_machine/components/build_payment_row.dart';
@@ -16,12 +17,15 @@ import 'package:pos_machine/components/build_tax_modal.dart';
 
 class PaymentSummary extends StatelessWidget {
   final bool compact;
+
   /// When false, hides the bare to-customer-credit toggle (mobile uses a
   /// dedicated section in [PaymentMethodsSection] instead).
   final bool showToCustomerCreditToggle;
+
   /// When false, the tax row is plain text (no underline, no breakdown dialog).
   /// Desktop keeps the default `true`; mobile billing passes `false`.
   final bool taxBreakdownEnabled;
+
   /// When true (and [taxBreakdownEnabled] is true), opens tax details in a
   /// bottom sheet instead of a centered dialog — intended for mobile billing.
   final bool taxBreakdownUseBottomSheet;
@@ -51,8 +55,7 @@ class PaymentSummary extends StatelessWidget {
       freeDeliveryEnabled:
           appSettingsProvider.appSettings?.freeDeliveryEnabled ?? false,
       freeDeliveryMinimumAmount: double.tryParse(
-            appSettingsProvider.appSettings?.freeDeliveryMinimumAmount
-                    .trim() ??
+            appSettingsProvider.appSettings?.freeDeliveryMinimumAmount.trim() ??
                 '',
           ) ??
           0.0,
@@ -93,7 +96,7 @@ class PaymentSummary extends StatelessWidget {
         children: [
           BuildPaymentRow(
             amount: "",
-            title: "Payment Summary",
+            title: 'billing.payment_summary'.tr,
             firstRowTextStyle: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s14,
@@ -106,7 +109,7 @@ class PaymentSummary extends StatelessWidget {
           BuildPaymentRow(
             amount:
                 "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.subTotal)}",
-            title: "Net amount",
+            title: 'billing.net_amount'.tr,
             color: ColorManager.textColor,
             firstRowTextStyle: buildCustomStyle(
               FontWeightManager.medium,
@@ -124,7 +127,7 @@ class PaymentSummary extends StatelessWidget {
           BuildPaymentRow(
             amount:
                 "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)}",
-            title: "Discount",
+            title: 'billing.discount'.tr,
             color: Colors.red,
             firstRowTextStyle: buildCustomStyle(
               FontWeightManager.medium,
@@ -142,7 +145,7 @@ class PaymentSummary extends StatelessWidget {
           if (deliveryCharge > 0)
             BuildPaymentRow(
               amount: "$currency ${AmountHelper.formatAmount(deliveryCharge)}",
-              title: "Delivery Charge",
+              title: 'billing.delivery_charge'.tr,
               color: Colors.green,
               firstRowTextStyle: buildCustomStyle(
                 FontWeightManager.medium,
@@ -161,7 +164,7 @@ class PaymentSummary extends StatelessWidget {
           BuildPaymentRow(
             amount:
                 "$currency ${AmountHelper.roundOffAmount(localProductProvider.cartTotal + deliveryCharge)}",
-            title: "Total Payable",
+            title: 'billing.total_payable_label'.tr,
             secondRowTextStyle: buildCustomStyle(
               FontWeightManager.bold,
               FontSize.s15,
@@ -201,9 +204,9 @@ class PaymentSummary extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Subtotal',
-              style: TextStyle(
+            Text(
+              'billing.subtotal'.tr,
+              style: const TextStyle(
                   fontSize: 14,
                   color: Colors.black54,
                   fontWeight: FontWeight.w500),
@@ -223,9 +226,9 @@ class PaymentSummary extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Discount',
-              style: TextStyle(
+            Text(
+              'billing.discount'.tr,
+              style: const TextStyle(
                   fontSize: 14, color: Colors.red, fontWeight: FontWeight.w500),
             ),
             Text(
@@ -240,17 +243,18 @@ class PaymentSummary extends StatelessWidget {
         // Tax row (tappable for details on desktop when enabled)
         Builder(
           builder: (context) {
-            final taxPercent = ((localProductProvider.priceSummary!.subTotal > 0)
-                    ? (localProductProvider.priceSummary!.totalTax /
+            final taxPercent =
+                ((localProductProvider.priceSummary!.subTotal > 0)
+                        ? (localProductProvider.priceSummary!.totalTax /
                             localProductProvider.priceSummary!.subTotal *
                             100)
-                    : 15.0)
-                .toStringAsFixed(0);
+                        : 15.0)
+                    .toStringAsFixed(0);
             final taxRow = Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Tax (VAT $taxPercent%)',
+                  '${'billing.tax'.tr} (VAT $taxPercent%)',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.black54,
@@ -288,16 +292,16 @@ class PaymentSummary extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Delivery Charge',
-              style: TextStyle(
+            Text(
+              'billing.delivery_charge'.tr,
+              style: const TextStyle(
                   fontSize: 14,
                   color: Colors.green,
                   fontWeight: FontWeight.w500),
             ),
             Text(
               deliveryCharge == 0.0
-                  ? 'Free'
+                  ? 'billing.free'.tr
                   : '$currency ${AmountHelper.formatAmount(deliveryCharge)}',
               style: const TextStyle(
                   fontSize: 14,
@@ -314,9 +318,9 @@ class PaymentSummary extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'To Customer Credit',
-                style: TextStyle(
+              Text(
+                'billing.to_customer_credit'.tr,
+                style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF0066CC)),
@@ -340,9 +344,9 @@ class PaymentSummary extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Total Payable',
-              style: TextStyle(
+            Text(
+              'billing.total_payable_label'.tr,
+              style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF0066CC)),
@@ -362,9 +366,9 @@ class PaymentSummary extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Total Paid',
-              style: TextStyle(
+            Text(
+              'billing.total_paid'.tr,
+              style: const TextStyle(
                   fontSize: 14,
                   color: Colors.black54,
                   fontWeight: FontWeight.w500),
@@ -384,9 +388,9 @@ class PaymentSummary extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Balance',
-              style: TextStyle(
+            Text(
+              'billing.balance'.tr,
+              style: const TextStyle(
                   fontSize: 14,
                   color: Colors.green,
                   fontWeight: FontWeight.w500),

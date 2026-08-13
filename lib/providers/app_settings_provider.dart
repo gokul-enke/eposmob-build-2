@@ -14,6 +14,8 @@ class AppSettingsProvider extends ChangeNotifier {
 
   AppSettings? get appSettings => _appSettings;
   bool get loading => _loading;
+  bool get lastFetchSucceeded => _lastFetchSucceeded;
+  bool get isReady => !_loading && _lastFetchSucceeded && _appSettings != null;
   bool get allowOverselling => appSettings?.allowOverselling ?? true;
   bool get multiSaleUnitEnabled => appSettings?.multiSaleUnitEnabled ?? false;
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_payment_row.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
@@ -12,46 +13,46 @@ import 'package:pos_machine/resources/style_manager.dart';
 class CheckoutFooter extends StatelessWidget {
   /// The price summary containing all payment calculations
   final PriceSummary? priceSummary;
-  
+
   /// Currency symbol (e.g., 'SAR', '$', '€')
   final String currency;
-  
+
   /// Map of tax names to their percentages for displaying tax details
   final Map<String, num> taxNames;
-  
+
   /// Total amount paid by the customer
   final double totalPaid;
-  
+
   /// Balance amount (can be positive or negative)
   final double balance;
-  
+
   /// Callback when tax row is tapped to show tax details
   final VoidCallback? onTaxTap;
-  
+
   /// Custom text style for the total payable row title
   final TextStyle? totalPayableTitleStyle;
-  
+
   /// Custom text style for the total payable row amount
   final TextStyle? totalPayableAmountStyle;
-  
+
   /// Custom padding for the container
   final EdgeInsetsGeometry padding;
-  
+
   /// Custom border radius for the container
   final double borderRadius;
-  
+
   /// Background color of the container
   final Color backgroundColor;
-  
+
   /// Whether to show the discount row (only shown if discount > 0)
   final bool showDiscount;
-  
+
   /// Whether to show the total paid row
   final bool showTotalPaid;
-  
+
   /// Whether to show the balance row
   final bool showBalance;
-  
+
   /// Whether the tax row is tappable to show details
   final bool enableTaxTap;
 
@@ -90,44 +91,47 @@ class CheckoutFooter extends StatelessWidget {
         children: [
           // Net Amount
           BuildPaymentRow(
-            title: 'Net Amount',
-            amount: '$currency ${AmountHelper.formatAmount(priceSummary!.netTotal ?? 0)}',
+            title: 'billing.net_amount'.tr,
+            amount:
+                '$currency ${AmountHelper.formatAmount(priceSummary!.netTotal ?? 0)}',
             color: ColorManager.textColor,
             padding: EdgeInsets.zero,
           ),
-          
+
           // Discount (only if > 0 and showDiscount is true)
           if (showDiscount && discount > 0) ...[
             const SizedBox(height: 6),
             BuildPaymentRow(
-              title: 'Discount',
+              title: 'billing.discount'.tr,
               amount: '-$currency ${AmountHelper.formatAmount(discount)}',
               color: ColorManager.kButtonRed,
               padding: EdgeInsets.zero,
             ),
           ],
-          
+
           const SizedBox(height: 6),
-          
+
           // Tax
           GestureDetector(
             onTap: enableTaxTap ? onTaxTap : null,
             child: BuildPaymentRow(
-              title: 'Tax',
-              amount: '$currency ${AmountHelper.formatAmount(priceSummary!.totalTax ?? 0)}',
+              title: 'billing.tax'.tr,
+              amount:
+                  '$currency ${AmountHelper.formatAmount(priceSummary!.totalTax ?? 0)}',
               color: ColorManager.kGreyColor,
               padding: EdgeInsets.zero,
             ),
           ),
-          
+
           const SizedBox(height: 8),
           const Divider(height: 1),
           const SizedBox(height: 8),
-          
+
           // Total Payable
           BuildPaymentRow(
-            title: 'Total Payable',
-            amount: '$currency ${AmountHelper.formatAmount(priceSummary!.netPayable ?? 0)}',
+            title: 'billing.total_payable_label'.tr,
+            amount:
+                '$currency ${AmountHelper.formatAmount(priceSummary!.netPayable ?? 0)}',
             color: ColorManager.kPrimaryColor,
             padding: EdgeInsets.zero,
             firstRowTextStyle: totalPayableTitleStyle ??
@@ -145,23 +149,23 @@ class CheckoutFooter extends StatelessWidget {
                   ColorManager.kPrimaryColor,
                 ),
           ),
-          
+
           // Total Paid
           if (showTotalPaid) ...[
             const SizedBox(height: 8),
             BuildPaymentRow(
-              title: 'Total Paid',
+              title: 'billing.total_paid'.tr,
               amount: '$currency ${AmountHelper.formatAmount(totalPaid)}',
               color: ColorManager.textColor,
               padding: EdgeInsets.zero,
             ),
           ],
-          
+
           // Balance
           if (showBalance) ...[
             const SizedBox(height: 6),
             BuildPaymentRow(
-              title: 'Balance',
+              title: 'billing.balance'.tr,
               amount: '$currency ${AmountHelper.formatAmount(balance)}',
               color: balance > 0
                   ? ColorManager.kButtonRed

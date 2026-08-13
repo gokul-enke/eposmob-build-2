@@ -19,6 +19,7 @@ void main() {
 
     expect(result.isSuccess, isTrue);
     expect(BarcodeLayoutSettings().barcodeWidthPercent, 70);
+    expect(BarcodeLayoutSettings().printRotationDegrees, isNull);
     expect(const PrinterSettings(), isA<PrinterSettings>());
     expect(const ProductBarcodeScreen(), isA<ProductBarcodeScreen>());
     expect(
@@ -44,6 +45,7 @@ void main() {
 
     expect(find.text('Barcode Width (% of sticker)'), findsOneWidget);
     expect(find.text('Printer Resolution'), findsOneWidget);
+    expect(find.text('Print Rotation Correction'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

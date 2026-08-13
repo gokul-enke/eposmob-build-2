@@ -3504,6 +3504,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           selectedStock: item.selectedStock,
           isCompact: false,
           currency: currency,
+          useBillingProductPermissions: true,
         );
       },
     );
@@ -9172,6 +9173,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                       context: context,
                       builder: (context) => ProductDetailsDialog(
                         product: product,
+                        useBillingProductPermissions: true,
                       ),
                     );
                   },
@@ -9284,6 +9286,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                 context: context,
                 builder: (context) => ProductDetailsDialog(
                   product: product,
+                  useBillingProductPermissions: true,
                 ),
               );
             },

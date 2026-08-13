@@ -176,6 +176,8 @@ class RealtimeSyncProvider extends ChangeNotifier {
       await _repository.apply(
         session: session,
         changes: response.changes,
+        updatedFrom: _lastSyncedAt,
+        updatedTo: response.syncedAt,
         isCurrent: () => _isCurrent(generation, session),
       );
       if (!_isCurrent(generation, session)) return;

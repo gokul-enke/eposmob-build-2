@@ -282,6 +282,19 @@ class _CheckoutModalState extends State<CheckoutModal> {
   late DateTime _lQuotationDate;
   late DateTime _lQuotationExpiryDate;
 
+  bool get _canCloseSelectionOnly {
+    switch (_currentStep) {
+      case 0:
+        return _localSelectedCustomer != null;
+      case 1:
+        return _lDeliveryMethodId.isNotEmpty || _lDeliveryMethod.isNotEmpty;
+      case 3:
+        return _hasAnyPaymentMethodSelected();
+      default:
+        return true;
+    }
+  }
+
   String _initialForName(String? name) {
     final trimmed = name?.trim() ?? '';
     if (trimmed.isEmpty) {
@@ -583,7 +596,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
     if (event.logicalKey == LogicalKeyboardKey.f2) {
       debugPrint("⌨️ [CheckoutModal] Handling F2 -> confirm");
       if (_isSelectionOnly) {
-        _closeSelectionOnlyModal();
+        if (_canCloseSelectionOnly) {
+          _closeSelectionOnlyModal();
+        }
       } else if (_canConfirmOrPrint && !_isConfirming) {
         _handleConfirm();
       }
@@ -608,16 +623,19 @@ class _CheckoutModalState extends State<CheckoutModal> {
     }
     if (event.logicalKey == LogicalKeyboardKey.f6) {
       debugPrint("⌨️ [CheckoutModal] Handling F6 -> print");
+      if (_isSelectionOnly) return true;
       if (_canPrint && !_isPrinting) _handlePrint();
       return true;
     }
     if (event.logicalKey == LogicalKeyboardKey.f8) {
       debugPrint("⌨️ [CheckoutModal] Handling F8 -> confirm");
+      if (_isSelectionOnly) return true;
       if (_canConfirmOrPrint && !_isConfirming) _handleConfirm();
       return true;
     }
     if (event.logicalKey == LogicalKeyboardKey.f9) {
       debugPrint("⌨️ [CheckoutModal] Handling F9 -> print");
+      if (_isSelectionOnly) return true;
       if (_canPrint && !_isPrinting) _handlePrint();
       return true;
     }

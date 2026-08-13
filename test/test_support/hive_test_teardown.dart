@@ -16,6 +16,8 @@ Future<void> awaitPendingHiveBoxWrites() async {
 /// after `Hive.close()` returns (antivirus/indexer scan). This is test
 /// cleanup, not an assertion, so failures here must never fail the suite.
 Future<void> closeHiveAndDeleteTestDir(Directory hiveDir) async {
+  await awaitPendingHiveBoxWrites();
+
   try {
     await Hive.close().timeout(const Duration(seconds: 3));
   } on Object {

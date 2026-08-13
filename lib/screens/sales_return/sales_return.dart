@@ -10,12 +10,14 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/quantity_input_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/models/list_sales_return_items.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/helpers/sales_return_calculation_helper.dart';
+import 'package:pos_machine/helpers/sales_return_order_id_helper.dart';
 import 'package:pos_machine/models/sales_return_refund_breakdown.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -72,6 +74,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
   bool isOrderSelected = false;
   bool initLoading = false;
   List<SalesReturnCart> _salesReturnItems = [];
+  int? _activeReturnOrderId;
 
   // Payment related variables
   String selectedPaymentMethod = 'CASH';
@@ -269,6 +272,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       selectedOrderId = null;
       selectedOrderNumber = null;
       orderDetailsModelData = null;
+      _activeReturnOrderId = null;
     });
     loadInitData();
   }
@@ -279,12 +283,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     }
   }
 
-  int? get _draftReturnOrderId {
-    for (final item in _salesReturnItems) {
-      if (item.returnOrderId != 0) return item.returnOrderId;
-    }
-    return null;
-  }
+  int? get _draftReturnOrderId =>
+      SalesReturnOrderIdHelper.forCompletion(_activeReturnOrderId);
 
   bool get _canCompleteReturn =>
       !initLoading &&
@@ -400,13 +400,14 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
 
       // ALSO fetch full order details to get shipping cost, price summary etc.
       try {
-        final orderDetailsResponse = await Provider.of<SalesProvider>(context,
-                listen: false)
-            .listOrderDetails(context, ordersId, accessToken ?? "");
+        final orderDetailsResponse =
+            await Provider.of<SalesProvider>(context, listen: false)
+                .listOrderDetails(context, ordersId, accessToken ?? "");
 
         if (orderDetailsResponse["status"] == "success") {
           setState(() {
-            final orderDetails = OrderDetailsModel.fromJson(orderDetailsResponse);
+            final orderDetails =
+                OrderDetailsModel.fromJson(orderDetailsResponse);
             orderDetailsModelData = orderDetails.data;
           });
           debugPrint('✅ Full order details fetched for $ordersId');
@@ -424,6 +425,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
 
       // Only reset initial state when loading a NEW order, not after individual return submissions
       if (resetInitialState) {
+        _activeReturnOrderId = null;
         Provider.of<SalesProvider>(context, listen: false)
             .clearServerRefundBreakdown();
         _initialReturnedQuantities.clear();
@@ -513,358 +515,352 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   ),
                 ],
               ),
-                  const SizedBox(
-                    height: 5,
-                  ),
-                  // Search and filters section commented out
-                  // SizedBox(
-                  //   height: 100,
-                  //   child: ListView(
-                  //     scrollDirection: Axis.horizontal,
-                  //     physics: const BouncingScrollPhysics(),
-                  //     children: [
-                  //       Padding(
-                  //         padding: const EdgeInsets.only(left: 10.0),
-                  //         child: Column(
-                  //           crossAxisAlignment: CrossAxisAlignment.start,
-                  //           children: [
-                  //             Padding(
-                  //               padding: const EdgeInsets.all(8.0),
-                  //               child: Text(
-                  //                 "Order Number",
-                  //                 style: buildCustomStyle(
-                  //                   FontWeightManager.regular,
-                  //                   FontSize.s14,
-                  //                   0.27,
-                  //                   Colors.black.withOpacity(0.6),
-                  //                 ),
-                  //               ),
-                  //             ),
-                  //             buildColumnWidgetForTextFields(
-                  //               height: 50,
-                  //               width: 120,
-                  //               onchanged: (value) {},
-                  //               controller: orderNumberController,
-                  //               size: size,
-                  //               hintText: 'Order Number',
-                  //             ),
-                  //           ],
-                  //         ),
-                  //       ),
-                  //       // Date
-                  //       Padding(
-                  //         padding: const EdgeInsets.only(left: 10.0),
-                  //         child: Column(
-                  //           crossAxisAlignment: CrossAxisAlignment.start,
-                  //           children: [
-                  //             Padding(
-                  //               padding: const EdgeInsets.all(8.0),
-                  //               child: Text(
-                  //                 "Date",
-                  //                 style: buildCustomStyle(
-                  //                   FontWeightManager.regular,
-                  //                   FontSize.s14,
-                  //                   0.27,
-                  //                   Colors.black.withOpacity(0.6),
-                  //                 ),
-                  //               ),
-                  //             ),
-                  //             BuildBoxShadowContainer(
-                  //               circleRadius: 7,
-                  //               height: 50,
-                  //               width: 150,
-                  //               child: Center(
-                  //                 child: CalendarPickerTableCell(
-                  //                   onDateSelected: (DateTime date) {
-                  //                     selectedDate = date;
-                  //                   },
-                  //                 ),
-                  //               ),
-                  //             ),
-                  //           ],
-                  //         ),
-                  //       ),
-                  //       SizedBox(
-                  //         width: 200,
-                  //         child: Padding(
-                  //           padding: const EdgeInsets.only(left: 10.0, top: 35),
-                  //           child: ProductAutocomplete(
-                  //             autocompleteProductKey: _autocompleteProductKey,
-                  //             size: size,
-                  //             onSelected: (GetProduct selectedProduct,
-                  //                 Stock? selectedStock) {},
-                  //             productList: productProvider.productList!,
-                  //           ),
-                  //         ),
-                  //       ),
-                  //     ],
-                  //   ),
-                  // ),
-                  // SizedBox(
-                  //   height: 90,
-                  //   child: ListView(
-                  //     scrollDirection: Axis.horizontal,
-                  //     physics: const BouncingScrollPhysics(),
-                  //     children: [
-                  //       Padding(
-                  //         padding: const EdgeInsets.only(left: 15.0),
-                  //         child: SizedBox(
-                  //           height: size.height * .07,
-                  //           width: 215,
-                  //           child: _buildMobileNumberInput(size: size),
-                  //         ),
-                  //       ),
-                  //       Padding(
-                  //         padding: const EdgeInsets.only(left: 10.0, top: 25),
-                  //         child: Column(
-                  //           crossAxisAlignment: CrossAxisAlignment.start,
-                  //           mainAxisAlignment: MainAxisAlignment.start,
-                  //           children: [
-                  //             CustomRoundButton(
-                  //               title: "Search",
-                  //               fct: () {
-                  //                 searchOrders(1);
-                  //               },
-                  //               height: 45,
-                  //               width: size.width * 0.09,
-                  //               fontSize: FontSize.s12,
-                  //             ),
-                  //           ],
-                  //         ),
-                  //       ),
-                  //       Padding(
-                  //         padding: const EdgeInsets.only(left: 10.0, top: 25),
-                  //         child: Column(
-                  //           children: [
-                  //             CustomRoundButton(
-                  //               title: "Reset",
-                  //               boxColor: Colors.white,
-                  //               textColor: ColorManager.kPrimaryColor,
-                  //               fct: resetSearch,
-                  //               height: 45,
-                  //               width: size.width * 0.09,
-                  //               fontSize: FontSize.s12,
-                  //             ),
-                  //           ],
-                  //         ),
-                  //       ),
-                  //     ],
-                  //   ),
-                  // ),
-                  const SizedBox(
-                    height: 8,
-                  ),
-                  _buildStepHint(),
-                  // Enhanced Order Details Card
-                  Consumer<SalesProvider>(
-                    builder: (context, orderProvider, child) {
-                      List<ListOrderModelData> orders = orderProvider.orders;
+              const SizedBox(
+                height: 5,
+              ),
+              // Search and filters section commented out
+              // SizedBox(
+              //   height: 100,
+              //   child: ListView(
+              //     scrollDirection: Axis.horizontal,
+              //     physics: const BouncingScrollPhysics(),
+              //     children: [
+              //       Padding(
+              //         padding: const EdgeInsets.only(left: 10.0),
+              //         child: Column(
+              //           crossAxisAlignment: CrossAxisAlignment.start,
+              //           children: [
+              //             Padding(
+              //               padding: const EdgeInsets.all(8.0),
+              //               child: Text(
+              //                 "Order Number",
+              //                 style: buildCustomStyle(
+              //                   FontWeightManager.regular,
+              //                   FontSize.s14,
+              //                   0.27,
+              //                   Colors.black.withOpacity(0.6),
+              //                 ),
+              //               ),
+              //             ),
+              //             buildColumnWidgetForTextFields(
+              //               height: 50,
+              //               width: 120,
+              //               onchanged: (value) {},
+              //               controller: orderNumberController,
+              //               size: size,
+              //               hintText: 'Order Number',
+              //             ),
+              //           ],
+              //         ),
+              //       ),
+              //       // Date
+              //       Padding(
+              //         padding: const EdgeInsets.only(left: 10.0),
+              //         child: Column(
+              //           crossAxisAlignment: CrossAxisAlignment.start,
+              //           children: [
+              //             Padding(
+              //               padding: const EdgeInsets.all(8.0),
+              //               child: Text(
+              //                 "Date",
+              //                 style: buildCustomStyle(
+              //                   FontWeightManager.regular,
+              //                   FontSize.s14,
+              //                   0.27,
+              //                   Colors.black.withOpacity(0.6),
+              //                 ),
+              //               ),
+              //             ),
+              //             BuildBoxShadowContainer(
+              //               circleRadius: 7,
+              //               height: 50,
+              //               width: 150,
+              //               child: Center(
+              //                 child: CalendarPickerTableCell(
+              //                   onDateSelected: (DateTime date) {
+              //                     selectedDate = date;
+              //                   },
+              //                 ),
+              //               ),
+              //             ),
+              //           ],
+              //         ),
+              //       ),
+              //       SizedBox(
+              //         width: 200,
+              //         child: Padding(
+              //           padding: const EdgeInsets.only(left: 10.0, top: 35),
+              //           child: ProductAutocomplete(
+              //             autocompleteProductKey: _autocompleteProductKey,
+              //             size: size,
+              //             onSelected: (GetProduct selectedProduct,
+              //                 Stock? selectedStock) {},
+              //             productList: productProvider.productList!,
+              //           ),
+              //         ),
+              //       ),
+              //     ],
+              //   ),
+              // ),
+              // SizedBox(
+              //   height: 90,
+              //   child: ListView(
+              //     scrollDirection: Axis.horizontal,
+              //     physics: const BouncingScrollPhysics(),
+              //     children: [
+              //       Padding(
+              //         padding: const EdgeInsets.only(left: 15.0),
+              //         child: SizedBox(
+              //           height: size.height * .07,
+              //           width: 215,
+              //           child: _buildMobileNumberInput(size: size),
+              //         ),
+              //       ),
+              //       Padding(
+              //         padding: const EdgeInsets.only(left: 10.0, top: 25),
+              //         child: Column(
+              //           crossAxisAlignment: CrossAxisAlignment.start,
+              //           mainAxisAlignment: MainAxisAlignment.start,
+              //           children: [
+              //             CustomRoundButton(
+              //               title: "Search",
+              //               fct: () {
+              //                 searchOrders(1);
+              //               },
+              //               height: 45,
+              //               width: size.width * 0.09,
+              //               fontSize: FontSize.s12,
+              //             ),
+              //           ],
+              //         ),
+              //       ),
+              //       Padding(
+              //         padding: const EdgeInsets.only(left: 10.0, top: 25),
+              //         child: Column(
+              //           children: [
+              //             CustomRoundButton(
+              //               title: "Reset",
+              //               boxColor: Colors.white,
+              //               textColor: ColorManager.kPrimaryColor,
+              //               fct: resetSearch,
+              //               height: 45,
+              //               width: size.width * 0.09,
+              //               fontSize: FontSize.s12,
+              //             ),
+              //           ],
+              //         ),
+              //       ),
+              //     ],
+              //   ),
+              // ),
+              const SizedBox(
+                height: 8,
+              ),
+              _buildStepHint(),
+              // Enhanced Order Details Card
+              Consumer<SalesProvider>(
+                builder: (context, orderProvider, child) {
+                  List<ListOrderModelData> orders = orderProvider.orders;
 
-                      if (isOrderSelected && orders.isNotEmpty) {
-                        try {
-                          // Find the selected order
-                          final order = orders.firstWhere(
-                            (order) =>
-                                order.orderNumber.toString() ==
-                                selectedOrderNumber,
-                            orElse: () => orders.firstWhere(
-                              (order) => order.id.toString() == selectedOrderId,
-                              orElse: () => ListOrderModelData(
-                                id: int.tryParse(selectedOrderId ?? "0"),
-                                orderNumber: selectedOrderNumber,
-                                orderDate: DateTime.now(),
-                                customerName: "Order #$selectedOrderNumber",
-                              ),
-                            ),
-                          );
+                  if (isOrderSelected && orders.isNotEmpty) {
+                    try {
+                      // Find the selected order
+                      final order = orders.firstWhere(
+                        (order) =>
+                            order.orderNumber.toString() == selectedOrderNumber,
+                        orElse: () => orders.firstWhere(
+                          (order) => order.id.toString() == selectedOrderId,
+                          orElse: () => ListOrderModelData(
+                            id: int.tryParse(selectedOrderId ?? "0"),
+                            orderNumber: selectedOrderNumber,
+                            orderDate: DateTime.now(),
+                            customerName: "Order #$selectedOrderNumber",
+                          ),
+                        ),
+                      );
 
-                          return SalesReturnContentCard(
-                            margin: const EdgeInsets.symmetric(vertical: 8),
-                            padding: EdgeInsetsDirectional.all(
-                                isPhone ? 14 : 20),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    const SalesReturnLabelPill(
-                                        label: 'ORDER DETAILS'),
-                                    const Spacer(),
-                                    Container(
-                                      padding: const EdgeInsetsDirectional
-                                          .symmetric(
-                                          horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.green.withOpacity(0.1),
-                                        borderRadius:
-                                            BorderRadius.circular(12),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.check_circle,
-                                            size: 14,
-                                            color: Colors.green.shade600,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            'Selected',
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s10,
-                                              0.25,
-                                              Colors.green.shade600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                SalesReturnDetailGrid(
-                                  children: [
-                                    _buildOrderDetailItem(
-                                      'Order Number',
-                                      '${order.orderNumber}',
-                                      Icons.receipt_long,
-                                    ),
-                                    _buildOrderDetailItem(
-                                      'Date',
-                                      DateHelper.formatDate(
-                                          order.orderDate ?? DateTime.now()),
-                                      Icons.calendar_today,
-                                    ),
-                                    _buildOrderDetailItem(
-                                      'Customer',
-                                      order.customerName ?? "N/A",
-                                      Icons.person,
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          );
-                        } catch (e) {
-                          debugPrint('Error displaying selected order: $e');
-                          return SalesReturnContentCard(
-                            margin: const EdgeInsets.symmetric(vertical: 8),
-                            padding: EdgeInsetsDirectional.all(
-                                isPhone ? 14 : 20),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                      return SalesReturnContentCard(
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        padding: EdgeInsetsDirectional.all(isPhone ? 14 : 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
                                 const SalesReturnLabelPill(
                                     label: 'ORDER DETAILS'),
-                                const SizedBox(height: 16),
-                                SalesReturnDetailGrid(
-                                  children: [
-                                    _buildOrderDetailItem(
-                                      'Order Number',
-                                      '$selectedOrderNumber',
-                                      Icons.receipt_long,
-                                    ),
-                                    _buildOrderDetailItem(
-                                      'Date',
-                                      DateHelper.formatDate(DateTime.now()),
-                                      Icons.calendar_today,
-                                    ),
-                                    _buildOrderDetailItem(
-                                      'Customer',
-                                      'Order #$selectedOrderNumber',
-                                      Icons.person,
-                                    ),
-                                  ],
+                                const Spacer(),
+                                Container(
+                                  padding:
+                                      const EdgeInsetsDirectional.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.check_circle,
+                                        size: 14,
+                                        color: Colors.green.shade600,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Selected',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.medium,
+                                          FontSize.s10,
+                                          0.25,
+                                          Colors.green.shade600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
-                          );
-                        }
-                      } else {
-                        return SalesReturnContentCard(
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          padding: EdgeInsetsDirectional.all(
-                              isPhone ? 20 : 24),
-                          color: Colors.grey.shade50,
-                          child: Column(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                size: 48,
-                                color: Colors.grey.shade400,
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Open an order from Sales',
-                                style: buildCustomStyle(
-                                  FontWeightManager.semiBold,
-                                  FontSize.s16,
-                                  0.27,
-                                  Colors.grey.shade600,
+                            const SizedBox(height: 16),
+                            SalesReturnDetailGrid(
+                              children: [
+                                _buildOrderDetailItem(
+                                  'Order Number',
+                                  '${order.orderNumber}',
+                                  Icons.receipt_long,
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Go to Sales → order actions → Return to start a return',
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s12,
-                                  0.25,
-                                  Colors.grey.shade500,
+                                _buildOrderDetailItem(
+                                  'Date',
+                                  DateHelper.formatDate(
+                                      order.orderDate ?? DateTime.now()),
+                                  Icons.calendar_today,
                                 ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                  // PaginationControl(
-                  //   currentPage:
-                  //       Provider.of<SalesProvider>(context, listen: true)
-                  //           .currentPage,
-                  //   totalPages:
-                  //       Provider.of<SalesProvider>(context, listen: true)
-                  //           .totalPages,
-                  //   onPageChanged: (int page) {
-                  //     searchOrders(page);
-                  //   },
-                  // ),
-                  const SizedBox(height: 16),
-                  const SalesReturnSectionTitle(title: 'Order Items'),
-                  const SizedBox(height: 12),
-                  Consumer<SalesProvider>(
-                    builder: (context, salesProvider, _) {
-                      final itemCount = salesProvider.salesReturnItems.length;
-                      final isPhone = salesReturnIsPhone(context);
-                      if (isPhone) {
-                        return _buildOrderDetails();
-                      }
-                      return SizedBox(
-                        height: _itemsTableHeight(itemCount),
-                        child: _buildOrderDetails(),
+                                _buildOrderDetailItem(
+                                  'Customer',
+                                  order.customerName ?? "N/A",
+                                  Icons.person,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       );
-                    },
-                  ),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  // Summary sections
-                  _buildSummarySection(),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  // Payment Details Section
-                  _buildPaymentDetailsSection(),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  _buildCompleteReturnButton(size),
-                  SizedBox(height: isPhone ? 12 : 20),
-                ],
+                    } catch (e) {
+                      debugPrint('Error displaying selected order: $e');
+                      return SalesReturnContentCard(
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        padding: EdgeInsetsDirectional.all(isPhone ? 14 : 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SalesReturnLabelPill(label: 'ORDER DETAILS'),
+                            const SizedBox(height: 16),
+                            SalesReturnDetailGrid(
+                              children: [
+                                _buildOrderDetailItem(
+                                  'Order Number',
+                                  '$selectedOrderNumber',
+                                  Icons.receipt_long,
+                                ),
+                                _buildOrderDetailItem(
+                                  'Date',
+                                  DateHelper.formatDate(DateTime.now()),
+                                  Icons.calendar_today,
+                                ),
+                                _buildOrderDetailItem(
+                                  'Customer',
+                                  'Order #$selectedOrderNumber',
+                                  Icons.person,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                  } else {
+                    return SalesReturnContentCard(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      padding: EdgeInsetsDirectional.all(isPhone ? 20 : 24),
+                      color: Colors.grey.shade50,
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 48,
+                            color: Colors.grey.shade400,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Open an order from Sales',
+                            style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s16,
+                              0.27,
+                              Colors.grey.shade600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Go to Sales → order actions → Return to start a return',
+                            style: buildCustomStyle(
+                              FontWeightManager.regular,
+                              FontSize.s12,
+                              0.25,
+                              Colors.grey.shade500,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                },
               ),
+              // PaginationControl(
+              //   currentPage:
+              //       Provider.of<SalesProvider>(context, listen: true)
+              //           .currentPage,
+              //   totalPages:
+              //       Provider.of<SalesProvider>(context, listen: true)
+              //           .totalPages,
+              //   onPageChanged: (int page) {
+              //     searchOrders(page);
+              //   },
+              // ),
+              const SizedBox(height: 16),
+              const SalesReturnSectionTitle(title: 'Order Items'),
+              const SizedBox(height: 12),
+              Consumer<SalesProvider>(
+                builder: (context, salesProvider, _) {
+                  final itemCount = salesProvider.salesReturnItems.length;
+                  final isPhone = salesReturnIsPhone(context);
+                  if (isPhone) {
+                    return _buildOrderDetails();
+                  }
+                  return SizedBox(
+                    height: _itemsTableHeight(itemCount),
+                    child: _buildOrderDetails(),
+                  );
+                },
+              ),
+              const SizedBox(
+                height: 20,
+              ),
+              // Summary sections
+              _buildSummarySection(),
+              const SizedBox(
+                height: 20,
+              ),
+              // Payment Details Section
+              _buildPaymentDetailsSection(),
+              const SizedBox(
+                height: 20,
+              ),
+              _buildCompleteReturnButton(size),
+              SizedBox(height: isPhone ? 12 : 20),
+            ],
+          ),
           _buildLoadingOverlay(),
         ],
       ),
@@ -1119,8 +1115,19 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     required String currency,
     required String totalPrice,
     required String quantity,
+    required String productUnit,
     required double returnedQuantity,
   }) {
+    if (cartItemId <= 0) {
+      showScaffoldError(
+        context: context,
+        message:
+            'This item cannot be returned because its cart item ID is missing. '
+            'Please refresh the order and try again.',
+      );
+      return;
+    }
+
     debugPrint('_showReturnDialog called with:');
     debugPrint('  productName: $productName');
     debugPrint('  unitPrice: $unitPrice');
@@ -1134,10 +1141,14 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     final TextEditingController reasonController = TextEditingController();
     final TextEditingController returnTotalController = TextEditingController();
     final soldQuantity = double.tryParse(quantity) ?? 0;
-    final maxQuantity = (soldQuantity - returnedQuantity).clamp(0, soldQuantity);
+    final maxQuantity =
+        (soldQuantity - returnedQuantity).clamp(0, soldQuantity);
     final unitPriceValue = double.parse(unitPrice);
     final maxTotal = maxQuantity * unitPriceValue;
-    final bool allowsDecimals = soldQuantity != soldQuantity.roundToDouble();
+    final hasProductUnit = productUnit.trim().isNotEmpty;
+    final bool allowsDecimals = hasProductUnit
+        ? allowsDecimalQuantityUnit(productUnit)
+        : soldQuantity != soldQuantity.roundToDouble();
 
     bool _updatingFromQuantity = false;
     bool _updatingFromTotal = false;
@@ -1146,8 +1157,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       if (_updatingFromTotal) return;
       if (quantityController.text.isEmpty) return;
 
-      final enteredQuantity =
-          double.tryParse(quantityController.text) ?? 0;
+      final enteredQuantity = double.tryParse(quantityController.text) ?? 0;
 
       if (enteredQuantity > maxQuantity) {
         quantityController.text = allowsDecimals
@@ -1204,406 +1214,423 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return Dialog(
-          insetPadding: EdgeInsets.symmetric(
-            horizontal: salesReturnIsPhone(context) ? 12 : 40,
-            vertical: 16,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: SingleChildScrollView(
-            child: Container(
-              decoration: BoxDecoration(
+              insetPadding: EdgeInsets.symmetric(
+                horizontal: salesReturnIsPhone(context) ? 12 : 40,
+                vertical: 16,
+              ),
+              shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                color: Colors.white,
               ),
-              width: salesReturnIsPhone(context)
-                  ? MediaQuery.of(context).size.width - 24
-                  : MediaQuery.of(context).size.width * 0.9,
-              constraints: const BoxConstraints(maxWidth: 520),
-              padding: EdgeInsetsDirectional.all(
-                  salesReturnIsPhone(context) ? 16 : 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+              child: SingleChildScrollView(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: Colors.white,
+                  ),
+                  width: salesReturnIsPhone(context)
+                      ? MediaQuery.of(context).size.width - 24
+                      : MediaQuery.of(context).size.width * 0.9,
+                  constraints: const BoxConstraints(maxWidth: 520),
+                  padding: EdgeInsetsDirectional.all(
+                      salesReturnIsPhone(context) ? 16 : 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          'Return $orderId',
-                          style: buildCustomStyle(
-                            FontWeightManager.semiBold,
-                            FontSize.s18,
-                            0.28,
-                            ColorManager.textColor,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 44,
-                        height: 44,
-                        child: IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  SalesReturnContentCard(
-                    padding: const EdgeInsetsDirectional.all(14),
-                    child: salesReturnIsPhone(context)
-                        ? Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildDialogProductRow(
-                                  'Product', productName, bold: true),
-                              const SizedBox(height: 8),
-                              _buildDialogProductRow(
-                                  'Price', '$currency $unitPrice'),
-                              const SizedBox(height: 8),
-                              _buildDialogProductRow(
-                                  'Total', '$currency $totalPrice'),
-                              const SizedBox(height: 8),
-                              _buildDialogProductRow(
-                                  'Order Qty', quantity),
-                            ],
-                          )
-                        : Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    flex: 3,
-                                    child: Text(
-                                      'Product name',
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.20,
-                                        Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Text(
-                                      'Price',
-                                      textAlign: TextAlign.center,
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.20,
-                                        Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Text(
-                                      'Total Price',
-                                      textAlign: TextAlign.center,
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.20,
-                                        Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Text(
-                                      'Order Quantity',
-                                      textAlign: TextAlign.center,
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.20,
-                                        Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Return $orderId',
+                              style: buildCustomStyle(
+                                FontWeightManager.semiBold,
+                                FontSize.s18,
+                                0.28,
+                                ColorManager.textColor,
                               ),
-                              const SizedBox(height: 8),
-                              Row(
+                            ),
+                          ),
+                          SizedBox(
+                            width: 44,
+                            height: 44,
+                            child: IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      SalesReturnContentCard(
+                        padding: const EdgeInsetsDirectional.all(14),
+                        child: salesReturnIsPhone(context)
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Expanded(
-                                    flex: 3,
-                                    child: Text(
-                                      productName,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: buildCustomStyle(
-                                        FontWeightManager.semiBold,
-                                        FontSize.s13,
-                                        0.20,
-                                        ColorManager.textColor,
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Text(
-                                      '$currency $unitPrice',
-                                      textAlign: TextAlign.center,
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.18,
-                                        ColorManager.textColor,
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Text(
-                                      '$currency $totalPrice',
-                                      textAlign: TextAlign.center,
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.18,
-                                        ColorManager.textColor,
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Text(
-                                      quantity,
-                                      textAlign: TextAlign.center,
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.18,
-                                        ColorManager.textColor,
-                                      ),
-                                    ),
-                                  ),
+                                  _buildDialogProductRow('Product', productName,
+                                      bold: true),
+                                  const SizedBox(height: 8),
+                                  _buildDialogProductRow(
+                                      'Price', '$currency $unitPrice'),
+                                  const SizedBox(height: 8),
+                                  _buildDialogProductRow(
+                                      'Total', '$currency $totalPrice'),
+                                  const SizedBox(height: 8),
+                                  _buildDialogProductRow('Order Qty', quantity),
                                 ],
-                              ),
-                            ],
-                          ),
-                  ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: quantityController,
-                    decoration: InputDecoration(
-                      labelText: 'Quantity',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                      helperText:
-                          'Maximum returnable: ${allowsDecimals ? maxQuantity.toStringAsFixed(3) : maxQuantity.toInt()}',
-                      errorText: (double.tryParse(quantityController.text) ??
-                                  0) >
-                              maxQuantity
-                          ? 'Cannot exceed remaining quantity'
-                          : null,
-                    ),
-                    keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true),
-                    inputFormatters: [
-                      if (allowsDecimals)
-                        FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d{0,3}'))
-                      else
-                        FilteringTextInputFormatter.digitsOnly,
-                      TextInputFormatter.withFunction((oldValue, newValue) {
-                        if (newValue.text.isEmpty) return newValue;
-                        final parsed = double.tryParse(newValue.text);
-                        if (parsed == null || parsed <= maxQuantity) {
-                          return newValue;
-                        }
-                        return oldValue;
-                      }),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: returnTotalController,
-                    decoration: InputDecoration(
-                      labelText: 'Return Total',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                      prefixText: '$currency ',
-                    ),
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d*\.?\d{0,2}')),
-                      TextInputFormatter.withFunction((oldValue, newValue) {
-                        if (newValue.text.isEmpty) return newValue;
-                        final doubleValue = double.tryParse(newValue.text);
-                        if (doubleValue == null || doubleValue <= maxTotal) {
-                          return newValue;
-                        }
-                        return oldValue;
-                      }),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: reasonController,
-                    decoration: InputDecoration(
-                      labelText: 'Reason',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                    ),
-                    maxLines: 1,
-                  ),
-                  const SizedBox(height: 24),
-                  SalesReturnActionRow(
-                    children: [
-                      TextButton(
-                        onPressed: isSubmitting
-                            ? null
-                            : () => Navigator.pop(dialogContext),
-                        style: TextButton.styleFrom(
-                          minimumSize: const Size(0, 44),
-                          padding: const EdgeInsetsDirectional.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
-                        ),
-                        child: const Text('Cancel'),
-                      ),
-                      ElevatedButton(
-                        onPressed: isSubmitting
-                            ? null
-                            : () async {
-                          final parsedOrderId = int.tryParse(orderId);
-                          if (parsedOrderId == null) {
-                            showScaffoldError(
-                              context: context,
-                              message: 'Invalid order. Please reopen from Sales.',
-                            );
-                            return;
-                          }
-
-                          final returnQty =
-                              double.tryParse(quantityController.text);
-                          if (returnQty == null || returnQty <= 0) {
-                            showScaffoldError(
-                              context: context,
-                              message: 'Please enter a valid quantity',
-                            );
-                            return;
-                          }
-                          if (returnQty > maxQuantity) {
-                            showScaffoldError(
-                              context: context,
-                              message:
-                                  'Quantity cannot exceed remaining returnable amount',
-                            );
-                            return;
-                          }
-
-                          setDialogState(() => isSubmitting = true);
-
-                          try {
-                            String? accessToken =
-                                Provider.of<AuthModel>(context, listen: false)
-                                    .token;
-
-                            await Provider.of<SalesProvider>(context,
-                                    listen: false)
-                                .submitSalesReturn(
-                              accessToken: accessToken ?? '',
-                              orderId: parsedOrderId,
-                              price: double.parse(unitPrice),
-                              quantity: returnQty,
-                              cartItemId: cartItemId,
-                              reason: reasonController.text,
-                              isDeliveryRefundable: _deliveryChargeRefundable,
-                            );
-
-                            if (!dialogContext.mounted) return;
-
-                            showScaffold(
-                              context: context,
-                              message: 'Item returned successfully',
-                            );
-
-                            await getOrderDetails(
-                                selectedOrderNumber.toString(),
-                                resetInitialState: false);
-
-                            if (dialogContext.mounted) {
-                              Navigator.pop(dialogContext);
-                            }
-                          } catch (error, stackTrace) {
-                            debugPrint('Error submitting sales return: $error');
-                            debugPrint(
-                                'Stack Trace for submitSalesReturn: $stackTrace');
-                            showScaffoldError(
-                              context: context,
-                              message: error is Exception
-                                  ? error
-                                      .toString()
-                                      .replaceFirst('Exception: ', '')
-                                  : 'Failed to submit sales return',
-                            );
-                          } finally {
-                            if (context.mounted) {
-                              setDialogState(() => isSubmitting = false);
-                            }
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: ColorManager.kPrimaryColor,
-                          disabledBackgroundColor:
-                              ColorManager.kPrimaryColor.withOpacity(0.4),
-                          minimumSize: const Size(0, 44),
-                          padding: const EdgeInsetsDirectional.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: isSubmitting
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
                               )
-                            : const Text(
-                                'Submit',
-                                style: TextStyle(color: Colors.white),
+                            : Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        flex: 3,
+                                        child: Text(
+                                          'Product name',
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s12,
+                                            0.20,
+                                            Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        flex: 2,
+                                        child: Text(
+                                          'Price',
+                                          textAlign: TextAlign.center,
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s12,
+                                            0.20,
+                                            Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        flex: 2,
+                                        child: Text(
+                                          'Total Price',
+                                          textAlign: TextAlign.center,
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s12,
+                                            0.20,
+                                            Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        flex: 2,
+                                        child: Text(
+                                          'Order Quantity',
+                                          textAlign: TextAlign.center,
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s12,
+                                            0.20,
+                                            Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        flex: 3,
+                                        child: Text(
+                                          productName,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: buildCustomStyle(
+                                            FontWeightManager.semiBold,
+                                            FontSize.s13,
+                                            0.20,
+                                            ColorManager.textColor,
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        flex: 2,
+                                        child: Text(
+                                          '$currency $unitPrice',
+                                          textAlign: TextAlign.center,
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s12,
+                                            0.18,
+                                            ColorManager.textColor,
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        flex: 2,
+                                        child: Text(
+                                          '$currency $totalPrice',
+                                          textAlign: TextAlign.center,
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s12,
+                                            0.18,
+                                            ColorManager.textColor,
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        flex: 2,
+                                        child: Text(
+                                          quantity,
+                                          textAlign: TextAlign.center,
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s12,
+                                            0.18,
+                                            ColorManager.textColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
+                      ),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: quantityController,
+                        decoration: InputDecoration(
+                          labelText: 'Quantity',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          helperText:
+                              'Maximum returnable: ${allowsDecimals ? maxQuantity.toStringAsFixed(3) : maxQuantity.toInt()}',
+                          errorText:
+                              (double.tryParse(quantityController.text) ?? 0) >
+                                      maxQuantity
+                                  ? 'Cannot exceed remaining quantity'
+                                  : null,
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        inputFormatters: [
+                          if (hasProductUnit)
+                            ...quantityInputFormattersForUnit(productUnit)
+                          else if (allowsDecimals)
+                            FilteringTextInputFormatter.allow(
+                                RegExp(r'^\d*\.?\d{0,3}'))
+                          else
+                            FilteringTextInputFormatter.digitsOnly,
+                          TextInputFormatter.withFunction((oldValue, newValue) {
+                            if (newValue.text.isEmpty) return newValue;
+                            final parsed = double.tryParse(newValue.text);
+                            if (parsed == null || parsed <= maxQuantity) {
+                              return newValue;
+                            }
+                            return oldValue;
+                          }),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: returnTotalController,
+                        decoration: InputDecoration(
+                          labelText: 'Return Total',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          prefixText: '$currency ',
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d*\.?\d{0,2}')),
+                          TextInputFormatter.withFunction((oldValue, newValue) {
+                            if (newValue.text.isEmpty) return newValue;
+                            final doubleValue = double.tryParse(newValue.text);
+                            if (doubleValue == null ||
+                                doubleValue <= maxTotal) {
+                              return newValue;
+                            }
+                            return oldValue;
+                          }),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: reasonController,
+                        decoration: InputDecoration(
+                          labelText: 'Reason',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                        ),
+                        maxLines: 1,
+                      ),
+                      const SizedBox(height: 24),
+                      SalesReturnActionRow(
+                        children: [
+                          TextButton(
+                            onPressed: isSubmitting
+                                ? null
+                                : () => Navigator.pop(dialogContext),
+                            style: TextButton.styleFrom(
+                              minimumSize: const Size(0, 44),
+                              padding: const EdgeInsetsDirectional.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                            ),
+                            child: const Text('Cancel'),
+                          ),
+                          ElevatedButton(
+                            onPressed: isSubmitting
+                                ? null
+                                : () async {
+                                    final parsedOrderId = int.tryParse(orderId);
+                                    if (parsedOrderId == null) {
+                                      showScaffoldError(
+                                        context: context,
+                                        message:
+                                            'Invalid order. Please reopen from Sales.',
+                                      );
+                                      return;
+                                    }
+
+                                    final returnQty = double.tryParse(
+                                        quantityController.text);
+                                    if (returnQty == null || returnQty <= 0) {
+                                      showScaffoldError(
+                                        context: context,
+                                        message:
+                                            'Please enter a valid quantity',
+                                      );
+                                      return;
+                                    }
+                                    if (returnQty > maxQuantity) {
+                                      showScaffoldError(
+                                        context: context,
+                                        message:
+                                            'Quantity cannot exceed remaining returnable amount',
+                                      );
+                                      return;
+                                    }
+
+                                    setDialogState(() => isSubmitting = true);
+
+                                    try {
+                                      String? accessToken =
+                                          Provider.of<AuthModel>(context,
+                                                  listen: false)
+                                              .token;
+
+                                      final returnOrderId =
+                                          await Provider.of<SalesProvider>(
+                                                  context,
+                                                  listen: false)
+                                              .submitSalesReturn(
+                                        accessToken: accessToken ?? '',
+                                        orderId: parsedOrderId,
+                                        price: double.parse(unitPrice),
+                                        quantity: returnQty,
+                                        cartItemId: cartItemId,
+                                        reason: reasonController.text,
+                                        isDeliveryRefundable:
+                                            _deliveryChargeRefundable,
+                                      );
+
+                                      if (mounted) {
+                                        setState(() {
+                                          _activeReturnOrderId = returnOrderId;
+                                        });
+                                      }
+
+                                      if (!dialogContext.mounted) return;
+
+                                      showScaffold(
+                                        context: context,
+                                        message: 'Item returned successfully',
+                                      );
+
+                                      await getOrderDetails(
+                                          selectedOrderNumber.toString(),
+                                          resetInitialState: false);
+
+                                      if (dialogContext.mounted) {
+                                        Navigator.pop(dialogContext);
+                                      }
+                                    } catch (error, stackTrace) {
+                                      debugPrint(
+                                          'Error submitting sales return: $error');
+                                      debugPrint(
+                                          'Stack Trace for submitSalesReturn: $stackTrace');
+                                      showScaffoldError(
+                                        context: context,
+                                        message: error is Exception
+                                            ? error
+                                                .toString()
+                                                .replaceFirst('Exception: ', '')
+                                            : 'Failed to submit sales return',
+                                      );
+                                    } finally {
+                                      if (context.mounted) {
+                                        setDialogState(
+                                            () => isSubmitting = false);
+                                      }
+                                    }
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: ColorManager.kPrimaryColor,
+                              disabledBackgroundColor:
+                                  ColorManager.kPrimaryColor.withOpacity(0.4),
+                              minimumSize: const Size(0, 44),
+                              padding: const EdgeInsetsDirectional.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: isSubmitting
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Submit',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
-        );
+            );
           },
         );
       },
     );
   }
 
-  Widget _buildDialogProductRow(String label, String value, {bool bold = false}) {
+  Widget _buildDialogProductRow(String label, String value,
+      {bool bold = false}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1701,8 +1728,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                     7: FlexColumnWidth(1.5),
                   },
                   border: null,
-                  defaultVerticalAlignment:
-                      TableCellVerticalAlignment.middle,
+                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                   children: [
                     TableRow(
                       children: [
@@ -1734,8 +1760,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                       7: FlexColumnWidth(1.5),
                     },
                     border: null,
-                    defaultVerticalAlignment:
-                        TableCellVerticalAlignment.middle,
+                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                     children: [
                       ...salesReturnItems.asMap().entries.map((entry) {
                         int index = entry.key;
@@ -1760,8 +1785,31 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     });
   }
 
+  String _resolvedProductUnit(SalesReturnCart item) {
+    if (item.productUnit.trim().isNotEmpty) {
+      return item.productUnit;
+    }
+
+    final orderItems = orderDetailsModelData?.cart?.cartItems ?? const [];
+    for (final orderItem in orderItems) {
+      final sameCartItem = orderItem.id == item.cartItemId;
+      final sameProductName = orderItem.productName?.trim().toLowerCase() ==
+          item.productName.trim().toLowerCase();
+      if (!sameCartItem && !sameProductName) continue;
+
+      final unit = orderItem.productUnit?.trim().isNotEmpty == true
+          ? orderItem.productUnit!.trim()
+          : orderItem.saleUnitName?.trim() ?? '';
+      if (unit.isNotEmpty) return unit;
+    }
+
+    return '';
+  }
+
   Widget _buildMobileReturnItemCard(SalesReturnCart item, int index) {
-    final canReturn = !item.isReturned &&
+    final hasValidCartItemId = item.cartItemId > 0;
+    final canReturn = hasValidCartItemId &&
+        !item.isReturned &&
         SalesReturnCalculationHelper.remainingReturnableQuantity(item) > 0;
 
     return Container(
@@ -1845,12 +1893,12 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
           const SizedBox(height: 12),
           if (!canReturn)
             Text(
-              'Returned',
+              hasValidCartItemId ? 'Returned' : 'Unavailable',
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s12,
                 0.20,
-                Colors.green,
+                hasValidCartItemId ? Colors.green : Colors.red,
               ),
             )
           else
@@ -1859,8 +1907,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               height: 44,
               child: TextButton(
                 style: TextButton.styleFrom(
-                  backgroundColor:
-                      ColorManager.kPrimaryColor.withOpacity(0.1),
+                  backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.1),
                   foregroundColor: ColorManager.kPrimaryColor,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -1876,6 +1923,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                     currency: '',
                     totalPrice: item.totalPrice.toString(),
                     quantity: item.quantity.toString(),
+                    productUnit: _resolvedProductUnit(item),
                     returnedQuantity: item.returnedQuantity,
                   );
                 },
@@ -1941,8 +1989,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         ),
       ),
       SizedBox(
-          height: 55,
-          child: _buildTableCell(item.returnedTotal.toString())),
+          height: 55, child: _buildTableCell(item.returnedTotal.toString())),
       SizedBox(
         height: 55,
         child: Center(
@@ -1956,17 +2003,18 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       SizedBox(
         height: 55,
         child: Center(
-          child: item.isReturned ||
+          child: item.cartItemId <= 0 ||
+                  item.isReturned ||
                   SalesReturnCalculationHelper.remainingReturnableQuantity(
                           item) <=
                       0
               ? Text(
-                  'Returned',
+                  item.cartItemId <= 0 ? 'Unavailable' : 'Returned',
                   style: buildCustomStyle(
                     FontWeightManager.medium,
                     FontSize.s12,
                     0.20,
-                    Colors.green,
+                    item.cartItemId <= 0 ? Colors.red : Colors.green,
                   ),
                 )
               : TextButton(
@@ -1980,6 +2028,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                       currency: '',
                       totalPrice: item.totalPrice.toString(),
                       quantity: item.quantity.toString(),
+                      productUnit: _resolvedProductUnit(item),
                       returnedQuantity: item.returnedQuantity,
                     );
                   },
@@ -2096,116 +2145,115 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
             title: isCompletingReturn ? "Completing…" : "Complete Sales Return",
             fct: canComplete
                 ? () async {
-        debugPrint('Return Order ID: $selectedOrderId');
+                    debugPrint('Return Order ID: $selectedOrderId');
 
-        // Check if there are any items with return_order_id
-        if (_salesReturnItems.isEmpty) {
-          showScaffoldError(
-            context: context,
-            message: 'No return items available',
-          );
-          return;
-        }
+                    // Check if there are any items with return_order_id
+                    if (_salesReturnItems.isEmpty) {
+                      showScaffoldError(
+                        context: context,
+                        message: 'No return items available',
+                      );
+                      return;
+                    }
 
-        // Find the first item with a valid return_order_id
-        final validReturnItem = _salesReturnItems.firstWhere(
-          (item) => item.returnOrderId != 0,
-          orElse: () => _salesReturnItems.first,
-        );
+                    final returnOrderId = _draftReturnOrderId;
+                    if (returnOrderId == null) {
+                      showScaffoldError(
+                        context: context,
+                        message:
+                            'No valid return order ID found. Please submit return items first.',
+                      );
+                      return;
+                    }
 
-        if (validReturnItem.returnOrderId == 0) {
-          showScaffoldError(
-            context: context,
-            message:
-                'No valid return order ID found. Please submit return items first.',
-          );
-          return;
-        }
+                    try {
+                      String? accessToken =
+                          Provider.of<AuthModel>(context, listen: false).token;
 
-        try {
-          String? accessToken =
-              Provider.of<AuthModel>(context, listen: false).token;
+                      // Validate payment details if payment is enabled
+                      if (hasPayment) {
+                        if (paidAmountController.text.isEmpty) {
+                          showScaffoldError(
+                            context: context,
+                            message: 'Please enter the return amount',
+                          );
+                          return;
+                        }
 
-          // Validate payment details if payment is enabled
-          if (hasPayment) {
-            if (paidAmountController.text.isEmpty) {
-              showScaffoldError(
-                context: context,
-                message: 'Please enter the return amount',
-              );
-              return;
-            }
+                        final refundSummary = _refundSummaryFor(
+                          _salesReturnItems,
+                          serverBreakdown:
+                              Provider.of<SalesProvider>(context, listen: false)
+                                  .serverRefundBreakdown,
+                        );
+                        final maxCashRefund = refundSummary.maxCashRefundAmount;
+                        final paidAmount =
+                            double.tryParse(paidAmountController.text) ?? 0.0;
 
-            final refundSummary = _refundSummaryFor(
-              _salesReturnItems,
-              serverBreakdown: Provider.of<SalesProvider>(context, listen: false)
-                  .serverRefundBreakdown,
-            );
-            final maxCashRefund = refundSummary.maxCashRefundAmount;
-            final paidAmount =
-                double.tryParse(paidAmountController.text) ?? 0.0;
+                        if (paidAmount <= 0) {
+                          showScaffoldError(
+                            context: context,
+                            message: 'Return amount must be greater than 0',
+                          );
+                          return;
+                        }
 
-            if (paidAmount <= 0) {
-              showScaffoldError(
-                context: context,
-                message: 'Return amount must be greater than 0',
-              );
-              return;
-            }
+                        if (paidAmount > maxCashRefund) {
+                          showScaffoldError(
+                            context: context,
+                            message:
+                                'Return amount cannot exceed ${maxCashRefund.toStringAsFixed(2)}',
+                          );
+                          return;
+                        }
+                      }
 
-            if (paidAmount > maxCashRefund) {
-              showScaffoldError(
-                context: context,
-                message:
-                    'Return amount cannot exceed ${maxCashRefund.toStringAsFixed(2)}',
-              );
-              return;
-            }
-          }
+                      // Parse paid amount
+                      double paidAmount = 0.0;
+                      if (hasPayment && paidAmountController.text.isNotEmpty) {
+                        paidAmount =
+                            double.tryParse(paidAmountController.text) ?? 0.0;
+                      }
 
-          // Parse paid amount
-          double paidAmount = 0.0;
-          if (hasPayment && paidAmountController.text.isNotEmpty) {
-            paidAmount = double.tryParse(paidAmountController.text) ?? 0.0;
-          }
+                      setState(() {
+                        isCompletingReturn = true;
+                      });
 
-          setState(() {
-            isCompletingReturn = true;
-          });
+                      await Provider.of<SalesProvider>(context, listen: false)
+                          .completeSalesReturn(
+                        accessToken: accessToken ?? '',
+                        returnOrderId: returnOrderId,
+                        paymentMethod:
+                            hasPayment ? selectedPaymentMethod : null,
+                        paidAmount: hasPayment ? paidAmount : null,
+                        hasPayment: hasPayment,
+                        isDeliveryRefundable: _deliveryChargeRefundable,
+                      );
 
-          await Provider.of<SalesProvider>(context, listen: false)
-              .completeSalesReturn(
-            accessToken: accessToken ?? '',
-            returnOrderId: validReturnItem.returnOrderId,
-            paymentMethod: hasPayment ? selectedPaymentMethod : null,
-            paidAmount: hasPayment ? paidAmount : null,
-            hasPayment: hasPayment,
-            isDeliveryRefundable: _deliveryChargeRefundable,
-          );
+                      showScaffold(
+                        context: context,
+                        message: 'Sales Return Created Successfully',
+                      );
 
-          showScaffold(
-            context: context,
-            message: 'Sales Return Created Successfully',
-          );
-
-          sideBarController.index.value = 50;
-        } catch (error, stackTrace) {
-          debugPrint('Error creating sales return: $error');
-          debugPrint('Stack Trace for completeSalesReturn: $stackTrace');
-          showScaffoldError(
-            context: context,
-            message: error is Exception
-                ? error.toString().replaceFirst('Exception: ', '')
-                : 'Failed to create sales return',
-          );
-        } finally {
-          if (mounted) {
-            setState(() {
-              isCompletingReturn = false;
-            });
-          }
-        }
-              }
+                      sideBarController.index.value = 50;
+                    } catch (error, stackTrace) {
+                      debugPrint('Error creating sales return: $error');
+                      debugPrint(
+                          'Stack Trace for completeSalesReturn: $stackTrace');
+                      showScaffoldError(
+                        context: context,
+                        message: error is Exception
+                            ? error.toString().replaceFirst('Exception: ', '')
+                            : 'Failed to create sales return',
+                      );
+                    } finally {
+                      if (mounted) {
+                        setState(() {
+                          isCompletingReturn = false;
+                        });
+                      }
+                    }
+                  }
                 : () {},
             height: 48,
             width: size.width,
@@ -2323,9 +2371,10 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
             (orderDetailsModelData!.priceSummary!.netPayable!).toDouble();
       }
 
-      final returnedQtyLabel = returnedQuantity == returnedQuantity.roundToDouble()
-          ? '${returnedQuantity.toInt()}'
-          : returnedQuantity.toStringAsFixed(3);
+      final returnedQtyLabel =
+          returnedQuantity == returnedQuantity.roundToDouble()
+              ? '${returnedQuantity.toInt()}'
+              : returnedQuantity.toStringAsFixed(3);
 
       return SalesReturnTwoColumnLayout(
         start: SalesReturnContentCard(
@@ -2411,8 +2460,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               const SizedBox(height: 6),
               _buildSummaryRow('Returned Quantity', returnedQtyLabel),
               const SizedBox(height: 6),
-              _buildSummaryRow(
-                  'Discount', returnDiscount.toStringAsFixed(2)),
+              _buildSummaryRow('Discount', returnDiscount.toStringAsFixed(2)),
               const SizedBox(height: 6),
               _buildSummaryRow('Delivery Charge',
                   '${(_deliveryChargeRefundable ? shippingCost : 0.0).toStringAsFixed(2)}'),
@@ -2476,12 +2524,12 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       // Real-time validation flag
       final double enteredAmount =
           double.tryParse(paidAmountController.text) ?? 0.0;
-      final bool isExceedingMax =
-          hasPayment && enteredAmount > maxCashRefund;
+      final bool isExceedingMax = hasPayment && enteredAmount > maxCashRefund;
 
       return SalesReturnContentCard(
         margin: const EdgeInsets.symmetric(vertical: 8),
-        padding: EdgeInsetsDirectional.all(salesReturnIsPhone(context) ? 14 : 20),
+        padding:
+            EdgeInsetsDirectional.all(salesReturnIsPhone(context) ? 14 : 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2534,7 +2582,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
             const SizedBox(height: 16),
             LayoutBuilder(
               builder: (context, constraints) {
-                final isPhone = constraints.maxWidth < kSalesReturnPhoneBreakpoint;
+                final isPhone =
+                    constraints.maxWidth < kSalesReturnPhoneBreakpoint;
                 final headerRow = Row(
                   children: [
                     Container(
@@ -2677,8 +2726,9 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                           ),
                           decoration: InputDecoration(
                             isDense: true,
-                            contentPadding: const EdgeInsetsDirectional
-                                .symmetric(horizontal: 12, vertical: 12),
+                            contentPadding:
+                                const EdgeInsetsDirectional.symmetric(
+                                    horizontal: 12, vertical: 12),
                             constraints:
                                 const BoxConstraints.tightFor(height: 48),
                             border: OutlineInputBorder(
@@ -2694,8 +2744,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                             focusedBorder: const OutlineInputBorder(
                               borderRadius:
                                   BorderRadius.all(Radius.circular(10)),
-                              borderSide: BorderSide(
-                                  color: ColorManager.kPrimaryColor),
+                              borderSide:
+                                  BorderSide(color: ColorManager.kPrimaryColor),
                             ),
                             filled: true,
                             fillColor: Colors.white,
@@ -2764,8 +2814,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                       decimal: true),
                               textAlignVertical: TextAlignVertical.center,
                               onTap: () {
-                                paidAmountController.selection =
-                                    TextSelection(
+                                paidAmountController.selection = TextSelection(
                                   baseOffset: 0,
                                   extentOffset:
                                       paidAmountController.text.length,
@@ -2777,17 +2826,17 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                     ? 'Return amount cannot exceed ${maxCashRefund.toStringAsFixed(2)}'
                                     : null,
                                 prefixText: '$currency ',
-                                constraints: const BoxConstraints.tightFor(
-                                    height: 48),
+                                constraints:
+                                    const BoxConstraints.tightFor(height: 48),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide(
-                                      color: Colors.grey.shade300),
+                                  borderSide:
+                                      BorderSide(color: Colors.grey.shade300),
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide(
-                                      color: Colors.grey.shade300),
+                                  borderSide:
+                                      BorderSide(color: Colors.grey.shade300),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(10),

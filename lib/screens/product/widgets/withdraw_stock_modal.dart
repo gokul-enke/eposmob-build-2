@@ -9,6 +9,7 @@ import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/models/list_stock.dart';
+import 'package:pos_machine/helpers/purchase_price_permission.dart';
 
 class WithdrawStockModal extends StatefulWidget {
   final ListStockModelData stock;
@@ -42,6 +43,7 @@ class _WithdrawStockModalState extends State<WithdrawStockModal> {
 
   @override
   Widget build(BuildContext context) {
+    final canShowPurchasePrice = canViewPurchasePrice(context);
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
@@ -111,12 +113,14 @@ class _WithdrawStockModalState extends State<WithdrawStockModal> {
                   Expanded(
                     child: _buildField('MRP', mrpController, readOnly: true),
                   ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: _buildField(
-                        'Purchase Price', purchasePriceController,
-                        readOnly: true),
-                  ),
+                  if (canShowPurchasePrice) ...[
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: _buildField(
+                          'Purchase Price', purchasePriceController,
+                          readOnly: true),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 20),
