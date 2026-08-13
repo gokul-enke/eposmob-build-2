@@ -146,7 +146,7 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
     if (picked != null && picked != selectedDate) {
       // Safety guard: reject if future date somehow slips through
       if (picked.isAfter(today)) {
-        showScaffoldError(context: context, message: "Future dates cannot be selected");
+        showScaffoldError(context: context, message: 'expense.error_future_date'.tr);
         return;
       }
       setState(() {
@@ -159,31 +159,31 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
     if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
     if (selectedCategory == null) {
-      showScaffoldError(context: context, message: "Please select an Expense Category");
+      showScaffoldError(context: context, message: 'expense.error_no_category'.tr);
       return;
     }
     if (selectedDebitAccount == null) {
-      showScaffoldError(context: context, message: "Please select a Debit Account");
+      showScaffoldError(context: context, message: 'expense.error_no_debit'.tr);
       return;
     }
     if (selectedCreditAccount == null) {
-      showScaffoldError(context: context, message: "Please select a Credit Account");
+      showScaffoldError(context: context, message: 'expense.error_no_credit'.tr);
       return;
     }
     if (selectedPaymentMethod == null) {
-      showScaffoldError(context: context, message: "Please select a Payment Method");
+      showScaffoldError(context: context, message: 'expense.error_no_payment_method'.tr);
       return;
     }
 
     final double amount = double.tryParse(amountController.text) ?? 0.0;
     if (amount <= 0) {
-      showScaffoldError(context: context, message: "Please enter a valid amount greater than zero");
+      showScaffoldError(context: context, message: 'expense.error_amount_zero'.tr);
       return;
     }
 
     final token = Provider.of<AuthModel>(context, listen: false).token;
     if (token == null) {
-      showScaffoldError(context: context, message: "Authentication token missing. Please log in again.");
+      showScaffoldError(context: context, message: 'expense.error_no_token'.tr);
       return;
     }
 
@@ -210,7 +210,7 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
         _isSubmitting = false;
       });
       if (result['status'] == 'success') {
-        showScaffold(context: context, message: "Expense created successfully");
+        showScaffold(context: context, message: 'expense.success_created'.tr);
         if (createAnother) {
           setState(() {
             descriptionController.clear();
@@ -227,7 +227,7 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
           sideBarController.index.value = 93;
         }
       } else {
-        showScaffoldError(context: context, message: result['message'] ?? 'Failed to create expense');
+        showScaffoldError(context: context, message: result['message'] ?? 'expense.error_create_failed'.tr);
       }
     });
   }
@@ -271,11 +271,11 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
               children: [
                 _buildHeader(),
                 const SizedBox(height: 20),
-                _buildSectionTitle("Entry Details"),
+                _buildSectionTitle('expense.section_entry_details'.tr),
                 const SizedBox(height: 15),
                 _buildFormFields(provider, isPhone),
                 const SizedBox(height: 15),
-                _buildLabel("Notes"),
+                _buildLabel('expense.label_notes'.tr),
                 FocusTraversalOrder(
                   order: const NumericFocusOrder(8),
                   child: _buildNotesField(notesFocus),
@@ -297,16 +297,16 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
     final leftColumn = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildLabel("Reference No."),
+        _buildLabel('expense.reference_no'.tr),
         _buildDisabledTextField(referenceNo),
         const SizedBox(height: 15),
-        _buildLabel("Expense Category*", isRequired: true),
+        _buildLabel('expense.label_expense_category'.tr, isRequired: true),
         FocusTraversalOrder(
           order: const NumericFocusOrder(2),
           child: _buildDropdownField<Map<String, dynamic>>(
             key: const ValueKey('expense_category_dropdown'),
             focusNode: categoryFocus,
-            hint: "Select an option",
+            hint: 'expense.hint_select_option'.tr,
             value: selectedCategory,
             items: provider.categoryOptions,
             displayText: (item) => item['name'] ?? '',
@@ -314,13 +314,13 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
           ),
         ),
         const SizedBox(height: 15),
-        _buildLabel("Expense Account (Debit)*", isRequired: true),
+        _buildLabel('expense.label_expense_account_debit'.tr, isRequired: true),
         FocusTraversalOrder(
           order: const NumericFocusOrder(4),
           child: _buildDropdownField<Map<String, dynamic>>(
             key: const ValueKey('expense_debit_account_dropdown'),
             focusNode: debitAccountFocus,
-            hint: "Select an option",
+            hint: 'expense.hint_select_option'.tr,
             value: selectedDebitAccount,
             items: provider.debitAccountOptions,
             displayText: (item) => item['name'] ?? '',
@@ -328,7 +328,7 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
           ),
         ),
         const SizedBox(height: 15),
-        _buildLabel("Amount*", isRequired: true),
+        _buildLabel('expense.amount'.tr, isRequired: true),
         FocusTraversalOrder(
           order: const NumericFocusOrder(6),
           child: _buildAmountField(amountFocus),
@@ -339,29 +339,29 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
     final rightColumn = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildLabel("Payment Date*", isRequired: true),
+        _buildLabel('expense.label_payment_date'.tr, isRequired: true),
         FocusTraversalOrder(
           order: const NumericFocusOrder(1),
           child: _buildDatePickerField(dateFocus),
         ),
         const SizedBox(height: 15),
-        _buildLabel("Description / Vendor"),
+        _buildLabel('expense.label_description_vendor_create'.tr),
         FocusTraversalOrder(
           order: const NumericFocusOrder(3),
           child: _buildTextField(
             controller: descriptionController,
-            hint: "e.g. Office rent",
+            hint: 'expense.hint_description'.tr,
             focusNode: descriptionFocus,
           ),
         ),
         const SizedBox(height: 15),
-        _buildLabel("Paid From / Source (Credit)*", isRequired: true),
+        _buildLabel('expense.label_paid_from'.tr, isRequired: true),
         FocusTraversalOrder(
           order: const NumericFocusOrder(5),
           child: _buildDropdownField<Map<String, dynamic>>(
             key: const ValueKey('expense_credit_account_dropdown'),
             focusNode: creditAccountFocus,
-            hint: "Select an option",
+            hint: 'expense.hint_select_option'.tr,
             value: selectedCreditAccount,
             items: provider.creditAccountOptions,
             displayText: (item) => item['name'] ?? '',
@@ -388,13 +388,13 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
           ),
         ),
         const SizedBox(height: 15),
-        _buildLabel("Payment Method*", isRequired: true),
+        _buildLabel('expense.payment_method'.tr, isRequired: true),
         FocusTraversalOrder(
           order: const NumericFocusOrder(7),
           child: _buildDropdownField<Map<String, dynamic>>(
             key: const ValueKey('expense_payment_method_dropdown'),
             focusNode: paymentMethodFocus,
-            hint: "Select an option",
+            hint: 'expense.hint_select_option'.tr,
             value: selectedPaymentMethod,
             items: _getFilteredPaymentMethods(provider),
             displayText: (item) => item['name'] ?? '',
@@ -433,10 +433,10 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
           onPressed: () {
             sideBarController.index.value = 93;
           },
-          text: 'All Expenses',
+          text: 'expense.all_expenses'.tr,
         ),
         Text(
-          "Create Expense",
+          'expense.create_title'.tr,
           style: buildCustomStyle(
             FontWeightManager.semiBold,
             FontSize.s20,
@@ -455,7 +455,7 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2),
                 child: Text(
-                  "Expenses",
+                  'expense.title'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.medium,
                     FontSize.s12,
@@ -467,7 +467,7 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
             ),
             const Icon(Icons.chevron_right, size: 14, color: Colors.grey),
             Text(
-              "Create",
+              'expense.breadcrumb_create'.tr,
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s12,
@@ -599,7 +599,7 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
           if (date.isAfter(today)) {
             showScaffoldError(
               context: context,
-              message: "Future dates cannot be selected",
+              message: 'expense.error_future_date'.tr,
             );
             return;
           }
@@ -662,12 +662,12 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             style: const TextStyle(fontSize: 13),
             validator: (val) {
-              if (val == null || val.isEmpty) return "Please enter amount";
-              if (double.tryParse(val) == null) return "Please enter a valid number";
+              if (val == null || val.isEmpty) return 'expense.error_amount_required'.tr;
+              if (double.tryParse(val) == null) return 'expense.error_amount_invalid'.tr;
               return null;
             },
             decoration: InputDecoration(
-              hintText: "Enter amount",
+              hintText: 'expense.hint_amount'.tr,
               prefixIcon: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
                 child: Text(
@@ -716,7 +716,7 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
             maxLines: 4,
             style: const TextStyle(fontSize: 13),
             decoration: InputDecoration(
-              hintText: "Write notes here...",
+              hintText: 'expense.hint_notes'.tr,
               hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               border: InputBorder.none,
@@ -731,7 +731,7 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
     final isPhone = _isPhone(context);
 
     final createButton = CustomRoundButtonAdvanced(
-      title: "Create",
+      title: 'expense.btn_create'.tr,
       fct: () => _submitForm(createAnother: false),
       width: isPhone ? double.infinity : 100,
       height: 40,
@@ -742,7 +742,7 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
     );
 
     final createAnotherButton = CustomRoundButtonAdvanced(
-      title: "Create & create another",
+      title: 'expense.btn_create_another'.tr,
       fct: () => _submitForm(createAnother: true),
       width: isPhone ? double.infinity : 170,
       height: 40,
@@ -756,7 +756,7 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
     );
 
     final cancelButton = CustomRoundButtonAdvanced(
-      title: "Cancel",
+      title: 'expense.btn_cancel'.tr,
       fct: () {
         sideBarController.index.value = 93;
       },

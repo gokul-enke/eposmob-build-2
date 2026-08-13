@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -220,13 +221,13 @@ class ExpenseListMobileFilterFields extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _labeledField('Category', categoryFilter),
+              _labeledField('expense.category'.tr, categoryFilter),
               const SizedBox(height: 10),
-              _labeledField('Reference No', referenceFilter),
+              _labeledField('expense.hint_reference_no'.tr, referenceFilter),
               const SizedBox(height: 10),
-              _labeledField('Debit account', debitFilter),
+              _labeledField('expense.filter_debit_account'.tr, debitFilter),
               const SizedBox(height: 10),
-              _labeledField('Status', statusFilter),
+              _labeledField('expense.status'.tr, statusFilter),
             ],
           );
         }
@@ -237,18 +238,18 @@ class ExpenseListMobileFilterFields extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: _labeledField('Category', categoryFilter)),
+                Expanded(child: _labeledField('expense.category'.tr, categoryFilter)),
                 const SizedBox(width: 10),
-                Expanded(child: _labeledField('Reference No', referenceFilter)),
+                Expanded(child: _labeledField('expense.hint_reference_no'.tr, referenceFilter)),
               ],
             ),
             const SizedBox(height: 10),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: _labeledField('Debit account', debitFilter)),
+                Expanded(child: _labeledField('expense.filter_debit_account'.tr, debitFilter)),
                 const SizedBox(width: 10),
-                Expanded(child: _labeledField('Status', statusFilter)),
+                Expanded(child: _labeledField('expense.status'.tr, statusFilter)),
               ],
             ),
           ],
