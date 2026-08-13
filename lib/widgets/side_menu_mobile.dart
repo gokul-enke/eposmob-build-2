@@ -189,7 +189,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               Obx(
                 () => _MobileDrawerTile(
                   icon: Icons.home_rounded,
-                  title: 'Home',
+                  title: 'nav.home'.tr,
                   onTap: () => navigate(0),
                   selected: sideBarController.index.value == 0,
                 ),
@@ -198,7 +198,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               Obx(
                 () => _MobileDrawerTile(
                   icon: Icons.point_of_sale_rounded,
-                  title: 'Billing',
+                  title: 'nav.billing'.tr,
                   onTap: () => navigate(90),
                   selected: sideBarController.index.value == 90,
                 ),
@@ -207,7 +207,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               Obx(
                 () => _MobileDrawerTile(
                   icon: Icons.dashboard_rounded,
-                  title: 'Dashboard',
+                  title: 'nav.dashboard'.tr,
                   onTap: () => navigate(1),
                   selected: sideBarController.index.value == 1,
                 ),
@@ -216,7 +216,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               Obx(
                 () => _MobileDrawerTile(
                   icon: Icons.restaurant_rounded,
-                  title: 'Restaurant',
+                  title: 'nav.restaurant'.tr,
                   onTap: () => navigate(89),
                   selected: sideBarController.index.value == 89,
                 ),
@@ -225,7 +225,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               Obx(
                 () => _MobileDrawerTile(
                   icon: Icons.storefront_rounded,
-                  title: 'Store',
+                  title: 'nav.store'.tr,
                   onTap: () => navigate(97),
                   selected: sideBarController.index.value == 97,
                 ),
@@ -234,7 +234,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               Obx(
                 () => _MobileDrawerTile(
                   icon: Icons.room_service_rounded,
-                  title: 'Attender',
+                  title: 'nav.attender'.tr,
                   onTap: () => navigate(55),
                   selected: sideBarController.index.value == 55,
                 ),
@@ -243,7 +243,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               Obx(
                 () => _MobileDrawerTile(
                   icon: Icons.soup_kitchen_rounded,
-                  title: 'Kitchen Master',
+                  title: 'nav.kitchen_master'.tr,
                   onTap: () => navigate(56),
                   selected: sideBarController.index.value == 56,
                 ),
@@ -294,7 +294,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               Obx(
                 () => _MobileDrawerExpandableTile(
                   icon: Icons.shopping_cart_rounded,
-                  title: 'Sales',
+                  title: 'nav.sales'.tr,
                   selected: [
                     2,
                     11,
@@ -310,7 +310,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                   subItems: [
                     if (hasSalesPermission)
                       _MobileDrawerSubItem(
-                        title: 'Sales',
+                        title: 'nav.sales'.tr,
                         onTap: () {
                           fetchSalesOrders();
                           navigate(2);
@@ -318,27 +318,27 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                       ),
                     if (hasConfirmedOrdersPermission)
                       _MobileDrawerSubItem(
-                        title: 'Confirmed Orders',
+                        title: 'nav.confirmed_orders'.tr,
                         onTap: () => navigate(54),
                       ),
                     if (hasSalesReturnPermission)
                       _MobileDrawerSubItem(
-                        title: 'Sales Return',
+                        title: 'nav.sales_return'.tr,
                         onTap: () => navigate(50),
                       ),
                     if (hasDayClosingPermission)
                       _MobileDrawerSubItem(
-                        title: 'Day Sale Closing',
+                        title: 'nav.day_sale_closing'.tr,
                         onTap: () => navigate(78),
                       ),
                     if (isCompanyAdmin && hasDayClosingPermission)
                       _MobileDrawerSubItem(
-                        title: 'Admin Day Sale records',
+                        title: 'nav.admin_day_sale_records'.tr,
                         onTap: () => navigate(84),
                       ),
                     if (hasOnlineSalesPermission || isCompanyAdmin)
                       _MobileDrawerSubItem(
-                        title: 'Online Orders',
+                        title: 'nav.online_orders'.tr,
                         onTap: () => navigate(92),
                       ),
                   ],
@@ -348,16 +348,16 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               Obx(
                 () => _MobileDrawerExpandableTile(
                   icon: Icons.request_quote_rounded,
-                  title: 'Quotations',
+                  title: 'nav.quotations'.tr,
                   selected:
                       [86, 87, 88].contains(sideBarController.index.value),
                   subItems: [
                     _MobileDrawerSubItem(
-                      title: 'Quotations',
+                      title: 'nav.quotations'.tr,
                       onTap: () => navigate(86),
                     ),
                     _MobileDrawerSubItem(
-                      title: 'Quotation List',
+                      title: 'nav.quotation_list'.tr,
                       onTap: () => navigate(87),
                     ),
                   ],
@@ -402,7 +402,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               Obx(
                 () => _MobileDrawerTile(
                   icon: Icons.category_rounded,
-                  title: 'Category',
+                  title: 'nav.category'.tr,
                   onTap: () => navigate(12),
                   selected: [12, 13, 16, 27, 34]
                       .contains(sideBarController.index.value),
@@ -412,23 +412,23 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               Obx(
                 () => _MobileDrawerExpandableTile(
                   icon: Icons.inventory_2_rounded,
-                  title: 'Product',
+                  title: 'nav.product'.tr,
                   selected: [14, 15, 17, 18, 28, 33, 35, 83]
                       .contains(sideBarController.index.value),
                   subItems: [
                     if (hasProductPermission)
                       _MobileDrawerSubItem(
-                        title: 'Product',
+                        title: 'nav.product'.tr,
                         onTap: () => navigate(14),
                       ),
                     if (hasStockPermission)
                       _MobileDrawerSubItem(
-                        title: 'Stock',
+                        title: 'nav.stock'.tr,
                         onTap: () => navigate(15),
                       ),
                     if (hasBarcodePermission)
                       _MobileDrawerSubItem(
-                        title: 'Product Barcode',
+                        title: 'nav.product_barcode'.tr,
                         onTap: () => navigate(83),
                       ),
                   ],
@@ -438,7 +438,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               Obx(
                 () => _MobileDrawerTile(
                   icon: Icons.shopping_bag_rounded,
-                  title: 'Purchase',
+                  title: 'nav.purchase'.tr,
                   onTap: () => navigate(81),
                   selected:
                       [81, 82, 36].contains(sideBarController.index.value),
@@ -474,7 +474,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
             .currentUserHasPermissionSync('menu.reports.consumed_stock.access');
         final isCompanyAdmin = userRole == 'company_admin';
         final hasStockReportPermission = roleProvider
-            .currentUserHasPermissionSync('menu.reports.stock.access') ||
+                .currentUserHasPermissionSync('menu.reports.stock.access') ||
             isCompanyAdmin;
         final canViewExecutiveSummary = isCompanyAdmin ||
             (hasExecutiveSummaryPermission && userRole != 'sales_executive');
@@ -498,7 +498,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
             Obx(
               () => _MobileDrawerExpandableTile(
                 icon: Icons.analytics_rounded,
-                title: 'Reports',
+                title: 'nav.reports'.tr,
                 selected: [
                   39,
                   40,
@@ -517,37 +517,37 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                 subItems: [
                   if (hasSalesExecutiveReportsPermission)
                     _MobileDrawerSubItem(
-                      title: 'Sales Executive Reports',
+                      title: 'nav.sales_executive_reports'.tr,
                       onTap: () => navigate(58),
                     ),
                   if (canViewExecutiveSummary)
                     _MobileDrawerSubItem(
-                      title: 'Executive Reports',
+                      title: 'nav.executive_reports'.tr,
                       onTap: () => navigate(85),
                     ),
                   if (hasCustomerTransactionsPermission)
                     _MobileDrawerSubItem(
-                      title: 'Customer Transactions Reports',
+                      title: 'nav.customer_transaction_reports'.tr,
                       onTap: () => navigate(65),
                     ),
                   if (hasSupplierTransactionsPermission)
                     _MobileDrawerSubItem(
-                      title: 'Supplier Transactions Reports',
+                      title: 'nav.supplier_transaction_reports'.tr,
                       onTap: () => navigate(67),
                     ),
                   if (hasStockReportPermission)
                     _MobileDrawerSubItem(
-                      title: 'Stock Report',
+                      title: 'nav.stock_report'.tr,
                       onTap: () => navigate(98),
                     ),
                   if (hasNonStockPermission)
                     _MobileDrawerSubItem(
-                      title: 'Non-Stock Report',
+                      title: 'nav.non_stock_report'.tr,
                       onTap: () => navigate(77),
                     ),
                   if (hasConsumedStockPermission)
                     _MobileDrawerSubItem(
-                      title: 'Consumed Stocks Report',
+                      title: 'nav.consumed_stocks_report'.tr,
                       onTap: () => navigate(80),
                     ),
                 ],
@@ -602,7 +602,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               Obx(
                 () => _MobileDrawerExpandableTile(
                   icon: Icons.receipt_long_rounded,
-                  title: 'Transactions',
+                  title: 'nav.transactions'.tr,
                   selected: [
                     21,
                     24,
@@ -622,31 +622,31 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                   subItems: [
                     if (hasInvoicePermission)
                       _MobileDrawerSubItem(
-                        title: 'Invoice',
+                        title: 'nav.invoice'.tr,
                         onTap: () => navigate(21),
                       ),
                     if (hasReceiptsPermission)
                       _MobileDrawerSubItem(
-                        title: 'Receipts',
+                        title: 'nav.receipts'.tr,
                         onTap: () => navigate(47),
                       ),
                     if (hasCustomerVouchersPermission)
                       _MobileDrawerSubItem(
-                        title: 'Customer Voucher',
+                        title: 'nav.customer_voucher'.tr,
                         onTap: () => navigate(70),
                       ),
                     if (hasSupplierVouchersPermission)
                       _MobileDrawerSubItem(
-                        title: 'Supplier Voucher (Purchase Entry)',
+                        title: 'nav.supplier_voucher_purchase'.tr,
                         onTap: () => navigate(75),
                       ),
                     if (hasProformaPermission)
                       _MobileDrawerSubItem(
-                        title: 'Proforma Invoice',
+                        title: 'nav.proforma_invoice'.tr,
                         onTap: () => navigate(91),
                       ),
                     _MobileDrawerSubItem(
-                      title: 'Expense',
+                      title: 'nav.expense'.tr,
                       onTap: () => navigate(93),
                     ),
                   ],
@@ -656,17 +656,17 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               Obx(
                 () => _MobileDrawerExpandableTile(
                   icon: Icons.account_balance_wallet_rounded,
-                  title: 'Party Accounts',
+                  title: 'nav.party_accounts'.tr,
                   selected: [23, 74].contains(sideBarController.index.value),
                   subItems: [
                     if (hasPartyCustomer)
                       _MobileDrawerSubItem(
-                        title: 'Customer Transactions',
+                        title: 'nav.customer_transactions'.tr,
                         onTap: () => navigate(23),
                       ),
                     if (hasPartySupplier)
                       _MobileDrawerSubItem(
-                        title: 'Supplier Transactions',
+                        title: 'nav.supplier_transactions'.tr,
                         onTap: () => navigate(74),
                       ),
                   ],
@@ -711,7 +711,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               Obx(
                 () => _MobileDrawerTile(
                   icon: Icons.people_rounded,
-                  title: 'Customers',
+                  title: 'nav.customers'.tr,
                   onTap: () => navigate(5),
                   selected:
                       [5, 9, 10, 38].contains(sideBarController.index.value),
@@ -721,13 +721,13 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               Obx(
                 () => _MobileDrawerExpandableTile(
                   icon: Icons.local_shipping_rounded,
-                  title: 'Suppliers',
+                  title: 'nav.suppliers'.tr,
                   selected: [52, 57, 69, 4, 72, 73]
                       .contains(sideBarController.index.value),
                   subItems: [
                     if (hasSuppliersPermission)
                       _MobileDrawerSubItem(
-                        title: 'Suppliers',
+                        title: 'nav.suppliers'.tr,
                         onTap: () {
                           fetchSuppliers();
                           navigate(52);
@@ -735,12 +735,12 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                       ),
                     if (hasSupplierTransactionsPermission)
                       _MobileDrawerSubItem(
-                        title: 'Supplier Transactions',
+                        title: 'nav.supplier_transactions'.tr,
                         onTap: () => navigate(4),
                       ),
                     if (hasSupplierVouchersPermission)
                       _MobileDrawerSubItem(
-                        title: 'Supplier Voucher',
+                        title: 'nav.supplier_voucher'.tr,
                         onTap: () => navigate(72),
                       ),
                   ],
@@ -776,7 +776,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               Obx(
                 () => _MobileDrawerTile(
                   icon: Icons.print_rounded,
-                  title: 'Printer',
+                  title: 'nav.printer'.tr,
                   onTap: () => navigate(53),
                   selected: sideBarController.index.value == 53,
                 ),
@@ -785,7 +785,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               Obx(
                 () => _MobileDrawerTile(
                   icon: Icons.settings_rounded,
-                  title: 'Settings',
+                  title: 'nav.settings'.tr,
                   onTap: () => navigate(62),
                   selected: [62, 63].contains(sideBarController.index.value),
                 ),
@@ -1148,7 +1148,7 @@ class _MobileDrawerFooter extends StatelessWidget {
           const SizedBox(height: 4),
           _MobileDrawerTile(
             icon: Icons.logout_rounded,
-            title: 'Logout',
+            title: 'nav.logout'.tr,
             selected: false,
             onTap: () => onLogout(),
           ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/domain/add_created_product_to_cart.dart';
 import 'package:pos_machine/features/billing/domain/add_product_form_helpers.dart';
@@ -32,10 +33,10 @@ class _SaleUnitFormRow {
     String conversionRate = '',
     String barcode = '',
     String price = '',
-  })  : conversionRateController = TextEditingController(text: conversionRate),
-        barcodeController = TextEditingController(text: barcode),
-        priceController = TextEditingController(text: price),
-        searchController = TextEditingController();
+  }) : conversionRateController = TextEditingController(text: conversionRate),
+       barcodeController = TextEditingController(text: barcode),
+       priceController = TextEditingController(text: price),
+       searchController = TextEditingController();
 
   String? selectedUnitId;
   final TextEditingController conversionRateController;
@@ -56,9 +57,11 @@ class AddProductWithBarcodeModal extends StatefulWidget {
   final String? barcode;
   final bool isAddToCart;
 
-  const AddProductWithBarcodeModal(
-      {Key? key, this.barcode, this.isAddToCart = false})
-      : super(key: key);
+  const AddProductWithBarcodeModal({
+    Key? key,
+    this.barcode,
+    this.isAddToCart = false,
+  }) : super(key: key);
 
   @override
   State<AddProductWithBarcodeModal> createState() =>
@@ -150,13 +153,17 @@ class _AddProductWithBarcodeModalState
 
   Future<void> _fetchVariantProperties() async {
     if (_variantPropertiesRequested) return;
-    final appSettings =
-        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    final appSettings = Provider.of<AppSettingsProvider>(
+      context,
+      listen: false,
+    ).appSettings;
     if (appSettings?.productVariantEnabled != true) return;
     _variantPropertiesRequested = true;
 
-    final productProvider =
-        Provider.of<ProductProvider>(context, listen: false);
+    final productProvider = Provider.of<ProductProvider>(
+      context,
+      listen: false,
+    );
     if (productProvider.hasProductProperties) return;
 
     final accessToken =
@@ -213,8 +220,10 @@ class _AddProductWithBarcodeModalState
       return const <GetProduct>[];
     }
 
-    return Provider.of<LocalProductProvider>(context, listen: false)
-        .filterProductByBarcode(barCode: trimmedBarcode);
+    return Provider.of<LocalProductProvider>(
+      context,
+      listen: false,
+    ).filterProductByBarcode(barCode: trimmedBarcode);
   }
 
   Future<bool> _ensureBarcodeDuplicateConfirmed() async {
@@ -313,7 +322,7 @@ class _AddProductWithBarcodeModalState
                       children: [
                         Expanded(
                           child: Text(
-                            'Duplicate Barcode Found',
+                            'product_form.duplicate_barcode_title'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.semiBold,
                               FontSize.s20,
@@ -331,7 +340,7 @@ class _AddProductWithBarcodeModalState
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'There is already a product with the same barcode. Do you want to continue?',
+                      'product_form.duplicate_barcode_message'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s13,
@@ -341,7 +350,10 @@ class _AddProductWithBarcodeModalState
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Barcode: $barcode',
+                      'product_form.barcode_value_label'.tr.replaceAll(
+                        '@barcode',
+                        barcode,
+                      ),
                       style: buildCustomStyle(
                         FontWeightManager.regular,
                         FontSize.s12,
@@ -351,7 +363,7 @@ class _AddProductWithBarcodeModalState
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Select a product to copy its details into the form.',
+                      'product_form.select_product_copy_hint'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.regular,
                         FontSize.s11,
@@ -389,14 +401,15 @@ class _AddProductWithBarcodeModalState
                           child: OutlinedButton(
                             onPressed: () => Navigator.of(dialogContext).pop(),
                             style: OutlinedButton.styleFrom(
-                              side:
-                                  BorderSide(color: ColorManager.kPrimaryColor),
+                              side: BorderSide(
+                                color: ColorManager.kPrimaryColor,
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
                             child: Text(
-                              'Cancel',
+                              'general.cancel'.tr,
                               style: TextStyle(
                                 color: ColorManager.kPrimaryColor,
                                 fontSize: FontSize.s12,
@@ -409,16 +422,17 @@ class _AddProductWithBarcodeModalState
                           width: 130,
                           height: 40,
                           child: ElevatedButton(
-                            onPressed: () => Navigator.of(dialogContext)
-                                .pop(selectedProduct),
+                            onPressed: () => Navigator.of(
+                              dialogContext,
+                            ).pop(selectedProduct),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: ColorManager.kPrimaryColor,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            child: const Text(
-                              'Continue',
+                            child: Text(
+                              'product_form.continue_btn'.tr,
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: FontSize.s12,
@@ -479,7 +493,7 @@ class _AddProductWithBarcodeModalState
                     child: Text(
                       product.productName?.trim().isNotEmpty == true
                           ? product.productName!.trim()
-                          : 'Unnamed Product',
+                          : 'product_form.unnamed_product'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         FontSize.s14,
@@ -501,22 +515,34 @@ class _AddProductWithBarcodeModalState
                 runSpacing: 8,
                 spacing: 14,
                 children: [
-                  _buildProductDetailItem('Barcode', product.barcode ?? '-'),
                   _buildProductDetailItem(
-                      'Category',
-                      categoryName != null && categoryName.isNotEmpty
-                          ? categoryName
-                          : '-'),
+                    'product.barcode'.tr,
+                    product.barcode ?? '-',
+                  ),
                   _buildProductDetailItem(
-                      'Selling Price',
-                      sellingPrice != null && sellingPrice.isNotEmpty
-                          ? sellingPrice
-                          : '-'),
+                    'product.category'.tr,
+                    categoryName != null && categoryName.isNotEmpty
+                        ? categoryName
+                        : '-',
+                  ),
                   _buildProductDetailItem(
-                      'MRP', mrp != null && mrp.isNotEmpty ? mrp : '-'),
+                    'product_form.selling_price'.tr,
+                    sellingPrice != null && sellingPrice.isNotEmpty
+                        ? sellingPrice
+                        : '-',
+                  ),
                   _buildProductDetailItem(
-                      'Unit', unit != null && unit.isNotEmpty ? unit : '-'),
-                  _buildProductDetailItem('Available Qty', availableQuantity),
+                    'product.mrp'.tr,
+                    mrp != null && mrp.isNotEmpty ? mrp : '-',
+                  ),
+                  _buildProductDetailItem(
+                    'product.unit'.tr,
+                    unit != null && unit.isNotEmpty ? unit : '-',
+                  ),
+                  _buildProductDetailItem(
+                    'product_form.available_qty'.tr,
+                    availableQuantity,
+                  ),
                 ],
               ),
             ],
@@ -601,8 +627,10 @@ class _AddProductWithBarcodeModalState
   }
 
   Category? _resolveCategory(GetProduct product) {
-    final categoryProvider =
-        Provider.of<CategoryProvider>(context, listen: false);
+    final categoryProvider = Provider.of<CategoryProvider>(
+      context,
+      listen: false,
+    );
     final categories = categoryProvider.category ?? const <Category>[];
 
     if (product.categoryId != null) {
@@ -632,8 +660,10 @@ class _AddProductWithBarcodeModalState
       return null;
     }
 
-    final purchaseProvider =
-        Provider.of<PurchaseProvider>(context, listen: false);
+    final purchaseProvider = Provider.of<PurchaseProvider>(
+      context,
+      listen: false,
+    );
     final unitList = purchaseProvider.getUnitList ?? const <String, String>{};
 
     if (unitList.containsKey(trimmedUnit)) {
@@ -707,7 +737,8 @@ class _AddProductWithBarcodeModalState
 
       for (final value in names.values) {
         if (value is Map) {
-          final code = value['code']?.toString().toLowerCase() ??
+          final code =
+              value['code']?.toString().toLowerCase() ??
               value['language_code']?.toString().toLowerCase();
           final languageId = value['language_id']?.toString();
           if (code == targetCode || languageId == language.id.toString()) {
@@ -721,7 +752,8 @@ class _AddProductWithBarcodeModalState
     if (names is List) {
       for (final value in names) {
         if (value is Map) {
-          final code = value['code']?.toString().toLowerCase() ??
+          final code =
+              value['code']?.toString().toLowerCase() ??
               value['language_code']?.toString().toLowerCase();
           final languageId = value['language_id']?.toString();
           if (code == targetCode || languageId == language.id.toString()) {
@@ -736,8 +768,10 @@ class _AddProductWithBarcodeModalState
   }
 
   void _syncLanguageControllersFromProduct(GetProduct product) {
-    final languageProvider =
-        Provider.of<LanguageProvider>(context, listen: false);
+    final languageProvider = Provider.of<LanguageProvider>(
+      context,
+      listen: false,
+    );
     final activeLanguages = languageProvider.languages
         .where((language) => language.active)
         .toList(growable: false);
@@ -788,7 +822,7 @@ class _AddProductWithBarcodeModalState
 
   String _resolveUnitLabel(String? unitId, Map<String, String>? unitList) {
     if (unitId == null || unitId.isEmpty) {
-      return 'Select unit';
+      return 'product_sale_unit.select_unit_hint'.tr;
     }
     return unitList?[unitId] ?? unitId;
   }
@@ -834,13 +868,15 @@ class _AddProductWithBarcodeModalState
     setState(() {});
 
     try {
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
+      String? accessToken = Provider.of<AuthModel>(
+        context,
+        listen: false,
+      ).token;
 
       if (accessToken == null || accessToken.isEmpty) {
         showScaffoldError(
           context: context,
-          message: 'Authentication token not found. Please log in again.',
+          message: 'product_form.auth_token_missing'.tr,
         );
         return;
       }
@@ -872,19 +908,23 @@ class _AddProductWithBarcodeModalState
         showScaffold(
           context: context,
           message: wasAdjusted
-              ? 'Barcode generated and incremented to keep it unique'
-              : 'Barcode generated successfully',
+              ? 'product_form.barcode_generated_incremented'.tr
+              : 'product_form.barcode_generated_success'.tr,
         );
       } else {
         showScaffoldError(
           context: context,
-          message: result?['message'] ?? 'Failed to generate barcode',
+          message:
+              result?['message'] ?? 'product_form.failed_generate_barcode'.tr,
         );
       }
     } catch (e) {
       showScaffoldError(
         context: context,
-        message: 'Error generating barcode: ${e.toString()}',
+        message: 'product_form.error_generating_barcode'.tr.replaceAll(
+          '@error',
+          e.toString(),
+        ),
       );
     } finally {
       onLoadingChanged?.call(false);
@@ -927,9 +967,10 @@ class _AddProductWithBarcodeModalState
       return false;
     }
 
-    return Provider.of<LocalProductProvider>(context, listen: false)
-        .filterProductByBarcode(barCode: normalized)
-        .isNotEmpty;
+    return Provider.of<LocalProductProvider>(
+      context,
+      listen: false,
+    ).filterProductByBarcode(barCode: normalized).isNotEmpty;
   }
 
   String _incrementBarcodeString(String barcode, int step) {
@@ -958,8 +999,9 @@ class _AddProductWithBarcodeModalState
       return seedBarcode;
     }
 
-    final currentFormBarcodes =
-        _collectCurrentFormBarcodes(excludeController: excludeController);
+    final currentFormBarcodes = _collectCurrentFormBarcodes(
+      excludeController: excludeController,
+    );
 
     bool isTaken(String candidate) {
       return currentFormBarcodes.contains(candidate) ||
@@ -996,7 +1038,7 @@ class _AddProductWithBarcodeModalState
       if (unitId == null || unitId.isEmpty) {
         showScaffoldError(
           context: context,
-          message: 'Select a unit for every added sale unit row.',
+          message: 'product_form.select_unit_every_row'.tr,
         );
         return false;
       }
@@ -1004,7 +1046,7 @@ class _AddProductWithBarcodeModalState
       if (usedUnitIds.contains(unitId)) {
         showScaffoldError(
           context: context,
-          message: 'Each sale unit must use a different unit.',
+          message: 'product_form.unique_unit_per_row'.tr,
         );
         return false;
       }
@@ -1013,7 +1055,7 @@ class _AddProductWithBarcodeModalState
       if (conversionRate.isEmpty) {
         showScaffoldError(
           context: context,
-          message: 'Enter a conversion rate for every sale unit.',
+          message: 'product_form.enter_conversion_rate_every'.tr,
         );
         return false;
       }
@@ -1022,7 +1064,7 @@ class _AddProductWithBarcodeModalState
       if (parsedRate == null || parsedRate <= 0) {
         showScaffoldError(
           context: context,
-          message: 'Conversion rate must be greater than 0.',
+          message: 'product_form.conversion_rate_must_be_positive'.tr,
         );
         return false;
       }
@@ -1030,7 +1072,7 @@ class _AddProductWithBarcodeModalState
       if (barcode.isEmpty) {
         showScaffoldError(
           context: context,
-          message: 'Enter or generate a barcode for every sale unit.',
+          message: 'product_form.enter_or_generate_barcode_every'.tr,
         );
         return false;
       }
@@ -1038,7 +1080,7 @@ class _AddProductWithBarcodeModalState
       if (usedBarcodes.contains(barcode)) {
         showScaffoldError(
           context: context,
-          message: 'Sale unit barcodes must be unique.',
+          message: 'product_form.barcodes_must_be_unique'.tr,
         );
         return false;
       }
@@ -1048,7 +1090,7 @@ class _AddProductWithBarcodeModalState
       if (price.isEmpty) {
         showScaffoldError(
           context: context,
-          message: 'Enter a price for every sale unit.',
+          message: 'product_form.enter_price_every'.tr,
         );
         return false;
       }
@@ -1057,7 +1099,7 @@ class _AddProductWithBarcodeModalState
       if (parsedPrice == null || parsedPrice <= 0) {
         showScaffoldError(
           context: context,
-          message: 'Price must be greater than 0.',
+          message: 'product_form.price_must_be_positive'.tr,
         );
         return false;
       }
@@ -1074,14 +1116,17 @@ class _AddProductWithBarcodeModalState
     }
 
     return _saleUnitRows
-        .map((row) => {
-              'unit_id':
-                  int.tryParse(row.selectedUnitId ?? '') ?? row.selectedUnitId,
-              'conversion_rate':
-                  num.parse(row.conversionRateController.text.trim()),
-              'barcode': row.barcodeController.text.trim(),
-              'price': num.parse(row.priceController.text.trim()),
-            })
+        .map(
+          (row) => {
+            'unit_id':
+                int.tryParse(row.selectedUnitId ?? '') ?? row.selectedUnitId,
+            'conversion_rate': num.parse(
+              row.conversionRateController.text.trim(),
+            ),
+            'barcode': row.barcodeController.text.trim(),
+            'price': num.parse(row.priceController.text.trim()),
+          },
+        )
         .toList(growable: false);
   }
 
@@ -1142,17 +1187,16 @@ class _AddProductWithBarcodeModalState
 
     final accessToken =
         Provider.of<AuthModel>(context, listen: false).token ?? '';
-    final languageProvider =
-        Provider.of<LanguageProvider>(context, listen: false);
+    final languageProvider = Provider.of<LanguageProvider>(
+      context,
+      listen: false,
+    );
 
     await languageProvider.fetchLanguages(accessToken: accessToken);
 
     if (!mounted) return;
     if (languageProvider.error != null) {
-      showScaffoldError(
-        context: context,
-        message: languageProvider.error!,
-      );
+      showScaffoldError(context: context, message: languageProvider.error!);
     }
   }
 
@@ -1194,9 +1238,7 @@ class _AddProductWithBarcodeModalState
       foregroundColor: WidgetStateProperty.all(Colors.white),
       padding: WidgetStateProperty.all(EdgeInsets.zero),
       shape: WidgetStateProperty.all(
-        RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(7),
-        ),
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
       ),
       elevation: WidgetStateProperty.resolveWith<double>(
         (states) => states.contains(WidgetState.focused) ? 9 : 4,
@@ -1208,10 +1250,7 @@ class _AddProductWithBarcodeModalState
       ),
       side: WidgetStateProperty.resolveWith<BorderSide>(
         (states) => states.contains(WidgetState.focused)
-            ? BorderSide(
-                color: Colors.white.withOpacity(0.9),
-                width: 1.2,
-              )
+            ? BorderSide(color: Colors.white.withOpacity(0.9), width: 1.2)
             : BorderSide.none,
       ),
     );
@@ -1222,7 +1261,7 @@ class _AddProductWithBarcodeModalState
     if (baseText.isEmpty) {
       showScaffoldError(
         context: context,
-        message: 'Please enter Product Name before translating.',
+        message: 'product_form.enter_name_before_translate'.tr,
       );
       return;
     }
@@ -1235,8 +1274,10 @@ class _AddProductWithBarcodeModalState
 
     final accessToken =
         Provider.of<AuthModel>(context, listen: false).token ?? '';
-    final languageProvider =
-        Provider.of<LanguageProvider>(context, listen: false);
+    final languageProvider = Provider.of<LanguageProvider>(
+      context,
+      listen: false,
+    );
 
     final translated = await languageProvider.translateText(
       accessToken: accessToken,
@@ -1250,12 +1291,15 @@ class _AddProductWithBarcodeModalState
       _languageNameControllers[language.id]?.text = translated;
       showScaffold(
         context: context,
-        message: 'Translated to ${language.name}',
+        message: 'product_form.translated_to'.tr.replaceAll(
+          '@language',
+          language.name,
+        ),
       );
     } else {
       showScaffoldError(
         context: context,
-        message: 'Translation failed. Please try again.',
+        message: 'product_form.translation_failed'.tr,
       );
     }
 
@@ -1287,18 +1331,19 @@ class _AddProductWithBarcodeModalState
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
-    final multiSaleUnitEnabled = context
+    final multiSaleUnitEnabled =
+        context
             .watch<AppSettingsProvider>()
             .appSettings
             ?.multiSaleUnitEnabled ??
         false;
-    PurchaseProvider purchaseProvider =
-        Provider.of<PurchaseProvider>(context, listen: false);
+    PurchaseProvider purchaseProvider = Provider.of<PurchaseProvider>(
+      context,
+      listen: false,
+    );
     Map<String, String>? unitList = purchaseProvider.getUnitList;
 
-    CategoryProvider categoryProvider = Provider.of<CategoryProvider>(
-      context,
-    );
+    CategoryProvider categoryProvider = Provider.of<CategoryProvider>(context);
     List<Category>? categoryList = categoryProvider.category;
 
     final languageProvider = Provider.of<LanguageProvider>(context);
@@ -1335,14 +1380,13 @@ class _AddProductWithBarcodeModalState
         return KeyEventResult.ignored;
       },
       child: Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         backgroundColor: Colors.transparent,
         child: Container(
           constraints: BoxConstraints(
-              maxWidth: size.width > 1100 ? 1050 : size.width * 0.92,
-              maxHeight: MediaQuery.of(context).size.height * 0.88),
+            maxWidth: size.width > 1100 ? 1050 : size.width * 0.92,
+            maxHeight: MediaQuery.of(context).size.height * 0.88,
+          ),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
@@ -1368,7 +1412,7 @@ class _AddProductWithBarcodeModalState
                     children: [
                       Expanded(
                         child: Text(
-                          "Create New Product",
+                          'product_form.title'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.semiBold,
                             FontSize.s20,
@@ -1382,7 +1426,7 @@ class _AddProductWithBarcodeModalState
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'Advanced',
+                              'product_form.advanced'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.medium,
                                 FontSize.s12,
@@ -1407,8 +1451,11 @@ class _AddProductWithBarcodeModalState
                   ),
                   Text(
                     widget.barcode != null
-                        ? "No product found with barcode ${widget.barcode}"
-                        : "Create a new product with custom barcode",
+                        ? 'product_form.no_product_found_barcode'.tr.replaceAll(
+                            '@barcode',
+                            '${widget.barcode}',
+                          )
+                        : 'product_form.subtitle'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.regular,
                       FontSize.s12,
@@ -1424,7 +1471,7 @@ class _AddProductWithBarcodeModalState
                     children: [
                       Expanded(
                         child: _buildTextField(
-                          "Product Name",
+                          'product.product_name'.tr,
                           _productNameController,
                           TextInputType.text,
                           size,
@@ -1433,9 +1480,7 @@ class _AddProductWithBarcodeModalState
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildBarcodeField(size),
-                      ),
+                      Expanded(child: _buildBarcodeField(size)),
                       const SizedBox(width: 8),
                       Expanded(
                         child: _buildCategoryDropdown(size, categoryList),
@@ -1450,20 +1495,19 @@ class _AddProductWithBarcodeModalState
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: _buildUnitDropdown(size, unitList),
-                      ),
+                      Expanded(child: _buildUnitDropdown(size, unitList)),
                       if (canShowPurchasePrice) ...[
                         const SizedBox(width: 8),
                         Expanded(
                           child: _buildTextField(
-                            "Purchase Price",
+                            'product.purchase_price'.tr,
                             _productPurchasePriceController,
                             TextInputType.number,
                             size,
                             isRequired: true,
                             inputFormatter: FilteringTextInputFormatter.allow(
-                                RegExp(r'^\d*\.?\d{0,2}$')),
+                              RegExp(r'^\d*\.?\d{0,2}$'),
+                            ),
                             focusNode: _purchasePriceFocusNode,
                           ),
                         ),
@@ -1471,13 +1515,14 @@ class _AddProductWithBarcodeModalState
                       const SizedBox(width: 8),
                       Expanded(
                         child: _buildTextField(
-                          "Max Sale Price / MRP",
+                          'product_form.max_sale_price_mrp'.tr,
                           _productMRPController,
                           TextInputType.number,
                           size,
                           isRequired: false,
                           inputFormatter: FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d*\.?\d{0,2}$')),
+                            RegExp(r'^\d*\.?\d{0,2}$'),
+                          ),
                           focusNode: _mrpFocusNode,
                         ),
                       ),
@@ -1491,26 +1536,28 @@ class _AddProductWithBarcodeModalState
                     children: [
                       Expanded(
                         child: _buildTextField(
-                          "Selling Price",
+                          'product_form.selling_price'.tr,
                           _productSellingPriceController,
                           TextInputType.number,
                           size,
                           isRequired: true,
                           inputFormatter: FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d*\.?\d{0,2}$')),
+                            RegExp(r'^\d*\.?\d{0,2}$'),
+                          ),
                           focusNode: _sellingPriceFocusNode,
                         ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: _buildTextField(
-                          "Quantity",
+                          'product_form.quantity'.tr,
                           _productQuantityController,
                           TextInputType.number,
                           size,
                           isRequired: true,
                           inputFormatter: FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d*\.?\d{0,2}$')),
+                            RegExp(r'^\d*\.?\d{0,2}$'),
+                          ),
                           focusNode: _quantityFocusNode,
                         ),
                       ),
@@ -1518,14 +1565,16 @@ class _AddProductWithBarcodeModalState
                       Expanded(
                         child: Consumer<AppSettingsProvider>(
                           builder: (context, appSettingsProvider, child) {
-                            final itemCodeEnabled = appSettingsProvider
-                                    .appSettings?.itemCodeEnabled ??
+                            final itemCodeEnabled =
+                                appSettingsProvider
+                                    .appSettings
+                                    ?.itemCodeEnabled ??
                                 false;
                             if (!itemCodeEnabled) {
                               return const SizedBox.shrink();
                             }
                             return _buildTextField(
-                              "Item Code",
+                              'product.item_code'.tr,
                               _productItemCodeController,
                               TextInputType.text,
                               size,
@@ -1545,26 +1594,28 @@ class _AddProductWithBarcodeModalState
                     children: [
                       Expanded(
                         child: _buildTextField(
-                          "Max Discount Percentage",
+                          'product_form.max_discount_percentage'.tr,
                           _productMinMarginController,
                           TextInputType.number,
                           size,
                           isRequired: false,
                           inputFormatter: FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d*\.?\d{0,2}$')),
+                            RegExp(r'^\d*\.?\d{0,2}$'),
+                          ),
                           focusNode: _minMarginFocusNode,
                         ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: _buildTextField(
-                          "Max Discount Amount",
+                          'product_form.max_discount_amount'.tr,
                           _productMinMarginPriceController,
                           TextInputType.number,
                           size,
                           isRequired: false,
                           inputFormatter: FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d*\.?\d{0,2}$')),
+                            RegExp(r'^\d*\.?\d{0,2}$'),
+                          ),
                           focusNode: _minMarginPriceFocusNode,
                         ),
                       ),
@@ -1600,7 +1651,7 @@ class _AddProductWithBarcodeModalState
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                'Close',
+                                'product_form.close'.tr,
                                 style: TextStyle(
                                   color: ColorManager.kPrimaryColor,
                                   fontSize: FontSize.s12,
@@ -1609,10 +1660,13 @@ class _AddProductWithBarcodeModalState
                               const SizedBox(width: 5),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 4, vertical: 1),
+                                  horizontal: 4,
+                                  vertical: 1,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: ColorManager.kPrimaryColor
-                                      .withOpacity(0.1),
+                                  color: ColorManager.kPrimaryColor.withOpacity(
+                                    0.1,
+                                  ),
                                   borderRadius: BorderRadius.circular(3),
                                 ),
                                 child: Text(
@@ -1652,7 +1706,8 @@ class _AddProductWithBarcodeModalState
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                     valueColor: AlwaysStoppedAnimation<Color>(
-                                        ColorManager.kPrimaryColor),
+                                      ColorManager.kPrimaryColor,
+                                    ),
                                   ),
                                 )
                               : Row(
@@ -1660,7 +1715,7 @@ class _AddProductWithBarcodeModalState
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
-                                      'Save and Create',
+                                      'product_form.save_and_create'.tr,
                                       style: TextStyle(
                                         color: ColorManager.kPrimaryColor,
                                         fontSize: FontSize.s12,
@@ -1669,7 +1724,9 @@ class _AddProductWithBarcodeModalState
                                     const SizedBox(width: 5),
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 4, vertical: 1),
+                                        horizontal: 4,
+                                        vertical: 1,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: ColorManager.kPrimaryColor
                                             .withOpacity(0.1),
@@ -1711,16 +1768,17 @@ class _AddProductWithBarcodeModalState
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                     valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white),
+                                      Colors.white,
+                                    ),
                                   ),
                                 )
                               : Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Text(
-                                      'Save',
-                                      style: TextStyle(
+                                    Text(
+                                      'general.save'.tr,
+                                      style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: FontSize.s12,
                                       ),
@@ -1728,7 +1786,9 @@ class _AddProductWithBarcodeModalState
                                     const SizedBox(width: 5),
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 4, vertical: 1),
+                                        horizontal: 4,
+                                        vertical: 1,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: Colors.white.withOpacity(0.2),
                                         borderRadius: BorderRadius.circular(3),
@@ -1824,7 +1884,7 @@ class _AddProductWithBarcodeModalState
             validator: isRequired
                 ? (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Required';
+                      return 'product_form.required'.tr;
                     }
                     return null;
                   }
@@ -1850,7 +1910,7 @@ class _AddProductWithBarcodeModalState
           TextSpan(
             children: [
               TextSpan(
-                text: 'Barcode',
+                text: 'product.barcode'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s12,
@@ -1911,7 +1971,7 @@ class _AddProductWithBarcodeModalState
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Required';
+                      return 'product_form.required'.tr;
                     }
                     return null;
                   },
@@ -1947,8 +2007,9 @@ class _AddProductWithBarcodeModalState
                         height: 16,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
                     : const Icon(Icons.refresh, size: 18, color: Colors.white),
@@ -1960,10 +2021,7 @@ class _AddProductWithBarcodeModalState
     );
   }
 
-  Widget _buildLanguageFields(
-    Size size,
-    LanguageProvider languageProvider,
-  ) {
+  Widget _buildLanguageFields(Size size, LanguageProvider languageProvider) {
     if (languageProvider.isLoading && languageProvider.languages.isEmpty) {
       return Row(
         children: [
@@ -1974,7 +2032,7 @@ class _AddProductWithBarcodeModalState
           ),
           const SizedBox(width: 8),
           Text(
-            'Loading languages...',
+            'product_form.loading_languages'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s11,
@@ -2002,7 +2060,7 @@ class _AddProductWithBarcodeModalState
           ),
           TextButton(
             onPressed: _retryFetchLanguages,
-            child: const Text('Retry'),
+            child: Text('product_form.retry'.tr),
           ),
         ],
       );
@@ -2035,7 +2093,7 @@ class _AddProductWithBarcodeModalState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Other Language Names',
+          'product_form.other_language_names'.tr,
           style: buildCustomStyle(
             FontWeightManager.semiBold,
             FontSize.s12,
@@ -2058,7 +2116,10 @@ class _AddProductWithBarcodeModalState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Product Name (${language.name})',
+          'product_form.product_name_in_language'.tr.replaceAll(
+            '@language',
+            language.name,
+          ),
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s12,
@@ -2079,8 +2140,9 @@ class _AddProductWithBarcodeModalState
                 width: double.infinity,
                 child: TextFormField(
                   controller: controller,
-                  textDirection:
-                      language.isRtl ? TextDirection.rtl : TextDirection.ltr,
+                  textDirection: language.isRtl
+                      ? TextDirection.rtl
+                      : TextDirection.ltr,
                   textInputAction: TextInputAction.next,
                   onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                   cursorColor: ColorManager.kPrimaryColor,
@@ -2102,11 +2164,12 @@ class _AddProductWithBarcodeModalState
               height: size.height * 0.048,
               width: size.height * 0.048,
               child: Tooltip(
-                message: 'Translate',
+                message: 'product_form.translate_tooltip'.tr,
                 child: ElevatedButton(
                   focusNode: translateFocusNode,
-                  onPressed:
-                      isTranslating ? null : () => _translateLanguage(language),
+                  onPressed: isTranslating
+                      ? null
+                      : () => _translateLanguage(language),
                   style: _buildSquareActionButtonStyle(),
                   child: isTranslating
                       ? const SizedBox(
@@ -2114,8 +2177,9 @@ class _AddProductWithBarcodeModalState
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
                       : const Icon(
@@ -2133,17 +2197,15 @@ class _AddProductWithBarcodeModalState
   }
 
   List<Map<String, dynamic>> _buildProductNamesPayload(
-      List<Language> languages) {
+    List<Language> languages,
+  ) {
     final payload = <Map<String, dynamic>>[];
 
     for (final language in languages) {
       final controller = _languageNameControllers[language.id];
       final text = controller?.text.trim() ?? '';
       if (text.isNotEmpty) {
-        payload.add({
-          'language_id': language.id,
-          'name': text,
-        });
+        payload.add({'language_id': language.id, 'name': text});
       }
     }
 
@@ -2159,7 +2221,7 @@ class _AddProductWithBarcodeModalState
           TextSpan(
             children: [
               TextSpan(
-                text: 'Product Unit',
+                text: 'product_form.product_unit'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s12,
@@ -2183,7 +2245,7 @@ class _AddProductWithBarcodeModalState
         CustomDropDownWithSearch<String>(
           focusNode: _unitFocusNode,
           title: "",
-          hintText: "Choose Product Unit",
+          hintText: 'product_form.choose_product_unit'.tr,
           value: selectedUnit,
           height: size.height * 0.048,
           margin: EdgeInsets.zero,
@@ -2198,7 +2260,7 @@ class _AddProductWithBarcodeModalState
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              'Required',
+              'product_form.required'.tr,
               style: TextStyle(color: Colors.red[700], fontSize: 11),
             ),
           ),
@@ -2224,9 +2286,9 @@ class _AddProductWithBarcodeModalState
             onRetryLoadProperties: _retryFetchVariantProperties,
             onGenerateBarcode: (target, setLoading) =>
                 _generateBarcodeIntoController(
-              target,
-              onLoadingChanged: setLoading,
-            ),
+                  target,
+                  onLoadingChanged: setLoading,
+                ),
           ),
         );
       },
@@ -2245,15 +2307,13 @@ class _AddProductWithBarcodeModalState
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFD),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: ColorManager.kPrimaryColor.withOpacity(0.15),
-        ),
+        border: Border.all(color: ColorManager.kPrimaryColor.withOpacity(0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Multi Sale Unit',
+            'product_sale_unit.multi_sale_unit'.tr,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s12,
@@ -2263,7 +2323,7 @@ class _AddProductWithBarcodeModalState
           ),
           const SizedBox(height: 4),
           Text(
-            'Base unit is required before adding additional sale units.',
+            'product_sale_unit.base_unit_required'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s11,
@@ -2282,7 +2342,7 @@ class _AddProductWithBarcodeModalState
                 border: Border.all(color: Colors.orange.withOpacity(0.35)),
               ),
               child: Text(
-                'Select the product unit first to activate this section.',
+                'product_form.select_unit_first'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s11,
@@ -2314,7 +2374,7 @@ class _AddProductWithBarcodeModalState
               child: OutlinedButton.icon(
                 onPressed: _addSaleUnitRow,
                 icon: const Icon(Icons.add, size: 18),
-                label: const Text('Add Sale Unit'),
+                label: Text('product_sale_unit.add_sale_unit'.tr),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: ColorManager.kPrimaryColor,
                   side: BorderSide(color: ColorManager.kPrimaryColor),
@@ -2345,7 +2405,10 @@ class _AddProductWithBarcodeModalState
           Row(
             children: [
               Text(
-                '${_resolveUnitLabel(selectedUnit, unitList)} (Base Unit)',
+                'product_sale_unit.base_unit_label'.tr.replaceAll(
+                  '@unit',
+                  _resolveUnitLabel(selectedUnit, unitList),
+                ),
                 style: buildCustomStyle(
                   FontWeightManager.semiBold,
                   FontSize.s12,
@@ -2361,7 +2424,7 @@ class _AddProductWithBarcodeModalState
             children: [
               Expanded(
                 child: _buildReadOnlyInfoField(
-                  'Sale Unit',
+                  'product_sale_unit.sale_unit_label'.tr,
                   _resolveUnitLabel(selectedUnit, unitList),
                   size,
                 ),
@@ -2369,7 +2432,7 @@ class _AddProductWithBarcodeModalState
               const SizedBox(width: 8),
               Expanded(
                 child: _buildTextField(
-                  'Conversion Rate',
+                  'product_sale_unit.conversion_rate'.tr,
                   _baseConversionRateController,
                   TextInputType.number,
                   size,
@@ -2385,7 +2448,7 @@ class _AddProductWithBarcodeModalState
                   valueListenable: _productBarcodeController,
                   builder: (context, value, _) {
                     return _buildReadOnlyInfoField(
-                      'Barcode',
+                      'product.barcode'.tr,
                       value.text.trim().isEmpty ? '-' : value.text.trim(),
                       size,
                     );
@@ -2405,8 +2468,7 @@ class _AddProductWithBarcodeModalState
     _SaleUnitFormRow row,
     int index,
   ) {
-    final availableUnits = (unitList ?? const <String, String>{})
-        .entries
+    final availableUnits = (unitList ?? const <String, String>{}).entries
         .where((entry) => entry.key != selectedUnit)
         .map((entry) => entry.key)
         .toList();
@@ -2418,7 +2480,8 @@ class _AddProductWithBarcodeModalState
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: _showSaleUnitValidation &&
+          color:
+              _showSaleUnitValidation &&
                   ((row.selectedUnitId?.isEmpty ?? true) ||
                       row.conversionRateController.text.trim().isEmpty ||
                       row.barcodeController.text.trim().isEmpty ||
@@ -2433,7 +2496,10 @@ class _AddProductWithBarcodeModalState
           Row(
             children: [
               Text(
-                'Sale Unit ${index + 1}',
+                'product_form.sale_unit_index'.tr.replaceAll(
+                  '@n',
+                  '${index + 1}',
+                ),
                 style: buildCustomStyle(
                   FontWeightManager.semiBold,
                   FontSize.s12,
@@ -2457,7 +2523,7 @@ class _AddProductWithBarcodeModalState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Sale Unit *',
+                      'product_sale_unit.sale_unit_star'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.regular,
                         FontSize.s12,
@@ -2468,7 +2534,7 @@ class _AddProductWithBarcodeModalState
                     const SizedBox(height: 4),
                     CustomDropDownWithSearch<String>(
                       title: '',
-                      hintText: 'Select unit',
+                      hintText: 'product_sale_unit.select_unit_hint'.tr,
                       value: row.selectedUnitId,
                       height: size.height * 0.048,
                       margin: EdgeInsets.zero,
@@ -2487,9 +2553,11 @@ class _AddProductWithBarcodeModalState
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(
-                          'Required',
-                          style:
-                              TextStyle(color: Colors.red[700], fontSize: 11),
+                          'product_form.required'.tr,
+                          style: TextStyle(
+                            color: Colors.red[700],
+                            fontSize: 11,
+                          ),
                         ),
                       ),
                   ],
@@ -2498,7 +2566,7 @@ class _AddProductWithBarcodeModalState
               const SizedBox(width: 8),
               Expanded(
                 child: _buildTextField(
-                  'Conversion Rate',
+                  'product_sale_unit.conversion_rate'.tr,
                   row.conversionRateController,
                   TextInputType.number,
                   size,
@@ -2509,9 +2577,7 @@ class _AddProductWithBarcodeModalState
                 ),
               ),
               const SizedBox(width: 8),
-              Expanded(
-                child: _buildBarcodeEditorField(size, row),
-              ),
+              Expanded(child: _buildBarcodeEditorField(size, row)),
             ],
           ),
           const SizedBox(height: 10),
@@ -2520,7 +2586,7 @@ class _AddProductWithBarcodeModalState
             children: [
               Expanded(
                 child: _buildTextField(
-                  'Price',
+                  'product.price'.tr,
                   row.priceController,
                   TextInputType.number,
                   size,
@@ -2585,7 +2651,7 @@ class _AddProductWithBarcodeModalState
           TextSpan(
             children: [
               TextSpan(
-                text: 'Barcode',
+                text: 'product.barcode'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s12,
@@ -2655,8 +2721,9 @@ class _AddProductWithBarcodeModalState
                         height: 16,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
                     : const Icon(Icons.auto_awesome, size: 16),
@@ -2669,7 +2736,7 @@ class _AddProductWithBarcodeModalState
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              'Required',
+              'product_form.required'.tr,
               style: TextStyle(color: Colors.red[700], fontSize: 11),
             ),
           ),
@@ -2686,7 +2753,7 @@ class _AddProductWithBarcodeModalState
           TextSpan(
             children: [
               TextSpan(
-                text: 'Product Category',
+                text: 'product_form.product_category'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s12,
@@ -2713,7 +2780,7 @@ class _AddProductWithBarcodeModalState
               child: CustomDropDownWithSearch<Category>(
                 focusNode: _categoryFocusNode,
                 title: "",
-                hintText: "Select Category",
+                hintText: 'product_form.select_category'.tr,
                 value: selectedCategory,
                 height: size.height * 0.048,
                 margin: EdgeInsets.zero,
@@ -2734,9 +2801,12 @@ class _AddProductWithBarcodeModalState
               circleRadius: 7,
               child: InkWell(
                 onTap: () async {
-                  final categoryProvider =
-                      Provider.of<CategoryProvider>(context, listen: false);
-                  final existingIds = categoryProvider.category
+                  final categoryProvider = Provider.of<CategoryProvider>(
+                    context,
+                    listen: false,
+                  );
+                  final existingIds =
+                      categoryProvider.category
                           ?.map((c) => c.categoryId)
                           .toSet() ??
                       {};
@@ -2779,7 +2849,7 @@ class _AddProductWithBarcodeModalState
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              'Required',
+              'product_form.required'.tr,
               style: TextStyle(color: Colors.red[700], fontSize: 11),
             ),
           ),
@@ -2789,8 +2859,9 @@ class _AddProductWithBarcodeModalState
 
   // Submit form
   Future<void> _submitForm({bool keepOpen = false}) async {
-    final multiSaleUnitEnabled =
-        context.read<AppSettingsProvider>().multiSaleUnitEnabled;
+    final multiSaleUnitEnabled = context
+        .read<AppSettingsProvider>()
+        .multiSaleUnitEnabled;
     setState(() {
       isValidatedOnce = true;
       _showSaleUnitValidation = multiSaleUnitEnabled && _showAdvancedOptions;
@@ -2810,7 +2881,7 @@ class _AddProductWithBarcodeModalState
         if (baseRate.isEmpty) {
           showScaffoldError(
             context: context,
-            message: 'Base unit conversion rate is required.',
+            message: 'product_form.base_conversion_rate_required'.tr,
           );
           return;
         }
@@ -2818,20 +2889,22 @@ class _AddProductWithBarcodeModalState
         if (parsedRate == null || parsedRate <= 0) {
           showScaffoldError(
             context: context,
-            message: 'Base unit conversion rate must be greater than 0.',
+            message: 'product_form.base_conversion_rate_must_be_positive'.tr,
           );
           return;
         }
       }
 
       final variantEnabled =
-          Provider.of<AppSettingsProvider>(context, listen: false)
-                  .appSettings
-                  ?.productVariantEnabled ??
-              false;
+          Provider.of<AppSettingsProvider>(
+            context,
+            listen: false,
+          ).appSettings?.productVariantEnabled ??
+          false;
       if (variantEnabled && _variantController.hasRows) {
-        final variantError =
-            validateVariantRows(_variantController.toCreateInputs());
+        final variantError = validateVariantRows(
+          _variantController.toCreateInputs(),
+        );
         if (variantError != null) {
           showScaffoldError(context: context, message: variantError);
           return;
@@ -2853,14 +2926,19 @@ class _AddProductWithBarcodeModalState
       });
 
       try {
-        String? accessToken =
-            Provider.of<AuthModel>(context, listen: false).token;
+        String? accessToken = Provider.of<AuthModel>(
+          context,
+          listen: false,
+        ).token;
         GridSelectionProvider gridSelectionProvider =
             Provider.of<GridSelectionProvider>(context, listen: false);
-        final languageProvider =
-            Provider.of<LanguageProvider>(context, listen: false);
-        final productNames =
-            _buildProductNamesPayload(languageProvider.languages);
+        final languageProvider = Provider.of<LanguageProvider>(
+          context,
+          listen: false,
+        );
+        final productNames = _buildProductNamesPayload(
+          languageProvider.languages,
+        );
         final saleUnits = multiSaleUnitEnabled
             ? _buildSaleUnitsPayload()
             : const <Map<String, dynamic>>[];
@@ -2869,10 +2947,11 @@ class _AddProductWithBarcodeModalState
             : const <Map<String, dynamic>>[];
 
         final itemCodeEnabled =
-            Provider.of<AppSettingsProvider>(context, listen: false)
-                    .appSettings
-                    ?.itemCodeEnabled ??
-                false;
+            Provider.of<AppSettingsProvider>(
+              context,
+              listen: false,
+            ).appSettings?.itemCodeEnabled ??
+            false;
 
         final result = await gridSelectionProvider.createProductAPI(
           categoryId: selectedCategory!.categoryId.toString(),
@@ -2891,18 +2970,19 @@ class _AddProductWithBarcodeModalState
           variants: variants.isNotEmpty ? variants : null,
           conversionRateBase:
               _baseConversionRateController.text.trim().isNotEmpty
-                  ? _baseConversionRateController.text.trim()
-                  : '1',
-          itemCode:
-              itemCodeEnabled ? _productItemCodeController.text.trim() : null,
+              ? _baseConversionRateController.text.trim()
+              : '1',
+          itemCode: itemCodeEnabled
+              ? _productItemCodeController.text.trim()
+              : null,
           minMarginPercentage:
               _productMinMarginController.text.trim().isNotEmpty
-                  ? _productMinMarginController.text.trim()
-                  : null,
+              ? _productMinMarginController.text.trim()
+              : null,
           minMarginPrice:
               _productMinMarginPriceController.text.trim().isNotEmpty
-                  ? _productMinMarginPriceController.text.trim()
-                  : null,
+              ? _productMinMarginPriceController.text.trim()
+              : null,
         );
 
         if (!mounted) {
@@ -2915,8 +2995,10 @@ class _AddProductWithBarcodeModalState
           GetProduct? createdProduct;
           try {
             createdProduct = GetProduct.fromJson(result['data']);
-            Provider.of<LocalProductProvider>(context, listen: false)
-                .addProduct(createdProduct);
+            Provider.of<LocalProductProvider>(
+              context,
+              listen: false,
+            ).addProduct(createdProduct);
           } catch (e) {
             debugPrint("Error parsing product: $e");
           }
@@ -2932,8 +3014,10 @@ class _AddProductWithBarcodeModalState
             }
           }
 
-          Provider.of<LocalProductProvider>(context, listen: false)
-              .refreshProducts();
+          Provider.of<LocalProductProvider>(
+            context,
+            listen: false,
+          ).refreshProducts();
 
           try {
             final returnedProduct = GetProduct.fromJson(result['data']);
@@ -2954,7 +3038,10 @@ class _AddProductWithBarcodeModalState
           if (keepOpen) {
             _resetFormFields();
           }
-          showScaffold(context: context, message: 'Product added successfully');
+          showScaffold(
+            context: context,
+            message: 'product_form.product_added_success'.tr,
+          );
         } else {
           showScaffoldError(
             context: context,
@@ -2964,7 +3051,10 @@ class _AddProductWithBarcodeModalState
       } catch (e) {
         showScaffoldError(
           context: context,
-          message: 'Error adding product: ${e.toString()}',
+          message: 'product_form.error_adding_product'.tr.replaceAll(
+            '@error',
+            e.toString(),
+          ),
         );
         debugPrint("Error in product creation: $e");
       } finally {
@@ -2979,7 +3069,7 @@ class _AddProductWithBarcodeModalState
     } else {
       showScaffoldError(
         context: context,
-        message: 'Please fill all required fields correctly',
+        message: 'product_form.fill_required_fields'.tr,
       );
     }
   }

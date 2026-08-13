@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 import '../../components/build_container_box.dart';
@@ -129,7 +130,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
   Future<void> _showDetails(Map<String, dynamic> invoice) async {
     final invoiceId = invoice['id'];
     if (invoiceId == null) {
-      showScaffoldError(context: context, message: 'Invoice id not found');
+      showScaffoldError(context: context, message: 'proforma_invoice.invoice_id_not_found'.tr);
       return;
     }
 
@@ -149,11 +150,11 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
       } else if (data is Map) {
         _openDetailsDialog(Map<String, dynamic>.from(data));
       } else {
-        showScaffoldError(context: context, message: 'Details not found');
+        showScaffoldError(context: context, message: 'proforma_invoice.details_not_found'.tr);
       }
     } catch (e) {
       if (mounted) {
-        showScaffoldError(context: context, message: 'Failed to load details');
+        showScaffoldError(context: context, message: 'proforma_invoice.failed_load_details'.tr);
       }
     }
   }
@@ -166,24 +167,24 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
     showDialog(
       context: context,
       builder: (context) => CommonDetailsDialog(
-        title: 'Proforma Invoice Details',
+        title: 'proforma_invoice.details_title'.tr,
         gridColumns: [
           [
-            CommonDetailsDialog.buildKeyValueRow('Invoice #', _text(data['invoice_number']), copyable: true),
-            CommonDetailsDialog.buildKeyValueRow('Status', _text(data['status'])),
-            CommonDetailsDialog.buildKeyValueRow('Amount', _text(data['amount'])),
-            CommonDetailsDialog.buildKeyValueRow('Invoice Date', _text(data['invoice_date'])),
+            CommonDetailsDialog.buildKeyValueRow('proforma_invoice.invoice_number_label'.tr, _text(data['invoice_number']), copyable: true),
+            CommonDetailsDialog.buildKeyValueRow('proforma_invoice.status_label'.tr, _text(data['status'])),
+            CommonDetailsDialog.buildKeyValueRow('proforma_invoice.field_amount'.tr, _text(data['amount'])),
+            CommonDetailsDialog.buildKeyValueRow('proforma_invoice.field_invoice_date'.tr, _text(data['invoice_date'])),
           ],
           [
-            CommonDetailsDialog.buildKeyValueRow('Due Date', _text(data['due_date'])),
-            CommonDetailsDialog.buildKeyValueRow('Customer', _text(customer['name'])),
-            CommonDetailsDialog.buildKeyValueRow('Phone', _text(customer['phone']), copyable: true),
-            CommonDetailsDialog.buildKeyValueRow('Quotation #', _text(quotation['quotation_number'])),
+            CommonDetailsDialog.buildKeyValueRow('proforma_invoice.field_due_date'.tr, _text(data['due_date'])),
+            CommonDetailsDialog.buildKeyValueRow('proforma_invoice.customer_label'.tr, _text(customer['name'])),
+            CommonDetailsDialog.buildKeyValueRow('proforma_invoice.field_phone'.tr, _text(customer['phone']), copyable: true),
+            CommonDetailsDialog.buildKeyValueRow('proforma_invoice.field_quotation_number'.tr, _text(quotation['quotation_number'])),
           ],
         ],
-        sectionTitle: 'Items',
+        sectionTitle: 'proforma_invoice.items_title'.tr,
         tableContent: items.isEmpty
-            ? const Center(child: Text('No items found'))
+            ? Center(child: Text('proforma_invoice.no_items_found'.tr))
             : Table(
                 columnWidths: const {
                   0: FlexColumnWidth(2.4),
@@ -212,13 +213,13 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
 
 
   TableRow _detailsHeaderRow() {
-    return const TableRow(
-      decoration: BoxDecoration(color: ColorManager.tableBGColor),
+    return TableRow(
+      decoration: const BoxDecoration(color: ColorManager.tableBGColor),
       children: [
-        _StaticTableCell('Item'),
-        _StaticTableCell('Qty'),
-        _StaticTableCell('Unit Amount'),
-        _StaticTableCell('Total'),
+        _StaticTableCell('proforma_invoice.col_item'.tr),
+        _StaticTableCell('proforma_invoice.col_qty'.tr),
+        _StaticTableCell('proforma_invoice.col_unit_amount'.tr),
+        _StaticTableCell('proforma_invoice.col_total'.tr),
       ],
     );
   }
@@ -246,29 +247,29 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           buildColumnWidgetForTextFields(
-            title: 'Invoice #',
+            title: 'proforma_invoice.invoice_number_label'.tr,
             height: 45,
             width: double.infinity,
             controller: _invoiceNumberController,
             size: size,
-            hintText: 'Search invoice number',
+            hintText: 'proforma_invoice.search_invoice_number_hint'.tr,
             margin: const EdgeInsets.symmetric(horizontal: 0),
             onchanged: (_) => _fetchInvoices(),
           ),
           const SizedBox(height: 10),
           buildColumnWidgetForTextFields(
-            title: 'Customer',
+            title: 'proforma_invoice.customer_label'.tr,
             height: 45,
             width: double.infinity,
             controller: _customerSearchController,
             size: size,
-            hintText: 'Name or phone',
+            hintText: 'proforma_invoice.name_or_phone_hint'.tr,
             margin: const EdgeInsets.symmetric(horizontal: 0),
             onchanged: (_) => _fetchInvoices(),
           ),
           const SizedBox(height: 10),
           BuildDropDownStatic(
-            title: 'Status',
+            title: 'proforma_invoice.status_label'.tr,
             size: size,
             items: _statusOptions,
             selectedItem: _selectedStatus,
@@ -283,7 +284,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
           ),
           const SizedBox(height: 12),
           CustomRoundButton(
-            title: 'Reset Filters',
+            title: 'proforma_invoice.reset_filters_button'.tr,
             boxColor: Colors.white,
             textColor: ColorManager.kPrimaryColor,
             borderColor: ColorManager.kPrimaryColor,
@@ -400,7 +401,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
                                 text: _text(invoice['invoice_number'])));
                             showScaffold(
                               context: context,
-                              message: 'Invoice number copied to clipboard',
+                              message: 'proforma_invoice.invoice_number_copied'.tr,
                             );
                           },
                           child: const Icon(
@@ -449,7 +450,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
                                   text: _text(quotation['quotation_number'])));
                               showScaffold(
                                 context: context,
-                                message: 'Quotation number copied to clipboard',
+                                message: 'proforma_invoice.quotation_number_copied'.tr,
                               );
                             },
                             child: const Icon(
@@ -466,7 +467,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
               ),
               const SizedBox(width: 8),
               Tooltip(
-                message: 'View Details',
+                message: 'proforma_invoice.view_details_tooltip'.tr,
                 child: SizedBox(
                   width: 30,
                   height: 30,
@@ -490,14 +491,14 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
             children: [
               Expanded(
                 child: _buildCompactFieldBox(
-                  label: 'Amount',
+                  label: 'proforma_invoice.field_amount'.tr,
                   value: _text(invoice['amount']),
                 ),
               ),
               const SizedBox(width: 6),
               Expanded(
                 child: _buildCompactFieldBox(
-                  label: 'Due Date',
+                  label: 'proforma_invoice.field_due_date'.tr,
                   value: _text(invoice['due_date']),
                 ),
               ),
@@ -566,7 +567,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
                             : _errorMessage != null
                                 ? Center(
                                     child: Text(
-                                      'Failed to load proforma invoices',
+                                      'proforma_invoice.failed_to_load'.tr,
                                       style: buildCustomStyle(
                                         FontWeightManager.medium,
                                         FontSize.s14,
@@ -576,10 +577,10 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
                                     ),
                                   )
                                 : _invoices.isEmpty
-                                    ? const Center(
+                                    ? Center(
                                         child: Padding(
-                                          padding: EdgeInsets.all(24),
-                                          child: Text('No proforma invoices found'),
+                                          padding: const EdgeInsets.all(24),
+                                          child: Text('proforma_invoice.no_invoices_found'.tr),
                                         ),
                                       )
                                     : _buildMobileList(),
@@ -637,7 +638,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Proforma Invoices',
+            'proforma_invoice.title'.tr,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s18,
@@ -655,13 +656,13 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
                 _showFilters = !_showFilters;
               });
             },
-            tooltip: _showFilters ? 'Hide Filters' : 'Show Filters',
+            tooltip: _showFilters ? 'proforma_invoice.hide_filters'.tr : 'proforma_invoice.show_filters'.tr,
           ),
         ],
       );
     }
     return Text(
-      'Proforma Invoices',
+      'proforma_invoice.title'.tr,
       style: buildCustomStyle(
         FontWeightManager.semiBold,
         FontSize.s20,
@@ -682,12 +683,12 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
       children: [
         Expanded(
           child: buildColumnWidgetForTextFields(
-            title: 'Invoice #',
+            title: 'proforma_invoice.invoice_number_label'.tr,
             height: 45,
             width: double.infinity,
             controller: _invoiceNumberController,
             size: size,
-            hintText: 'Search invoice number',
+            hintText: 'proforma_invoice.search_invoice_number_hint'.tr,
             margin: const EdgeInsets.symmetric(horizontal: 0),
             onchanged: (_) => _fetchInvoices(),
           ),
@@ -695,12 +696,12 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
         const SizedBox(width: 10),
         Expanded(
           child: buildColumnWidgetForTextFields(
-            title: 'Customer',
+            title: 'proforma_invoice.customer_label'.tr,
             height: 45,
             width: double.infinity,
             controller: _customerSearchController,
             size: size,
-            hintText: 'Name or phone',
+            hintText: 'proforma_invoice.name_or_phone_hint'.tr,
             margin: const EdgeInsets.symmetric(horizontal: 0),
             onchanged: (_) => _fetchInvoices(),
           ),
@@ -708,7 +709,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
         const SizedBox(width: 10),
         Expanded(
           child: BuildDropDownStatic(
-            title: 'Status',
+            title: 'proforma_invoice.status_label'.tr,
             size: size,
             items: _statusOptions,
             selectedItem: _selectedStatus,
@@ -724,7 +725,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
         ),
         const SizedBox(width: 10),
         CustomRoundButton(
-          title: 'Reset',
+          title: 'general.reset'.tr,
           boxColor: Colors.white,
           textColor: ColorManager.kPrimaryColor,
           fct: _resetFilters,
@@ -740,7 +741,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
     if (_errorMessage != null) {
       return Center(
         child: Text(
-          'Failed to load proforma invoices',
+          'proforma_invoice.failed_to_load'.tr,
           style: buildCustomStyle(
             FontWeightManager.medium,
             FontSize.s14,
@@ -752,7 +753,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
     }
 
     if (_invoices.isEmpty) {
-      return const Center(child: Text('No proforma invoices found'));
+      return Center(child: Text('proforma_invoice.no_invoices_found'.tr));
     }
 
     return LayoutBuilder(
@@ -808,17 +809,17 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
   }
 
   TableRow _buildTableHeader() {
-    return const TableRow(
-      decoration: BoxDecoration(color: ColorManager.tableBGColor),
+    return TableRow(
+      decoration: const BoxDecoration(color: ColorManager.tableBGColor),
       children: [
-        _StaticTableCell('Invoice #'),
-        _StaticTableCell('Customer'),
-        _StaticTableCell('Quotation #'),
-        _StaticTableCell('Invoice Date'),
-        _StaticTableCell('Due Date'),
-        _StaticTableCell('Amount'),
-        _StaticTableCell('Status'),
-        _StaticTableCell('Actions'),
+        _StaticTableCell('proforma_invoice.invoice_number_label'.tr),
+        _StaticTableCell('proforma_invoice.customer_label'.tr),
+        _StaticTableCell('proforma_invoice.field_quotation_number'.tr),
+        _StaticTableCell('proforma_invoice.field_invoice_date'.tr),
+        _StaticTableCell('proforma_invoice.field_due_date'.tr),
+        _StaticTableCell('proforma_invoice.field_amount'.tr),
+        _StaticTableCell('proforma_invoice.status_label'.tr),
+        _StaticTableCell('proforma_invoice.col_actions'.tr),
       ],
     );
   }
@@ -863,7 +864,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
                         text: _text(invoice['invoice_number'])));
                     showScaffold(
                       context: context,
-                      message: 'Invoice number copied to clipboard',
+                      message: 'proforma_invoice.invoice_number_copied'.tr,
                     );
                   },
                   child: const Icon(
@@ -924,7 +925,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
                           text: _text(quotation['quotation_number'])));
                       showScaffold(
                         context: context,
-                        message: 'Quotation number copied to clipboard',
+                        message: 'proforma_invoice.quotation_number_copied'.tr,
                       );
                     },
                     child: const Icon(
@@ -1029,7 +1030,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
               : null,
           icon: const Icon(Icons.chevron_left),
         ),
-        Text('Page $_currentPage of $_lastPage'),
+        Text('proforma_invoice.page_of'.tr.replaceAll('@current', _currentPage.toString()).replaceAll('@last', _lastPage.toString())),
         IconButton(
           onPressed: _currentPage < _lastPage
               ? () => _fetchInvoices(page: _currentPage + 1)

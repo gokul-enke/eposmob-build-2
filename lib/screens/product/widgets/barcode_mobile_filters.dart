@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -71,26 +72,26 @@ class BarcodeMobileFilters extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildFilterField(
-          label: 'Category',
+          label: 'product_barcode.category'.tr,
           child: categoryField,
         ),
         const SizedBox(height: 12),
         _buildTextFilter(
-          label: 'Product Name',
-          hint: 'Product Name',
+          label: 'product_barcode.product_name'.tr,
+          hint: 'product_barcode.product_name'.tr,
           controller: productNameController,
           size: size,
         ),
         const SizedBox(height: 12),
         _buildTextFilter(
-          label: 'Barcode',
-          hint: 'Barcode',
+          label: 'product_barcode.barcode'.tr,
+          hint: 'product_barcode.barcode'.tr,
           controller: barcodeController,
           size: size,
         ),
         const SizedBox(height: 16),
         CustomRoundButton(
-          title: 'Reset Filters',
+          title: 'product_barcode.reset_filters'.tr,
           boxColor: Colors.white,
           textColor: ColorManager.kPrimaryColor,
           borderColor: ColorManager.kPrimaryColor,

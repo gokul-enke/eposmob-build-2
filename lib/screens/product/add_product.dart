@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
@@ -89,15 +90,18 @@ class _AddProductScreenState extends State<AddProductScreen> {
       });
 
       // Load categories from CategoryProvider with caching (same as sidebar and stock)
-      final categoryProvider =
-          Provider.of<CategoryProvider>(context, listen: false);
+      final categoryProvider = Provider.of<CategoryProvider>(
+        context,
+        listen: false,
+      );
       if (!categoryProvider.isCategoriesLoaded) {
         debugPrint('📥 Ensuring sellable categories are loaded...');
         await categoryProvider.ensureCategoriesLoaded();
         debugPrint('✅ Categories ready');
       } else {
         debugPrint(
-            "📋 Using cached categories (${categoryProvider.category?.length ?? 0} items)");
+          "📋 Using cached categories (${categoryProvider.category?.length ?? 0} items)",
+        );
       }
 
       LocalProductProvider localProductProvider =
@@ -211,7 +215,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
             const Icon(Icons.warning_amber_rounded, color: Colors.orange),
             const SizedBox(width: 10),
             Text(
-              "Confirm Delete",
+              'product.confirm_delete_title'.tr,
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s18,
@@ -226,7 +230,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Are you sure you want to delete this product?",
+              'product.confirm_delete_message'.tr,
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s14,
@@ -245,7 +249,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Product: ${product.productName}",
+                    'product.delete_product_label'.tr.replaceAll(
+                          '@name',
+                          '${product.productName}',
+                        ),
                     style: buildCustomStyle(
                       FontWeightManager.medium,
                       FontSize.s14,
@@ -255,7 +262,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   ),
                   if (product.barcode != null && product.barcode!.isNotEmpty)
                     Text(
-                      "Barcode: ${product.barcode}",
+                      'product.barcode_label'.tr.replaceAll(
+                            '@code',
+                            '${product.barcode}',
+                          ),
                       style: buildCustomStyle(
                         FontWeightManager.regular,
                         FontSize.s12,
@@ -265,7 +275,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     ),
                   if (product.itemCode != null && product.itemCode!.isNotEmpty)
                     Text(
-                      "Item Code: ${product.itemCode}",
+                      'product.item_code_label'.tr.replaceAll(
+                            '@code',
+                            '${product.itemCode}',
+                          ),
                       style: buildCustomStyle(
                         FontWeightManager.regular,
                         FontSize.s12,
@@ -274,7 +287,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       ),
                     ),
                   Text(
-                    "Price: ${product.price?.price ?? 'N/A'}",
+                    'product.price_label'.tr.replaceAll(
+                          '@price',
+                          '${product.price?.price ?? 'product.na'.tr}',
+                        ),
                     style: buildCustomStyle(
                       FontWeightManager.regular,
                       FontSize.s12,
@@ -291,7 +307,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             child: Text(
-              "Cancel",
+              'general.cancel'.tr,
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s14,
@@ -304,7 +320,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red.shade400,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             onPressed: () async {
               Navigator.of(ctx).pop();
@@ -313,9 +330,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 initLoading = true;
               });
 
-              final success = await Provider.of<LocalProductProvider>(context,
-                      listen: false)
-                  .deleteProductAPI(product.productId!);
+              final success = await Provider.of<LocalProductProvider>(
+                context,
+                listen: false,
+              ).deleteProductAPI(product.productId!);
 
               setState(() {
                 initLoading = false;
@@ -324,8 +342,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
               if (success) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Product deleted successfully"),
+                    SnackBar(
+                      content: Text('product.deleted_success'.tr),
                       backgroundColor: Colors.green,
                     ),
                   );
@@ -333,8 +351,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
               } else {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Failed to delete product"),
+                    SnackBar(
+                      content: Text('product.delete_failed'.tr),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -342,7 +360,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
               }
             },
             child: Text(
-              "Delete",
+              'product.delete'.tr,
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s14,
@@ -388,16 +406,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
               color: ColorManager.kPrimaryColor,
             ),
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(
-              minWidth: 44,
-              minHeight: 44,
-            ),
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             onPressed: () {
               setState(() {
                 _showFilters = !_showFilters;
               });
             },
-            tooltip: _showFilters ? 'Hide Filters' : 'Show Filters',
+            tooltip: _showFilters
+                ? 'product.hide_filters'.tr
+                : 'product.show_filters'.tr,
           ),
           if (hasFilters)
             PositionedDirectional(
@@ -462,7 +479,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      "Product List",
+                                      'product.title'.tr,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: buildCustomStyle(
@@ -478,7 +495,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               ),
                               const SizedBox(height: 12),
                               CustomRoundButton(
-                                title: "Add Product",
+                                title: 'product.add'.tr,
                                 fct: () async {
                                   await showDialog(
                                     context: context,
@@ -497,7 +514,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  "Product List",
+                                  'product.title'.tr,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: buildCustomStyle(
@@ -509,7 +526,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                 ),
                               ),
                               CustomRoundButton(
-                                title: "Add Product",
+                                title: 'product.add'.tr,
                                 fct: () async {
                                   await showDialog(
                                     context: context,
@@ -569,75 +586,92 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                   ? Column(
                                       children: [
                                         wrapField(
-                                            buildColumnWidgetForTextFields(
-                                          height: 45,
-                                          onchanged: (value) {
-                                            searchProducts(1);
-                                          },
-                                          controller: productNameController,
-                                          size: size,
-                                          hintText: 'Product Name',
-                                        )),
-                                        wrapField(Consumer<CategoryProvider>(
-                                          builder: (context, categoryProvider,
-                                              child) {
-                                            return _buildCategoryDropdown(
-                                                categoryProvider);
-                                          },
-                                        )),
+                                          buildColumnWidgetForTextFields(
+                                            height: 45,
+                                            onchanged: (value) {
+                                              searchProducts(1);
+                                            },
+                                            controller: productNameController,
+                                            size: size,
+                                            hintText: 'product.product_name'.tr,
+                                          ),
+                                        ),
                                         wrapField(
-                                            buildColumnWidgetForTextFields(
-                                          height: 45,
-                                          onchanged: (value) {
-                                            searchProducts(1);
-                                          },
-                                          controller: amountController,
-                                          size: size,
-                                          hintText: 'Price',
-                                        )),
+                                          Consumer<CategoryProvider>(
+                                            builder: (
+                                              context,
+                                              categoryProvider,
+                                              child,
+                                            ) {
+                                              return _buildCategoryDropdown(
+                                                categoryProvider,
+                                              );
+                                            },
+                                          ),
+                                        ),
                                         wrapField(
-                                            buildColumnWidgetForTextFields(
-                                          height: 45,
-                                          onchanged: (value) {
-                                            searchProducts(1);
-                                          },
-                                          controller: barcodeController,
-                                          size: size,
-                                          hintText: 'Barcode',
-                                        )),
+                                          buildColumnWidgetForTextFields(
+                                            height: 45,
+                                            onchanged: (value) {
+                                              searchProducts(1);
+                                            },
+                                            controller: amountController,
+                                            size: size,
+                                            hintText: 'product.price'.tr,
+                                          ),
+                                        ),
                                         wrapField(
-                                            buildColumnWidgetForTextFields(
-                                          height: 45,
-                                          onchanged: (value) {
-                                            searchProducts(1);
-                                          },
-                                          controller: hsnCodeController,
-                                          size: size,
-                                          hintText: 'HSN Code',
-                                        )),
+                                          buildColumnWidgetForTextFields(
+                                            height: 45,
+                                            onchanged: (value) {
+                                              searchProducts(1);
+                                            },
+                                            controller: barcodeController,
+                                            size: size,
+                                            hintText: 'product.barcode'.tr,
+                                          ),
+                                        ),
                                         wrapField(
-                                            BuildDropDownWithSearch<String>(
-                                          title: null,
-                                          showName: false,
-                                          hintText: 'Select Property',
-                                          value: selectedProperty,
-                                          items: propertyList,
-                                          onChanged: (String? newValue) {
-                                            setState(() {
-                                              selectedProperty = newValue;
-                                            });
-                                            searchProducts(1);
-                                          },
-                                          displayText: (property) => property,
-                                          searchController:
-                                              propertySearchController,
-                                          height: 45,
-                                          margin: const EdgeInsets.symmetric(
-                                              horizontal: 0, vertical: 0),
-                                        )),
+                                          buildColumnWidgetForTextFields(
+                                            height: 45,
+                                            onchanged: (value) {
+                                              searchProducts(1);
+                                            },
+                                            controller: hsnCodeController,
+                                            size: size,
+                                            hintText: 'product.hsn_code'.tr,
+                                          ),
+                                        ),
+                                        wrapField(
+                                          BuildDropDownWithSearch<String>(
+                                            title: null,
+                                            showName: false,
+                                            hintText:
+                                                'product.select_property'.tr,
+                                            value: selectedProperty,
+                                            items: propertyList,
+                                            onChanged: (String? newValue) {
+                                              setState(() {
+                                                selectedProperty = newValue;
+                                              });
+                                              searchProducts(1);
+                                            },
+                                            displayText: (property) => property,
+                                            searchController:
+                                                propertySearchController,
+                                            height: 45,
+                                            margin: const EdgeInsets.symmetric(
+                                              horizontal: 0,
+                                              vertical: 0,
+                                            ),
+                                          ),
+                                        ),
                                         Consumer<AppSettingsProvider>(
-                                          builder: (context,
-                                              appSettingsProvider, child) {
+                                          builder: (
+                                            context,
+                                            appSettingsProvider,
+                                            child,
+                                          ) {
                                             final itemCodeEnabled =
                                                 appSettingsProvider.appSettings
                                                         ?.itemCodeEnabled ??
@@ -646,15 +680,17 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                               return const SizedBox.shrink();
                                             }
                                             return wrapField(
-                                                buildColumnWidgetForTextFields(
-                                              height: 45,
-                                              onchanged: (value) {
-                                                searchProducts(1);
-                                              },
-                                              controller: itemCodeController,
-                                              size: size,
-                                              hintText: 'Item Code',
-                                            ));
+                                              buildColumnWidgetForTextFields(
+                                                height: 45,
+                                                onchanged: (value) {
+                                                  searchProducts(1);
+                                                },
+                                                controller: itemCodeController,
+                                                size: size,
+                                                hintText:
+                                                    'product.item_code'.tr,
+                                              ),
+                                            );
                                           },
                                         ),
                                       ],
@@ -666,49 +702,61 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                               CrossAxisAlignment.end,
                                           children: [
                                             wrapField(
-                                                buildColumnWidgetForTextFields(
-                                              height: 45,
-                                              onchanged: (value) {
-                                                searchProducts(1);
-                                              },
-                                              controller: productNameController,
-                                              size: size,
-                                              hintText: 'Product Name',
-                                            )),
+                                              buildColumnWidgetForTextFields(
+                                                height: 45,
+                                                onchanged: (value) {
+                                                  searchProducts(1);
+                                                },
+                                                controller:
+                                                    productNameController,
+                                                size: size,
+                                                hintText:
+                                                    'product.product_name'.tr,
+                                              ),
+                                            ),
                                             const SizedBox(width: 15),
                                             wrapField(
-                                                Consumer<CategoryProvider>(
-                                              builder: (context,
-                                                  categoryProvider, child) {
-                                                return _buildCategoryDropdown(
-                                                    categoryProvider);
-                                              },
-                                            )),
+                                              Consumer<CategoryProvider>(
+                                                builder: (
+                                                  context,
+                                                  categoryProvider,
+                                                  child,
+                                                ) {
+                                                  return _buildCategoryDropdown(
+                                                    categoryProvider,
+                                                  );
+                                                },
+                                              ),
+                                            ),
                                             const SizedBox(width: 15),
                                             wrapField(
-                                                buildColumnWidgetForTextFields(
-                                              height: 45,
-                                              onchanged: (value) {
-                                                searchProducts(1);
-                                              },
-                                              controller: amountController,
-                                              size: size,
-                                              hintText: 'Price',
-                                            )),
+                                              buildColumnWidgetForTextFields(
+                                                height: 45,
+                                                onchanged: (value) {
+                                                  searchProducts(1);
+                                                },
+                                                controller: amountController,
+                                                size: size,
+                                                hintText: 'product.price'.tr,
+                                              ),
+                                            ),
                                             const SizedBox(width: 15),
                                             wrapField(
-                                                buildColumnWidgetForTextFields(
-                                              height: 45,
-                                              onchanged: (value) {
-                                                searchProducts(1);
-                                              },
-                                              margin:
-                                                  const EdgeInsetsDirectional
-                                                      .only(start: 5),
-                                              controller: barcodeController,
-                                              size: size,
-                                              hintText: 'Barcode',
-                                            )),
+                                              buildColumnWidgetForTextFields(
+                                                height: 45,
+                                                onchanged: (value) {
+                                                  searchProducts(1);
+                                                },
+                                                margin:
+                                                    const EdgeInsetsDirectional
+                                                        .only(
+                                                  start: 5,
+                                                ),
+                                                controller: barcodeController,
+                                                size: size,
+                                                hintText: 'product.barcode'.tr,
+                                              ),
+                                            ),
                                           ],
                                         ),
                                         const SizedBox(height: 10),
@@ -717,43 +765,51 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                               CrossAxisAlignment.start,
                                           children: [
                                             wrapField(
-                                                buildColumnWidgetForTextFields(
-                                              height: 45,
-                                              onchanged: (value) {
-                                                searchProducts(1);
-                                              },
-                                              controller: hsnCodeController,
-                                              size: size,
-                                              hintText: 'HSN Code',
-                                            )),
+                                              buildColumnWidgetForTextFields(
+                                                height: 45,
+                                                onchanged: (value) {
+                                                  searchProducts(1);
+                                                },
+                                                controller: hsnCodeController,
+                                                size: size,
+                                                hintText: 'product.hsn_code'.tr,
+                                              ),
+                                            ),
                                             const SizedBox(width: 15),
                                             wrapField(
-                                                BuildDropDownWithSearch<String>(
-                                              title: null,
-                                              showName: false,
-                                              hintText: 'Select Property',
-                                              value: selectedProperty,
-                                              items: propertyList,
-                                              onChanged: (String? newValue) {
-                                                setState(() {
-                                                  selectedProperty = newValue;
-                                                });
-                                                searchProducts(1);
-                                              },
-                                              displayText: (property) =>
-                                                  property,
-                                              searchController:
-                                                  propertySearchController,
-                                              height: 45,
-                                              margin:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 0,
-                                                      vertical: 0),
-                                            )),
+                                              BuildDropDownWithSearch<String>(
+                                                title: null,
+                                                showName: false,
+                                                hintText:
+                                                    'product.select_property'
+                                                        .tr,
+                                                value: selectedProperty,
+                                                items: propertyList,
+                                                onChanged: (String? newValue) {
+                                                  setState(() {
+                                                    selectedProperty = newValue;
+                                                  });
+                                                  searchProducts(1);
+                                                },
+                                                displayText: (property) =>
+                                                    property,
+                                                searchController:
+                                                    propertySearchController,
+                                                height: 45,
+                                                margin:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: 0,
+                                                  vertical: 0,
+                                                ),
+                                              ),
+                                            ),
                                             const SizedBox(width: 15),
                                             Consumer<AppSettingsProvider>(
-                                              builder: (context,
-                                                  appSettingsProvider, child) {
+                                              builder: (
+                                                context,
+                                                appSettingsProvider,
+                                                child,
+                                              ) {
                                                 final itemCodeEnabled =
                                                     appSettingsProvider
                                                             .appSettings
@@ -761,25 +817,30 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                         false;
                                                 if (!itemCodeEnabled) {
                                                   return const Expanded(
-                                                      flex: 1,
-                                                      child: SizedBox());
+                                                    flex: 1,
+                                                    child: SizedBox(),
+                                                  );
                                                 }
                                                 return wrapField(
-                                                    buildColumnWidgetForTextFields(
-                                                  height: 45,
-                                                  onchanged: (value) {
-                                                    searchProducts(1);
-                                                  },
-                                                  controller:
-                                                      itemCodeController,
-                                                  size: size,
-                                                  hintText: 'Item Code',
-                                                ));
+                                                  buildColumnWidgetForTextFields(
+                                                    height: 45,
+                                                    onchanged: (value) {
+                                                      searchProducts(1);
+                                                    },
+                                                    controller:
+                                                        itemCodeController,
+                                                    size: size,
+                                                    hintText:
+                                                        'product.item_code'.tr,
+                                                  ),
+                                                );
                                               },
                                             ),
                                             const SizedBox(width: 15),
                                             const Expanded(
-                                                flex: 1, child: SizedBox()),
+                                              flex: 1,
+                                              child: SizedBox(),
+                                            ),
                                           ],
                                         ),
                                       ],
@@ -790,7 +851,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                     ? Alignment.center
                                     : Alignment.centerRight,
                                 child: CustomRoundButton(
-                                  title: "Reset",
+                                  title: 'general.reset'.tr,
                                   boxColor: Colors.white,
                                   textColor: ColorManager.kPrimaryColor,
                                   fct: resetSearch,
@@ -815,31 +876,33 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     Expanded(
                       child: Padding(
                         padding: EdgeInsets.symmetric(
-                            horizontal: isMobile ? 12.0 : 20.0),
+                          horizontal: isMobile ? 12.0 : 20.0,
+                        ),
                         child: Consumer<LocalProductProvider>(
                           builder: (context, productProvider, child) {
                             List<GetProduct> productList =
                                 productProvider.paginatedProducts;
                             final itemCodeEnabled =
-                                Provider.of<AppSettingsProvider>(context,
-                                            listen: false)
-                                        .appSettings
-                                        ?.itemCodeEnabled ??
+                                Provider.of<AppSettingsProvider>(
+                                      context,
+                                      listen: false,
+                                    ).appSettings?.itemCodeEnabled ??
                                     false;
-                            final canViewPurchasePrice =
-                                _canViewPurchasePrice(listen: true);
+                            final canViewPurchasePrice = _canViewPurchasePrice(
+                              listen: true,
+                            );
 
                             if (initLoading) {
-                              return const Center(
+                              return Center(
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    CircularProgressIndicator(
+                                    const CircularProgressIndicator(
                                       color: ColorManager.kPrimaryColor,
                                     ),
-                                    SizedBox(height: 14),
+                                    const SizedBox(height: 14),
                                     Text(
-                                      "Loading products...",
+                                      'product.loading'.tr,
                                       style: TextStyle(
                                         color: ColorManager.kGreyColor,
                                         fontSize: 13,
@@ -871,7 +934,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                     ),
                                     const SizedBox(height: 16),
                                     Text(
-                                      "No products found",
+                                      'product.no_products'.tr,
                                       style: buildCustomStyle(
                                         FontWeightManager.semiBold,
                                         FontSize.s16,
@@ -886,14 +949,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
                             if (isMobile) {
                               return ListView.builder(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                ),
                                 itemCount: productList.length,
                                 itemBuilder: (context, index) {
                                   final product = productList[index];
                                   final categoryName = product.category != null
-                                      ? product.category!.name ?? 'Unknown'
-                                      : 'No Category';
+                                      ? product.category!.name ??
+                                          'product.unknown'.tr
+                                      : 'product.no_category'.tr;
                                   final serialNumber =
                                       productProvider.paginationFrom + index;
                                   return _buildMobileProductCard(
@@ -914,7 +979,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               blurRadius: 10.0,
                               color: Colors.white,
                               border: Border.all(
-                                  color: Colors.grey.withOpacity(0.12)),
+                                color: Colors.grey.withOpacity(0.12),
+                              ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(14),
                                 child: Column(
@@ -924,32 +990,39 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                         color: ColorManager.tableBGColor,
                                         border: Border(
                                           bottom: BorderSide(
-                                              color: Color(0x1F000000),
-                                              width: 1),
+                                            color: Color(0x1F000000),
+                                            width: 1,
+                                          ),
                                         ),
                                       ),
                                       child: Table(
                                         columnWidths: {
                                           0: FractionColumnWidth(0.05), // No
                                           1: FractionColumnWidth(
-                                              0.24), // Product Name
+                                            0.24,
+                                          ), // Product Name
                                           2: FractionColumnWidth(
-                                              0.08), // Item Code
+                                            0.08,
+                                          ), // Item Code
                                           3: FractionColumnWidth(
-                                              0.11), // Category Name
+                                            0.11,
+                                          ), // Category Name
                                           4: FractionColumnWidth(0.07), // Price
                                           5: FractionColumnWidth(0.07), // MRP
                                           if (canViewPurchasePrice)
                                             6: FractionColumnWidth(
-                                                0.07), // Purchase Price
+                                              0.07,
+                                            ), // Purchase Price
                                           6 + (canViewPurchasePrice ? 1 : 0):
                                               FractionColumnWidth(0.07), // Unit
                                           7 + (canViewPurchasePrice ? 1 : 0):
                                               FractionColumnWidth(
-                                                  0.12), // Barcode
+                                            0.12,
+                                          ), // Barcode
                                           8 + (canViewPurchasePrice ? 1 : 0):
                                               FractionColumnWidth(
-                                                  0.12), // Action
+                                            0.12,
+                                          ), // Action
                                         },
                                         border: null,
                                         defaultVerticalAlignment:
@@ -957,21 +1030,39 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                         children: [
                                           TableRow(
                                             children: [
-                                              _buildTableHeader("No"),
-                                              _buildTableHeader("Product Name"),
-                                              _buildTableHeader(itemCodeEnabled
-                                                  ? "Item Code"
-                                                  : ""),
                                               _buildTableHeader(
-                                                  "Category Name"),
-                                              _buildTableHeader("Price"),
-                                              _buildTableHeader("MRP"),
+                                                'product.col_no'.tr,
+                                              ),
+                                              _buildTableHeader(
+                                                'product.product_name'.tr,
+                                              ),
+                                              _buildTableHeader(
+                                                itemCodeEnabled
+                                                    ? 'product.item_code'.tr
+                                                    : "",
+                                              ),
+                                              _buildTableHeader(
+                                                'product.category_name'.tr,
+                                              ),
+                                              _buildTableHeader(
+                                                'product.price'.tr,
+                                              ),
+                                              _buildTableHeader(
+                                                'product.mrp'.tr,
+                                              ),
                                               if (canViewPurchasePrice)
                                                 _buildTableHeader(
-                                                    "Purchase Price"),
-                                              _buildTableHeader("Unit"),
-                                              _buildTableHeader("Barcode"),
-                                              _buildTableHeader("Action"),
+                                                  'product.purchase_price'.tr,
+                                                ),
+                                              _buildTableHeader(
+                                                'product.unit'.tr,
+                                              ),
+                                              _buildTableHeader(
+                                                'product.barcode'.tr,
+                                              ),
+                                              _buildTableHeader(
+                                                'product.action'.tr,
+                                              ),
                                             ],
                                           ),
                                         ],
@@ -982,9 +1073,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                       child: MouseRegion(
                                         cursor: SystemMouseCursors.grab,
                                         child: ScrollConfiguration(
-                                          behavior:
-                                              ScrollConfiguration.of(context)
-                                                  .copyWith(
+                                          behavior: ScrollConfiguration.of(
+                                            context,
+                                          ).copyWith(
                                             dragDevices: {
                                               PointerDeviceKind.mouse,
                                               PointerDeviceKind.touch,
@@ -999,38 +1090,48 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                             child: Table(
                                               columnWidths: {
                                                 0: FractionColumnWidth(
-                                                    0.05), // No
+                                                  0.05,
+                                                ), // No
                                                 1: FractionColumnWidth(
-                                                    0.24), // Product Name
+                                                  0.24,
+                                                ), // Product Name
                                                 2: FractionColumnWidth(
-                                                    0.08), // Item Code
+                                                  0.08,
+                                                ), // Item Code
                                                 3: FractionColumnWidth(
-                                                    0.11), // Category Name
+                                                  0.11,
+                                                ), // Category Name
                                                 4: FractionColumnWidth(
-                                                    0.07), // Price
+                                                  0.07,
+                                                ), // Price
                                                 5: FractionColumnWidth(
-                                                    0.07), // MRP
+                                                  0.07,
+                                                ), // MRP
                                                 if (canViewPurchasePrice)
                                                   6: FractionColumnWidth(
-                                                      0.07), // Purchase Price
+                                                    0.07,
+                                                  ), // Purchase Price
                                                 6 +
                                                         (canViewPurchasePrice
                                                             ? 1
                                                             : 0):
                                                     FractionColumnWidth(
-                                                        0.07), // Unit
+                                                  0.07,
+                                                ), // Unit
                                                 7 +
                                                         (canViewPurchasePrice
                                                             ? 1
                                                             : 0):
                                                     FractionColumnWidth(
-                                                        0.12), // Barcode
+                                                  0.12,
+                                                ), // Barcode
                                                 8 +
                                                         (canViewPurchasePrice
                                                             ? 1
                                                             : 0):
                                                     FractionColumnWidth(
-                                                        0.12), // Action
+                                                  0.12,
+                                                ), // Action
                                               },
                                               border: null,
                                               defaultVerticalAlignment:
@@ -1040,15 +1141,19 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                 ...productList
                                                     .asMap()
                                                     .entries
-                                                    .map((entry) {
+                                                    .map((
+                                                  entry,
+                                                ) {
                                                   int index = entry.key;
                                                   var product = entry.value;
-                                                  String categoryName =
-                                                      product.category != null
-                                                          ? product.category!
-                                                                  .name ??
-                                                              'Unknown'
-                                                          : 'No Category';
+                                                  String categoryName = product
+                                                              .category !=
+                                                          null
+                                                      ? product
+                                                              .category!.name ??
+                                                          'general.unknown'.tr
+                                                      : 'product.no_category'
+                                                          .tr;
 
                                                   // Calculate serial number based on pagination
                                                   int serialNumber =
@@ -1061,11 +1166,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                       color: index % 2 == 0
                                                           ? Colors.white
                                                           : Colors.grey
-                                                              .withOpacity(0.1),
+                                                              .withOpacity(
+                                                              0.1,
+                                                            ),
                                                     ),
                                                     children: [
                                                       _buildTableCell(
-                                                          "$serialNumber"),
+                                                        "$serialNumber",
+                                                      ),
                                                       TableCell(
                                                         verticalAlignment:
                                                             TableCellVerticalAlignment
@@ -1073,7 +1181,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                         child: Padding(
                                                           padding:
                                                               const EdgeInsets
-                                                                  .all(12.0),
+                                                                  .all(
+                                                            12.0,
+                                                          ),
                                                           child: Center(
                                                             child:
                                                                 SelectableText(
@@ -1101,7 +1211,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                         child: Padding(
                                                           padding:
                                                               const EdgeInsets
-                                                                  .all(12.0),
+                                                                  .all(
+                                                            12.0,
+                                                          ),
                                                           child: Center(
                                                             child: Row(
                                                               mainAxisAlignment:
@@ -1143,17 +1255,22 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                                         .itemCode!
                                                                         .isNotEmpty) ...[
                                                                   const SizedBox(
-                                                                      width: 6),
+                                                                    width: 6,
+                                                                  ),
                                                                   GestureDetector(
                                                                     onTap: () {
-                                                                      Clipboard.setData(
-                                                                          ClipboardData(
-                                                                              text: product.itemCode!));
+                                                                      Clipboard
+                                                                          .setData(
+                                                                        ClipboardData(
+                                                                          text:
+                                                                              product.itemCode!,
+                                                                        ),
+                                                                      );
                                                                       showScaffold(
                                                                         context:
                                                                             context,
                                                                         message:
-                                                                            'Item code copied to clipboard',
+                                                                            'product.item_code_copied'.tr,
                                                                       );
                                                                     },
                                                                     child:
@@ -1178,7 +1295,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                         child: Padding(
                                                           padding:
                                                               const EdgeInsets
-                                                                  .all(12.0),
+                                                                  .all(
+                                                            12.0,
+                                                          ),
                                                           child: Center(
                                                             child:
                                                                 SelectableText(
@@ -1200,9 +1319,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                         ),
                                                       ),
                                                       _buildTableCell(
-                                                          "${product.price?.price ?? 'N/A'}"),
+                                                        "${product.price?.price ?? 'N/A'}",
+                                                      ),
                                                       _buildTableCell(
-                                                          "${product.mrp ?? 'N/A'}"),
+                                                        "${product.mrp ?? 'N/A'}",
+                                                      ),
                                                       if (canViewPurchasePrice)
                                                         _buildTableCell(() {
                                                           // Debug purchase price resolution
@@ -1226,22 +1347,27 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                                   'N/A';
 
                                                           debugPrint(
-                                                              "🔍 PURCHASE PRICE DEBUG for ${product.productName}:");
+                                                            "🔍 PURCHASE PRICE DEBUG for ${product.productName}:",
+                                                          );
                                                           debugPrint(
-                                                              "  - Product Purchase Price: $productPurchasePrice");
+                                                            "  - Product Purchase Price: $productPurchasePrice",
+                                                          );
                                                           debugPrint(
-                                                              "  - Stock Purchase Price: $stockPurchasePrice");
+                                                            "  - Stock Purchase Price: $stockPurchasePrice",
+                                                          );
                                                           debugPrint(
-                                                              "  - Final Display Price: $finalPrice");
+                                                            "  - Final Display Price: $finalPrice",
+                                                          );
                                                           debugPrint(
-                                                              "  - Stock Count: ${product.stock?.length ?? 0}");
+                                                            "  - Stock Count: ${product.stock?.length ?? 0}",
+                                                          );
 
                                                           return finalPrice
                                                               .toString();
                                                         }()),
                                                       _buildTableCell(
-                                                          product.unit ??
-                                                              'N/A'),
+                                                        product.unit ?? 'N/A',
+                                                      ),
                                                       TableCell(
                                                         verticalAlignment:
                                                             TableCellVerticalAlignment
@@ -1249,7 +1375,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                         child: Padding(
                                                           padding:
                                                               const EdgeInsets
-                                                                  .all(12.0),
+                                                                  .all(
+                                                            12.0,
+                                                          ),
                                                           child: Center(
                                                             child: Row(
                                                               mainAxisAlignment:
@@ -1291,17 +1419,22 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                                     product.barcode !=
                                                                         'N/A') ...[
                                                                   const SizedBox(
-                                                                      width: 6),
+                                                                    width: 6,
+                                                                  ),
                                                                   GestureDetector(
                                                                     onTap: () {
-                                                                      Clipboard.setData(
-                                                                          ClipboardData(
-                                                                              text: product.barcode!));
+                                                                      Clipboard
+                                                                          .setData(
+                                                                        ClipboardData(
+                                                                          text:
+                                                                              product.barcode!,
+                                                                        ),
+                                                                      );
                                                                       showScaffold(
                                                                         context:
                                                                             context,
                                                                         message:
-                                                                            'Barcode copied to clipboard',
+                                                                            'product.barcode_copied'.tr,
                                                                       );
                                                                     },
                                                                     child:
@@ -1323,7 +1456,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                         child: Padding(
                                                           padding:
                                                               const EdgeInsets
-                                                                  .all(8.0),
+                                                                  .all(
+                                                            8.0,
+                                                          ),
                                                           child: Row(
                                                             mainAxisAlignment:
                                                                 MainAxisAlignment
@@ -1333,9 +1468,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                                 margin:
                                                                     const EdgeInsets
                                                                         .only(
-                                                                        left: 2,
-                                                                        right:
-                                                                            2),
+                                                                  left: 2,
+                                                                  right: 2,
+                                                                ),
                                                                 circleRadius: 5,
                                                                 child:
                                                                     IconButton(
@@ -1346,12 +1481,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                                     color: ColorManager
                                                                         .kPrimaryColor
                                                                         .withOpacity(
-                                                                            0.9),
+                                                                      0.9,
+                                                                    ),
                                                                   ),
                                                                   onPressed:
                                                                       () {
                                                                     _showProductDetails(
-                                                                        product);
+                                                                      product,
+                                                                    );
                                                                   },
                                                                   constraints:
                                                                       const BoxConstraints(
@@ -1366,14 +1503,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                                 ),
                                                               ),
                                                               const SizedBox(
-                                                                  width: 5),
+                                                                width: 5,
+                                                              ),
                                                               BuildBoxShadowContainer(
                                                                 margin:
                                                                     const EdgeInsets
                                                                         .only(
-                                                                        left: 2,
-                                                                        right:
-                                                                            2),
+                                                                  left: 2,
+                                                                  right: 2,
+                                                                ),
                                                                 circleRadius: 5,
                                                                 child:
                                                                     IconButton(
@@ -1388,7 +1526,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                                   onPressed:
                                                                       () {
                                                                     _confirmDelete(
-                                                                        product);
+                                                                      product,
+                                                                    );
                                                                   },
                                                                   constraints:
                                                                       const BoxConstraints(
@@ -1426,7 +1565,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     // Pagination Always at Bottom
                     Padding(
                       padding: EdgeInsets.symmetric(
-                          horizontal: isMobile ? 12.0 : 20.0, vertical: 10),
+                        horizontal: isMobile ? 12.0 : 20.0,
+                        vertical: 10,
+                      ),
                       child: Consumer<LocalProductProvider>(
                         builder: (context, productProvider, child) {
                           if (productProvider.paginatedProducts.isEmpty) {
@@ -1470,7 +1611,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     return BuildDropDownWithSearch<Category>(
       title: null,
       showName: false,
-      hintText: 'Please Select',
+      hintText: 'product.please_select'.tr,
       value: selectedCategory,
       items: categoryList != null && categoryList.isNotEmpty
           ? categoryList
@@ -1485,7 +1626,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           searchProducts(1);
         }
       },
-      displayText: (category) => category.categoryName ?? 'Unknown',
+      displayText: (category) => category.categoryName ?? 'product.unknown'.tr,
       searchController: categorySearchController,
       height: 45,
       margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
@@ -1515,7 +1656,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
               children: [
                 Expanded(
                   child: SelectableText(
-                    product.productName ?? 'Unnamed',
+                    product.productName ?? 'product.unnamed'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s14,
@@ -1554,7 +1695,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   children: [
                     Flexible(
                       child: Text(
-                        'Item: ${product.itemCode}',
+                        'product.item_label'.tr.replaceAll(
+                              '@code',
+                              '${product.itemCode}',
+                            ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: buildCustomStyle(
@@ -1569,10 +1713,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     GestureDetector(
                       onTap: () {
                         Clipboard.setData(
-                            ClipboardData(text: product.itemCode!));
+                          ClipboardData(text: product.itemCode!),
+                        );
                         showScaffold(
                           context: context,
-                          message: 'Item code copied to clipboard',
+                          message: 'product.item_code_copied'.tr,
                         );
                       },
                       child: const Icon(
@@ -1591,7 +1736,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   children: [
                     Flexible(
                       child: Text(
-                        'Barcode: ${product.barcode}',
+                        'product.barcode_label'.tr.replaceAll(
+                              '@code',
+                              '${product.barcode}',
+                            ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: buildCustomStyle(
@@ -1606,10 +1754,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     GestureDetector(
                       onTap: () {
                         Clipboard.setData(
-                            ClipboardData(text: product.barcode!));
+                          ClipboardData(text: product.barcode!),
+                        );
                         showScaffold(
                           context: context,
-                          message: 'Barcode copied to clipboard',
+                          message: 'product.barcode_copied'.tr,
                         );
                       },
                       child: const Icon(
@@ -1629,7 +1778,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'Price: ${product.price?.price ?? 'N/A'}',
+                      'product.price_label'.tr.replaceAll(
+                            '@price',
+                            '${product.price?.price ?? 'product.na'.tr}',
+                          ),
                       maxLines: 1,
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
@@ -1647,8 +1799,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       width: 44,
                       height: 44,
                       child: IconButton(
-                        icon: Icon(Icons.visibility,
-                            size: 20, color: ColorManager.kPrimaryColor),
+                        icon: Icon(
+                          Icons.visibility,
+                          size: 20,
+                          color: ColorManager.kPrimaryColor,
+                        ),
                         onPressed: () => _showProductDetails(product),
                       ),
                     ),
@@ -1656,8 +1811,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       width: 44,
                       height: 44,
                       child: IconButton(
-                        icon: Icon(Icons.delete_outline,
-                            size: 20, color: Colors.red.shade400),
+                        icon: Icon(
+                          Icons.delete_outline,
+                          size: 20,
+                          color: Colors.red.shade400,
+                        ),
                         onPressed: () => _confirmDelete(product),
                       ),
                     ),

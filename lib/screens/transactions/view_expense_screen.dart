@@ -123,7 +123,7 @@ class ViewExpenseScreen extends StatelessWidget {
             Row(
               children: [
                 CustomRoundButtonAdvanced(
-                  title: "Back to List",
+                  title: 'expense.back_to_list'.tr,
                   fct: () {
                     sideBarController.index.value = 93; // Navigate back to ExpenseListScreen
                   },
@@ -154,7 +154,7 @@ class ViewExpenseScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "View $refNumber",
+              '${'expense.breadcrumb_view'.tr} $refNumber',
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s20,
@@ -166,7 +166,7 @@ class ViewExpenseScreen extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  "Expenses",
+                  'expense.title'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.medium,
                     FontSize.s12,
@@ -186,7 +186,7 @@ class ViewExpenseScreen extends StatelessWidget {
                 ),
                 const Icon(Icons.chevron_right, size: 14, color: Colors.grey),
                 Text(
-                  "View",
+                  'expense.breadcrumb_view'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.medium,
                     FontSize.s12,
@@ -228,7 +228,7 @@ class ViewExpenseScreen extends StatelessWidget {
               border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
             ),
             child: Text(
-              "Expense Details",
+              'expense.expense_details'.tr,
               style: buildCustomStyle(
                 FontWeightManager.bold,
                 FontSize.s14,
@@ -247,18 +247,18 @@ class ViewExpenseScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: _buildDetailItem("Reference No.", expense.referenceNumber),
+                      child: _buildDetailItem('expense.reference_no'.tr, expense.referenceNumber),
                     ),
                     Expanded(
                       child: _buildDetailItemWithBadge(
-                        "Entry Type", 
-                        "Expense", 
-                        Colors.orange.shade50, 
+                        'expense.label_entry_type'.tr,
+                        'expense.entry_type_value'.tr,
+                        Colors.orange.shade50,
                         Colors.orange
                       ),
                     ),
                     Expanded(
-                      child: _buildDetailItem("Date", dateStr),
+                      child: _buildDetailItem('expense.date'.tr, dateStr),
                     ),
                   ],
                 ),
@@ -268,17 +268,17 @@ class ViewExpenseScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _buildDetailItemWithBadge(
-                        "Category", 
-                        displayCategory, 
-                        Colors.blue.shade50, 
+                        'expense.category'.tr,
+                        displayCategory,
+                        Colors.blue.shade50,
                         Colors.blue
                       ),
                     ),
                     Expanded(
-                      child: _buildDetailItem("Description/Vendor", expense.description.isNotEmpty ? expense.description : "-"),
+                      child: _buildDetailItem('expense.label_description_vendor'.tr, expense.description.isNotEmpty ? expense.description : "-"),
                     ),
                     Expanded(
-                      child: _buildDetailItem("Amount", "$currency ${expense.amount.toStringAsFixed(2)}"),
+                      child: _buildDetailItem('expense.amount'.tr, "$currency ${expense.amount.toStringAsFixed(2)}"),
                     ),
                   ],
                 ),
@@ -288,17 +288,17 @@ class ViewExpenseScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _buildDetailItemWithBadge(
-                        "Payment Method", 
-                        displayPaymentMethod, 
-                        Colors.blue.shade50, 
+                        'expense.payment_method'.tr,
+                        displayPaymentMethod,
+                        Colors.blue.shade50,
                         Colors.blue
                       ),
                     ),
                     Expanded(
                       child: _buildDetailItemWithBadge(
-                        "Status", 
-                        expense.status, 
-                        Colors.green.shade50, 
+                        'expense.status'.tr,
+                        expense.status,
+                        Colors.green.shade50,
                         Colors.green
                       ),
                     ),
@@ -308,7 +308,7 @@ class ViewExpenseScreen extends StatelessWidget {
                 const SizedBox(height: 20),
                 const Divider(),
                 const SizedBox(height: 10),
-                _buildDetailItem("Notes/Remarks", expense.notes.isNotEmpty ? expense.notes : "No remarks provided"),
+                _buildDetailItem('expense.label_notes_remarks'.tr, expense.notes.isNotEmpty ? expense.notes : 'expense.no_remarks'.tr),
               ],
             ),
           ),
@@ -342,7 +342,7 @@ class ViewExpenseScreen extends StatelessWidget {
               border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
             ),
             child: Text(
-              "Accounting Entry (Double Entry)",
+              'expense.accounting_title'.tr,
               style: buildCustomStyle(
                 FontWeightManager.bold,
                 FontSize.s14,
@@ -362,7 +362,7 @@ class ViewExpenseScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Debit (Expense A/c)",
+                        'expense.label_debit_expense_ac'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s12,
@@ -388,7 +388,7 @@ class ViewExpenseScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Credit (Cash/Bank A/c)",
+                        'expense.label_credit_cash_ac'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s12,
@@ -414,7 +414,7 @@ class ViewExpenseScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Transaction Amount",
+                        'expense.label_transaction_amount'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s12,

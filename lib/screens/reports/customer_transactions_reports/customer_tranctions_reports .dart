@@ -159,7 +159,7 @@ class _CustomerTransactionsReportScreenState
           for (final g in groups) {
             if (g is! Map) continue;
             final String displayName =
-                (g['customer_name'] ?? 'Unknown Customer').toString();
+                (g['customer_name'] ?? 'customer_transaction_report.unknown_customer'.tr).toString();
             final String idStr = (g['customer_id']?.toString() ?? '').trim();
             final String key = idStr.isNotEmpty ? idStr : displayName;
 
@@ -216,7 +216,7 @@ class _CustomerTransactionsReportScreenState
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text("Failed to load transaction data"),
+              content: Text('customer_transaction_report.failed_load_transaction_data'.tr),
               backgroundColor: Colors.red,
             ),
           );
@@ -227,7 +227,7 @@ class _CustomerTransactionsReportScreenState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Error loading transaction data: $error"),
+            content: Text('customer_transaction_report.err_loading_transaction_data'.tr.replaceAll('@error', error.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -250,8 +250,8 @@ class _CustomerTransactionsReportScreenState
     }
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(
-        content: Text('From Date cannot be after To Date.'),
+      ..showSnackBar(SnackBar(
+        content: Text('customer_transaction_report.from_date_after_to_date'.tr),
         backgroundColor: Colors.orange,
       ));
     return false;
@@ -375,7 +375,7 @@ class _CustomerTransactionsReportScreenState
     Map<String, CustomerTransactionSummary> filteredCustomerSummary = {};
 
     for (var transaction in allTransactions!) {
-      final String displayName = transaction.customerName ?? 'Unknown Customer';
+      final String displayName = transaction.customerName ?? 'customer_transaction_report.unknown_customer'.tr;
       final String idStr = (transaction.customerId?.toString() ?? '').trim();
       final String key = idStr.isNotEmpty
           ? idStr
@@ -498,7 +498,7 @@ class _CustomerTransactionsReportScreenState
       children: [
         Expanded(
           child: Text(
-            "Customer Transactions Report",
+            'customer_transaction_report.title'.tr,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s20,
@@ -516,7 +516,7 @@ class _CustomerTransactionsReportScreenState
               color: ColorManager.kPrimaryColor,
             ),
             label: Text(
-              _showFilters ? 'Hide' : 'Filters',
+              _showFilters ? 'customer_transaction_report.hide'.tr : 'customer_transaction_report.filters'.tr,
               style: const TextStyle(
                   color: ColorManager.kPrimaryColor, fontSize: 12),
             ),
@@ -535,17 +535,17 @@ class _CustomerTransactionsReportScreenState
           Row(
             children: [
               Expanded(
-                child: _buildDateField("From Date", _fromDateController, true),
+                child: _buildDateField('customer_transaction_report.from_date'.tr, _fromDateController, true),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _buildDateField("To Date", _toDateController, false),
+                child: _buildDateField('customer_transaction_report.to_date'.tr, _toDateController, false),
               ),
             ],
           ),
           const SizedBox(height: 8),
           CustomRoundButton(
-            title: "Reset",
+            title: 'customer_transaction_report.reset'.tr,
             boxColor: Colors.white,
             textColor: ColorManager.kPrimaryColor,
             fct: _resetFilters,
@@ -570,7 +570,7 @@ class _CustomerTransactionsReportScreenState
               Expanded(
                 flex: 1,
                 child: _buildDateField(
-                  "From Date",
+                  'customer_transaction_report.from_date'.tr,
                   _fromDateController,
                   true,
                 ),
@@ -578,7 +578,7 @@ class _CustomerTransactionsReportScreenState
               Expanded(
                 flex: 1,
                 child: _buildDateField(
-                  "To Date",
+                  'customer_transaction_report.to_date'.tr,
                   _toDateController,
                   false,
                 ),
@@ -588,7 +588,7 @@ class _CustomerTransactionsReportScreenState
                 child: Padding(
                   padding: const EdgeInsets.only(top: 45, left: 10),
                   child: CustomRoundButton(
-                    title: "Reset",
+                    title: 'customer_transaction_report.reset'.tr,
                     boxColor: Colors.white,
                     textColor: ColorManager.kPrimaryColor,
                     fct: _resetFilters,
@@ -632,7 +632,7 @@ class _CustomerTransactionsReportScreenState
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text(
-              "Customer",
+              'customer_transaction_report.customer'.tr,
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s14,
@@ -644,7 +644,7 @@ class _CustomerTransactionsReportScreenState
           const SizedBox(height: 8),
           BuildDropDownWithSearch<dynamic>(
             title: null,
-            hintText: "Search Customer",
+            hintText: 'customer_transaction_report.search_customer_hint'.tr,
             value: currentSelected,
             items: allCustomers,
             displayText: (c) => (c.name ?? '').toString(),
@@ -663,7 +663,7 @@ class _CustomerTransactionsReportScreenState
               });
               _applyFilters();
             },
-            searchHintText: 'Type to search customer...',
+            searchHintText: 'customer_transaction_report.search_customer_hint_typing'.tr,
             width: double.infinity,
           ),
         ],
@@ -769,9 +769,9 @@ class _CustomerTransactionsReportScreenState
             Row(
               children: [
                 _buildMobileCardStat(
-                    'Debit', summary.totalDebit.toStringAsFixed(2)),
+                    'customer_transaction_report.debit_stat'.tr, summary.totalDebit.toStringAsFixed(2)),
                 _buildMobileCardStat(
-                    'Credit', summary.totalCredit.toStringAsFixed(2)),
+                    'customer_transaction_report.credit_stat'.tr, summary.totalCredit.toStringAsFixed(2)),
               ],
             ),
             const SizedBox(height: 8),
@@ -781,7 +781,7 @@ class _CustomerTransactionsReportScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Balance',
+                      Text('customer_transaction_report.balance'.tr,
                           style: buildCustomStyle(FontWeightManager.regular,
                               FontSize.s10, 0.15, Colors.grey)),
                       Text(
@@ -796,7 +796,7 @@ class _CustomerTransactionsReportScreenState
                   ),
                 ),
                 _buildMobileCardStat(
-                    'Transactions', summary.transactionCount.toString()),
+                    'customer_transaction_report.transactions'.tr, summary.transactionCount.toString()),
               ],
             ),
           ],
@@ -876,12 +876,12 @@ class _CustomerTransactionsReportScreenState
                 children: [
                   TableRow(
                     children: [
-                      _buildTableHeader("Customer Name"),
-                      _buildTableHeader("Total Debit"),
-                      _buildTableHeader("Total Credit"),
-                      _buildTableHeader("Balance"),
-                      _buildTableHeader("Transactions"),
-                      _buildTableHeader("Action"),
+                      _buildTableHeader('customer_transaction_report.customer_name_col'.tr),
+                      _buildTableHeader('customer_transaction_report.total_debit_col'.tr),
+                      _buildTableHeader('customer_transaction_report.total_credit_col'.tr),
+                      _buildTableHeader('customer_transaction_report.balance'.tr),
+                      _buildTableHeader('customer_transaction_report.transactions'.tr),
+                      _buildTableHeader('customer_transaction_report.action_col'.tr),
                     ],
                   ),
                 ],
@@ -960,7 +960,7 @@ class _CustomerTransactionsReportScreenState
           ),
           const SizedBox(height: 15),
           Text(
-            'No customer transactions available',
+            'customer_transaction_report.no_customer_transactions'.tr,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s18,
@@ -970,7 +970,7 @@ class _CustomerTransactionsReportScreenState
           ),
           const SizedBox(height: 8),
           Text(
-            'Try refreshing the data',
+            'customer_transaction_report.try_refreshing'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,

@@ -136,7 +136,7 @@ class _CustomerTransactionListScreenState
         listTransaction = [];
         totalPages = 1;
       });
-      showScaffold(context: context, message: 'Data Not Found');
+      showScaffold(context: context, message: 'party_accounts.data_not_found'.tr);
     }
   }
 
@@ -258,26 +258,26 @@ class _CustomerTransactionListScreenState
     showDialog(
       context: context,
       builder: (context) => CommonDetailsDialog(
-        title: 'Transaction Details',
+        title: 'party_accounts.dialog_title'.tr,
         gridColumns: [
           [
-            CommonDetailsDialog.buildKeyValueRow('Customer Name', transaction.customerName ?? 'No Name'),
-            CommonDetailsDialog.buildKeyValueRow('Date', transaction.date ?? 'N/A'),
-            CommonDetailsDialog.buildKeyValueRow('Type', transaction.type ?? 'N/A'),
-            CommonDetailsDialog.buildKeyValueRow('Transaction Type', transaction.transactionType ?? 'N/A'),
-            CommonDetailsDialog.buildKeyValueRow('Payment Method', transaction.paymentMethod ?? 'N/A'),
+            CommonDetailsDialog.buildKeyValueRow('party_accounts.customer_name'.tr, transaction.customerName ?? 'party_accounts.no_name'.tr),
+            CommonDetailsDialog.buildKeyValueRow('party_accounts.date'.tr, transaction.date ?? 'party_accounts.na'.tr),
+            CommonDetailsDialog.buildKeyValueRow('party_accounts.type'.tr, transaction.type ?? 'party_accounts.na'.tr),
+            CommonDetailsDialog.buildKeyValueRow('party_accounts.transaction_type'.tr, transaction.transactionType ?? 'party_accounts.na'.tr),
+            CommonDetailsDialog.buildKeyValueRow('party_accounts.payment_method'.tr, transaction.paymentMethod ?? 'party_accounts.na'.tr),
           ],
           [
-            CommonDetailsDialog.buildKeyValueRow('Amount', '${transaction.currency ?? ''} ${transaction.amount ?? ''}'),
-            CommonDetailsDialog.buildKeyValueRow('Reference ID', transaction.referenceId ?? 'N/A', copyable: true),
-            CommonDetailsDialog.buildKeyValueRow('Reference', transaction.reference ?? 'N/A', copyable: true),
-            CommonDetailsDialog.buildKeyValueRow('Status', transaction.status ?? 'N/A'),
-            CommonDetailsDialog.buildKeyValueRow('Comment', transaction.transactionComment ?? 'N/A'),
+            CommonDetailsDialog.buildKeyValueRow('party_accounts.amount'.tr, '${transaction.currency ?? ''} ${transaction.amount ?? ''}'),
+            CommonDetailsDialog.buildKeyValueRow('party_accounts.reference_id'.tr, transaction.referenceId ?? 'party_accounts.na'.tr, copyable: true),
+            CommonDetailsDialog.buildKeyValueRow('party_accounts.reference'.tr, transaction.reference ?? 'party_accounts.na'.tr, copyable: true),
+            CommonDetailsDialog.buildKeyValueRow('party_accounts.status'.tr, transaction.status ?? 'party_accounts.na'.tr),
+            CommonDetailsDialog.buildKeyValueRow('party_accounts.comment'.tr, transaction.transactionComment ?? 'party_accounts.na'.tr),
             CommonDetailsDialog.buildKeyValueRow(
-              'Created At',
+              'party_accounts.created_at'.tr,
               transaction.createdAt != null
                   ? DateHelper.formatDate(transaction.createdAt!)
-                  : 'N/A',
+                  : 'party_accounts.na'.tr,
             ),
           ],
         ],
@@ -466,7 +466,7 @@ class _CustomerTransactionListScreenState
       ),
       child: ExpansionTile(
         leading: const Icon(Icons.filter_list, size: 18),
-        title: Text('Filters',
+        title: Text('party_accounts.filters'.tr,
             style: buildCustomStyle(FontWeightManager.medium,
                 FontSize.s12, 0.18, ColorManager.textColor)),
         children: [
@@ -483,7 +483,7 @@ class _CustomerTransactionListScreenState
                     });
                     applyFilters();
                   },
-                  decoration: _mobileInputDecoration('Amount'),
+                  decoration: _mobileInputDecoration('party_accounts.amount'.tr),
                 ),
                 const SizedBox(height: 8),
                 CustomerAutocomplete(
@@ -509,7 +509,7 @@ class _CustomerTransactionListScreenState
                 const SizedBox(height: 8),
                 _mobileDropdown(
                   value: searchType.isEmpty ? 'All' : searchType,
-                  hint: 'Select Type',
+                  hint: 'party_accounts.hint_select_type'.tr,
                   items: const ['All', 'Credit', 'Debit'],
                   onChanged: (String? value) {
                     setState(() {
@@ -529,7 +529,7 @@ class _CustomerTransactionListScreenState
                     });
                     applyFilters();
                   },
-                  decoration: _mobileInputDecoration('Reference ID'),
+                  decoration: _mobileInputDecoration('party_accounts.reference_id'.tr),
                 ),
                 const SizedBox(height: 8),
                 BuildBoxShadowContainer(
@@ -560,7 +560,7 @@ class _CustomerTransactionListScreenState
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(6)),
                     ),
-                    child: const Text('Reset Filters'),
+                    child: Text('party_accounts.btn_reset_filters'.tr),
                   ),
                 ),
               ],
@@ -644,7 +644,7 @@ class _CustomerTransactionListScreenState
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 SelectableText(
-                                  tx.customerName ?? 'No Name',
+                                  tx.customerName ?? 'party_accounts.no_name'.tr,
                                   style: buildCustomStyle(FontWeightManager.semiBold,
                                       FontSize.s13, 0.19, ColorManager.textColor),
                                 ),
@@ -654,7 +654,7 @@ class _CustomerTransactionListScreenState
                                     children: [
                                       Flexible(
                                         child: Text(
-                                          'Ref: ${tx.referenceId}',
+                                          '${'party_accounts.ref_prefix'.tr} ${tx.referenceId}',
                                           style: buildCustomStyle(FontWeightManager.regular,
                                               FontSize.s10, 0.15, Colors.grey),
                                           overflow: TextOverflow.ellipsis,
@@ -668,7 +668,7 @@ class _CustomerTransactionListScreenState
                                           showScaffold(
                                             context: context,
                                             message:
-                                                'Reference ID copied to clipboard',
+                                                'party_accounts.ref_copied'.tr,
                                           );
                                         },
                                         child: const Icon(
@@ -746,7 +746,7 @@ class _CustomerTransactionListScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Customer Transaction',
+                  'party_accounts.title'.tr,
                   style: buildCustomStyle(FontWeightManager.semiBold,
                       FontSize.s18, 0.25, ColorManager.textColor),
                 ),
@@ -794,7 +794,7 @@ class _CustomerTransactionListScreenState
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Customer Transaction",
+                      'party_accounts.title'.tr,
                       style: buildCustomStyle(FontWeightManager.semiBold,
                           FontSize.s20, 0.30, ColorManager.textColor),
                     ),
@@ -814,7 +814,7 @@ class _CustomerTransactionListScreenState
                               Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: Text(
-                                  "Amount",
+                                  'party_accounts.amount'.tr,
                                   style: buildCustomStyle(
                                     FontWeightManager.regular,
                                     FontSize.s14,
@@ -835,7 +835,7 @@ class _CustomerTransactionListScreenState
                                 },
                                 controller: amountRefController,
                                 size: size,
-                                hintText: 'Amount',
+                                hintText: 'party_accounts.amount'.tr,
                               ),
                             ],
                           ),
@@ -851,7 +851,7 @@ class _CustomerTransactionListScreenState
                               Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: Text(
-                                  "Customer Name",
+                                  'party_accounts.customer_name'.tr,
                                   style: buildCustomStyle(
                                     FontWeightManager.regular,
                                     FontSize.s14,
@@ -895,7 +895,7 @@ class _CustomerTransactionListScreenState
                               Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: Text(
-                                  "Type",
+                                  'party_accounts.type'.tr,
                                   style: buildCustomStyle(
                                     FontWeightManager.regular,
                                     FontSize.s14,
@@ -921,7 +921,7 @@ class _CustomerTransactionListScreenState
                                   ),
                                   dropdownColor: Colors.white,
                                   hint: Text(
-                                    'Select Type',
+                                    'party_accounts.hint_select_type'.tr,
                                     style: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s11,
@@ -968,7 +968,7 @@ class _CustomerTransactionListScreenState
                               Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: Text(
-                                  "Reference ID",
+                                  'party_accounts.reference_id'.tr,
                                   style: buildCustomStyle(
                                     FontWeightManager.regular,
                                     FontSize.s14,
@@ -989,7 +989,7 @@ class _CustomerTransactionListScreenState
                                 },
                                 controller: referenceSearchController,
                                 size: size,
-                                hintText: 'Reference ID',
+                                hintText: 'party_accounts.reference_id'.tr,
                               ),
                             ],
                           ),
@@ -1010,7 +1010,7 @@ class _CustomerTransactionListScreenState
                               Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: Text(
-                                  "Date",
+                                  'party_accounts.date'.tr,
                                   style: buildCustomStyle(
                                     FontWeightManager.regular,
                                     FontSize.s14,
@@ -1055,7 +1055,7 @@ class _CustomerTransactionListScreenState
                           child: Padding(
                             padding: const EdgeInsets.only(top: 30),
                             child: CustomRoundButton(
-                              title: "Reset",
+                              title: 'party_accounts.btn_reset'.tr,
                               boxColor: Colors.white,
                               textColor: ColorManager.kPrimaryColor,
                               fct: resetSearch,
@@ -1115,14 +1115,14 @@ class _CustomerTransactionListScreenState
                                         children: [
                                           TableRow(
                                             children: [
-                                              _buildTableHeader('No'),
-                                              _buildTableHeader('Name'),
-                                              _buildTableHeader('Date'),
-                                              _buildTableHeader('Amount'),
-                                              _buildTableHeader('Reference ID'),
-                                              _buildTableHeader('Type'),
-                                              _buildTableHeader('Status'),
-                                              _buildTableHeader('Action'),
+                                              _buildTableHeader('party_accounts.col_no'.tr),
+                                              _buildTableHeader('party_accounts.col_name'.tr),
+                                              _buildTableHeader('party_accounts.date'.tr),
+                                              _buildTableHeader('party_accounts.amount'.tr),
+                                              _buildTableHeader('party_accounts.reference_id'.tr),
+                                              _buildTableHeader('party_accounts.type'.tr),
+                                              _buildTableHeader('party_accounts.status'.tr),
+                                              _buildTableHeader('party_accounts.col_action'.tr),
                                             ],
                                           ),
                                         ],
@@ -1171,7 +1171,7 @@ class _CustomerTransactionListScreenState
                                                         const SizedBox(
                                                             height: 15),
                                                         Text(
-                                                          'No transactions found',
+                                                          'party_accounts.no_transactions'.tr,
                                                           style:
                                                               buildCustomStyle(
                                                             FontWeightManager
@@ -1185,7 +1185,7 @@ class _CustomerTransactionListScreenState
                                                         const SizedBox(
                                                             height: 8),
                                                         Text(
-                                                          'Try adjusting your search criteria',
+                                                          'party_accounts.no_transactions_hint'.tr,
                                                           style:
                                                               buildCustomStyle(
                                                             FontWeightManager
@@ -1250,7 +1250,7 @@ class _CustomerTransactionListScreenState
                                                                  padding: const EdgeInsets.all(8.0),
                                                                  child: Center(
                                                                    child: SelectableText(
-                                                                     "${transaction.customerName ?? 'No Name'}",
+                                                                     "${transaction.customerName ?? 'party_accounts.no_name'.tr}",
                                                                      textAlign: TextAlign.center,
                                                                      style: buildCustomStyle(
                                                                        FontWeightManager.medium,

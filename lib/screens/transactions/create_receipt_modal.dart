@@ -223,7 +223,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
 
       showScaffoldError(
         context: context,
-        message: 'Error loading customers: $e',
+        message: 'receipt.error_loading_customers'.tr.replaceAll('@error', e.toString()),
       );
     }
   }
@@ -342,7 +342,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
 
       showScaffoldError(
         context: context,
-        message: 'Error loading invoices: $e',
+        message: 'receipt.error_loading_invoices'.tr.replaceAll('@error', e.toString()),
       );
     }
   }
@@ -352,7 +352,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
     if (_newItemCard.amountController.text.isEmpty) {
       showScaffoldError(
         context: context,
-        message: 'Please enter an amount',
+        message: 'receipt.enter_amount_required'.tr,
       );
       return;
     }
@@ -362,7 +362,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
             _newItemCard.selectedInvoice!.isEmpty)) {
       showScaffoldError(
         context: context,
-        message: 'Please select an invoice',
+        message: 'receipt.select_invoice_required'.tr,
       );
       return;
     }
@@ -382,8 +382,9 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
       if (paid > balance) {
         showScaffoldError(
           context: context,
-          message:
-              'Paid amount (${paid.toStringAsFixed(2)}) cannot exceed balance (${balance.toStringAsFixed(2)}).',
+          message: 'receipt.paid_exceeds_balance'.tr
+              .replaceAll('@paid', paid.toStringAsFixed(2))
+              .replaceAll('@balance', balance.toStringAsFixed(2)),
         );
         return;
       }
@@ -488,7 +489,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Not authenticated. Please log in again.',
+          message: 'receipt.not_authenticated'.tr,
         );
       }
       return;
@@ -499,7 +500,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Please select a customer',
+          message: 'receipt.select_customer_required'.tr,
         );
       }
       return;
@@ -513,7 +514,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
         if (mounted) {
           showScaffoldError(
             context: context,
-            message: 'Please select an item type for all items',
+            message: 'receipt.select_item_type_required'.tr,
           );
         }
         return;
@@ -544,8 +545,9 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
           if (mounted) {
             showScaffoldError(
               context: context,
-              message:
-                  'Paid amount (\u20B9${paid.toStringAsFixed(2)}) cannot exceed balance (\u20B9${balance.toStringAsFixed(2)}).',
+              message: 'receipt.paid_exceeds_balance_currency'.tr
+                  .replaceAll('@paid', paid.toStringAsFixed(2))
+                  .replaceAll('@balance', balance.toStringAsFixed(2)),
             );
           }
           return;
@@ -598,7 +600,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
       if (mounted) {
         showScaffold(
           context: context,
-          message: 'Receipt created successfully',
+          message: 'receipt.created_successfully'.tr,
         );
         Navigator.pop(context, true); // Close the modal and return success
       }
@@ -608,7 +610,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error creating receipt: $e',
+          message: 'receipt.error_creating_receipt'.tr.replaceAll('@error', e.toString()),
         );
       }
     }
@@ -657,7 +659,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item != null ? 'Edit Item' : 'Add Item',
+                      item != null ? 'receipt.edit_item_title'.tr : 'receipt.add_item_title'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         FontSize.s18,
@@ -673,10 +675,10 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildLabel("Item Type", isRequired: true),
+                              _buildLabel('receipt.item_type_label'.tr, isRequired: true),
                               const SizedBox(height: 4),
                               CustomDropDownWithSearch<String>(
-                                hintText: "Select Item Type",
+                                hintText: 'receipt.select_item_type_hint'.tr,
                                 title: "",
                                 value: tempCard.selectedItemType,
                                 items: const [
@@ -696,7 +698,9 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                                     }
                                   });
                                 },
-                                displayText: (item) => item,
+                                displayText: (item) => item == "General Payment"
+                                    ? 'receipt.item_type_general'.tr
+                                    : 'receipt.item_type_invoice'.tr,
                                 showName: false,
                                 height: 48,
                               ),
@@ -708,11 +712,11 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                         if (tempCard.selectedItemType == "General Payment")
                           Expanded(
                             child: _buildTextField(
-                              "Description",
+                              'receipt.description_label'.tr,
                               tempCard.descriptionController,
                               TextInputType.text,
                               widget.size,
-                              placeholder: "Description",
+                              placeholder: 'receipt.description_label'.tr,
                               focusNode: tempCard.descriptionFocus,
                               textInputAction: TextInputAction.next,
                               onFieldSubmitted: (_) {
@@ -726,12 +730,12 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildLabel("Invoice", isRequired: true),
+                                _buildLabel('receipt.invoice_label'.tr, isRequired: true),
                                 const SizedBox(height: 4),
                                 CustomDropDownWithSearch<String>(
                                   hintText: _isLoadingInvoices
-                                      ? "Loading..."
-                                      : "Select an invoice",
+                                      ? 'receipt.loading'.tr
+                                      : 'receipt.select_invoice_hint'.tr,
                                   title: "",
                                   value: tempCard.selectedInvoice,
                                   items: _invoiceList
@@ -777,7 +781,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                                       );
                                       return "${invoice.invoiceNumber} (${invoice.amount})";
                                     } catch (e) {
-                                      return "Unknown Invoice";
+                                      return 'receipt.unknown_invoice'.tr;
                                     }
                                   },
                                   showName: false,
@@ -795,7 +799,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                         if (tempCard.selectedItemType == "Invoice Payment") ...[
                           Expanded(
                             child: _buildTextField(
-                              "Invoice Amount",
+                              'receipt.invoice_amount_label'.tr,
                               tempCard.invoiceAmountController,
                               TextInputType.number,
                               widget.size,
@@ -805,7 +809,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: _buildTextField(
-                              "Balance Amount",
+                              'receipt.balance_amount_label'.tr,
                               tempCard.balanceAmountController,
                               TextInputType.number,
                               widget.size,
@@ -818,7 +822,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildLabel("Payment Date", isRequired: true),
+                              _buildLabel('receipt.payment_date_label'.tr, isRequired: true),
                               const SizedBox(height: 4),
                               CustomCalendarPickerTableCell(
                                 initialDate: DateTime.tryParse(
@@ -833,7 +837,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                                   FocusScope.of(context)
                                       .requestFocus(tempCard.amountFocus);
                                 },
-                                hintText: "Select payment date",
+                                hintText: 'receipt.select_payment_date_hint'.tr,
                                 height: 48,
                                 focusNode: tempCard.paymentDateFocus,
                               ),
@@ -843,7 +847,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: _buildTextField(
-                            "Amount",
+                            'receipt.amount_label'.tr,
                             tempCard.amountController,
                             TextInputType.number,
                             widget.size,
@@ -902,7 +906,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                             Navigator.pop(context);
                           },
                           child: Text(
-                            "Cancel",
+                            'general.cancel'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.medium,
                               FontSize.s14,
@@ -913,7 +917,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                         ),
                         const SizedBox(width: 12),
                         CustomRoundButtonAdvanced(
-                          title: "Save",
+                          title: 'general.save'.tr,
                           fct: () {
                             // Validation
                             if (tempCard.selectedItemType == null) {
@@ -1145,12 +1149,12 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
     final customerColumn = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildLabel("Customer", isRequired: true),
+        _buildLabel('receipt.customer_label'.tr, isRequired: true),
         const SizedBox(height: 4),
         CustomDropDownWithSearch<String>(
           hintText: _isLoadingCustomers
-              ? "Loading customers..."
-              : "Select a customer",
+              ? 'receipt.loading_customers'.tr
+              : 'receipt.select_customer_hint'.tr,
           title: "",
           value: _selectedCustomer,
           items: _customerList
@@ -1166,21 +1170,21 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                 context: context,
                 builder: (ctx) => AlertDialog(
                   backgroundColor: Colors.white,
-                  title: const Text('Change Customer?'),
-                  content: const Text(
-                    'Changing the customer will clear all added items. Do you want to continue?',
+                  title: Text('receipt.change_customer_title'.tr),
+                  content: Text(
+                    'receipt.change_customer_message'.tr,
                   ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Cancel'),
+                      child: Text('general.cancel'.tr),
                     ),
                     TextButton(
                       onPressed: () {
                         Navigator.pop(ctx);
                         _resetItemsAndChangeCustomer(value);
                       },
-                      child: const Text('Continue'),
+                      child: Text('receipt.continue_button'.tr),
                     ),
                   ],
                 ),
@@ -1199,15 +1203,15 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
             }
           },
           displayText: (item) {
-            if (_isLoadingCustomers) return "Loading...";
+            if (_isLoadingCustomers) return 'receipt.loading'.tr;
             // Find the customer by ID
             final customer = _customerList.firstWhere(
               (c) => c.id?.toString() == item,
               orElse: () => CustomerListModelData(
-                  id: 0, name: "Select customer"),
+                  id: 0, name: 'receipt.select_customer_fallback'.tr),
             );
             // Return the customer name or a default message
-            return customer.name ?? "Unnamed customer";
+            return customer.name ?? 'receipt.unnamed_customer'.tr;
           },
           showName: false,
           height: 48,
@@ -1240,7 +1244,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                   : Colors.red.shade700;
 
               return Text(
-                'Balance: ${balanceValue.toStringAsFixed(2)}',
+                'receipt.balance_prefix'.tr.replaceAll('@balance', balanceValue.toStringAsFixed(2)),
                 style: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s11,
@@ -1256,10 +1260,10 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
     final itemTypeColumn = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildLabel("Item Type", isRequired: true),
+        _buildLabel('receipt.item_type_label'.tr, isRequired: true),
         const SizedBox(height: 4),
         CustomDropDownWithSearch<String>(
-          hintText: "Item Type",
+          hintText: 'receipt.item_type_label'.tr,
           title: "",
           value: _newItemCard.selectedItemType,
           items: const [
@@ -1289,7 +1293,9 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
               }
             });
           },
-          displayText: (item) => item,
+          displayText: (item) => item == "General Payment"
+              ? 'receipt.item_type_general'.tr
+              : 'receipt.item_type_invoice'.tr,
           showName: false,
           height: 48,
         ),
@@ -1299,7 +1305,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
     final paymentDateColumn = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildLabel("Payment Date", isRequired: true),
+        _buildLabel('receipt.payment_date_label'.tr, isRequired: true),
         const SizedBox(height: 4),
         CustomCalendarPickerTableCell(
           initialDate: DateTime.tryParse(_newItemCard
@@ -1314,7 +1320,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
             FocusScope.of(context)
                 .requestFocus(_newItemCard.amountFocus);
           },
-          hintText: "Select payment date",
+          hintText: 'receipt.select_payment_date_hint'.tr,
           height: 48,
           focusNode: _newItemCard.paymentDateFocus,
         ),
@@ -1333,7 +1339,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Create Receipt',
+                    'receipt.create_receipt_title'.tr,
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s20, 0.30, ColorManager.textColor),
                   ),
@@ -1384,7 +1390,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Add Item',
+                    'receipt.add_item_title'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s16,
@@ -1401,11 +1407,11 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                         Expanded(
                           flex: 4,
                           child: _buildTextField(
-                            "Description",
+                            'receipt.description_label'.tr,
                             _newItemCard.descriptionController,
                             TextInputType.text,
                             widget.size,
-                            placeholder: "Description",
+                            placeholder: 'receipt.description_label'.tr,
                             focusNode: _newItemCard.descriptionFocus,
                             textInputAction: TextInputAction.next,
                             onFieldSubmitted: (_) {
@@ -1421,12 +1427,12 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildLabel("Invoice", isRequired: true),
+                              _buildLabel('receipt.invoice_label'.tr, isRequired: true),
                               const SizedBox(height: 4),
                               CustomDropDownWithSearch<String>(
                                 hintText: _isLoadingInvoices
-                                    ? "Loading invoices..."
-                                    : "Select an invoice",
+                                    ? 'receipt.loading_invoices'.tr
+                                    : 'receipt.select_invoice_hint'.tr,
                                 title: "",
                                 value: _newItemCard.selectedInvoice,
                                 items: () {
@@ -1489,7 +1495,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                                     );
                                     return "${invoice.invoiceNumber} (${invoice.amount})";
                                   } catch (e) {
-                                    return "Unknown Invoice";
+                                    return 'receipt.unknown_invoice'.tr;
                                   }
                                 },
                                 showName: false,
@@ -1505,7 +1511,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                         Expanded(
                           flex: 2,
                           child: _buildTextField(
-                            "Invoice Amount",
+                            'receipt.invoice_amount_label'.tr,
                             _newItemCard.invoiceAmountController,
                             TextInputType.number,
                             widget.size,
@@ -1516,7 +1522,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                         Expanded(
                           flex: 2,
                           child: _buildTextField(
-                            "Balance Amount",
+                            'receipt.balance_amount_label'.tr,
                             _newItemCard.balanceAmountController,
                             TextInputType.number,
                             widget.size,
@@ -1529,7 +1535,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                       Expanded(
                         flex: 2,
                         child: _buildTextField(
-                          "Amount",
+                          'receipt.amount_label'.tr,
                           _newItemCard.amountController,
                           TextInputType.number,
                           widget.size,
@@ -1580,7 +1586,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                   //   ),
                   // ),
                   Text(
-                    'Receipt Items List',
+                    'receipt.receipt_items_list_title'.tr,
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s16, 0.30, ColorManager.textColor),
                   ),
@@ -1590,7 +1596,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                       child: Padding(
                         padding: const EdgeInsets.all(20.0),
                         child: Text(
-                          "No items added yet. Click '+ Add Item' to start.",
+                          'receipt.no_items_placeholder'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.regular,
                             FontSize.s14,
@@ -1624,12 +1630,12 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           children: [
-                            _buildTableHeader("#"),
-                            _buildTableHeader("Type"),
-                            _buildTableHeader("Details"),
-                            _buildTableHeader("Date"),
-                            _buildTableHeader("Amount"),
-                            _buildTableHeader("Actions",
+                            _buildTableHeader('receipt.col_no'.tr),
+                            _buildTableHeader('receipt.col_type'.tr),
+                            _buildTableHeader('receipt.col_details'.tr),
+                            _buildTableHeader('receipt.col_date'.tr),
+                            _buildTableHeader('receipt.amount_label'.tr),
+                            _buildTableHeader('receipt.col_actions'.tr,
                                 align: TextAlign.center),
                           ],
                         ),
@@ -1640,10 +1646,14 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                           return TableRow(
                             children: [
                               _buildTableCell((index + 1).toString()),
-                              _buildTableCell(card.selectedItemType ?? "-"),
+                              _buildTableCell(card.selectedItemType == "Invoice Payment"
+                                  ? 'receipt.item_type_invoice'.tr
+                                  : card.selectedItemType == "General Payment"
+                                      ? 'receipt.item_type_general'.tr
+                                      : "-"),
                               _buildTableCell(
                                 card.selectedItemType == "Invoice Payment"
-                                    ? "Inv: ${_getInvoiceNumber(card.selectedInvoice)}"
+                                    ? 'receipt.invoice_prefix'.tr.replaceAll('@number', _getInvoiceNumber(card.selectedInvoice))
                                     : card.descriptionController.text,
                               ),
                               _buildTableCell(card.paymentDateController.text),
@@ -1701,12 +1711,12 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildLabel("Payment Method", isRequired: true),
+                            _buildLabel('receipt.payment_method_label'.tr, isRequired: true),
                             const SizedBox(height: 4),
                             CustomDropDownWithSearch<String>(
                               hintText: _isLoadingPaymentMethods
-                                  ? "Loading..."
-                                  : "Payment Method",
+                                  ? 'receipt.loading'.tr
+                                  : 'receipt.payment_method_label'.tr,
                               title: "",
                               value: _selectedPaymentMethod,
                               items:
@@ -1738,11 +1748,11 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                       SizedBox(width: 16),
                       Expanded(
                         child: _buildTextField(
-                          "Payment Reference",
+                          'receipt.payment_reference_label'.tr,
                           _paymentReferenceController,
                           TextInputType.text,
                           widget.size,
-                          placeholder: "Enter payment reference (optional)",
+                          placeholder: 'receipt.payment_reference_placeholder'.tr,
                           focusNode: _paymentReferenceFocus,
                           textInputAction: TextInputAction.next,
                           onFieldSubmitted: (_) {
@@ -1770,7 +1780,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                             Row(
                               children: [
                                 Text(
-                                  'Items',
+                                  'receipt.items_summary_label'.tr,
                                   style: TextStyle(
                                     fontSize: 16,
                                     color: Colors.grey[600],
@@ -1791,7 +1801,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                             Row(
                               children: [
                                 Text(
-                                  'Total Amount',
+                                  'receipt.total_amount_label'.tr,
                                   style: TextStyle(
                                     fontSize: 16,
                                     color: Colors.grey[600],
@@ -1825,7 +1835,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 CustomRoundButtonAdvanced(
-                  title: "Cancel",
+                  title: 'general.cancel'.tr,
                   fct: () {
                     Navigator.pop(context);
                   },
@@ -1838,7 +1848,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                 ),
                 const SizedBox(width: 8),
                 CustomRoundButtonAdvanced(
-                  title: "Submit",
+                  title: 'receipt.submit_button'.tr,
                   fct: _submitReceipt, // Updated to call the submit function
                   width: 100,
                   height: 45,

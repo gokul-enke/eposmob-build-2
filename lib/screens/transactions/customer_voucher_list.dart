@@ -85,7 +85,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
 
       if (accessToken == null || accessToken.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Authentication token is missing")),
+          SnackBar(content: Text('customer_voucher.auth_token_missing'.tr)),
         );
         return;
       }
@@ -97,7 +97,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
       });
     } catch (error) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error loading vouchers: $error")),
+        SnackBar(content: Text('customer_voucher.error_loading_vouchers'.tr.replaceAll('@error', error.toString()))),
       );
     }
   }
@@ -220,7 +220,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
               backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.12),
               child: const Icon(Icons.share, color: ColorManager.kPrimaryColor),
             ),
-            title: const Text('Share'),
+            title: Text('customer_voucher.share_action'.tr),
             onTap: () {
               Navigator.pop(ctx);
               ShareHelper.showShareCustomerVoucherSheet(
@@ -241,7 +241,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                 backgroundColor: Colors.orange.withOpacity(0.12),
                 child: const Icon(Icons.description, color: Colors.orange),
               ),
-              title: const Text('ZATCA Phase 2'),
+              title: Text('customer_voucher.zatca_phase2_action'.tr),
               onTap: () async {
                 Navigator.pop(ctx);
                 await _performZatcaPhase2SendWithPdf(voucher);
@@ -255,7 +255,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                 child:
                     const Icon(Icons.send, color: ColorManager.kPrimaryColor),
               ),
-              title: const Text('Send Credit Note to ZATCA'),
+              title: Text('customer_voucher.send_credit_note_action'.tr),
               onTap: () async {
                 Navigator.pop(ctx);
                 await _performZatcaPhase2Send(voucher);
@@ -279,9 +279,9 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const Text(
-                  'More Options',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                Text(
+                  'customer_voucher.more_options_title'.tr,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
                 const Divider(height: 1),
@@ -304,12 +304,12 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
         debugPrint(
             '[ZATCA][Phase2 Send With PDF] ERROR: Missing authentication token');
         showScaffoldError(
-            context: context, message: 'Missing authentication token');
+            context: context, message: 'customer_voucher.missing_token'.tr);
         return;
       }
 
-      showScaffold(context: context, message: 'Processing ZATCA Phase 2...');
-      showLoadingOverlay(context, message: 'Processing...');
+      showScaffold(context: context, message: 'customer_voucher.processing_zatca_phase2'.tr);
+      showLoadingOverlay(context, message: 'customer_voucher.processing'.tr);
 
       final provider =
           Provider.of<CustomerVoucherProvider>(context, listen: false);
@@ -333,17 +333,17 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
         }
         showScaffold(
           context: context,
-          message: 'Voucher $voucherNumber processed under ZATCA Phase 2.',
+          message: 'customer_voucher.processed_phase2'.tr.replaceAll('@number', voucherNumber),
         );
       } else {
         final msg = (result is Map ? result['message'] : null) ??
-            'Failed to process ZATCA Phase 2';
+            'customer_voucher.process_phase2_failed'.tr;
         debugPrint('[ZATCA][Phase2 Send With PDF] ERROR: $msg');
         showScaffoldError(context: context, message: msg.toString());
       }
     } catch (e) {
       debugPrint('[ZATCA][Phase2 Send With PDF] EXCEPTION: $e');
-      showScaffoldError(context: context, message: 'Error: $e');
+      showScaffoldError(context: context, message: 'customer_voucher.error_generic'.tr.replaceAll('@error', e.toString()));
     } finally {
       hideLoadingOverlay();
     }
@@ -358,12 +358,12 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
       if (token == null || token.isEmpty) {
         debugPrint('[ZATCA][Phase2 Send] ERROR: Missing authentication token');
         showScaffoldError(
-            context: context, message: 'Missing authentication token');
+            context: context, message: 'customer_voucher.missing_token'.tr);
         return;
       }
 
-      showScaffold(context: context, message: 'Sending to ZATCA...');
-      showLoadingOverlay(context, message: 'Sending...');
+      showScaffold(context: context, message: 'customer_voucher.sending_to_zatca'.tr);
+      showLoadingOverlay(context, message: 'customer_voucher.sending'.tr);
 
       final provider =
           Provider.of<CustomerVoucherProvider>(context, listen: false);
@@ -383,17 +383,17 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
         // Do NOT open PDF here per requirement. Just inform the user.
         showScaffold(
           context: context,
-          message: 'Voucher $voucherNumber submitted to ZATCA successfully.',
+          message: 'customer_voucher.submitted_to_zatca'.tr.replaceAll('@number', voucherNumber),
         );
       } else {
         final msg = (result is Map ? result['message'] : null) ??
-            'Failed to send to ZATCA';
+            'customer_voucher.send_to_zatca_failed'.tr;
         debugPrint('[ZATCA][Phase2 Send] ERROR: $msg');
         showScaffoldError(context: context, message: msg.toString());
       }
     } catch (e) {
       debugPrint('[ZATCA][Phase2 Send] EXCEPTION: $e');
-      showScaffoldError(context: context, message: 'Error: $e');
+      showScaffoldError(context: context, message: 'customer_voucher.error_generic'.tr.replaceAll('@error', e.toString()));
     } finally {
       hideLoadingOverlay();
     }
@@ -404,7 +404,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
     try {
       if (kIsWeb) {
         await launchUrlString(url, mode: LaunchMode.externalApplication);
-        showScaffold(context: context, message: 'Opened PDF in browser');
+        showScaffold(context: context, message: 'customer_voucher.opened_pdf_browser'.tr);
         return;
       }
 
@@ -427,13 +427,13 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
       );
 
       await OpenFile.open(savePath);
-      showScaffold(context: context, message: 'PDF downloaded');
+      showScaffold(context: context, message: 'customer_voucher.pdf_downloaded'.tr);
     } catch (e) {
       debugPrint('[ZATCA][PDF] ERROR while downloading/opening: $e');
       try {
         await launchUrlString(url, mode: LaunchMode.externalApplication);
       } catch (_) {}
-      showScaffoldError(context: context, message: 'Failed to open PDF');
+      showScaffoldError(context: context, message: 'customer_voucher.failed_open_pdf'.tr);
     }
   }
 
@@ -529,12 +529,12 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              "Customer Voucher List",
+              'customer_voucher.list_title'.tr,
               style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
                   0.30, ColorManager.textColor),
             ),
             CustomRoundButton(
-              title: "Create Voucher",
+              title: 'customer_voucher.create_voucher_button'.tr,
               fct: () {
                 Get.find<SideBarController>().index.value =
                     71; // Create Voucher Screen
@@ -587,7 +587,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
               ),
               const SizedBox(width: 10),
               CustomRoundButton(
-                title: "Reset",
+                title: 'general.reset'.tr,
                 boxColor: Colors.white,
                 textColor: ColorManager.kPrimaryColor,
                 fct: resetSearch,
@@ -630,7 +630,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                   0.18, ColorManager.textColor),
               decoration: InputDecoration(
                 border: InputBorder.none,
-                hintText: "Customer Name",
+                hintText: 'customer_voucher.customer_name_hint'.tr,
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor),
                 contentPadding: const EdgeInsets.only(left: 15),
@@ -670,7 +670,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                   0.18, ColorManager.textColor),
               decoration: InputDecoration(
                 border: InputBorder.none,
-                hintText: "Voucher No",
+                hintText: 'customer_voucher.voucher_no_hint'.tr,
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor),
                 contentPadding: const EdgeInsets.only(left: 15),
@@ -771,7 +771,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                   0.18, ColorManager.textColor),
               decoration: InputDecoration(
                 border: InputBorder.none,
-                hintText: "YYYY-MM-DD HH:MM:SS",
+                hintText: 'customer_voucher.date_range_hint'.tr,
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor.withOpacity(.5)),
                 prefixIcon: const Icon(
@@ -800,7 +800,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                   0.18, ColorManager.textColor),
               decoration: InputDecoration(
                 border: InputBorder.none,
-                hintText: "YYYY-MM-DD HH:MM:SS",
+                hintText: 'customer_voucher.date_range_hint'.tr,
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor.withOpacity(.5)),
                 prefixIcon: const Icon(
@@ -873,15 +873,15 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                                 children: [
                                   TableRow(
                                     children: [
-                                      _buildTableHeader("Voucher Number"),
-                                      _buildTableHeader("Customer Name"),
-                                      _buildTableHeader("Type"),
-                                      _buildTableHeader("Voucher Date"),
-                                      _buildTableHeader("Due Date"),
-                                      _buildTableHeader("Payment Method"),
-                                      _buildTableHeader("Paid Amount"),
-                                      _buildTableHeader("Status"),
-                                      _buildTableHeader("Action"),
+                                      _buildTableHeader('customer_voucher.col_voucher_number'.tr),
+                                      _buildTableHeader('customer_voucher.customer_name_hint'.tr),
+                                      _buildTableHeader('customer_voucher.col_type'.tr),
+                                      _buildTableHeader('customer_voucher.col_voucher_date'.tr),
+                                      _buildTableHeader('customer_voucher.col_due_date'.tr),
+                                      _buildTableHeader('customer_voucher.col_payment_method'.tr),
+                                      _buildTableHeader('customer_voucher.col_paid_amount'.tr),
+                                      _buildTableHeader('customer_voucher.col_status'.tr),
+                                      _buildTableHeader('customer_voucher.col_action'.tr),
                                     ],
                                   ),
                                 ],
@@ -984,7 +984,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                                                                  context:
                                                                      context,
                                                                  message:
-                                                                     'Voucher number copied to clipboard',
+                                                                     'customer_voucher.voucher_number_copied'.tr,
                                                                );
                                                              },
                                                              child: const Icon(
@@ -1269,7 +1269,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
           ),
           const SizedBox(height: 15),
           Text(
-            'No vouchers found',
+            'customer_voucher.no_vouchers_found'.tr,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s18,
@@ -1279,7 +1279,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Try adjusting your search criteria',
+            'customer_voucher.try_adjusting_search'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,
@@ -1296,22 +1296,22 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
     showDialog(
       context: context,
       builder: (context) => CommonDetailsDialog(
-        title: 'Voucher details',
+        title: 'customer_voucher.details_title'.tr,
         gridColumns: [
           [
-            CommonDetailsDialog.buildKeyValueRow('Voucher Number', voucher.voucherNumber, copyable: true),
-            CommonDetailsDialog.buildKeyValueRow('Customer Name', voucher.customer.user.name),
-            CommonDetailsDialog.buildKeyValueRow('Customer Phone', voucher.customer.user.phone, copyable: true),
-            CommonDetailsDialog.buildKeyValueRow('Type', voucher.type),
+            CommonDetailsDialog.buildKeyValueRow('customer_voucher.col_voucher_number'.tr, voucher.voucherNumber, copyable: true),
+            CommonDetailsDialog.buildKeyValueRow('customer_voucher.customer_name_hint'.tr, voucher.customer.user.name),
+            CommonDetailsDialog.buildKeyValueRow('customer_voucher.field_customer_phone'.tr, voucher.customer.user.phone, copyable: true),
+            CommonDetailsDialog.buildKeyValueRow('customer_voucher.col_type'.tr, voucher.type),
           ],
           [
-            CommonDetailsDialog.buildKeyValueRow('Voucher Date', voucher.voucherDate),
-            CommonDetailsDialog.buildKeyValueRow('Due Date', voucher.dueDate),
-            CommonDetailsDialog.buildKeyValueRow('Status', voucher.status),
-            CommonDetailsDialog.buildKeyValueRow('Payment Method', voucher.paymentMethod),
+            CommonDetailsDialog.buildKeyValueRow('customer_voucher.col_voucher_date'.tr, voucher.voucherDate),
+            CommonDetailsDialog.buildKeyValueRow('customer_voucher.col_due_date'.tr, voucher.dueDate),
+            CommonDetailsDialog.buildKeyValueRow('customer_voucher.col_status'.tr, voucher.status),
+            CommonDetailsDialog.buildKeyValueRow('customer_voucher.col_payment_method'.tr, voucher.paymentMethod),
           ],
         ],
-        sectionTitle: 'Voucher Items',
+        sectionTitle: 'customer_voucher.items_section_title'.tr,
         tableContent: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1333,12 +1333,12 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                 children: [
                   TableRow(
                     children: [
-                      _buildTableHeaderCell('VOUCHER'),
-                      _buildTableHeaderCell('ITEM NAME'),
-                      _buildTableHeaderCell('QUANTITY'),
-                      _buildTableHeaderCell('UNIT AMOUNT'),
-                      _buildTableHeaderCell('TAX'),
-                      _buildTableHeaderCell('TOTAL AMOUNT'),
+                      _buildTableHeaderCell('customer_voucher.col_voucher'.tr),
+                      _buildTableHeaderCell('customer_voucher.col_item_name'.tr),
+                      _buildTableHeaderCell('customer_voucher.col_quantity_upper'.tr),
+                      _buildTableHeaderCell('customer_voucher.col_unit_amount_upper'.tr),
+                      _buildTableHeaderCell('customer_voucher.col_tax_upper'.tr),
+                      _buildTableHeaderCell('customer_voucher.col_total_amount_upper'.tr),
                     ],
                   ),
                 ],
@@ -1383,7 +1383,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                'Grand Total:',
+                'customer_voucher.grand_total_label'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.semiBold,
                   FontSize.s12,

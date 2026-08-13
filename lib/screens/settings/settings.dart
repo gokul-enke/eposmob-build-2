@@ -381,10 +381,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         builder: (context, productProvider, _) {
           final count = productProvider.sellableProducts.length;
           final subtitle = count > 0
-              ? '$count products cached locally'
-              : 'View cached billing data';
+              ? 'settings_ui.products_cached'.trParams({'count': '$count'})
+              : 'settings_ui.view_cached_data'.tr;
           return _SettingsInfoCard(
-            title: 'Offline Data',
+            title: 'settings_ui.offline_data'.tr,
             subtitle: subtitle,
             icon: const FaIcon(
               FontAwesomeIcons.database,
@@ -406,12 +406,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           final isoTime = snapshot.data;
           final displayTime =
               snapshot.connectionState == ConnectionState.waiting
-                  ? 'Loading...'
+                  ? 'settings_ui.loading'.tr
                   : (isoTime == null
-                      ? 'Not synced yet'
+                      ? 'settings_ui.not_synced'.tr
                       : DateHelper.formatISODateToIST(isoTime));
           return _SettingsInfoCard(
-            title: 'Last Product Sync',
+            title: 'settings_ui.last_product_sync'.tr,
             subtitle: displayTime,
             icon: const FaIcon(
               FontAwesomeIcons.clockRotateLeft,
@@ -429,7 +429,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         },
       ),
       _SettingsCardWithIcon(
-        title: 'Resync Products',
+        title: 'settings_ui.resync_products'.tr,
         icon: FontAwesomeIcons.arrowsRotate,
         backgroundColor: const Color(0xFFEDE7F6),
         iconColor: const Color(0xFF5E35B1),
@@ -439,8 +439,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       if (kDebugMode)
         _SettingsInfoCard(
-          title: 'Realtime Sync Tester',
-          subtitle: 'Test Reverb and sync API without changing local data',
+          title: 'settings_ui.realtime_sync_tester'.tr,
+          subtitle: 'settings_ui.realtime_sync_tester_subtitle'.tr,
           icon: const FaIcon(
             FontAwesomeIcons.satelliteDish,
             color: Color(0xFF00695C),
@@ -460,10 +460,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         builder: (context, billingProvider, _) {
           final isOfflineModeEnabled = billingProvider.isManualOfflineMode;
           return _SettingsInfoCard(
-            title: 'Offline Mode',
+            title: 'settings_ui.offline_mode'.tr,
             subtitle: isOfflineModeEnabled
-                ? 'Manually enabled'
-                : 'Uses live internet status',
+                ? 'settings_ui.manually_enabled'.tr
+                : 'settings_ui.live_internet_status'.tr,
             icon: Icon(
               isOfflineModeEnabled ? Icons.wifi_off : Icons.wifi,
               color: isOfflineModeEnabled
@@ -487,9 +487,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         future: SharedPreferenceProvider().getNotificationPosition(),
         builder: (context, snapshot) {
           final current = snapshot.data ?? 'right';
-          final label = current[0].toUpperCase() + current.substring(1);
+          final label = current == 'left'
+              ? 'settings_ui.left'.tr
+              : 'settings_ui.right'.tr;
           return _SettingsInfoCard(
-            title: 'Notification Position',
+            title: 'settings_ui.notification_position'.tr,
             subtitle: label,
             icon: const Icon(
               Icons.view_week,
@@ -509,9 +511,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           future: SharedPreferenceProvider().getOrientationMode(),
           builder: (context, snapshot) {
             final current = snapshot.data ?? OrientationHelper.modeAuto;
+            final orientationLabel = switch (current) {
+              OrientationHelper.modePortrait => 'settings_ui.portrait'.tr,
+              OrientationHelper.modeLandscape => 'settings_ui.landscape'.tr,
+              _ => 'settings_ui.auto'.tr,
+            };
             return _SettingsInfoCard(
-              title: 'Screen Orientation',
-              subtitle: OrientationHelper.labelForMode(current),
+              title: 'settings_ui.screen_orientation'.tr,
+              subtitle: orientationLabel,
               icon: const Icon(
                 Icons.screen_rotation,
                 color: Color(0xFF3949AB),
@@ -530,10 +537,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         builder: (context, snapshot) {
           final isEnabled = snapshot.data ?? false;
           return _SettingsInfoCard(
-            title: 'Developer Mode',
+            title: 'settings_ui.developer_mode'.tr,
             subtitle: isEnabled
-                ? 'On • file-output printer available'
-                : 'Off • production printing',
+                ? 'settings_ui.developer_on'.tr
+                : 'settings_ui.developer_off'.tr,
             icon: FaIcon(
               FontAwesomeIcons.code,
               color:
@@ -549,7 +556,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         },
       ),
       _SettingsCardWithIcon(
-        title: 'Clear Local Storage',
+        title: 'settings_ui.clear_local_storage'.tr,
         icon: FontAwesomeIcons.trashCan,
         backgroundColor: const Color(0xFFFFF3E0),
         iconColor: const Color(0xFFEF6C00),
@@ -559,7 +566,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       if (kDebugMode)
         _SettingsCardWithIcon(
-          title: 'Clear Product Cache (Debug)',
+          title: 'settings_ui.clear_product_cache_debug'.tr,
           icon: FontAwesomeIcons.broom,
           backgroundColor: const Color(0xFFFFEBEE),
           iconColor: const Color(0xFFC62828),
@@ -578,7 +585,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           SettingsPageHeader(
             title: 'settings.title'.tr,
-            subtitle: 'Manage integrations, sync, and app preferences',
+            subtitle: 'settings_ui.subtitle'.tr,
           ),
           const SizedBox(height: 20),
           Expanded(

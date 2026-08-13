@@ -98,7 +98,7 @@ class ViewPurchaseWidget extends StatelessWidget {
                               onPressed: () {
                                 sideBarController.index.value = 81;
                               },
-                              text: 'All Purchases',
+                              text: 'purchase_order.all_purchases'.tr,
                             ),
                             const SizedBox(height: 12),
                             Row(
@@ -106,7 +106,7 @@ class ViewPurchaseWidget extends StatelessWidget {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    'Purchase Voucher #${viewData.voucherNumber}',
+                                    'purchase_order.purchase_voucher_hash'.tr.replaceAll('@number', viewData.voucherNumber),
                                     style: buildCustomStyle(
                                       FontWeightManager.bold,
                                       FontSize.s24,
@@ -116,13 +116,13 @@ class ViewPurchaseWidget extends StatelessWidget {
                                   ),
                                 ),
                                 _TopActionButton(
-                                  label: 'Print',
+                                  label: 'purchase_order.print'.tr,
                                   icon: Icons.print_outlined,
                                   onPressed: () {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
+                                      SnackBar(
                                         content: Text(
-                                          'Print will be added later.',
+                                          'purchase_order.print_coming_soon'.tr,
                                         ),
                                       ),
                                     );
@@ -132,7 +132,7 @@ class ViewPurchaseWidget extends StatelessWidget {
                             ),
                             const SizedBox(height: 24),
                             _SectionCard(
-                              title: 'Voucher Information',
+                              title: 'purchase_order.voucher_information'.tr,
                               child: LayoutBuilder(
                                 builder: (context, constraints) {
                                   final isCompact = constraints.maxWidth < 720;
@@ -147,14 +147,14 @@ class ViewPurchaseWidget extends StatelessWidget {
                                       SizedBox(
                                         width: blockWidth,
                                         child: _InfoBlock(
-                                          label: 'Voucher Number',
+                                          label: 'purchase_order.voucher_number'.tr,
                                           value: viewData.voucherNumber,
                                         ),
                                       ),
                                       SizedBox(
                                         width: blockWidth,
                                         child: _InfoBlock(
-                                          label: 'Purchase Date',
+                                          label: 'purchase_order.purchase_date'.tr,
                                           value: _DisplayFormatter.date(
                                             viewData.purchaseDate,
                                           ),
@@ -163,7 +163,7 @@ class ViewPurchaseWidget extends StatelessWidget {
                                       SizedBox(
                                         width: blockWidth,
                                         child: _InfoBlock(
-                                          label: 'Net Payable',
+                                          label: 'purchase_order.net_payable'.tr,
                                           value: _DisplayFormatter.currency(
                                             viewData.amountTotal,
                                             currency: currency,
@@ -173,21 +173,21 @@ class ViewPurchaseWidget extends StatelessWidget {
                                       SizedBox(
                                         width: blockWidth,
                                         child: _InfoBlock(
-                                          label: 'Supplier',
+                                          label: 'purchase_order.supplier'.tr,
                                           value: viewData.supplierName,
                                         ),
                                       ),
                                       SizedBox(
                                         width: blockWidth,
                                         child: _InfoBlock(
-                                          label: 'Store',
+                                          label: 'purchase_order.store'.tr,
                                           value: viewData.storeName,
                                         ),
                                       ),
                                       SizedBox(
                                         width: blockWidth,
                                         child: _InfoBlock(
-                                          label: 'Status',
+                                          label: 'purchase_order.status'.tr,
                                           value: viewData.statusLabel,
                                         ),
                                       ),
@@ -198,7 +198,7 @@ class ViewPurchaseWidget extends StatelessWidget {
                             ),
                             const SizedBox(height: 24),
                             _SectionCard(
-                              title: 'Purchase Items',
+                              title: 'purchase_order.purchase_items'.tr,
                               child: LayoutBuilder(
                                 builder: (context, constraints) {
                                   final tableWidth =
@@ -223,35 +223,35 @@ class ViewPurchaseWidget extends StatelessWidget {
                                             child: Row(
                                               children: [
                                                 _TableHeaderCell(
-                                                  text: 'PRODUCT',
+                                                  text: 'purchase_order.product_col_caps'.tr,
                                                   width: columns.product,
                                                 ),
                                                 _TableHeaderCell(
-                                                  text: 'CATEGORY',
+                                                  text: 'purchase_order.category_col_caps'.tr,
                                                   width: columns.category,
                                                 ),
                                                 _TableHeaderCell(
-                                                  text: 'QUANTITY',
+                                                  text: 'purchase_order.quantity_col_caps'.tr,
                                                   width: columns.quantity,
                                                 ),
                                                 _TableHeaderCell(
-                                                  text: 'UNIT PRICE',
+                                                  text: 'purchase_order.unit_price_col_caps'.tr,
                                                   width: columns.unitPrice,
                                                 ),
                                                 _TableHeaderCell(
-                                                  text: 'TOTAL',
+                                                  text: 'purchase_order.total_col_caps'.tr,
                                                   width: columns.total,
                                                 ),
                                                 _TableHeaderCell(
-                                                  text: 'BATCH NO.',
+                                                  text: 'purchase_order.batch_no_col'.tr,
                                                   width: columns.batch,
                                                 ),
                                                 _TableHeaderCell(
-                                                  text: 'EXPIRY DATE',
+                                                  text: 'purchase_order.expiry_date_col_caps'.tr,
                                                   width: columns.expiry,
                                                 ),
                                                 _TableHeaderCell(
-                                                  text: 'STATUS',
+                                                  text: 'purchase_order.status_col_caps'.tr,
                                                   width: columns.status,
                                                 ),
                                               ],
@@ -451,7 +451,7 @@ class _EmptyPurchaseState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'No purchase details available.',
+              'purchase_order.no_purchase_details'.tr,
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s18,
@@ -461,7 +461,7 @@ class _EmptyPurchaseState extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Open a purchase order from the list to view its details.',
+              'purchase_order.open_purchase_order_hint'.tr,
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s13,
@@ -472,7 +472,7 @@ class _EmptyPurchaseState extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             _TopActionButton(
-              label: 'Back',
+              label: 'purchase_order.back'.tr,
               icon: Icons.arrow_back_rounded,
               onPressed: onBack,
             ),
@@ -588,13 +588,13 @@ class _PurchaseTotalsSummary extends StatelessWidget {
     return Column(
       children: [
         _buildRow(
-          'Gross Total',
+          'purchase_order.gross_total'.tr,
           _DisplayFormatter.currency(grossAmount, currency: currency),
         ),
         if (discount > 0) ...[
           const SizedBox(height: 8),
           _buildRow(
-            'Overall Discount',
+            'purchase_order.overall_discount'.tr,
             '- ${_DisplayFormatter.currency(discount, currency: currency)}',
             valueColor: Colors.red.shade700,
           ),
@@ -604,7 +604,7 @@ class _PurchaseTotalsSummary extends StatelessWidget {
           child: Divider(height: 1),
         ),
         _buildRow(
-          'Net Payable',
+          'purchase_order.net_payable'.tr,
           _DisplayFormatter.currency(netPayable, currency: currency),
           emphasize: true,
           valueColor: ColorManager.kPrimaryColor,
@@ -1152,19 +1152,19 @@ class _DisplayFormatter {
       return text;
     }
 
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
+    final months = [
+      'purchase_order.month_jan'.tr,
+      'purchase_order.month_feb'.tr,
+      'purchase_order.month_mar'.tr,
+      'purchase_order.month_apr'.tr,
+      'purchase_order.month_may'.tr,
+      'purchase_order.month_jun'.tr,
+      'purchase_order.month_jul'.tr,
+      'purchase_order.month_aug'.tr,
+      'purchase_order.month_sep'.tr,
+      'purchase_order.month_oct'.tr,
+      'purchase_order.month_nov'.tr,
+      'purchase_order.month_dec'.tr,
     ];
     return '${parsed.day.toString().padLeft(2, '0')} ${months[parsed.month - 1]} ${parsed.year}';
   }
@@ -1242,15 +1242,15 @@ class _DisplayFormatter {
     final normalized = asText(status).toLowerCase();
     switch (normalized) {
       case 'fully_received':
-        return 'Fully Received';
+        return 'purchase_order.fully_received'.tr;
       case 'partially_received':
-        return 'Partially Received';
+        return 'purchase_order.partially_received'.tr;
       case 'pending':
-        return 'Pending';
+        return 'purchase_order.pending'.tr;
       case 'y':
-        return 'Active';
+        return 'purchase_order.active'.tr;
       case 'n':
-        return 'Inactive';
+        return 'purchase_order.inactive'.tr;
       default:
         return normalized.isEmpty
             ? '-'
@@ -1271,22 +1271,22 @@ class _DisplayFormatter {
       case 'Y':
       case 'RECEIVED':
       case 'FULLY_RECEIVED':
-        return const _StatusDisplay(
-          label: 'Received',
-          color: Color(0xFF0F8A44),
-          backgroundColor: Color(0xFFDDF7E5),
+        return _StatusDisplay(
+          label: 'purchase_order.received'.tr,
+          color: const Color(0xFF0F8A44),
+          backgroundColor: const Color(0xFFDDF7E5),
         );
       case 'PARTIALLY_RECEIVED':
-        return const _StatusDisplay(
-          label: 'Partial',
-          color: Color(0xFF9A6700),
-          backgroundColor: Color(0xFFFFF1CC),
+        return _StatusDisplay(
+          label: 'purchase_order.partial'.tr,
+          color: const Color(0xFF9A6700),
+          backgroundColor: const Color(0xFFFFF1CC),
         );
       default:
-        return const _StatusDisplay(
-          label: 'Pending',
-          color: Color(0xFF6B7280),
-          backgroundColor: Color(0xFFEFF1F4),
+        return _StatusDisplay(
+          label: 'purchase_order.pending'.tr,
+          color: const Color(0xFF6B7280),
+          backgroundColor: const Color(0xFFEFF1F4),
         );
     }
   }

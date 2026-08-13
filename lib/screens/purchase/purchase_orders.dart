@@ -306,7 +306,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                 _showFilters = !_showFilters;
               });
             },
-            tooltip: _showFilters ? 'Hide Filters' : 'Show Filters',
+            tooltip: _showFilters ? 'purchase_order.hide_filters'.tr : 'purchase_order.show_filters'.tr,
           ),
           if (hasFilters)
             PositionedDirectional(
@@ -410,13 +410,13 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
     final isPhone = purchaseOrdersIsPhone(context);
 
     return PurchaseOrdersPageHeader(
-      title: "Purchase Order",
-      subtitle: "View and manage purchase orders",
+      title: 'purchase_order.title'.tr,
+      subtitle: 'purchase_order.subtitle'.tr,
       leading: isPhone ? _buildFilterToggleButton() : null,
       trailing: SizedBox(
         width: isPhone ? double.infinity : 180,
         child: CustomRoundButton(
-          title: "Create Purchase Order",
+          title: 'purchase_order.create_purchase_order_btn'.tr,
           fct: () {
             provider.activePurchaseOrderDetails = null;
             provider.voucherDetails = null;
@@ -440,11 +440,11 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const PurchaseOrdersSectionTitle(title: 'Filters'),
+          PurchaseOrdersSectionTitle(title: 'purchase_order.filters'.tr),
           const SizedBox(height: 12),
           if (isPhone) ...[
             _buildFilterDropdown(
-              "Supplier",
+              'purchase_order.supplier'.tr,
               supplierController,
               suppliers,
               supplierSearchController,
@@ -452,22 +452,22 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
             ),
             const SizedBox(height: 10),
             _buildFilterDropdown(
-              "Store",
+              'purchase_order.store'.tr,
               storeController,
               stores,
               storeSearchController,
               expanded: false,
             ),
             const SizedBox(height: 10),
-            _buildFilterDate("From Date", fromDateController, expanded: false),
+            _buildFilterDate('purchase_order.from_date'.tr, fromDateController, expanded: false),
             const SizedBox(height: 10),
-            _buildFilterDate("To Date", toDateController, expanded: false),
+            _buildFilterDate('purchase_order.to_date'.tr, toDateController, expanded: false),
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: CustomRoundButton(
-                    title: "Reset",
+                    title: 'purchase_order.reset'.tr,
                     boxColor: Colors.white,
                     textColor: ColorManager.kPrimaryColor,
                     borderColor: ColorManager.kPrimaryColor,
@@ -480,7 +480,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: CustomRoundButton(
-                    title: "Apply",
+                    title: 'purchase_order.apply'.tr,
                     fct: _fetchPurchases,
                     height: 44,
                     width: double.infinity,
@@ -494,22 +494,22 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 _buildFilterDropdown(
-                  "Supplier",
+                  'purchase_order.supplier'.tr,
                   supplierController,
                   suppliers,
                   supplierSearchController,
                 ),
                 const SizedBox(width: 15),
                 _buildFilterDropdown(
-                  "Store",
+                  'purchase_order.store'.tr,
                   storeController,
                   stores,
                   storeSearchController,
                 ),
                 const SizedBox(width: 15),
-                _buildFilterDate("From Date", fromDateController),
+                _buildFilterDate('purchase_order.from_date'.tr, fromDateController),
                 const SizedBox(width: 15),
-                _buildFilterDate("To Date", toDateController),
+                _buildFilterDate('purchase_order.to_date'.tr, toDateController),
               ],
             ),
             const SizedBox(height: 16),
@@ -523,7 +523,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                 const SizedBox(width: 15),
                 Expanded(
                   child: CustomRoundButton(
-                    title: "Reset",
+                    title: 'purchase_order.reset'.tr,
                     boxColor: Colors.white,
                     textColor: ColorManager.kPrimaryColor,
                     borderColor: ColorManager.kPrimaryColor,
@@ -575,8 +575,8 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
             const SizedBox(height: 12),
             Text(
               hasFilters
-                  ? "No purchase orders match your filters"
-                  : "No purchase orders found",
+                  ? 'purchase_order.no_orders_match_filters'.tr
+                  : 'purchase_order.no_orders_found'.tr,
               textAlign: TextAlign.center,
               style: buildCustomStyle(
                 FontWeightManager.medium,
@@ -588,7 +588,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
             if (hasFilters) ...[
               const SizedBox(height: 16),
               CustomRoundButton(
-                title: 'Clear filters',
+                title: 'purchase_order.clear_filters'.tr,
                 fct: resetSearch,
                 fontSize: 12,
                 height: 44,
@@ -723,7 +723,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Tooltip(
-                    message: 'View order',
+                    message: 'purchase_order.view_order_tooltip'.tr,
                     child: SizedBox(
                       width: 30,
                       height: 30,
@@ -743,7 +743,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                   if (canReceive) ...[
                     const SizedBox(width: 6),
                     Tooltip(
-                      message: 'Receive items',
+                      message: 'purchase_order.receive_items_tooltip'.tr,
                       child: SizedBox(
                         width: 30,
                         height: 30,
@@ -770,14 +770,14 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
             children: [
               Expanded(
                 child: _buildCompactFieldBox(
-                  label: 'Store',
+                  label: 'purchase_order.store'.tr,
                   value: item.store?.name ?? '—',
                 ),
               ),
               const SizedBox(width: 6),
               Expanded(
                 child: _buildCompactFieldBox(
-                  label: 'Total Price',
+                  label: 'purchase_order.total_price'.tr,
                   value: '$currency ${item.amountTotal ?? '0'}',
                 ),
               ),
@@ -827,13 +827,13 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
               children: [
                 TableRow(
                   children: [
-                    _buildTableHeader("SL"),
-                    _buildTableHeader("Purchase Date"),
-                    _buildTableHeader("Store"),
-                    _buildTableHeader("Supplier"),
-                    _buildTableHeader("Total Price"),
-                    _buildTableHeader("Received Items"),
-                    _buildTableHeader("Action"),
+                    _buildTableHeader('purchase_order.sl_col'.tr),
+                    _buildTableHeader('purchase_order.purchase_date'.tr),
+                    _buildTableHeader('purchase_order.store'.tr),
+                    _buildTableHeader('purchase_order.supplier'.tr),
+                    _buildTableHeader('purchase_order.total_price'.tr),
+                    _buildTableHeader('purchase_order.received_items_col'.tr),
+                    _buildTableHeader('purchase_order.action_col'.tr),
                   ],
                 ),
               ],
@@ -906,7 +906,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Summary",
+                  'purchase_order.summary'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.bold,
                     FontSize.s14,
@@ -919,7 +919,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Total Price",
+                      'purchase_order.total_price'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s12,
@@ -945,7 +945,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
           : Row(
               children: [
                 Text(
-                  "Summary",
+                  'purchase_order.summary'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.bold,
                     FontSize.s14,
@@ -958,7 +958,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Total Price",
+                      'purchase_order.total_price'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s12,
@@ -1005,7 +1005,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
         BuildDropDownWithSearch<String>(
           title: null,
           showName: false,
-          hintText: "All",
+          hintText: 'purchase_order.hint_all'.tr,
           value: controller.text == "All" ? null : controller.text,
           items: items.where((e) => e != "All").toList(),
           onChanged: (val) {
@@ -1163,7 +1163,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                 icon: Icons.visibility,
                 backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.9),
                 iconColor: Colors.white,
-                tooltip: 'View order',
+                tooltip: 'purchase_order.view_order_tooltip'.tr,
                 onPressed: () => _handleOrderAction(item, 36),
               ),
               if (canReceive) ...[
@@ -1172,7 +1172,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                   icon: Icons.add,
                   backgroundColor: const Color(0xFFE7F8EC),
                   iconColor: Colors.green,
-                  tooltip: 'Receive items',
+                  tooltip: 'purchase_order.receive_items_tooltip'.tr,
                   onPressed: () => _handleOrderAction(item, 82),
                 ),
               ],

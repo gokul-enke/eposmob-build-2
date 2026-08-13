@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -591,7 +592,7 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
   String _getFormattedDate() {
     final date = selectedDate ?? widget.initialDate;
     if (date == null) {
-      return widget.hintText ?? 'Select Date';
+      return widget.hintText ?? 'common.select_date'.tr;
     }
     
     // Always use consistent format: MMM dd, yyyy

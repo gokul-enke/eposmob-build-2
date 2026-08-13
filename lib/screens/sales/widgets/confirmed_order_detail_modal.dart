@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
@@ -95,8 +96,8 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      "Order Details",
+                    Text(
+                      "kitchen.order_details".tr,
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -130,9 +131,9 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  "Order Information",
-                                  style: TextStyle(
+                                Text(
+                                  "confirmed_orders.order_info".tr,
+                                  style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.black,
@@ -140,30 +141,30 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 16),
                                 _buildInfoRow(
-                                    "Order Number", "#${order.orderNumber}"),
+                                    "sales.order_number_hint".tr, "#${order.orderNumber}"),
                                 const SizedBox(height: 8),
-                                _buildInfoRow("Customer Phone",
-                                    order.customerPhone ?? "N/A"),
+                                _buildInfoRow("confirmed_orders.customer_phone".tr,
+                                    order.customerPhone ?? "confirmed_orders.na".tr),
                                 const SizedBox(height: 8),
                                 if (order.customerName != null &&
                                     order.customerName!.isNotEmpty) ...[
                                   _buildInfoRow(
-                                      "Customer Name", order.customerName!),
+                                      "sales.customer_name_hint".tr, order.customerName!),
                                   const SizedBox(height: 8),
                                 ],
                                 _buildInfoRow(
-                                    "Date", _formatDateTime(order.createdAt)),
+                                    "sales.date_col".tr, _formatDateTime(order.createdAt)),
                                 const SizedBox(height: 8),
                                 _buildInfoRow(
-                                    "Time", _formatTime(order.createdAt)),
+                                    "confirmed_orders.time".tr, _formatTime(order.createdAt)),
                                 const SizedBox(height: 8),
-                                _buildInfoRow("Total Amount",
+                                _buildInfoRow("confirmed_orders.total_amount".tr,
                                     "$currency${order.total.toStringAsFixed(2)}"),
                                 const SizedBox(height: 8),
-                                _buildInfoRow("Total MRP",
+                                _buildInfoRow("confirmed_orders.total_mrp".tr,
                                     "$currency${_calculateTotalMRP().toStringAsFixed(2)}"),
                                 const SizedBox(height: 8),
-                                _buildInfoRow("You Saved",
+                                _buildInfoRow("confirmed_orders.you_saved".tr,
                                     "$currency${_calculateYouSaved().toStringAsFixed(2)}",
                                     valueStyle: const TextStyle(
                                       color: Colors.green,
@@ -174,19 +175,19 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                                     order.deliveryMethod!.isNotEmpty) ...[
                                   const SizedBox(height: 8),
                                   _buildInfoRow(
-                                      "Delivery Method", order.deliveryMethod!),
+                                      "confirmed_orders.delivery_method".tr, order.deliveryMethod!),
                                 ],
                                 if (order.transactionId != null &&
                                     order.transactionId!.isNotEmpty) ...[
                                   const SizedBox(height: 8),
                                   _buildInfoRow(
-                                      "Transaction ID", order.transactionId!),
+                                      "confirmed_orders.transaction_id".tr, order.transactionId!),
                                 ],
                                 if (order.balanceAmount != null &&
                                     order.balanceAmount != "0.0" &&
                                     order.balanceAmount!.isNotEmpty) ...[
                                   const SizedBox(height: 8),
-                                  _buildInfoRow("Balance Amount",
+                                  _buildInfoRow("confirmed_orders.balance_amount".tr,
                                       "$currency${order.balanceAmount}",
                                       valueStyle: const TextStyle(
                                         color: Colors.blue,
@@ -196,7 +197,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                                 if (order.carNumber != null &&
                                     order.carNumber!.isNotEmpty) ...[
                                   const SizedBox(height: 8),
-                                  _buildInfoRow("Car Number", order.carNumber!,
+                                  _buildInfoRow("confirmed_orders.car_number".tr, order.carNumber!,
                                       valueStyle: const TextStyle(
                                         color: Colors.purple,
                                         fontWeight: FontWeight.w600,
@@ -205,7 +206,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                                 if (order.status != null &&
                                     order.status!.isNotEmpty) ...[
                                   const SizedBox(height: 8),
-                                  _buildInfoRow("Order Status",
+                                  _buildInfoRow("confirmed_orders.order_status".tr,
                                       order.status!.toUpperCase(),
                                       valueStyle: TextStyle(
                                         color: order.status!.toLowerCase() ==
@@ -226,9 +227,9 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                                   const SizedBox(height: 8),
                                   const Divider(),
                                   const SizedBox(height: 8),
-                                  const Text(
-                                    "Applied Discounts",
-                                    style: TextStyle(
+                                   Text(
+                                    "confirmed_orders.applied_discounts".tr,
+                                    style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.black,
@@ -237,7 +238,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                                   const SizedBox(height: 8),
                                   if (order.flatDiscount != null &&
                                       order.flatDiscount! > 0)
-                                    _buildInfoRow("Flat Discount",
+                                    _buildInfoRow("confirmed_orders.flat_discount".tr,
                                         "$currency${order.flatDiscount!.toStringAsFixed(2)}",
                                         valueStyle: const TextStyle(
                                           color: Colors.orange,
@@ -246,7 +247,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                                   if (order.percentageDiscount != null &&
                                       order.percentageDiscount! > 0) ...[
                                     const SizedBox(height: 4),
-                                    _buildInfoRow("Percentage Discount",
+                                    _buildInfoRow("confirmed_orders.percentage_discount".tr,
                                         "${order.percentageDiscount!.toStringAsFixed(1)}%",
                                         valueStyle: const TextStyle(
                                           color: Colors.orange,
@@ -257,7 +258,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                                       order.couponId!.isNotEmpty) ...[
                                     const SizedBox(height: 4),
                                     _buildInfoRow(
-                                        "Coupon Code", order.couponId!,
+                                        "confirmed_orders.coupon_code".tr, order.couponId!,
                                         valueStyle: const TextStyle(
                                           color: Colors.blue,
                                           fontWeight: FontWeight.w600,
@@ -279,7 +280,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                                     order.deliveryDate!.isNotEmpty) ...[
                                   const SizedBox(height: 8),
                                   _buildInfoRow(
-                                      "Delivery Date",
+                                      "confirmed_orders.delivery_date".tr,
                                       DateHelper.formatToISODateOnlyFromISO(
                                           order.deliveryDate!)),
                                 ],
@@ -287,18 +288,18 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                                     order.deliveryTime!.isNotEmpty) ...[
                                   const SizedBox(height: 8),
                                   _buildInfoRow(
-                                      "Delivery Time", order.deliveryTime!),
+                                      "confirmed_orders.delivery_time".tr, order.deliveryTime!),
                                 ],
                                 if (order.comment != null &&
                                     order.comment!.isNotEmpty) ...[
                                   const SizedBox(height: 8),
-                                  _buildInfoRow("Comment", order.comment!),
+                                  _buildInfoRow("confirmed_orders.comment".tr, order.comment!),
                                 ],
                                 if (order.toCustomerCredit == true) ...[
                                   const SizedBox(height: 8),
                                   _buildInfoRow(
-                                    "Credit Applied",
-                                    "Yes",
+                                    "confirmed_orders.credit_applied".tr,
+                                    "confirmed_orders.yes".tr,
                                     valueStyle: const TextStyle(
                                       color: Colors.blue,
                                       fontWeight: FontWeight.w600,
@@ -312,9 +313,9 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                         const SizedBox(height: 24),
 
                         // Order Items Section
-                        const Text(
-                          "Order Items",
-                          style: TextStyle(
+                        Text(
+                          "confirmed_orders.order_items".tr,
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
@@ -341,12 +342,12 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                               ),
                               horizontalMargin: 16,
                               columnSpacing: 24,
-                              columns: const [
-                                DataColumn(label: Text('Product')),
-                                DataColumn(label: Text('Qty'), numeric: true),
+                              columns: [
+                                DataColumn(label: Text('confirmed_orders.product'.tr)),
+                                DataColumn(label: Text('billing.table_qty'.tr), numeric: true),
                                 DataColumn(
-                                    label: Text('Unit Price'), numeric: true),
-                                DataColumn(label: Text('Total'), numeric: true),
+                                    label: Text('billing.unit_price'.tr), numeric: true),
+                                DataColumn(label: Text('billing.table_total'.tr), numeric: true),
                               ],
                               rows: order.items.map((item) {
                                 double unitPrice = item.price ??
@@ -395,7 +396,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                   children: [
                     CustomRoundButton(
                       fct: () => _printOrder(context),
-                      title: "Print Order",
+                      title: "confirmed_orders.print_order".tr,
                       fontSize: FontSize.s12,
                       height: MediaQuery.of(context).size.height * .05,
                       width: 120,
@@ -406,7 +407,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                       children: [
                         CustomRoundButton(
                           fct: () => _showDeleteConfirmationDialog(context),
-                          title: "Delete",
+                          title: "confirmed_orders.delete".tr,
                           fontSize: FontSize.s12,
                           height: MediaQuery.of(context).size.height * .05,
                           width: 80,
@@ -417,7 +418,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                         const SizedBox(width: 12),
                         CustomRoundButton(
                           fct: () => Navigator.of(context).pop(),
-                          title: "Close",
+                          title: "confirmed_orders.close".tr,
                           fontSize: FontSize.s12,
                           height: MediaQuery.of(context).size.height * .05,
                           width: 80,
@@ -608,8 +609,8 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
     } catch (error) {
       debugPrint("Error printing order: ${error.toString()}");
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Failed to print order. Please try again."),
+        SnackBar(
+          content: Text("confirmed_orders.failed_print".tr),
           backgroundColor: Colors.red,
         ),
       );
@@ -619,13 +620,13 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
   void _showDeleteConfirmationDialog(BuildContext context) {
     DeleteConfirmationDialog.show(
       context: context,
-      title: "Delete Confirmed Order",
+      title: "confirmed_orders.delete_title".tr,
       itemName: order.orderNumber,
       message:
-          "This confirmed order will be permanently removed from your local storage. This action cannot be undone.",
+          "confirmed_orders.delete_message".tr,
       warningIcon: Icons.receipt_long_outlined,
       warningIconColor: ColorManager.kButtonRed,
-      deleteButtonText: "Delete",
+      deleteButtonText: "confirmed_orders.delete".tr,
       onDelete: () {
         // Delete the confirmed order from local storage
         final provider =
@@ -638,7 +639,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
         // Show success message
         showScaffold(
           context: context,
-          message: "Confirmed order deleted successfully",
+          message: "confirmed_orders.delete_success".tr,
         );
       },
     );
@@ -658,7 +659,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
         if (methodIdOrName == billing.codPaymentMethodId) return 'COD';
       } catch (_) {}
       // Fallback if BillingProvider lookup failed
-      return "Payment #$methodIdOrName";
+      return 'confirmed_orders.payment_hash'.tr.replaceAll('@id', methodIdOrName);
     }
     // It's already a name (CASH, CARD, UPI, DEBIT, etc.)
     return methodIdOrName;
@@ -694,7 +695,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(left: 16.0, top: 4.0),
                   child: _buildInfoRow(
-                    "$displayName Payment",
+                    'confirmed_orders.payment_display'.tr.replaceAll('@name', displayName),
                     "$currency${amountValue.toStringAsFixed(2)}",
                     valueStyle: const TextStyle(
                       color: Colors.green,
@@ -709,9 +710,9 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "Payment Methods",
-                style: TextStyle(
+              Text(
+                "billing.payment_methods".tr,
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
@@ -721,7 +722,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
               ...methodWidgets,
               const SizedBox(height: 8),
               _buildInfoRow(
-                  "Total Paid", "$currency${totalPaid.toStringAsFixed(2)}",
+                  "billing.total_paid".tr, "$currency${totalPaid.toStringAsFixed(2)}",
                   valueStyle: const TextStyle(
                     color: Colors.green,
                     fontWeight: FontWeight.bold,
@@ -741,16 +742,16 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "Payment Method",
-          style: TextStyle(
+        Text(
+          "confirmed_orders.payment_method".tr,
+          style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
             color: Colors.black,
           ),
         ),
         const SizedBox(height: 8),
-        _buildInfoRow("Method", displayName,
+        _buildInfoRow("confirmed_orders.method".tr, displayName,
             valueStyle: const TextStyle(
               color: Colors.green,
               fontWeight: FontWeight.w600,

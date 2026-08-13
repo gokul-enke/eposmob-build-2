@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/models/customer_voucher.dart';
 import 'package:provider/provider.dart';
@@ -107,14 +108,14 @@ class _CustomerVoucherMobileViewState
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'Voucher List',
+          'customer_voucher.mobile_list_title'.tr,
           style: buildCustomStyle(
               FontWeightManager.semiBold, FontSize.s16, 0.25, ColorManager.textColor),
         ),
         ElevatedButton.icon(
           onPressed: widget.onCreateVoucher,
           icon: const Icon(Icons.add, size: 16),
-          label: const Text('Create', style: TextStyle(fontSize: 12)),
+          label: Text('customer_voucher.mobile_create_button'.tr, style: const TextStyle(fontSize: 12)),
           style: ElevatedButton.styleFrom(
             backgroundColor: ColorManager.kPrimaryColor,
             foregroundColor: Colors.white,
@@ -143,7 +144,7 @@ class _CustomerVoucherMobileViewState
         onExpansionChanged: (v) => setState(() => _filtersExpanded = v),
         leading: const Icon(Icons.filter_list, size: 18),
         title: Text(
-          _filtersExpanded ? 'Hide Filters' : 'Show Filters',
+          _filtersExpanded ? 'customer_voucher.hide_filters'.tr : 'customer_voucher.show_filters'.tr,
           style: buildCustomStyle(FontWeightManager.medium, FontSize.s12, 0.18,
               ColorManager.textColor),
         ),
@@ -153,10 +154,10 @@ class _CustomerVoucherMobileViewState
             child: Column(
               children: [
                 _filterField(widget.searchTextController, widget.nameFocusNode,
-                    'Customer Name'),
+                    'customer_voucher.customer_name_hint'.tr),
                 const SizedBox(height: 8),
                 _filterField(widget.voucherNumberController,
-                    widget.voucherNoFocusNode, 'Voucher No.'),
+                    widget.voucherNoFocusNode, 'customer_voucher.mobile_voucher_no_hint'.tr),
                 const SizedBox(height: 8),
                 _dropdownField(
                   hint: 'All Types',
@@ -182,7 +183,7 @@ class _CustomerVoucherMobileViewState
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(6)),
                     ),
-                    child: const Text('Reset Filters'),
+                    child: Text('customer_voucher.reset_filters_button'.tr),
                   ),
                 ),
               ],
@@ -274,11 +275,11 @@ class _CustomerVoucherMobileViewState
                 size: 60,
                 color: ColorManager.kPrimaryColor.withOpacity(0.5)),
             const SizedBox(height: 12),
-            Text('No vouchers found',
+            Text('customer_voucher.no_vouchers_found'.tr,
                 style: buildCustomStyle(FontWeightManager.medium, FontSize.s16,
                     0.24, ColorManager.textColor)),
             const SizedBox(height: 6),
-            Text('Try adjusting your filters',
+            Text('customer_voucher.try_adjusting_filters'.tr,
                 style: buildCustomStyle(FontWeightManager.regular, FontSize.s13,
                     0.19, Colors.grey)),
           ],
@@ -354,7 +355,7 @@ class _VoucherCard extends StatelessWidget {
                             ClipboardData(text: voucher.voucherNumber));
                         showScaffold(
                           context: context,
-                          message: 'Voucher number copied to clipboard',
+                          message: 'customer_voucher.voucher_number_copied'.tr,
                         );
                       },
                       child: const Icon(
@@ -394,7 +395,9 @@ class _VoucherCard extends StatelessWidget {
 
             // Dates
             Text(
-              'Date: ${voucher.voucherDate}  •  Due: ${voucher.dueDate}',
+              'customer_voucher.date_due_line'.tr
+                  .replaceAll('@date', voucher.voucherDate)
+                  .replaceAll('@due', voucher.dueDate),
               style: buildCustomStyle(
                   FontWeightManager.regular, FontSize.s11, 0.16, Colors.grey),
             ),
@@ -407,13 +410,13 @@ class _VoucherCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                _actionBtn(Icons.visibility_outlined, 'View',
+                _actionBtn(Icons.visibility_outlined, 'customer_voucher.view_action'.tr,
                     () => onViewDetails(voucher)),
                 const SizedBox(width: 6),
                 _actionBtn(
-                    Icons.print_outlined, 'Print', () => onPrint(voucher)),
+                    Icons.print_outlined, 'general.print'.tr, () => onPrint(voucher)),
                 const SizedBox(width: 6),
-                _actionBtn(Icons.more_horiz, 'More',
+                _actionBtn(Icons.more_horiz, 'general.more'.tr,
                     () => onShowActions(voucher)),
               ],
             ),

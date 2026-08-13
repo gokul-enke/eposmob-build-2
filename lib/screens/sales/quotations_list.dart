@@ -87,8 +87,10 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
 
     try {
       final authProvider = Provider.of<AuthModel>(context, listen: false);
-      final quotationProvider =
-          Provider.of<QuotationsProvider>(context, listen: false);
+      final quotationProvider = Provider.of<QuotationsProvider>(
+        context,
+        listen: false,
+      );
 
       String? startDate;
       if (_selectedQuotationDate != null) {
@@ -150,10 +152,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
   Future<void> _convertQuotationToOrder(Quotation quotation) async {
     final quotationId = quotation.id;
     if (quotationId == null) {
-      showScaffoldError(
-        context: context,
-        message: 'Quotation id not found',
-      );
+      showScaffoldError(context: context, message: 'quotations.err_no_id'.tr);
       return;
     }
     if (_isConvertingQuotation) return;
@@ -161,10 +160,14 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
     setState(() => _isConvertingQuotation = true);
     try {
       final authProvider = Provider.of<AuthModel>(context, listen: false);
-      final quotationsProvider =
-          Provider.of<QuotationsProvider>(context, listen: false);
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
+      final quotationsProvider = Provider.of<QuotationsProvider>(
+        context,
+        listen: false,
+      );
+      final localProductProvider = Provider.of<LocalProductProvider>(
+        context,
+        listen: false,
+      );
 
       final details = await quotationsProvider.fetchQuotationDetails(
         accessToken: authProvider.token ?? '',
@@ -175,24 +178,28 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
       if (details == null || (details.items ?? const []).isEmpty) {
         showScaffoldError(
           context: context,
-          message: 'Quotation details not found',
+          message: 'quotations.err_no_details'.tr,
         );
         return;
       }
 
       debugPrint(
-          '🧾 [QuotationConvert] Loading quotation #$quotationId (${details.quotationNumber ?? quotation.quotationNumber}) into billing draft');
+        '🧾 [QuotationConvert] Loading quotation #$quotationId (${details.quotationNumber ?? quotation.quotationNumber}) into billing draft',
+      );
       debugPrint(
-          '🧾 [QuotationConvert] Customer id=${details.customer?.id}, inline=${details.customer?.isInline}, name="${details.customer?.name}", phone="${details.customer?.phone}"');
+        '🧾 [QuotationConvert] Customer id=${details.customer?.id}, inline=${details.customer?.isInline}, name="${details.customer?.name}", phone="${details.customer?.phone}"',
+      );
       debugPrint(
-          '🧾 [QuotationConvert] Delivery id=${details.deliveryMethodId}, method="${details.deliveryMethod}", charge=${details.deliveryCharge}, items=${details.items?.length ?? 0}');
+        '🧾 [QuotationConvert] Delivery id=${details.deliveryMethodId}, method="${details.deliveryMethod}", charge=${details.deliveryCharge}, items=${details.items?.length ?? 0}',
+      );
 
       final draftItems = <LocalCartItem>[];
       for (final quotationItem in details.items!) {
         final productId = quotationItem.productId;
         if (productId == null) continue;
 
-        final product = localProductProvider.getProductById(productId) ??
+        final product =
+            localProductProvider.getProductById(productId) ??
             GetProduct(
               productId: productId,
               productName: quotationItem.productName,
@@ -207,30 +214,32 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         final saleUnit = _findQuotationSaleUnit(product, saleUnitId);
         final saleUnitName = quotationItem.saleUnitName ?? saleUnit?.unitName;
         final saleUnitConversionRate =
-            _parseQuotationNumber(quotationItem.saleUnitConversionRate)
-                    ?.toDouble() ??
-                double.tryParse(saleUnit?.conversionRate ?? '');
-        final effectiveSaleUnitRate = saleUnitId != null &&
+            _parseQuotationNumber(
+              quotationItem.saleUnitConversionRate,
+            )?.toDouble() ??
+            double.tryParse(saleUnit?.conversionRate ?? '');
+        final effectiveSaleUnitRate =
+            saleUnitId != null &&
                 saleUnitConversionRate != null &&
                 saleUnitConversionRate > 0
             ? saleUnitConversionRate
             : null;
         final hasSaleUnit = effectiveSaleUnitRate != null;
-        final baseQuantity =
-            hasSaleUnit ? quantity * effectiveSaleUnitRate : quantity;
+        final baseQuantity = hasSaleUnit
+            ? quantity * effectiveSaleUnitRate
+            : quantity;
 
-        final selectedStock = _findQuotationStock(
-              product,
-              quotationItem.productStockId,
-            ) ??
+        final selectedStock =
+            _findQuotationStock(product, quotationItem.productStockId) ??
             localProductProvider.selectStockForQuantity(product, baseQuantity);
-        final quotationUnitPrice =
-            _parseQuotationNumber(quotationItem.unitPrice);
+        final quotationUnitPrice = _parseQuotationNumber(
+          quotationItem.unitPrice,
+        );
         final price = quotationUnitPrice != null && hasSaleUnit
             ? quotationUnitPrice / effectiveSaleUnitRate
             : quotationUnitPrice ??
-                (double.tryParse(product.price?.price?.toString() ?? '') ??
-                    0.0);
+                  (double.tryParse(product.price?.price?.toString() ?? '') ??
+                      0.0);
         final productMrp = double.tryParse(product.mrp?.toString() ?? '');
         final mrp = productMrp != null && hasSaleUnit
             ? productMrp / effectiveSaleUnitRate
@@ -241,10 +250,12 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
             product: product,
             price: price.toDouble(),
             mrp: mrp.toDouble(),
-            taxRate: _parseQuotationNumber(quotationItem.taxRate)?.toDouble() ??
+            taxRate:
+                _parseQuotationNumber(quotationItem.taxRate)?.toDouble() ??
                 product.totalTaxRate,
-            taxAmount:
-                _parseQuotationNumber(quotationItem.taxAmount)?.toDouble(),
+            taxAmount: _parseQuotationNumber(
+              quotationItem.taxAmount,
+            )?.toDouble(),
             quantity: baseQuantity,
             selectedStock: selectedStock,
             stockGroupIds: quotationItem.productStockId == null
@@ -258,13 +269,14 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
           ),
         );
         debugPrint(
-            '🧾 [QuotationConvert] Item product=$productId qty=${quotationItem.quantity} baseQty=$baseQuantity price=$price stock=${quotationItem.productStockId} saleUnit=$saleUnitId rate=$effectiveSaleUnitRate');
+          '🧾 [QuotationConvert] Item product=$productId qty=${quotationItem.quantity} baseQty=$baseQuantity price=$price stock=${quotationItem.productStockId} saleUnit=$saleUnitId rate=$effectiveSaleUnitRate',
+        );
       }
 
       if (draftItems.isEmpty) {
         showScaffoldError(
           context: context,
-          message: 'No valid quotation items found',
+          message: 'quotations.err_no_items'.tr,
         );
         return;
       }
@@ -272,14 +284,16 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
       final customer = details.customer;
       final quotationCustomerPhone =
           (customer?.phone?.trim().isNotEmpty ?? false)
-              ? customer!.phone
-              : quotation.customerPhone;
-      final deliveryCharge =
-          _parseQuotationNumber(details.deliveryCharge)?.toDouble();
+          ? customer!.phone
+          : quotation.customerPhone;
+      final deliveryCharge = _parseQuotationNumber(
+        details.deliveryCharge,
+      )?.toDouble();
       localProductProvider.loadQuotationDraftForEditing(
         SavedOrder(
           id: 'quotation-$quotationId',
-          orderNumber: details.quotationNumber ??
+          orderNumber:
+              details.quotationNumber ??
               quotation.quotationNumber ??
               'QT-$quotationId',
           items: draftItems,
@@ -287,7 +301,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
           customerName: customer?.name ?? quotation.customer,
           customerPhone: quotationCustomerPhone,
           createdAt: DateTime.now().toIso8601String(),
-          total: _parseQuotationNumber(details.grandTotal)?.toDouble() ??
+          total:
+              _parseQuotationNumber(details.grandTotal)?.toDouble() ??
               _parseQuotationNumber(quotation.grandTotal)?.toDouble() ??
               0.0,
           deliveryMethod: details.deliveryMethod,
@@ -302,19 +317,17 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         ),
       );
       debugPrint(
-          '🧾 [QuotationConvert] Draft loaded. quotationId=$quotationId, cartItems=${draftItems.length}, route=90');
+        '🧾 [QuotationConvert] Draft loaded. quotationId=$quotationId, cartItems=${draftItems.length}, route=90',
+      );
 
       Get.find<SideBarController>().index.value = 90;
-      showScaffold(
-        context: context,
-        message: 'Quotation loaded in billing. Confirm the order when ready.',
-      );
+      showScaffold(context: context, message: 'quotations.loaded_billing'.tr);
     } catch (e) {
       debugPrint('Error converting quotation: $e');
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'Failed to load quotation in billing',
+          message: 'quotations.err_load_billing'.tr,
         );
       }
     } finally {
@@ -379,10 +392,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
   Future<void> _printQuotation(Quotation quotation) async {
     final quotationId = quotation.id;
     if (quotationId == null) {
-      showScaffoldError(
-        context: context,
-        message: 'Quotation id not found',
-      );
+      showScaffoldError(context: context, message: 'quotations.err_no_id'.tr);
       return;
     }
     if (_isPrintingQuotation) return;
@@ -390,8 +400,10 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
     setState(() => _isPrintingQuotation = true);
     try {
       final authProvider = Provider.of<AuthModel>(context, listen: false);
-      final quotationsProvider =
-          Provider.of<QuotationsProvider>(context, listen: false);
+      final quotationsProvider = Provider.of<QuotationsProvider>(
+        context,
+        listen: false,
+      );
 
       final details = await quotationsProvider.fetchQuotationDetails(
         accessToken: authProvider.token ?? '',
@@ -402,7 +414,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
       if (details == null) {
         showScaffoldError(
           context: context,
-          message: 'Quotation details not found for printing',
+          message: 'quotations.err_no_details_print'.tr,
         );
         return;
       }
@@ -414,10 +426,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
     } catch (e) {
       debugPrint('Error printing quotation: $e');
       if (mounted) {
-        showScaffoldError(
-          context: context,
-          message: 'Failed to print quotation',
-        );
+        showScaffoldError(context: context, message: 'quotations.err_print'.tr);
       }
     } finally {
       if (mounted) setState(() => _isPrintingQuotation = false);
@@ -425,50 +434,56 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
   }
 
   Widget _buildStoreDropdown() {
-    return Consumer<StoreSessionProvider>(builder: (context, prov, _) {
-      final List<Store> list = prov.availableStores;
-      final Store? sel =
-          list.firstWhereOrNull((s) => s.storeId == _selectedStoreId);
-      return BuildDropDownWithSearch<Store>(
-        title: "Store",
-        showName: true,
-        hintText: "Select Store",
-        value: sel,
-        items: list,
-        onChanged: (v) {
-          setState(() {
-            _selectedStoreId = v?.storeId;
-          });
-          _fetchQuotations();
-        },
-        displayText: (v) => v.storeName ?? "",
-        searchController: _storeSearchController,
-        height: 45,
-      );
-    });
+    return Consumer<StoreSessionProvider>(
+      builder: (context, prov, _) {
+        final List<Store> list = prov.availableStores;
+        final Store? sel = list.firstWhereOrNull(
+          (s) => s.storeId == _selectedStoreId,
+        );
+        return BuildDropDownWithSearch<Store>(
+          title: 'quotations.store_col'.tr,
+          showName: true,
+          hintText: 'quotations.select_store'.tr,
+          value: sel,
+          items: list,
+          onChanged: (v) {
+            setState(() {
+              _selectedStoreId = v?.storeId;
+            });
+            _fetchQuotations();
+          },
+          displayText: (v) => v.storeName ?? "",
+          searchController: _storeSearchController,
+          height: 45,
+        );
+      },
+    );
   }
 
   Widget _buildCustomerDropdown() {
-    return Consumer<CustomerProvider>(builder: (context, prov, _) {
-      final CustomerListModelData? sel = prov.allCustomers
-          ?.firstWhereOrNull((s) => s.id.toString() == _selectedCustomerId);
-      return BuildDropDownWithSearch<CustomerListModelData>(
-        title: "Customer",
-        showName: true,
-        hintText: "Select Customer",
-        value: sel,
-        items: prov.allCustomers ?? [],
-        onChanged: (v) {
-          setState(() {
-            _selectedCustomerId = v?.id?.toString();
-          });
-          _fetchQuotations();
-        },
-        displayText: (v) => "${v.name} (${v.phone})",
-        searchController: _customerSearchController,
-        height: 45,
-      );
-    });
+    return Consumer<CustomerProvider>(
+      builder: (context, prov, _) {
+        final CustomerListModelData? sel = prov.allCustomers?.firstWhereOrNull(
+          (s) => s.id.toString() == _selectedCustomerId,
+        );
+        return BuildDropDownWithSearch<CustomerListModelData>(
+          title: 'quotations.customer_col'.tr,
+          showName: true,
+          hintText: 'quotations.select_customer'.tr,
+          value: sel,
+          items: prov.allCustomers ?? [],
+          onChanged: (v) {
+            setState(() {
+              _selectedCustomerId = v?.id?.toString();
+            });
+            _fetchQuotations();
+          },
+          displayText: (v) => "${v.name} (${v.phone})",
+          searchController: _customerSearchController,
+          height: 45,
+        );
+      },
+    );
   }
 
   @override
@@ -488,9 +503,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                   constraints: BoxConstraints(
                     maxHeight: MediaQuery.of(context).size.height * 0.55,
                   ),
-                  child: SingleChildScrollView(
-                    child: _buildFiltersCard(),
-                  ),
+                  child: SingleChildScrollView(child: _buildFiltersCard()),
                 ),
                 const SizedBox(height: 16),
               ],
@@ -506,13 +519,14 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                  ColorManager.kPrimaryColor),
+                                ColorManager.kPrimaryColor,
+                              ),
                             ),
                           ),
                         )
                       : provider.quotations.isEmpty
-                          ? _buildEmptyState(provider)
-                          : _buildQuotationsContent(provider),
+                      ? _buildEmptyState(provider)
+                      : _buildQuotationsContent(provider),
                 ),
               ),
             ],
@@ -526,8 +540,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
     final isPhone = quotationsIsPhone(context);
 
     return QuotationsPageHeader(
-      title: 'Quotation List',
-      subtitle: 'Search, view and convert quotations to orders',
+      title: 'quotations.title'.tr,
+      subtitle: 'quotations.subtitle'.tr,
       leading: isPhone
           ? IconButton(
               icon: Icon(
@@ -544,7 +558,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
       trailing: SizedBox(
         width: isPhone ? double.infinity : 160,
         child: CustomRoundButton(
-          title: 'New Quotation',
+          title: 'quotations.new_quotation'.tr,
           fct: () {
             Get.find<SideBarController>().index.value = 86;
           },
@@ -565,11 +579,11 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const QuotationsSectionTitle(title: 'Filters'),
+          QuotationsSectionTitle(title: 'quotations.filters'.tr),
           const SizedBox(height: 12),
           if (isPhone) ...[
             buildColumnWidgetForTextFields(
-              title: "Quotation #",
+              title: 'quotations.quotation_number_label'.tr,
               height: 45,
               width: double.infinity,
               onchanged: (value) {
@@ -577,7 +591,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
               },
               controller: _quotationNumberController,
               size: size,
-              hintText: 'Search quotation number',
+              hintText: 'quotations.search_hint'.tr,
               margin: const EdgeInsets.symmetric(horizontal: 0),
             ),
             const SizedBox(height: 10),
@@ -586,11 +600,11 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
             _buildStoreDropdown(),
             const SizedBox(height: 10),
             BuildDropDownStatic(
-              title: "Quotation Status",
+              title: 'quotations.quotation_status'.tr,
               size: size,
               items: _statusOptions,
               selectedItem: _selectedStatus,
-              hintText: "All",
+              hintText: 'common.all'.tr,
               onChanged: (v) {
                 setState(() => _selectedStatus = v ?? 'All');
                 _fetchQuotations();
@@ -601,7 +615,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 BuildTextTile(
-                  title: "Quotation Date",
+                  title: 'quotations.quotation_date'.tr,
                   textStyle: buildCustomStyle(
                     FontWeightManager.regular,
                     FontSize.s14,
@@ -630,7 +644,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 BuildTextTile(
-                  title: "Expiry Date",
+                  title: 'quotations.expiry_date'.tr,
                   textStyle: buildCustomStyle(
                     FontWeightManager.regular,
                     FontSize.s14,
@@ -656,7 +670,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
             ),
             const SizedBox(height: 12),
             CustomRoundButton(
-              title: "Reset",
+              title: 'general.reset'.tr,
               boxColor: Colors.white,
               textColor: ColorManager.kPrimaryColor,
               fct: _resetFilters,
@@ -670,7 +684,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
               children: [
                 Expanded(
                   child: buildColumnWidgetForTextFields(
-                    title: "Quotation #",
+                    title: 'quotations.quotation_number_label'.tr,
                     height: 45,
                     width: double.infinity,
                     onchanged: (value) {
@@ -678,7 +692,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                     },
                     controller: _quotationNumberController,
                     size: size,
-                    hintText: 'Search quotation number',
+                    hintText: 'quotations.search_hint'.tr,
                     margin: const EdgeInsets.symmetric(horizontal: 0),
                   ),
                 ),
@@ -689,11 +703,11 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: BuildDropDownStatic(
-                    title: "Quotation Status",
+                    title: 'quotations.quotation_status'.tr,
                     size: size,
                     items: _statusOptions,
                     selectedItem: _selectedStatus,
-                    hintText: "All",
+                    hintText: 'common.all'.tr,
                     onChanged: (v) {
                       setState(() => _selectedStatus = v ?? 'All');
                       _fetchQuotations();
@@ -711,7 +725,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       BuildTextTile(
-                        title: "Quotation Date",
+                        title: 'quotations.quotation_date'.tr,
                         textStyle: buildCustomStyle(
                           FontWeightManager.regular,
                           FontSize.s14,
@@ -742,7 +756,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       BuildTextTile(
-                        title: "Expiry Date",
+                        title: 'quotations.expiry_date'.tr,
                         textStyle: buildCustomStyle(
                           FontWeightManager.regular,
                           FontSize.s14,
@@ -774,7 +788,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                       Opacity(
                         opacity: 0.0,
                         child: BuildTextTile(
-                          title: "Reset",
+                          title: 'general.reset'.tr,
                           textStyle: buildCustomStyle(
                             FontWeightManager.regular,
                             FontSize.s14,
@@ -784,7 +798,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                         ),
                       ),
                       CustomRoundButton(
-                        title: "Reset",
+                        title: 'general.reset'.tr,
                         boxColor: Colors.white,
                         textColor: ColorManager.kPrimaryColor,
                         fct: _resetFilters,
@@ -806,7 +820,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
   }
 
   Widget _buildEmptyState(QuotationsProvider provider) {
-    final hasFilters = _quotationNumberController.text.isNotEmpty ||
+    final hasFilters =
+        _quotationNumberController.text.isNotEmpty ||
         _selectedCustomerId != null ||
         _selectedStoreId != null ||
         _selectedStatus != 'All' ||
@@ -827,8 +842,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
             const SizedBox(height: 12),
             Text(
               provider.quotations.isEmpty && !hasFilters
-                  ? "No quotations available"
-                  : "No quotations match your filters",
+                  ? 'quotations.no_quotations'.tr
+                  : 'quotations.no_quotations_filtered'.tr,
               textAlign: TextAlign.center,
               style: buildCustomStyle(
                 FontWeightManager.medium,
@@ -840,7 +855,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
             if (hasFilters) ...[
               const SizedBox(height: 16),
               CustomRoundButton(
-                title: 'Clear filters',
+                title: 'quotations.clear_filters'.tr,
                 fct: _resetFilters,
                 fontSize: 12,
                 height: 44,
@@ -873,10 +888,12 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
 
   Widget _buildMobileQuotationCard(Quotation q) {
     final status = q.status ?? '';
-    final quotationDate =
-        q.quotationDate != null ? q.quotationDate!.split(' ').first : '—';
-    final expiryDate =
-        q.expiryDate != null ? q.expiryDate!.split(' ').first : '—';
+    final quotationDate = q.quotationDate != null
+        ? q.quotationDate!.split(' ').first
+        : '—';
+    final expiryDate = q.expiryDate != null
+        ? q.expiryDate!.split(' ').first
+        : '—';
 
     return Container(
       padding: const EdgeInsetsDirectional.all(14),
@@ -917,10 +934,11 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                           GestureDetector(
                             onTap: () {
                               Clipboard.setData(
-                                  ClipboardData(text: q.quotationNumber!));
+                                ClipboardData(text: q.quotationNumber!),
+                              );
                               showScaffold(
                                 context: context,
-                                message: 'Quotation number copied to clipboard',
+                                message: 'quotations.copy_success'.tr,
                               );
                             },
                             child: const Icon(
@@ -945,26 +963,23 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                   ],
                 ),
               ),
-              QuotationsStatusBadge(
-                label: status,
-                color: _statusColor(status),
-              ),
+              QuotationsStatusBadge(label: status, color: _statusColor(status)),
             ],
           ),
           const SizedBox(height: 12),
           QuotationsTwoColumnLayout(
             start: QuotationsInfoChip(
-              label: 'Store',
+              label: 'quotations.store_col'.tr,
               value: q.store ?? '—',
             ),
             end: QuotationsInfoChip(
-              label: 'Quotation Date',
+              label: 'quotations.quotation_date'.tr,
               value: quotationDate,
             ),
           ),
           const SizedBox(height: 10),
           QuotationsInfoChip(
-            label: 'Expiry Date',
+            label: 'quotations.expiry_date'.tr,
             value: expiryDate,
           ),
           const SizedBox(height: 12),
@@ -975,12 +990,12 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                 icon: Icons.visibility,
                 backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.9),
                 iconColor: Colors.white,
-                tooltip: 'View details',
+                tooltip: 'quotations.view_tooltip'.tr,
                 onPressed: () {
                   Get.find<SideBarController>().index.value = 88;
-                  context
-                      .read<QuotationsProvider>()
-                      .setSelectedQuotationId(q.id);
+                  context.read<QuotationsProvider>().setSelectedQuotationId(
+                    q.id,
+                  );
                 },
               ),
               const SizedBox(width: 8),
@@ -988,7 +1003,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                 icon: Icons.shopping_cart_checkout,
                 backgroundColor: Colors.orange.withOpacity(0.9),
                 iconColor: Colors.white,
-                tooltip: 'Convert to order',
+                tooltip: 'quotations.convert_tooltip'.tr,
                 onPressed: _isConvertingQuotation
                     ? null
                     : () => _convertQuotationToOrder(q),
@@ -998,9 +1013,10 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                 icon: Icons.print,
                 backgroundColor: Colors.green.withOpacity(0.9),
                 iconColor: Colors.white,
-                tooltip: 'Print quotation',
-                onPressed:
-                    _isPrintingQuotation ? null : () => _printQuotation(q),
+                tooltip: 'quotations.print_tooltip'.tr,
+                onPressed: _isPrintingQuotation
+                    ? null
+                    : () => _printQuotation(q),
               ),
             ],
           ),
@@ -1067,32 +1083,35 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
 
   TableRow _buildTableHeader() {
     return TableRow(
-      children: [
-        'Quotation #',
-        'Customer',
-        'Store',
-        'Quotation Date',
-        'Expiry Date',
-        'Status',
-        'Actions',
-      ]
-          .map(
-            (title) => Padding(
-              padding:
-                  const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-              child: Text(
-                title,
-                textAlign: TextAlign.center,
-                style: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s12,
-                  0.18,
-                  ColorManager.kPrimaryColor,
+      children:
+          [
+                'quotations.quotation_number_label'.tr,
+                'quotations.customer_col'.tr,
+                'quotations.store_col'.tr,
+                'quotations.quotation_date'.tr,
+                'quotations.expiry_date'.tr,
+                'sales.status'.tr,
+                'quotations.actions_col'.tr,
+              ]
+              .map(
+                (title) => Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16.0,
+                    horizontal: 8.0,
+                  ),
+                  child: Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s12,
+                      0.18,
+                      ColorManager.kPrimaryColor,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          )
-          .toList(),
+              )
+              .toList(),
     );
   }
 
@@ -1107,8 +1126,10 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         TableCell(
           verticalAlignment: TableCellVerticalAlignment.middle,
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
+            padding: const EdgeInsets.symmetric(
+              vertical: 16.0,
+              horizontal: 12.0,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -1133,10 +1154,11 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                   GestureDetector(
                     onTap: () {
                       Clipboard.setData(
-                          ClipboardData(text: q.quotationNumber!));
+                        ClipboardData(text: q.quotationNumber!),
+                      );
                       showScaffold(
                         context: context,
-                        message: 'Quotation number copied to clipboard',
+                        message: 'quotations.copy_success'.tr,
                       );
                     },
                     child: const Icon(
@@ -1153,8 +1175,10 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         TableCell(
           verticalAlignment: TableCellVerticalAlignment.middle,
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
+            padding: const EdgeInsets.symmetric(
+              vertical: 16.0,
+              horizontal: 12.0,
+            ),
             child: Center(
               child: SelectableText(
                 q.customer ?? '—',
@@ -1171,7 +1195,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         ),
         _textCell(q.store ?? '—'),
         _textCell(
-            q.quotationDate != null ? q.quotationDate!.split(' ').first : '—'),
+          q.quotationDate != null ? q.quotationDate!.split(' ').first : '—',
+        ),
         _textCell(q.expiryDate != null ? q.expiryDate!.split(' ').first : '—'),
         TableCell(
           verticalAlignment: TableCellVerticalAlignment.middle,
@@ -1196,15 +1221,16 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                 children: [
                   QuotationsIconAction(
                     icon: Icons.visibility,
-                    backgroundColor:
-                        ColorManager.kPrimaryColor.withOpacity(0.9),
+                    backgroundColor: ColorManager.kPrimaryColor.withOpacity(
+                      0.9,
+                    ),
                     iconColor: Colors.white,
-                    tooltip: 'View details',
+                    tooltip: 'quotations.view_tooltip'.tr,
                     onPressed: () {
                       Get.find<SideBarController>().index.value = 88;
-                      context
-                          .read<QuotationsProvider>()
-                          .setSelectedQuotationId(q.id);
+                      context.read<QuotationsProvider>().setSelectedQuotationId(
+                        q.id,
+                      );
                     },
                   ),
                   const SizedBox(width: 6),
@@ -1212,7 +1238,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                     icon: Icons.shopping_cart_checkout,
                     backgroundColor: Colors.orange.withOpacity(0.9),
                     iconColor: Colors.white,
-                    tooltip: 'Convert to order',
+                    tooltip: 'quotations.convert_tooltip'.tr,
                     onPressed: _isConvertingQuotation
                         ? null
                         : () => _convertQuotationToOrder(q),
@@ -1222,9 +1248,10 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                     icon: Icons.print,
                     backgroundColor: Colors.green.withOpacity(0.9),
                     iconColor: Colors.white,
-                    tooltip: 'Print quotation',
-                    onPressed:
-                        _isPrintingQuotation ? null : () => _printQuotation(q),
+                    tooltip: 'quotations.print_tooltip'.tr,
+                    onPressed: _isPrintingQuotation
+                        ? null
+                        : () => _printQuotation(q),
                   ),
                 ],
               ),

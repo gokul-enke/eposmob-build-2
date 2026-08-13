@@ -91,7 +91,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
 
       if (accessToken == null || accessToken.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Authentication token is missing")),
+          SnackBar(content: Text('receipt.auth_token_missing'.tr)),
         );
         return;
       }
@@ -105,7 +105,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     } catch (error) {
       debugPrint("Error loading receipts: $error");
       showScaffold(
-          context: context, message: "Error fetching receipts: $error");
+          context: context, message: 'receipt.error_fetching_receipts'.tr.replaceAll('@error', error.toString()));
     }
   }
 
@@ -116,7 +116,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
 
       if (accessToken == null || accessToken.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Authentication token is missing")),
+          SnackBar(content: Text('receipt.auth_token_missing'.tr)),
         );
         return;
       }
@@ -128,7 +128,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     } catch (error) {
       debugPrint("Error refreshing receipts: $error");
       showScaffold(
-          context: context, message: "Error refreshing receipts: $error");
+          context: context, message: 'receipt.error_refreshing_receipts'.tr.replaceAll('@error', error.toString()));
     }
   }
 
@@ -332,12 +332,12 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Receipt List",
+          'receipt.list_title'.tr,
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
               0.30, ColorManager.textColor),
         ),
         CustomRoundButton(
-          title: "Create Receipt",
+          title: 'receipt.create_receipt_button'.tr,
           fct: () async {
             final result = await showCreateReceiptModal(context, size);
             if (result == true) {
@@ -406,15 +406,15 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     Color textColor;
 
     if (invoiceCount > 0 && generalCount > 0) {
-      displayText = 'Mixed';
+      displayText = 'receipt.type_mixed'.tr;
       backgroundColor = Colors.orange.withOpacity(0.1);
       textColor = Colors.orange;
     } else if (invoiceCount > 0) {
-      displayText = 'Invoice Payment';
+      displayText = 'receipt.type_invoice_payment'.tr;
       backgroundColor = Colors.blue.withOpacity(0.1);
       textColor = Colors.blue;
     } else {
-      displayText = 'General Payment';
+      displayText = 'receipt.type_general_payment'.tr;
       backgroundColor = Colors.green.withOpacity(0.1);
       textColor = Colors.green;
     }
@@ -454,7 +454,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                   0.18, ColorManager.textColor),
               decoration: InputDecoration(
                 border: InputBorder.none,
-                hintText: "YYYY-MM-DD HH:MM:SS",
+                hintText: 'receipt.date_range_hint'.tr,
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor.withOpacity(.5)),
                 prefixIcon: const Icon(
@@ -483,7 +483,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                   0.18, ColorManager.textColor),
               decoration: InputDecoration(
                 border: InputBorder.none,
-                hintText: "YYYY-MM-DD HH:MM:SS",
+                hintText: 'receipt.date_range_hint'.tr,
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor.withOpacity(.5)),
                 prefixIcon: const Icon(
@@ -576,7 +576,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
               Expanded(
                 flex: 1,
                 child: CustomRoundButton(
-                  title: "Reset",
+                  title: 'general.reset'.tr,
                   boxColor: Colors.white,
                   textColor: ColorManager.kPrimaryColor,
                   fct: resetSearch,
@@ -615,7 +615,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
                   0.18, ColorManager.textColor),
               decoration: decoration.copyWith(
-                hintText: "Phone Number",
+                hintText: 'receipt.phone_hint'.tr,
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor),
                 prefixIconColor: Colors.black,
@@ -656,7 +656,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
             style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
                 0.18, ColorManager.textColor),
             decoration: decoration.copyWith(
-              hintText: "Email Address",
+              hintText: 'receipt.email_hint'.tr,
               hintStyle: buildCustomStyle(FontWeightManager.medium,
                   FontSize.s10, 0.18, ColorManager.textColor),
               prefixIconColor: Colors.black,
@@ -698,7 +698,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
             style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
                 0.18, ColorManager.textColor),
             decoration: decoration.copyWith(
-              hintText: "Receipt No.",
+              hintText: 'receipt.receipt_no_hint'.tr,
               hintStyle: buildCustomStyle(FontWeightManager.medium,
                   FontSize.s10, 0.18, ColorManager.textColor),
               prefixIconColor: Colors.black,
@@ -740,7 +740,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
                   0.18, ColorManager.textColor),
               decoration: decoration.copyWith(
-                hintText: "Reference No.",
+                hintText: 'receipt.reference_no_hint'.tr,
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor),
                 prefixIconColor: Colors.black,
@@ -857,7 +857,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
                   0.18, ColorManager.textColor),
               decoration: decoration.copyWith(
-                hintText: "Name",
+                hintText: 'receipt.name_hint'.tr,
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor),
                 prefixIconColor: Colors.black,
@@ -881,20 +881,20 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     showDialog(
       context: context,
       builder: (context) => CommonDetailsDialog(
-        title: 'Receipt payment details',
+        title: 'receipt.receipt_details_title'.tr,
         gridColumns: [
           [
-            CommonDetailsDialog.buildKeyValueRow('Receipt Number', receipt.receiptNumber, copyable: true),
-            CommonDetailsDialog.buildKeyValueRow('Customer', receipt.customer.user.name),
-            CommonDetailsDialog.buildKeyValueRow('Amount', receipt.amount),
+            CommonDetailsDialog.buildKeyValueRow('receipt.field_receipt_number'.tr, receipt.receiptNumber, copyable: true),
+            CommonDetailsDialog.buildKeyValueRow('receipt.field_customer'.tr, receipt.customer.user.name),
+            CommonDetailsDialog.buildKeyValueRow('receipt.field_amount'.tr, receipt.amount),
           ],
           [
-            CommonDetailsDialog.buildKeyValueRow('Company', receipt.company.name),
-            CommonDetailsDialog.buildKeyValueRow('Status', receipt.receiptStatus),
-            CommonDetailsDialog.buildKeyValueRow('Payment reference', receipt.paymentReference),
+            CommonDetailsDialog.buildKeyValueRow('receipt.field_company'.tr, receipt.company.name),
+            CommonDetailsDialog.buildKeyValueRow('receipt.field_status'.tr, receipt.receiptStatus),
+            CommonDetailsDialog.buildKeyValueRow('receipt.field_payment_reference'.tr, receipt.paymentReference),
           ],
         ],
-        sectionTitle: 'Payments',
+        sectionTitle: 'receipt.payments_section_title'.tr,
         tableContent: Column(
           children: [
             // Table Header
@@ -910,7 +910,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                   Expanded(
                     flex: 3,
                     child: Text(
-                      'Date',
+                      'receipt.col_date'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s11,
@@ -922,7 +922,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                   Expanded(
                     flex: 3,
                     child: Text(
-                      'Invoice',
+                      'receipt.col_invoice'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s11,
@@ -934,7 +934,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                   Expanded(
                     flex: 2,
                     child: Text(
-                      'Method',
+                      'receipt.col_method'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s11,
@@ -946,7 +946,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                   Expanded(
                     flex: 2,
                     child: Text(
-                      'Amount',
+                      'receipt.field_amount'.tr,
                       textAlign: TextAlign.right,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
@@ -968,7 +968,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                   ? 'INV-${p.invoiceId}'
                   : (p.description?.isNotEmpty == true
                       ? p.description!
-                      : 'General Payment');
+                      : 'receipt.type_general_payment'.tr);
               return Container(
                 padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                 decoration: BoxDecoration(
@@ -1148,13 +1148,13 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                         children: [
                           TableRow(
                             children: [
-                              _buildTableHeader("Receipt Number"),
-                              _buildTableHeader("Customer Name"),
-                              _buildTableHeader("Amount"),
-                              _buildTableHeader("Type"),
-                              _buildTableHeader("Status"),
-                              _buildTableHeader("Payment Reference"),
-                              _buildTableHeader("Action"),
+                              _buildTableHeader('receipt.col_receipt_number'.tr),
+                              _buildTableHeader('receipt.col_customer_name'.tr),
+                              _buildTableHeader('receipt.field_amount'.tr),
+                              _buildTableHeader('receipt.col_type'.tr),
+                              _buildTableHeader('receipt.col_status'.tr),
+                              _buildTableHeader('receipt.col_payment_reference'.tr),
+                              _buildTableHeader('receipt.col_action'.tr),
                             ],
                           ),
                         ],
@@ -1176,7 +1176,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                                   ),
                                   const SizedBox(height: 15),
                                   Text(
-                                    'No receipts available',
+                                    'receipt.no_receipts_available'.tr,
                                     style: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s18,
@@ -1186,7 +1186,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Try adjusting your search criteria',
+                                    'receipt.try_adjusting_search'.tr,
                                     style: buildCustomStyle(
                                       FontWeightManager.regular,
                                       FontSize.s14,
@@ -1272,7 +1272,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                                                         new_dialog.showScaffold(
                                                           context: context,
                                                           message:
-                                                              'Copied to clipboard',
+                                                              'receipt.copied_to_clipboard'.tr,
                                                         );
                                                       },
                                                       child: const Icon(
@@ -1342,7 +1342,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                                                           new_dialog.showScaffold(
                                                             context: context,
                                                             message:
-                                                                'Copied to clipboard',
+                                                                'receipt.copied_to_clipboard'.tr,
                                                           );
                                                         },
                                                         child: const Icon(

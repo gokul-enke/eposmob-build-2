@@ -72,7 +72,7 @@ class _SalesExecutiveReportScreenState
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error loading data: $error',
+          message: 'sales_executive_report.err_loading_data'.tr.replaceAll('@error', error.toString()),
         );
       }
     } finally {
@@ -120,7 +120,7 @@ class _SalesExecutiveReportScreenState
       if (response != null && response['status'] == 'error') {
         showScaffoldError(
           context: context,
-          message: response['message'] ?? 'Failed to fetch report data',
+          message: response['message'] ?? 'sales_executive_report.failed_fetch_report'.tr,
         );
       }
     } catch (error) {
@@ -128,7 +128,7 @@ class _SalesExecutiveReportScreenState
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error fetching report: $error',
+          message: 'sales_executive_report.err_fetching_report'.tr.replaceAll('@error', error.toString()),
         );
       }
     }
@@ -140,8 +140,8 @@ class _SalesExecutiveReportScreenState
     if (from == null || to == null || !from.isAfter(to)) return true;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(
-        content: Text('From Date cannot be after To Date.'),
+      ..showSnackBar(SnackBar(
+        content: Text('sales_executive_report.from_date_after_to_date'.tr),
         backgroundColor: Colors.orange,
       ));
     return false;
@@ -270,7 +270,7 @@ class _SalesExecutiveReportScreenState
       children: [
         Expanded(
           child: Text(
-            "My Sales Report",
+            'sales_executive_report.title'.tr,
             style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
                 0.30, ColorManager.textColor),
           ),
@@ -284,7 +284,7 @@ class _SalesExecutiveReportScreenState
               color: ColorManager.kPrimaryColor,
             ),
             label: Text(
-              _showFilters ? 'Hide' : 'Filters',
+              _showFilters ? 'sales_executive_report.hide'.tr : 'sales_executive_report.filters'.tr,
               style: const TextStyle(
                   color: ColorManager.kPrimaryColor, fontSize: 12),
             ),
@@ -307,7 +307,7 @@ class _SalesExecutiveReportScreenState
           ),
           const SizedBox(height: 8),
           CustomRoundButton(
-            title: "Reset",
+            title: 'sales_executive_report.reset'.tr,
             boxColor: Colors.white,
             textColor: ColorManager.kPrimaryColor,
             fct: resetSearch,
@@ -339,7 +339,7 @@ class _SalesExecutiveReportScreenState
                 child: Padding(
                   padding: const EdgeInsets.only(top: 42),
                   child: CustomRoundButton(
-                    title: "Reset",
+                    title: 'sales_executive_report.reset'.tr,
                     boxColor: Colors.white,
                     textColor: ColorManager.kPrimaryColor,
                     fct: resetSearch,
@@ -363,7 +363,7 @@ class _SalesExecutiveReportScreenState
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(
-            "From Date",
+            'sales_executive_report.from_date'.tr,
             style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
                 0.27, Colors.black.withOpacity(0.6)),
           ),
@@ -408,7 +408,7 @@ class _SalesExecutiveReportScreenState
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(
-            "To Date",
+            'sales_executive_report.to_date'.tr,
             style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
                 0.27, Colors.black.withOpacity(0.6)),
           ),
@@ -465,7 +465,7 @@ class _SalesExecutiveReportScreenState
               children: [
                 Expanded(
                   child: SelectableText(
-                    report.name ?? 'N/A',
+                    report.name ?? 'sales_executive_report.na'.tr,
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s14, 0.20, ColorManager.textColor),
                   ),
@@ -481,7 +481,7 @@ class _SalesExecutiveReportScreenState
               ],
             ),
             SelectableText(
-              report.phone ?? 'N/A',
+              report.phone ?? 'sales_executive_report.na'.tr,
               style: buildCustomStyle(
                   FontWeightManager.regular, FontSize.s12, 0.18, Colors.grey),
             ),
@@ -489,27 +489,27 @@ class _SalesExecutiveReportScreenState
             Row(
               children: [
                 _buildMobileCardStat(
-                    'Orders', (report.orderCount ?? 0).toString()),
+                    'sales_executive_report.orders'.tr, (report.orderCount ?? 0).toString()),
                 _buildMobileCardStat(
-                    'Total Sales', '$currency ${report.formattedTotalSales}'),
+                    'sales_executive_report.total_sales'.tr, '$currency ${report.formattedTotalSales}'),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: [
                 _buildMobileCardStat(
-                    'Cash Sales', '$currency ${report.formattedCashSales}'),
+                    'sales_executive_report.cash_sales'.tr, '$currency ${report.formattedCashSales}'),
                 _buildMobileCardStat(
-                    'Online Sales', '$currency ${report.formattedOnlineSales}'),
+                    'sales_executive_report.online_sales'.tr, '$currency ${report.formattedOnlineSales}'),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: [
                 _buildMobileCardStat(
-                    'Credit Sales', '$currency ${report.formattedCreditSales}'),
+                    'sales_executive_report.credit_sales'.tr, '$currency ${report.formattedCreditSales}'),
                 _buildMobileCardStat(
-                    'Collected', '$currency ${report.formattedCollectedSales}'),
+                    'sales_executive_report.collected'.tr, '$currency ${report.formattedCollectedSales}'),
               ],
             ),
           ],
@@ -606,15 +606,15 @@ class _SalesExecutiveReportScreenState
                         children: [
                           TableRow(
                             children: [
-                              _buildTableHeader("Executive Name"),
-                              _buildTableHeader("Phone"),
-                              _buildTableHeader("Total Orders"),
-                              _buildTableHeader("Total Sales"),
-                              _buildTableHeader("Online Sales"),
-                              _buildTableHeader("Cash Sales"),
-                              _buildTableHeader("Credit Sales"),
-                              _buildTableHeader("Collected Sales"),
-                              _buildTableHeader("Actions"),
+                              _buildTableHeader('sales_executive_report.executive_name'.tr),
+                              _buildTableHeader('sales_executive_report.phone'.tr),
+                              _buildTableHeader('sales_executive_report.total_orders'.tr),
+                              _buildTableHeader('sales_executive_report.total_sales'.tr),
+                              _buildTableHeader('sales_executive_report.online_sales'.tr),
+                              _buildTableHeader('sales_executive_report.cash_sales'.tr),
+                              _buildTableHeader('sales_executive_report.credit_sales'.tr),
+                              _buildTableHeader('sales_executive_report.collected_sales'.tr),
+                              _buildTableHeader('sales_executive_report.actions'.tr),
                             ],
                           ),
                         ],
@@ -675,7 +675,7 @@ class _SalesExecutiveReportScreenState
                                                   padding:
                                                       const EdgeInsets.all(8.0),
                                                   child: SelectableText(
-                                                    report.name ?? "N/A",
+                                                    report.name ?? 'sales_executive_report.na'.tr,
                                                     textAlign: TextAlign.center,
                                                     style: buildCustomStyle(
                                                       FontWeightManager.medium,
@@ -694,7 +694,7 @@ class _SalesExecutiveReportScreenState
                                                   padding:
                                                       const EdgeInsets.all(8.0),
                                                   child: SelectableText(
-                                                    report.phone ?? "N/A",
+                                                    report.phone ?? 'sales_executive_report.na'.tr,
                                                     textAlign: TextAlign.center,
                                                     style: buildCustomStyle(
                                                       FontWeightManager.medium,
@@ -753,7 +753,7 @@ class _SalesExecutiveReportScreenState
           ),
           const SizedBox(height: 15),
           Text(
-            'No report data found',
+            'sales_executive_report.no_report_data'.tr,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s18,
@@ -763,7 +763,7 @@ class _SalesExecutiveReportScreenState
           ),
           const SizedBox(height: 8),
           Text(
-            'Try adjusting the date filters or check back later',
+            'sales_executive_report.adjust_date_filters'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,
@@ -792,7 +792,7 @@ class _SalesExecutiveReportScreenState
           ),
           const SizedBox(height: 15),
           Text(
-            'Error Loading Report',
+            'sales_executive_report.error_loading_report'.tr,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s18,
@@ -824,7 +824,7 @@ class _SalesExecutiveReportScreenState
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: const Text('Retry'),
+            child: Text('sales_executive_report.retry'.tr),
           ),
         ],
       ),
@@ -936,7 +936,7 @@ class _SalesExecutiveReportScreenState
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Sales Executive Details',
+                        'sales_executive_report.executive_details'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s20,
@@ -960,7 +960,7 @@ class _SalesExecutiveReportScreenState
                                 vertical: 8,
                               ),
                               child: Text(
-                                'Back',
+                                'sales_executive_report.back'.tr,
                                 style: buildCustomStyle(
                                   FontWeightManager.medium,
                                   FontSize.s14,
@@ -984,17 +984,17 @@ class _SalesExecutiveReportScreenState
                       children: [
                         // Executive Information Section
                         _buildSection(
-                          title: 'Executive Information',
+                          title: 'sales_executive_report.executive_information'.tr,
                           children: [
                             _buildInfoRow(
-                              _buildInfoItem('Name', report.name ?? 'N/A'),
-                              _buildInfoItem('Phone', report.phone ?? 'N/A'),
+                              _buildInfoItem('sales_executive_report.name'.tr, report.name ?? 'sales_executive_report.na'.tr),
+                              _buildInfoItem('sales_executive_report.phone'.tr, report.phone ?? 'sales_executive_report.na'.tr),
                             ),
                             const SizedBox(height: 16),
                             _buildInfoRow(
-                              _buildInfoItem('Date Range', dateRange),
+                              _buildInfoItem('sales_executive_report.date_range'.tr, dateRange),
                               _buildInfoItem(
-                                'Total Orders',
+                                'sales_executive_report.total_orders'.tr,
                                 (report.orderCount ?? 0).toString(),
                               ),
                             ),
@@ -1003,42 +1003,42 @@ class _SalesExecutiveReportScreenState
                         const SizedBox(height: 16),
                         // Financial Summary Section
                         _buildSection(
-                          title: 'Financial Summary',
+                          title: 'sales_executive_report.financial_summary'.tr,
                           children: [
                             _buildFinancialItem(
-                              'Total Sales',
+                              'sales_executive_report.total_sales'.tr,
                               '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedTotalSales}',
                             ),
                             _buildFinancialItem(
-                              'Total Payment Received',
+                              'sales_executive_report.total_payment_received'.tr,
                               '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedTotalPaymentReceived}',
                             ),
                             _buildFinancialItem(
-                              'Total Amount Collected On Sale',
+                              'sales_executive_report.total_amount_collected_on_sale'.tr,
                               '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedTotalCollectedOnSale}',
                             ),
                             _buildFinancialItem(
-                              'Total Credit Collected (Prev Balance)',
+                              'sales_executive_report.total_credit_collected_prev'.tr,
                               '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCollectedSales}',
                             ),
                             _buildFinancialItem(
-                              'Total UPI Sales',
+                              'sales_executive_report.total_upi_sales'.tr,
                               '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedUpiSales}',
                             ),
                             _buildFinancialItem(
-                              'Total Card Sales',
+                              'sales_executive_report.total_card_sales'.tr,
                               '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCardSales}',
                             ),
                             _buildFinancialItem(
-                              'Total Online Sales',
+                              'sales_executive_report.total_online_sales'.tr,
                               '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedOnlineSales}',
                             ),
                             _buildFinancialItem(
-                              'Total Cash Sales',
+                              'sales_executive_report.total_cash_sales'.tr,
                               '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCashSales}',
                             ),
                             _buildFinancialItem(
-                              'Total Credit Amount',
+                              'sales_executive_report.total_credit_amount'.tr,
                               '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCreditSales}',
                             ),
                           ],

@@ -206,7 +206,7 @@ class _SupplierTransactionDetailsScreenState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Error loading transaction data: $error"),
+            content: Text('supplier_transaction_report.err_loading_transaction_data'.tr.replaceAll('@error', error.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -383,7 +383,7 @@ class _SupplierTransactionDetailsScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Supplier Transaction Details",
+                    'supplier_transaction_report.transaction_details_title'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s20,
@@ -393,7 +393,7 @@ class _SupplierTransactionDetailsScreenState
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    "Supplier: $selectedSupplierName",
+                    'supplier_transaction_report.supplier_prefix'.tr.replaceAll('@name', selectedSupplierName),
                     style: buildCustomStyle(
                       FontWeightManager.medium,
                       FontSize.s14,
@@ -408,7 +408,7 @@ class _SupplierTransactionDetailsScreenState
               Row(
                 children: [
                   CustomRoundButton(
-                    title: "Print",
+                    title: 'supplier_transaction_report.print'.tr,
                     boxColor: ColorManager.kPrimaryColor,
                     textColor: Colors.white,
                     fct: _printReport,
@@ -418,7 +418,7 @@ class _SupplierTransactionDetailsScreenState
                   ),
                   const SizedBox(width: 10),
                   CustomRoundButton(
-                    title: "Back to Report",
+                    title: 'supplier_transaction_report.back_to_report'.tr,
                     boxColor: Colors.white,
                     textColor: ColorManager.kPrimaryColor,
                     fct: () {
@@ -439,7 +439,7 @@ class _SupplierTransactionDetailsScreenState
                   color: ColorManager.kPrimaryColor,
                 ),
                 label: Text(
-                  _showFilters ? 'Hide' : 'Filters',
+                  _showFilters ? 'supplier_transaction_report.hide'.tr : 'supplier_transaction_report.filters'.tr,
                   style: const TextStyle(
                       color: ColorManager.kPrimaryColor, fontSize: 12),
                 ),
@@ -452,7 +452,7 @@ class _SupplierTransactionDetailsScreenState
             children: [
               Expanded(
                 child: CustomRoundButton(
-                  title: "Print",
+                  title: 'supplier_transaction_report.print'.tr,
                   boxColor: ColorManager.kPrimaryColor,
                   textColor: Colors.white,
                   fct: _printReport,
@@ -464,7 +464,7 @@ class _SupplierTransactionDetailsScreenState
               const SizedBox(width: 8),
               Expanded(
                 child: CustomRoundButton(
-                  title: "Back",
+                  title: 'supplier_transaction_report.back'.tr,
                   boxColor: Colors.white,
                   textColor: ColorManager.kPrimaryColor,
                   fct: () => sideBarController.index.value = 67,
@@ -490,10 +490,10 @@ class _SupplierTransactionDetailsScreenState
             children: [
               Expanded(
                   child:
-                      _buildDateField("From Date", _fromDateController, true)),
+                      _buildDateField('supplier_transaction_report.from_date'.tr, _fromDateController, true)),
               const SizedBox(width: 8),
               Expanded(
-                  child: _buildDateField("To Date", _toDateController, false)),
+                  child: _buildDateField('supplier_transaction_report.to_date'.tr, _toDateController, false)),
             ],
           ),
           const SizedBox(height: 8),
@@ -501,7 +501,7 @@ class _SupplierTransactionDetailsScreenState
             children: [
               Expanded(
                 child: _buildDropdownField(
-                  "Type",
+                  'supplier_transaction_report.type_label'.tr,
                   selectedTransactionType,
                   ['All', 'Credit', 'Debit'],
                   (value) {
@@ -513,7 +513,7 @@ class _SupplierTransactionDetailsScreenState
               const SizedBox(width: 8),
               Expanded(
                 child: _buildDropdownField(
-                  "Payment",
+                  'supplier_transaction_report.payment_label'.tr,
                   selectedPaymentMethod,
                   ['All', 'Cash', 'Card', 'Bank Transfer', 'Cheque', 'UPI'],
                   (value) {
@@ -526,7 +526,7 @@ class _SupplierTransactionDetailsScreenState
           ),
           const SizedBox(height: 8),
           CustomRoundButton(
-            title: "Reset",
+            title: 'supplier_transaction_report.reset'.tr,
             boxColor: Colors.white,
             textColor: ColorManager.kPrimaryColor,
             fct: _resetFilters,
@@ -551,7 +551,7 @@ class _SupplierTransactionDetailsScreenState
               Expanded(
                 flex: 1,
                 child: _buildDateField(
-                  "From Date",
+                  'supplier_transaction_report.from_date'.tr,
                   _fromDateController,
                   true,
                 ),
@@ -559,7 +559,7 @@ class _SupplierTransactionDetailsScreenState
               Expanded(
                 flex: 1,
                 child: _buildDateField(
-                  "To Date",
+                  'supplier_transaction_report.to_date'.tr,
                   _toDateController,
                   false,
                 ),
@@ -567,7 +567,7 @@ class _SupplierTransactionDetailsScreenState
               Expanded(
                 flex: 1,
                 child: _buildDropdownField(
-                  "Transaction Type",
+                  'supplier_transaction_report.transaction_type_label'.tr,
                   selectedTransactionType,
                   ['All', 'Credit', 'Debit'],
                   (value) {
@@ -589,7 +589,7 @@ class _SupplierTransactionDetailsScreenState
               Expanded(
                 flex: 1,
                 child: _buildDropdownField(
-                  "Payment Method",
+                  'supplier_transaction_report.payment_method_label'.tr,
                   selectedPaymentMethod,
                   ['All', 'Cash', 'Card', 'Bank Transfer', 'Cheque', 'UPI'],
                   (value) {
@@ -613,7 +613,7 @@ class _SupplierTransactionDetailsScreenState
                 child: Padding(
                   padding: const EdgeInsets.only(top: 45, left: 10),
                   child: CustomRoundButton(
-                    title: "Reset",
+                    title: 'supplier_transaction_report.reset'.tr,
                     boxColor: Colors.white,
                     textColor: ColorManager.kPrimaryColor,
                     fct: _resetFilters,
@@ -639,7 +639,7 @@ class _SupplierTransactionDetailsScreenState
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text(
-              "Search",
+              'supplier_transaction_report.search'.tr,
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s14,
@@ -662,7 +662,7 @@ class _SupplierTransactionDetailsScreenState
                 _applyFiltersFromCurrentData();
               },
               decoration: InputDecoration(
-                hintText: "Search by reference, type, amount",
+                hintText: 'supplier_transaction_report.search_hint'.tr,
                 hintStyle: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s12,
@@ -735,7 +735,7 @@ class _SupplierTransactionDetailsScreenState
                   : null,
               firstDate: DateTime(2000),
               lastDate: DateTime(2101),
-              hintText: "Select Date",
+              hintText: 'supplier_transaction_report.select_date_hint'.tr,
               isAllowEdit: true,
             ),
           ),
@@ -772,7 +772,7 @@ class _SupplierTransactionDetailsScreenState
               value: selectedValue == 'All' ? null : selectedValue,
               decoration: decoration.copyWith(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                hintText: "All $label",
+                hintText: 'supplier_transaction_report.all_prefix'.tr.replaceAll('@label', label),
                 hintStyle: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s10,
@@ -784,11 +784,11 @@ class _SupplierTransactionDetailsScreenState
               ),
               dropdownColor: Colors.white,
               items: [
-                const DropdownMenuItem(
+                DropdownMenuItem(
                   value: null,
                   child: Text(
-                    "All",
-                    style: TextStyle(
+                    'supplier_transaction_report.all'.tr,
+                    style: const TextStyle(
                       fontSize: 12,
                       color: Colors.grey,
                     ),
@@ -888,9 +888,9 @@ class _SupplierTransactionDetailsScreenState
             const Divider(height: 12),
             Row(
               children: [
-                _buildMobileCardStat('Amount',
+                _buildMobileCardStat('supplier_transaction_report.amount_col'.tr,
                     '${tx.currency} ${double.tryParse(tx.amount)?.toStringAsFixed(2) ?? tx.amount}'),
-                _buildMobileCardStat('Payment', tx.paymentMethod),
+                _buildMobileCardStat('supplier_transaction_report.payment_label'.tr, tx.paymentMethod),
               ],
             ),
             if (tx.transactionType.isNotEmpty) ...[
@@ -917,26 +917,26 @@ class _SupplierTransactionDetailsScreenState
       case 'COMPLETED':
         bg = Colors.green.withOpacity(0.1);
         fg = Colors.green;
-        label = 'Success';
+        label = 'supplier_transaction_report.success_label'.tr;
         break;
       case 'INIT':
       case 'INITIATED':
       case 'PENDING':
         bg = Colors.orange.withOpacity(0.1);
         fg = Colors.orange;
-        label = 'Pending';
+        label = 'supplier_transaction_report.pending_label'.tr;
         break;
       case 'FAIL':
       case 'FAILED':
       case 'CANCELLED':
         bg = Colors.red.withOpacity(0.1);
         fg = Colors.red;
-        label = 'Failed';
+        label = 'supplier_transaction_report.failed_label'.tr;
         break;
       default:
         bg = Colors.grey.withOpacity(0.1);
         fg = Colors.grey;
-        label = status.isEmpty ? 'N/A' : status;
+        label = status.isEmpty ? 'supplier_transaction_report.na'.tr : status;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1022,13 +1022,13 @@ class _SupplierTransactionDetailsScreenState
                 children: [
                   TableRow(
                     children: [
-                      _buildTableHeader("Date"),
-                      _buildTableHeader("Reference"),
-                      _buildTableHeader("Type"),
-                      _buildTableHeader("Transaction Type"),
-                      _buildTableHeader("Amount"),
-                      _buildTableHeader("Payment Method"),
-                      _buildTableHeader("Status"),
+                      _buildTableHeader('supplier_transaction_report.date_col'.tr),
+                      _buildTableHeader('supplier_transaction_report.reference_col'.tr),
+                      _buildTableHeader('supplier_transaction_report.type_label'.tr),
+                      _buildTableHeader('supplier_transaction_report.transaction_type_label'.tr),
+                      _buildTableHeader('supplier_transaction_report.amount_col'.tr),
+                      _buildTableHeader('supplier_transaction_report.payment_method_label'.tr),
+                      _buildTableHeader('supplier_transaction_report.status_col'.tr),
                     ],
                   ),
                 ],
@@ -1098,7 +1098,7 @@ class _SupplierTransactionDetailsScreenState
           ),
           const SizedBox(height: 15),
           Text(
-            'No transactions found',
+            'supplier_transaction_report.no_transactions_found'.tr,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s18,
@@ -1108,7 +1108,7 @@ class _SupplierTransactionDetailsScreenState
           ),
           const SizedBox(height: 8),
           Text(
-            'Try adjusting your filters',
+            'supplier_transaction_report.try_adjusting_filters'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,
@@ -1193,26 +1193,26 @@ class _SupplierTransactionDetailsScreenState
       case 'COMPLETED':
         bg = Colors.green.withOpacity(0.1);
         fg = Colors.green;
-        label = 'Success';
+        label = 'supplier_transaction_report.success_label'.tr;
         break;
       case 'INIT':
       case 'INITIATED':
       case 'PENDING':
         bg = Colors.orange.withOpacity(0.1);
         fg = Colors.orange;
-        label = 'Pending';
+        label = 'supplier_transaction_report.pending_label'.tr;
         break;
       case 'FAIL':
       case 'FAILED':
       case 'CANCELLED':
         bg = Colors.red.withOpacity(0.1);
         fg = Colors.red;
-        label = 'Failed';
+        label = 'supplier_transaction_report.failed_label'.tr;
         break;
       default:
         bg = Colors.grey.withOpacity(0.1);
         fg = Colors.grey;
-        label = status.isEmpty ? 'N/A' : status;
+        label = status.isEmpty ? 'supplier_transaction_report.na'.tr : status;
     }
 
     return TableCell(
@@ -1265,7 +1265,7 @@ class _SupplierTransactionDetailsScreenState
     if (mounted) {
       showScaffold(
         context: context,
-        message: "Preparing supplier transaction report...",
+        message: 'supplier_transaction_report.preparing_supplier_report'.tr,
       );
     }
 

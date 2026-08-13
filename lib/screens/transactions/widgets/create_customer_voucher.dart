@@ -225,26 +225,26 @@ class _CreateCustomerVoucherScreenState
   Future<void> _submitVoucher() async {
     if (!_formKey.currentState!.validate()) return;
     if (selectedCustomerId == null) {
-      showScaffoldError(context: context, message: 'Please select a customer');
+      showScaffoldError(context: context, message: 'customer_voucher.select_customer_required'.tr);
       return;
     }
     if (selectedType == null) {
-      showScaffoldError(context: context, message: 'Please select a type');
+      showScaffoldError(context: context, message: 'customer_voucher.select_type_required'.tr);
       return;
     }
     if (selectedStatus == null) {
-      showScaffoldError(context: context, message: 'Please select a status');
+      showScaffoldError(context: context, message: 'customer_voucher.select_status_required'.tr);
       return;
     }
     if (selectedPaymentMethod == null) {
       showScaffoldError(
-          context: context, message: 'Please select a payment method');
+          context: context, message: 'customer_voucher.select_payment_method_required'.tr);
       return;
     }
     if (voucherItems.isEmpty ||
         voucherItems.every((item) => item.itemName.isEmpty)) {
       showScaffoldError(
-          context: context, message: 'Please add at least one item');
+          context: context, message: 'customer_voucher.add_at_least_one_item_required'.tr);
       return;
     }
 
@@ -283,18 +283,18 @@ class _CreateCustomerVoucherScreenState
       if (result['success']) {
         showScaffold(
           context: context,
-          message: result['message'] ?? 'Voucher created successfully',
+          message: result['message'] ?? 'customer_voucher.created_successfully'.tr,
         );
         // Navigate back to voucher list
         sideBarController.index.value = 70;
       } else {
         showScaffoldError(
           context: context,
-          message: result['message'] ?? 'Failed to create voucher',
+          message: result['message'] ?? 'customer_voucher.create_failed'.tr,
         );
       }
     } catch (e) {
-      showScaffoldError(context: context, message: 'Error: $e');
+      showScaffoldError(context: context, message: 'customer_voucher.error_generic'.tr.replaceAll('@error', e.toString()));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -327,7 +327,7 @@ class _CreateCustomerVoucherScreenState
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "Create Voucher",
+                    'customer_voucher.create_voucher_button'.tr,
                     style: buildCustomStyle(FontWeightManager.bold,
                         FontSize.s24, 0.36, Colors.black),
                   ),
@@ -353,7 +353,7 @@ class _CreateCustomerVoucherScreenState
                           const SizedBox(width: 16),
                           Expanded(
                             child: _buildDateField(
-                              'Voucher date',
+                              'customer_voucher.voucher_date_label'.tr,
                               selectedVoucherDate,
                               (DateTime date) =>
                                   setState(() => selectedVoucherDate = date),
@@ -420,7 +420,7 @@ class _CreateCustomerVoucherScreenState
                       const SizedBox(height: 24),
                       // Voucher Items Section
                       Text(
-                        'Voucher items',
+                        'customer_voucher.voucher_items_label'.tr,
                         style: buildCustomStyle(FontWeightManager.semiBold,
                             FontSize.s16, 0.27, Colors.black),
                       ),
@@ -443,7 +443,7 @@ class _CreateCustomerVoucherScreenState
                               Row(
                                 children: [
                                   Text(
-                                    'Items',
+                                    'customer_voucher.items_label'.tr,
                                     style: TextStyle(
                                       fontSize: 16,
                                       color: Colors.grey[600],
@@ -464,7 +464,7 @@ class _CreateCustomerVoucherScreenState
                               Row(
                                 children: [
                                   Text(
-                                    'Total Amount',
+                                    'customer_voucher.total_amount_label'.tr,
                                     style: TextStyle(
                                       fontSize: 16,
                                       color: Colors.grey[600],
@@ -519,7 +519,7 @@ class _CreateCustomerVoucherScreenState
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   CustomRoundButton(
-                    title: "Cancel",
+                    title: 'general.cancel'.tr,
                     boxColor: Colors.white,
                     textColor: ColorManager.kPrimaryColor,
                     borderColor: ColorManager.kPrimaryColor,
@@ -530,7 +530,7 @@ class _CreateCustomerVoucherScreenState
                   ),
                   const SizedBox(width: 16),
                   CustomRoundButton(
-                    title: _isLoading ? "Submitting..." : "Submit",
+                    title: _isLoading ? 'customer_voucher.submitting'.tr : 'customer_voucher.submit_button'.tr,
                     boxColor: ColorManager.kPrimaryColor,
                     textColor: Colors.white,
                     fct: _isLoading ? () {} : _submitVoucher,
@@ -620,7 +620,7 @@ class _CreateCustomerVoucherScreenState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Type',
+          'customer_voucher.type_label'.tr,
           style: buildCustomStyle(FontWeightManager.regular, FontSize.s14, 0.27,
               Colors.black.withOpacity(0.6)),
         ),
@@ -629,7 +629,7 @@ class _CreateCustomerVoucherScreenState
           focusNode: typeFocus,
           title: null,
           showName: false,
-          hintText: 'Select Type',
+          hintText: 'customer_voucher.select_type_hint'.tr,
           value: selectedType,
           items: typeOptions.map((t) => t['value']!).toList(),
           onChanged: (String? value) {
@@ -638,10 +638,19 @@ class _CreateCustomerVoucherScreenState
             FocusScope.of(context).requestFocus(voucherDateFocus);
           },
           displayText: (String? value) {
-            if (value == null) return 'Select Type';
-            final type = typeOptions.firstWhere((t) => t['value'] == value,
-                orElse: () => {'display': 'Unknown'});
-            return type['display']!;
+            if (value == null) return 'customer_voucher.select_type_hint'.tr;
+            switch (value) {
+              case 'order':
+                return 'customer_voucher.type_order'.tr;
+              case 'discount':
+                return 'customer_voucher.type_discount'.tr;
+              case 'sales_return':
+                return 'customer_voucher.type_sales_return'.tr;
+              case 'other':
+                return 'customer_voucher.type_other'.tr;
+              default:
+                return 'general.unknown'.tr;
+            }
           },
           height: 45,
         ),
@@ -688,7 +697,7 @@ class _CreateCustomerVoucherScreenState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Payment method',
+          'customer_voucher.payment_method_label'.tr,
           style: buildCustomStyle(FontWeightManager.regular, FontSize.s14, 0.27,
               Colors.black.withOpacity(0.6)),
         ),
@@ -698,7 +707,7 @@ class _CreateCustomerVoucherScreenState
           title: null,
           showName: false,
           hintText:
-              _isLoadingPaymentMethods ? 'Loading...' : 'Select Payment Method',
+              _isLoadingPaymentMethods ? 'customer_voucher.loading'.tr : 'customer_voucher.select_payment_method_hint'.tr,
           value: selectedPaymentMethod,
           items: _paymentMethods.map((m) => m.value).toList(),
           onChanged: (String? value) {
@@ -707,7 +716,7 @@ class _CreateCustomerVoucherScreenState
             FocusScope.of(context).requestFocus(customerFocus);
           },
           displayText: (String? value) {
-            if (value == null) return 'Select Payment Method';
+            if (value == null) return 'customer_voucher.select_payment_method_hint'.tr;
             try {
               return _paymentMethods
                   .firstWhere((m) => m.value == value)
@@ -739,7 +748,7 @@ class _CreateCustomerVoucherScreenState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Customer*',
+          'customer_voucher.customer_label'.tr,
           style: buildCustomStyle(FontWeightManager.regular, FontSize.s14, 0.27,
               Colors.black.withOpacity(0.6)),
         ),
@@ -748,7 +757,7 @@ class _CreateCustomerVoucherScreenState
           focusNode: customerFocus,
           title: null,
           showName: false,
-          hintText: 'Select a customer',
+          hintText: 'customer_voucher.select_customer_hint'.tr,
           value: selectedCustomerId,
           items: customers.map((c) => c['id'] as int).toList(),
           onChanged: (int? value) {
@@ -767,10 +776,10 @@ class _CreateCustomerVoucherScreenState
             }
           },
           displayText: (int? id) {
-            if (id == null) return 'Select a customer';
+            if (id == null) return 'customer_voucher.select_customer_hint'.tr;
             final customer =
                 customers.firstWhere((c) => c['id'] == id, orElse: () => {});
-            return customer['name'] ?? 'Unknown';
+            return customer['name'] ?? 'general.unknown'.tr;
           },
           height: 45,
         ),
@@ -791,7 +800,7 @@ class _CreateCustomerVoucherScreenState
             child: Padding(
               padding: const EdgeInsets.all(12.0),
               child: Text(
-                'Item name*',
+                'customer_voucher.col_item_name_required'.tr,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s11, 0.18, ColorManager.kPrimaryColor),
               ),
@@ -801,7 +810,7 @@ class _CreateCustomerVoucherScreenState
             child: Padding(
               padding: const EdgeInsets.all(12.0),
               child: Text(
-                'Unit amount*',
+                'customer_voucher.col_unit_amount_required'.tr,
                 textAlign: TextAlign.center,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s11, 0.18, ColorManager.kPrimaryColor),
@@ -823,7 +832,7 @@ class _CreateCustomerVoucherScreenState
             child: Padding(
               padding: const EdgeInsets.all(12.0),
               child: Text(
-                'Quantity',
+                'customer_voucher.col_quantity'.tr,
                 textAlign: TextAlign.center,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s11, 0.18, ColorManager.kPrimaryColor),
@@ -834,7 +843,7 @@ class _CreateCustomerVoucherScreenState
             child: Padding(
               padding: const EdgeInsets.all(12.0),
               child: Text(
-                'Total',
+                'customer_voucher.col_total'.tr,
                 textAlign: TextAlign.center,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s11, 0.18, ColorManager.kPrimaryColor),
@@ -893,10 +902,10 @@ class _CreateCustomerVoucherScreenState
                           extentOffset: item.itemName.length,
                         );
                       },
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         border: InputBorder.none,
-                        hintText: 'Item name',
-                        contentPadding: EdgeInsets.only(left: 15),
+                        hintText: 'customer_voucher.item_name_hint'.tr,
+                        contentPadding: const EdgeInsets.only(left: 15),
                       ),
                     ),
                   );

@@ -128,7 +128,7 @@ class _SupplierTransactionReportScreenState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Error loading supplier data: $error"),
+            content: Text('supplier_transaction_report.err_loading_supplier_data'.tr.replaceAll('@error', error.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -288,8 +288,8 @@ class _SupplierTransactionReportScreenState
     }
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(
-        content: Text('From Date cannot be after To Date.'),
+      ..showSnackBar(SnackBar(
+        content: Text('supplier_transaction_report.from_date_after_to_date'.tr),
         backgroundColor: Colors.orange,
       ));
     return false;
@@ -315,7 +315,7 @@ class _SupplierTransactionReportScreenState
     for (final g in _groupedData!) {
       if (g is! Map) continue;
       final String supplierIdKey = (g['supplier_id']?.toString() ?? '').trim();
-      final String displayName = (g['supplier_name'] ?? 'Unknown').toString();
+      final String displayName = (g['supplier_name'] ?? 'supplier_transaction_report.unknown'.tr).toString();
       final double totalDebit = (g['total_debit'] is num)
           ? (g['total_debit'] as num).toDouble()
           : double.tryParse((g['total_debit'] ?? '0').toString()) ?? 0.0;
@@ -425,7 +425,7 @@ class _SupplierTransactionReportScreenState
       children: [
         Expanded(
           child: Text(
-            "Supplier Transactions Report",
+            'supplier_transaction_report.title'.tr,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s20,
@@ -443,7 +443,7 @@ class _SupplierTransactionReportScreenState
               color: ColorManager.kPrimaryColor,
             ),
             label: Text(
-              _showFilters ? 'Hide' : 'Filters',
+              _showFilters ? 'supplier_transaction_report.hide'.tr : 'supplier_transaction_report.filters'.tr,
               style: const TextStyle(
                   color: ColorManager.kPrimaryColor, fontSize: 12),
             ),
@@ -463,15 +463,15 @@ class _SupplierTransactionReportScreenState
             children: [
               Expanded(
                   child:
-                      _buildDateField("From Date", _fromDateController, true)),
+                      _buildDateField('supplier_transaction_report.from_date'.tr, _fromDateController, true)),
               const SizedBox(width: 8),
               Expanded(
-                  child: _buildDateField("To Date", _toDateController, false)),
+                  child: _buildDateField('supplier_transaction_report.to_date'.tr, _toDateController, false)),
             ],
           ),
           const SizedBox(height: 8),
           CustomRoundButton(
-            title: "Reset",
+            title: 'supplier_transaction_report.reset'.tr,
             boxColor: Colors.white,
             textColor: ColorManager.kPrimaryColor,
             fct: _resetFilters,
@@ -495,7 +495,7 @@ class _SupplierTransactionReportScreenState
             Expanded(
               flex: 1,
               child: _buildDateField(
-                "From Date",
+                'supplier_transaction_report.from_date'.tr,
                 _fromDateController,
                 true,
               ),
@@ -503,7 +503,7 @@ class _SupplierTransactionReportScreenState
             Expanded(
               flex: 1,
               child: _buildDateField(
-                "To Date",
+                'supplier_transaction_report.to_date'.tr,
                 _toDateController,
                 false,
               ),
@@ -513,7 +513,7 @@ class _SupplierTransactionReportScreenState
               child: Padding(
                 padding: const EdgeInsets.only(top: 45, left: 10),
                 child: CustomRoundButton(
-                  title: "Reset",
+                  title: 'supplier_transaction_report.reset'.tr,
                   boxColor: Colors.white,
                   textColor: ColorManager.kPrimaryColor,
                   fct: _resetFilters,
@@ -551,7 +551,7 @@ class _SupplierTransactionReportScreenState
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text(
-              "Supplier",
+              'supplier_transaction_report.supplier'.tr,
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s14,
@@ -563,7 +563,7 @@ class _SupplierTransactionReportScreenState
           const SizedBox(height: 8),
           BuildDropDownWithSearch<Supplier>(
             title: null,
-            hintText: "Search Supplier",
+            hintText: 'supplier_transaction_report.search_supplier_hint'.tr,
             value: currentSelected,
             items: allSuppliers ?? const <Supplier>[],
             displayText: (s) => s.name,
@@ -578,7 +578,7 @@ class _SupplierTransactionReportScreenState
                   '🔗 [SUPPLIER_TX_REPORT] dropdown onChanged: name="${s?.name}", supplierId=${selectedSupplierId ?? 'null'}');
               _loadFilteredTransactionData();
             },
-            searchHintText: 'Type to search supplier...',
+            searchHintText: 'supplier_transaction_report.search_supplier_hint_typing'.tr,
             // Ensure consistent padding/width like date fields
             width: double.infinity,
           ),
@@ -629,7 +629,7 @@ class _SupplierTransactionReportScreenState
                   : null,
               firstDate: DateTime(2000),
               lastDate: DateTime(2101),
-              hintText: "Select Date",
+              hintText: 'supplier_transaction_report.select_date_hint'.tr,
               isAllowEdit: true,
             ),
           ),
@@ -678,9 +678,9 @@ class _SupplierTransactionReportScreenState
             Row(
               children: [
                 _buildMobileCardStat(
-                    'Debit', summary.totalDebit.toStringAsFixed(2)),
+                    'supplier_transaction_report.debit_stat'.tr, summary.totalDebit.toStringAsFixed(2)),
                 _buildMobileCardStat(
-                    'Credit', summary.totalCredit.toStringAsFixed(2)),
+                    'supplier_transaction_report.credit_stat'.tr, summary.totalCredit.toStringAsFixed(2)),
               ],
             ),
             const SizedBox(height: 8),
@@ -690,7 +690,7 @@ class _SupplierTransactionReportScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Balance',
+                      Text('supplier_transaction_report.balance'.tr,
                           style: buildCustomStyle(FontWeightManager.regular,
                               FontSize.s10, 0.15, Colors.grey)),
                       Text(
@@ -705,7 +705,7 @@ class _SupplierTransactionReportScreenState
                   ),
                 ),
                 _buildMobileCardStat(
-                    'Transactions', summary.transactionCount.toString()),
+                    'supplier_transaction_report.transactions'.tr, summary.transactionCount.toString()),
               ],
             ),
           ],
@@ -785,12 +785,12 @@ class _SupplierTransactionReportScreenState
                 children: [
                   TableRow(
                     children: [
-                      _buildTableHeader("Supplier Name"),
-                      _buildTableHeader("Total Debit"),
-                      _buildTableHeader("Total Credit"),
-                      _buildTableHeader("Balance"),
-                      _buildTableHeader("Transactions"),
-                      _buildTableHeader("Action"),
+                      _buildTableHeader('supplier_transaction_report.supplier_name_col'.tr),
+                      _buildTableHeader('supplier_transaction_report.total_debit_col'.tr),
+                      _buildTableHeader('supplier_transaction_report.total_credit_col'.tr),
+                      _buildTableHeader('supplier_transaction_report.balance'.tr),
+                      _buildTableHeader('supplier_transaction_report.transactions'.tr),
+                      _buildTableHeader('supplier_transaction_report.action_col'.tr),
                     ],
                   ),
                 ],
@@ -857,7 +857,7 @@ class _SupplierTransactionReportScreenState
           ),
           const SizedBox(height: 15),
           Text(
-            'No supplier transactions available',
+            'supplier_transaction_report.no_supplier_transactions'.tr,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s18,
@@ -867,7 +867,7 @@ class _SupplierTransactionReportScreenState
           ),
           const SizedBox(height: 8),
           Text(
-            'Try refreshing the data',
+            'supplier_transaction_report.try_refreshing'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,

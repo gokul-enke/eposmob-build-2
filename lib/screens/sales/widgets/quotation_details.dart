@@ -84,7 +84,7 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
                                   ),
                                   const SizedBox(height: 12),
                                   Text(
-                                    "No details found",
+                                    'quotations.no_details_found'.tr,
                                     textAlign: TextAlign.center,
                                     style: buildCustomStyle(
                                       FontWeightManager.medium,
@@ -126,7 +126,7 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
             child: CustomBackButton(
               onPressed: () =>
                   Get.find<SideBarController>().index.value = 87,
-              text: 'Quotation List',
+              text: 'quotations.back_btn'.tr,
             ),
           ),
           const SizedBox(width: 8),
