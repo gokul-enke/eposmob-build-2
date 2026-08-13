@@ -486,7 +486,9 @@ class _StockReportScreenState extends State<StockReportScreen> {
       hint: 'stock_report.all_levels'.tr,
       value: selectedStockLevel,
       items: const ['All', 'Below Reorder'],
-      displayText: (val) => val,
+      displayText: (val) => val == 'Below Reorder'
+          ? 'stock_report.below_reorder'.tr
+          : 'stock_report.all'.tr,
       onChanged: (val) {
         setState(() {
           selectedStockLevel = val ?? 'All';
@@ -501,7 +503,13 @@ class _StockReportScreenState extends State<StockReportScreen> {
       hint: 'stock_report.all_expiries'.tr,
       value: selectedExpiryFilter,
       items: const ['All', '1 Month', '3 Months', '6 Months', '1 Year'],
-      displayText: (val) => val,
+      displayText: (val) => switch (val) {
+        '1 Month' => 'stock_report.one_month'.tr,
+        '3 Months' => 'stock_report.three_months'.tr,
+        '6 Months' => 'stock_report.six_months'.tr,
+        '1 Year' => 'stock_report.one_year'.tr,
+        _ => 'stock_report.all'.tr,
+      },
       onChanged: (val) {
         setState(() {
           selectedExpiryFilter = val ?? 'All';

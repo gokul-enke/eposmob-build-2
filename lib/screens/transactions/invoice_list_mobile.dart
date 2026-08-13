@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/models/list_invoice.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 
@@ -213,7 +214,7 @@ class InvoiceMobileView extends StatelessWidget {
             BuildDropDownWithSearch<String>(
               title: null,
               showName: false,
-              hintText: 'All Status',
+              hintText: 'invoice.all_status'.tr,
               value: selectedStatus,
               items:
                   statusOptions.where((s) => s != "All Status").toList(),
@@ -226,7 +227,7 @@ class InvoiceMobileView extends StatelessWidget {
             BuildDropDownWithSearch<String>(
               title: null,
               showName: false,
-              hintText: 'All ZATCA Status',
+              hintText: 'invoice.all_zatca_status'.tr,
               value: selectedZatcaStatus,
               items: zatcaStatusOptions
                   .where((s) => s != "All ZATCA Status")

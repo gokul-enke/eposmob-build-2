@@ -1598,7 +1598,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             return BuildDropDownWithSearch<String>(
               title: null,
               showName: false,
-              hintText: 'All Status',
+              hintText: 'invoice.all_status'.tr,
               value: selectedStatus,
               items: statusOptions
                   .where((status) => status != "All Status")
@@ -1630,7 +1630,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           return BuildDropDownWithSearch<String>(
             title: null,
             showName: false,
-            hintText: 'All ZATCA Status',
+            hintText: 'invoice.all_zatca_status'.tr,
             value: selectedZatcaStatus,
             items: zatcaStatusOptions
                 .where((status) => status != "All ZATCA Status")
@@ -2257,7 +2257,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                                 ),
                                                 _buildTableCell(
                                                     invoice.invoiceDate),
-                                                _buildTableCell(invoice.type),
+                                                _buildTableCell(
+                                                    _localizedInvoiceType(
+                                                        invoice.type)),
                                                 _buildTableCell(
                                                     invoice.dueDate),
                                                 Center(
@@ -2506,7 +2508,12 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        status.toUpperCase(),
+        switch (status.toUpperCase()) {
+          'PAID' => 'invoice.status_paid'.tr,
+          'PENDING' => 'invoice.status_pending'.tr,
+          'FAIL' || 'FAILED' => 'invoice.status_failed'.tr,
+          _ => status,
+        },
         style: TextStyle(
           color: textColor,
           fontSize: 10,
@@ -2515,6 +2522,12 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       ),
     );
   }
+
+  String _localizedInvoiceType(String type) => switch (type.toLowerCase()) {
+        'order' => 'invoice.type_order'.tr,
+        'other' => 'invoice.type_other'.tr,
+        _ => type,
+      };
 
   Widget _buildZatcaStatusChip(Invoice invoice) {
     String label = 'invoice.zatca_status_not_sent'.tr;
@@ -2814,11 +2827,16 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   ),
                 ),
               ),
-              _buildTableCell(invoice.type),
+              _buildTableCell(_localizedInvoiceType(invoice.type)),
               _buildTableCell(invoice.invoiceDate),
               _buildTableCell(invoice.dueDate),
               _buildTableCell(invoice.amount.toString()),
-              _buildTableCell(invoice.status),
+              _buildTableCell(switch (invoice.status.toUpperCase()) {
+                'PAID' => 'invoice.status_paid'.tr,
+                'PENDING' => 'invoice.status_pending'.tr,
+                'FAIL' || 'FAILED' => 'invoice.status_failed'.tr,
+                _ => invoice.status,
+              }),
               _buildActionCell(invoice.id),
             ],
           );

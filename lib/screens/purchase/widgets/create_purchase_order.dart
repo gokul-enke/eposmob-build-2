@@ -2363,7 +2363,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                 const SizedBox(width: 15),
                 Expanded(
                   child: _buildFieldColumn(
-                    "Manufacturing Date",
+                    'purchase_order.manufacturing_date'.tr,
                     CalendarPickerTableCell(
                       onDateSelected: (date) {
                         setState(() => item.pkgMfg = date);

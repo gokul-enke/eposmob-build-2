@@ -497,12 +497,12 @@ class _SideMenuState extends State<SideMenu> {
                   onTapTitle6: () {
                     sideBarController.index.value = 92;
                   },
-                  listTitle1: "Sales",
-                  listTitle2: "Confirmed Orders",
-                  listTitle3: "Sales Return",
-                  listTitle4: "Day Sale Closing",
-                  listTitle5: "Admin Day Sale records",
-                  listTitle6: "Online Orders",
+                  listTitle1: 'nav.sales'.tr,
+                  listTitle2: 'nav.confirmed_orders'.tr,
+                  listTitle3: 'nav.sales_return'.tr,
+                  listTitle4: 'nav.day_sale_closing'.tr,
+                  listTitle5: 'nav.admin_day_sale_records'.tr,
+                  listTitle6: 'nav.online_orders'.tr,
 
                   // Permission-based visibility
                   showTitle1: hasSalesPermission,
@@ -557,8 +557,8 @@ class _SideMenuState extends State<SideMenu> {
                   onTapTitle2: () {
                     sideBarController.index.value = 87;
                   },
-                  listTitle1: "Quotations",
-                  listTitle2: "Quotation List",
+                  listTitle1: 'nav.quotations'.tr,
+                  listTitle2: 'nav.quotation_list'.tr,
                   icon: fa.FontAwesomeIcons.fileInvoice,
                   title: 'nav.quotations'.tr,
                   onTap: () {
@@ -631,9 +631,9 @@ class _SideMenuState extends State<SideMenu> {
                     onTapTitle3: () {
                       sideBarController.index.value = 83;
                     },
-                    listTitle1: "Product",
-                    listTitle2: "Stock",
-                    listTitle3: "Product Barcode",
+                    listTitle1: 'nav.product'.tr,
+                    listTitle2: 'nav.stock'.tr,
+                    listTitle3: 'nav.product_barcode'.tr,
                     // Permission-based visibility
                     showTitle1: hasProductPermission,
                     showTitle2: hasStockPermission,
@@ -679,7 +679,7 @@ class _SideMenuState extends State<SideMenu> {
                     onTapTitle1: () {
                       sideBarController.index.value = 81;
                     },
-                    listTitle1: "Purchase Orders",
+                    listTitle1: 'nav.purchase_orders'.tr,
                     // Permission-based visibility
                     showTitle1: hasPurchasePermission,
                     icon: fa.FontAwesomeIcons.clipboardList,
@@ -774,13 +774,13 @@ class _SideMenuState extends State<SideMenu> {
                     onTapTitle7: () {
                       sideBarController.index.value = 80;
                     },
-                    listTitle1: "Sales Executive Reports",
-                    listTitle2: "Executive Reports",
-                    listTitle3: "Customer Transactions Reports",
-                    listTitle4: "Supplier Transactions Reports",
-                    listTitle5: "Stock Report",
-                    listTitle6: "Non-Stock Report",
-                    listTitle7: "Consumed Stocks Report",
+                    listTitle1: 'nav.sales_executive_reports'.tr,
+                    listTitle2: 'nav.executive_reports'.tr,
+                    listTitle3: 'nav.customer_transaction_reports'.tr,
+                    listTitle4: 'nav.supplier_transaction_reports'.tr,
+                    listTitle5: 'nav.stock_report'.tr,
+                    listTitle6: 'nav.non_stock_report'.tr,
+                    listTitle7: 'nav.consumed_stocks_report'.tr,
                     // Permission-based visibility
                     showTitle1: hasSalesExecutiveReportsPermission,
                     showTitle2: canViewExecutiveSummary,
@@ -873,12 +873,12 @@ class _SideMenuState extends State<SideMenu> {
                     onTapTitle6: () {
                       sideBarController.index.value = 93;
                     },
-                    listTitle1: "Invoice",
-                    listTitle2: "Receipts",
-                    listTitle3: "Customer Voucher",
-                    listTitle4: "Supplier Voucher (Purchase Entry)",
-                    listTitle5: "Proforma Invoice",
-                    listTitle6: "Expense",
+                    listTitle1: 'nav.invoice'.tr,
+                    listTitle2: 'nav.receipts'.tr,
+                    listTitle3: 'nav.customer_voucher'.tr,
+                    listTitle4: 'nav.supplier_voucher_purchase'.tr,
+                    listTitle5: 'nav.proforma_invoice'.tr,
+                    listTitle6: 'nav.expense'.tr,
                     // Permission-based visibility
                     showTitle1: hasInvoicePermission,
                     showTitle2: hasReceiptsPermission,
@@ -941,8 +941,8 @@ class _SideMenuState extends State<SideMenu> {
                     onTapTitle2: () {
                       sideBarController.index.value = 74; // alias index
                     },
-                    listTitle1: "Customer Transactions",
-                    listTitle2: "Supplier Transactions",
+                    listTitle1: 'nav.customer_transactions'.tr,
+                    listTitle2: 'nav.supplier_transactions'.tr,
                     // Permission-based visibility
                     showTitle1: hasCustomerTransactionsPermission,
                     showTitle2: hasSupplierTransactionsPermission,
@@ -1054,9 +1054,9 @@ class _SideMenuState extends State<SideMenu> {
                   onTapTitle3: () {
                     sideBarController.index.value = 72;
                   },
-                  listTitle1: "Suppliers",
-                  listTitle2: "Supplier Transactions",
-                  listTitle3: "Supplier Voucher",
+                  listTitle1: 'nav.suppliers'.tr,
+                  listTitle2: 'nav.supplier_transactions'.tr,
+                  listTitle3: 'nav.supplier_voucher'.tr,
                   // Permission-based visibility
                   showTitle1: hasSuppliersPermission,
                   showTitle2: hasSupplierTransactionsPermission,
@@ -1100,7 +1100,7 @@ class _SideMenuState extends State<SideMenu> {
                     Padding(
                       padding: const EdgeInsets.only(left: 45.0),
                       child: Text(
-                        'Other',
+                        'nav.other'.tr,
                         style: buildCustomStyle(FontWeightManager.medium,
                             FontSize.s13, 0.16, ColorManager.textColor),
                       ),

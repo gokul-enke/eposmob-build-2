@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 
 import 'customer_ui.dart';
@@ -92,8 +93,8 @@ class CustomerFilterPanel extends StatelessWidget {
       initialValue: selectedBalanceFilter,
       isExpanded: true,
       decoration: _decoration(
-        label: 'Balance',
-        hint: 'All balances',
+        label: 'customers.balance'.tr,
+        hint: 'customers.all_balances'.tr,
         icon: Icons.account_balance_wallet_outlined,
       ),
       dropdownColor: Colors.white,
@@ -107,7 +108,12 @@ class CustomerFilterPanel extends StatelessWidget {
           .map(
             (balance) => DropdownMenuItem<String>(
               value: balance,
-              child: Text(balance),
+              child: Text(switch (balance) {
+                'Positive (+ve)' => 'customers.positive'.tr,
+                'Negative (-ve)' => 'customers.negative'.tr,
+                'Zero (0)' => 'customers.zero'.tr,
+                _ => 'customers.all'.tr,
+              }),
             ),
           )
           .toList(),
@@ -132,8 +138,8 @@ class CustomerFilterPanel extends StatelessWidget {
             width: fieldWidth,
             child: _field(
               controller: nameController,
-              label: 'Name',
-              hint: 'Search by name',
+              label: 'customers.name'.tr,
+              hint: 'customers.search_name'.tr,
               icon: Icons.person_outline_rounded,
               keyboardType: TextInputType.name,
             ),
@@ -142,8 +148,8 @@ class CustomerFilterPanel extends StatelessWidget {
             width: fieldWidth,
             child: _field(
               controller: emailController,
-              label: 'Email',
-              hint: 'Search by email',
+              label: 'customers.email'.tr,
+              hint: 'customers.search_email'.tr,
               icon: Icons.mail_outline_rounded,
               keyboardType: TextInputType.emailAddress,
             ),
@@ -152,8 +158,8 @@ class CustomerFilterPanel extends StatelessWidget {
             width: fieldWidth,
             child: _field(
               controller: phoneController,
-              label: 'Phone',
-              hint: 'Search by phone',
+              label: 'customers.phone'.tr,
+              hint: 'customers.search_phone'.tr,
               icon: Icons.phone_outlined,
               keyboardType: TextInputType.phone,
             ),
@@ -182,22 +188,22 @@ class CustomerFilterPanel extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Find customers',
-                          style: TextStyle(
+                          'customers.find'.tr,
+                          style: const TextStyle(
                             color: CustomerUiColors.heading,
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
-                          'Results update as you type.',
-                          style: TextStyle(
+                          'customers.find_hint'.tr,
+                          style: const TextStyle(
                             color: CustomerUiColors.muted,
                             fontSize: 11,
                           ),
@@ -208,7 +214,7 @@ class CustomerFilterPanel extends StatelessWidget {
                   TextButton.icon(
                     onPressed: onReset,
                     icon: const Icon(Icons.restart_alt_rounded, size: 17),
-                    label: const Text('Reset'),
+                    label: Text('customers.reset'.tr),
                     style: TextButton.styleFrom(
                       foregroundColor: ColorManager.kPrimaryColor,
                       textStyle: const TextStyle(

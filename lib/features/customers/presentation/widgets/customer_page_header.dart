@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 
 import 'customer_ui.dart';
@@ -42,7 +43,7 @@ class CustomerPageHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Customers',
+                    'customers.title'.tr,
                     style: TextStyle(
                       color: CustomerUiColors.heading,
                       fontSize: compact ? 20 : 24,
@@ -52,9 +53,9 @@ class CustomerPageHeader extends StatelessWidget {
                   ),
                   if (!compact) ...[
                     const SizedBox(height: 3),
-                    const Text(
-                      'Manage customer details, balances and account types.',
-                      style: TextStyle(
+                    Text(
+                      'customers.subtitle'.tr,
+                      style: const TextStyle(
                         color: CustomerUiColors.muted,
                         fontSize: 13,
                       ),
@@ -71,7 +72,7 @@ class CustomerPageHeader extends StatelessWidget {
           children: [
             if (onRefresh != null) ...[
               Tooltip(
-                message: 'Refresh customers',
+                message: 'customers.refresh'.tr,
                 child: OutlinedButton(
                   onPressed: onRefresh,
                   style: OutlinedButton.styleFrom(
