@@ -102,6 +102,7 @@ class ReturnBillLayoutParamsBuilder {
       storePhone: storeSession.activeStore?.phone,
       storeEmail: storeSession.activeStore?.email,
       isReturnOnly: true,
+      returnBillDocumentConfig: returnBillDocumentConfig,
     );
   }
 
@@ -120,7 +121,7 @@ class ReturnBillLayoutParamsBuilder {
     String returnTotalAmount,
   ) {
     final totalAmount = double.tryParse(returnTotalAmount) ?? 0.0;
-    final totalQty = returnItems.fold<int>(
+    final totalQty = returnItems.fold<num>(
       0,
       (sum, item) => sum + (item.quantity ?? 0),
     );

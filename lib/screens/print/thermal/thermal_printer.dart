@@ -264,6 +264,11 @@ class ThermalPrinter {
           selectedFontType,
           displayConfig,
           billDocumentConfig,
+          orderNumber: orderNumber,
+          orderDate: orderDate,
+          customerName: customerName,
+          customerPhone: customerPhone,
+          customerAddress: customerAddress,
         );
 
         debugPrint("Building total summary section...");

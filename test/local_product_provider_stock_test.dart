@@ -170,6 +170,38 @@ void main() {
     expect(provider.cartItems.single.product.productId, 1);
   });
 
+  test('realtime catalog delta preserves unchanged products', () async {
+    final provider = LocalProductProvider();
+    final first = buildProduct(
+      productId: 1,
+      basePrice: '10',
+      mrp: '12',
+      stocks: const <Stock>[],
+    );
+    final second = buildProduct(
+      productId: 2,
+      basePrice: '20',
+      mrp: '22',
+      stocks: const <Stock>[],
+    );
+    final changedSecond = buildProduct(
+      productId: 2,
+      basePrice: '25',
+      mrp: '27',
+      stocks: const <Stock>[],
+    );
+    provider.initializeProducts(<GetProduct>[first, second]);
+
+    await provider.mergeRealtimeCatalog(
+      <GetProduct>[changedSecond],
+      deletedProductIds: const <int>{},
+    );
+
+    expect(provider.products, hasLength(2));
+    expect(provider.getProductById(1), same(first));
+    expect(provider.getProductById(2)?.price?.price, '25');
+  });
+
   test('grouped stock reservations merge same pricing group and expand payload',
       () {
     final provider = LocalProductProvider();

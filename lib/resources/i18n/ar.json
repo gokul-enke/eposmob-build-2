@@ -147,7 +147,8 @@
     "total_payable_label": "الإجمالي المستحق",
     "empty_cart_hint": "أضف منتجات باستخدام شريط البحث أعلاه",
     "customer": "العميل",
-    "item_code": "كود الصنف"
+    "item_code": "كود الصنف",
+    "cart": "السلة"
   },
   "customers": {
     "title": "العملاء"
@@ -177,7 +178,9 @@
     "create_new_order": "إنشاء طلب جديد",
     "no_saved_orders": "لا توجد طلبات محفوظة حتى الآن",
     "create_first_order": "أنشئ طلبك الأول أعلاه",
-    "items": "عناصر"
+    "items": "عناصر",
+    "cancel": "إلغاء",
+    "save": "حفظ"
   },
   "sync": {
     "syncing_data": "جاري مزامنة البيانات...",
@@ -510,7 +513,7 @@
     "order_items_count": "عناصر الطلب (",
     "time_ago_suffix": "د مضت",
     "no_status_orders": "لا توجد طلبات ",
-    "no_status_orders_suffix": "",
+    "no_status_orders_suffix": " حاليًا",
     "orders_match_hint": "ستظهر الطلبات هنا عندما تتطابق مع هذه الحالة",
     "view_less": "عرض أقل",
     "view_more_prefix": "عرض المزيد (",
@@ -574,7 +577,9 @@
     "method": "الطريقة",
     "na": "غير متاح",
     "payment_display": "دفع @name",
-    "payment_hash": "دفع #@id"
+    "payment_hash": "دفع #@id",
+    "delivery_date": "????? ???????",
+    "delivery_time": "??? ???????"
   },
   "sales_return": {
     "title": "طلبات إرجاع المبيعات",
@@ -626,6 +631,8 @@
     "credit_prefix": "آجل: ",
     "business_date_prefix": "تاريخ العمل: ",
     "day_close_subtitle": "ملخص أنشطة اليوم",
+    "confirm_close": "تأكيد الإغلاق",
+    "confirm_close_subtitle": "راجع النقد المتوقع عند الإغلاق وتحصيلات اليوم قبل الإغلاق النهائي",
     "session_info": "معلومات الجلسة",
     "user": "المستخدم",
     "opening": "الافتتاح",
@@ -657,6 +664,10 @@
     "notes": "الملاحظات",
     "cancel": "إلغاء",
     "close_day": "إغلاق اليوم",
+    "back": "رجوع",
+    "next": "التالي",
+    "confirm_close_day": "تأكيد وإغلاق اليوم",
+    "at": "في",
     "add_row": "إضافة صف",
     "remove_row": "حذف الصف",
     "denomination": "الفئة",
@@ -734,7 +745,11 @@
     "customer": "العميل",
     "order_no": "رقم الطلب",
     "date": "التاريخ",
-    "time": "الوقت"
+    "time": "الوقت",
+    "credit_collected": "???????? ??????",
+    "order_number": "??? ?????",
+    "previous_balance_collected": "?????? ?????? ??????",
+    "total_returns_sales_return": "?????? ????????? (??????? ????????)"
   },
   "quotations": {
     "title": "قائمة عروض الأسعار",
@@ -1031,6 +1046,7 @@
     "unit": "الوحدة",
     "qty": "الكمية",
     "purchase_rate": "سعر الشراء",
+    "purchase_total": "إجمالي الشراء",
     "retail_price": "سعر التجزئة",
     "mrp": "الحد الأقصى للسعر",
     "actions": "الإجراءات",
@@ -1245,6 +1261,8 @@
     "select_purchase_unit_hint": "اختر وحدة الشراء",
     "select_rack": "اختر الرف",
     "including_tax": "شامل الضريبة",
+    "selling_prices_include_tax": "أسعار البيع تشمل الضريبة",
+    "purchase_price_includes_tax": "سعر الشراء يشمل الضريبة",
     "product_col": "المنتج",
     "purchase_price_col": "سعر الشراء",
     "qty_col": "الكمية",
@@ -1990,5 +2008,28 @@
     "details_not_found": "التفاصيل غير موجودة",
     "failed_load_details": "فشل تحميل التفاصيل",
     "page_of": "صفحة @current من @last"
-  }
+  },
+  "nav": {
+    "home": "الرئيسية",
+    "billing": "الفواتير",
+    "dashboard": "لوحة التحكم",
+    "restaurant": "المطعم",
+    "store": "المتجر",
+    "attender": "المساعد",
+    "kitchen_master": "المطبخ",
+    "sales": "المبيعات",
+    "quotations": "عروض الأسعار",
+    "category": "الفئات",
+    "product": "المنتجات",
+    "purchase": "المشتريات",
+    "reports": "التقارير",
+    "transactions": "المعاملات",
+    "party_accounts": "حسابات الأطراف",
+    "customers": "العملاء",
+    "suppliers": "الموردون",
+    "printer": "الطابعة",
+    "settings": "الإعدادات",
+    "logout": "تسجيل الخروج"
+  },
+  "free": "?????"
 }

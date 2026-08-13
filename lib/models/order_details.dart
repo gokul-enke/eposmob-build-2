@@ -938,7 +938,7 @@ class OrderReturns {
 class OrderReturnItem {
   final int? id;
   final String? productName;
-  final int? quantity;
+  final num? quantity;
   final String? reason;
   final int? productVariantId;
   final Map<String, dynamic>? variantAttributes;
@@ -973,7 +973,9 @@ class OrderReturnItem {
       OrderReturnItem(
         id: json["id"],
         productName: json["product_name"],
-        quantity: json["quantity"],
+        quantity: json["quantity"] is num
+            ? json["quantity"]
+            : num.tryParse(json["quantity"]?.toString() ?? ''),
         reason: json["reason"],
         productVariantId: OrderDetailsModelDataCartItem._parseNullableInt(
             json["product_variant_id"]),

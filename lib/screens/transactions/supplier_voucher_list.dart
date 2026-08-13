@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart'
     as pagination;
@@ -122,7 +121,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
         .listAllSupplierVouchers(accessToken: accessToken);
   }
 
-@override
+  @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     final bool isMobile = size.width < 700;

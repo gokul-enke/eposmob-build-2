@@ -41,6 +41,7 @@ import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/screens/billing/restaurant/utils/restaurant_helpers.dart';
+import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 
 part 'order_panel_current_cart.dart';
 part 'order_panel_saved_order_item.dart';
@@ -3535,7 +3536,8 @@ class OrderPanelState extends State<OrderPanel> {
               _usesCounterOrderTabs
                   ? 'restaurant.orders'.tr
                   : 'restaurant.saved_orders'.tr,
-              Icons.pending_actions, const Color(0xFFD97706),
+              Icons.pending_actions,
+              const Color(0xFFD97706),
               showBackButton: !_usesCounterOrderTabs && _showSavedOrdersView,
               onBackButtonPressed: () {
             setState(() => _showSavedOrdersView = false);
@@ -7024,6 +7026,30 @@ class OrderPanelState extends State<OrderPanel> {
         (double.tryParse(_codAmount) ?? 0.0);
   }
 
+  double _sumPaymentBreakdown(Map<String, dynamic> payments) {
+    const excludedKeys = {'DEBIT', 'CREDIT', 'BALANCE'};
+    return payments.entries
+        .where(
+            (entry) => !excludedKeys.contains(entry.key.trim().toUpperCase()))
+        .fold<double>(0.0, (sum, entry) {
+      final value = entry.value;
+      return sum +
+          (value is num
+              ? value.toDouble()
+              : double.tryParse(value.toString()) ?? 0.0);
+    });
+  }
+
+  double? _orderBalanceFromProps(List<OrderDetailsModelDataOrderProp>? props) {
+    if (props == null) return null;
+    for (final prop in props) {
+      if (prop.propsCode?.toUpperCase() == 'BALANCE') {
+        return double.tryParse(prop.propsValue ?? '');
+      }
+    }
+    return null;
+  }
+
   double _calculateBalanceAmount() {
     final totalPaid = _getTotalPaidAmountFromState();
     final payableTotal = _getEffectiveOrderTotal();
@@ -7170,11 +7196,19 @@ class OrderPanelState extends State<OrderPanel> {
         cart?.priceSummary?.netTotal.toString() ??
         _getEffectiveOrderTotal().toStringAsFixed(2);
     final savedTotal = cart?.priceSummary?.savedTotal.toString();
-    final totalPaid = _getTotalPaidAmountFromState();
+    var totalPaid = _getTotalPaidAmountFromState();
+    if (totalPaid <= 0 && detailsData?.payments != null) {
+      totalPaid = _sumPaymentBreakdown(detailsData!.payments!);
+      debugPrint(
+          '[RestaurantPrint] Derived total paid from payment breakdown: $totalPaid');
+    }
     final isDefaultCustomer = _isDefaultCustomer(_selectedCustomer);
     final oldBalance = isDefaultCustomer ? null : _selectedCustomer?.balance;
     double? currentBalance;
-    if (oldBalance != null) {
+    final apiBalance = _orderBalanceFromProps(detailsData?.orderProps);
+    if (apiBalance != null) {
+      currentBalance = apiBalance;
+    } else if (oldBalance != null) {
       final cartTotal = double.tryParse(formattedTotal) ?? 0.0;
       currentBalance = oldBalance - (cartTotal - totalPaid);
     }
@@ -7426,7 +7460,8 @@ class OrderPanelState extends State<OrderPanel> {
         Provider.of<LocalProductProvider>(context, listen: false);
     final cartItems = List<LocalCartItem>.from(localProductProvider.cartItems);
     if (cartItems.isEmpty) {
-      showScaffoldError(context: context, message: 'restaurant.no_items_cart'.tr);
+      showScaffoldError(
+          context: context, message: 'restaurant.no_items_cart'.tr);
       return false;
     }
 
@@ -7434,7 +7469,8 @@ class OrderPanelState extends State<OrderPanel> {
     if (_selectedCustomer == null &&
         _selectedCustomerID == null &&
         (customerPhone == null || customerPhone.isEmpty)) {
-      showScaffoldError(context: context, message: 'restaurant.select_customer'.tr);
+      showScaffoldError(
+          context: context, message: 'restaurant.select_customer'.tr);
       return false;
     }
 
@@ -7564,7 +7600,8 @@ class OrderPanelState extends State<OrderPanel> {
         Provider.of<LocalProductProvider>(context, listen: false);
     final cartItems = List<LocalCartItem>.from(localProductProvider.cartItems);
     if (cartItems.isEmpty) {
-      showScaffoldError(context: context, message: 'restaurant.no_items_cart'.tr);
+      showScaffoldError(
+          context: context, message: 'restaurant.no_items_cart'.tr);
       return false;
     }
 
@@ -7572,7 +7609,8 @@ class OrderPanelState extends State<OrderPanel> {
     if (_selectedCustomerID == null &&
         _selectedCustomer?.id == null &&
         (customerPhone == null || customerPhone.isEmpty)) {
-      showScaffoldError(context: context, message: 'restaurant.select_customer'.tr);
+      showScaffoldError(
+          context: context, message: 'restaurant.select_customer'.tr);
       return false;
     }
 
@@ -7645,7 +7683,8 @@ class OrderPanelState extends State<OrderPanel> {
         showScaffoldError(
           context: context,
           message: response is Map
-              ? (response['message']?.toString() ?? 'restaurant.failed_kot_bill'.tr)
+              ? (response['message']?.toString() ??
+                  'restaurant.failed_kot_bill'.tr)
               : 'restaurant.failed_kot_bill'.tr,
         );
         return false;
@@ -7704,6 +7743,9 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   Future<bool> _confirmOrder({bool closeOnSuccess = true}) async {
+    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
+      return false;
+    }
     if (_selectedOrder == null) {
       showScaffoldError(
         context: context,
@@ -7948,6 +7990,12 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint('\nÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥ updateOrderAPI RESPONSE:');
       debugPrint('   Response: $response');
       debugPrint('   Response Type: ${response.runtimeType}');
+      if (await SubscriptionActionGuard.handleBackendResponse(
+        context,
+        response,
+      )) {
+        return false;
+      }
       if (response is Map) {
         debugPrint('   Status: ${response['status']}');
         debugPrint('   Message: ${response['message']}');

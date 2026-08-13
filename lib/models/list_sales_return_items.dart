@@ -77,6 +77,7 @@ class SalesReturnCart {
   final int cartItemId;
   final int returnOrderId;
   final String productName;
+  final String productUnit;
   final String quantity;
   final String unitPrice;
   final String totalPrice;
@@ -91,6 +92,7 @@ class SalesReturnCart {
     required this.cartItemId,
     required this.returnOrderId,
     required this.productName,
+    this.productUnit = '',
     required this.quantity,
     required this.unitPrice,
     required this.totalPrice,
@@ -138,6 +140,31 @@ class SalesReturnCart {
     return null;
   }
 
+  static String _parseProductUnit(
+    Map<String, dynamic> json,
+    Map<String, dynamic> product,
+  ) {
+    dynamic raw = json['product_unit'] ??
+        json['productUnit'] ??
+        json['unit_name'] ??
+        json['unitName'] ??
+        product['product_unit'] ??
+        product['productUnit'] ??
+        product['unit_name'] ??
+        product['unitName'] ??
+        product['unit'];
+
+    if (raw is Map) {
+      raw = raw['name'] ??
+          raw['code'] ??
+          raw['short_name'] ??
+          raw['shortName'] ??
+          raw['unit'];
+    }
+
+    return raw?.toString().trim() ?? '';
+  }
+
   factory SalesReturnCart.fromJson(Map<String, dynamic> json) {
     final product = json['product'] is Map
         ? Map<String, dynamic>.from(json['product'] as Map)
@@ -153,6 +180,7 @@ class SalesReturnCart {
                   json['item_name'])
               ?.toString() ??
           '',
+      productUnit: _parseProductUnit(json, product),
       quantity: json['quantity']?.toString() ?? '0',
       unitPrice: (json['unit_price'] ?? json['price'] ?? '0.00').toString(),
       totalPrice:

@@ -37,6 +37,7 @@ void main() {
   });
 
   setUp(() async {
+    await awaitPendingHiveBoxWrites();
     SharedPreferences.setMockInitialValues({
       'general_stock_enabled': true,
     });

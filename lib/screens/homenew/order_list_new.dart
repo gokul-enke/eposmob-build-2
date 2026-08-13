@@ -22,6 +22,7 @@ import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/customers/add_customer_modal.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
 import '../../widgets/compact_quantity_control.dart';
@@ -872,7 +873,8 @@ class _OrderListNewState extends State<OrderListNew> {
                       children: [
                         WebsafeSvg.asset(
                           ImageAssets.cashIcon,
-                          colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),
+                          colorFilter: const ColorFilter.mode(
+                              Colors.black, BlendMode.srcIn),
                           fit: BoxFit.none,
                         ),
                         Text(
@@ -903,7 +905,8 @@ class _OrderListNewState extends State<OrderListNew> {
                       children: [
                         WebsafeSvg.asset(
                           ImageAssets.creditCardIcon,
-                          colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),
+                          colorFilter: const ColorFilter.mode(
+                              Colors.black, BlendMode.srcIn),
                           fit: BoxFit.none,
                         ),
                         Text(
@@ -934,7 +937,8 @@ class _OrderListNewState extends State<OrderListNew> {
                       children: [
                         WebsafeSvg.asset(
                           ImageAssets.creditCardIcon,
-                          colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),
+                          colorFilter: const ColorFilter.mode(
+                              Colors.black, BlendMode.srcIn),
                           fit: BoxFit.none,
                         ),
                         Text(
@@ -1060,6 +1064,10 @@ class _OrderListNewState extends State<OrderListNew> {
                           paymentMethod = "UPI";
                         }
 
+                        if (!await SubscriptionActionGuard
+                            .ensureOrderSubmissionAllowed(context)) {
+                          return;
+                        }
                         try {
                           await Provider.of<CartProvider>(context,
                                   listen: false)
@@ -1077,7 +1085,11 @@ class _OrderListNewState extends State<OrderListNew> {
                             phone: mobileNumberText,
                             paymentMethod: paymentMethod,
                           )
-                              .then((response) {
+                              .then((response) async {
+                            if (await SubscriptionActionGuard
+                                .handleBackendResponse(context, response)) {
+                              return;
+                            }
                             AddToOrderModel addToOrderModel =
                                 AddToOrderModel.fromJson(response);
                             // debugPrint("$response");
@@ -1149,7 +1161,7 @@ class _OrderListNewState extends State<OrderListNew> {
                           builder: (context) => PrintPage(
                             cartItems: cartProductItems!,
                             formattedTotal: formattedTotal,
-                                    discountAmount: Provider.of<CartProvider>(context,
+                            discountAmount: Provider.of<CartProvider>(context,
                                         listen: false)
                                     .priceSummary
                                     ?.discount
@@ -1167,7 +1179,8 @@ class _OrderListNewState extends State<OrderListNew> {
                       children: [
                         WebsafeSvg.asset(
                           ImageAssets.printIcon,
-                          colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                          colorFilter: const ColorFilter.mode(
+                              Colors.white, BlendMode.srcIn),
                           fit: BoxFit.none,
                         ),
                         Text(

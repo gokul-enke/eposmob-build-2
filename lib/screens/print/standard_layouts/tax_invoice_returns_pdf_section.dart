@@ -21,8 +21,10 @@ class TaxInvoiceReturnsPdfSection {
     String currency,
     pw.Font font,
     pw.Font fontBold,
-    bool isA5,
-  ) {
+    bool isA5, {
+    bool isDualLanguage = false,
+    String? configLang,
+  }) {
     final orderReturns = params.orderReturns!;
     if (orderReturns.returnItems == null || orderReturns.returnItems!.isEmpty) {
       return [];
@@ -113,7 +115,7 @@ class TaxInvoiceReturnsPdfSection {
 
     for (int i = 0; i < orderReturns.returnItems!.length; i++) {
       final ri = orderReturns.returnItems![i];
-      final int qty = ri.quantity ?? 0;
+      final num qty = ri.quantity ?? 0;
       final String name = ri.productName ?? '';
 
       double itemRate = 0.0;
@@ -151,7 +153,7 @@ class TaxInvoiceReturnsPdfSection {
       if (itemRate == 0.0) {
         final totalRet =
             double.tryParse(orderReturns.returnTotalAmount ?? '0') ?? 0.0;
-        int totalQty = 0;
+        num totalQty = 0;
         for (var ri2 in orderReturns.returnItems!) {
           totalQty += ri2.quantity ?? 0;
         }
@@ -186,13 +188,102 @@ class TaxInvoiceReturnsPdfSection {
     final double returnRateTotal =
         double.tryParse(orderReturns.returnTotalAmount ?? '0') ?? 0.0;
 
+    final retDc = params.returnBillDisplayConfig;
+    final retLabels = params.returnBillResolvedLabels;
+    bool retCol(String key) => retDc?[key]?.visible == true;
+    String retLbl(String key, String? resolved, String def) {
+      final v = retDc?[key]?.value as String?;
+      if (v != null && v.isNotEmpty) return v;
+      if (resolved != null && resolved.isNotEmpty) return resolved;
+      return def;
+    }
+
+    final sectionHeadingStyle = pw.TextStyle(
+        font: fontBold, fontSize: fs(9), fontWeight: pw.FontWeight.bold);
+
+    final hasCreditNoteConfig = retLabels?.creditNoteNumber != null ||
+        retLabels?.creditNoteDate != null;
+
     final widgets = <pw.Widget>[
       pw.SizedBox(height: 6),
       pw.Divider(height: 0, thickness: 0.8),
       pw.SizedBox(height: 4),
-      pw.Text('RETURNS', style: titleStyle),
-      pw.SizedBox(height: 4),
+      if (!hasCreditNoteConfig) ...[
+        pw.Text(params.returnsSectionHeading, style: titleStyle),
+        pw.SizedBox(height: 4),
+      ],
     ];
+
+    // — Credit Note Details section —
+    final cnDetailsRows = <pw.Widget>[];
+    if ((retLabels?.creditNoteNumber != null)) {
+      cnDetailsRows.add(_kvRow(
+        retLbl('showCreditNoteNumber', retLabels?.creditNoteNumber,
+            'Credit Note No:'),
+        params.orderNumber,
+        labelStyle,
+        valueStyle,
+      ));
+    }
+    if ((retLabels?.creditNoteDate != null)) {
+      cnDetailsRows.add(_kvRow(
+        retLbl('showCreditNoteDate', retLabels?.creditNoteDate,
+            'Credit Note Date:'),
+        params.orderDate,
+        labelStyle,
+        valueStyle,
+      ));
+    }
+    if ((retLabels?.creditNoteReason != null)) {
+      cnDetailsRows.add(_kvRow(
+        retLbl('showCreditNoteReason', retLabels?.creditNoteReason, 'Reason:'),
+        '',
+        labelStyle,
+        valueStyle,
+      ));
+    }
+    if (cnDetailsRows.isNotEmpty) {
+      widgets.add(pw.Text(
+        retLbl('showCreditNoteOrder', retLabels?.detailsHeading,
+            'CREDIT NOTE DETAILS'),
+        style: sectionHeadingStyle,
+      ));
+      widgets.add(pw.SizedBox(height: 2));
+      widgets.addAll(cnDetailsRows);
+      widgets.add(pw.SizedBox(height: 4));
+    }
+
+    // — Customer Details section —
+    final custRows = <pw.Widget>[];
+    if (params.customerName != null && params.customerName!.trim().isNotEmpty) {
+      custRows.add(_kvRow(
+        'Customer Name:',
+        params.customerName!,
+        labelStyle,
+        valueStyle,
+      ));
+    }
+    if (params.customerPhone != null &&
+        params.customerPhone!.trim().isNotEmpty) {
+      custRows.add(_kvRow('Phone:', params.customerPhone!, labelStyle,
+          valueStyle));
+    }
+    if (params.customerAddress != null &&
+        params.customerAddress!.trim().isNotEmpty) {
+      custRows.add(_kvRow('Billing Address:', params.customerAddress!,
+          labelStyle, valueStyle));
+    }
+    if (custRows.isNotEmpty) {
+      widgets.add(pw.Text(retLabels?.customerHeading ?? 'CUSTOMER DETAILS', style: sectionHeadingStyle));
+      widgets.add(pw.SizedBox(height: 2));
+      widgets.addAll(custRows);
+      widgets.add(pw.SizedBox(height: 4));
+    }
+
+    if (retLabels?.itemsHeading != null) {
+      widgets.add(pw.Text(retLabels!.itemsHeading!, style: sectionHeadingStyle));
+      widgets.add(pw.SizedBox(height: 2));
+    }
 
     if (tableRows.isNotEmpty) {
       widgets.add(pw.Table(
@@ -203,16 +294,23 @@ class TaxInvoiceReturnsPdfSection {
       widgets.add(pw.SizedBox(height: 4));
     }
 
-    if (col('showReturnItemsCount')) {
-      final countLabel = lbl('showReturnItemsCount', null, 'Return Items:');
+    if (col('showReturnItemsCount') || (retLabels?.creditNoteItemsCount != null)) {
+      final countLabel = (retLabels?.creditNoteItemsCount != null)
+          ? retLbl('showCreditNoteItemsCount', retLabels?.creditNoteItemsCount,
+              'Total Items:')
+          : lbl('showReturnItemsCount', null, 'Return Items:');
       widgets.add(pw.Text(
           '$countLabel ${orderReturns.returnItems!.length}',
           style: labelStyle));
       widgets.add(pw.SizedBox(height: 2));
     }
 
-    if (col('showReturnTotalAmount')) {
-      final label = lbl('showReturnTotalAmount', null, 'Return Total:');
+    if (col('showReturnTotalAmount') ||
+        (retLabels?.creditNoteTotalAmount != null)) {
+      final label = (retLabels?.creditNoteTotalAmount != null)
+          ? retLbl('showCreditNoteTotalAmount',
+              retLabels?.creditNoteTotalAmount, 'Total Amount:')
+          : lbl('showReturnTotalAmount', null, 'Return Total:');
       widgets.add(pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.end,
         children: [
@@ -222,8 +320,11 @@ class TaxInvoiceReturnsPdfSection {
       ));
     }
 
-    if (col('showReturnNetAmount')) {
-      final label = lbl('showReturnNetAmount', null, 'Return Net Amount:');
+    if (col('showReturnNetAmount') || (retLabels?.creditNoteRefund != null)) {
+      final label = (retLabels?.creditNoteRefund != null)
+          ? retLbl('showCreditNoteRefund', retLabels?.creditNoteRefund,
+              'Credit Note Total:')
+          : lbl('showReturnNetAmount', null, 'Return Net Amount:');
       widgets.add(pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.end,
         children: [
@@ -231,9 +332,36 @@ class TaxInvoiceReturnsPdfSection {
           pw.Text(formatMoney(currency, returnRateTotal), style: valueStyle),
         ],
       ));
+    }
+
+    if (hasCreditNoteConfig) {
+      widgets.add(pw.SizedBox(height: 4));
+      widgets.addAll(_amountInWords(
+          returnRateTotal, currency, isDualLanguage, configLang, labelStyle));
     }
 
     return widgets;
+  }
+
+  static pw.Widget _kvRow(
+    String label,
+    String value,
+    pw.TextStyle labelStyle,
+    pw.TextStyle valueStyle,
+  ) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(vertical: 1),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.SizedBox(
+            width: 130,
+            child: pw.Text(label, style: labelStyle),
+          ),
+          pw.Expanded(child: pw.Text(value, style: valueStyle)),
+        ],
+      ),
+    );
   }
 
   static List<pw.Widget> buildFinalSummarySection(
@@ -280,7 +408,7 @@ class TaxInvoiceReturnsPdfSection {
 
     double returnTotal = 0.0;
     for (final ri in orderReturns.returnItems!) {
-      final int qty = ri.quantity ?? 0;
+      final num qty = ri.quantity ?? 0;
       double itemRate = 0.0;
       for (var cartItem in params.cartItems) {
         String cartName = '';
@@ -309,7 +437,7 @@ class TaxInvoiceReturnsPdfSection {
       if (itemRate == 0.0) {
         final totalRet =
             double.tryParse(orderReturns.returnTotalAmount ?? '0') ?? 0.0;
-        int totalQty = 0;
+        num totalQty = 0;
         for (var ri2 in orderReturns.returnItems!) {
           totalQty += ri2.quantity ?? 0;
         }

@@ -12,6 +12,7 @@ import '../models/list_cart.dart';
 import '../resources/app_url.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:http/http.dart' as http;
+import 'package:pos_machine/features/subscription/presentation/subscription_provider.dart';
 
 @visibleForTesting
 Uri buildListCartUri({
@@ -889,6 +890,9 @@ class CartProvider with ChangeNotifier {
     double? deliveryCharge,
     int? quotationId,
   }) async {
+    final subscriptionRejection =
+        SubscriptionAccessRegistry.rejectedOrderResponse();
+    if (subscriptionRejection != null) return subscriptionRejection;
     debugPrint("📤 ADD TO ORDER API - Starting request");
     debugPrint("📦 Order items count: ${items?.length ?? 0}");
     debugPrint("🛒 Cart ID: $cartIds");
@@ -1099,6 +1103,9 @@ class CartProvider with ChangeNotifier {
     String? address,
     double? deliveryCharge,
   }) async {
+    final subscriptionRejection =
+        SubscriptionAccessRegistry.rejectedOrderResponse();
+    if (subscriptionRejection != null) return subscriptionRejection;
     debugPrint("📤 UPDATE ORDER API - Starting request");
     DateTime now = DateTime.now();
 
@@ -1204,7 +1211,22 @@ class CartProvider with ChangeNotifier {
         return jsonData;
       } else {
         debugPrint('❌ Failed to update order (status ${response.statusCode})');
-        return {"status": "failure", "message": "Failed to update order"};
+        try {
+          final decoded = json.decode(response.body);
+          if (decoded is Map) {
+            return <String, dynamic>{
+              ...decoded.map(
+                (key, value) => MapEntry(key.toString(), value),
+              ),
+              'http_status': response.statusCode,
+            };
+          }
+        } catch (_) {}
+        return {
+          "status": "failure",
+          "message": "Failed to update order",
+          "http_status": response.statusCode,
+        };
       }
     } catch (e) {
       debugPrint('❌ Exception during API call: $e');
@@ -1234,6 +1256,9 @@ class CartProvider with ChangeNotifier {
     String? carNumber,
     int? quotationId,
   }) async {
+    final subscriptionRejection =
+        SubscriptionAccessRegistry.rejectedOrderResponse();
+    if (subscriptionRejection != null) return subscriptionRejection;
     debugPrint("📤 CONFIRM ORDER API - Starting request");
     DateTime now = DateTime.now();
 
@@ -1315,7 +1340,22 @@ class CartProvider with ChangeNotifier {
         return jsonData;
       } else {
         debugPrint('❌ Failed to confirm order (status ${response.statusCode})');
-        return {"status": "failure", "message": "Failed to confirm order"};
+        try {
+          final decoded = json.decode(response.body);
+          if (decoded is Map) {
+            return <String, dynamic>{
+              ...decoded.map(
+                (key, value) => MapEntry(key.toString(), value),
+              ),
+              'http_status': response.statusCode,
+            };
+          }
+        } catch (_) {}
+        return {
+          "status": "failure",
+          "message": "Failed to confirm order",
+          "http_status": response.statusCode,
+        };
       }
     } catch (e) {
       debugPrint('❌ Exception during API call: $e');

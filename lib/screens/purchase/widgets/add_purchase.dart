@@ -20,6 +20,7 @@ import '../../../models/get_product.dart';
 import '../../../models/get_store.dart'; 
 import '../../../models/get_suppliers.dart';
 import '../../../models/list_purchase.dart';
+import 'package:pos_machine/helpers/purchase_price_permission.dart';
 
 import '../../../providers/auth_model.dart';
 import '../../../providers/category_providers.dart';
@@ -158,6 +159,14 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
+    if (!canViewPurchasePrice(context)) {
+      return const SafeArea(
+        child: Center(
+          child: Text('Purchase permission is required to add purchases.'),
+        ),
+      );
+    }
+
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
     // debugPrint('zcccdcdc$accessToken');
     // Access the CategoryProvider

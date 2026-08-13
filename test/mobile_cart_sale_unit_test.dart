@@ -80,6 +80,8 @@ void main() {
     String? minMarginPrice,
     List<SaleUnit>? saleUnits,
     List<ProductTax>? taxes,
+    List<Stock>? stock,
+    List<ProductVariant>? variants,
   }) {
     return GetProduct(
       productId: 1,
@@ -89,6 +91,8 @@ void main() {
       mrp: '120',
       minMarginPercentage: minMarginPercentage,
       minMarginPrice: minMarginPrice,
+      stock: stock,
+      variants: variants,
       saleUnits: saleUnits ??
           [
             SaleUnit(
@@ -219,6 +223,162 @@ void main() {
 
       expect(result.committed, isTrue);
       expect(result.clampedToDisplayPrice, 90);
+      expect(provider.cartItems.single.price, 90);
+    });
+
+    test('combined amount and percentage limits use the stricter limit', () {
+      final provider = LocalProductProvider();
+      provider.setStockEnabled(false);
+      final product = buildProduct(
+        price: '100',
+        minMarginPercentage: '15',
+        minMarginPrice: '10',
+        saleUnits: const [],
+      );
+      provider.initializeProducts([product]);
+      provider.addToCart(product: product, quantity: 1, price: 100);
+
+      expect(
+        provider.minimumSalePriceForCartItem(provider.cartItems.single),
+        90,
+      );
+    });
+
+    test('stock price is the discount reference price', () {
+      final provider = LocalProductProvider();
+      provider.setStockEnabled(false);
+      final stock = Stock(id: 1, price: '80', quantity: 20);
+      final product = buildProduct(
+        price: '100',
+        minMarginPercentage: '10',
+        saleUnits: const [],
+        stock: [stock],
+      );
+      provider.initializeProducts([product]);
+      provider.addToCart(
+        product: product,
+        quantity: 1,
+        selectedStock: stock,
+      );
+
+      expect(provider.cartItems.single.price, 80);
+      expect(
+        provider.minimumSalePriceForCartItem(provider.cartItems.single),
+        72,
+      );
+    });
+
+    test('wholesale price is the discount reference after its threshold', () {
+      final provider = LocalProductProvider();
+      provider.setStockEnabled(false);
+      final stock = Stock(
+        id: 1,
+        price: '100',
+        wholesalePrice: '70',
+        wholesaleMinUnit: 5,
+        quantity: 20,
+      );
+      final product = buildProduct(
+        price: '100',
+        minMarginPrice: '7',
+        saleUnits: const [],
+        stock: [stock],
+      );
+      provider.initializeProducts([product]);
+      provider.addToCart(
+        product: product,
+        quantity: 5,
+        selectedStock: stock,
+      );
+
+      expect(provider.cartItems.single.price, 70);
+      expect(
+        provider.minimumSalePriceForCartItem(provider.cartItems.single),
+        63,
+      );
+    });
+
+    test('variant price is the discount reference price', () {
+      final provider = LocalProductProvider();
+      provider.setStockEnabled(false);
+      final product = buildProduct(
+        price: '100',
+        minMarginPercentage: '10',
+        saleUnits: const [],
+        variants: [ProductVariant(id: 7, price: 60)],
+      );
+      provider.initializeProducts([product]);
+      provider.addToCart(
+        product: product,
+        quantity: 1,
+        variantId: 7,
+      );
+
+      expect(provider.cartItems.single.price, 60);
+      expect(
+        provider.minimumSalePriceForCartItem(provider.cartItems.single),
+        54,
+      );
+    });
+
+    test('explicit sale-unit price is the discount reference price', () {
+      final provider = LocalProductProvider();
+      provider.setStockEnabled(false);
+      final product = buildProduct(
+        price: '10',
+        minMarginPercentage: '10',
+        saleUnits: [
+          SaleUnit(
+            id: 10,
+            unitId: 100,
+            unitName: 'CASE',
+            conversionRate: '12',
+            price: 240,
+          ),
+        ],
+      );
+      provider.initializeProducts([product]);
+      provider.addToCart(
+        product: product,
+        quantity: 12,
+        saleUnitId: 10,
+        saleUnitName: 'CASE',
+        saleUnitConversionRate: 12,
+      );
+
+      final item = provider.cartItems.single;
+      expect(item.price, 20);
+      expect(provider.minimumSalePriceForCartItem(item), 18);
+
+      final result = controller.commitDisplayPrice(
+        provider: provider,
+        item: item,
+        displayPrice: 200,
+      );
+      expect(result.clampedToDisplayPrice, 216);
+      expect(provider.cartItems.single.price, 18);
+    });
+
+    test('manual price does not replace a configured discount reference', () {
+      final provider = LocalProductProvider();
+      provider.setStockEnabled(false);
+      final product = buildProduct(
+        price: '100',
+        minMarginPrice: '10',
+        saleUnits: const [],
+      );
+      provider.initializeProducts([product]);
+      provider.addToCart(
+        product: product,
+        quantity: 1,
+        price: 50,
+        markPriceAsManualOverride: true,
+      );
+
+      expect(
+        provider.minimumSalePriceForCartItem(provider.cartItems.single),
+        90,
+      );
       expect(provider.cartItems.single.price, 90);
     });
 

@@ -17,12 +17,15 @@ import 'package:pos_machine/components/build_tax_modal.dart';
 
 class PaymentSummary extends StatelessWidget {
   final bool compact;
+
   /// When false, hides the bare to-customer-credit toggle (mobile uses a
   /// dedicated section in [PaymentMethodsSection] instead).
   final bool showToCustomerCreditToggle;
+
   /// When false, the tax row is plain text (no underline, no breakdown dialog).
   /// Desktop keeps the default `true`; mobile billing passes `false`.
   final bool taxBreakdownEnabled;
+
   /// When true (and [taxBreakdownEnabled] is true), opens tax details in a
   /// bottom sheet instead of a centered dialog — intended for mobile billing.
   final bool taxBreakdownUseBottomSheet;
@@ -52,8 +55,7 @@ class PaymentSummary extends StatelessWidget {
       freeDeliveryEnabled:
           appSettingsProvider.appSettings?.freeDeliveryEnabled ?? false,
       freeDeliveryMinimumAmount: double.tryParse(
-            appSettingsProvider.appSettings?.freeDeliveryMinimumAmount
-                    .trim() ??
+            appSettingsProvider.appSettings?.freeDeliveryMinimumAmount.trim() ??
                 '',
           ) ??
           0.0,
@@ -241,12 +243,13 @@ class PaymentSummary extends StatelessWidget {
         // Tax row (tappable for details on desktop when enabled)
         Builder(
           builder: (context) {
-            final taxPercent = ((localProductProvider.priceSummary!.subTotal > 0)
-                    ? (localProductProvider.priceSummary!.totalTax /
+            final taxPercent =
+                ((localProductProvider.priceSummary!.subTotal > 0)
+                        ? (localProductProvider.priceSummary!.totalTax /
                             localProductProvider.priceSummary!.subTotal *
                             100)
-                    : 15.0)
-                .toStringAsFixed(0);
+                        : 15.0)
+                    .toStringAsFixed(0);
             final taxRow = Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

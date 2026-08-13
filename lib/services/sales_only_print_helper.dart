@@ -6,7 +6,7 @@ List<OrderDetailsModelDataCartItem> buildSalesOnlyCartItems(
   List<OrderDetailsModelDataCartItem> cartItems,
   List<OrderReturnItem> returnItems,
 ) {
-  final returnQtyByProduct = <String, int>{};
+  final returnQtyByProduct = <String, num>{};
   for (final returnItem in returnItems) {
     final productName = returnItem.productName?.trim().toLowerCase() ?? '';
     if (productName.isEmpty) continue;
@@ -14,7 +14,7 @@ List<OrderDetailsModelDataCartItem> buildSalesOnlyCartItems(
         (returnQtyByProduct[productName] ?? 0) + (returnItem.quantity ?? 0);
   }
 
-  final remainingReturns = Map<String, int>.from(returnQtyByProduct);
+  final remainingReturns = Map<String, num>.from(returnQtyByProduct);
   final adjustedItems = <OrderDetailsModelDataCartItem>[];
 
   for (final item in cartItems) {
@@ -23,7 +23,7 @@ List<OrderDetailsModelDataCartItem> buildSalesOnlyCartItems(
     if (originalQty <= 0) continue;
 
     final returnedQty = remainingReturns[productName] ?? 0;
-    final deductQty = returnedQty.clamp(0, originalQty.toInt());
+    final deductQty = returnedQty.clamp(0, originalQty).toDouble();
     if (deductQty > 0) {
       remainingReturns[productName] = returnedQty - deductQty;
     }

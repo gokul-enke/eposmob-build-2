@@ -19,6 +19,7 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
+import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -54,6 +55,10 @@ class ProductDetailsDialog extends StatefulWidget {
   /// When true, Edit tab / save / stock-row edit require `billing.product.edit`.
   final bool useBillingProductPermissions;
 
+  /// When true, purchase-price visibility uses the purchase permission while
+  /// retaining the caller's normal product edit permissions.
+  final bool enforcePurchasePricePermission;
+
   const ProductDetailsDialog({
     super.key,
     this.product,
@@ -67,6 +72,7 @@ class ProductDetailsDialog extends StatefulWidget {
     this.currency = '',
     this.onAdd,
     this.useBillingProductPermissions = false,
+    this.enforcePurchasePricePermission = true,
   });
 
   @override
@@ -127,9 +133,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   }
 
   bool _canViewPurchasePrice(BuildContext context) {
-    if (!widget.useBillingProductPermissions) return true;
-    return Provider.of<RoleProvider>(context, listen: false)
-        .currentUserHasPermissionSync('menu.purchase.orders.access');
+    if (!widget.useBillingProductPermissions &&
+        !widget.enforcePurchasePricePermission) {
+      return true;
+    }
+    return canViewPurchasePrice(context);
   }
 
   void _ensureTabController(bool canEdit) {
@@ -698,6 +706,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         '[EDIT_PRODUCT] submit started productId=${selectedProduct?.productId}');
 
     final product = selectedProduct!;
+    final canShowPurchasePrice = _canViewPurchasePrice(context);
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
     final productProvider =
@@ -726,9 +735,15 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     final double mrpForApi = updatedMrpString.isEmpty
         ? double.tryParse(product.mrp?.toString() ?? '') ?? 0
         : double.tryParse(updatedMrpString) ?? 0;
-    final double? purchasePriceForApi = updatedPurchasePrice.isEmpty
-        ? double.tryParse(product.purchasePrice ?? '')
-        : double.tryParse(updatedPurchasePrice);
+    final existingPurchasePrice = product.purchasePrice ??
+        (product.stock != null && product.stock!.isNotEmpty
+            ? product.stock!.first.purchasePrice
+            : null);
+    final double? purchasePriceForApi = canShowPurchasePrice
+        ? (updatedPurchasePrice.isEmpty
+            ? double.tryParse(product.purchasePrice ?? '')
+            : double.tryParse(updatedPurchasePrice))
+        : double.tryParse(existingPurchasePrice ?? '');
     final num? quantityForApi = updatedQuantityString.isEmpty
         ? null
         : num.tryParse(updatedQuantityString);
@@ -968,9 +983,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             source: "manual",
           )
         ],
-        purchasePrice: updatedPurchasePrice.isEmpty
-            ? product.purchasePrice
-            : updatedPurchasePrice,
+        purchasePrice: canShowPurchasePrice
+            ? (updatedPurchasePrice.isEmpty
+                ? product.purchasePrice
+                : updatedPurchasePrice)
+            : existingPurchasePrice,
         minMarginPercentage: serverProduct?.minMarginPercentage ??
             (updatedMinMargin.isEmpty
                 ? product.minMarginPercentage
@@ -1240,8 +1257,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
 
   Widget _buildStockStatusBadge(ProductStockDisplayStatus status) {
     final isOutOfStock = status == ProductStockDisplayStatus.outOfStock;
-    final atReorderLevel =
-        status == ProductStockDisplayStatus.atReorderLevel;
+    final atReorderLevel = status == ProductStockDisplayStatus.atReorderLevel;
     final color = isOutOfStock
         ? ColorManager.kRed
         : atReorderLevel
@@ -2090,12 +2106,14 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         if (!variantEnabled) {
           return const SizedBox.shrink();
         }
+        final canViewPurchasePrice = _canViewPurchasePrice(context);
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: VariantEditorSection(
             controller: _variantController,
             properties: productProvider.productProperties,
             isLoadingProperties: _isLoadingVariantProperties,
+            showPurchasePrice: canViewPurchasePrice,
             onRetryLoadProperties: _retryFetchVariantProperties,
             onGenerateBarcode: _generateVariantBarcode,
           ),
@@ -2184,9 +2202,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
               Switch(
                 value: _showSaleUnitOptions,
                 activeThumbColor: ColorManager.kPrimaryColor,
-                onChanged: canConfigureSaleUnits
-                    ? _toggleSaleUnitOptions
-                    : null,
+                onChanged:
+                    canConfigureSaleUnits ? _toggleSaleUnitOptions : null,
               ),
             ],
           ),
@@ -2988,10 +3005,20 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   Map<int, TableColumnWidth> _stockTableColumnWidths(
       bool showPurchasePrice, bool showMrp) {
     final widths = <double>[
-      56, 88, 100,
+      56,
+      88,
+      100,
       if (showMrp) 100,
       if (showPurchasePrice) 120,
-      120, 120, 120, 96, 88, 110, 110, 72, 72,
+      120,
+      120,
+      120,
+      96,
+      88,
+      110,
+      110,
+      72,
+      72,
     ];
     return {
       for (var index = 0; index < widths.length; index++)

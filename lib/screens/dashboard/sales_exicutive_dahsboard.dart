@@ -1803,7 +1803,8 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            member.name ?? "dashboard.placeholders.unknown_member".tr,
+                            member.name ??
+                                "dashboard.placeholders.unknown_member".tr,
                             style: buildCustomStyle(
                               FontWeightManager.semiBold,
                               FontSize.s14,

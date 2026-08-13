@@ -31,11 +31,7 @@ class BarcodeRow {
   final ProductVariant? variant;
   final SaleUnit? saleUnit;
 
-  const BarcodeRow({
-    required this.product,
-    this.variant,
-    this.saleUnit,
-  });
+  const BarcodeRow({required this.product, this.variant, this.saleUnit});
 
   // ── Display helpers ──
 
@@ -59,12 +55,15 @@ class BarcodeRow {
       final newNames = <dynamic, dynamic>{};
       originalNames.forEach((key, value) {
         if (value is String) {
-          newNames[key] = value.trim().isNotEmpty ? '${value.trim()}$suffix' : value;
+          newNames[key] = value.trim().isNotEmpty
+              ? '${value.trim()}$suffix'
+              : value;
         } else if (value is Map) {
           final newSubMap = <dynamic, dynamic>{};
           value.forEach((subKey, subValue) {
             if (subKey == 'name' || subKey == 'value') {
-              newSubMap[subKey] = (subValue != null && subValue.toString().trim().isNotEmpty)
+              newSubMap[subKey] =
+                  (subValue != null && subValue.toString().trim().isNotEmpty)
                   ? '${subValue.toString().trim()}$suffix'
                   : subValue;
             } else {
@@ -84,7 +83,8 @@ class BarcodeRow {
           final newItem = <dynamic, dynamic>{};
           item.forEach((key, value) {
             if (key == 'name' || key == 'value') {
-              newItem[key] = (value != null && value.toString().trim().isNotEmpty)
+              newItem[key] =
+                  (value != null && value.toString().trim().isNotEmpty)
                   ? '${value.toString().trim()}$suffix'
                   : value;
             } else {
@@ -126,7 +126,8 @@ class BarcodeRow {
     }
     // If the product has variants, the base product's own standalone quantity
     // is the sum of stock entries where productVariantId is null (excluding variants).
-    final hasVariants = product.variants != null && product.variants!.isNotEmpty;
+    final hasVariants =
+        product.variants != null && product.variants!.isNotEmpty;
     if (hasVariants) {
       final baseStockQty = product.stock
           ?.where((s) => s.productVariantId == null)
@@ -146,7 +147,7 @@ class BarcodeRow {
       //  treat zero variant price as invalid — fall back to base.
       final v = variant!;
       final vPrice = (v.price != null && v.price! > 0) ? v.price : null;
-      return (vPrice ?? product.price?.price)?.toString() ?? 'product_barcode.na'.tr;
+      return (vPrice ?? product.price?.price)?.toString() ?? 'N/A';
     }
     if (saleUnit != null) {
       //  reuse the shared resolution chain (batch override →
@@ -155,7 +156,9 @@ class BarcodeRow {
         product: product,
         saleUnit: saleUnit!,
       );
-      return resolved?.toString() ?? product.price?.price?.toString() ?? 'product_barcode.na'.tr;
+      return resolved?.toString() ??
+          product.price?.price?.toString() ??
+          'product_barcode.na'.tr;
     }
     return product.price?.price?.toString() ?? 'product_barcode.na'.tr;
   }
@@ -165,9 +168,9 @@ class BarcodeRow {
       //  treat zero variant MRP as invalid — fall back to base.
       final v = variant!;
       final vMrp = (v.mrp != null && v.mrp! > 0) ? v.mrp : null;
-      return (vMrp ?? product.mrp)?.toString() ?? 'product_barcode.na'.tr;
+      return (vMrp ?? product.mrp)?.toString() ?? 'N/A';
     }
-    return product.mrp?.toString() ?? 'product_barcode.na'.tr;
+    return product.mrp?.toString() ?? 'N/A';
   }
 
   /// Stable, unique key for selection tracking.
@@ -244,9 +247,8 @@ class BarcodeRow {
     //  base branch — only pass stock records that belong to the base
     // product (productVariantId == null). Variant-owned batch records must not
     // bleed into the base row's print output.
-    final baseStock = product.stock
-            ?.where((s) => s.productVariantId == null)
-            .toList() ??
+    final baseStock =
+        product.stock?.where((s) => s.productVariantId == null).toList() ??
         const [];
     return product.copyWith(stock: baseStock);
   }
@@ -296,15 +298,13 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
       (_allBarcodeRows.length / _barcodeRowsPerPage).ceil().clamp(1, 999999);
 
   /// 1-based serial number of the first row on the current page.
-  int get _barcodeFrom =>
-      (_barcodePage - 1) * _barcodeRowsPerPage + 1;
+  int get _barcodeFrom => (_barcodePage - 1) * _barcodeRowsPerPage + 1;
 
   /// The slice of expanded rows for the current page.
   List<BarcodeRow> get _currentPageRows {
     final start = (_barcodePage - 1) * _barcodeRowsPerPage;
     if (start >= _allBarcodeRows.length) return const [];
-    final end =
-        (start + _barcodeRowsPerPage).clamp(0, _allBarcodeRows.length);
+    final end = (start + _barcodeRowsPerPage).clamp(0, _allBarcodeRows.length);
     return _allBarcodeRows.sublist(start, end);
   }
 
@@ -335,8 +335,10 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
         initLoading = true;
       });
 
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
+      String? accessToken = Provider.of<AuthModel>(
+        context,
+        listen: false,
+      ).token;
 
       if (accessToken == null || accessToken.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -346,8 +348,10 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
         return;
       }
 
-      final categoryProvider =
-          Provider.of<CategoryProvider>(context, listen: false);
+      final categoryProvider = Provider.of<CategoryProvider>(
+        context,
+        listen: false,
+      );
       if (!categoryProvider.isCategoriesLoaded) {
         debugPrint("📥 Loading categories from API...");
         await categoryProvider.ensureCategoriesLoaded();
@@ -355,11 +359,14 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
         debugPrint("✅ Categories loaded and cached");
       } else {
         debugPrint(
-            "📋 Using cached categories (${categoryProvider.category?.length ?? 0} items)");
+          "📋 Using cached categories (${categoryProvider.category?.length ?? 0} items)",
+        );
       }
 
-      Provider.of<LocalProductProvider>(context, listen: false)
-          .listAllProducts(categoryId: 0);
+      Provider.of<LocalProductProvider>(
+        context,
+        listen: false,
+      ).listAllProducts(categoryId: 0);
 
       _extractCategories();
 
@@ -372,7 +379,14 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
       debugPrint("Error loading products: $error");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('product_barcode.error_loading_products'.tr.replaceAll('@error', error.toString()))),
+          SnackBar(
+            content: Text(
+              'product_barcode.error_loading_products'.tr.replaceAll(
+                '@error',
+                error.toString(),
+              ),
+            ),
+          ),
         );
         setState(() => initLoading = false);
       }
@@ -380,8 +394,10 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
   }
 
   void _extractCategories() {
-    final categoryProvider =
-        Provider.of<CategoryProvider>(context, listen: false);
+    final categoryProvider = Provider.of<CategoryProvider>(
+      context,
+      listen: false,
+    );
 
     final categoryList = categoryProvider.category ?? [];
     final uniqueCategories = categoryList
@@ -399,10 +415,14 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
   }
 
   void searchProducts(int pageNo) {
-    LocalProductProvider provider =
-        Provider.of<LocalProductProvider>(context, listen: false);
-    final categoryProvider =
-        Provider.of<CategoryProvider>(context, listen: false);
+    LocalProductProvider provider = Provider.of<LocalProductProvider>(
+      context,
+      listen: false,
+    );
+    final categoryProvider = Provider.of<CategoryProvider>(
+      context,
+      listen: false,
+    );
 
     int? catId;
     if (categoryController.text != "All Categories") {
@@ -419,8 +439,9 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
           ? null
           : productNameController.text,
       categoryId: catId,
-      filterBarcode:
-          barcodeController.text.isEmpty ? null : barcodeController.text,
+      filterBarcode: barcodeController.text.isEmpty
+          ? null
+          : barcodeController.text,
       page: pageNo,
     );
   }
@@ -433,8 +454,10 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
       _selectedProductKeys.clear();
       _selectedProductsByKey.clear();
     });
-    Provider.of<LocalProductProvider>(context, listen: false)
-        .listAllProducts(categoryId: 0);
+    Provider.of<LocalProductProvider>(
+      context,
+      listen: false,
+    ).listAllProducts(categoryId: 0);
   }
 
   List<BarcodeRow> expandProductsToBarcodeRows(List<GetProduct> products) {
@@ -466,7 +489,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
 
       // Always show the base product row.
       rows.add(BarcodeRow(product: product));
-      
+
       // Show any variant or sale-unit rows.
       rows.addAll(subRows);
     }
@@ -559,13 +582,31 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                   shrinkWrap: true,
                   physics: const BouncingScrollPhysics(),
                   children: [
-                    _buildDetailRow('product_barcode.product_name'.tr, row.displayName),
-                    _buildDetailRow('product_barcode.category'.tr, row.product.category?.name ?? 'product_barcode.na'.tr),
-                    _buildDetailRow('product_barcode.unit'.tr, row.product.unit ?? 'product_barcode.na'.tr),
-                    _buildDetailRow('product_barcode.retail_price'.tr, row.priceDisplay),
-                    _buildDetailRow('product_barcode.mrp'.tr, row.mrpDisplay),
-                    _buildDetailRow('product_barcode.quantity'.tr, row.quantity),
-                    _buildDetailRow('product_barcode.barcode'.tr, row.barcode ?? 'product_barcode.na'.tr),
+                    _buildDetailRow(
+                      'product_barcode.product_name'.tr,
+                      row.displayName,
+                    ),
+                    _buildDetailRow(
+                      'product_barcode.category'.tr,
+                      row.product.category?.name ?? 'product_barcode.na'.tr,
+                    ),
+                    _buildDetailRow(
+                      'product_barcode.unit'.tr,
+                      row.product.unit ?? 'product_barcode.na'.tr,
+                    ),
+                    _buildDetailRow(
+                      'product_barcode.retail_price'.tr,
+                      row.priceDisplay,
+                    ),
+                    _buildDetailRow('MRP', row.mrpDisplay),
+                    _buildDetailRow(
+                      'product_barcode.quantity'.tr,
+                      row.quantity,
+                    ),
+                    _buildDetailRow(
+                      'product_barcode.barcode'.tr,
+                      row.barcode ?? 'product_barcode.na'.tr,
+                    ),
                   ],
                 ),
               ),
@@ -595,22 +636,28 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     setState(() => _isPrinting = true);
     try {
       final validRows = selectedRows
-          .where((row) =>
-              row.barcode != null && row.barcode!.trim().isNotEmpty)
+          .where((row) => row.barcode != null && row.barcode!.trim().isNotEmpty)
           .toList();
 
       if (validRows.length < selectedRows.length) {
-        final bool shouldContinue = await showDialog(
+        final bool shouldContinue =
+            await showDialog(
               context: context,
               builder: (context) => AlertDialog(
                 title: Text('product_barcode.missing_barcode_title'.tr),
-                content: Text(validRows.isEmpty
-                    ? 'product_barcode.no_barcode_plural'.tr
-                    : 'product_barcode.no_barcode_skip'.tr),
+                content: Text(
+                  validRows.isEmpty
+                      ? 'product_barcode.no_barcode_plural'.tr
+                      : 'product_barcode.no_barcode_skip'.tr,
+                ),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context, false),
-                    child: Text(validRows.isEmpty ? 'product_barcode.close'.tr : 'general.cancel'.tr),
+                    child: Text(
+                      validRows.isEmpty
+                          ? 'product_barcode.close'.tr
+                          : 'general.cancel'.tr,
+                    ),
                   ),
                   if (validRows.isNotEmpty)
                     TextButton(
@@ -627,8 +674,9 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
         }
       }
 
-      final validProducts =
-          validRows.map((r) => r.toProductForPrint()).toList();
+      final validProducts = validRows
+          .map((r) => r.toProductForPrint())
+          .toList();
 
       if (!mounted) return;
       final BarcodePrintRequest? result = await showDialog<BarcodePrintRequest>(
@@ -643,6 +691,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
           printItems: result.items,
           stickerSize: result.stickerSize,
           stickersPerRow: result.stickersPerRow,
+          printRotationDegrees: result.printRotationDegrees,
+          invertPrintColors: result.invertPrintColors,
         );
 
         if (mounted && printResult.isSuccess) {
@@ -693,6 +743,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
           printItems: result.items,
           stickerSize: result.stickerSize,
           stickersPerRow: result.stickersPerRow,
+          printRotationDegrees: result.printRotationDegrees,
+          invertPrintColors: result.invertPrintColors,
         );
 
         if (mounted && printResult.isSuccess) {
@@ -724,8 +776,9 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
       value: categoryController.text == "All Categories"
           ? null
           : categoryController.text,
-      items:
-          categories.where((category) => category != "All Categories").toList(),
+      items: categories
+          .where((category) => category != "All Categories")
+          .toList(),
       onChanged: (String? newValue) {
         setState(() {
           categoryController.text = newValue ?? "All Categories";
@@ -835,7 +888,10 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     final printButton = CustomRoundButton(
       title: _isPrinting
           ? 'product_barcode.printing'.tr
-          : 'product_barcode.print_selected'.tr.replaceAll('@count', _selectedProductKeys.length.toString()),
+          : 'product_barcode.print_selected'.tr.replaceAll(
+              '@count',
+              _selectedProductKeys.length.toString(),
+            ),
       fct: () {
         if (_isPrinting) return;
         final selectedRows = _selectedProductsByKey.values.toList();
@@ -881,11 +937,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
 
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: [
-        printButton,
-        const SizedBox(width: 10),
-        clearButton,
-      ],
+      children: [printButton, const SizedBox(width: 10), clearButton],
     );
   }
 
@@ -981,7 +1033,9 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                   ),
                 ),
               ),
-              if (copyable && value.isNotEmpty && value != 'product_barcode.na'.tr) ...[
+              if (copyable &&
+                  value.isNotEmpty &&
+                  value != 'product_barcode.na'.tr) ...[
                 const SizedBox(width: 6),
                 Builder(
                   builder: (context) => GestureDetector(
@@ -989,7 +1043,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                       Clipboard.setData(ClipboardData(text: value));
                       showScaffold(
                         context: context,
-                        message: 'product_barcode.copied_to_clipboard'.tr.replaceAll('@label', label),
+                        message: 'product_barcode.copied_to_clipboard'.tr
+                            .replaceAll('@label', label),
                       );
                     },
                     child: const Icon(
@@ -1113,10 +1168,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     );
   }
 
-  Widget _buildDesktopTable(
-    List<BarcodeRow> barcodeRows,
-    int fromIndex,
-  ) {
+  Widget _buildDesktopTable(List<BarcodeRow> barcodeRows, int fromIndex) {
     const Map<int, TableColumnWidth> colWidths = {
       0: FixedColumnWidth(55),
       1: FixedColumnWidth(48),
@@ -1132,7 +1184,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
 
     // barcodeRows is already the current-page slice (Issue 5 — no re-expansion).
 
-    final allSelected = barcodeRows.isNotEmpty &&
+    final allSelected =
+        barcodeRows.isNotEmpty &&
         barcodeRows.every((row) => _isRowSelected(row));
 
     return Column(
@@ -1211,11 +1264,12 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                       return TableRow(
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? ColorManager.kPrimaryColor
-                                  .withValues(alpha: 0.07)
+                              ? ColorManager.kPrimaryColor.withValues(
+                                  alpha: 0.07,
+                                )
                               : index % 2 == 0
-                                  ? Colors.white
-                                  : Colors.grey.withValues(alpha: 0.06),
+                              ? Colors.white
+                              : Colors.grey.withValues(alpha: 0.06),
                         ),
                         children: [
                           _buildTableCell(serialNumber.toString()),
@@ -1238,7 +1292,9 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                               child: Center(
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 4, vertical: 4),
+                                    horizontal: 4,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.transparent,
                                     borderRadius: BorderRadius.circular(6),
@@ -1283,16 +1339,19 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                     ),
                                     if (row.barcode != null &&
                                         row.barcode!.isNotEmpty &&
-                                        row.barcode != 'product_barcode.na'.tr) ...[
+                                        row.barcode !=
+                                            'product_barcode.na'.tr) ...[
                                       const SizedBox(width: 6),
                                       GestureDetector(
                                         onTap: () {
-                                          Clipboard.setData(ClipboardData(
-                                              text: row.barcode!));
+                                          Clipboard.setData(
+                                            ClipboardData(text: row.barcode!),
+                                          );
                                           showScaffold(
                                             context: context,
                                             message:
-                                                'product_barcode.barcode_copied'.tr,
+                                                'product_barcode.barcode_copied'
+                                                    .tr,
                                           );
                                         },
                                         child: const Icon(
@@ -1315,13 +1374,16 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                               child: Center(
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 4, vertical: 4),
+                                    horizontal: 4,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.transparent,
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: SelectableText(
-                                    row.product.category?.name ?? 'product_barcode.na'.tr,
+                                    row.product.category?.name ??
+                                        'product_barcode.na'.tr,
                                     textAlign: TextAlign.center,
                                     style: buildCustomStyle(
                                       FontWeightManager.medium,
@@ -1347,16 +1409,16 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                   iconColor: ColorManager.kPrimaryColor
                                       .withValues(alpha: 0.9),
                                   tooltip: 'product_barcode.view_details'.tr,
-                                  onPressed: () =>
-                                      _showProductDetails(row),
+                                  onPressed: () => _showProductDetails(row),
                                 ),
                                 const SizedBox(width: 5),
                                 ProductBarcodeIconAction(
                                   icon: Icons.print,
                                   iconColor: ColorManager.kPrimaryColor,
-                                  tooltip: 'product_barcode.print_barcode_tooltip'.tr,
-                                  onPressed: () =>
-                                      _handlePrintSingle(row),
+                                  tooltip:
+                                      'product_barcode.print_barcode_tooltip'
+                                          .tr,
+                                  onPressed: () => _handlePrintSingle(row),
                                 ),
                               ],
                             ),
@@ -1374,13 +1436,11 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     );
   }
 
-  Widget _buildMobileList(
-    List<BarcodeRow> barcodeRows,
-    int fromIndex,
-  ) {
+  Widget _buildMobileList(List<BarcodeRow> barcodeRows, int fromIndex) {
     // barcodeRows is already the current-page slice (Issue 5 — no re-expansion).
 
-    final allSelected = barcodeRows.isNotEmpty &&
+    final allSelected =
+        barcodeRows.isNotEmpty &&
         barcodeRows.every((row) => _isRowSelected(row));
 
     return Column(
@@ -1516,10 +1576,12 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                 child: Column(
                   children: [
                     Expanded(
-                      child: initLoading ||
-                              Provider.of<LocalProductProvider>(context,
-                                      listen: true)
-                                  .isLoading
+                      child:
+                          initLoading ||
+                              Provider.of<LocalProductProvider>(
+                                context,
+                                listen: true,
+                              ).isLoading
                           ? const ProductBarcodeLoadingState()
                           : Consumer<LocalProductProvider>(
                               builder: (context, gridProvider, child) {
@@ -1576,8 +1638,10 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                             totalPages: _barcodeTotalPages,
                             onPageChanged: (int page) {
                               setState(() {
-                                _barcodePage =
-                                    page.clamp(1, _barcodeTotalPages);
+                                _barcodePage = page.clamp(
+                                  1,
+                                  _barcodeTotalPages,
+                                );
                               });
                             },
                           );

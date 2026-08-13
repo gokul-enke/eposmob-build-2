@@ -13,7 +13,7 @@ class ProductVariantDetailsSection extends StatelessWidget {
     required this.currency,
     this.activeStoreId,
     this.selectedVariantId,
-    this.showPurchasePrice = true,
+    this.showPurchasePrice = false,
     this.showMrp = true,
   });
 

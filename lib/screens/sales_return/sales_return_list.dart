@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
+import 'package:pos_machine/components/build_dialog_box.dart'
+    hide
+        showScaffold,
+        showScaffoldError,
+        showLoadingOverlay,
+        hideLoadingOverlay;
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
@@ -263,8 +268,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
     );
     final bool isCompleted =
         order.status.toString() == '1' || order.status.toString() == 'true';
-    final orderNumber =
-        order.order?.orderNumber ?? order.orderId.toString();
+    final orderNumber = order.order?.orderNumber ?? order.orderId.toString();
 
     return Container(
       padding: const EdgeInsetsDirectional.all(14),
@@ -369,8 +373,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
             children: [
               SalesReturnIconAction(
                 icon: Icons.visibility,
-                backgroundColor:
-                    ColorManager.kPrimaryColor.withOpacity(0.9),
+                backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.9),
                 iconColor: Colors.white,
                 tooltip: 'billing.view_details'.tr,
                 onPressed: () {
@@ -392,9 +395,8 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                   List<OrderReturnItem> returnItems = order.items.map((item) {
                     return OrderReturnItem(
                       id: item.id,
-                      productName:
-                          item.cartItem.product?.name ?? 'Unknown',
-                      quantity: item.quantity.toInt(),
+                      productName: item.cartItem.product?.name ?? 'Unknown',
+                      quantity: item.quantity,
                       reason: item.reason,
                     );
                   }).toList();
@@ -408,8 +410,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                         orderDate: order.createdAt.toString(),
                         orderNumber: order.order?.orderNumber ??
                             order.orderId.toString(),
-                        customerName:
-                            order.order?.customer?.user?.name,
+                        customerName: order.order?.customer?.user?.name,
                       ),
                     ),
                   );
@@ -481,8 +482,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
             child: ListView.builder(
               itemCount: salesProvider.salesReturnOrders.length,
               itemBuilder: (context, index) {
-                SalesReturnOrder order =
-                    salesProvider.salesReturnOrders[index];
+                SalesReturnOrder order = salesProvider.salesReturnOrders[index];
                 debugPrint('order.orderId ${order.orderId}');
                 return Table(
                   border: TableBorder(
@@ -490,8 +490,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                       color: Colors.grey.withOpacity(0.12),
                     ),
                   ),
-                  defaultVerticalAlignment:
-                      TableCellVerticalAlignment.middle,
+                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                   columnWidths: const {
                     0: FlexColumnWidth(1.5),
                     1: FlexColumnWidth(1),
@@ -664,9 +663,8 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                           order.items.map((item) {
                         return OrderReturnItem(
                           id: item.id,
-                          productName:
-                              item.cartItem.product?.name ?? 'Unknown',
-                          quantity: item.quantity.toInt(),
+                          productName: item.cartItem.product?.name ?? 'Unknown',
+                          quantity: item.quantity,
                           reason: item.reason,
                         );
                       }).toList();
@@ -680,8 +678,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                             orderDate: order.createdAt.toString(),
                             orderNumber: order.order?.orderNumber ??
                                 order.orderId.toString(),
-                            customerName:
-                                order.order?.customer?.user?.name,
+                            customerName: order.order?.customer?.user?.name,
                           ),
                         ),
                       );

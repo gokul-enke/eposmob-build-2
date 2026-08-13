@@ -171,9 +171,8 @@ class VariantEditorController {
     final newRows = <VariantRow>[];
     final usedSignatures = <String>{};
     for (final combo in combos) {
-      final signature = (combo.map((e) => '${e.key}:${e.value}').toList()
-            ..sort())
-          .join('|');
+      final signature =
+          (combo.map((e) => '${e.key}:${e.value}').toList()..sort()).join('|');
       usedSignatures.add(signature);
       final existing = existingBySignature[signature];
       if (existing != null) {
@@ -299,6 +298,7 @@ class VariantEditorSection extends StatefulWidget {
   final VariantEditorController controller;
   final List<ProductProperty> properties;
   final bool isLoadingProperties;
+  final bool showPurchasePrice;
   final GenerateBarcodeCallback? onGenerateBarcode;
   final VoidCallback? onRetryLoadProperties;
 
@@ -307,6 +307,7 @@ class VariantEditorSection extends StatefulWidget {
     required this.controller,
     required this.properties,
     this.isLoadingProperties = false,
+    this.showPurchasePrice = false,
     this.onGenerateBarcode,
     this.onRetryLoadProperties,
   });
@@ -430,7 +431,8 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
             controller.optionGroups.length,
             (index) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: _buildOptionGroupRow(controller.optionGroups[index], index),
+              child:
+                  _buildOptionGroupRow(controller.optionGroups[index], index),
             ),
           ),
           Wrap(
@@ -486,7 +488,8 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
       searchController: group.propSearchController,
     );
     final deleteButton = IconButton(
-      onPressed: () => setState(() => widget.controller.removeOptionGroup(index)),
+      onPressed: () =>
+          setState(() => widget.controller.removeOptionGroup(index)),
       splashRadius: 16,
       icon: const Icon(Icons.close, size: 18, color: Colors.black45),
     );
@@ -525,7 +528,8 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
     );
   }
 
-  Widget _buildOptionValuesInput(VariantOptionGroup group, ProductProperty? prop) {
+  Widget _buildOptionValuesInput(
+      VariantOptionGroup group, ProductProperty? prop) {
     final availableValues =
         (prop != null && prop.isList) ? prop.values : const <String>[];
 
@@ -643,16 +647,17 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
   // Row content has 7 inter-column gaps (no gap between the Active checkbox
   // and the delete icon), plus each variant row's Container adds 8px padding
   // and a 1px border on both sides.
-  static const double _tableContentWidth = _colAttr +
+  double get _tableContentWidth =>
+      _colAttr +
       _colSku +
       _colBarcode +
       _colPrice +
       _colMrp +
-      _colPurchase +
+      (widget.showPurchasePrice ? _colPurchase : 0) +
       _colQty +
       _colActive +
       _colDelete +
-      _colGap * 7 +
+      _colGap * (widget.showPurchasePrice ? 7 : 6) +
       (8 + 1) * 2;
 
   static const _tableHeaderStyle = TextStyle(
@@ -704,21 +709,34 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
   Widget _buildTableHeaderRow() {
     return Row(
       children: [
-        const SizedBox(width: _colAttr, child: Text('Attributes', style: _tableHeaderStyle)),
+        const SizedBox(
+            width: _colAttr,
+            child: Text('Attributes', style: _tableHeaderStyle)),
         const SizedBox(width: _colGap),
-        const SizedBox(width: _colSku, child: Text('SKU', style: _tableHeaderStyle)),
+        const SizedBox(
+            width: _colSku, child: Text('SKU', style: _tableHeaderStyle)),
         const SizedBox(width: _colGap),
-        const SizedBox(width: _colBarcode, child: Text('Barcode', style: _tableHeaderStyle)),
+        const SizedBox(
+            width: _colBarcode,
+            child: Text('Barcode', style: _tableHeaderStyle)),
         const SizedBox(width: _colGap),
-        const SizedBox(width: _colPrice, child: Text('Price', style: _tableHeaderStyle)),
+        const SizedBox(
+            width: _colPrice, child: Text('Price', style: _tableHeaderStyle)),
         const SizedBox(width: _colGap),
-        const SizedBox(width: _colMrp, child: Text('MRP', style: _tableHeaderStyle)),
+        const SizedBox(
+            width: _colMrp, child: Text('MRP', style: _tableHeaderStyle)),
+        if (widget.showPurchasePrice) ...[
+          const SizedBox(width: _colGap),
+          const SizedBox(
+              width: _colPurchase,
+              child: Text('Purchase Price', style: _tableHeaderStyle)),
+        ],
         const SizedBox(width: _colGap),
-        const SizedBox(width: _colPurchase, child: Text('Purchase Price', style: _tableHeaderStyle)),
+        const SizedBox(
+            width: _colQty, child: Text('Qty', style: _tableHeaderStyle)),
         const SizedBox(width: _colGap),
-        const SizedBox(width: _colQty, child: Text('Qty', style: _tableHeaderStyle)),
-        const SizedBox(width: _colGap),
-        const SizedBox(width: _colActive, child: Text('Active', style: _tableHeaderStyle)),
+        const SizedBox(
+            width: _colActive, child: Text('Active', style: _tableHeaderStyle)),
         const SizedBox(width: _colDelete),
       ],
     );
@@ -737,17 +755,34 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
         children: [
           SizedBox(width: _colAttr, child: _buildAttributeSummaryCell(row)),
           const SizedBox(width: _colGap),
-          SizedBox(height: 42, width: _colSku, child: _plainField(row.skuController)),
+          SizedBox(
+              height: 42,
+              width: _colSku,
+              child: _plainField(row.skuController)),
           const SizedBox(width: _colGap),
           SizedBox(width: _colBarcode, child: _buildBarcodeTableCell(row)),
           const SizedBox(width: _colGap),
-          SizedBox(height: 42, width: _colPrice, child: _plainField(row.priceController, numeric: true)),
+          SizedBox(
+              height: 42,
+              width: _colPrice,
+              child: _plainField(row.priceController, numeric: true)),
           const SizedBox(width: _colGap),
-          SizedBox(height: 42, width: _colMrp, child: _plainField(row.mrpController, numeric: true)),
+          SizedBox(
+              height: 42,
+              width: _colMrp,
+              child: _plainField(row.mrpController, numeric: true)),
+          if (widget.showPurchasePrice) ...[
+            const SizedBox(width: _colGap),
+            SizedBox(
+                height: 42,
+                width: _colPurchase,
+                child: _plainField(row.purchasePriceController, numeric: true)),
+          ],
           const SizedBox(width: _colGap),
-          SizedBox(height: 42, width: _colPurchase, child: _plainField(row.purchasePriceController, numeric: true)),
-          const SizedBox(width: _colGap),
-          SizedBox(height: 42, width: _colQty, child: _plainField(row.quantityController, numeric: true)),
+          SizedBox(
+              height: 42,
+              width: _colQty,
+              child: _plainField(row.quantityController, numeric: true)),
           const SizedBox(width: _colGap),
           SizedBox(
             height: 42,
@@ -763,10 +798,12 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
             height: 42,
             width: _colDelete,
             child: IconButton(
-              onPressed: () => setState(() => widget.controller.removeRow(index)),
+              onPressed: () =>
+                  setState(() => widget.controller.removeRow(index)),
               splashRadius: 16,
               padding: EdgeInsets.zero,
-              icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
+              icon:
+                  const Icon(Icons.delete_outline, color: Colors.red, size: 18),
             ),
           ),
         ],
@@ -811,7 +848,8 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
                             style: const TextStyle(fontSize: 10),
                           ),
                           visualDensity: VisualDensity.compact,
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
                           padding: const EdgeInsets.symmetric(horizontal: 2),
                         );
                       }).toList(),
@@ -883,7 +921,8 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
     return Row(
       children: [
         Expanded(
-          child: SizedBox(height: 42, child: _plainField(row.barcodeController)),
+          child:
+              SizedBox(height: 42, child: _plainField(row.barcodeController)),
         ),
         if (widget.onGenerateBarcode != null) ...[
           const SizedBox(width: 6),
@@ -916,7 +955,8 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : const Icon(Icons.auto_awesome, size: 14, color: Colors.white),
+                  : const Icon(Icons.auto_awesome,
+                      size: 14, color: Colors.white),
             ),
           ),
         ],
@@ -965,7 +1005,8 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: _buildAttributeValueField(attr, selectedProp, extraRefresh: extraRefresh),
+          child: _buildAttributeValueField(attr, selectedProp,
+              extraRefresh: extraRefresh),
         ),
         IconButton(
           onPressed: row.attributes.length <= 1

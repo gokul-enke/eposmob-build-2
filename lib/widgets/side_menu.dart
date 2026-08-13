@@ -300,7 +300,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.house,
-                  title: 'Home',
+                  title: 'nav.home'.tr,
                   onTap: () {
                     sideBarController.index.value = 0;
                   },
@@ -324,7 +324,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.store,
-                  title: 'Billing',
+                  title: 'nav.billing'.tr,
                   onTap: () {
                     sideBarController.index.value = 90;
                   },
@@ -347,7 +347,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.chartLine,
-                  title: 'Dashboard',
+                  title: 'nav.dashboard'.tr,
                   onTap: () {
                     sideBarController.index.value = 1;
                   },
@@ -370,7 +370,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.shop,
-                  title: 'Restaurant',
+                  title: 'nav.restaurant'.tr,
                   onTap: () {
                     sideBarController.index.value = 89;
                   },
@@ -393,7 +393,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.cashRegister,
-                  title: 'Store',
+                  title: 'nav.store'.tr,
                   onTap: () {
                     sideBarController.index.value = 97;
                   },
@@ -414,7 +414,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.bellConcierge,
-                  title: 'Attender',
+                  title: 'nav.attender'.tr,
                   onTap: () {
                     sideBarController.index.value = 55;
                   },
@@ -435,7 +435,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.utensils,
-                  title: 'Kitchen Master',
+                  title: 'nav.kitchen_master'.tr,
                   onTap: () {
                     sideBarController.index.value = 56;
                   },
@@ -512,7 +512,7 @@ class _SideMenuState extends State<SideMenu> {
                   showTitle5: isCompanyAdmin && hasDayClosingPermission,
                   showTitle6: hasOnlineSalesPermission || isCompanyAdmin,
                   icon: fa.FontAwesomeIcons.shoppingCart,
-                  title: 'Sales',
+                  title: 'nav.sales'.tr,
                   onTap: () {
                     sideBarController.index.value = 2;
                     final salesProvider =
@@ -560,7 +560,7 @@ class _SideMenuState extends State<SideMenu> {
                   listTitle1: "Quotations",
                   listTitle2: "Quotation List",
                   icon: fa.FontAwesomeIcons.fileInvoice,
-                  title: 'Quotations',
+                  title: 'nav.quotations'.tr,
                   onTap: () {
                     sideBarController.index.value = 86;
                   },
@@ -585,7 +585,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.tags,
-                  title: 'Category',
+                  title: 'nav.category'.tr,
                   onTap: () {
                     sideBarController.index.value = 12;
                   },
@@ -639,7 +639,7 @@ class _SideMenuState extends State<SideMenu> {
                     showTitle2: hasStockPermission,
                     showTitle3: hasBarcodePermission,
                     icon: fa.FontAwesomeIcons.cube,
-                    title: 'Product',
+                    title: 'nav.product'.tr,
                     onTap: () async {
                       sideBarController.index.value = 14;
                     },
@@ -683,7 +683,7 @@ class _SideMenuState extends State<SideMenu> {
                     // Permission-based visibility
                     showTitle1: hasPurchasePermission,
                     icon: fa.FontAwesomeIcons.clipboardList,
-                    title: 'Purchase',
+                    title: 'nav.purchase'.tr,
                     onTap: () async {
                       sideBarController.index.value = 81;
                     },
@@ -790,7 +790,7 @@ class _SideMenuState extends State<SideMenu> {
                     showTitle6: hasNonStockPermission,
                     showTitle7: hasConsumedStockPermission,
                     icon: fa.FontAwesomeIcons.chartPie,
-                    title: 'Reports',
+                    title: 'nav.reports'.tr,
                     onTap: () {
                       sideBarController.index.value = isCompanyAdmin ? 85 : 58;
                     },
@@ -887,7 +887,7 @@ class _SideMenuState extends State<SideMenu> {
                     showTitle5: hasProformaPermission,
                     showTitle6: true,
                     icon: fa.FontAwesomeIcons.exchange,
-                    title: 'Transactions',
+                    title: 'nav.transactions'.tr,
                     onTap: () {
                       sideBarController.index.value = 21;
                     },
@@ -947,7 +947,7 @@ class _SideMenuState extends State<SideMenu> {
                     showTitle1: hasCustomerTransactionsPermission,
                     showTitle2: hasSupplierTransactionsPermission,
                     icon: fa.FontAwesomeIcons.users,
-                    title: 'Party Accounts',
+                    title: 'nav.party_accounts'.tr,
                     onTap: () {
                       sideBarController.index.value = 23;
                     },
@@ -969,7 +969,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.users,
-                  title: 'Customers',
+                  title: 'nav.customers'.tr,
                   onTap: () {
                     sideBarController.index.value = 5;
                   },
@@ -1062,7 +1062,7 @@ class _SideMenuState extends State<SideMenu> {
                   showTitle2: hasSupplierTransactionsPermission,
                   showTitle3: hasSupplierVouchersPermission,
                   icon: fa.FontAwesomeIcons.truck,
-                  title: 'Suppliers',
+                  title: 'nav.suppliers'.tr,
                   onTap: () {
                     sideBarController.index.value = 52;
                     final supplierProvider =
@@ -1109,7 +1109,7 @@ class _SideMenuState extends State<SideMenu> {
                   Obx(
                     () => DrawerListTile(
                       icon: fa.FontAwesomeIcons.print,
-                      title: 'Printer',
+                      title: 'nav.printer'.tr,
                       onTap: () {
                         sideBarController.index.value = 53;
                       },
@@ -1134,7 +1134,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.gear,
-                  title: 'Settings',
+                  title: 'nav.settings'.tr,
                   onTap: () {
                     sideBarController.index.value = 62;
                   },
@@ -1147,9 +1147,9 @@ class _SideMenuState extends State<SideMenu> {
           // LOGOUT (always visible)
           DrawerListTile(
             icon: fa.FontAwesomeIcons.signOutAlt,
-            title: 'Logout',
+            title: 'nav.logout'.tr,
             onTap: () async {
-              String token = authModel.token ?? '';
+              final token = authModel.token ?? '';
               showDialog(
                   context: context,
                   barrierDismissible: false,
@@ -1158,30 +1158,30 @@ class _SideMenuState extends State<SideMenu> {
                       child: CircularProgressIndicator.adaptive(),
                     );
                   });
-              await AuthenticationProvider()
-                  .logout(token, context)
-                  .then((value) async {
-                if (value["status"] == "success") {
-                  await SessionResetService.resetAfterLogout(context);
 
-                  showScaffold(
-                    context: context,
-                    message: '${value["message"]}',
-                  );
-                  Navigator.pop(context);
-                  await Future.delayed(const Duration(seconds: 0)).then(
-                      (value) => Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const SignInScreen())));
-                } else {
-                  Navigator.pop(context);
-                  showScaffoldError(
-                    context: context,
-                    message: '${value["message"]}',
-                  );
+              String message = 'Logged out successfully';
+              try {
+                final value =
+                    await AuthenticationProvider().logout(token, context);
+                if (value is Map && value['message'] != null) {
+                  message = value['message'].toString();
                 }
-              });
+              } catch (error) {
+                // Server logout is best-effort. The user must still be able to
+                // leave the local session when the network is unavailable.
+                debugPrint('Server logout deferred: $error');
+                message = 'Logged out locally';
+              }
+
+              await SessionResetService.resetAfterLogout(context);
+              if (!context.mounted) return;
+
+              Navigator.pop(context);
+              showScaffold(context: context, message: message);
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const SignInScreen()),
+              );
             },
             selected: false,
           ),

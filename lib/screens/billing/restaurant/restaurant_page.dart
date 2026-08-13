@@ -43,6 +43,7 @@ import 'package:pos_machine/screens/billing/restaurant/widgets/order_panel.dart'
 import 'package:pos_machine/features/billing/presentation/widgets/keyboard_shortcuts_help_dialog.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/dining_selection_modal.dart';
 import 'package:pos_machine/services/cash_drawer_service.dart';
+import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 
 class RestaurantPage extends StatefulWidget {
   final bool allowCounterBillingFromAttender;
@@ -114,7 +115,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
   DeliveryMethodsProvider? _deliveryMethodsProviderForDefaults;
   GeneralSettingsProvider? _generalSettingsProviderForStock;
 
-  String get _menuTitle => widget.storeMode ? 'restaurant.products_tab'.tr : 'restaurant.menu_tab'.tr;
+  String get _menuTitle => widget.storeMode
+      ? 'restaurant.products_tab'.tr
+      : 'restaurant.menu_tab'.tr;
 
   void _syncStockEnabledSetting() {
     final stockEnabled =
@@ -1415,7 +1418,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
     );
   }
 
-  Widget _buildAttenderTopBar({required bool isCompact, bool isMobile = false}) {
+  Widget _buildAttenderTopBar(
+      {required bool isCompact, bool isMobile = false}) {
     final customerSelectionProvider =
         Provider.of<CustomerSelectionProvider>(context);
     final isCounterEnabled =
@@ -2536,11 +2540,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
         for (final item in items) {
           total += (item.price ?? 0) * item.quantity;
         }
-        final currency = Provider.of<AppSettingsProvider>(context,
-                    listen: false)
-                .appSettings
-                ?.currency ??
-            'INR';
+        final currency =
+            Provider.of<AppSettingsProvider>(context, listen: false)
+                    .appSettings
+                    ?.currency ??
+                'INR';
 
         return Padding(
           padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
@@ -2822,8 +2826,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
               IconButton(
                 visualDensity: VisualDensity.compact,
                 icon: const Icon(Icons.arrow_back, color: Color(0xFF2563EB)),
-                tooltip:
-                    widget.storeMode ? 'restaurant.back_to_products'.tr : 'restaurant.back_to_tables'.tr,
+                tooltip: widget.storeMode
+                    ? 'restaurant.back_to_products'.tr
+                    : 'restaurant.back_to_tables'.tr,
                 onPressed: () {
                   setState(() {
                     _currentMobileView = widget.storeMode
@@ -3236,6 +3241,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   Future<dynamic> _sendOrderToKitchen() async {
+    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
+      return null;
+    }
     if (_activeTableId == null && _selectedDeliveryMethodId == null) {
       showScaffoldError(
         context: context,
@@ -3332,6 +3340,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
       );
       debugPrint('📥 SEND TO KITCHEN response body: ${json.encode(response)}');
 
+      if (await SubscriptionActionGuard.handleBackendResponse(
+        context,
+        response,
+      )) {
+        return null;
+      }
       if (response["order_id"] != null) {
         showScaffold(
           context: context,
@@ -3602,6 +3616,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   Future<void> _printOrderWithLoading() async {
+    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
+      return;
+    }
     if (_activeTableId == null && _selectedDeliveryMethodId == null) {
       showScaffoldError(
         context: context,
@@ -3701,6 +3718,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
         tableId: _activeTableId,
       );
 
+      if (await SubscriptionActionGuard.handleBackendResponse(
+        context,
+        response,
+      )) {
+        return;
+      }
       if (response["order_id"] != null) {
         // Get order number from API response
         final orderNumber = response["order_number"]?.toString() ??

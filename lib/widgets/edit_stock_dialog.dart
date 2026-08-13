@@ -37,7 +37,7 @@ Future<bool> showEditStockDialog({
   required String initialMrp,
   bool showMrp = true,
   required String initialPurchasePrice,
-  bool showPurchasePrice = true,
+  bool showPurchasePrice = false,
   required String initialQuantity,
   required String initialRack,
   Future<void> Function(EditStockDialogResult result)? onSuccess,

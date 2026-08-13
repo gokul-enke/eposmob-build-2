@@ -262,6 +262,48 @@ class _BarcodeLayoutSettingsPanelState
           ),
           const SizedBox(height: 16),
 
+          // ---- PDF print rotation correction ----
+          _sectionLabel('Print Rotation Correction'),
+          const SizedBox(height: 8),
+          _dropdownRow(
+            value: _settings.printRotationDegrees?.toString() ?? 'default',
+            items: const ['default', '90', '180', '270'],
+            itemLabel: (value) =>
+                value == 'default' ? 'Printer default' : '$value°',
+            onChanged: (v) => _update((s) => v == 'default'
+                ? s.copyWith(usePrinterDefaultRotation: true)
+                : s.copyWith(printRotationDegrees: int.parse(v))),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Optional correction for label drivers that rotate silent PDF '
+            'prints. Leave at Printer default for normal printers.',
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s10,
+              0.10,
+              Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          Material(
+            type: MaterialType.transparency,
+            child: CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: const Text('Invert Print Colors'),
+              subtitle: const Text(
+                'Use only when the printer outputs white content on black.',
+              ),
+              value: _settings.invertPrintColors,
+              onChanged: (value) => _update(
+                (s) => s.copyWith(invertPrintColors: value ?? false),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+
           // ---- Element Spacing ----
           _sectionLabel('Element Spacing (pt)'),
           const SizedBox(height: 8),
@@ -343,7 +385,7 @@ class _BarcodeLayoutSettingsPanelState
           const SizedBox(height: 10),
           PrinterInfoStrip(
             text:
-                'Size: ${_settings.stickerSize}  ·  ${_settings.stickersPerRow} per row  ·  Barcode: ${_settings.barcodeWidthPercent.round()}% × ${_settings.barcodeHeight.round()}pt  ·  ${_settings.rasterDpi} DPI',
+                'Size: ${_settings.stickerSize}  ·  ${_settings.stickersPerRow} per row  ·  Barcode: ${_settings.barcodeWidthPercent.round()}% × ${_settings.barcodeHeight.round()}pt  ·  ${_settings.rasterDpi} DPI  ·  Rotation: ${_settings.printRotationDegrees == null ? 'Default' : '${_settings.printRotationDegrees}°'}${_settings.invertPrintColors ? '  ·  Inverted' : ''}',
             icon: Icons.straighten_rounded,
           ),
           const SizedBox(height: 20),

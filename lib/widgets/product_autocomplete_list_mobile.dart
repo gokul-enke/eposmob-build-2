@@ -7,6 +7,7 @@ import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/features/billing/domain/add_product_with_variant.dart';
 import 'package:pos_machine/helpers/system_keyboard_policy.dart';
+import 'package:pos_machine/helpers/product_search_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -111,110 +112,7 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
       return const <GetProduct>[];
     }
 
-    final appSettingsProvider =
-        Provider.of<AppSettingsProvider>(context, listen: false);
-    final itemCodeEnabled =
-        appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
-    final lowerQuery = query.toLowerCase();
-
-    // Match desktop billing autocomplete: search sellable products only.
-    final results = widget.productList.where((product) {
-      final nameMatch = _productSearchNames(product)
-          .any((name) => name.toLowerCase().contains(lowerQuery));
-      if (nameMatch) return true;
-
-      // Check SKU (always on)
-      final sku = product.sku ?? '';
-      if (sku.isNotEmpty && sku.toLowerCase().contains(lowerQuery)) {
-        return true;
-      }
-
-      //  only active variants' SKUs surface a product in billing search.
-      final variantSkuMatch = product.variants?.any((variant) {
-            if (!variant.active) return false;
-            final varSku = variant.sku ?? '';
-            return varSku.isNotEmpty &&
-                varSku.toLowerCase().contains(lowerQuery);
-          }) ??
-          false;
-      if (variantSkuMatch) return true;
-
-      if (itemCodeEnabled) {
-        final itemCode = product.itemCode ?? '';
-        if (itemCode.isNotEmpty &&
-            itemCode.toLowerCase().contains(lowerQuery)) {
-          return true;
-        }
-      }
-      return false;
-    }).toList();
-
-    final indexedResults = results.indexed.toList();
-    indexedResults.sort((first, second) {
-      final rankCompare = _productSearchRank(first.$2, lowerQuery)
-          .compareTo(_productSearchRank(second.$2, lowerQuery));
-      if (rankCompare != 0) return rankCompare;
-      return first.$1.compareTo(second.$1);
-    });
-
-    return indexedResults.map((entry) => entry.$2).toList();
-  }
-
-  int _productSearchRank(GetProduct product, String lowerQuery) {
-    final productNames = _productSearchNames(product)
-        .map((name) => name.trim().toLowerCase())
-        .where((name) => name.isNotEmpty);
-    if (productNames.any((name) => name.startsWith(lowerQuery))) return 0;
-    return 1;
-  }
-
-  List<String> _productSearchNames(GetProduct product) {
-    final names = <String>[];
-
-    void addName(dynamic value) {
-      if (value == null) return;
-      final text = value.toString().trim();
-      if (text.isNotEmpty) {
-        names.add(text);
-      }
-    }
-
-    void extractNames(dynamic value) {
-      if (value == null) return;
-
-      if (value is String || value is num || value is bool) {
-        addName(value);
-        return;
-      }
-
-      if (value is Map) {
-        for (final key in const ['name', 'product_name', 'value', 'text']) {
-          if (value.containsKey(key)) {
-            addName(value[key]);
-          }
-        }
-
-        for (final entry in value.entries) {
-          final entryKey = entry.key?.toString().toLowerCase() ?? '';
-          if (entryKey.contains('language') || entryKey == 'id') {
-            continue;
-          }
-          extractNames(entry.value);
-        }
-        return;
-      }
-
-      if (value is Iterable) {
-        for (final item in value) {
-          extractNames(item);
-        }
-      }
-    }
-
-    addName(product.productName);
-    extractNames(product.names);
-
-    return names.toSet().toList();
+    return ProductSearchHelper.search(widget.productList, query);
   }
 
   Future<void> _handleProductSelection(GetProduct product) async {

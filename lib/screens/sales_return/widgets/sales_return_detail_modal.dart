@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/sales_return_detail_helper.dart';
 import 'package:pos_machine/models/list_sales_return.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -79,8 +80,9 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
 
       if (!mounted) return;
       setState(() {
-        _loadedItems =
-            List<SalesReturnCart>.from(salesProvider.salesReturnItems);
+        _loadedItems = List<SalesReturnCart>.from(
+          salesProvider.salesReturnItems,
+        );
         _isLoadingItems = false;
       });
     } catch (error) {
@@ -93,31 +95,7 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
   }
 
   List<OrderReturnItem> _returnItemsForPrint() {
-    if (_loadedItems.isNotEmpty) {
-      return _loadedItems.map((item) {
-        final returnedQuantity = item.returnedQuantity > 0
-            ? item.returnedQuantity
-            : double.tryParse(item.quantity) ?? 0;
-        final reason = resolveSalesReturnItemReason(item, order.items);
-        return OrderReturnItem(
-          id: item.cartItemId,
-          productName: item.productName,
-          quantity: returnedQuantity.toInt(),
-          reason: reason ?? (item.isReturned ? 'sales_return.reason_returned_fallback'.tr : ''),
-        );
-      }).toList();
-    }
-
-    return order.items.map((item) {
-      return OrderReturnItem(
-        id: item.id,
-        productName: item.cartItem.displayName,
-        quantity: item.quantity is int
-            ? item.quantity as int
-            : (item.quantity as double).toInt(),
-        reason: item.reason,
-      );
-    }).toList();
+    return buildTransactionReturnPrintItems(order.items, _loadedItems);
   }
 
   @override
@@ -180,7 +158,9 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SalesReturnLabelPill(label: 'sales_return.order_info'.tr),
+                            SalesReturnLabelPill(
+                              label: 'sales_return.order_info'.tr,
+                            ),
                             const SizedBox(height: 14),
                             _buildInfoRow(
                               'sales.order_number_hint'.tr,
@@ -188,7 +168,8 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                             ),
                             _buildInfoRow(
                               'billing.customer'.tr,
-                              order.order?.customer?.user?.name ?? 'confirmed_orders.na'.tr,
+                              order.order?.customer?.user?.name ??
+                                  'confirmed_orders.na'.tr,
                             ),
                             Consumer<AppSettingsProvider>(
                               builder: (context, settings, _) {
@@ -200,12 +181,15 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                                     ? parsed.toStringAsFixed(2)
                                     : raw;
                                 return _buildInfoRow(
-                                    'sales_return.grand_total'.tr, '$currency $amount');
+                                  'sales_return.grand_total'.tr,
+                                  '$currency $amount',
+                                );
                               },
                             ),
                             _buildInfoRow(
                               'confirmed_orders.payment_method'.tr,
-                              order.order?.paymentMethod?.join(', ') ?? 'confirmed_orders.na'.tr,
+                              order.order?.paymentMethod?.join(', ') ??
+                                  'confirmed_orders.na'.tr,
                             ),
                             _buildInfoRow(
                               'sales.date_col'.tr,
@@ -215,13 +199,16 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                               builder: (context, settings, _) {
                                 final currency =
                                     settings.appSettings?.currency ?? 'INR';
-                                final parsed =
-                                    double.tryParse(order.totalAmount);
+                                final parsed = double.tryParse(
+                                  order.totalAmount,
+                                );
                                 final amount = parsed != null
                                     ? parsed.toStringAsFixed(2)
                                     : order.totalAmount;
                                 return _buildInfoRow(
-                                    'sales_return.return_total'.tr, '$currency $amount');
+                                  'sales_return.return_total'.tr,
+                                  '$currency $amount',
+                                );
                               },
                             ),
                             const SizedBox(height: 8),
@@ -258,18 +245,16 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      if (_isLoadingItems)
-                        const Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      else if (_loadedItems.isNotEmpty)
-                        _buildLoadedItemsTable(context, isPhone)
-                      else if (order.items.isNotEmpty)
+                      if (order.items.isNotEmpty)
                         if (isPhone)
                           ...order.items.map(_buildMobileItemCard)
                         else
                           _buildItemsTable(context)
+                      else if (_isLoadingItems)
+                        const Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
                       else
                         Padding(
                           padding: const EdgeInsets.all(20),
@@ -411,7 +396,7 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            item.cartItem.displayName,
+            salesReturnItemDisplayName(item, _loadedItems),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: buildCustomStyle(
@@ -425,17 +410,23 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
           Row(
             children: [
               Expanded(
-                child: _buildItemMetric('billing.table_qty'.tr, item.quantity.toString()),
+                child: _buildItemMetric(
+                  'billing.table_qty'.tr,
+                  item.quantity.toString(),
+                ),
               ),
               Expanded(
                 child: Consumer<AppSettingsProvider>(
                   builder: (context, settings, _) {
                     final currency = settings.appSettings?.currency ?? 'INR';
-                    final raw = item.price;
+                    final raw = salesReturnItemUnitPrice(item, _loadedItems);
                     final parsed = double.tryParse(raw);
                     final amount =
                         parsed != null ? parsed.toStringAsFixed(2) : raw;
-                    return _buildItemMetric('sales.price'.tr, '$currency $amount');
+                    return _buildItemMetric(
+                      'sales.price'.tr,
+                      '$currency $amount',
+                    );
                   },
                 ),
               ),
@@ -443,7 +434,7 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
           ),
           const SizedBox(height: 8),
           Text(
-            '${'sales_return.reason'.tr}: ${item.reason}',
+            'Reason: ${salesReturnItemReason(item, _loadedItems)}',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: buildCustomStyle(
@@ -507,28 +498,32 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                 ? item.returnedQuantity
                 : double.tryParse(item.quantity) ?? 0;
             final reason = resolveSalesReturnItemReason(item, order.items) ??
-                (item.isReturned ? 'sales_return.reason_returned_fallback'.tr : '—');
-            return TableRow(children: [
-              _buildTableValue(
-                item.productName.trim().isEmpty
-                    ? 'sales_return.unknown_product'.tr
-                    : item.productName,
-              ),
-              _buildTableValue(quantity.toString()),
-              _buildTableValueWidget(
-                Consumer<AppSettingsProvider>(
-                  builder: (context, settings, _) {
-                    final currency = settings.appSettings?.currency ?? 'INR';
-                    final parsed = double.tryParse(item.unitPrice);
-                    final amount = parsed != null
-                        ? parsed.toStringAsFixed(2)
-                        : item.unitPrice;
-                    return Text('$currency $amount');
-                  },
+                (item.isReturned
+                    ? 'sales_return.reason_returned_fallback'.tr
+                    : '—');
+            return TableRow(
+              children: [
+                _buildTableValue(
+                  item.productName.trim().isEmpty
+                      ? 'sales_return.unknown_product'.tr
+                      : item.productName,
                 ),
-              ),
-              _buildTableValue(reason),
-            ]);
+                _buildTableValue(quantity.toString()),
+                _buildTableValueWidget(
+                  Consumer<AppSettingsProvider>(
+                    builder: (context, settings, _) {
+                      final currency = settings.appSettings?.currency ?? 'INR';
+                      final parsed = double.tryParse(item.unitPrice);
+                      final amount = parsed != null
+                          ? parsed.toStringAsFixed(2)
+                          : item.unitPrice;
+                      return Text('$currency $amount');
+                    },
+                  ),
+                ),
+                _buildTableValue(reason),
+              ],
+            );
           }),
         ],
       ),
@@ -547,23 +542,27 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
         children: [
           _buildItemsHeaderRow(),
           ...order.items.map((item) {
-            return TableRow(children: [
-              _buildTableValue(item.cartItem.displayName),
-              _buildTableValue(item.quantity.toString()),
-              _buildTableValueWidget(
-                Consumer<AppSettingsProvider>(
-                  builder: (context, settings, _) {
-                    final currency = settings.appSettings?.currency ?? 'INR';
-                    final raw = item.price;
-                    final parsed = double.tryParse(raw);
-                    final amount =
-                        parsed != null ? parsed.toStringAsFixed(2) : raw;
-                    return Text('$currency $amount');
-                  },
+            return TableRow(
+              children: [
+                _buildTableValue(
+                  salesReturnItemDisplayName(item, _loadedItems),
                 ),
-              ),
-              _buildTableValue(item.reason),
-            ]);
+                _buildTableValue(item.quantity.toString()),
+                _buildTableValueWidget(
+                  Consumer<AppSettingsProvider>(
+                    builder: (context, settings, _) {
+                      final currency = settings.appSettings?.currency ?? 'INR';
+                      final raw = salesReturnItemUnitPrice(item, _loadedItems);
+                      final parsed = double.tryParse(raw);
+                      final amount =
+                          parsed != null ? parsed.toStringAsFixed(2) : raw;
+                      return Text('$currency $amount');
+                    },
+                  ),
+                ),
+                _buildTableValue(salesReturnItemReason(item, _loadedItems)),
+              ],
+            );
           }),
         ],
       ),
@@ -571,18 +570,13 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
   }
 
   Widget _buildItemsTableShell(Widget table) {
-    return SalesReturnResponsiveTable(
-      minWidth: 560,
-      table: table,
-    );
+    return SalesReturnResponsiveTable(minWidth: 560, table: table);
   }
 
   TableRow _buildItemsHeaderRow() {
     return TableRow(
       decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Color(0xFFE0E0E0)),
-        ),
+        border: Border(bottom: BorderSide(color: Color(0xFFE0E0E0))),
       ),
       children: [
         _SalesReturnTableHeaderCell('confirmed_orders.product'.tr),
@@ -595,11 +589,7 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
 
   Widget _buildTableValue(String value) {
     return _buildTableValueWidget(
-      Text(
-        value,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-      ),
+      Text(value, maxLines: 2, overflow: TextOverflow.ellipsis),
     );
   }
 

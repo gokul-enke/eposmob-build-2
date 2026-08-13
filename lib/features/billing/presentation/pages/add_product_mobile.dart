@@ -18,6 +18,7 @@ import 'package:pos_machine/providers/language_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 
 class AddProductMobileScreen extends StatefulWidget {
@@ -49,6 +50,9 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
   bool _languagesRequested = false;
 
   String? _confirmedDuplicateBarcode;
+
+  bool _canViewPurchasePrice({bool listen = false}) =>
+      canViewPurchasePrice(context, listen: listen);
 
   // Step 1
   final _productNameController = TextEditingController();
@@ -809,6 +813,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
       final variants = (variantEnabled && _variantController.hasRows)
           ? buildCreateVariantsPayload(_variantController.toCreateInputs())
           : const <Map<String, dynamic>>[];
+      final canViewPurchasePrice = _canViewPurchasePrice();
 
       final result = await gridProvider.createProductAPI(
         categoryId: _selectedCategory!.categoryId.toString(),
@@ -819,7 +824,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
         quantity: _quantityController.text,
         barcode: _barcodeController.text,
         accessToken: token,
-        purchasePrice: _purchasePriceController.text,
+        purchasePrice:
+            canViewPurchasePrice ? _purchasePriceController.text : '0',
         productNames: productNames.isNotEmpty ? productNames : null,
         saleUnits: saleUnits.isNotEmpty ? saleUnits : null,
         variants: variants.isNotEmpty ? variants : null,
@@ -1434,6 +1440,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
             .appSettings
             ?.multiSaleUnitEnabled ??
         false;
+    final canViewPurchasePrice = _canViewPurchasePrice(listen: true);
     return Form(
       key: _formKeyStep3,
       child: Column(
@@ -1524,14 +1531,16 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
             ],
           ),
           const SizedBox(height: 18),
-          _buildInputField(
-            label: 'Purchase Price',
-            hintText: '0.00',
-            controller: _purchasePriceController,
-            isRequired: true,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [_decimalInputFormatter],
-          ),
+          if (canViewPurchasePrice)
+            _buildInputField(
+              label: 'Purchase Price',
+              hintText: '0.00',
+              controller: _purchasePriceController,
+              isRequired: true,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [_decimalInputFormatter],
+            ),
           const SizedBox(height: 18),
           _buildInputField(
             label: 'Max Sale Price / MRP',
@@ -1614,6 +1623,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           controller: _variantController,
           properties: productProvider.productProperties,
           isLoadingProperties: _isLoadingVariantProperties,
+          showPurchasePrice: _canViewPurchasePrice(),
           onRetryLoadProperties: _retryFetchVariantProperties,
           onGenerateBarcode: (target, setLoading) =>
               _generateBarcodeIntoController(target,

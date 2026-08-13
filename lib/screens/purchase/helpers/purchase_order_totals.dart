@@ -42,3 +42,19 @@ double parsePurchaseAmount(String value) {
   }
   return parsed;
 }
+
+double resolveEffectivePurchaseRate({
+  required double enteredRate,
+  required bool taxIncludePurchase,
+  double? calculatedPurchaseRate,
+}) {
+  if (taxIncludePurchase) return enteredRate;
+  final calculated = calculatedPurchaseRate;
+  if (calculated == null ||
+      !calculated.isFinite ||
+      calculated < 0 ||
+      (enteredRate > 0 && calculated == 0)) {
+    return enteredRate;
+  }
+  return calculated;
+}

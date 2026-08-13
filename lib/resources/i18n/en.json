@@ -64,7 +64,7 @@
     "product_cleared": "Product Details Cleared Successfully",
     "save_order": "Save Order",
     "confirm_and_print": "Confirm and Print",
-    "cart_cleared": "Cart Cleared Succesfully",
+    "cart_cleared": "Cart Cleared Successfully",
     "failed_clear_cart": "Failed to clear cart. Please try again.",
     "add_items_to_cart": "Please add items to cart",
     "select_customer": "Please select a customer",
@@ -577,7 +577,9 @@
     "method": "Method",
     "na": "N/A",
     "payment_display": "@name Payment",
-    "payment_hash": "Payment #@id"
+    "payment_hash": "Payment #@id",
+    "delivery_date": "Delivery Date",
+    "delivery_time": "Delivery Time"
   },
   "sales_return": {
     "title": "Sales Return Orders",
@@ -629,6 +631,8 @@
     "credit_prefix": "Credit: ",
     "business_date_prefix": "Business Date: ",
     "day_close_subtitle": "Summary of today's activities",
+    "confirm_close": "Confirm Close",
+    "confirm_close_subtitle": "Review expected closing cash and today's collection before final closure",
     "session_info": "Session Information",
     "user": "User",
     "opening": "Opening",
@@ -660,6 +664,10 @@
     "notes": "Notes",
     "cancel": "Cancel",
     "close_day": "Close Day",
+    "back": "Back",
+    "next": "Next",
+    "confirm_close_day": "Confirm & Close Day",
+    "at": "at",
     "add_row": "Add Row",
     "remove_row": "Remove row",
     "denomination": "Denomination",
@@ -737,7 +745,11 @@
     "customer": "Customer",
     "order_no": "Order No",
     "date": "Date",
-    "time": "Time"
+    "time": "Time",
+    "credit_collected": "Credit Collected",
+    "order_number": "Order Number",
+    "previous_balance_collected": "Previous Balance Collected",
+    "total_returns_sales_return": "Total Returns (Sales Return)"
   },
   "quotations": {
     "title": "Quotation List",
@@ -1034,6 +1046,7 @@
     "unit": "Unit",
     "qty": "Qty",
     "purchase_rate": "Purchase Rate",
+    "purchase_total": "Purchase Total",
     "retail_price": "Retail Price",
     "mrp": "MRP",
     "actions": "Actions",
@@ -1248,6 +1261,8 @@
     "select_purchase_unit_hint": "Select purchase unit",
     "select_rack": "Select rack",
     "including_tax": "Including Tax",
+    "selling_prices_include_tax": "Selling prices include tax",
+    "purchase_price_includes_tax": "Purchase price includes tax",
     "product_col": "Product",
     "purchase_price_col": "Purchase Price",
     "qty_col": "QTY",
@@ -1993,5 +2008,28 @@
     "details_not_found": "Details not found",
     "failed_load_details": "Failed to load details",
     "page_of": "Page @current of @last"
-  }
+  },
+  "nav": {
+    "home": "Home",
+    "billing": "Billing",
+    "dashboard": "Dashboard",
+    "restaurant": "Restaurant",
+    "store": "Store",
+    "attender": "Attender",
+    "kitchen_master": "Kitchen Master",
+    "sales": "Sales",
+    "quotations": "Quotations",
+    "category": "Category",
+    "product": "Product",
+    "purchase": "Purchase",
+    "reports": "Reports",
+    "transactions": "Transactions",
+    "party_accounts": "Party Accounts",
+    "customers": "Customers",
+    "suppliers": "Suppliers",
+    "printer": "Printer",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "free": "Free"
 }

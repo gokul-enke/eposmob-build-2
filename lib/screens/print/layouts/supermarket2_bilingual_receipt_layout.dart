@@ -2099,13 +2099,110 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
     final bool is58mm = params.is58mm;
     final double scale = is58mm ? 0.85 : 1.0;
 
+    final retDc = params.returnBillDisplayConfig;
+    final retLabels = params.returnBillResolvedLabels;
+    final hasCreditNoteConfig = retLabels?.creditNoteNumber != null ||
+        retLabels?.creditNoteDate != null;
+
     rows.add(SpacingRow(_sectionGap));
     rows.add(StandardThinDividerRow());
     rows.add(SpacingRow(_itemGap));
 
-    final returnTitle = isEnglish ? 'RETURNS' : (isBilingual ? 'المرتجعات\nRETURNS' : 'المرتجعات');
-    rows.add(TextRow(returnTitle, isBold: true, scale: 1.1));
+    if (!hasCreditNoteConfig) {
+      final returnTitle = isEnglish ? params.returnsSectionHeading : (isBilingual ? '${params.returnsSectionHeadingArabic}\n${params.returnsSectionHeading}' : params.returnsSectionHeadingArabic);
+      rows.add(TextRow(returnTitle, isBold: true, scale: 1.1));
+    }
     rows.add(SpacingRow(_itemGap));
+
+    // — Credit Note Details section —
+    if (hasCreditNoteConfig) {
+      final detailsHeading = isBilingual
+          ? _getBilingualText(
+              arabic: (retDc?['showCreditNoteOrder']?.value as String?)?.isNotEmpty == true
+                  ? retDc!['showCreditNoteOrder']!.value as String
+                  : 'تفاصيل إشعار الائتمان',
+              english: (retDc?['showCreditNoteOrder']?.value as String?)?.isNotEmpty == true
+                  ? retDc!['showCreditNoteOrder']!.value as String
+                  : 'CREDIT NOTE DETAILS')
+          : (isEnglish
+              ? (retLabels?.detailsHeading?.isNotEmpty == true ? retLabels!.detailsHeading! : 'CREDIT NOTE DETAILS')
+              : 'تفاصيل إشعار الائتمان');
+      rows.add(TextRow(detailsHeading, isBold: true, scale: scale));
+      rows.add(SpacingRow(_itemGap));
+      if (retLabels?.creditNoteNumber != null) {
+        final cnLabelText = retLabels?.creditNoteNumber?.isNotEmpty == true
+            ? retLabels!.creditNoteNumber! : 'Credit Note No:';
+        final cnLabel = isBilingual
+            ? _getBilingualText(arabic: 'رقم إشعار الائتمان:', english: cnLabelText)
+            : (isEnglish ? cnLabelText : 'رقم إشعار الائتمان:');
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(cnLabel,
+              weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
+          ReceiptTableColumn(params.orderNumber,
+              weight: 0.55, align: TextAlign.left, scale: scale),
+        ]));
+      }
+      if (retLabels?.creditNoteDate != null) {
+        final dateLabelText = retLabels?.creditNoteDate?.isNotEmpty == true
+            ? retLabels!.creditNoteDate! : 'Credit Note Date:';
+        final dateLabel = isBilingual
+            ? _getBilingualText(arabic: 'تاريخ إشعار الائتمان:', english: dateLabelText)
+            : (isEnglish ? dateLabelText : 'تاريخ إشعار الائتمان:');
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(dateLabel,
+              weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
+          ReceiptTableColumn(params.orderDate,
+              weight: 0.55, align: TextAlign.left, scale: scale),
+        ]));
+      }
+      rows.add(SpacingRow(_itemGap));
+    }
+
+    // — Customer Details section —
+    if (params.customerName != null && params.customerName!.trim().isNotEmpty) {
+      final custHeading = isBilingual
+          ? _getBilingualText(arabic: retLabels?.customerHeading ?? 'تفاصيل العميل', english: retLabels?.customerHeading ?? 'CUSTOMER DETAILS')
+          : (isEnglish ? (retLabels?.customerHeading ?? 'CUSTOMER DETAILS') : (retLabels?.customerHeading ?? 'تفاصيل العميل'));
+      rows.add(TextRow(custHeading, isBold: true, scale: scale));
+      rows.add(SpacingRow(_itemGap));
+      final custNameLabel = isBilingual
+          ? _getBilingualText(arabic: 'اسم العميل:', english: 'Customer Name:')
+          : (isEnglish ? 'Customer Name:' : 'اسم العميل:');
+      rows.add(ReceiptTableRow([
+        ReceiptTableColumn(custNameLabel,
+            weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
+        ReceiptTableColumn(params.customerName!,
+            weight: 0.55, align: TextAlign.left, scale: scale),
+      ]));
+      if (params.customerPhone != null && params.customerPhone!.trim().isNotEmpty) {
+        final phoneLabel = isBilingual
+            ? _getBilingualText(arabic: 'الهاتف:', english: 'Phone:')
+            : (isEnglish ? 'Phone:' : 'الهاتف:');
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(phoneLabel,
+              weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
+          ReceiptTableColumn(params.customerPhone!,
+              weight: 0.55, align: TextAlign.left, scale: scale),
+        ]));
+      }
+      if (params.customerAddress != null && params.customerAddress!.trim().isNotEmpty) {
+        final addrLabel = isBilingual
+            ? _getBilingualText(arabic: 'عنوان الفاتورة:', english: 'Billing Address:')
+            : (isEnglish ? 'Billing Address:' : 'عنوان الفاتورة:');
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(addrLabel,
+              weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
+          ReceiptTableColumn(params.customerAddress!,
+              weight: 0.55, align: TextAlign.left, scale: scale),
+        ]));
+      }
+      rows.add(SpacingRow(_itemGap));
+    }
+
+    if (retLabels?.itemsHeading != null) {
+      rows.add(TextRow(retLabels!.itemsHeading!, isBold: true, scale: scale));
+      rows.add(SpacingRow(_itemGap));
+    }
 
     final slLabel = _getModeLabel(
       displayConfig: displayConfig,
@@ -2232,7 +2329,7 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
 
     for (var i = 0; i < orderReturns.returnItems!.length; i++) {
       final returnItem = orderReturns.returnItems![i];
-      final int itemQty = returnItem.quantity ?? 0;
+      final num itemQty = returnItem.quantity ?? 0;
       final String returnItemName = returnItem.productName ?? '';
       double itemMrp = 0.0, itemRate = 0.0;
       for (var cartItem in params.cartItems) {
@@ -2264,7 +2361,7 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
       if (itemRate == 0.0) {
         final totalReturnAmount =
             double.tryParse(orderReturns.returnTotalAmount ?? '0') ?? 0.0;
-        int totalQty = 0;
+        num totalQty = 0;
         for (var ri in orderReturns.returnItems!) {
           totalQty += ri.quantity ?? 0;
         }
@@ -2310,15 +2407,26 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
     rows.add(SpacingRow(_itemGap));
 
     if (displayConfig?['showReturnItemsCount']?.visible == true) {
-      final countLabel = _getModeLabel(
-        displayConfig: displayConfig,
-        key: 'showReturnItemsCount',
-        isEnglish: isEnglish,
-        isBilingual: isBilingual,
-        english: 'Return Items:',
-        arabic: 'عناصر المرتجع:',
-        inlineBilingual: true,
-      );
+      final bool useCreditNoteItemsCount = retLabels?.creditNoteItemsCount != null;
+      final countLabel = useCreditNoteItemsCount
+          ? _getModeLabel(
+              displayConfig: displayConfig,
+              key: 'showReturnItemsCount',
+              isEnglish: isEnglish,
+              isBilingual: isBilingual,
+              english: 'Credit Note Items:',
+              arabic: 'عناصر إشعار الائتمان:',
+              inlineBilingual: true,
+            )
+          : _getModeLabel(
+              displayConfig: displayConfig,
+              key: 'showReturnItemsCount',
+              isEnglish: isEnglish,
+              isBilingual: isBilingual,
+              english: 'Return Items:',
+              arabic: 'عناصر المرتجع:',
+              inlineBilingual: true,
+            );
       rows.add(ReceiptTableRow([
         ReceiptTableColumn(countLabel,
             weight: 0.6, align: TextAlign.left, isBold: true, scale: scale),
@@ -2339,14 +2447,23 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
           double.tryParse(orderReturns.returnTotalAmount ?? '0') ?? 0.0;
       final List<StandardBoxedLineItem> returnSummaryItems = [];
       if (showReturnTotalAmt) {
+        final bool useCreditNoteTotalAmount = retLabels?.creditNoteTotalAmount != null;
         returnSummaryItems.add(StandardBoxedLineItem(
-            label: _getModeLabel(
-                displayConfig: displayConfig,
-                key: 'showReturnTotalAmount',
-                isEnglish: isEnglish,
-                isBilingual: isBilingual,
-                english: 'Return Total:',
-                arabic: 'إجمالي المرتجع:'),
+            label: useCreditNoteTotalAmount
+                ? _getModeLabel(
+                    displayConfig: displayConfig,
+                    key: 'showReturnTotalAmount',
+                    isEnglish: isEnglish,
+                    isBilingual: isBilingual,
+                    english: 'Credit Note Total:',
+                    arabic: 'إجمالي إشعار الائتمان:')
+                : _getModeLabel(
+                    displayConfig: displayConfig,
+                    key: 'showReturnTotalAmount',
+                    isEnglish: isEnglish,
+                    isBilingual: isBilingual,
+                    english: 'Return Total:',
+                    arabic: 'إجمالي المرتجع:'),
             value: returnRateTotal.toStringAsFixed(2),
             isBold: true,
             scale: 1.1,
@@ -2354,14 +2471,23 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
             currencySymbol: currencySymbol));
       }
       if (showReturnNetAmt) {
+        final bool useCreditNoteRefund = retLabels?.creditNoteRefund != null;
         returnSummaryItems.add(StandardBoxedLineItem(
-            label: _getModeLabel(
-                displayConfig: displayConfig,
-                key: 'showReturnNetAmount',
-                isEnglish: isEnglish,
-                isBilingual: isBilingual,
-                english: 'Return Net Amount:',
-                arabic: 'صافي مبلغ الإرجاع:'),
+            label: useCreditNoteRefund
+                ? _getModeLabel(
+                    displayConfig: displayConfig,
+                    key: 'showReturnNetAmount',
+                    isEnglish: isEnglish,
+                    isBilingual: isBilingual,
+                    english: 'Credit Note Refund:',
+                    arabic: 'استرداد إشعار الائتمان:')
+                : _getModeLabel(
+                    displayConfig: displayConfig,
+                    key: 'showReturnNetAmount',
+                    isEnglish: isEnglish,
+                    isBilingual: isBilingual,
+                    english: 'Return Net Amount:',
+                    arabic: 'صافي مبلغ الإرجاع:'),
             value: returnRateTotal.toStringAsFixed(2),
             isBold: true,
             scale: 1.1,
@@ -2370,6 +2496,17 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
       }
       rows.add(SpacingRow(_itemGap));
       rows.add(StandardBoxedTotalsRow(items: returnSummaryItems));
+
+      if (hasCreditNoteConfig) {
+        final arabicText = AmountHelper()
+            .convertNumberToWords(returnRateTotal, currency: currency, language: 'ar');
+        final englishText = AmountHelper()
+            .convertNumberToWords(returnRateTotal, currency: currency, language: 'en');
+        rows.add(SpacingRow(_itemGap));
+        rows.add(TextRow('Amount in Words:', isBold: true, scale: 0.9));
+        rows.add(TextRow(englishText, isBold: false, scale: 0.85));
+        rows.add(TextRow(arabicText, isBold: false, scale: 0.85));
+      }
     }
   }
 
@@ -2402,7 +2539,7 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
 
     double returnTotal = 0.0;
     for (final returnItem in orderReturns.returnItems!) {
-      final int itemQty = returnItem.quantity ?? 0;
+      final num itemQty = returnItem.quantity ?? 0;
       double itemRate = 0.0;
       for (var cartItem in params.cartItems) {
         String cartName = '';
@@ -2430,7 +2567,7 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
       if (itemRate == 0.0) {
         final totalReturnAmount =
             double.tryParse(orderReturns.returnTotalAmount ?? '0') ?? 0.0;
-        int totalQty = 0;
+        num totalQty = 0;
         for (var ri in orderReturns.returnItems!) {
           totalQty += ri.quantity ?? 0;
         }

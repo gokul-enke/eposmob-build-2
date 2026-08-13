@@ -507,7 +507,8 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
             return GestureDetector(
               onTap: () => setStateBuilder(() => isExpanded = true),
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),

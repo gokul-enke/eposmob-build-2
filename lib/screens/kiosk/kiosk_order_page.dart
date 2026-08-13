@@ -25,6 +25,7 @@ import 'package:pos_machine/screens/kiosk/kiosk_billing_page.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/widgets/product_card_list_kiosk.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
 class KioskOrderPage extends StatefulWidget {
@@ -852,6 +853,9 @@ class KioskOrderPageState extends State<KioskOrderPage> {
   }
 
   Future<void> _saveSales() async {
+    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
+      return;
+    }
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
     final provider = Provider.of<CartProvider>(context, listen: false);
     int? cartId = provider.getCartIDForOrder;
@@ -865,7 +869,13 @@ class KioskOrderPageState extends State<KioskOrderPage> {
         totalPrice: provider.priceSummary!.netTotal.toString(),
         customerId: Provider.of<AuthModel>(context, listen: false).userId!,
       )
-          .then((response) {
+          .then((response) async {
+        if (await SubscriptionActionGuard.handleBackendResponse(
+          context,
+          response,
+        )) {
+          return;
+        }
         AddToOrderModel addToOrderModel = AddToOrderModel.fromJson(response);
         if (response["status"] == "success") {
           showScaffold(context: context, message: "${addToOrderModel.message}");
@@ -920,7 +930,8 @@ class KioskOrderPageState extends State<KioskOrderPage> {
                   ?.discount
                   ?.toString() ??
               "0.00",
-          orderDate: DateHelper.formatInputToDisplay(DateHelper.now().toString()),
+          orderDate:
+              DateHelper.formatInputToDisplay(DateHelper.now().toString()),
           orderNumber: "#000000",
         ),
       ),

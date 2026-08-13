@@ -9,6 +9,7 @@ import '../../../components/build_container_box.dart';
 import '../../../components/build_round_button.dart';
 import '../../../controllers/sidebar_controller.dart';
 import '../../../models/list_purchase.dart';
+import 'package:pos_machine/helpers/purchase_price_permission.dart';
 
 import '../../../providers/grid_provider.dart';
 import '../../../providers/purchase_provider.dart';
@@ -21,6 +22,14 @@ class ViewVoucherWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!canViewPurchasePrice(context)) {
+      return const SafeArea(
+        child: Center(
+          child: Text('Purchase permission is required to view voucher details.'),
+        ),
+      );
+    }
+
     Size size = MediaQuery.of(context).size;
     SideBarController sideBarController = Get.put(SideBarController());
     GridSelectionProvider gridSelectionProvider =

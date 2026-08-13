@@ -16,6 +16,7 @@ import '../../../models/list_purchase.dart';
 
 import '../../../providers/grid_provider.dart';
 import '../../../providers/purchase_provider.dart';
+import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import '../../../resources/color_manager.dart';
 import '../../../resources/font_manager.dart';
 import '../../../resources/style_manager.dart';
@@ -26,6 +27,15 @@ class AddVoucherDetailsWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
+    if (!canViewPurchasePrice(context)) {
+      return const SafeArea(
+        child: Center(
+          child: Text(
+            'Purchase permission is required to view voucher details.',
+          ),
+        ),
+      );
+    }
     SideBarController sideBarController = Get.put(SideBarController());
     GridSelectionProvider gridSelectionProvider =
         Provider.of<GridSelectionProvider>(context);

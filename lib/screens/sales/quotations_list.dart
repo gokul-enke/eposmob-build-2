@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
-import 'package:pos_machine/components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
+import 'package:pos_machine/components/build_dialog_box.dart'
+    hide
+        showScaffold,
+        showScaffoldError,
+        showLoadingOverlay,
+        hideLoadingOverlay;
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
@@ -82,8 +87,10 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
 
     try {
       final authProvider = Provider.of<AuthModel>(context, listen: false);
-      final quotationProvider =
-          Provider.of<QuotationsProvider>(context, listen: false);
+      final quotationProvider = Provider.of<QuotationsProvider>(
+        context,
+        listen: false,
+      );
 
       String? startDate;
       if (_selectedQuotationDate != null) {
@@ -145,10 +152,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
   Future<void> _convertQuotationToOrder(Quotation quotation) async {
     final quotationId = quotation.id;
     if (quotationId == null) {
-      showScaffoldError(
-        context: context,
-        message: 'quotations.err_no_id'.tr,
-      );
+      showScaffoldError(context: context, message: 'quotations.err_no_id'.tr);
       return;
     }
     if (_isConvertingQuotation) return;
@@ -156,10 +160,14 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
     setState(() => _isConvertingQuotation = true);
     try {
       final authProvider = Provider.of<AuthModel>(context, listen: false);
-      final quotationsProvider =
-          Provider.of<QuotationsProvider>(context, listen: false);
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
+      final quotationsProvider = Provider.of<QuotationsProvider>(
+        context,
+        listen: false,
+      );
+      final localProductProvider = Provider.of<LocalProductProvider>(
+        context,
+        listen: false,
+      );
 
       final details = await quotationsProvider.fetchQuotationDetails(
         accessToken: authProvider.token ?? '',
@@ -176,18 +184,22 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
       }
 
       debugPrint(
-          '🧾 [QuotationConvert] Loading quotation #$quotationId (${details.quotationNumber ?? quotation.quotationNumber}) into billing draft');
+        '🧾 [QuotationConvert] Loading quotation #$quotationId (${details.quotationNumber ?? quotation.quotationNumber}) into billing draft',
+      );
       debugPrint(
-          '🧾 [QuotationConvert] Customer id=${details.customer?.id}, inline=${details.customer?.isInline}, name="${details.customer?.name}", phone="${details.customer?.phone}"');
+        '🧾 [QuotationConvert] Customer id=${details.customer?.id}, inline=${details.customer?.isInline}, name="${details.customer?.name}", phone="${details.customer?.phone}"',
+      );
       debugPrint(
-          '🧾 [QuotationConvert] Delivery id=${details.deliveryMethodId}, method="${details.deliveryMethod}", charge=${details.deliveryCharge}, items=${details.items?.length ?? 0}');
+        '🧾 [QuotationConvert] Delivery id=${details.deliveryMethodId}, method="${details.deliveryMethod}", charge=${details.deliveryCharge}, items=${details.items?.length ?? 0}',
+      );
 
       final draftItems = <LocalCartItem>[];
       for (final quotationItem in details.items!) {
         final productId = quotationItem.productId;
         if (productId == null) continue;
 
-        final product = localProductProvider.getProductById(productId) ??
+        final product =
+            localProductProvider.getProductById(productId) ??
             GetProduct(
               productId: productId,
               productName: quotationItem.productName,
@@ -202,30 +214,32 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         final saleUnit = _findQuotationSaleUnit(product, saleUnitId);
         final saleUnitName = quotationItem.saleUnitName ?? saleUnit?.unitName;
         final saleUnitConversionRate =
-            _parseQuotationNumber(quotationItem.saleUnitConversionRate)
-                    ?.toDouble() ??
-                double.tryParse(saleUnit?.conversionRate ?? '');
-        final effectiveSaleUnitRate = saleUnitId != null &&
+            _parseQuotationNumber(
+              quotationItem.saleUnitConversionRate,
+            )?.toDouble() ??
+            double.tryParse(saleUnit?.conversionRate ?? '');
+        final effectiveSaleUnitRate =
+            saleUnitId != null &&
                 saleUnitConversionRate != null &&
                 saleUnitConversionRate > 0
             ? saleUnitConversionRate
             : null;
         final hasSaleUnit = effectiveSaleUnitRate != null;
-        final baseQuantity =
-            hasSaleUnit ? quantity * effectiveSaleUnitRate : quantity;
+        final baseQuantity = hasSaleUnit
+            ? quantity * effectiveSaleUnitRate
+            : quantity;
 
-        final selectedStock = _findQuotationStock(
-              product,
-              quotationItem.productStockId,
-            ) ??
+        final selectedStock =
+            _findQuotationStock(product, quotationItem.productStockId) ??
             localProductProvider.selectStockForQuantity(product, baseQuantity);
-        final quotationUnitPrice =
-            _parseQuotationNumber(quotationItem.unitPrice);
+        final quotationUnitPrice = _parseQuotationNumber(
+          quotationItem.unitPrice,
+        );
         final price = quotationUnitPrice != null && hasSaleUnit
             ? quotationUnitPrice / effectiveSaleUnitRate
             : quotationUnitPrice ??
-                (double.tryParse(product.price?.price?.toString() ?? '') ??
-                    0.0);
+                  (double.tryParse(product.price?.price?.toString() ?? '') ??
+                      0.0);
         final productMrp = double.tryParse(product.mrp?.toString() ?? '');
         final mrp = productMrp != null && hasSaleUnit
             ? productMrp / effectiveSaleUnitRate
@@ -236,10 +250,12 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
             product: product,
             price: price.toDouble(),
             mrp: mrp.toDouble(),
-            taxRate: _parseQuotationNumber(quotationItem.taxRate)?.toDouble() ??
+            taxRate:
+                _parseQuotationNumber(quotationItem.taxRate)?.toDouble() ??
                 product.totalTaxRate,
-            taxAmount:
-                _parseQuotationNumber(quotationItem.taxAmount)?.toDouble(),
+            taxAmount: _parseQuotationNumber(
+              quotationItem.taxAmount,
+            )?.toDouble(),
             quantity: baseQuantity,
             selectedStock: selectedStock,
             stockGroupIds: quotationItem.productStockId == null
@@ -253,7 +269,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
           ),
         );
         debugPrint(
-            '🧾 [QuotationConvert] Item product=$productId qty=${quotationItem.quantity} baseQty=$baseQuantity price=$price stock=${quotationItem.productStockId} saleUnit=$saleUnitId rate=$effectiveSaleUnitRate');
+          '🧾 [QuotationConvert] Item product=$productId qty=${quotationItem.quantity} baseQty=$baseQuantity price=$price stock=${quotationItem.productStockId} saleUnit=$saleUnitId rate=$effectiveSaleUnitRate',
+        );
       }
 
       if (draftItems.isEmpty) {
@@ -267,14 +284,16 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
       final customer = details.customer;
       final quotationCustomerPhone =
           (customer?.phone?.trim().isNotEmpty ?? false)
-              ? customer!.phone
-              : quotation.customerPhone;
-      final deliveryCharge =
-          _parseQuotationNumber(details.deliveryCharge)?.toDouble();
+          ? customer!.phone
+          : quotation.customerPhone;
+      final deliveryCharge = _parseQuotationNumber(
+        details.deliveryCharge,
+      )?.toDouble();
       localProductProvider.loadQuotationDraftForEditing(
         SavedOrder(
           id: 'quotation-$quotationId',
-          orderNumber: details.quotationNumber ??
+          orderNumber:
+              details.quotationNumber ??
               quotation.quotationNumber ??
               'QT-$quotationId',
           items: draftItems,
@@ -282,7 +301,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
           customerName: customer?.name ?? quotation.customer,
           customerPhone: quotationCustomerPhone,
           createdAt: DateTime.now().toIso8601String(),
-          total: _parseQuotationNumber(details.grandTotal)?.toDouble() ??
+          total:
+              _parseQuotationNumber(details.grandTotal)?.toDouble() ??
               _parseQuotationNumber(quotation.grandTotal)?.toDouble() ??
               0.0,
           deliveryMethod: details.deliveryMethod,
@@ -297,13 +317,11 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         ),
       );
       debugPrint(
-          '🧾 [QuotationConvert] Draft loaded. quotationId=$quotationId, cartItems=${draftItems.length}, route=90');
+        '🧾 [QuotationConvert] Draft loaded. quotationId=$quotationId, cartItems=${draftItems.length}, route=90',
+      );
 
       Get.find<SideBarController>().index.value = 90;
-      showScaffold(
-        context: context,
-        message: 'quotations.loaded_billing'.tr,
-      );
+      showScaffold(context: context, message: 'quotations.loaded_billing'.tr);
     } catch (e) {
       debugPrint('Error converting quotation: $e');
       if (context.mounted) {
@@ -374,10 +392,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
   Future<void> _printQuotation(Quotation quotation) async {
     final quotationId = quotation.id;
     if (quotationId == null) {
-      showScaffoldError(
-        context: context,
-        message: 'quotations.err_no_id'.tr,
-      );
+      showScaffoldError(context: context, message: 'quotations.err_no_id'.tr);
       return;
     }
     if (_isPrintingQuotation) return;
@@ -385,8 +400,10 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
     setState(() => _isPrintingQuotation = true);
     try {
       final authProvider = Provider.of<AuthModel>(context, listen: false);
-      final quotationsProvider =
-          Provider.of<QuotationsProvider>(context, listen: false);
+      final quotationsProvider = Provider.of<QuotationsProvider>(
+        context,
+        listen: false,
+      );
 
       final details = await quotationsProvider.fetchQuotationDetails(
         accessToken: authProvider.token ?? '',
@@ -409,10 +426,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
     } catch (e) {
       debugPrint('Error printing quotation: $e');
       if (mounted) {
-        showScaffoldError(
-          context: context,
-          message: 'quotations.err_print'.tr,
-        );
+        showScaffoldError(context: context, message: 'quotations.err_print'.tr);
       }
     } finally {
       if (mounted) setState(() => _isPrintingQuotation = false);
@@ -420,50 +434,56 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
   }
 
   Widget _buildStoreDropdown() {
-    return Consumer<StoreSessionProvider>(builder: (context, prov, _) {
-      final List<Store> list = prov.availableStores;
-      final Store? sel =
-          list.firstWhereOrNull((s) => s.storeId == _selectedStoreId);
-      return BuildDropDownWithSearch<Store>(
-        title: 'quotations.store_col'.tr,
-        showName: true,
-        hintText: 'quotations.select_store'.tr,
-        value: sel,
-        items: list,
-        onChanged: (v) {
-          setState(() {
-            _selectedStoreId = v?.storeId;
-          });
-          _fetchQuotations();
-        },
-        displayText: (v) => v.storeName ?? "",
-        searchController: _storeSearchController,
-        height: 45,
-      );
-    });
+    return Consumer<StoreSessionProvider>(
+      builder: (context, prov, _) {
+        final List<Store> list = prov.availableStores;
+        final Store? sel = list.firstWhereOrNull(
+          (s) => s.storeId == _selectedStoreId,
+        );
+        return BuildDropDownWithSearch<Store>(
+          title: 'quotations.store_col'.tr,
+          showName: true,
+          hintText: 'quotations.select_store'.tr,
+          value: sel,
+          items: list,
+          onChanged: (v) {
+            setState(() {
+              _selectedStoreId = v?.storeId;
+            });
+            _fetchQuotations();
+          },
+          displayText: (v) => v.storeName ?? "",
+          searchController: _storeSearchController,
+          height: 45,
+        );
+      },
+    );
   }
 
   Widget _buildCustomerDropdown() {
-    return Consumer<CustomerProvider>(builder: (context, prov, _) {
-      final CustomerListModelData? sel = prov.allCustomers
-          ?.firstWhereOrNull((s) => s.id.toString() == _selectedCustomerId);
-      return BuildDropDownWithSearch<CustomerListModelData>(
-        title: 'quotations.customer_col'.tr,
-        showName: true,
-        hintText: 'quotations.select_customer'.tr,
-        value: sel,
-        items: prov.allCustomers ?? [],
-        onChanged: (v) {
-          setState(() {
-            _selectedCustomerId = v?.id?.toString();
-          });
-          _fetchQuotations();
-        },
-        displayText: (v) => "${v.name} (${v.phone})",
-        searchController: _customerSearchController,
-        height: 45,
-      );
-    });
+    return Consumer<CustomerProvider>(
+      builder: (context, prov, _) {
+        final CustomerListModelData? sel = prov.allCustomers?.firstWhereOrNull(
+          (s) => s.id.toString() == _selectedCustomerId,
+        );
+        return BuildDropDownWithSearch<CustomerListModelData>(
+          title: 'quotations.customer_col'.tr,
+          showName: true,
+          hintText: 'quotations.select_customer'.tr,
+          value: sel,
+          items: prov.allCustomers ?? [],
+          onChanged: (v) {
+            setState(() {
+              _selectedCustomerId = v?.id?.toString();
+            });
+            _fetchQuotations();
+          },
+          displayText: (v) => "${v.name} (${v.phone})",
+          searchController: _customerSearchController,
+          height: 45,
+        );
+      },
+    );
   }
 
   @override
@@ -483,9 +503,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                   constraints: BoxConstraints(
                     maxHeight: MediaQuery.of(context).size.height * 0.55,
                   ),
-                  child: SingleChildScrollView(
-                    child: _buildFiltersCard(),
-                  ),
+                  child: SingleChildScrollView(child: _buildFiltersCard()),
                 ),
                 const SizedBox(height: 16),
               ],
@@ -501,13 +519,14 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                  ColorManager.kPrimaryColor),
+                                ColorManager.kPrimaryColor,
+                              ),
                             ),
                           ),
                         )
                       : provider.quotations.isEmpty
-                          ? _buildEmptyState(provider)
-                          : _buildQuotationsContent(provider),
+                      ? _buildEmptyState(provider)
+                      : _buildQuotationsContent(provider),
                 ),
               ),
             ],
@@ -801,7 +820,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
   }
 
   Widget _buildEmptyState(QuotationsProvider provider) {
-    final hasFilters = _quotationNumberController.text.isNotEmpty ||
+    final hasFilters =
+        _quotationNumberController.text.isNotEmpty ||
         _selectedCustomerId != null ||
         _selectedStoreId != null ||
         _selectedStatus != 'All' ||
@@ -871,8 +891,9 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
     final quotationDate = q.quotationDate != null
         ? q.quotationDate!.split(' ').first
         : '—';
-    final expiryDate =
-        q.expiryDate != null ? q.expiryDate!.split(' ').first : '—';
+    final expiryDate = q.expiryDate != null
+        ? q.expiryDate!.split(' ').first
+        : '—';
 
     return Container(
       padding: const EdgeInsetsDirectional.all(14),
@@ -906,12 +927,15 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                             ),
                           ),
                         ),
-                        if (q.quotationNumber != null && q.quotationNumber!.isNotEmpty && q.quotationNumber != '—') ...[
+                        if (q.quotationNumber != null &&
+                            q.quotationNumber!.isNotEmpty &&
+                            q.quotationNumber != '—') ...[
                           const SizedBox(width: 6),
                           GestureDetector(
                             onTap: () {
-                              Clipboard.setData(ClipboardData(
-                                  text: q.quotationNumber!));
+                              Clipboard.setData(
+                                ClipboardData(text: q.quotationNumber!),
+                              );
                               showScaffold(
                                 context: context,
                                 message: 'quotations.copy_success'.tr,
@@ -939,26 +963,23 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                   ],
                 ),
               ),
-              QuotationsStatusBadge(
-                label: status,
-                color: _statusColor(status),
-              ),
+              QuotationsStatusBadge(label: status, color: _statusColor(status)),
             ],
           ),
           const SizedBox(height: 12),
           QuotationsTwoColumnLayout(
             start: QuotationsInfoChip(
-              label: 'Store',
+              label: 'quotations.store_col'.tr,
               value: q.store ?? '—',
             ),
             end: QuotationsInfoChip(
-              label: 'Quotation Date',
+              label: 'quotations.quotation_date'.tr,
               value: quotationDate,
             ),
           ),
           const SizedBox(height: 10),
           QuotationsInfoChip(
-            label: 'Expiry Date',
+            label: 'quotations.expiry_date'.tr,
             value: expiryDate,
           ),
           const SizedBox(height: 12),
@@ -972,9 +993,9 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                 tooltip: 'quotations.view_tooltip'.tr,
                 onPressed: () {
                   Get.find<SideBarController>().index.value = 88;
-                  context
-                      .read<QuotationsProvider>()
-                      .setSelectedQuotationId(q.id);
+                  context.read<QuotationsProvider>().setSelectedQuotationId(
+                    q.id,
+                  );
                 },
               ),
               const SizedBox(width: 8),
@@ -1062,32 +1083,35 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
 
   TableRow _buildTableHeader() {
     return TableRow(
-      children: [
-        'quotations.quotation_number_label'.tr,
-        'quotations.customer_col'.tr,
-        'quotations.store_col'.tr,
-        'quotations.quotation_date'.tr,
-        'quotations.expiry_date'.tr,
-        'sales.status'.tr,
-        'quotations.actions_col'.tr,
-      ]
-          .map(
-            (title) => Padding(
-              padding:
-                  const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-              child: Text(
-                title,
-                textAlign: TextAlign.center,
-                style: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s12,
-                  0.18,
-                  ColorManager.kPrimaryColor,
+      children:
+          [
+                'quotations.quotation_number_label'.tr,
+                'quotations.customer_col'.tr,
+                'quotations.store_col'.tr,
+                'quotations.quotation_date'.tr,
+                'quotations.expiry_date'.tr,
+                'sales.status'.tr,
+                'quotations.actions_col'.tr,
+              ]
+              .map(
+                (title) => Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16.0,
+                    horizontal: 8.0,
+                  ),
+                  child: Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s12,
+                      0.18,
+                      ColorManager.kPrimaryColor,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          )
-          .toList(),
+              )
+              .toList(),
     );
   }
 
@@ -1103,7 +1127,9 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
           verticalAlignment: TableCellVerticalAlignment.middle,
           child: Padding(
             padding: const EdgeInsets.symmetric(
-                vertical: 16.0, horizontal: 12.0),
+              vertical: 16.0,
+              horizontal: 12.0,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -1121,12 +1147,15 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                     ),
                   ),
                 ),
-                if (q.quotationNumber != null && q.quotationNumber!.isNotEmpty && q.quotationNumber != '—') ...[
+                if (q.quotationNumber != null &&
+                    q.quotationNumber!.isNotEmpty &&
+                    q.quotationNumber != '—') ...[
                   const SizedBox(width: 6),
                   GestureDetector(
                     onTap: () {
-                      Clipboard.setData(ClipboardData(
-                          text: q.quotationNumber!));
+                      Clipboard.setData(
+                        ClipboardData(text: q.quotationNumber!),
+                      );
                       showScaffold(
                         context: context,
                         message: 'quotations.copy_success'.tr,
@@ -1146,7 +1175,10 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         TableCell(
           verticalAlignment: TableCellVerticalAlignment.middle,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
+            padding: const EdgeInsets.symmetric(
+              vertical: 16.0,
+              horizontal: 12.0,
+            ),
             child: Center(
               child: SelectableText(
                 q.customer ?? '—',
@@ -1163,7 +1195,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         ),
         _textCell(q.store ?? '—'),
         _textCell(
-            q.quotationDate != null ? q.quotationDate!.split(' ').first : '—'),
+          q.quotationDate != null ? q.quotationDate!.split(' ').first : '—',
+        ),
         _textCell(q.expiryDate != null ? q.expiryDate!.split(' ').first : '—'),
         TableCell(
           verticalAlignment: TableCellVerticalAlignment.middle,
@@ -1188,15 +1221,16 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                 children: [
                   QuotationsIconAction(
                     icon: Icons.visibility,
-                    backgroundColor:
-                        ColorManager.kPrimaryColor.withOpacity(0.9),
+                    backgroundColor: ColorManager.kPrimaryColor.withOpacity(
+                      0.9,
+                    ),
                     iconColor: Colors.white,
                     tooltip: 'quotations.view_tooltip'.tr,
                     onPressed: () {
                       Get.find<SideBarController>().index.value = 88;
-                      context
-                          .read<QuotationsProvider>()
-                          .setSelectedQuotationId(q.id);
+                      context.read<QuotationsProvider>().setSelectedQuotationId(
+                        q.id,
+                      );
                     },
                   ),
                   const SizedBox(width: 6),

@@ -84,8 +84,11 @@ class ZeroPriceQuickEntryHelper {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
     final currency = appSettingsProvider.appSettings?.currency ?? '';
-    final double? minPrice =
-        localProductProvider.minimumSalePriceForProduct(product);
+    final double? minPrice = localProductProvider.minimumSalePriceForProduct(
+      product,
+      quantity: initialQuantity,
+      selectedStock: selectedStock,
+    );
 
     final result = await showDialog<Map<String, dynamic>?>(
       context: context,

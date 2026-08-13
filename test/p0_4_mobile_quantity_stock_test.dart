@@ -51,6 +51,7 @@ void main() {
   });
 
   setUp(() async {
+    await awaitPendingHiveBoxWrites();
     SharedPreferences.setMockInitialValues({});
     await Hive.box<HiveProduct>('products').clear();
     await Hive.box<HiveLocalCartItem>('cart_items').clear();

@@ -17,11 +17,15 @@ import 'package:pos_machine/features/billing/presentation/widgets/keyboard_short
 class HeaderBar extends StatelessWidget {
   final bool isSidebarVisible;
   final VoidCallback onToggleSidebar;
-  const HeaderBar({super.key, required this.isSidebarVisible, required this.onToggleSidebar});
+  const HeaderBar(
+      {super.key,
+      required this.isSidebarVisible,
+      required this.onToggleSidebar});
 
   @override
   Widget build(BuildContext context) {
-    final localProductProvider = Provider.of<LocalProductProvider>(context, listen: true);
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: true);
     final customerSelectionProvider =
         Provider.of<CustomerSelectionProvider>(context, listen: true);
     final appSettings =
@@ -29,8 +33,9 @@ class HeaderBar extends StatelessWidget {
     final bool isEditingOrder = localProductProvider.currentOrder != null;
     final currentOrder = localProductProvider.currentOrder;
     final selectedCustomer = customerSelectionProvider.selectedCustomer;
-    final fallbackCustomerName =
-        selectedCustomer?.name ?? currentOrder?.customerName ?? currentOrder?.customerPhone;
+    final fallbackCustomerName = selectedCustomer?.name ??
+        currentOrder?.customerName ??
+        currentOrder?.customerPhone;
     final bool showCustomerType = appSettings?.companyB2BEnabled ?? false;
 
     return Row(
@@ -46,7 +51,9 @@ class HeaderBar extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    isEditingOrder ? '${'billing.edit_order'.tr} - ' : '${'billing.new_order'.tr} - ',
+                    isEditingOrder
+                        ? '${'billing.edit_order'.tr} - '
+                        : '${'billing.new_order'.tr} - ',
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s20,
@@ -95,15 +102,18 @@ class HeaderBar extends StatelessWidget {
                 Provider.of<KeyboardProvider>(context).showKeyboardFeature
                     ? Icons.keyboard_hide
                     : Icons.keyboard,
-                color: Provider.of<KeyboardProvider>(context).showKeyboardFeature
-                    ? ColorManager.kPrimaryColor
-                    : Colors.grey.shade600,
+                color:
+                    Provider.of<KeyboardProvider>(context).showKeyboardFeature
+                        ? ColorManager.kPrimaryColor
+                        : Colors.grey.shade600,
               ),
-              tooltip: Provider.of<KeyboardProvider>(context).showKeyboardFeature
-                  ? 'Hide Keyboard'
-                  : 'Show Keyboard',
+              tooltip:
+                  Provider.of<KeyboardProvider>(context).showKeyboardFeature
+                      ? 'Hide Keyboard'
+                      : 'Show Keyboard',
               onPressed: () {
-                final keyboardProvider = Provider.of<KeyboardProvider>(context, listen: false);
+                final keyboardProvider =
+                    Provider.of<KeyboardProvider>(context, listen: false);
                 if (keyboardProvider.showKeyboardFeature) {
                   keyboardProvider.featureOff();
                   keyboardProvider.clear();
@@ -152,8 +162,9 @@ class _SelectedCustomerDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String displayName =
-        (name == null || name!.trim().isEmpty) ? 'billing.customer'.tr : name!.trim();
+    final String displayName = (name == null || name!.trim().isEmpty)
+        ? 'billing.customer'.tr
+        : name!.trim();
     final String displayBalance = (balance ?? 0).toStringAsFixed(2);
     final String? displayCustomerType = customerType?.trim().isEmpty == true
         ? null

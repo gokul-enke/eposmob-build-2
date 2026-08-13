@@ -20,6 +20,7 @@ import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/features/billing/domain/billing_totals.dart';
 import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
+import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 import 'package:pos_machine/features/billing/domain/payment_validation.dart';
 import 'package:pos_machine/features/billing/domain/product_details_helpers.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
@@ -451,6 +452,7 @@ class BillingPageState extends State<BillingPage>
               '  - New discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}');
         }
         _syncStockEnabledSetting();
+        _refreshTotalsAfterSettingsChange(appSettingsProvider);
       };
       appSettingsProvider.addListener(_appSettingsDebugListener!);
 
@@ -643,6 +645,31 @@ class BillingPageState extends State<BillingPage>
     }
 
     return true;
+  }
+
+  bool _ensureAuthoritativeAppSettings() {
+    final settingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    if (settingsProvider.isReady) return true;
+
+    showScaffoldError(
+      context: context,
+      message: settingsProvider.loading
+          ? 'Company settings are still loading. Please try again shortly.'
+          : 'Company settings could not be loaded. Refresh settings before confirming the order.',
+    );
+    return false;
+  }
+
+  void _refreshTotalsAfterSettingsChange(
+    AppSettingsProvider settingsProvider,
+  ) {
+    if (!mounted || !settingsProvider.isReady) return;
+
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    localProductProvider.cartTotal;
+    setState(() {});
   }
 
   // Function to initialize the connectivity listener
@@ -2421,8 +2448,8 @@ class BillingPageState extends State<BillingPage>
         Provider.of<LocalProductProvider>(context, listen: true);
     final customerSelectionProvider =
         Provider.of<CustomerSelectionProvider>(context, listen: true);
-    final appSettings =
-        Provider.of<AppSettingsProvider>(context, listen: true).appSettings;
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: true);
     final bool isEditingOrder = localProductProvider.currentOrder != null;
     final currentOrder = localProductProvider.currentOrder;
     final String compactOrderNumber = currentOrder?.orderNumber
@@ -2434,9 +2461,7 @@ class BillingPageState extends State<BillingPage>
     final fallbackCustomerName = selectedHeaderCustomer?.name ??
         currentOrder?.customerName ??
         currentOrder?.customerPhone;
-    final bool showCustomerType = appSettings?.companyB2BEnabled ?? false;
-    final bool showHeaderCustomerBalance = selectedHeaderCustomer != null &&
-        !_isDefaultCustomer(selectedHeaderCustomer);
+    final hasHeaderCustomer = fallbackCustomerName?.trim().isNotEmpty ?? false;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2451,7 +2476,9 @@ class BillingPageState extends State<BillingPage>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    isEditingOrder ? '${'billing.edit_order'.tr} - ' : '${'billing.new_order'.tr} - ',
+                    isEditingOrder
+                        ? '${'billing.edit_order'.tr} - '
+                        : '${'billing.new_order'.tr} - ',
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s18, 0.25, ColorManager.textColor),
                   ),
@@ -2463,15 +2490,45 @@ class BillingPageState extends State<BillingPage>
                     ),
                 ],
               ),
-              if (fallbackCustomerName != null &&
-                  fallbackCustomerName.trim().isNotEmpty)
-                _buildHeaderCustomerDetails(
-                  name: fallbackCustomerName,
-                  balance: selectedHeaderCustomer?.balance,
-                  showBalance: showHeaderCustomerBalance,
-                  customerType: showCustomerType
-                      ? selectedHeaderCustomer?.customerType
-                      : null,
+              _buildHeaderContextChip(
+                icon: Icons.person_rounded,
+                label: hasHeaderCustomer
+                    ? fallbackCustomerName!.trim()
+                    : 'Customer',
+                color: const Color(0xFF7C3AED),
+                isSelected: hasHeaderCustomer,
+                tooltip: 'Select customer',
+                onTap: () => _showHeaderSelectionModal(
+                  initialStep: 0,
+                  title: 'Select Customer',
+                ),
+              ),
+              if (!_isQuotationPage)
+                _buildHeaderContextChip(
+                  icon: _getHeaderPaymentIcon(),
+                  label: _getHeaderPaymentLabel(),
+                  color: const Color(0xFFEA580C),
+                  isSelected: _hasHeaderPaymentSelection,
+                  tooltip: 'Select payment method',
+                  onTap: () => _showHeaderSelectionModal(
+                    initialStep: 3,
+                    title: 'Select Payment Method',
+                  ),
+                ),
+              if (deliveryMethodsProvider.deliveryMethods.isNotEmpty)
+                _buildHeaderContextChip(
+                  icon: Icons.local_shipping_rounded,
+                  label: deliveryMethod.trim().isNotEmpty
+                      ? _getDeliveryMethodLabel()
+                      : 'Delivery',
+                  color: const Color(0xFF059669),
+                  isSelected: deliveryMethodId.trim().isNotEmpty ||
+                      deliveryMethod.trim().isNotEmpty,
+                  tooltip: 'Select delivery method',
+                  onTap: () => _showHeaderSelectionModal(
+                    initialStep: 1,
+                    title: 'Select Delivery Method',
+                  ),
                 ),
             ],
           ),
@@ -2577,118 +2634,125 @@ class BillingPageState extends State<BillingPage>
     );
   }
 
-  Widget _buildHeaderCustomerDetails({
-    required String? name,
-    required double? balance,
-    required bool showBalance,
-    required String? customerType,
+  void _showHeaderSelectionModal({
+    required int initialStep,
+    required String title,
   }) {
-    const int maxCustomerNameChars = 30;
-    final String rawName =
-        (name == null || name.trim().isEmpty) ? 'Customer' : name.trim();
-    final String displayName = rawName.length > maxCustomerNameChars
-        ? '${rawName.substring(0, maxCustomerNameChars)}...'
-        : rawName;
-    final String displayBalance = (balance ?? 0).toStringAsFixed(2);
-    final Color balanceColor = (balance ?? 0) < 0
-        ? Colors.red.shade600
-        : (balance ?? 0) > 0
-            ? Colors.green.shade700
-            : Colors.grey.shade600;
-    final String? displayCustomerType = customerType?.trim().isEmpty == true
-        ? null
-        : customerType?.trim().toUpperCase();
+    _showCheckoutModal(
+      actionMode: _isQuotationPage
+          ? CheckoutActionMode.quotation
+          : CheckoutActionMode.confirm,
+      mode: CheckoutModalMode.selectionOnly,
+      initialStep: initialStep,
+      title: title,
+    );
+  }
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: () => _showCheckoutModal(
-          actionMode: CheckoutActionMode.confirm,
-          initialStep: 0,
-        ),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: ColorManager.kPrimaryColor.withValues(alpha: 0.18),
+  bool get _hasHeaderPaymentSelection {
+    return _isCashSelected ||
+        _isCardSelected ||
+        _isUpiSelected ||
+        _isCodSelected ||
+        _isDebitSelected ||
+        _toCustomerCreditEnabled ||
+        _extraPaymentAmounts.isNotEmpty ||
+        _headerDefaultPaymentLabel().isNotEmpty;
+  }
+
+  String _headerDefaultPaymentLabel() {
+    final configured = Provider.of<AppSettingsProvider>(context, listen: true)
+        .appSettings
+        ?.defaultPaymentMethod
+        .trim()
+        .toUpperCase();
+    return configured == null || configured.isEmpty ? 'CASH' : configured;
+  }
+
+  String _getHeaderPaymentLabel() {
+    final methods = <String>[];
+    if (_isCashSelected) methods.add('CASH');
+    if (_isCardSelected) methods.add('CARD');
+    if (_isUpiSelected) methods.add('UPI');
+    if (_isCodSelected) methods.add('COD');
+    if (_isDebitSelected || _toCustomerCreditEnabled) {
+      methods.add('CREDIT');
+    }
+    for (final entry in _extraPaymentValues.entries) {
+      final label = entry.value.trim().toUpperCase();
+      if (label.isNotEmpty && !methods.contains(label)) {
+        methods.add(label);
+      }
+    }
+
+    if (methods.length > 1) return 'MULTI';
+    if (methods.length == 1) return methods.first;
+    return _headerDefaultPaymentLabel();
+  }
+
+  IconData _getHeaderPaymentIcon() {
+    final label = _getHeaderPaymentLabel();
+    if (label == 'CARD') return Icons.credit_card_rounded;
+    if (label == 'UPI') return Icons.phone_android_rounded;
+    if (label == 'COD') return Icons.local_shipping_rounded;
+    if (label == 'CREDIT' || label == 'MULTI') {
+      return Icons.account_balance_wallet_rounded;
+    }
+    return Icons.payments_rounded;
+  }
+
+  Widget _buildHeaderContextChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required String tooltip,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(999),
+          onTap: onTap,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 150),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? color.withValues(alpha: 0.10)
+                  : Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: isSelected
+                    ? color.withValues(alpha: 0.45)
+                    : Colors.grey.shade200,
+              ),
             ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                height: 18,
-                width: 18,
-                decoration: BoxDecoration(
-                  color: ColorManager.kPrimaryColor.withValues(alpha: 0.10),
-                  shape: BoxShape.circle,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: 14,
+                  color: isSelected ? color : Colors.grey.shade600,
                 ),
-                child: const Icon(
-                  Icons.person_outline,
-                  size: 12,
-                  color: ColorManager.kPrimaryColor,
-                ),
-              ),
-              const SizedBox(width: 6),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 120),
-                child: Text(
-                  displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s11,
-                    0.16,
-                    ColorManager.textColor,
-                  ),
-                ),
-              ),
-              if (showBalance) ...[
-                Container(
-                  height: 14,
-                  width: 1,
-                  margin: const EdgeInsets.symmetric(horizontal: 7),
-                  color: Colors.grey.shade300,
-                ),
-                Text(
-                  'Bal $displayBalance',
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s11,
-                    0.16,
-                    balanceColor,
-                  ),
-                ),
-              ],
-              if (displayCustomerType != null) ...[
                 const SizedBox(width: 6),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: displayCustomerType == 'B2B'
-                        ? Colors.green.shade100
-                        : ColorManager.kPrimaryColor.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                Flexible(
                   child: Text(
-                    displayCustomerType,
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s9,
-                      0.12,
-                      displayCustomerType == 'B2B'
-                          ? Colors.green.shade700
-                          : ColorManager.kPrimaryColor,
+                      FontWeightManager.semiBold,
+                      FontSize.s12,
+                      0.21,
+                      isSelected ? color : const Color(0xFF64748B),
                     ),
                   ),
                 ),
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -4493,7 +4557,7 @@ class BillingPageState extends State<BillingPage>
 
       // Enforce the product's minimum sale price (discount floor).
       final double? minBase =
-          localProductProvider.minimumSalePriceForProduct(item.product);
+          localProductProvider.minimumSalePriceForCartItem(item);
       if (minBase != null && selectedPrice < minBase - 0.001) {
         showScaffoldError(
           context: context,
@@ -6537,6 +6601,12 @@ class BillingPageState extends State<BillingPage>
   }
 
   Future<void> _createOrderAndPrint() async {
+    if (!_ensureAuthoritativeAppSettings()) {
+      return;
+    }
+    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
+      return;
+    }
     // Check for internet connection before proceeding
     if (!_hasInternet) {
       showScaffoldError(
@@ -6679,6 +6749,12 @@ class BillingPageState extends State<BillingPage>
           .then((response) async {
         debugPrint(
             "✅ API RESPONSE - Create Order and Print: ${json.encode(response)}");
+        if (await SubscriptionActionGuard.handleBackendResponse(
+          context,
+          response,
+        )) {
+          return;
+        }
         if (response["order_id"] != null) {
           showScaffold(
             context: context,
@@ -6728,6 +6804,12 @@ class BillingPageState extends State<BillingPage>
             Map<String, dynamic>? paymentBreakdown =
                 orderDetails.data?.payments;
 
+            debugPrint('[BillingPrint] Order number: ${ordersId}');
+            debugPrint('[BillingPrint] Payment method: $paymentMethod');
+            debugPrint('[BillingPrint] Payment breakdown: $paymentBreakdown');
+            debugPrint(
+                '[BillingPrint] Payment breakdown keys: ${paymentBreakdown?.keys.toList()}');
+
             String? orderComment;
             if (orderDetails.data?.orderProps != null) {
               try {
@@ -6756,8 +6838,27 @@ class BillingPageState extends State<BillingPage>
             double? oldBalance =
                 isDefaultCustomer ? null : selectedCustomer?.balance;
             double totalPaid = _getTotalPaidAmount();
+            if (totalPaid <= 0 && paymentBreakdown != null) {
+              const excludedPaymentKeys = {'DEBIT', 'CREDIT', 'BALANCE'};
+              totalPaid = paymentBreakdown.entries
+                  .where((entry) => !excludedPaymentKeys
+                      .contains(entry.key.trim().toUpperCase()))
+                  .fold<double>(0.0, (sum, entry) {
+                final value = entry.value;
+                return sum +
+                    (value is num
+                        ? value.toDouble()
+                        : double.tryParse(value.toString()) ?? 0.0);
+              });
+              debugPrint(
+                  '[BillingPrint] Derived total paid from payment breakdown: $totalPaid');
+            }
             double? currentBalance;
-            if (oldBalance != null) {
+            final apiBalance =
+                _orderBalanceFromProps(orderDetails.data?.orderProps);
+            if (apiBalance != null) {
+              currentBalance = apiBalance;
+            } else if (oldBalance != null) {
               double cartTotal = double.tryParse(formattedTotal!) ?? 0.0;
               // Current balance = Old balance - (Cart Total - Amount Paid)
               // If customer paid less than cart total, their balance decreases (they owe more)
@@ -6771,6 +6872,12 @@ class BillingPageState extends State<BillingPage>
                 "💰 Customer Old Balanceance: $oldBalance, Paid: $totalPaid, Current Balance: $currentBalance");
 
             Future<bool> printOnce() {
+              debugPrint(
+                  '[BillingPrint] Sending payment method to PrintPage: $paymentMethod');
+              debugPrint(
+                  '[BillingPrint] Sending payment breakdown to PrintPage: $paymentBreakdown');
+              debugPrint(
+                  '[BillingPrint] Sending paid amount to PrintPage: ${totalPaid > 0 ? totalPaid : null}');
               return _printOrderDetailsWithFallback(
                 storeName: storeName,
                 cartItems: orderDetails.data!.cart!.cartItems!,
@@ -6887,6 +6994,12 @@ class BillingPageState extends State<BillingPage>
   }
 
   Future<void> _confirmOrder() async {
+    if (!_ensureAuthoritativeAppSettings()) {
+      return;
+    }
+    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
+      return;
+    }
     // Check for internet connection before proceeding
     if (!_hasInternet) {
       showScaffoldError(
@@ -7025,6 +7138,12 @@ class BillingPageState extends State<BillingPage>
       )
           .then((response) async {
         debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
+        if (await SubscriptionActionGuard.handleBackendResponse(
+          context,
+          response,
+        )) {
+          return;
+        }
         if (response["order_id"] != null) {
           showScaffold(
             context: context,
@@ -7400,6 +7519,7 @@ class BillingPageState extends State<BillingPage>
   Future<void> _prepareCheckoutDefaults({
     required bool applyDefaultCustomer,
     required bool applyDefaultPayment,
+    bool loadPaymentMethods = true,
   }) async {
     _hydrateCustomerListFromProviderCache(
       applyDefaultCustomer: applyDefaultCustomer,
@@ -7408,32 +7528,34 @@ class BillingPageState extends State<BillingPage>
       _applyDefaultCustomerFromCacheIfNeeded();
     }
 
-    final masterDataProvider =
-        Provider.of<MasterDataProvider>(context, listen: false);
-    final methods = await masterDataProvider.fetchPaymentMethods();
+    if (loadPaymentMethods) {
+      final masterDataProvider =
+          Provider.of<MasterDataProvider>(context, listen: false);
+      final methods = await masterDataProvider.fetchPaymentMethods();
 
-    if (methods != null && mounted) {
-      final billingProvider =
-          Provider.of<BillingProvider>(context, listen: false);
-      String? cashId, cardId, upiId, codId;
-      for (var m in methods) {
-        final val = m.value.toUpperCase();
-        if (val == 'CASH') {
-          cashId = m.id.toString();
-        } else if (val == 'CARD') {
-          cardId = m.id.toString();
-        } else if (val == 'UPI') {
-          upiId = m.id.toString();
-        } else if (val == 'COD') {
-          codId = m.id.toString();
+      if (methods != null && mounted) {
+        final billingProvider =
+            Provider.of<BillingProvider>(context, listen: false);
+        String? cashId, cardId, upiId, codId;
+        for (var m in methods) {
+          final val = m.value.toUpperCase();
+          if (val == 'CASH') {
+            cashId = m.id.toString();
+          } else if (val == 'CARD') {
+            cardId = m.id.toString();
+          } else if (val == 'UPI') {
+            upiId = m.id.toString();
+          } else if (val == 'COD') {
+            codId = m.id.toString();
+          }
         }
+        billingProvider.updatePaymentMethodIds(
+          cashId: cashId,
+          cardId: cardId,
+          upiId: upiId,
+          codId: codId,
+        );
       }
-      billingProvider.updatePaymentMethodIds(
-        cashId: cashId,
-        cardId: cardId,
-        upiId: upiId,
-        codId: codId,
-      );
     }
 
     if (!mounted) return;
@@ -7537,17 +7659,18 @@ class BillingPageState extends State<BillingPage>
     await _saveOrderAndPrint();
   }
 
-  /// Shows the checkout modal for customer selection, delivery, discount, and payment
-  /// This is called when clicking Confirm Order or Confirm & Print buttons
+  /// Opens either the full checkout flow or one selection-only checkout step.
   void _showCheckoutModal({
     CheckoutActionMode actionMode = CheckoutActionMode.confirm,
+    CheckoutModalMode mode = CheckoutModalMode.checkout,
     int? initialStep,
+    String? title,
   }) async {
     final isSaveMode = actionMode == CheckoutActionMode.save;
     final isQuotationMode = actionMode == CheckoutActionMode.quotation;
     bool checkoutActionTriggered = false;
     debugPrint(
-        "⌨️ [BillingPage] _showCheckoutModal requested | mode=$actionMode | initialStep=$initialStep | ${_focusDebugSummary()}");
+        "⌨️ [BillingPage] _showCheckoutModal requested | action=$actionMode | mode=$mode | initialStep=$initialStep | ${_focusDebugSummary()}");
     if (_isOrderActionBusy) {
       debugPrint(
           "⌨️ [BillingPage] _showCheckoutModal ignored because order action is busy");
@@ -7565,6 +7688,8 @@ class BillingPageState extends State<BillingPage>
     await _prepareCheckoutDefaults(
       applyDefaultCustomer: !isQuotationMode,
       applyDefaultPayment: !isQuotationMode,
+      loadPaymentMethods:
+          mode == CheckoutModalMode.checkout || initialStep == 3,
     );
     if (!mounted) return;
     if (isQuotationMode) {
@@ -7617,12 +7742,14 @@ class BillingPageState extends State<BillingPage>
     bool deliveryEnabled = deliveryMethodsProvider.deliveryMethods.isNotEmpty;
 
     debugPrint(
-        "⌨️ [BillingPage] Opening checkout modal | mode=$actionMode | ${_focusDebugSummary()}");
+        "⌨️ [BillingPage] Opening checkout modal | action=$actionMode | mode=$mode | ${_focusDebugSummary()}");
     await showDialog<void>(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: mode == CheckoutModalMode.selectionOnly,
       builder: (dialogContext) {
         return CheckoutModal(
+          mode: mode,
+          title: title ?? 'Finalize Order',
           initialStep: initialStep,
           cartTotal: localProductProvider.priceSummary?.subTotal ??
               localProductProvider.cartTotal,
@@ -7959,7 +8086,7 @@ class BillingPageState extends State<BillingPage>
       });
     }
     debugPrint(
-        "⌨️ [BillingPage] Checkout modal closed | mode=$actionMode | busy=$_isOrderActionBusy | ${_focusDebugSummary()}");
+        "⌨️ [BillingPage] Checkout modal closed | action=$actionMode | mode=$mode | busy=$_isOrderActionBusy | ${_focusDebugSummary()}");
     _restoreShortcutFocus('checkout modal closed');
   }
 
@@ -9318,6 +9445,16 @@ class BillingPageState extends State<BillingPage>
     }
 
     return autoPrintSuccess;
+  }
+
+  double? _orderBalanceFromProps(List<OrderDetailsModelDataOrderProp>? props) {
+    if (props == null) return null;
+    for (final prop in props) {
+      if (prop.propsCode?.toUpperCase() == 'BALANCE') {
+        return double.tryParse(prop.propsValue ?? '');
+      }
+    }
+    return null;
   }
 
   Future<void> printFromSavedOrder(SavedOrder savedOrder) async {
