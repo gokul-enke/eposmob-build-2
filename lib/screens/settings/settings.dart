@@ -219,25 +219,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
-        title: const Text('Notification Position'),
+        title: Text('settings_ui.notification_position'.tr),
         content: StatefulBuilder(
           builder: (context, setState) => Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               RadioListTile<String>(
-                title: const Text('Left'),
+                title: Text('settings_ui.left'.tr),
                 value: 'left',
                 groupValue: selected,
                 onChanged: (v) => setState(() => selected = v!),
               ),
               RadioListTile<String>(
-                title: const Text('Center'),
+                title: Text('settings_ui.center'.tr),
                 value: 'center',
                 groupValue: selected,
                 onChanged: (v) => setState(() => selected = v!),
               ),
               RadioListTile<String>(
-                title: const Text('Right'),
+                title: Text('settings_ui.right'.tr),
                 value: 'right',
                 groupValue: selected,
                 onChanged: (v) => setState(() => selected = v!),
@@ -248,11 +248,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            child: Text('general.cancel'.tr),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(selected),
-            child: const Text('Save'),
+            child: Text('general.save'.tr),
           ),
         ],
       ),
@@ -265,7 +265,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     custom_dialog_box.setNotificationPosition(result);
     if (!mounted) return;
     setState(() {});
-    showScaffold(context: context, message: 'Notification position updated');
+    showScaffold(context: context, message: 'settings_ui.toast_notification_updated'.tr);
   }
 
   Future<void> _showOrientationModePicker() async {
@@ -278,27 +278,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
-        title: const Text('Screen Orientation'),
+        title: Text('settings_ui.screen_orientation'.tr),
         content: StatefulBuilder(
           builder: (context, setState) => Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               RadioListTile<String>(
-                title: const Text('Auto'),
-                subtitle:
-                    const Text('Portrait on phones, landscape on tablets'),
+                title: Text('settings_ui.auto'.tr),
+                subtitle: Text('settings_ui.portrait_sub'.tr),
                 value: OrientationHelper.modeAuto,
                 groupValue: selected,
                 onChanged: (v) => setState(() => selected = v!),
               ),
               RadioListTile<String>(
-                title: const Text('Portrait'),
+                title: Text('settings_ui.portrait'.tr),
                 value: OrientationHelper.modePortrait,
                 groupValue: selected,
                 onChanged: (v) => setState(() => selected = v!),
               ),
               RadioListTile<String>(
-                title: const Text('Landscape'),
+                title: Text('settings_ui.landscape'.tr),
                 value: OrientationHelper.modeLandscape,
                 groupValue: selected,
                 onChanged: (v) => setState(() => selected = v!),
@@ -309,11 +308,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            child: Text('general.cancel'.tr),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(selected),
-            child: const Text('Save'),
+            child: Text('general.save'.tr),
           ),
         ],
       ),
@@ -325,7 +324,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await OrientationHelper.apply(modeOverride: result);
     if (!mounted) return;
     setState(() {});
-    showScaffold(context: context, message: 'Screen orientation updated');
+    showScaffold(context: context, message: 'settings_ui.toast_orientation_updated'.tr);
   }
 
   Future<void> _toggleDeveloperMode() async {
