@@ -1636,7 +1636,7 @@ class OrderPanelState extends State<OrderPanel> {
 
     final statusId = _findStatusIdByValue('SERVED');
     if (statusId == null) {
-      showScaffoldError(context: context, message: 'Status "SERVED" not found');
+      showScaffoldError(context: context, message: 'order_panel.error_status_served_not_found'.tr);
       return false;
     }
 
@@ -1678,7 +1678,7 @@ class OrderPanelState extends State<OrderPanel> {
         if (mounted) {
           showScaffold(
             context: context,
-            message: 'Order $displayOrderId items marked as SERVED',
+            message: '${'order_panel.msg_order_marked_served_1'.tr} $displayOrderId ${'order_panel.msg_order_marked_served_2'.tr}',
           );
         }
         return true;
@@ -2630,7 +2630,7 @@ class OrderPanelState extends State<OrderPanel> {
                   children: [
                     Expanded(
                       child: CustomRoundButton(
-                        title: "Cancel",
+                        title: 'general.cancel'.tr,
                         fct: () => Navigator.of(context).pop(),
                         fontSize: FontSize.s14,
                         height: 45,
@@ -2643,7 +2643,7 @@ class OrderPanelState extends State<OrderPanel> {
                     Expanded(
                       flex: 2,
                       child: CustomRoundButton(
-                        title: "Save Comment",
+                        title: 'order_panel.btn_save_comment'.tr,
                         fct: () {
                           setState(() {
                             _orderComment = controller.text.trim();
@@ -2725,7 +2725,7 @@ class OrderPanelState extends State<OrderPanel> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(null),
-            child: Text('Cancel',
+            child: Text('general.cancel'.tr,
                 style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,
                     0.21, const Color(0xFF64748B))),
           ),
@@ -2737,7 +2737,7 @@ class OrderPanelState extends State<OrderPanel> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
             ),
-            child: Text('Save',
+            child: Text('general.save'.tr,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s14, 0.21, Colors.white)),
           ),
@@ -2781,7 +2781,7 @@ class OrderPanelState extends State<OrderPanel> {
           if (productId == null) {
             showScaffoldError(
               context: context,
-              message: 'Product ID not found for item comment update.',
+              message: 'order_panel.error_product_id_not_found_comment'.tr,
             );
             return;
           }
@@ -4018,7 +4018,7 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ _printNewKOT: No order selected');
       showScaffoldError(
         context: context,
-        message: 'Please select an order first',
+        message: 'order_panel.error_select_order_first'.tr,
       );
       return;
     }
@@ -4055,7 +4055,7 @@ class OrderPanelState extends State<OrderPanel> {
           'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â _printNewKOT: No pending add-on or cancel KOT items');
       showScaffoldError(
         context: context,
-        message: 'No pending KOT items to print',
+        message: 'order_panel.error_no_pending_kot'.tr,
       );
       return;
     }
@@ -4762,7 +4762,7 @@ class OrderPanelState extends State<OrderPanel> {
           'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â _printSavedOrderKot: KOT printing is disabled in app settings');
       showScaffoldError(
         context: context,
-        message: 'KOT printing is disabled in settings',
+        message: 'order_panel.error_kot_disabled'.tr,
       );
     }
   }
@@ -6242,7 +6242,7 @@ class OrderPanelState extends State<OrderPanel> {
 
         if (productId == null) {
           showScaffoldError(
-              context: context, message: 'Product ID not found for item.');
+              context: context, message: 'order_panel.error_product_id_not_found'.tr);
           return;
         }
 
@@ -8008,7 +8008,7 @@ class OrderPanelState extends State<OrderPanel> {
 
         showScaffold(
           context: context,
-          message: 'Order $orderNumber confirmed successfully!',
+          message: '${'order_panel.msg_order_confirmed_1'.tr} $orderNumber ${'order_panel.msg_order_confirmed_2'.tr}',
         );
 
         // Refresh saved orders to show updated status
@@ -8080,7 +8080,7 @@ class OrderPanelState extends State<OrderPanel> {
     return _showCheckoutModal(
       mode: CheckoutModalMode.selectionOnly,
       initialStep: 0,
-      title: 'Select Customer',
+      title: 'order_panel.modal_select_customer'.tr,
     );
   }
 
@@ -8088,7 +8088,7 @@ class OrderPanelState extends State<OrderPanel> {
     return _showCheckoutModal(
       mode: CheckoutModalMode.selectionOnly,
       initialStep: 1,
-      title: 'Select Delivery Method',
+      title: 'order_panel.modal_select_delivery'.tr,
     );
   }
 
@@ -8096,7 +8096,7 @@ class OrderPanelState extends State<OrderPanel> {
     return _showCheckoutModal(
       mode: CheckoutModalMode.selectionOnly,
       initialStep: 3,
-      title: 'Select Payment Method',
+      title: 'order_panel.modal_select_payment'.tr,
     );
   }
 

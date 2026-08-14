@@ -2710,5 +2710,21 @@
     "comment": "Comment",
     "na": "N/A",
     "error_loading": "Error loading transactions: @error"
+  },
+  "order_panel": {
+    "error_status_served_not_found": "Status 'SERVED' not found",
+    "msg_order_marked_served_1": "Order",
+    "msg_order_marked_served_2": "items marked as SERVED",
+    "btn_save_comment": "Save Comment",
+    "error_product_id_not_found_comment": "Product ID not found for item comment update.",
+    "error_product_id_not_found": "Product ID not found for item.",
+    "error_select_order_first": "Please select an order first",
+    "error_no_pending_kot": "No pending KOT items to print",
+    "error_kot_disabled": "KOT printing is disabled in settings",
+    "msg_order_confirmed_1": "Order",
+    "msg_order_confirmed_2": "confirmed successfully!",
+    "modal_select_customer": "Select Customer",
+    "modal_select_delivery": "Select Delivery Method",
+    "modal_select_payment": "Select Payment Method"
   }
 }

@@ -2710,5 +2710,21 @@
     "comment": "التعليق",
     "na": "غير متاح",
     "error_loading": "خطأ في تحميل المعاملات: @error"
+  },
+  "order_panel": {
+    "error_status_served_not_found": "حالة 'SERVED' غير موجودة",
+    "msg_order_marked_served_1": "تم تحديد عناصر الطلب",
+    "msg_order_marked_served_2": "كـ'تم التقديم'",
+    "btn_save_comment": "حفظ التعليق",
+    "error_product_id_not_found_comment": "معرّف المنتج غير موجود لتحديث تعليق العنصر.",
+    "error_product_id_not_found": "معرّف المنتج غير موجود للعنصر.",
+    "error_select_order_first": "يرجى تحديد طلب أولاً",
+    "error_no_pending_kot": "لا توجد عناصر KOT معلقة للطباعة",
+    "error_kot_disabled": "طباعة KOT معطلة في الإعدادات",
+    "msg_order_confirmed_1": "تم تأكيد الطلب",
+    "msg_order_confirmed_2": "بنجاح!",
+    "modal_select_customer": "اختر عميلاً",
+    "modal_select_delivery": "اختر طريقة التوصيل",
+    "modal_select_payment": "اختر طريقة الدفع"
   }
 }
