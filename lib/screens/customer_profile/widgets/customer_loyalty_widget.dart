@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -39,7 +40,7 @@ class _CustomerLoyaltyWidgetState extends State<CustomerLoyaltyWidget> {
       setState(() => isLoading = false);
     } catch (error) {
       setState(() {
-        errorMessage = 'Failed to load loyalty information';
+        errorMessage = 'customer_loyalty.err_load'.tr;
         isLoading = false;
       });
     }
@@ -73,7 +74,7 @@ class _CustomerLoyaltyWidgetState extends State<CustomerLoyaltyWidget> {
           children: [
             const Icon(Icons.error_outline, size: 50, color: ColorManager.kRed),
             const SizedBox(height: 16),
-            Text('Error Loading Data',
+            Text('customer_loyalty.title_error'.tr,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s18, 0, ColorManager.kTitleTextColor)),
             const SizedBox(height: 8),
@@ -85,7 +86,7 @@ class _CustomerLoyaltyWidgetState extends State<CustomerLoyaltyWidget> {
             ElevatedButton.icon(
               onPressed: _loadLoyaltyInfo,
               icon: const Icon(Icons.refresh),
-              label: const Text('Try Again'),
+              label: Text('customer_loyalty.btn_try_again'.tr),
               style: ElevatedButton.styleFrom(
                   backgroundColor: ColorManager.kPrimaryColor),
             ),
@@ -139,7 +140,7 @@ class _CustomerLoyaltyWidgetState extends State<CustomerLoyaltyWidget> {
           isMobile
               ? Expanded(
                   child: Text(
-                    'Loyalty Program',
+                    'customer_loyalty.title_program'.tr,
                     softWrap: true,
                     style: buildCustomStyle(FontWeightManager.bold,
                         FontSize.s16, 0, ColorManager.kTitleTextColor),
@@ -147,7 +148,7 @@ class _CustomerLoyaltyWidgetState extends State<CustomerLoyaltyWidget> {
                 )
               : Flexible(
                   child: Text(
-                    'Loyalty Program',
+                    'customer_loyalty.title_program'.tr,
                     overflow: TextOverflow.ellipsis,
                     style: buildCustomStyle(FontWeightManager.bold,
                         FontSize.s18, 0, ColorManager.kTitleTextColor),
@@ -202,7 +203,7 @@ class _CustomerLoyaltyWidgetState extends State<CustomerLoyaltyWidget> {
                       isMobile
                           ? Expanded(
                               child: Text(
-                                'EPOS Loyalty',
+                                'customer_loyalty.card_title'.tr,
                                 softWrap: true,
                                 style: buildCustomStyle(FontWeightManager.bold,
                                     FontSize.s16, 0, Colors.white),
@@ -210,7 +211,7 @@ class _CustomerLoyaltyWidgetState extends State<CustomerLoyaltyWidget> {
                             )
                           : Flexible(
                               child: Text(
-                                'EPOS Loyalty',
+                                'customer_loyalty.card_title'.tr,
                                 softWrap: true,
                                 style: buildCustomStyle(FontWeightManager.bold,
                                     FontSize.s20, 0, Colors.white),
@@ -239,7 +240,7 @@ class _CustomerLoyaltyWidgetState extends State<CustomerLoyaltyWidget> {
                       ? const SizedBox(height: 24)
                       : const Spacer(),
                   Text(
-                    widget.customer.name ?? 'Customer Name',
+                    widget.customer.name ?? 'customer_loyalty.label_customer_name'.tr,
                     softWrap: true,
                     maxLines: isMobile ? null : 2,
                     overflow: isMobile ? null : TextOverflow.ellipsis,
@@ -279,29 +280,29 @@ class _CustomerLoyaltyWidgetState extends State<CustomerLoyaltyWidget> {
         children: [
           _buildInfoRow(
             icon: Icons.star_border_purple500_outlined,
-            title: 'Loyalty Points',
+            title: 'customer_loyalty.loyalty_points'.tr,
             value: widget.customer.loyaltyPoints?.toString() ?? '0',
             valueColor: ColorManager.kSuccessColor,
           ),
           _buildInfoRow(
             icon: Icons.redeem,
-            title: 'Min. Redeemable Points',
+            title: 'customer_loyalty.min_redeemable'.tr,
             value: widget.customer.minRedeemablePoints?.toString() ?? '0',
           ),
           _buildInfoRow(
             icon: Icons.price_change_outlined,
-            title: 'Price Per Point',
-            value:
-                '', // Empty value as we'll use the Consumer widget to display this
+            title: 'customer_loyalty.price_per_point'.tr,
+            value: '',
+            showConsumerWidget: true,
           ),
           _buildInfoRow(
             icon: Icons.calendar_today_outlined,
-            title: 'Valid From',
+            title: 'customer_loyalty.valid_from'.tr,
             value: widget.customer.validFrom ?? '--',
           ),
           _buildInfoRow(
             icon: Icons.event_busy_outlined,
-            title: 'Valid Until',
+            title: 'customer_loyalty.valid_until'.tr,
             value: widget.customer.validUntil ?? '--',
             showDivider: false,
           ),
@@ -316,6 +317,7 @@ class _CustomerLoyaltyWidgetState extends State<CustomerLoyaltyWidget> {
     required String value,
     Color? valueColor,
     bool showDivider = true,
+    bool showConsumerWidget = false,
   }) {
     final isMobile = widget.size.width < 600;
 
@@ -381,7 +383,7 @@ class _CustomerLoyaltyWidgetState extends State<CustomerLoyaltyWidget> {
               SizedBox(width: isMobile ? 12 : 16),
               buildLabel(),
               const SizedBox(width: 8),
-              if (title == 'Price Per Point')
+              if (showConsumerWidget)
                 Consumer<AppSettingsProvider>(
                   builder: (context, appSettingsProvider, child) {
                     final currency =
