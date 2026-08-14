@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import '../../../components/build_container_box.dart';
@@ -77,7 +78,7 @@ class _PersonalInformationEditWidgetState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         BuildTitle(
-                          title: "First Name",
+                          title: 'profile.field_first_name'.tr,
                           textStyle: buildCustomStyle(
                             FontWeightManager.regular,
                             FontSize.s10,
@@ -99,7 +100,7 @@ class _PersonalInformationEditWidgetState
                             cursorColor: ColorManager.kPrimaryColor,
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: "First Name",
+                              hintText: 'profile.field_first_name'.tr,
                               hintStyle: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s10,
@@ -122,7 +123,7 @@ class _PersonalInformationEditWidgetState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         BuildTitle(
-                          title: "Last Name",
+                          title: 'profile.field_last_name'.tr,
                           textStyle: buildCustomStyle(
                             FontWeightManager.regular,
                             FontSize.s10,
@@ -145,7 +146,7 @@ class _PersonalInformationEditWidgetState
                             cursorColor: ColorManager.kPrimaryColor,
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: "Last Name",
+                              hintText: 'profile.field_last_name'.tr,
                               hintStyle: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s10,
@@ -168,7 +169,7 @@ class _PersonalInformationEditWidgetState
                 ),
                 const SizedBox(height: 8),
                 BuildTitle(
-                  title: "Email Address",
+                  title: 'profile.field_email'.tr,
                   textStyle: buildCustomStyle(
                     FontWeightManager.regular,
                     FontSize.s10,
@@ -207,7 +208,7 @@ class _PersonalInformationEditWidgetState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         BuildTitle(
-                          title: "Phone Number",
+                          title: 'profile.field_phone'.tr,
                           textStyle: buildCustomStyle(
                             FontWeightManager.regular,
                             FontSize.s10,
@@ -245,7 +246,7 @@ class _PersonalInformationEditWidgetState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         BuildTitle(
-                          title: "Address",
+                          title: 'profile.field_address'.tr,
                           textStyle: buildCustomStyle(
                             FontWeightManager.regular,
                             FontSize.s10,
@@ -283,7 +284,7 @@ class _PersonalInformationEditWidgetState
                 ),
                 const SizedBox(height: 10),
                 RoundButton(
-                    radius: 14, title: "Edit Profile", fct: () {}, size: size),
+                    radius: 14, title: 'profile.btn_edit_profile'.tr, fct: () {}, size: size),
                 const SizedBox(height: 10),
               ],
             ),
