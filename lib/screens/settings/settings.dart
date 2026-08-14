@@ -681,7 +681,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (ctx) {
         return AlertDialog(
           backgroundColor: Colors.white,
-          title: const Text('Last Product Sync'),
+          title: Text('settings_ui.last_product_sync'.tr),
           content: Text(displayTime),
           actions: [
             TextButton(
@@ -695,7 +695,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Get.back();
                     }
                   : null,
-              child: const Text('Reset'),
+              child: Text('general.reset'.tr),
             ),
             TextButton(
               onPressed: () => Get.back(),
