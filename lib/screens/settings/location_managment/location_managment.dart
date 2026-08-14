@@ -53,7 +53,7 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> {
               ListTransactionModel.fromJson(value);
           listTransaction = listTransactionModel.data?.transactions ?? [];
         } else {
-          showScaffold(context: context, message: "Data Not Found");
+          showScaffold(context: context, message: 'location_management.error_not_found'.tr);
         }
       });
     } catch (error) {
@@ -134,22 +134,22 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SettingsPageHeader(
-            title: 'Location Management',
-            subtitle: 'Search and manage location records',
+          SettingsPageHeader(
+            title: 'location_management.title'.tr,
+            subtitle: 'location_management.subtitle'.tr,
           ),
           const SizedBox(height: 16),
           SettingsFilterWrap(
             actions: [
               CustomRoundButton(
-                title: 'Search',
+                title: 'location_management.btn_search'.tr,
                 fct: () async {},
                 height: 48,
                 width: isCompact ? double.infinity : 120,
                 fontSize: FontSize.s12,
               ),
               CustomRoundButton(
-                title: 'Reset',
+                title: 'location_management.btn_reset'.tr,
                 boxColor: Colors.white,
                 textColor: ColorManager.kPrimaryColor,
                 fct: () async {
@@ -165,17 +165,17 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> {
               ),
             ],
             children: [
-              _buildFilterField(label: 'State', hintText: 'State'),
-              _buildFilterField(label: 'District', hintText: 'District'),
-              _buildFilterField(label: 'Pincode', hintText: 'Pincode'),
+              _buildFilterField(label: 'location_management.filter_state'.tr, hintText: 'location_management.filter_state'.tr),
+              _buildFilterField(label: 'location_management.filter_district'.tr, hintText: 'location_management.filter_district'.tr),
+              _buildFilterField(label: 'location_management.filter_pincode'.tr, hintText: 'location_management.filter_pincode'.tr),
               _buildFilterField(
-                label: 'Location Name',
-                hintText: 'Location Name',
+                label: 'location_management.filter_location_name'.tr,
+                hintText: 'location_management.filter_location_name'.tr,
               ),
             ],
           ),
           const SizedBox(height: 20),
-          const SettingsSectionHeader(title: 'Location Records'),
+          SettingsSectionHeader(title: 'location_management.section_records'.tr),
           const SizedBox(height: 10),
           SettingsResponsiveTable(
               minWidth: 720,
@@ -204,11 +204,11 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> {
                       color: ColorManager.tableBGColor,
                     ),
                     children: [
-                      _buildHeaderCell('Name'),
-                      _buildHeaderCell('Type'),
-                      _buildHeaderCell('Amount'),
-                      _buildHeaderCell('Status'),
-                      _buildHeaderCell('Action'),
+                      _buildHeaderCell('location_management.col_name'.tr),
+                      _buildHeaderCell('location_management.col_type'.tr),
+                      _buildHeaderCell('location_management.col_amount'.tr),
+                      _buildHeaderCell('location_management.col_status'.tr),
+                      _buildHeaderCell('location_management.col_action'.tr),
                     ],
                   ),
                   ...listTransaction!.where((transaction) {

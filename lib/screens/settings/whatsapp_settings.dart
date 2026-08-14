@@ -24,7 +24,7 @@ class WhatsappSettingsScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SettingsSubPageHeader(
-            backLabel: 'Settings',
+            backLabel: 'whatsapp_settings.back_label'.tr,
             onBack: () {
               sideBarController.index.value =
                   62; // Navigate back to Settings
@@ -33,8 +33,8 @@ class WhatsappSettingsScreen extends StatelessWidget {
               sideBarController.index.value =
                   62; // Navigate back to Settings
             },
-            title: 'WhatsApp Integration',
-            subtitle: 'Connect your WhatsApp account to send invoices',
+            title: 'whatsapp_settings.title'.tr,
+            subtitle: 'whatsapp_settings.subtitle'.tr,
           ),
           const SizedBox(height: 20),
           SettingsContentCard(
@@ -46,8 +46,8 @@ class WhatsappSettingsScreen extends StatelessWidget {
                   children: [
                     Obx(() => SettingsStatusBadge(
                           label: ctrl.connected.value
-                              ? 'Connected'
-                              : 'Disconnected',
+                              ? 'whatsapp_settings.status_connected'.tr
+                              : 'whatsapp_settings.status_disconnected'.tr,
                           isPositive: ctrl.connected.value,
                           icon: ctrl.connected.value
                               ? Icons.check_circle
@@ -81,7 +81,7 @@ class WhatsappSettingsScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'WhatsApp Connected Successfully',
+                            'whatsapp_settings.connected_title'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.semiBold,
                               FontSize.s16,
@@ -91,7 +91,7 @@ class WhatsappSettingsScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Ready to send invoices and receipts',
+                            'whatsapp_settings.connected_subtitle'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.regular,
                               FontSize.s13,
@@ -107,7 +107,7 @@ class WhatsappSettingsScreen extends StatelessWidget {
                   return Column(
                     children: [
                       Text(
-                        'Scan QR code with WhatsApp on your phone',
+                        'whatsapp_settings.scan_instruction'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.regular,
                           FontSize.s14,
@@ -117,7 +117,7 @@ class WhatsappSettingsScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Go to WhatsApp > Settings > Linked Devices > Link a Device',
+                        'whatsapp_settings.scan_steps'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.regular,
                           FontSize.s12,
@@ -162,7 +162,7 @@ class WhatsappSettingsScreen extends StatelessWidget {
                                         ),
                                         const SizedBox(height: 12),
                                         Text(
-                                          'Generating QR Code...',
+                                          'whatsapp_settings.qr_generating'.tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s14,
@@ -178,7 +178,7 @@ class WhatsappSettingsScreen extends StatelessWidget {
                                         ),
                                         const SizedBox(height: 12),
                                         Text(
-                                          'Click Connect to generate QR code',
+                                          'whatsapp_settings.qr_idle'.tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s13,
@@ -225,10 +225,10 @@ class WhatsappSettingsScreen extends StatelessWidget {
                         : const Icon(Icons.link, size: 18),
                     label: Text(
                       ctrl.isConnecting.value
-                          ? 'Connecting...'
+                          ? 'whatsapp_settings.btn_connecting'.tr
                           : ctrl.connected.value
-                              ? 'Connected'
-                              : 'Connect',
+                              ? 'whatsapp_settings.btn_connected'.tr
+                              : 'whatsapp_settings.btn_connect'.tr,
                       style: const TextStyle(fontSize: 14),
                     ),
                   );
@@ -247,9 +247,9 @@ class WhatsappSettingsScreen extends StatelessWidget {
                         ? () => ctrl.disconnect()
                         : null,
                     icon: const Icon(Icons.link_off, size: 18),
-                    label: const Text(
-                      'Disconnect',
-                      style: TextStyle(fontSize: 14),
+                    label: Text(
+                      'whatsapp_settings.btn_disconnect'.tr,
+                      style: const TextStyle(fontSize: 14),
                     ),
                   );
 
@@ -312,10 +312,9 @@ class WhatsappSettingsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SettingsSectionHeader(
-                  title: 'Test Message',
-                  subtitle:
-                      'Send a test message to verify WhatsApp integration.',
+                SettingsSectionHeader(
+                  title: 'whatsapp_settings.test_message_title'.tr,
+                  subtitle: 'whatsapp_settings.test_message_subtitle'.tr,
                 ),
                 const SizedBox(height: 16),
                 _PhoneAndMessageForm(ctrl: ctrl),
@@ -332,7 +331,7 @@ class WhatsappSettingsScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Auto-Reconnect',
+                            'whatsapp_settings.auto_reconnect_title'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.medium,
                               FontSize.s14,
@@ -342,7 +341,7 @@ class WhatsappSettingsScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Automatically reconnect when connection is lost',
+                            'whatsapp_settings.auto_reconnect_subtitle'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.regular,
                               FontSize.s12,
@@ -360,8 +359,8 @@ class WhatsappSettingsScreen extends StatelessWidget {
                         showScaffold(
                           context: context,
                           message: ctrl.autoReconnect.value
-                              ? 'Auto-Reconnect enabled'
-                              : 'Auto-Reconnect disabled',
+                              ? 'whatsapp_settings.auto_reconnect_enabled'.tr
+                              : 'whatsapp_settings.auto_reconnect_disabled'.tr,
                         );
                       },
                       activeColor: const Color(0xFF25D366),
@@ -404,24 +403,24 @@ class _PhoneAndMessageFormState extends State<_PhoneAndMessageForm> {
         children: [
           TextFormField(
             controller: _phone,
-            decoration: const InputDecoration(
-              labelText: 'Phone Number',
+            decoration: InputDecoration(
+              labelText: 'whatsapp_settings.field_phone'.tr,
               hintText: '+91xxxxxxxxxx',
-              prefixIcon: Icon(Icons.phone),
+              prefixIcon: const Icon(Icons.phone),
             ),
             validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Enter phone number' : null,
+                (v == null || v.trim().isEmpty) ? 'whatsapp_settings.validator_phone'.tr : null,
           ),
           const SizedBox(height: 12),
           TextFormField(
             controller: _msg,
-            decoration: const InputDecoration(
-              labelText: 'Message',
-              prefixIcon: Icon(Icons.message),
+            decoration: InputDecoration(
+              labelText: 'whatsapp_settings.field_message'.tr,
+              prefixIcon: const Icon(Icons.message),
             ),
             maxLines: 2,
             validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Enter message' : null,
+                (v == null || v.trim().isEmpty) ? 'whatsapp_settings.validator_message'.tr : null,
           ),
           const SizedBox(height: 16),
           Obx(() => SizedBox(
@@ -445,7 +444,7 @@ class _PhoneAndMessageFormState extends State<_PhoneAndMessageForm> {
                         }
                       : null,
                   icon: const Icon(Icons.send, size: 18),
-                  label: const Text('Send Test Message'),
+                  label: Text('whatsapp_settings.btn_send_test'.tr),
                 ),
               )),
         ],

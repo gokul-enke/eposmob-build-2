@@ -96,18 +96,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
-        title: const Text('Clear Product Cache'),
-        content: const Text(
-          'This will clear locally cached products and last product sync timestamp. Continue?',
-        ),
+        title: Text('settings_ui.clear_product_cache_title'.tr),
+        content: Text('settings_ui.clear_product_cache_content'.tr),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text('general.cancel'.tr),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Clear'),
+            child: Text('settings_ui.clear_product_cache_btn_clear'.tr),
           ),
         ],
       ),
@@ -124,14 +122,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       showScaffold(
         context: context,
-        message: 'Local product cache cleared (debug)',
+        message: 'settings_ui.clear_product_cache_success'.tr,
       );
       setState(() {});
     } catch (e) {
       if (!mounted) return;
       showScaffoldError(
         context: context,
-        message: 'Failed to clear product cache: ${e.toString()}',
+        message: '${'settings_ui.clear_product_cache_error'.tr}: ${e.toString()}',
       );
     }
   }
@@ -142,20 +140,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         context: context,
         builder: (context) => AlertDialog(
           backgroundColor: Colors.white,
-          title: const Text('Clear Local Storage'),
-          content: const Text(
-            'This will clear all local data except login credentials and log you out. Are you sure?',
-          ),
+          title: Text('settings_ui.clear_local_storage_title'.tr),
+          content: Text('settings_ui.clear_local_storage_content'.tr),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: Text('general.cancel'.tr),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text(
-                'Clear & Logout',
-                style: TextStyle(color: ColorManager.kButtonRed),
+              child: Text(
+                'settings_ui.clear_local_storage_btn_confirm'.tr,
+                style: const TextStyle(color: ColorManager.kButtonRed),
               ),
             ),
           ],
@@ -171,7 +167,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) {
         showScaffold(
           context: context,
-          message: 'Local storage cleared successfully',
+          message: 'settings_ui.clear_local_storage_success'.tr,
         );
 
         Future.delayed(const Duration(milliseconds: 500), () {
@@ -185,7 +181,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error clearing local storage: ${e.toString()}',
+          message: '${'settings_ui.clear_local_storage_error'.tr}: ${e.toString()}',
         );
       }
     }
