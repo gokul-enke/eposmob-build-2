@@ -159,7 +159,7 @@ class _SupplierInformationEditWidgetState
               color: ColorManager.kPrimaryColor, size: 28),
           const SizedBox(width: 12),
           Text(
-            'Edit Supplier Information',
+            'supplier_profile.edit_title'.tr,
             style: buildCustomStyle(FontWeightManager.bold, FontSize.s18, 0,
                 ColorManager.kTitleTextColor),
           ),
@@ -177,39 +177,39 @@ class _SupplierInformationEditWidgetState
           children: [
             // Basic Information Section
             _buildSectionCard(
-              title: 'Basic Information',
+              title: 'supplier_profile.edit_section_basic'.tr,
               icon: Icons.business_outlined,
               children: [
                 _buildTextField(
                   controller: _nameController,
-                  label: 'Supplier Name',
-                  hintText: 'Enter supplier name',
+                  label: 'supplier_profile.edit_label_name'.tr,
+                  hintText: 'supplier_profile.edit_hint_name'.tr,
                   isRequired: true,
                 ),
                 const SizedBox(height: 20),
                 _buildTwoFieldRow(
                   leftController: _emailController,
-                  leftLabel: 'Email Address',
-                  leftHint: 'Enter email address',
+                  leftLabel: 'supplier_profile.edit_label_email'.tr,
+                  leftHint: 'supplier_profile.edit_hint_email'.tr,
                   leftKeyboardType: TextInputType.emailAddress,
                   rightController: _phoneController,
-                  rightLabel: 'Phone Number',
-                  rightHint: 'Enter phone number',
+                  rightLabel: 'supplier_profile.edit_label_phone'.tr,
+                  rightHint: 'supplier_profile.edit_hint_phone'.tr,
                   rightKeyboardType: TextInputType.phone,
                   rightRequired: true,
                 ),
                 const SizedBox(height: 20),
                 _buildTextField(
                   controller: _altPhoneController,
-                  label: 'Alternative Phone',
-                  hintText: 'Enter alternative phone number',
+                  label: 'supplier_profile.edit_label_alt_phone'.tr,
+                  hintText: 'supplier_profile.edit_hint_alt_phone'.tr,
                   keyboardType: TextInputType.phone,
                 ),
                 const SizedBox(height: 20),
                 _buildTextField(
                   controller: _taxNumberController,
-                  label: 'Tax Number',
-                  hintText: 'Enter tax number',
+                  label: 'supplier_profile.edit_label_tax'.tr,
+                  hintText: 'supplier_profile.edit_hint_tax'.tr,
                 ),
               ],
             ),
@@ -218,13 +218,13 @@ class _SupplierInformationEditWidgetState
 
             // Address Information Section
             _buildSectionCard(
-              title: 'Address Information',
+              title: 'supplier_profile.edit_section_address'.tr,
               icon: Icons.location_on_outlined,
               children: [
                 _buildTextField(
                   controller: _addressController,
-                  label: 'Business Address',
-                  hintText: 'Enter complete business address',
+                  label: 'supplier_profile.edit_label_address'.tr,
+                  hintText: 'supplier_profile.edit_hint_address'.tr,
                   maxLines: 3,
                 ),
               ],
@@ -233,16 +233,16 @@ class _SupplierInformationEditWidgetState
             const SizedBox(height: 24),
 
             _buildSectionCard(
-              title: 'KYC Information',
+              title: 'supplier_profile.edit_section_kyc'.tr,
               icon: Icons.verified_user_outlined,
               children: [
                 _buildTwoFieldRow(
                   leftController: _crNumberController,
-                  leftLabel: 'CR Number',
-                  leftHint: 'Enter CR number',
+                  leftLabel: 'supplier_profile.edit_label_cr'.tr,
+                  leftHint: 'supplier_profile.edit_hint_cr'.tr,
                   rightController: _vatNumberController,
-                  rightLabel: 'VAT Number',
-                  rightHint: 'Enter VAT number',
+                  rightLabel: 'supplier_profile.edit_label_vat'.tr,
+                  rightHint: 'supplier_profile.edit_hint_vat'.tr,
                 ),
               ],
             ),
@@ -251,7 +251,7 @@ class _SupplierInformationEditWidgetState
 
             // Financial Information Section
             _buildSectionCard(
-              title: 'Financial Information',
+              title: 'supplier_profile.edit_section_financial'.tr,
               icon: Icons.account_balance_wallet_outlined,
               children: [
                 _buildBalanceAndPaymentTypeFields(),
@@ -368,7 +368,7 @@ class _SupplierInformationEditWidgetState
           validator: isRequired
               ? (value) {
                   if (value == null || value.isEmpty) {
-                    return '$label is required';
+                    return '$label ${'supplier_profile.edit_val_required'.tr}';
                   }
                   return null;
                 }
@@ -426,7 +426,7 @@ class _SupplierInformationEditWidgetState
         Expanded(
           child: CustomRoundButton(
             radius: 10,
-            title: "Save Changes",
+            title: 'supplier_profile.edit_btn_save'.tr,
             fct: _saveChanges,
             height: 50,
             width: 150,
@@ -437,7 +437,7 @@ class _SupplierInformationEditWidgetState
         Expanded(
           child: CustomRoundButton(
             radius: 10,
-            title: "Cancel",
+            title: 'supplier_profile.edit_btn_cancel'.tr,
             fct: () {
               // Cancel editing
             },
@@ -509,7 +509,7 @@ class _SupplierInformationEditWidgetState
       if (isSuccess) {
         showScaffold(
           context: context,
-          message: 'Supplier information updated successfully',
+          message: 'supplier_profile.edit_msg_success'.tr,
         );
 
         // Navigate back to supplier list after successful save
@@ -525,7 +525,7 @@ class _SupplierInformationEditWidgetState
       Navigator.pop(context);
       showScaffoldError(
         context: context,
-        message: 'Failed to update supplier',
+        message: 'supplier_profile.edit_msg_failed'.tr,
       );
     }
   }
@@ -554,7 +554,7 @@ class _SupplierInformationEditWidgetState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               BuildTextTile(
-                title: 'Payment Type',
+                title: 'supplier_profile.edit_label_payment_type'.tr,
                 isStarRed: true,
                 textStyle: buildCustomStyle(
                   FontWeightManager.regular,
@@ -589,7 +589,7 @@ class _SupplierInformationEditWidgetState
                       },
                     ),
                     Text(
-                      'To Pay',
+                      'supplier_profile.edit_radio_to_pay'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s13,
@@ -614,7 +614,7 @@ class _SupplierInformationEditWidgetState
                       },
                     ),
                     Text(
-                      'To Receive',
+                      'supplier_profile.edit_radio_to_receive'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s13,
@@ -634,8 +634,8 @@ class _SupplierInformationEditWidgetState
           flex: 2,
           child: buildColumnWidgetForTextFields(
             controller: _balanceController,
-            hintText: 'Balance',
-            title: 'Balance',
+            hintText: 'supplier_profile.edit_label_balance'.tr,
+            title: 'supplier_profile.edit_label_balance'.tr,
             size: widget.size,
             width: double.infinity,
             keyboardType: TextInputType.number,
@@ -646,10 +646,10 @@ class _SupplierInformationEditWidgetState
               if (value != null && value.isNotEmpty) {
                 final balance = double.tryParse(value);
                 if (balance == null) {
-                  return 'Please enter a valid balance';
+                  return 'supplier_profile.edit_val_invalid_balance'.tr;
                 }
                 if (balance < 0) {
-                  return 'Balance cannot be negative';
+                  return 'supplier_profile.edit_val_negative_balance'.tr;
                 }
               }
               return null;

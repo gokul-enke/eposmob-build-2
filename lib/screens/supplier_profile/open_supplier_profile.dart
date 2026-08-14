@@ -46,7 +46,7 @@ class _OpenSupplierProfileScreenState extends State<OpenSupplierProfileScreen> {
     SideBarController sideBarController = Get.put(SideBarController());
 
     if (selectedSupplier == null) {
-      return const Center(child: Text("No supplier selected."));
+      return Center(child: Text('supplier_profile.label_no_supplier'.tr));
     }
 
     return SafeArea(
@@ -60,11 +60,11 @@ class _OpenSupplierProfileScreenState extends State<OpenSupplierProfileScreen> {
               CustomBackButton(
                 onPressed: () => sideBarController.index.value =
                     52, // Navigate back to supplier list
-                text: 'All Suppliers',
+                text: 'supplier_profile.btn_all_suppliers'.tr,
               ),
               const SizedBox(height: 10),
               Text(
-                'Supplier Profile',
+                'supplier_profile.title'.tr,
                 style: buildCustomStyle(FontWeightManager.bold, FontSize.s24, 0,
                     ColorManager.kTitleTextColor),
               ),
@@ -94,11 +94,11 @@ class _OpenSupplierProfileScreenState extends State<OpenSupplierProfileScreen> {
 
   Widget _buildMobileLayout(Size size, Supplier supplier) {
     final List<String> tabTitles = [
-      'Information',
-      'Edit Details',
-      'Transactions',
-      'All Orders',
-      'Address',
+      'supplier_profile.tab_information'.tr,
+      'supplier_profile.tab_edit_details'.tr,
+      'supplier_profile.tab_transactions'.tr,
+      'supplier_profile.tab_all_orders'.tr,
+      'supplier_profile.tab_address'.tr,
     ];
 
     return Column(
@@ -115,7 +115,7 @@ class _OpenSupplierProfileScreenState extends State<OpenSupplierProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      supplier.name ?? 'Supplier Name',
+                      supplier.name ?? 'supplier_profile.label_supplier_name'.tr,
                       style: buildCustomStyle(FontWeightManager.bold,
                           FontSize.s16, 0, ColorManager.kTitleTextColor),
                       overflow: TextOverflow.ellipsis,
@@ -185,11 +185,11 @@ class _OpenSupplierProfileScreenState extends State<OpenSupplierProfileScreen> {
         children: [
           _buildProfileHeader(supplier),
           const SizedBox(height: 24),
-          _buildSidebarButton(0, 'Information', ImageAssets.userProfile),
-          _buildSidebarButton(1, 'Edit Details', ImageAssets.lock),
-          _buildSidebarButton(2, 'Transactions', ImageAssets.transactionIcon),
-          _buildSidebarButton(3, 'All Orders', ImageAssets.saleIcon),
-          _buildSidebarButton(4, 'Supplier Address', ImageAssets.userIcon),
+          _buildSidebarButton(0, 'supplier_profile.tab_information'.tr, ImageAssets.userProfile),
+          _buildSidebarButton(1, 'supplier_profile.tab_edit_details'.tr, ImageAssets.lock),
+          _buildSidebarButton(2, 'supplier_profile.tab_transactions'.tr, ImageAssets.transactionIcon),
+          _buildSidebarButton(3, 'supplier_profile.tab_all_orders'.tr, ImageAssets.saleIcon),
+          _buildSidebarButton(4, 'supplier_profile.tab_supplier_address'.tr, ImageAssets.userIcon),
         ],
       ),
     );
@@ -201,7 +201,7 @@ class _OpenSupplierProfileScreenState extends State<OpenSupplierProfileScreen> {
         const BuildProfilePicture(),
         const SizedBox(height: 12),
         Text(
-          supplier.name ?? 'Supplier Name',
+          supplier.name ?? 'supplier_profile.label_supplier_name'.tr,
           style: buildCustomStyle(FontWeightManager.bold, FontSize.s18, 0,
               ColorManager.kTitleTextColor),
           textAlign: TextAlign.center,

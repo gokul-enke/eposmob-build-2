@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/supplier.dart';
@@ -210,7 +211,7 @@ class _SupplierTransactionsWidgetState
                   color: Color(0xFF3C92F5), size: 28),
               const SizedBox(width: 12),
               Text(
-                'Transactions (${filteredTransactions.length})',
+                '${'supplier_profile.tab_transactions'.tr} (${filteredTransactions.length})',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -225,7 +226,7 @@ class _SupplierTransactionsWidgetState
                 icon: const Icon(Icons.print),
                 onPressed: _printTransactions,
                 color: const Color(0xFF7F8C8D),
-                tooltip: 'Print transactions',
+                tooltip: 'supplier_profile.trans_tooltip_print'.tr,
               ),
               IconButton(
                 icon: Icon(_isFilterPanelVisible
@@ -234,8 +235,8 @@ class _SupplierTransactionsWidgetState
                 onPressed: _toggleFilterPanel,
                 color: const Color(0xFF7F8C8D),
                 tooltip: _isFilterPanelVisible
-                    ? 'Close filters'
-                    : 'Filter transactions',
+                    ? 'supplier_profile.trans_tooltip_close_filters'.tr
+                    : 'supplier_profile.trans_tooltip_filter'.tr,
               ),
             ],
           ),
@@ -281,7 +282,7 @@ class _SupplierTransactionsWidgetState
           tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           leading: _buildTransactionIcon(transaction.type),
           title: Text(
-            transaction.reference ?? 'No Reference',
+            transaction.reference ?? 'supplier_profile.trans_label_no_reference'.tr,
             style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s15, 0,
                 ColorManager.kTitleTextColor),
           ),
@@ -361,9 +362,9 @@ class _SupplierTransactionsWidgetState
       ),
       child: Column(
         children: [
-          _buildDetailRow('Transaction Type', transaction.transactionType ?? 'N/A'),
-          _buildDetailRow('Payment Method', transaction.paymentMethod?.isEmpty == true ? 'N/A' : transaction.paymentMethod),
-          _buildDetailRow('Date', transaction.date ?? 'N/A'),
+          _buildDetailRow('supplier_profile.trans_detail_type'.tr, transaction.transactionType ?? 'N/A'),
+          _buildDetailRow('supplier_profile.trans_detail_payment_method'.tr, transaction.paymentMethod?.isEmpty == true ? 'N/A' : transaction.paymentMethod),
+          _buildDetailRow('supplier_profile.trans_detail_date'.tr, transaction.date ?? 'N/A'),
         ],
       ),
     );
@@ -429,9 +430,9 @@ class _SupplierTransactionsWidgetState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Reference Number',
-                      style: TextStyle(
+                    Text(
+                      'supplier_profile.trans_label_reference_number'.tr,
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: Colors.grey,
@@ -440,11 +441,10 @@ class _SupplierTransactionsWidgetState
                     const SizedBox(height: 8),
                     TextField(
                       controller: _referenceController,
-                      decoration: const InputDecoration(
-                        hintText: 'Enter reference number',
-                        border: OutlineInputBorder(),
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                      decoration: InputDecoration(
+                        hintText: 'supplier_profile.trans_hint_reference'.tr,
+                        border: const OutlineInputBorder(),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                       ),
                       onChanged: (value) {
                         setState(() {
@@ -460,9 +460,9 @@ class _SupplierTransactionsWidgetState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Transaction Type',
-                      style: TextStyle(
+                    Text(
+                      'supplier_profile.trans_label_type'.tr,
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: Colors.grey,
@@ -471,17 +471,16 @@ class _SupplierTransactionsWidgetState
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
                       value: _filterType,
-                      decoration: const InputDecoration(
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        hintText: "Select Type",
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        hintText: 'supplier_profile.trans_hint_select_type'.tr,
+                        border: const OutlineInputBorder(),
                       ),
                       dropdownColor: Colors.white,
                       items: [
-                        const DropdownMenuItem(
+                        DropdownMenuItem(
                           value: null,
-                          child: Text("All Types"),
+                          child: Text('supplier_profile.trans_label_all_types'.tr),
                         ),
                         ...transactionTypes.map((String type) {
                           return DropdownMenuItem<String>(
@@ -508,9 +507,9 @@ class _SupplierTransactionsWidgetState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'From Date',
-                      style: TextStyle(
+                    Text(
+                      'supplier_profile.trans_label_from_date'.tr,
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: Colors.grey,
@@ -532,7 +531,7 @@ class _SupplierTransactionsWidgetState
                         initialDate: _filterFromDate,
                         firstDate: DateTime(2000),
                         lastDate: DateTime(2101),
-                        hintText: "Select From Date",
+                        hintText: 'supplier_profile.trans_hint_from_date'.tr,
                         isAllowEdit: true,
                       ),
                     ),
@@ -544,9 +543,9 @@ class _SupplierTransactionsWidgetState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'To Date',
-                      style: TextStyle(
+                    Text(
+                      'supplier_profile.trans_label_to_date'.tr,
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: Colors.grey,
@@ -568,7 +567,7 @@ class _SupplierTransactionsWidgetState
                         initialDate: _filterToDate,
                         firstDate: DateTime(2000),
                         lastDate: DateTime(2101),
-                        hintText: "Select To Date",
+                        hintText: 'supplier_profile.trans_hint_to_date'.tr,
                         isAllowEdit: true,
                       ),
                     ),
@@ -583,12 +582,12 @@ class _SupplierTransactionsWidgetState
             children: [
               TextButton(
                 onPressed: _resetFilters,
-                child: const Text('Reset'),
+                child: Text('supplier_profile.trans_btn_reset'.tr),
               ),
               const SizedBox(width: 8),
               ElevatedButton(
                 onPressed: _applyFiltersAndClose,
-                child: const Text('Apply Filters'),
+                child: Text('supplier_profile.trans_btn_apply_filters'.tr),
               ),
             ],
           ),
@@ -605,14 +604,14 @@ class _SupplierTransactionsWidgetState
           Icon(Icons.receipt_long_outlined,
               size: 60, color: ColorManager.kPrimaryColor.withOpacity(0.4)),
           const SizedBox(height: 20),
-          Text('No Transactions Found',
+          Text('supplier_profile.trans_empty_title'.tr,
               style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s18,
                   0, ColorManager.kTitleTextColor)),
           const SizedBox(height: 8),
           Text(
             transactions.isEmpty 
-                ? 'Transaction data is not available for this supplier.'
-                : 'No transactions match your current filters.',
+                ? 'supplier_profile.trans_empty_no_data'.tr
+                : 'supplier_profile.trans_empty_no_match'.tr,
             textAlign: TextAlign.center,
             style: buildCustomStyle(FontWeightManager.regular, FontSize.s14, 0,
                 ColorManager.kGreyColor),
@@ -627,7 +626,7 @@ class _SupplierTransactionsWidgetState
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "No transactions available to print",
+          message: 'supplier_profile.trans_msg_no_transactions'.tr,
         );
       }
       return;
@@ -637,7 +636,7 @@ class _SupplierTransactionsWidgetState
     if (mounted) {
       showScaffold(
         context: context,
-        message: "Preparing supplier transaction report...",
+        message: 'supplier_profile.trans_msg_preparing_print'.tr,
       );
     }
 
@@ -709,7 +708,7 @@ class _SupplierTransactionsWidgetState
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Error preparing print: $e",
+          message: '${'supplier_profile.trans_msg_print_error'.tr} $e',
         );
       }
     }

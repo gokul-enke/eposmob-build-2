@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_detail_row.dart';
 import 'package:pos_machine/models/supplier.dart';
 import '../../../components/build_container_box.dart';
@@ -77,7 +78,7 @@ class _SupplierInformationViewWidgetState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.supplier?.name ?? "Supplier Name",
+                          widget.supplier?.name ?? 'supplier_profile.label_supplier_name'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.bold,
                             FontSize.s20,
@@ -107,7 +108,7 @@ class _SupplierInformationViewWidgetState
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      "Active",
+                      'supplier_profile.view_status_active'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s12,
@@ -130,31 +131,31 @@ class _SupplierInformationViewWidgetState
                     children: [
                       // Contact Information Card
                       _buildInfoCard(
-                        title: "Contact Information",
+                        title: 'supplier_profile.view_contact_title'.tr,
                         icon: Icons.contact_phone,
                         children: [
                           _buildInfoRow(
                             icon: Icons.email_outlined,
-                            label: "Email",
-                            value: widget.supplier?.email ?? "Not provided",
+                            label: 'supplier_profile.label_email'.tr,
+                            value: widget.supplier?.email ?? 'supplier_profile.not_provided'.tr,
                           ),
                           const SizedBox(height: 16),
                           _buildInfoRow(
                             icon: Icons.phone_outlined,
-                            label: "Phone",
-                            value: widget.supplier?.phone ?? "Not provided",
+                            label: 'supplier_profile.label_phone'.tr,
+                            value: widget.supplier?.phone ?? 'supplier_profile.not_provided'.tr,
                           ),
                           const SizedBox(height: 16),
                           _buildInfoRow(
                             icon: Icons.phone_android_outlined,
-                            label: "Alt Phone",
-                            value: widget.supplier?.altPhone ?? "Not provided",
+                            label: 'supplier_profile.view_label_alt_phone'.tr,
+                            value: widget.supplier?.altPhone ?? 'supplier_profile.not_provided'.tr,
                           ),
                           const SizedBox(height: 16),
                           _buildInfoRow(
                             icon: Icons.receipt_long_outlined,
-                            label: "Tax Number",
-                            value: widget.supplier?.taxNumber ?? "Not provided",
+                            label: 'supplier_profile.view_label_tax_number'.tr,
+                            value: widget.supplier?.taxNumber ?? 'supplier_profile.not_provided'.tr,
                           ),
                         ],
                       ),
@@ -163,12 +164,12 @@ class _SupplierInformationViewWidgetState
 
                       // Account Information Card
                       _buildInfoCard(
-                        title: "Account Information",
+                        title: 'supplier_profile.view_account_title'.tr,
                         icon: Icons.account_circle,
                         children: [
                           _buildInfoRow(
                             icon: Icons.account_balance_wallet,
-                            label: "Current Balance",
+                            label: 'supplier_profile.view_label_current_balance'.tr,
                             value: widget.supplier?.currentBalance
                                     ?.toStringAsFixed(2) ??
                                 "0.00",
@@ -180,13 +181,13 @@ class _SupplierInformationViewWidgetState
                           const SizedBox(height: 16),
                           _buildInfoRow(
                             icon: Icons.payment,
-                            label: "Payment Type",
+                            label: 'supplier_profile.view_label_payment_type'.tr,
                             value: widget.supplier?.paymentType ?? "N/A",
                           ),
                           const SizedBox(height: 16),
                           _buildInfoRow(
                             icon: Icons.info_outline,
-                            label: "Balance Status",
+                            label: 'supplier_profile.view_label_balance_status'.tr,
                             value: widget.supplier?.balanceStatus ?? "N/A",
                             valueColor: widget.supplier?.paymentType == 'to_pay'
                                 ? Colors.red
@@ -197,7 +198,7 @@ class _SupplierInformationViewWidgetState
                           const SizedBox(height: 16),
                           _buildInfoRow(
                             icon: Icons.category,
-                            label: "Product Categories",
+                            label: 'supplier_profile.view_label_product_categories'.tr,
                             value: widget.supplier?.productCategories ?? "N/A",
                           ),
                         ],
@@ -207,13 +208,13 @@ class _SupplierInformationViewWidgetState
 
                       // Address Information Card
                       _buildInfoCard(
-                        title: "Address Information",
+                        title: 'supplier_profile.view_address_title'.tr,
                         icon: Icons.location_on,
                         children: [
                           _buildInfoRow(
                             icon: Icons.location_on_outlined,
-                            label: "Address",
-                            value: widget.supplier?.address ?? "Not provided",
+                            label: 'supplier_profile.label_address'.tr,
+                            value: widget.supplier?.address ?? 'supplier_profile.not_provided'.tr,
                           ),
                         ],
                       ),
@@ -221,7 +222,7 @@ class _SupplierInformationViewWidgetState
                       const SizedBox(height: 24),
 
                       _buildInfoCard(
-                        title: "KYC Information",
+                        title: 'supplier_profile.view_kyc_title'.tr,
                         icon: Icons.verified_user_outlined,
                         children: _buildKycRows(),
                       ),
@@ -304,8 +305,8 @@ class _SupplierInformationViewWidgetState
       return [
         _buildInfoRow(
           icon: Icons.verified_user_outlined,
-          label: "KYC",
-          value: "Not provided",
+          label: 'supplier_profile.view_label_kyc'.tr,
+          value: 'supplier_profile.not_provided'.tr,
         ),
       ];
     }
@@ -315,7 +316,7 @@ class _SupplierInformationViewWidgetState
           (entry) => _buildInfoRow(
             icon: Icons.badge_outlined,
             label: entry.key,
-            value: entry.value.isEmpty ? "Not provided" : entry.value,
+            value: entry.value.isEmpty ? 'supplier_profile.not_provided'.tr : entry.value,
           ),
         )
         .toList();
@@ -393,7 +394,7 @@ class _SupplierInformationViewWidgetState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Quick Actions",
+            'supplier_profile.view_quick_actions'.tr,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s16,
@@ -407,7 +408,7 @@ class _SupplierInformationViewWidgetState
               Expanded(
                 child: _buildActionButton(
                   icon: Icons.edit_outlined,
-                  label: "Edit Supplier",
+                  label: 'supplier_profile.view_btn_edit'.tr,
                   color: ColorManager.kPrimaryColor,
                   onTap: widget.onEditSupplier ?? () {},
                 ),
@@ -416,7 +417,7 @@ class _SupplierInformationViewWidgetState
               Expanded(
                 child: _buildActionButton(
                   icon: Icons.history_outlined,
-                  label: "View Orders",
+                  label: 'supplier_profile.view_btn_orders'.tr,
                   color: ColorManager.kButtonGreen,
                   onTap: widget.onViewOrders ?? () {},
                 ),
@@ -425,7 +426,7 @@ class _SupplierInformationViewWidgetState
               Expanded(
                 child: _buildActionButton(
                   icon: Icons.business_outlined,
-                  label: "Contact",
+                  label: 'supplier_profile.view_btn_contact'.tr,
                   color: ColorManager.kButtonBlue,
                   onTap: widget.onMessage ?? () {},
                 ),
