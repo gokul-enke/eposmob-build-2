@@ -2762,5 +2762,27 @@
     "error_name_required": "الاسم مطلوب",
     "error_phone_required": "رقم الهاتف مطلوب",
     "error_unknown": "حدث خطأ غير معروف"
+  },
+  "mobile_billing": {
+    "msg_order_loaded": "تم تحميل الطلب للتعديل",
+    "error_multi_sale_disabled": "وحدات البيع المتعدد معطلة لهذا المتجر.",
+    "error_product_not_found_barcode": "المنتج غير موجود للباركود",
+    "error_invalid_barcode": "صيغة الباركود غير صحيحة",
+    "error_select_product_first": "يرجى اختيار منتج أولاً",
+    "error_adding_to_cart": "خطأ في إضافة العنصر إلى السلة",
+    "msg_product_cleared": "تم مسح تفاصيل المنتج بنجاح",
+    "error_add_items_to_cart": "يرجى إضافة عناصر إلى السلة",
+    "error_invalid_prices": "يرجى التأكد من أن جميع العناصر لها أسعار صحيحة قبل الحفظ",
+    "msg_order_updated": "تم تحديث الطلب بنجاح",
+    "msg_order_saved": "تم حفظ الطلب بنجاح",
+    "error_save_order_failed": "فشل حفظ الطلب. يرجى المحاولة مجدداً.",
+    "msg_cart_cleared": "تم مسح السلة بنجاح",
+    "btn_add": "إضافة",
+    "field_customer_name": "اسم العميل",
+    "field_paid_amount": "المبلغ المدفوع",
+    "error_enter_customer_name": "يرجى إدخال اسم العميل",
+    "error_select_payment_method": "يرجى اختيار طريقة دفع واحدة على الأقل",
+    "error_paid_less_than_total": "المبلغ المدفوع أقل من الإجمالي",
+    "btn_print_receipt": "طباعة الإيصال"
   }
 }

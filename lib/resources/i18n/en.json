@@ -2762,5 +2762,27 @@
     "error_name_required": "Name is required",
     "error_phone_required": "Phone number is required",
     "error_unknown": "An unknown error occurred"
+  },
+  "mobile_billing": {
+    "msg_order_loaded": "Order loaded for editing",
+    "error_multi_sale_disabled": "Multi sale units are disabled for this store.",
+    "error_product_not_found_barcode": "Product not found for barcode",
+    "error_invalid_barcode": "Invalid barcode format",
+    "error_select_product_first": "Please select a product first",
+    "error_adding_to_cart": "Error adding item to cart",
+    "msg_product_cleared": "Product Details Cleared Successfully",
+    "error_add_items_to_cart": "Please add items to cart",
+    "error_invalid_prices": "Please ensure all items have valid prices before saving",
+    "msg_order_updated": "Order Updated Successfully",
+    "msg_order_saved": "Order Saved Successfully",
+    "error_save_order_failed": "Failed to save order. Please try again.",
+    "msg_cart_cleared": "Cart cleared successfully",
+    "btn_add": "Add",
+    "field_customer_name": "Customer Name",
+    "field_paid_amount": "Paid Amount",
+    "error_enter_customer_name": "Please enter customer name",
+    "error_select_payment_method": "Please select at least one payment method",
+    "error_paid_less_than_total": "Paid amount is less than the total amount",
+    "btn_print_receipt": "PRINT RECEIPT"
   }
 }
