@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
@@ -68,7 +69,7 @@ class _AdjustStockModalState extends State<AdjustStockModal> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Adjust Stock',
+                    'stock.adjust_stock'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s20,
@@ -88,17 +89,17 @@ class _AdjustStockModalState extends State<AdjustStockModal> {
               Row(
                 children: [
                   Expanded(
-                    child: _buildField('Product', productController,
+                    child: _buildField('stock.col_product'.tr, productController,
                         readOnly: true),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
-                    child:
-                        _buildField('Store', storeController, readOnly: true),
+                    child: _buildField('stock.label_store'.tr, storeController,
+                        readOnly: true),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
-                    child: _buildField('Supplier', supplierController,
+                    child: _buildField('stock.supplier'.tr, supplierController,
                         readOnly: true),
                   ),
                 ],
@@ -109,17 +110,17 @@ class _AdjustStockModalState extends State<AdjustStockModal> {
               Row(
                 children: [
                   Expanded(
-                    child: _buildField('Retail Price', retailPriceController),
+                    child: _buildField('stock.retail_price'.tr, retailPriceController),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
-                    child: _buildField('MRP', mrpController),
+                    child: _buildField('stock.mrp'.tr, mrpController),
                   ),
                   if (canShowPurchasePrice) ...[
                     const SizedBox(width: 15),
                     Expanded(
                       child: _buildField(
-                          'Purchase Price', purchasePriceController),
+                          'stock.purchase_price'.tr, purchasePriceController),
                     ),
                   ],
                 ],
@@ -128,7 +129,7 @@ class _AdjustStockModalState extends State<AdjustStockModal> {
 
               // Row 3: Stock Adjust Type
               Text(
-                'Stock Adjust Type',
+                'stock.adjust_type_label'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s14,
@@ -149,7 +150,7 @@ class _AdjustStockModalState extends State<AdjustStockModal> {
                       });
                     },
                   ),
-                  const Text('Increase Stock'),
+                  Text('stock.adjust_increase'.tr),
                   const SizedBox(width: 20),
                   Radio<String>(
                     value: 'Decrease Stock',
@@ -161,7 +162,7 @@ class _AdjustStockModalState extends State<AdjustStockModal> {
                       });
                     },
                   ),
-                  const Text('Decrease Stock'),
+                  Text('stock.adjust_decrease'.tr),
                 ],
               ),
               const SizedBox(height: 20),
@@ -172,7 +173,7 @@ class _AdjustStockModalState extends State<AdjustStockModal> {
                 children: [
                   RichText(
                     text: TextSpan(
-                      text: 'Adjust Quantity',
+                      text: 'stock.adjust_qty_label'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s14,
@@ -211,7 +212,7 @@ class _AdjustStockModalState extends State<AdjustStockModal> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Reason',
+                    'stock.adjust_reason_label'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.medium,
                       FontSize.s14,
@@ -229,7 +230,7 @@ class _AdjustStockModalState extends State<AdjustStockModal> {
                       controller: reasonController,
                       maxLines: 4,
                       decoration: InputDecoration(
-                        hintText: 'Enter the reason',
+                        hintText: 'stock.adjust_reason_hint'.tr,
                         hintStyle: buildCustomStyle(
                           FontWeightManager.regular,
                           FontSize.s12,
@@ -249,14 +250,14 @@ class _AdjustStockModalState extends State<AdjustStockModal> {
               Row(
                 children: [
                   CustomRoundButton(
-                    title: "Submit",
+                    title: 'stock.btn_submit'.tr,
                     boxColor: ColorManager.kPrimaryColor,
                     textColor: Colors.white,
                     fct: () async {
                       if (adjustQtyController.text.isEmpty) {
                         showScaffoldError(
                             context: context,
-                            message: "Please enter adjust quantity");
+                            message: 'stock.adjust_err_qty_required'.tr);
                         return;
                       }
 
@@ -278,7 +279,7 @@ class _AdjustStockModalState extends State<AdjustStockModal> {
                       debugPrint('   REASON: $reason');
 
                       showLoadingOverlay(context,
-                          message: 'Adjusting Stock...');
+                          message: 'stock.adjust_loading'.tr);
 
                       try {
                         final success = await stockProvider.adjustStockAPI(
@@ -294,18 +295,18 @@ class _AdjustStockModalState extends State<AdjustStockModal> {
                         if (success) {
                           showScaffold(
                               context: context,
-                              message: "Stock adjusted successfully");
+                              message: 'stock.adjust_success'.tr);
                           Navigator.pop(context);
                         } else {
                           showScaffoldError(
                               context: context,
-                              message: "Failed to adjust stock");
+                              message: 'stock.adjust_err_failed'.tr);
                         }
                       } catch (e) {
                         hideLoadingOverlay();
                         showScaffoldError(
                             context: context,
-                            message: "An error occurred: ${e.toString()}");
+                            message: '${'stock.err_occurred'.tr}${e.toString()}');
                       }
                     },
                     height: 45,
@@ -314,7 +315,7 @@ class _AdjustStockModalState extends State<AdjustStockModal> {
                   ),
                   const SizedBox(width: 15),
                   CustomRoundButton(
-                    title: "Cancel",
+                    title: 'stock.btn_cancel'.tr,
                     boxColor: Colors.white,
                     textColor: Colors.black,
                     borderColor: Colors.grey.withOpacity(0.5),
