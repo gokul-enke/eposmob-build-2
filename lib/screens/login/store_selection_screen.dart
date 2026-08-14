@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -71,9 +72,9 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
             }
           },
         ),
-        title: const Text(
-          'Select Store',
-          style: TextStyle(
+        title: Text(
+          'login.store_select_title'.tr,
+          style: const TextStyle(
             fontFamily: FontConstants.fontFamily,
             fontSize: FontSize.s16,
             fontWeight: FontWeightManager.semiBold,
@@ -104,7 +105,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Choose Your Store',
+                  'login.store_choose'.tr,
                   style: TextStyle(
                     fontFamily: FontConstants.fontFamily,
                     fontSize: isMobile ? FontSize.s14 : FontSize.s18,
@@ -114,7 +115,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Select the store you want to work with',
+                  'login.store_choose_sub'.tr,
                   style: TextStyle(
                     fontFamily: FontConstants.fontFamily,
                     fontSize: isMobile ? FontSize.s10 : FontSize.s12,
@@ -140,7 +141,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'No stores available',
+                          'login.store_empty'.tr,
                           style: TextStyle(
                             fontFamily: FontConstants.fontFamily,
                             fontSize: FontSize.s14,
@@ -196,7 +197,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
                           const SizedBox(height: 16),
                           Text(
                             storeSession.statusMessage ??
-                                'Preparing your workspace...',
+                                'login.store_preparing'.tr,
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontFamily: FontConstants.fontFamily,
@@ -213,7 +214,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
                       height: isMobile ? 50 : 60,
                       fontSize: FontSize.s14,
                       radius: 25,
-                      title: 'Continue',
+                      title: 'login.btn_continue'.tr,
                       fct: _handleSubmit,
                     );
                   },
@@ -287,7 +288,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      store.storeName ?? 'Unnamed Store',
+                      store.storeName ?? 'login.store_unnamed'.tr,
                       style: TextStyle(
                         fontFamily: FontConstants.fontFamily,
                         fontSize: isMobile ? FontSize.s14 : FontSize.s16,
@@ -327,7 +328,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
                     ],
                     const SizedBox(height: 4),
                     Text(
-                      'Store ID: ${store.storeId}',
+                      '${'login.store_id_label'.tr}: ${store.storeId}',
                       style: TextStyle(
                         fontFamily: FontConstants.fontFamily,
                         fontSize: isMobile ? FontSize.s8 : FontSize.s10,
@@ -391,7 +392,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
       showScaffold(
         context: context,
         message:
-            '${selectedStore.storeName ?? "Store"} ready. Loading dashboard...',
+            '${selectedStore.storeName ?? 'login.store_unnamed'.tr} ${'login.store_ready'.tr}',
       );
 
       // Check compulsory day close
@@ -457,7 +458,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
             context: context,
             barrierDismissible: false,
             builder: (ctx) => AlertDialog(
-              title: const Text('Day Close Pending'),
+              title: Text('login.day_close_title'.tr),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -465,8 +466,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
                   Text(
                     (pendingStatus?.message.isNotEmpty ?? false)
                         ? pendingStatus!.message
-                        : 'You did not close your last day sales for '
-                            '${pendingStatus?.businessDate ?? ''}.',
+                        : '${'login.day_close_default'.tr} ${pendingStatus?.businessDate ?? ''}.',
                   ),
                   if (pendingStatus?.confirmationMessage.isNotEmpty ??
                       false) ...[
@@ -511,7 +511,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
                       }
                     });
                   },
-                  child: const Text('Yes'),
+                  child: Text('login.btn_yes'.tr),
                 ),
                 TextButton(
                   onPressed: () {
@@ -522,7 +522,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
                       ),
                     );
                   },
-                  child: const Text('No'),
+                  child: Text('login.btn_no'.tr),
                 ),
               ],
             ),
@@ -542,7 +542,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error saving store: ${e.toString()}'),
+            content: Text('${'login.error_saving_store'.tr}: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );

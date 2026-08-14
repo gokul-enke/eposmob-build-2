@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/forgot_model_error.dart';
 
@@ -60,7 +61,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     height: height * .1,
                   ),
                   BuildTextTile(
-                    title: 'Forgot Password',
+                    title: 'login.forgot_title'.tr,
                     textStyle: buildTitleStyle,
                   ),
                   SizedBox(
@@ -120,7 +121,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               fontSize: FontSize.s12,
                               height: size.height * .07,
                               key: const Key("Button_Sign_in"),
-                              title: 'Continue',
+                              title: 'login.btn_continue'.tr,
                               fct: () async {
                                 if (_emailController.text.isNotEmpty &&
                                     _formKey.currentState!.validate()) {
@@ -171,7 +172,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 } else {
                                   showScaffold(
                                     context: context,
-                                    message: 'Please Fill the Required Field',
+                                    message: 'login.forgot_fill_required'.tr,
                                   );
                                 }
                               },
@@ -217,7 +218,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final regex = RegExp(pattern);
 
     return value!.isNotEmpty && !regex.hasMatch(value)
-        ? 'Enter a valid email address'
+        ? 'login.validator_email_invalid'.tr
         : null;
   }
 }
