@@ -67,9 +67,9 @@ class ShareHelper {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const Text(
-                  'Share Invoice',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                Text(
+                  'share_helper.title_share_invoice'.tr,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
                 const Divider(height: 1),
@@ -82,7 +82,7 @@ class ShareHelper {
                     child: Icon(Icons.picture_as_pdf_outlined,
                         color: Color(0xFFE53E3E)),
                   ),
-                  title: const Text('Share as PDF'),
+                  title: Text('share_helper.opt_share_pdf'.tr),
                   onTap: () async {
                     Navigator.pop(ctx);
                     await _generateAndSharePDF(
@@ -102,8 +102,8 @@ class ShareHelper {
                   ),
                   title: Text(
                     (customerEmail != null && customerEmail.isNotEmpty)
-                        ? 'Share to Email ($customerEmail)'
-                        : 'Share to Email',
+                        ? '${'share_helper.opt_share_email'.tr} ($customerEmail)'
+                        : 'share_helper.opt_share_email'.tr,
                   ),
                   onTap: () async {
                     Navigator.pop(ctx);
@@ -124,8 +124,8 @@ class ShareHelper {
                   ),
                   title: Text(
                     (customerPhone != null && customerPhone.isNotEmpty)
-                        ? 'Share via WhatsApp ($customerPhone)'
-                        : 'Share via WhatsApp',
+                        ? '${'share_helper.opt_share_whatsapp'.tr} ($customerPhone)'
+                        : 'share_helper.opt_share_whatsapp'.tr,
                   ),
                   onTap: () async {
                     Navigator.pop(ctx);
@@ -169,7 +169,8 @@ class ShareHelper {
       if (token == null || token.isEmpty) {
         Navigator.of(context, rootNavigator: true).pop();
         showScaffoldError(
-            context: context, message: 'Missing authentication token');
+            context: context,
+            message: 'share_helper.msg_missing_token'.tr);
         return;
       }
 
@@ -194,7 +195,7 @@ class ShareHelper {
         Navigator.of(context, rootNavigator: true).pop();
         showScaffoldError(
             context: context,
-            message: 'Invoice template not found. Check Document Templates settings.');
+            message: 'share_helper.msg_invoice_template_not_found'.tr);
         return;
       }
 
@@ -212,7 +213,7 @@ class ShareHelper {
       if (details == null) {
         Navigator.of(context, rootNavigator: true).pop();
         showScaffoldError(
-            context: context, message: 'Failed to load invoice details.');
+            context: context, message: 'share_helper.msg_failed_load_invoice'.tr);
         return;
       }
 
@@ -245,7 +246,7 @@ class ShareHelper {
         if (context.mounted) {
           showScaffoldError(
               context: context,
-              message: 'Failed to generate Invoice PDF.');
+              message: 'share_helper.msg_failed_invoice_pdf'.tr);
         }
         return;
       }
@@ -270,7 +271,8 @@ class ShareHelper {
           } else if (result.status == ShareResultStatus.dismissed) {
             if (context.mounted) {
               showScaffold(
-                  context: context, message: 'Sharing cancelled by user.');
+                  context: context,
+                  message: 'share_helper.msg_sharing_cancelled'.tr);
             }
             return;
           } else {
@@ -297,7 +299,7 @@ class ShareHelper {
 
       if (context.mounted) {
         showScaffold(
-            context: context, message: 'Invoice PDF shared successfully!');
+            context: context, message: 'share_helper.msg_invoice_shared'.tr);
       }
     } catch (e) {
       if (Navigator.canPop(context)) {
@@ -307,7 +309,7 @@ class ShareHelper {
       if (context.mounted) {
         showScaffoldError(
             context: context,
-            message: 'Error generating Invoice PDF. Please try again.');
+            message: 'share_helper.msg_error_invoice_pdf'.tr);
       }
     }
   }
@@ -319,11 +321,11 @@ class ShareHelper {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.picture_as_pdf, color: Colors.red),
-            SizedBox(width: 8),
-            Text('PDF Invoice Ready'),
+            const Icon(Icons.picture_as_pdf, color: Colors.red),
+            const SizedBox(width: 8),
+            Text('share_helper.dialog_pdf_ready'.tr),
           ],
         ),
         content: Column(
@@ -334,8 +336,8 @@ class ShareHelper {
             const SizedBox(height: 8),
             Text('File: ${pdfFile.path.split('/').last}'),
             const SizedBox(height: 16),
-            const Text('Choose how to share your PDF:',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('share_helper.dialog_pdf_choose'.tr,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
         actions: [
@@ -351,15 +353,14 @@ class ShareHelper {
                 if (context.mounted) {
                   showScaffold(
                       context: context,
-                      message:
-                          'File location opened. PDF saved in Documents/epos folder.');
+                      message: 'share_helper.msg_file_location_opened'.tr);
                 }
               } catch (e) {
                 debugPrint('Error opening file location: $e');
               }
             },
             icon: const Icon(Icons.folder_open),
-            label: const Text('Open File Location'),
+            label: Text('share_helper.btn_open_file_location'.tr),
           ),
           TextButton.icon(
             onPressed: () async {
@@ -373,15 +374,14 @@ class ShareHelper {
                 if (context.mounted) {
                   showScaffold(
                       context: context,
-                      message:
-                          'PDF opened. You can share from your PDF viewer.');
+                      message: 'share_helper.msg_pdf_opened'.tr);
                 }
               } catch (e) {
                 debugPrint('Error opening PDF: $e');
               }
             },
             icon: const Icon(Icons.open_in_new),
-            label: const Text('Open PDF'),
+            label: Text('share_helper.btn_open_pdf'.tr),
           ),
           TextButton.icon(
             onPressed: () async {
@@ -391,14 +391,14 @@ class ShareHelper {
                 if (context.mounted) {
                   showScaffold(
                       context: context,
-                      message: 'File path copied to clipboard!');
+                      message: 'share_helper.msg_path_copied'.tr);
                 }
               } catch (e) {
                 debugPrint('Error copying to clipboard: $e');
               }
             },
             icon: const Icon(Icons.copy),
-            label: const Text('Copy Path'),
+            label: Text('share_helper.btn_copy_path'.tr),
           ),
         ],
       ),
@@ -432,7 +432,7 @@ class ShareHelper {
       if (context.mounted) {
         showScaffoldError(
             context: context,
-            message: 'No email app found to share the invoice.');
+            message: 'share_helper.msg_no_email_app_invoice'.tr);
       }
     }
   }
@@ -456,28 +456,28 @@ class ShareHelper {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.warning, color: Colors.orange),
-                SizedBox(width: 8),
-                Text('WhatsApp Not Connected'),
+                const Icon(Icons.warning, color: Colors.orange),
+                const SizedBox(width: 8),
+                Text('share_helper.dialog_wa_not_connected'.tr),
               ],
             ),
             content: Text(
-              'WhatsApp bot is not connected. Would you like to connect now?\n\n'
-              'Status: ${whatsappProvider.connectionStatus}',
+              '${'share_helper.dialog_wa_body'.tr}\n\n'
+              '${'share_helper.dialog_wa_status'.tr}: ${whatsappProvider.connectionStatus}',
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
+                child: Text('general.cancel'.tr),
               ),
               ElevatedButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                   Get.find<SideBarController>().index.value = 63;
                 },
-                child: const Text('Connect WhatsApp'),
+                child: Text('share_helper.btn_connect_wa'.tr),
               ),
             ],
           ),
@@ -488,7 +488,7 @@ class ShareHelper {
       if (customerPhone == null || customerPhone.isEmpty) {
         showScaffoldError(
             context: context,
-            message: 'Customer phone number not available.');
+            message: 'share_helper.msg_no_phone'.tr);
         return;
       }
 
@@ -510,12 +510,13 @@ class ShareHelper {
         if (success) {
           showScaffold(
               context: context,
-              message: 'Invoice sent via WhatsApp to $customerPhone');
+              message:
+                  '${'share_helper.msg_invoice_sent_wa'.tr} $customerPhone');
         } else {
           showScaffoldError(
               context: context,
               message:
-                  'Failed to send WhatsApp message: ${whatsappProvider.lastError}');
+                  '${'share_helper.msg_wa_send_failed'.tr} ${whatsappProvider.lastError}');
         }
       }
     } catch (e) {
@@ -523,7 +524,7 @@ class ShareHelper {
       if (context.mounted) {
         showScaffoldError(
             context: context,
-            message: 'Error sending WhatsApp message. Please try again.');
+            message: 'share_helper.msg_wa_error'.tr);
       }
     }
   }
@@ -558,9 +559,9 @@ class ShareHelper {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const Text(
-                  'Share Receipt',
-                  style: TextStyle(
+                Text(
+                  'share_helper.title_share_receipt'.tr,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -576,7 +577,7 @@ class ShareHelper {
                     child: Icon(Icons.picture_as_pdf_outlined,
                         color: Color(0xFFE53E3E)),
                   ),
-                  title: const Text('Share as PDF'),
+                  title: Text('share_helper.opt_share_pdf'.tr),
                   onTap: () async {
                     Navigator.pop(ctx);
                     await _generateAndShareReceiptPDF(
@@ -591,7 +592,7 @@ class ShareHelper {
                     backgroundColor: Color(0x1A1E88E5),
                     child: Icon(Icons.email, color: Color(0xFF1E88E5)),
                   ),
-                  title: const Text('Share to Email'),
+                  title: Text('share_helper.opt_share_email'.tr),
                   onTap: () async {
                     Navigator.pop(ctx);
                     await _shareReceiptViaEmail(
@@ -607,9 +608,9 @@ class ShareHelper {
                     child: Icon(Icons.message, color: Color(0xFF25D366)),
                   ),
                   title: Text(
-                    (receipt.customer.user.phone.isNotEmpty)
-                        ? 'Share via WhatsApp (${receipt.customer.user.phone})'
-                        : 'Share via WhatsApp',
+                    receipt.customer.user.phone.isNotEmpty
+                        ? '${'share_helper.opt_share_whatsapp'.tr} (${receipt.customer.user.phone})'
+                        : 'share_helper.opt_share_whatsapp'.tr,
                   ),
                   onTap: () async {
                     Navigator.pop(ctx);
@@ -644,7 +645,7 @@ class ShareHelper {
       if (token == null || token.isEmpty) {
         Navigator.of(context, rootNavigator: true).pop();
         showScaffoldError(
-            context: context, message: 'Missing authentication token');
+            context: context, message: 'share_helper.msg_missing_token'.tr);
         return;
       }
 
@@ -669,7 +670,7 @@ class ShareHelper {
         Navigator.of(context, rootNavigator: true).pop();
         showScaffoldError(
             context: context,
-            message: 'Receipt template not found. Check Document Templates settings.');
+            message: 'share_helper.msg_receipt_template_not_found'.tr);
         return;
       }
 
@@ -706,7 +707,7 @@ class ShareHelper {
         if (context.mounted) {
           showScaffoldError(
               context: context,
-              message: 'Failed to generate Receipt PDF.');
+              message: 'share_helper.msg_failed_receipt_pdf'.tr);
         }
         return;
       }
@@ -731,7 +732,8 @@ class ShareHelper {
           } else if (result.status == ShareResultStatus.dismissed) {
             if (context.mounted) {
               showScaffold(
-                  context: context, message: 'Sharing cancelled by user.');
+                  context: context,
+                  message: 'share_helper.msg_sharing_cancelled'.tr);
             }
             return;
           } else {
@@ -758,7 +760,7 @@ class ShareHelper {
 
       if (context.mounted) {
         showScaffold(
-            context: context, message: 'Receipt PDF shared successfully!');
+            context: context, message: 'share_helper.msg_receipt_shared'.tr);
       }
     } catch (e) {
       if (Navigator.canPop(context)) {
@@ -768,7 +770,7 @@ class ShareHelper {
       if (context.mounted) {
         showScaffoldError(
             context: context,
-            message: 'Error generating Receipt PDF. Please try again.');
+            message: 'share_helper.msg_error_receipt_pdf'.tr);
       }
     }
   }
@@ -796,13 +798,13 @@ class ShareHelper {
         await launchUrl(mailtoUri);
       } else {
         if (context.mounted) {
-          showScaffoldError(context: context, message: 'Could not launch email app.');
+          showScaffoldError(context: context, message: 'share_helper.msg_no_email_app'.tr);
         }
       }
     } catch (e) {
       debugPrint('Error launching email: $e');
       if (context.mounted) {
-        showScaffoldError(context: context, message: 'Failed to share receipt via Email.');
+        showScaffoldError(context: context, message: 'share_helper.msg_failed_share_receipt_email'.tr);
       }
     }
   }
@@ -820,28 +822,28 @@ class ShareHelper {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.warning, color: Colors.orange),
-                SizedBox(width: 8),
-                Text('WhatsApp Not Connected'),
+                const Icon(Icons.warning, color: Colors.orange),
+                const SizedBox(width: 8),
+                Text('share_helper.dialog_wa_not_connected'.tr),
               ],
             ),
             content: Text(
-              'WhatsApp bot is not connected. Would you like to connect now?\n\n'
-              'Status: ${whatsappProvider.connectionStatus}',
+              '${'share_helper.dialog_wa_body'.tr}\n\n'
+              '${'share_helper.dialog_wa_status'.tr}: ${whatsappProvider.connectionStatus}',
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
+                child: Text('general.cancel'.tr),
               ),
               ElevatedButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                   Get.find<SideBarController>().index.value = 63;
                 },
-                child: const Text('Connect WhatsApp'),
+                child: Text('share_helper.btn_connect_wa'.tr),
               ),
             ],
           ),
@@ -853,7 +855,7 @@ class ShareHelper {
       if (customerPhone.isEmpty) {
         showScaffoldError(
             context: context,
-            message: 'Customer phone number not available.');
+            message: 'share_helper.msg_no_phone'.tr);
         return;
       }
 
@@ -869,7 +871,7 @@ class ShareHelper {
       if (token == null || token.isEmpty) {
         Navigator.of(context, rootNavigator: true).pop();
         showScaffoldError(
-            context: context, message: 'Missing authentication token');
+            context: context, message: 'share_helper.msg_missing_token'.tr);
         return;
       }
 
@@ -890,7 +892,7 @@ class ShareHelper {
         Navigator.of(context, rootNavigator: true).pop();
         showScaffoldError(
             context: context,
-            message: 'Receipt template not found.');
+            message: 'share_helper.msg_receipt_template_not_found'.tr);
         return;
       }
 
@@ -918,7 +920,7 @@ class ShareHelper {
       if (pdfFile == null) {
         if (context.mounted) {
           showScaffoldError(
-              context: context, message: 'Failed to generate PDF for WhatsApp.');
+              context: context, message: 'share_helper.msg_failed_pdf_wa'.tr);
         }
         return;
       }
@@ -942,12 +944,13 @@ class ShareHelper {
         if (success) {
           showScaffold(
               context: context,
-              message: 'Receipt sent via WhatsApp to $customerPhone');
+              message:
+                  '${'share_helper.msg_receipt_sent_wa'.tr} $customerPhone');
         } else {
           showScaffoldError(
               context: context,
               message:
-                  'Failed to send WhatsApp message: ${whatsappProvider.lastError}');
+                  '${'share_helper.msg_wa_send_failed'.tr} ${whatsappProvider.lastError}');
         }
       }
     } catch (e) {
@@ -955,7 +958,7 @@ class ShareHelper {
       if (context.mounted) {
         showScaffoldError(
             context: context,
-            message: 'Error sending WhatsApp message. Please try again.');
+            message: 'share_helper.msg_wa_error'.tr);
       }
     }
   }
@@ -990,9 +993,9 @@ class ShareHelper {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const Text(
-                  'Share Voucher',
-                  style: TextStyle(
+                Text(
+                  'share_helper.title_share_voucher'.tr,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1008,7 +1011,7 @@ class ShareHelper {
                     child: Icon(Icons.picture_as_pdf_outlined,
                         color: Color(0xFFE53E3E)),
                   ),
-                  title: const Text('Share as PDF'),
+                  title: Text('share_helper.opt_share_pdf'.tr),
                   onTap: () async {
                     Navigator.pop(ctx);
                     await _generateAndShareVoucherPDF(
@@ -1026,9 +1029,10 @@ class ShareHelper {
                     child: Icon(Icons.email, color: Color(0xFF1E88E5)),
                   ),
                   title: Text(
-                    (voucher.customer.user.email != null && voucher.customer.user.email!.isNotEmpty)
-                        ? 'Share to ${voucher.customer.user.email}'
-                        : 'Share to Email',
+                    (voucher.customer.user.email != null &&
+                            voucher.customer.user.email!.isNotEmpty)
+                        ? '${'share_helper.opt_share_to'.tr} ${voucher.customer.user.email}'
+                        : 'share_helper.opt_share_email'.tr,
                   ),
                   onTap: () async {
                     Navigator.pop(ctx);
@@ -1046,7 +1050,9 @@ class ShareHelper {
                       await launchUrl(Uri.parse(mailtoUrl));
                     } catch (e) {
                       if (context.mounted) {
-                        showScaffoldError(context: context, message: 'Could not launch email app');
+                        showScaffoldError(
+                            context: context,
+                            message: 'share_helper.msg_no_email_app'.tr);
                       }
                     }
                   },
@@ -1061,8 +1067,8 @@ class ShareHelper {
                   ),
                   title: Text(
                     voucher.customer.user.phone.isNotEmpty
-                        ? 'Send via WhatsApp to ${voucher.customer.user.phone}'
-                        : 'Send via WhatsApp',
+                        ? '${'share_helper.opt_send_whatsapp_to'.tr} ${voucher.customer.user.phone}'
+                        : 'share_helper.opt_send_whatsapp'.tr,
                   ),
                   onTap: () async {
                     Navigator.pop(ctx);
@@ -1111,7 +1117,9 @@ class ShareHelper {
           if (Navigator.canPop(context)) {
             Navigator.of(context, rootNavigator: true).pop();
           }
-          showScaffoldError(context: context, message: 'Voucher template config not found.');
+          showScaffoldError(
+              context: context,
+              message: 'share_helper.msg_voucher_template_not_found'.tr);
         }
         return;
       }
@@ -1143,7 +1151,9 @@ class ShareHelper {
 
       if (pdfFile == null) {
         if (context.mounted) {
-          showScaffoldError(context: context, message: 'Failed to generate PDF document.');
+          showScaffoldError(
+              context: context,
+              message: 'share_helper.msg_failed_pdf'.tr);
         }
         return;
       }
@@ -1165,7 +1175,8 @@ class ShareHelper {
           } else if (result.status == ShareResultStatus.dismissed) {
             if (context.mounted) {
               showScaffold(
-                  context: context, message: 'Sharing cancelled by user.');
+                  context: context,
+                  message: 'share_helper.msg_sharing_cancelled'.tr);
             }
             return;
           } else {
@@ -1192,7 +1203,7 @@ class ShareHelper {
 
       if (context.mounted) {
         showScaffold(
-            context: context, message: 'Voucher PDF shared successfully!');
+            context: context, message: 'share_helper.msg_voucher_shared'.tr);
       }
     } catch (e) {
       debugPrint('Error sharing voucher PDF: $e');
@@ -1200,7 +1211,9 @@ class ShareHelper {
         if (Navigator.canPop(context)) {
           Navigator.of(context, rootNavigator: true).pop();
         }
-        showScaffoldError(context: context, message: 'Error generating PDF. Please try again.');
+        showScaffoldError(
+            context: context,
+            message: 'share_helper.msg_error_pdf'.tr);
       }
     }
   }
@@ -1212,7 +1225,9 @@ class ShareHelper {
     try {
       final String customerPhone = voucher.customer.user.phone.trim();
       if (customerPhone.isEmpty) {
-        showScaffoldError(context: context, message: 'Customer phone number is empty.');
+        showScaffoldError(
+          context: context,
+          message: 'share_helper.msg_no_phone_customer'.tr);
         return;
       }
 
@@ -1241,7 +1256,9 @@ class ShareHelper {
           if (Navigator.canPop(context)) {
             Navigator.of(context, rootNavigator: true).pop();
           }
-          showScaffoldError(context: context, message: 'Voucher template config not found.');
+          showScaffoldError(
+              context: context,
+              message: 'share_helper.msg_voucher_template_not_found'.tr);
         }
         return;
       }
@@ -1273,7 +1290,9 @@ class ShareHelper {
 
       if (pdfFile == null) {
         if (context.mounted) {
-          showScaffoldError(context: context, message: 'Failed to generate PDF document.');
+          showScaffoldError(
+              context: context,
+              message: 'share_helper.msg_failed_pdf'.tr);
         }
         return;
       }
@@ -1297,11 +1316,15 @@ class ShareHelper {
 
       if (context.mounted) {
         if (success) {
-          showScaffold(context: context, message: 'Voucher sent via WhatsApp to $customerPhone');
+          showScaffold(
+              context: context,
+              message:
+                  '${'share_helper.msg_voucher_sent_wa'.tr} $customerPhone');
         } else {
           showScaffoldError(
             context: context,
-            message: 'Failed to send WhatsApp message: ${whatsappProvider.lastError}',
+            message:
+                '${'share_helper.msg_wa_send_failed'.tr} ${whatsappProvider.lastError}',
           );
         }
       }
@@ -1311,7 +1334,9 @@ class ShareHelper {
         if (Navigator.canPop(context)) {
           Navigator.of(context, rootNavigator: true).pop();
         }
-        showScaffoldError(context: context, message: 'Error sending WhatsApp message. Please try again.');
+        showScaffoldError(
+            context: context,
+            message: 'share_helper.msg_wa_error'.tr);
       }
     }
   }
@@ -1346,9 +1371,9 @@ class ShareHelper {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const Text(
-                  'Share Supplier Voucher',
-                  style: TextStyle(
+                Text(
+                  'share_helper.title_share_supplier_voucher'.tr,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1364,7 +1389,7 @@ class ShareHelper {
                     child: Icon(Icons.picture_as_pdf_outlined,
                         color: Color(0xFFE53E3E)),
                   ),
-                  title: const Text('Share as PDF'),
+                  title: Text('share_helper.opt_share_pdf'.tr),
                   onTap: () async {
                     Navigator.pop(ctx);
                     await _generateAndShareSupplierVoucherPDF(
@@ -1383,8 +1408,8 @@ class ShareHelper {
                   ),
                   title: Text(
                     voucher.supplier.email.isNotEmpty
-                        ? 'Share to ${voucher.supplier.email}'
-                        : 'Share to Email',
+                        ? '${'share_helper.opt_share_to'.tr} ${voucher.supplier.email}'
+                        : 'share_helper.opt_share_email'.tr,
                   ),
                   onTap: () async {
                     Navigator.pop(ctx);
@@ -1402,7 +1427,9 @@ class ShareHelper {
                       await launchUrl(Uri.parse(mailtoUrl));
                     } catch (e) {
                       if (context.mounted) {
-                        showScaffoldError(context: context, message: 'Could not launch email app');
+                        showScaffoldError(
+                            context: context,
+                            message: 'share_helper.msg_no_email_app'.tr);
                       }
                     }
                   },
@@ -1417,8 +1444,8 @@ class ShareHelper {
                   ),
                   title: Text(
                     voucher.supplier.phone.isNotEmpty
-                        ? 'Send via WhatsApp to ${voucher.supplier.phone}'
-                        : 'Send via WhatsApp',
+                        ? '${'share_helper.opt_send_whatsapp_to'.tr} ${voucher.supplier.phone}'
+                        : 'share_helper.opt_send_whatsapp'.tr,
                   ),
                   onTap: () async {
                     Navigator.pop(ctx);
@@ -1465,7 +1492,9 @@ class ShareHelper {
           if (Navigator.canPop(context)) {
             Navigator.of(context, rootNavigator: true).pop();
           }
-          showScaffoldError(context: context, message: 'Supplier Voucher template config not found.');
+          showScaffoldError(
+              context: context,
+              message: 'share_helper.msg_supplier_voucher_template_not_found'.tr);
         }
         return;
       }
@@ -1497,7 +1526,9 @@ class ShareHelper {
 
       if (pdfFile == null) {
         if (context.mounted) {
-          showScaffoldError(context: context, message: 'Failed to generate PDF document.');
+          showScaffoldError(
+              context: context,
+              message: 'share_helper.msg_failed_pdf'.tr);
         }
         return;
       }
@@ -1519,7 +1550,8 @@ class ShareHelper {
           } else if (result.status == ShareResultStatus.dismissed) {
             if (context.mounted) {
               showScaffold(
-                  context: context, message: 'Sharing cancelled by user.');
+                  context: context,
+                  message: 'share_helper.msg_sharing_cancelled'.tr);
             }
             return;
           } else {
@@ -1546,7 +1578,7 @@ class ShareHelper {
 
       if (context.mounted) {
         showScaffold(
-            context: context, message: 'Supplier Voucher PDF shared successfully!');
+            context: context, message: 'share_helper.msg_supplier_voucher_shared'.tr);
       }
     } catch (e) {
       debugPrint('Error sharing supplier voucher PDF: $e');
@@ -1554,7 +1586,9 @@ class ShareHelper {
         if (Navigator.canPop(context)) {
           Navigator.of(context, rootNavigator: true).pop();
         }
-        showScaffoldError(context: context, message: 'Error generating PDF. Please try again.');
+        showScaffoldError(
+            context: context,
+            message: 'share_helper.msg_error_pdf'.tr);
       }
     }
   }
@@ -1566,7 +1600,9 @@ class ShareHelper {
     try {
       final String customerPhone = voucher.supplier.phone.trim();
       if (customerPhone.isEmpty) {
-        showScaffoldError(context: context, message: 'Supplier phone number is empty.');
+        showScaffoldError(
+          context: context,
+          message: 'share_helper.msg_no_phone_supplier'.tr);
         return;
       }
 
@@ -1593,7 +1629,9 @@ class ShareHelper {
           if (Navigator.canPop(context)) {
             Navigator.of(context, rootNavigator: true).pop();
           }
-          showScaffoldError(context: context, message: 'Supplier Voucher template config not found.');
+          showScaffoldError(
+              context: context,
+              message: 'share_helper.msg_supplier_voucher_template_not_found'.tr);
         }
         return;
       }
@@ -1625,7 +1663,9 @@ class ShareHelper {
 
       if (pdfFile == null) {
         if (context.mounted) {
-          showScaffoldError(context: context, message: 'Failed to generate PDF document.');
+          showScaffoldError(
+              context: context,
+              message: 'share_helper.msg_failed_pdf'.tr);
         }
         return;
       }
@@ -1649,11 +1689,15 @@ class ShareHelper {
 
       if (context.mounted) {
         if (success) {
-          showScaffold(context: context, message: 'Supplier Voucher sent via WhatsApp to $customerPhone');
+          showScaffold(
+              context: context,
+              message:
+                  '${'share_helper.msg_supplier_voucher_sent_wa'.tr} $customerPhone');
         } else {
           showScaffoldError(
             context: context,
-            message: 'Failed to send WhatsApp message: ${whatsappProvider.lastError}',
+            message:
+                '${'share_helper.msg_wa_send_failed'.tr} ${whatsappProvider.lastError}',
           );
         }
       }
@@ -1663,7 +1707,9 @@ class ShareHelper {
         if (Navigator.canPop(context)) {
           Navigator.of(context, rootNavigator: true).pop();
         }
-        showScaffoldError(context: context, message: 'Error sending WhatsApp message. Please try again.');
+        showScaffoldError(
+            context: context,
+            message: 'share_helper.msg_wa_error'.tr);
       }
     }
   }
