@@ -661,7 +661,7 @@ class _CustomerTransactionsWidgetState
                       ),
                       dropdownColor: Colors.white,
                       items: [
-                        const DropdownMenuItem(
+                        DropdownMenuItem(
                           value: null,
                           child: Text('customer_transactions.label_all_types'.tr),
                         ),
