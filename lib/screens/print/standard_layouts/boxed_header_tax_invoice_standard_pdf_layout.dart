@@ -3158,18 +3158,6 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     return arabicName?.trim() ?? '';
   }
 
-  /// Compatibility formatter for the alternate table used by the non-boxed
-  /// branch of this layout class. The boxed reference table renders its two
-  /// language lines independently so each can have the correct direction.
-  String _bilingualItemName(dynamic item, String englishName, bool isArabic) {
-    if (!isArabic) return englishName;
-    final arabicName = _arabicItemName(item);
-    if (arabicName.isEmpty) return englishName;
-    return englishName.trim().isEmpty
-        ? arabicName
-        : '$arabicName\n$englishName';
-  }
-
   String _variantAttributeLabel(dynamic rawAttributes) {
     dynamic attrs = rawAttributes;
     if (attrs is String) {
@@ -3266,6 +3254,37 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   textDirection: pw.TextDirection.rtl,
                   textAlign: pw.TextAlign.center),
             pw.Text(en, style: headerEn, textAlign: pw.TextAlign.center),
+          ],
+        ),
+      );
+    }
+
+    pw.Widget itemNameCell(String englishName, String arabicName) {
+      pw.Widget nameLine(String text, pw.TextDirection direction) =>
+          pw.Container(
+            width: double.infinity,
+            child: pw.Text(
+              text,
+              style: bodyStyle,
+              maxLines: 1,
+              softWrap: false,
+              overflow: pw.TextOverflow.clip,
+              textAlign: pw.TextAlign.left,
+              textDirection: direction,
+            ),
+          );
+
+      return pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            if (arabicName.isNotEmpty)
+              nameLine(arabicName, pw.TextDirection.rtl),
+            if (arabicName.isNotEmpty && englishName.isNotEmpty)
+              pw.SizedBox(height: 2),
+            if (englishName.isNotEmpty)
+              nameLine(englishName, _dirOf(englishName)),
           ],
         ),
       );
@@ -3394,19 +3413,13 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       final double rateExcTax = unitPrice - taxPerUnit;
 
       name = _itemDisplayName(item, name);
-      name = _bilingualItemName(item, name, isAr);
-      // Right-align + RTL-shape whenever the name carries any Arabic (covers
-      // bilingual names and English names with embedded Arabic).
-      final bool isArName = _hasArabic(name);
+      final englishName = name;
+      final arabicName = isAr ? _arabicItemName(item) : '';
 
       final cells = <pw.Widget>[];
       if (showSL) cells.add(_dataCell('${i + 1}', bodyStyle));
       if (showItems) {
-        cells.add(_dataCell(name, bodyStyle,
-            align:
-                isArName ? pw.Alignment.centerRight : pw.Alignment.centerLeft,
-            textDirection:
-                isArName ? pw.TextDirection.rtl : pw.TextDirection.ltr));
+        cells.add(itemNameCell(englishName, arabicName));
       }
       if (showMRP) {
         cells.add(_dataCell(mrp.toStringAsFixed(2), bodyStyle,

@@ -74,10 +74,13 @@ ProductStockDisplayStatus resolveProductStockQuantityStatus(
   int? reorderLevel, {
   required bool stockEnabled,
 }) {
+  if (!stockEnabled) {
+    return ProductStockDisplayStatus.available;
+  }
   if (isProductOutOfStock(quantity)) {
     return ProductStockDisplayStatus.outOfStock;
   }
-  if (!stockEnabled || !isProductLowStock(quantity, reorderLevel)) {
+  if (!isProductLowStock(quantity, reorderLevel)) {
     return ProductStockDisplayStatus.available;
   }
   if (quantity == reorderLevel) {
@@ -91,6 +94,9 @@ ProductStockDisplayStatus resolveProductStockDisplayStatus(
   GetProduct product, {
   required bool stockEnabled,
 }) {
+  if (!stockEnabled) {
+    return ProductStockDisplayStatus.available;
+  }
   final inStock =
       hasAvailableStock(product.stock?.map((stock) => stock.quantity));
   if (!inStock) return ProductStockDisplayStatus.outOfStock;

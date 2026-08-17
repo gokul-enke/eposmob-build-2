@@ -47,6 +47,33 @@ void main() {
       );
     });
 
+    test('stock quantity status hides warnings when stock is disabled', () {
+      expect(
+        resolveProductStockQuantityStatus(0, 5, stockEnabled: false),
+        ProductStockDisplayStatus.available,
+      );
+      expect(
+        resolveProductStockQuantityStatus(-1, 5, stockEnabled: false),
+        ProductStockDisplayStatus.available,
+      );
+      expect(
+        resolveProductStockQuantityStatus(3, 5, stockEnabled: false),
+        ProductStockDisplayStatus.available,
+      );
+    });
+
+    test('product stock display hides warnings when stock is disabled', () {
+      final product = GetProduct(
+        stock: [Stock(quantity: 0)],
+        reorderLevel: 5,
+      );
+
+      expect(
+        resolveProductStockDisplayStatus(product, stockEnabled: false),
+        ProductStockDisplayStatus.available,
+      );
+    });
+
     test('formatProductStockNumber drops decimals for whole numbers', () {
       expect(formatProductStockNumber(10), '10');
       expect(formatProductStockNumber(10.5), '10.5');
