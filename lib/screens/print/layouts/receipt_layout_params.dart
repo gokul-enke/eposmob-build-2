@@ -42,6 +42,7 @@ class ReceiptLayoutParams {
       paymentBreakdown; // Added for multi-payment support
   // ZATCA fields for Saudi Arabia e-invoicing
   final String? zatcaVatNumber;
+  final String? zatcaCrNumber;
   final String? zatcaCompanyName;
   // Flag to indicate if the customer is the default/walk-in customer
   final bool isDefaultCustomer;
@@ -92,6 +93,7 @@ class ReceiptLayoutParams {
     this.documentTitleOverride,
     this.paymentBreakdown,
     this.zatcaVatNumber,
+    this.zatcaCrNumber,
     this.zatcaCompanyName,
     this.isDefaultCustomer = false,
     this.hideDefaultCustomerPhone = true,

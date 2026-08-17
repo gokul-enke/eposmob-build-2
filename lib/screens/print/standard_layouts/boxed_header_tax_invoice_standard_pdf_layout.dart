@@ -411,8 +411,16 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final englishHeaderLines = configuredHeaderLines(arabic: false);
     final storeFssai = cfgVal('showFssaiInfo', '');
     final extraHeading2 = cfgVal('showExtraHeading2', '');
-    final sellerCrNumber = extraHeading2.trim();
-    final sellerVatNumber = params.zatcaVatNumber?.trim() ?? '';
+    final savedSellerCrNumber = params.zatcaCrNumber?.trim() ?? '';
+    final configuredSellerCrNumber = cfgVal('showCRNumber', '').trim();
+    final sellerCrNumber = savedSellerCrNumber.isNotEmpty
+        ? savedSellerCrNumber
+        : configuredSellerCrNumber;
+    final savedSellerVatNumber = params.zatcaVatNumber?.trim() ?? '';
+    final configuredSellerVatNumber = cfgVal('showVatNumber', '').trim();
+    final sellerVatNumber = savedSellerVatNumber.isNotEmpty
+        ? savedSellerVatNumber
+        : configuredSellerVatNumber;
     if (sellerCrNumber.isNotEmpty) {
       englishHeaderLines.add('CR No: $sellerCrNumber');
       arabicHeaderLines.add('رقم السجل التجاري: $sellerCrNumber');
