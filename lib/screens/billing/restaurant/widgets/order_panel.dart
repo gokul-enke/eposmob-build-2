@@ -18,6 +18,7 @@ import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/cart_item_status.dart';
+import 'package:pos_machine/models/master_data.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
@@ -2666,7 +2667,8 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   // Per-item comment dialog (works for both local cart items and saved order items)
-  void _showItemCommentDialog(dynamic item, {required bool isLocal}) {
+  Future<void> _showItemCommentDialog(dynamic item,
+      {required bool isLocal}) async {
     String currentComment = '';
     if (isLocal) {
       currentComment = (item as LocalCartItem).comment ?? '';
@@ -2674,152 +2676,419 @@ class OrderPanelState extends State<OrderPanel> {
       currentComment = item['comment']?.toString() ?? '';
     }
 
-    final controller = TextEditingController(text: currentComment);
-    showDialog(
+    final masterDataProvider =
+        Provider.of<MasterDataProvider>(context, listen: false);
+    final noteOptions = await masterDataProvider.fetchKotItemNoteOptions();
+    if (!mounted) return;
+
+    String optionLabel(MasterDataValue option) {
+      final description = option.description.toString().trim();
+      return description.isNotEmpty
+          ? description
+          : option.value.toString().trim();
+    }
+
+    // Comments are currently persisted as one string. Recover selections when
+    // reopening the dialog by matching comma-separated values to master data.
+    final commentParts = currentComment
+        .split(',')
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .toList();
+    final selectedOptionIds = <int>{};
+    for (final option in noteOptions) {
+      final label = optionLabel(option);
+      final matchingPartIndex = commentParts.indexWhere((part) =>
+          part.toLowerCase() == label.toLowerCase() ||
+          part.toLowerCase() == option.value.toString().trim().toLowerCase());
+      if (matchingPartIndex != -1) {
+        selectedOptionIds.add(option.id);
+        commentParts.removeAt(matchingPartIndex);
+      }
+    }
+
+    final controller = TextEditingController(text: commentParts.join(', '));
+    final result = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(Icons.chat_bubble_outline,
-                color: Color(0xFF2563EB), size: 22),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Item Note',
-                style: buildCustomStyle(FontWeightManager.bold, FontSize.s16,
-                    0.21, const Color(0xFF1E293B)),
-              ),
-            ),
-            if (currentComment.isNotEmpty)
-              IconButton(
-                icon: const Icon(Icons.delete_outline,
-                    color: Color(0xFFDC2626), size: 20),
-                onPressed: () {
-                  Navigator.of(dialogContext).pop('');
-                },
-                tooltip: 'Clear note',
-              ),
-          ],
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLines: 3,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: InputDecoration(
-            hintText: 'e.g., No ice, Extra spicy, Less sugar...',
-            hintStyle: buildCustomStyle(FontWeightManager.regular, FontSize.s13,
-                0.21, const Color(0xFF94A3B8)),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: Color(0xFF2563EB), width: 1.5),
-            ),
-            contentPadding: const EdgeInsets.all(12),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(null),
-            child: Text('Cancel',
-                style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,
-                    0.21, const Color(0xFF64748B))),
-          ),
-          ElevatedButton(
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(controller.text.trim()),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-            ),
-            child: Text('Save',
-                style: buildCustomStyle(FontWeightManager.semiBold,
-                    FontSize.s14, 0.21, Colors.white)),
-          ),
-        ],
-      ),
-    ).then((result) async {
-      if (result == null) return; // Cancelled
-      final comment = (result as String).isEmpty ? null : result;
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          const primaryColor = Color(0xFF2563EB);
+          const textColor = Color(0xFF1E293B);
+          final availableWidth = MediaQuery.sizeOf(context).width - 48;
+          final dialogWidth = availableWidth.clamp(300.0, 480.0).toDouble();
+          final hasAnyNote =
+              selectedOptionIds.isNotEmpty || controller.text.trim().isNotEmpty;
 
-      if (isLocal) {
-        final cartItem = item as LocalCartItem;
-        final localProductProvider =
-            Provider.of<LocalProductProvider>(context, listen: false);
-        localProductProvider.updateCartItemComment(
-          cartItem.product.productId!,
-          cartItem.selectedStock,
-          comment,
-          stockGroupIds: cartItem.stockGroupIds,
-          saleUnitId: cartItem.saleUnitId,
-          variantId: cartItem.variantId,
-        );
-      } else {
-        // For saved order items, persist comment via addToCartAPI with same payload + comment
-        try {
-          final authModel = Provider.of<AuthModel>(context, listen: false);
-          final cartProvider =
-              Provider.of<CartProvider>(context, listen: false);
-
-          final customerId = _selectedOrder['cart']?['customer_id'] ??
-              _selectedOrder['customer_id'] ??
-              1;
-          final orderCartId = int.tryParse(
-              (_selectedOrder['cart']?['id'] ?? _selectedOrder['cart_id'])
-                      ?.toString() ??
-                  '');
-          final productId = item['product_id'];
-          final unitPrice = item['unit_price']?.toString() ??
-              item['price']?.toString() ??
-              item['product_price']?.toString();
-
-          if (productId == null) {
-            showScaffoldError(
-              context: context,
-              message: 'Product ID not found for item comment update.',
-            );
-            return;
-          }
-
-          debugPrint(
-              'ÃƒÂ¢Ã…Â¾Ã‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Calling CartProvider.addToCartAPI for item comment update');
-          debugPrint(
-              'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ addToCartAPI Request Body: {customerId: $customerId, productId: $productId, quantity: 0, unitPrice: $unitPrice, cartId: $orderCartId, comment: $comment}');
-
-          final response = await cartProvider.addToCartAPI(
-            customerId: int.parse(customerId.toString()),
-            productId: int.parse(productId.toString()),
-            quantity: 0,
-            unitPrice: unitPrice,
-            comment: comment,
-            accessToken: authModel.token ?? '',
-            cartId: orderCartId,
-          );
-
-          if (isApiSuccess(response)) {
-            setState(() {
-              item['comment'] = comment ?? '';
+          void toggleOption(int optionId) {
+            setDialogState(() {
+              if (!selectedOptionIds.add(optionId)) {
+                selectedOptionIds.remove(optionId);
+              }
             });
-          } else {
-            showScaffoldError(
-              context: context,
-              message: response?['message']?.toString() ??
-                  'Failed to update item comment',
-            );
           }
-        } catch (e) {
+
+          return Dialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.white,
+            insetPadding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            child: SizedBox(
+              width: dialogWidth,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 20, 14, 16),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(11),
+                          ),
+                          child: const Icon(Icons.chat_bubble_outline,
+                              color: primaryColor, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Item Note',
+                                style: buildCustomStyle(FontWeightManager.bold,
+                                    FontSize.s16, 0.21, textColor),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Add kitchen instructions for this item',
+                                style: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    FontSize.s12,
+                                    0.21,
+                                    const Color(0xFF64748B)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          tooltip: 'Close',
+                          icon: const Icon(Icons.close,
+                              size: 20, color: Color(0xFF64748B)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (noteOptions.isNotEmpty) ...[
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Quick notes',
+                                    style: buildCustomStyle(
+                                        FontWeightManager.semiBold,
+                                        FontSize.s13,
+                                        0.21,
+                                        const Color(0xFF334155)),
+                                  ),
+                                ),
+                                if (selectedOptionIds.isNotEmpty)
+                                  Text(
+                                    '${selectedOptionIds.length} selected',
+                                    style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s11,
+                                        0.21,
+                                        primaryColor),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final optionWidth = constraints.maxWidth >= 390
+                                    ? (constraints.maxWidth - 10) / 2
+                                    : constraints.maxWidth;
+                                return Wrap(
+                                  spacing: 10,
+                                  runSpacing: 10,
+                                  children: noteOptions.map((option) {
+                                    final isSelected =
+                                        selectedOptionIds.contains(option.id);
+                                    return SizedBox(
+                                      width: optionWidth,
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          onTap: () => toggleOption(option.id),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          child: AnimatedContainer(
+                                            duration: const Duration(
+                                                milliseconds: 150),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 10, vertical: 7),
+                                            decoration: BoxDecoration(
+                                              color: isSelected
+                                                  ? const Color(0xFFEFF6FF)
+                                                  : const Color(0xFFF8FAFC),
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              border: Border.all(
+                                                color: isSelected
+                                                    ? primaryColor
+                                                    : const Color(0xFFE2E8F0),
+                                              ),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                SizedBox(
+                                                  width: 28,
+                                                  height: 28,
+                                                  child: Checkbox(
+                                                    value: isSelected,
+                                                    activeColor: primaryColor,
+                                                    side: const BorderSide(
+                                                        color:
+                                                            Color(0xFF94A3B8),
+                                                        width: 1.5),
+                                                    shape:
+                                                        RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              4),
+                                                    ),
+                                                    onChanged: (_) =>
+                                                        toggleOption(option.id),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 7),
+                                                Expanded(
+                                                  child: Text(
+                                                    optionLabel(option),
+                                                    style: buildCustomStyle(
+                                                        isSelected
+                                                            ? FontWeightManager
+                                                                .semiBold
+                                                            : FontWeightManager
+                                                                .medium,
+                                                        FontSize.s12,
+                                                        0.21,
+                                                        isSelected
+                                                            ? const Color(
+                                                                0xFF1D4ED8)
+                                                            : const Color(
+                                                                0xFF334155)),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+                          Text(
+                            'Custom note',
+                            style: buildCustomStyle(FontWeightManager.semiBold,
+                                FontSize.s13, 0.21, const Color(0xFF334155)),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: controller,
+                            autofocus: noteOptions.isEmpty,
+                            minLines: 2,
+                            maxLines: 3,
+                            onChanged: (_) => setDialogState(() {}),
+                            textCapitalization: TextCapitalization.sentences,
+                            decoration: InputDecoration(
+                              hintText: 'Type any additional instruction...',
+                              hintStyle: buildCustomStyle(
+                                  FontWeightManager.regular,
+                                  FontSize.s13,
+                                  0.21,
+                                  const Color(0xFF94A3B8)),
+                              filled: true,
+                              fillColor: const Color(0xFFF8FAFC),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide:
+                                    const BorderSide(color: Color(0xFFCBD5E1)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(
+                                    color: primaryColor, width: 1.5),
+                              ),
+                              contentPadding: const EdgeInsets.all(13),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+                    child: Row(
+                      children: [
+                        if (hasAnyNote)
+                          TextButton.icon(
+                            onPressed: () {
+                              setDialogState(() {
+                                selectedOptionIds.clear();
+                                controller.clear();
+                              });
+                            },
+                            icon: const Icon(Icons.delete_outline, size: 18),
+                            label: const Text('Clear all'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: const Color(0xFFDC2626),
+                            ),
+                          ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 18, vertical: 13),
+                          ),
+                          child: Text('Cancel',
+                              style: buildCustomStyle(FontWeightManager.medium,
+                                  FontSize.s14, 0.21, const Color(0xFF64748B))),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            final selectedLabels = noteOptions
+                                .where((option) =>
+                                    selectedOptionIds.contains(option.id))
+                                .map(optionLabel);
+                            final customNote = controller.text.trim();
+                            final comment = [
+                              ...selectedLabels,
+                              if (customNote.isNotEmpty) customNote,
+                            ].join(', ');
+                            Navigator.of(dialogContext).pop(comment);
+                          },
+                          icon: const Icon(Icons.check, size: 18),
+                          label: const Text('Save note'),
+                          style: ElevatedButton.styleFrom(
+                            elevation: 0,
+                            backgroundColor: primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 18, vertical: 13),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(9)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    controller.dispose();
+
+    if (result == null || !mounted) return; // Cancelled
+    final comment = result.isEmpty ? null : result;
+
+    if (isLocal) {
+      final cartItem = item as LocalCartItem;
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      localProductProvider.updateCartItemComment(
+        cartItem.product.productId!,
+        cartItem.selectedStock,
+        comment,
+        stockGroupIds: cartItem.stockGroupIds,
+        saleUnitId: cartItem.saleUnitId,
+        variantId: cartItem.variantId,
+      );
+    } else {
+      // For saved order items, persist comment via addToCartAPI with same payload + comment
+      try {
+        final authModel = Provider.of<AuthModel>(context, listen: false);
+        final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+        final customerId = _selectedOrder['cart']?['customer_id'] ??
+            _selectedOrder['customer_id'] ??
+            1;
+        final orderCartId = int.tryParse(
+            (_selectedOrder['cart']?['id'] ?? _selectedOrder['cart_id'])
+                    ?.toString() ??
+                '');
+        final productId = item['product_id'];
+        final unitPrice = item['unit_price']?.toString() ??
+            item['price']?.toString() ??
+            item['product_price']?.toString();
+
+        if (productId == null) {
           showScaffoldError(
             context: context,
-            message: 'Failed to update item comment: ${e.toString()}',
+            message: 'Product ID not found for item comment update.',
+          );
+          return;
+        }
+
+        debugPrint(
+            'ÃƒÂ¢Ã…Â¾Ã‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Calling CartProvider.addToCartAPI for item comment update');
+        debugPrint(
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ addToCartAPI Request Body: {customerId: $customerId, productId: $productId, quantity: 0, unitPrice: $unitPrice, cartId: $orderCartId, comment: $comment}');
+
+        final response = await cartProvider.addToCartAPI(
+          customerId: int.parse(customerId.toString()),
+          productId: int.parse(productId.toString()),
+          quantity: 0,
+          unitPrice: unitPrice,
+          comment: comment,
+          accessToken: authModel.token ?? '',
+          cartId: orderCartId,
+        );
+        if (!mounted) return;
+
+        if (isApiSuccess(response)) {
+          setState(() {
+            item['comment'] = comment ?? '';
+          });
+        } else {
+          showScaffoldError(
+            context: context,
+            message: response?['message']?.toString() ??
+                'Failed to update item comment',
           );
         }
+      } catch (e) {
+        if (!mounted) return;
+        showScaffoldError(
+          context: context,
+          message: 'Failed to update item comment: ${e.toString()}',
+        );
       }
-    });
+    }
   }
 
   DeliveryMethod _getDefaultDeliveryMethod() {
