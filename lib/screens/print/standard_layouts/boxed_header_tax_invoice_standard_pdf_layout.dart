@@ -1649,27 +1649,34 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   ),
                 ],
               ),
-              if (customerBalanceSummaryLines.isNotEmpty) ...[
+              if (customerBalanceSummaryLines.isNotEmpty ||
+                  cfgVisible('showAmountInWords')) ...[
                 pw.SizedBox(height: 4),
-                pw.Align(
-                  alignment: pw.Alignment.centerRight,
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.end,
-                    children: customerBalanceSummaryLines,
-                  ),
-                ),
-              ],
-              if (cfgVisible('showAmountInWords')) ...[
-                pw.SizedBox(height: 4),
-                pw.Align(
-                  alignment: pw.Alignment.centerRight,
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.end,
-                    children: [
-                      ..._amountInWords(totalAmount, currency, isDualLanguage,
-                          configLang, wordsBold),
-                    ],
-                  ),
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Expanded(
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: customerBalanceSummaryLines,
+                      ),
+                    ),
+                    pw.SizedBox(width: 8),
+                    pw.Expanded(
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.end,
+                        children: cfgVisible('showAmountInWords')
+                            ? _amountInWords(
+                                totalAmount,
+                                currency,
+                                isDualLanguage,
+                                configLang,
+                                wordsBold,
+                              )
+                            : const <pw.Widget>[],
+                      ),
+                    ),
+                  ],
                 ),
               ],
               pw.SizedBox(height: 6),
@@ -3052,21 +3059,21 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       lines.add(_autoText(
         '${_getLabel(dc, 'showCustomerPrevBalance', null, 'Previous Balance')}: ${_formatMoney(currency, params.customerOldBalance!)}',
         style,
-        textAlign: pw.TextAlign.right,
+        textAlign: pw.TextAlign.left,
       ));
     }
     if (showPaid && params.paidAmount != null) {
       lines.add(_autoText(
         '${_getLabel(dc, 'showCustomerPaidAmount', null, 'Paid Amount')}: ${_formatMoney(currency, params.paidAmount!)}',
         style,
-        textAlign: pw.TextAlign.right,
+        textAlign: pw.TextAlign.left,
       ));
     }
     if (showCurrent && params.customerCurrentBalance != null) {
       lines.add(_autoText(
         '${_getLabel(dc, 'showCustomerCurrentBalance', null, 'Current Balance')}: ${_formatMoney(currency, params.customerCurrentBalance!)}',
         boldStyle,
-        textAlign: pw.TextAlign.right,
+        textAlign: pw.TextAlign.left,
       ));
     }
     return lines;
