@@ -531,6 +531,14 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         !isQuotation && cfgVisibleDefault(paymentConfigKey);
     final bool showComment = cfgVisibleDefault(commentConfigKey);
     final bool showDeliveryMethod = cfgVisibleDefault('showDeliveryMethod');
+    final bool hasSummaryComment = showComment &&
+        params.orderComment != null &&
+        params.orderComment!.isNotEmpty;
+    final customerBalanceSummaryLines =
+        _customerBalanceLines(params, dc, currency, wordsStyle, wordsBold);
+    final bool showSavedSummary = cfgVisible('showSaved') && saved > 0;
+    final bool hasLeftSummaryContent =
+        bankLines.isNotEmpty || hasSummaryComment || showSavedSummary;
 
     // Human-readable payment method summary (handles single + multi-payment),
     // reused by both the invoice info box and the left payment line.
@@ -1466,53 +1474,58 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             // Replacement summary row: bank details | QR code | totals.
             if (!params.isReturnOnly) ...[
               pw.Table(
-                columnWidths: const {
-                  0: pw.FlexColumnWidth(5),
-                  1: pw.FixedColumnWidth(8),
-                  2: pw.FlexColumnWidth(3),
-                  3: pw.FixedColumnWidth(8),
-                  4: pw.FlexColumnWidth(6),
-                },
+                columnWidths: hasLeftSummaryContent
+                    ? const {
+                        0: pw.FlexColumnWidth(5),
+                        1: pw.FixedColumnWidth(8),
+                        2: pw.FlexColumnWidth(3),
+                        3: pw.FixedColumnWidth(8),
+                        4: pw.FlexColumnWidth(6),
+                      }
+                    : const {
+                        0: pw.FlexColumnWidth(3),
+                        1: pw.FixedColumnWidth(8),
+                        2: pw.FlexColumnWidth(6),
+                      },
                 children: [
                   pw.TableRow(
                     verticalAlignment: pw.TableCellVerticalAlignment.full,
                     children: [
-                      pw.Container(
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(width: 0.5),
-                        ),
-                        padding: const pw.EdgeInsets.all(6),
-                        child: pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: [
-                            if (bankLines.isNotEmpty) ...[
-                              pw.Center(
-                                child: _autoText('BANK DETAILS', footerBold,
-                                    textAlign: pw.TextAlign.center),
-                              ),
-                              pw.SizedBox(height: 3),
-                              ...bankLines
-                                  .map((line) => _autoText(line, footerStyle)),
+                      if (hasLeftSummaryContent) ...[
+                        pw.Container(
+                          decoration: pw.BoxDecoration(
+                            border: pw.Border.all(width: 0.5),
+                          ),
+                          padding: const pw.EdgeInsets.all(6),
+                          child: pw.Column(
+                            crossAxisAlignment: pw.CrossAxisAlignment.start,
+                            children: [
+                              if (bankLines.isNotEmpty) ...[
+                                pw.Center(
+                                  child: _autoText('BANK DETAILS', footerBold,
+                                      textAlign: pw.TextAlign.center),
+                                ),
+                                pw.SizedBox(height: 3),
+                                ...bankLines.map(
+                                    (line) => _autoText(line, footerStyle)),
+                              ],
+                              if (hasSummaryComment) ...[
+                                if (bankLines.isNotEmpty)
+                                  pw.SizedBox(height: 4),
+                                _autoText(
+                                    '${_getLabel(dc, commentConfigKey, null, 'Comment')}: ${params.orderComment}',
+                                    wordsStyle),
+                              ],
+                              if (showSavedSummary)
+                                pw.Text(
+                                  '${_getLabel(dc, 'showSaved', null, 'You Saved:')} ${_formatMoney(currency, saved)}',
+                                  style: wordsBold,
+                                ),
                             ],
-                            if (showComment &&
-                                params.orderComment != null &&
-                                params.orderComment!.isNotEmpty) ...[
-                              if (bankLines.isNotEmpty) pw.SizedBox(height: 4),
-                              _autoText(
-                                  '${_getLabel(dc, commentConfigKey, null, 'Comment')}: ${params.orderComment}',
-                                  wordsStyle),
-                            ],
-                            ..._customerBalanceLines(
-                                params, dc, currency, wordsStyle, wordsBold),
-                            if (cfgVisible('showSaved') && saved > 0)
-                              pw.Text(
-                                '${_getLabel(dc, 'showSaved', null, 'You Saved:')} ${_formatMoney(currency, saved)}',
-                                style: wordsBold,
-                              ),
-                          ],
+                          ),
                         ),
-                      ),
-                      pw.SizedBox(),
+                        pw.SizedBox(),
+                      ],
                       pw.Container(
                         decoration: pw.BoxDecoration(
                           border: pw.Border.all(width: 0.5),
@@ -1529,97 +1542,123 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                             : pw.SizedBox(),
                       ),
                       pw.SizedBox(),
-                      pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.end,
-                        children: [
-                          pw.Table(
-                            // Keep the original complete payment-summary
-                            // grid inside its own payment-summary table.
-                            border: pw.TableBorder.all(width: 0.5),
-                            columnWidths: const {
-                              0: pw.FlexColumnWidth(2.2),
-                              1: pw.FlexColumnWidth(2.0),
-                              2: pw.FlexColumnWidth(1.8),
-                            },
-                            children: [
-                              if (cfgVisible('showItemsCount'))
-                                _totalsRow(
-                                    _withColon(_getLabel(
-                                        dc, 'showItemsCount', null, 'Items')),
-                                    '',
-                                    params.cartItems.length.toString(),
-                                    totalsLabelEn,
-                                    totalsLabelAr,
-                                    totalsValueStyle),
-                              if (cfgVisible('showQuantityCount'))
-                                _totalsRow(
-                                    _withColon(_getLabel(
-                                        dc,
-                                        'showQuantityCount',
-                                        null,
-                                        'Total Qty')),
-                                    '',
-                                    params.totalQuantity % 1 == 0
-                                        ? params.totalQuantity
-                                            .toInt()
-                                            .toString()
-                                        : params.totalQuantity
-                                            .toStringAsFixed(2),
-                                    totalsLabelEn,
-                                    totalsLabelAr,
-                                    totalsValueStyle),
-                              if (showSubTotalFlag)
-                                _totalsRow(
-                                    _labelEn(dc, 'showSubTotal', null,
-                                        'SUB TOTAL', isDualLanguage),
-                                    _labelAr(dc, 'showSubTotal', null,
-                                        'SUB TOTAL', isDualLanguage),
-                                    _formatMoney(currency, netExcTaxValue),
-                                    totalsLabelEn,
-                                    totalsLabelAr,
-                                    totalsValueStyle),
-                              if (showDiscountFlag && discountAmountValue != 0)
-                                _totalsRow(
-                                    _labelEn(dc, 'showDiscount', null,
-                                        'DISCOUNT', isDualLanguage),
-                                    _labelAr(dc, 'showDiscount', null,
-                                        'DISCOUNT', isDualLanguage),
-                                    _formatMoney(currency, discountAmountValue),
-                                    totalsLabelEn,
-                                    totalsLabelAr,
-                                    totalsValueStyle),
-                              if (showTaxTotalFlag)
-                                _totalsRow(
-                                    _labelEn(
-                                        dc,
-                                        'showTax',
-                                        resolvedLabels?.taxDefault,
-                                        'TOTAL VAT 15%',
-                                        isDualLanguage),
-                                    _labelAr(dc, 'showTax', resolvedLabels?.tax,
-                                        'TOTAL VAT 15%', isDualLanguage),
-                                    _formatMoney(currency, totalTax),
-                                    totalsLabelEn,
-                                    totalsLabelAr,
-                                    totalsValueStyle),
-                              if (showNetFlag)
-                                _totalsRow(
-                                    _labelEn(dc, 'showNetAmount', null,
-                                        'NET AMOUNT', isDualLanguage),
-                                    _labelAr(dc, 'showNetAmount', null,
-                                        'NET AMOUNT', isDualLanguage),
-                                    _formatMoney(currency, totalAmount),
-                                    totalsLabelEn,
-                                    totalsLabelAr,
-                                    totalsValueBold),
-                            ],
-                          ),
-                        ],
+                      pw.Container(
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border.all(width: 0.5),
+                        ),
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                          children: [
+                            pw.Table(
+                              // Keep the original complete payment-summary
+                              // grid inside its own payment-summary table. The
+                              // outer container owns the full-height border so
+                              // all visible summary boxes remain equal height.
+                              border: const pw.TableBorder(
+                                horizontalInside: pw.BorderSide(width: 0.5),
+                                verticalInside: pw.BorderSide(width: 0.5),
+                              ),
+                              columnWidths: const {
+                                0: pw.FlexColumnWidth(2.2),
+                                1: pw.FlexColumnWidth(2.0),
+                                2: pw.FlexColumnWidth(1.8),
+                              },
+                              children: [
+                                if (cfgVisible('showItemsCount'))
+                                  _totalsRow(
+                                      _withColon(_getLabel(
+                                          dc, 'showItemsCount', null, 'Items')),
+                                      '',
+                                      params.cartItems.length.toString(),
+                                      totalsLabelEn,
+                                      totalsLabelAr,
+                                      totalsValueStyle),
+                                if (cfgVisible('showQuantityCount'))
+                                  _totalsRow(
+                                      _withColon(_getLabel(
+                                          dc,
+                                          'showQuantityCount',
+                                          null,
+                                          'Total Qty')),
+                                      '',
+                                      params.totalQuantity % 1 == 0
+                                          ? params.totalQuantity
+                                              .toInt()
+                                              .toString()
+                                          : params.totalQuantity
+                                              .toStringAsFixed(2),
+                                      totalsLabelEn,
+                                      totalsLabelAr,
+                                      totalsValueStyle),
+                                if (showSubTotalFlag)
+                                  _totalsRow(
+                                      _labelEn(dc, 'showSubTotal', null,
+                                          'SUB TOTAL', isDualLanguage),
+                                      _labelAr(dc, 'showSubTotal', null,
+                                          'SUB TOTAL', isDualLanguage),
+                                      _formatMoney(currency, netExcTaxValue),
+                                      totalsLabelEn,
+                                      totalsLabelAr,
+                                      totalsValueStyle),
+                                if (showDiscountFlag &&
+                                    discountAmountValue != 0)
+                                  _totalsRow(
+                                      _labelEn(dc, 'showDiscount', null,
+                                          'DISCOUNT', isDualLanguage),
+                                      _labelAr(dc, 'showDiscount', null,
+                                          'DISCOUNT', isDualLanguage),
+                                      _formatMoney(
+                                          currency, discountAmountValue),
+                                      totalsLabelEn,
+                                      totalsLabelAr,
+                                      totalsValueStyle),
+                                if (showTaxTotalFlag)
+                                  _totalsRow(
+                                      _labelEn(
+                                          dc,
+                                          'showTax',
+                                          resolvedLabels?.taxDefault,
+                                          'TOTAL VAT 15%',
+                                          isDualLanguage),
+                                      _labelAr(
+                                          dc,
+                                          'showTax',
+                                          resolvedLabels?.tax,
+                                          'TOTAL VAT 15%',
+                                          isDualLanguage),
+                                      _formatMoney(currency, totalTax),
+                                      totalsLabelEn,
+                                      totalsLabelAr,
+                                      totalsValueStyle),
+                                if (showNetFlag)
+                                  _totalsRow(
+                                      _labelEn(dc, 'showNetAmount', null,
+                                          'NET AMOUNT', isDualLanguage),
+                                      _labelAr(dc, 'showNetAmount', null,
+                                          'NET AMOUNT', isDualLanguage),
+                                      _formatMoney(currency, totalAmount),
+                                      totalsLabelEn,
+                                      totalsLabelAr,
+                                      totalsValueBold),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ],
               ),
+              if (customerBalanceSummaryLines.isNotEmpty) ...[
+                pw.SizedBox(height: 4),
+                pw.Align(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: customerBalanceSummaryLines,
+                  ),
+                ),
+              ],
               if (cfgVisible('showAmountInWords')) ...[
                 pw.SizedBox(height: 4),
                 pw.Align(
@@ -3010,19 +3049,25 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
 
     final lines = <pw.Widget>[];
     if (showPrev && params.customerOldBalance != null) {
-      lines.add(pw.Text(
-          '${_getLabel(dc, 'showCustomerPrevBalance', null, 'Previous Balance')}: ${_formatMoney(currency, params.customerOldBalance!)}',
-          style: style));
+      lines.add(_autoText(
+        '${_getLabel(dc, 'showCustomerPrevBalance', null, 'Previous Balance')}: ${_formatMoney(currency, params.customerOldBalance!)}',
+        style,
+        textAlign: pw.TextAlign.right,
+      ));
     }
     if (showPaid && params.paidAmount != null) {
-      lines.add(pw.Text(
-          '${_getLabel(dc, 'showCustomerPaidAmount', null, 'Paid Amount')}: ${_formatMoney(currency, params.paidAmount!)}',
-          style: style));
+      lines.add(_autoText(
+        '${_getLabel(dc, 'showCustomerPaidAmount', null, 'Paid Amount')}: ${_formatMoney(currency, params.paidAmount!)}',
+        style,
+        textAlign: pw.TextAlign.right,
+      ));
     }
     if (showCurrent && params.customerCurrentBalance != null) {
-      lines.add(pw.Text(
-          '${_getLabel(dc, 'showCustomerCurrentBalance', null, 'Current Balance')}: ${_formatMoney(currency, params.customerCurrentBalance!)}',
-          style: boldStyle));
+      lines.add(_autoText(
+        '${_getLabel(dc, 'showCustomerCurrentBalance', null, 'Current Balance')}: ${_formatMoney(currency, params.customerCurrentBalance!)}',
+        boldStyle,
+        textAlign: pw.TextAlign.right,
+      ));
     }
     return lines;
   }
