@@ -3319,5 +3319,19 @@
     "err_vat_required": "VAT Number is required for B2B",
     "err_unknown": "An unknown error occurred",
     "err_prefix": "Error: "
+  },
+  "modifier_selection": {
+    "base_price": "Base Price: ",
+    "customizations": "Customizations",
+    "required_label": "(Required)",
+    "optional_label": "(Optional)",
+    "select_one": "1 option",
+    "select_up_to_prefix": "up to ",
+    "select_up_to_suffix": " options",
+    "special_notes": "Special Notes",
+    "notes_hint": "e.g., No onions, extra crispy",
+    "quantity": "Quantity",
+    "total_price": "Total Price: ",
+    "btn_add_to_order": "Add to Order"
   }
 }

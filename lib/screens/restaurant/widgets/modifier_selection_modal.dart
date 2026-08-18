@@ -5,6 +5,7 @@ import '../../../resources/color_manager.dart';
 import '../../../resources/font_manager.dart';
 import '../../../resources/style_manager.dart';
 import '../../../components/build_round_button.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 class ModifierSelectionModal extends StatefulWidget {
@@ -123,7 +124,7 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
                 final currency =
                     appSettingsProvider.appSettings?.currency ?? 'INR';
                 return Text(
-                  'Base Price: $currency${widget.menuItem.price.toStringAsFixed(0)}',
+                  '${'modifier_selection.base_price'.tr}$currency${widget.menuItem.price.toStringAsFixed(0)}',
                   style: buildCustomStyle(FontWeightManager.semiBold,
                       FontSize.s16, 0.23, ColorManager.kPrimaryColor),
                 );
@@ -132,7 +133,7 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
             const Divider(height: 25, color: ColorManager.grey),
             if (widget.menuItem.modifierGroups.isNotEmpty)
               Text(
-                'Customizations',
+                'modifier_selection.customizations'.tr,
                 style: buildCustomStyle(FontWeightManager.bold, FontSize.s16,
                     0.3, ColorManager.textColor),
               ),
@@ -144,12 +145,14 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${group.name} ${group.isRequired ? '(Required)' : '(Optional)'}',
+                      '${group.name} ${group.isRequired ? 'modifier_selection.required_label'.tr : 'modifier_selection.optional_label'.tr}',
                       style: buildCustomStyle(FontWeightManager.semiBold,
                           FontSize.s14, 0.21, ColorManager.textColor),
                     ),
                     Text(
-                      '(Select ${group.maxSelections == 1 ? '1 option' : 'up to ${group.maxSelections} options'})',
+                      group.maxSelections == 1
+                          ? '(Select ${'modifier_selection.select_one'.tr})'
+                          : '(Select ${'modifier_selection.select_up_to_prefix'.tr}${group.maxSelections}${'modifier_selection.select_up_to_suffix'.tr})',
                       style: buildCustomStyle(FontWeightManager.regular,
                           FontSize.s12, 0.21, ColorManager.kGreyColor),
                     ),
@@ -191,7 +194,7 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
             }).toList(),
             const Divider(height: 25, color: ColorManager.grey),
             Text(
-              'Special Notes',
+              'modifier_selection.special_notes'.tr,
               style: buildCustomStyle(FontWeightManager.bold, FontSize.s16, 0.3,
                   ColorManager.textColor),
             ),
@@ -199,7 +202,7 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
             TextField(
               controller: _notesController,
               decoration: InputDecoration(
-                hintText: 'e.g., No onions, extra crispy',
+                hintText: 'modifier_selection.notes_hint'.tr,
                 border:
                     OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 contentPadding:
@@ -212,7 +215,7 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Quantity',
+                  'modifier_selection.quantity'.tr,
                   style: buildCustomStyle(FontWeightManager.bold, FontSize.s16,
                       0.3, ColorManager.textColor),
                 ),
@@ -252,7 +255,7 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
                   final currency =
                       appSettingsProvider.appSettings?.currency ?? 'INR';
                   return Text(
-                    'Total Price: $currency${(_currentPrice * _quantity).toStringAsFixed(0)}',
+                    '${'modifier_selection.total_price'.tr}$currency${(_currentPrice * _quantity).toStringAsFixed(0)}',
                     style: buildCustomStyle(FontWeightManager.bold,
                         FontSize.s22, 0.3, ColorManager.kPrimaryColor),
                   );
@@ -264,7 +267,7 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
       ),
       actions: [
         CustomRoundButton(
-          title: 'Cancel',
+          title: 'general.cancel'.tr,
           fct: () => Navigator.of(context).pop(),
           height: 40,
           width: 100,
@@ -274,7 +277,7 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
           textColor: ColorManager.kGreyColor,
         ),
         CustomRoundButton(
-          title: 'Add to Order',
+          title: 'modifier_selection.btn_add_to_order'.tr,
           fct: _isValidSelection()
               ? () {
                   widget.onModifiersSelected(
