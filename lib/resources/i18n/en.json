@@ -3320,6 +3320,25 @@
     "err_unknown": "An unknown error occurred",
     "err_prefix": "Error: "
   },
+  "add_company_account": {
+    "title": "Add Company Account",
+    "is_active": "Is Active",
+    "name_label": "Name *",
+    "name_hint": "Enter name",
+    "name_required": "Name is required",
+    "type_label": "Type *",
+    "select_type": "Select type",
+    "type_required": "Type is required",
+    "store_label": "Store",
+    "select_store": "Select store",
+    "bank_account_label": "Bank Account ID",
+    "select_bank_account": "Select bank account",
+    "payment_method_label": "Payment Method *",
+    "select_payment_method": "Select payment method",
+    "payment_required": "Payment method is required",
+    "btn_create_another": "Create & Create Another",
+    "btn_create": "Create"
+  },
   "add_purchase": {
     "all_purchases": "All Purchases",
     "create_new_purchase": "Create New Purchase",

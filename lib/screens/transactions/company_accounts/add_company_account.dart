@@ -112,7 +112,7 @@ class _AddCompanyAccountScreenState extends State<AddCompanyAccountScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Add Company Account",
+          'add_company_account.title'.tr,
           style: buildCustomStyle(
             FontWeightManager.semiBold,
             FontSize.s20,
@@ -123,7 +123,7 @@ class _AddCompanyAccountScreenState extends State<AddCompanyAccountScreen> {
         Row(
           children: [
             Text(
-              "Is Active",
+              'add_company_account.is_active'.tr,
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s14,
@@ -188,7 +188,7 @@ class _AddCompanyAccountScreenState extends State<AddCompanyAccountScreen> {
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(
-            "Name *",
+            'add_company_account.name_label'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,
@@ -213,12 +213,12 @@ class _AddCompanyAccountScreenState extends State<AddCompanyAccountScreen> {
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
-                return 'Name is required';
+                return 'add_company_account.name_required'.tr;
               }
               return null;
             },
             decoration: decoration.copyWith(
-              hintText: "Enter name",
+              hintText: 'add_company_account.name_hint'.tr,
               hintStyle: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s10,
@@ -241,7 +241,7 @@ class _AddCompanyAccountScreenState extends State<AddCompanyAccountScreen> {
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(
-            "Type *",
+            'add_company_account.type_label'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,
@@ -265,7 +265,7 @@ class _AddCompanyAccountScreenState extends State<AddCompanyAccountScreen> {
             ),
             decoration: decoration.copyWith(
               contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-              hintText: "Select type",
+              hintText: 'add_company_account.select_type'.tr,
               hintStyle: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s10,
@@ -278,7 +278,7 @@ class _AddCompanyAccountScreenState extends State<AddCompanyAccountScreen> {
             dropdownColor: Colors.white,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Type is required';
+                return 'add_company_account.type_required'.tr;
               }
               return null;
             },
@@ -314,7 +314,7 @@ class _AddCompanyAccountScreenState extends State<AddCompanyAccountScreen> {
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(
-            "Store",
+            'add_company_account.store_label'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,
@@ -338,7 +338,7 @@ class _AddCompanyAccountScreenState extends State<AddCompanyAccountScreen> {
             ),
             decoration: decoration.copyWith(
               contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-              hintText: "Select store",
+              hintText: 'add_company_account.select_store'.tr,
               hintStyle: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s10,
@@ -381,7 +381,7 @@ class _AddCompanyAccountScreenState extends State<AddCompanyAccountScreen> {
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(
-            "Bank Account ID",
+            'add_company_account.bank_account_label'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,
@@ -405,7 +405,7 @@ class _AddCompanyAccountScreenState extends State<AddCompanyAccountScreen> {
             ),
             decoration: decoration.copyWith(
               contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-              hintText: "Select bank account",
+              hintText: 'add_company_account.select_bank_account'.tr,
               hintStyle: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s10,
@@ -448,7 +448,7 @@ class _AddCompanyAccountScreenState extends State<AddCompanyAccountScreen> {
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(
-            "Payment Method *",
+            'add_company_account.payment_method_label'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,
@@ -472,7 +472,7 @@ class _AddCompanyAccountScreenState extends State<AddCompanyAccountScreen> {
             ),
             decoration: decoration.copyWith(
               contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-              hintText: "Select payment method",
+              hintText: 'add_company_account.select_payment_method'.tr,
               hintStyle: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s10,
@@ -485,7 +485,7 @@ class _AddCompanyAccountScreenState extends State<AddCompanyAccountScreen> {
             dropdownColor: Colors.white,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Payment method is required';
+                return 'add_company_account.payment_required'.tr;
               }
               return null;
             },
@@ -519,7 +519,7 @@ class _AddCompanyAccountScreenState extends State<AddCompanyAccountScreen> {
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         CustomRoundButton(
-          title: "Cancel",
+          title: 'general.cancel'.tr,
           boxColor: Colors.white,
           textColor: ColorManager.kPrimaryColor,
           borderColor: ColorManager.kPrimaryColor,
@@ -530,7 +530,7 @@ class _AddCompanyAccountScreenState extends State<AddCompanyAccountScreen> {
         ),
         const SizedBox(width: 15),
         CustomRoundButton(
-          title: "Create & Create Another",
+          title: 'add_company_account.btn_create_another'.tr,
           fct: _handleCreateAndCreateAnother,
           height: 45,
           width: 200,
@@ -538,7 +538,7 @@ class _AddCompanyAccountScreenState extends State<AddCompanyAccountScreen> {
         ),
         const SizedBox(width: 15),
         CustomRoundButton(
-          title: "Create",
+          title: 'add_company_account.btn_create'.tr,
           fct: _handleCreate,
           height: 45,
           width: 150,

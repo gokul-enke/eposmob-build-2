@@ -3320,6 +3320,25 @@
     "err_unknown": "حدث خطأ غير معروف",
     "err_prefix": "خطأ: "
   },
+  "add_company_account": {
+    "title": "إضافة حساب شركة",
+    "is_active": "نشط",
+    "name_label": "الاسم *",
+    "name_hint": "أدخل الاسم",
+    "name_required": "الاسم مطلوب",
+    "type_label": "النوع *",
+    "select_type": "اختر النوع",
+    "type_required": "النوع مطلوب",
+    "store_label": "المتجر",
+    "select_store": "اختر المتجر",
+    "bank_account_label": "معرف الحساب البنكي",
+    "select_bank_account": "اختر الحساب البنكي",
+    "payment_method_label": "طريقة الدفع *",
+    "select_payment_method": "اختر طريقة الدفع",
+    "payment_required": "طريقة الدفع مطلوبة",
+    "btn_create_another": "إنشاء وإنشاء آخر",
+    "btn_create": "إنشاء"
+  },
   "add_purchase": {
     "all_purchases": "جميع المشتريات",
     "create_new_purchase": "إنشاء مشترى جديد",
