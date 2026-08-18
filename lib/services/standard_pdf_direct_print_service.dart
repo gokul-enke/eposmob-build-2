@@ -85,6 +85,11 @@ class StandardPdfDirectPrintService {
         name: jobName,
         format: pageFormatFor(paperSize),
         dynamicLayout: false,
+        // On Windows, leaving this false makes the printing plugin construct a
+        // minimal DEVMODE without loading the vendor driver's private data.
+        // Some drivers accept the job but then leave it at 0 KB in the spooler.
+        // Using the installed queue's validated settings avoids that failure.
+        usePrinterSettings: true,
         onLayout: (_) async => pdfBytes,
       );
       debugPrint(
