@@ -23,6 +23,7 @@ import 'package:flutter/foundation.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/resources/localization_service.dart';
 import 'package:pos_machine/services/development_printer_service.dart';
+import 'package:pos_machine/services/standard_pdf_direct_print_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/bank_provider.dart';
@@ -911,6 +912,15 @@ class StandardPrinter {
             message: 'Development PDF saved to ${savedFile.path}',
           );
         }
+        return;
+      }
+
+      if (await StandardPdfDirectPrintService.printDocument(
+        document: pdf,
+        selectedPrinter: selectedPrinter,
+        paperSize: selectedPaperSize,
+        jobName: 'Receipt $orderNumber',
+      )) {
         return;
       }
 

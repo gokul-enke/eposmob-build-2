@@ -104,6 +104,15 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       return;
     }
 
+    if (await StandardPdfDirectPrintService.printDocument(
+      document: pdf,
+      selectedPrinter: params.selectedPrinter,
+      paperSize: params.selectedPaperSize,
+      jobName: 'Standard Tax Invoice ${params.orderNumber}',
+    )) {
+      return;
+    }
+
     final sanitized = params.orderNumber.replaceAll('/', '_');
     final output = await _getEposDirectory();
     final file = File('${output.path}/DetailedTaxInvoice_$sanitized.pdf');

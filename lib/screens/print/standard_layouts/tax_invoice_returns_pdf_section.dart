@@ -69,8 +69,8 @@ class TaxInvoiceReturnsPdfSection {
 
     pw.Widget hdrCell(String text) => pw.Padding(
           padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
-          child: pw.Text(text,
-              style: headerStyle, textAlign: pw.TextAlign.center),
+          child:
+              pw.Text(text, style: headerStyle, textAlign: pw.TextAlign.center),
         );
 
     final headerCells = <pw.Widget>[];
@@ -95,8 +95,8 @@ class TaxInvoiceReturnsPdfSection {
           hdrCell(lbl('showReturnRate', resolvedLabels?.returnRate, 'RATE')));
     }
     if (showTotal) {
-      headerCells.add(
-          hdrCell(lbl('showReturnTotal', resolvedLabels?.returnTotal, 'TOTAL')));
+      headerCells.add(hdrCell(
+          lbl('showReturnTotal', resolvedLabels?.returnTotal, 'TOTAL')));
     }
 
     pw.Widget cell(String text, {pw.Alignment align = pw.Alignment.center}) =>
@@ -125,23 +125,20 @@ class TaxInvoiceReturnsPdfSection {
         double cartRate = 0.0;
         double cartMrp = 0.0;
         if (params.isFromLocalStorage || cartItem is Map) {
-          cartName =
-              (cartItem['product_name'] ?? cartItem['productName'] ?? '')
-                  .toString();
+          cartName = (cartItem['product_name'] ?? cartItem['productName'] ?? '')
+              .toString();
           cartRate = double.tryParse(
                   (cartItem['unit_price'] ?? cartItem['unitPrice'])
                           ?.toString() ??
                       '0') ??
               0.0;
-          cartMrp =
-              double.tryParse(cartItem['mrp']?.toString() ?? '0') ?? 0.0;
+          cartMrp = double.tryParse(cartItem['mrp']?.toString() ?? '0') ?? 0.0;
         } else {
           try {
             cartName = cartItem.productName?.toString() ?? '';
             cartRate =
                 double.tryParse(cartItem.unitPrice?.toString() ?? '0') ?? 0.0;
-            cartMrp =
-                double.tryParse(cartItem.mrp?.toString() ?? '0') ?? 0.0;
+            cartMrp = double.tryParse(cartItem.mrp?.toString() ?? '0') ?? 0.0;
           } catch (_) {}
         }
         if (cartName == name) {
@@ -175,8 +172,8 @@ class TaxInvoiceReturnsPdfSection {
         cells.add(cell(qty.toString(), align: pw.Alignment.centerRight));
       }
       if (showRate) {
-        cells.add(cell(itemRate.toStringAsFixed(2),
-            align: pw.Alignment.centerRight));
+        cells.add(
+            cell(itemRate.toStringAsFixed(2), align: pw.Alignment.centerRight));
       }
       if (showTotal) {
         cells.add(cell(itemTotal.toStringAsFixed(2),
@@ -265,23 +262,25 @@ class TaxInvoiceReturnsPdfSection {
     }
     if (params.customerPhone != null &&
         params.customerPhone!.trim().isNotEmpty) {
-      custRows.add(_kvRow('Phone:', params.customerPhone!, labelStyle,
-          valueStyle));
+      custRows
+          .add(_kvRow('Phone:', params.customerPhone!, labelStyle, valueStyle));
     }
     if (params.customerAddress != null &&
         params.customerAddress!.trim().isNotEmpty) {
-      custRows.add(_kvRow('Billing Address:', params.customerAddress!,
-          labelStyle, valueStyle));
+      custRows.add(_kvRow(
+          'Billing Address:', params.customerAddress!, labelStyle, valueStyle));
     }
     if (custRows.isNotEmpty) {
-      widgets.add(pw.Text(retLabels?.customerHeading ?? 'CUSTOMER DETAILS', style: sectionHeadingStyle));
+      widgets.add(pw.Text(retLabels?.customerHeading ?? 'CUSTOMER DETAILS',
+          style: sectionHeadingStyle));
       widgets.add(pw.SizedBox(height: 2));
       widgets.addAll(custRows);
       widgets.add(pw.SizedBox(height: 4));
     }
 
     if (retLabels?.itemsHeading != null) {
-      widgets.add(pw.Text(retLabels!.itemsHeading!, style: sectionHeadingStyle));
+      widgets
+          .add(pw.Text(retLabels!.itemsHeading!, style: sectionHeadingStyle));
       widgets.add(pw.SizedBox(height: 2));
     }
 
@@ -294,13 +293,13 @@ class TaxInvoiceReturnsPdfSection {
       widgets.add(pw.SizedBox(height: 4));
     }
 
-    if (col('showReturnItemsCount') || (retLabels?.creditNoteItemsCount != null)) {
+    if (col('showReturnItemsCount') ||
+        (retLabels?.creditNoteItemsCount != null)) {
       final countLabel = (retLabels?.creditNoteItemsCount != null)
           ? retLbl('showCreditNoteItemsCount', retLabels?.creditNoteItemsCount,
               'Total Items:')
           : lbl('showReturnItemsCount', null, 'Return Items:');
-      widgets.add(pw.Text(
-          '$countLabel ${orderReturns.returnItems!.length}',
+      widgets.add(pw.Text('$countLabel ${orderReturns.returnItems!.length}',
           style: labelStyle));
       widgets.add(pw.SizedBox(height: 2));
     }
@@ -414,9 +413,8 @@ class TaxInvoiceReturnsPdfSection {
         String cartName = '';
         double cartRate = 0.0;
         if (params.isFromLocalStorage || cartItem is Map) {
-          cartName =
-              (cartItem['product_name'] ?? cartItem['productName'] ?? '')
-                  .toString();
+          cartName = (cartItem['product_name'] ?? cartItem['productName'] ?? '')
+              .toString();
           cartRate = double.tryParse(
                   (cartItem['unit_price'] ?? cartItem['unitPrice'])
                           ?.toString() ??
@@ -450,17 +448,14 @@ class TaxInvoiceReturnsPdfSection {
         double.tryParse(params.formattedTotal.replaceAll(',', '')) ?? 0.0;
     final finalTotal = orderTotal - returnTotal;
 
-    pw.TableRow summaryRow(
-            String label, String value, pw.TextStyle valStyle) =>
+    pw.TableRow summaryRow(String label, String value, pw.TextStyle valStyle) =>
         pw.TableRow(children: [
           pw.Padding(
-            padding:
-                const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+            padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
             child: pw.Text(label, style: labelStyle),
           ),
           pw.Padding(
-            padding:
-                const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+            padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
             child: pw.Align(
               alignment: pw.Alignment.centerRight,
               child: pw.Text(value, style: valStyle),

@@ -153,6 +153,15 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
       return;
     }
 
+    if (await StandardPdfDirectPrintService.printDocument(
+      document: pdf,
+      selectedPrinter: params.selectedPrinter,
+      paperSize: params.selectedPaperSize,
+      jobName: 'Bilingual Tax Invoice ${params.orderNumber}',
+    )) {
+      return;
+    }
+
     final sanitized = params.orderNumber.replaceAll('/', '_');
     final output = await _getEposDirectory();
     final file =
@@ -2202,8 +2211,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     }
     if (params.customerPhone != null &&
         params.customerPhone!.trim().isNotEmpty) {
-      custRows.add(
-          _kvRow('Phone:', params.customerPhone!, labelStyle, valueStyle));
+      custRows
+          .add(_kvRow('Phone:', params.customerPhone!, labelStyle, valueStyle));
     }
     if (params.customerAddress != null &&
         params.customerAddress!.trim().isNotEmpty) {
@@ -2211,14 +2220,16 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
           'Billing Address:', params.customerAddress!, labelStyle, valueStyle));
     }
     if (custRows.isNotEmpty) {
-      widgets.add(pw.Text(retLabels?.customerHeading ?? 'CUSTOMER DETAILS', style: sectionHeadingStyle));
+      widgets.add(pw.Text(retLabels?.customerHeading ?? 'CUSTOMER DETAILS',
+          style: sectionHeadingStyle));
       widgets.add(pw.SizedBox(height: 2));
       widgets.addAll(custRows);
       widgets.add(pw.SizedBox(height: 4));
     }
 
-if (retLabels?.itemsHeading != null) {
-      widgets.add(pw.Text(retLabels!.itemsHeading!, style: sectionHeadingStyle));
+    if (retLabels?.itemsHeading != null) {
+      widgets
+          .add(pw.Text(retLabels!.itemsHeading!, style: sectionHeadingStyle));
       widgets.add(pw.SizedBox(height: 2));
     }
 
@@ -2231,7 +2242,8 @@ if (retLabels?.itemsHeading != null) {
       widgets.add(pw.SizedBox(height: 4));
     }
 
-    if (col('showReturnItemsCount') || (retLabels?.creditNoteItemsCount != null)) {
+    if (col('showReturnItemsCount') ||
+        (retLabels?.creditNoteItemsCount != null)) {
       final countLabel = (retLabels?.creditNoteItemsCount != null)
           ? retLbl('showCreditNoteItemsCount', retLabels?.creditNoteItemsCount,
               'Total Items:')
@@ -2241,7 +2253,8 @@ if (retLabels?.itemsHeading != null) {
       widgets.add(pw.SizedBox(height: 2));
     }
 
-    if (col('showReturnTotalAmount') || (retLabels?.creditNoteTotalAmount != null)) {
+    if (col('showReturnTotalAmount') ||
+        (retLabels?.creditNoteTotalAmount != null)) {
       final label = (retLabels?.creditNoteTotalAmount != null)
           ? retLbl('showCreditNoteTotalAmount',
               retLabels?.creditNoteTotalAmount, 'Total Amount:')
@@ -2271,8 +2284,8 @@ if (retLabels?.itemsHeading != null) {
 
     if (hasCreditNoteConfig) {
       widgets.add(pw.SizedBox(height: 4));
-      widgets.addAll(_amountInWords(
-          returnRateTotal, currency, false, null, labelStyle));
+      widgets.addAll(
+          _amountInWords(returnRateTotal, currency, false, null, labelStyle));
     }
 
     return widgets;

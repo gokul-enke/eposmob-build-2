@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:printing/printing.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -645,8 +646,21 @@ class _PrintPageState extends State<PrintPage> {
     });
 
     try {
-      // Bluetooth discovery only on mobile platforms
-      if (Platform.isAndroid || Platform.isIOS) {
+      if (Platform.isWindows) {
+        debugPrint('[PrintPage] Discovering Windows spooler printers');
+        final printers = await Printing.listPrinters();
+        for (final printer in printers) {
+          if (!mounted) return;
+          setState(() {
+            devices.add(BluetoothPrinter(
+              deviceName: printer.name,
+              address: printer.url,
+              typePrinter: PrinterType.usb,
+            ));
+          });
+        }
+      } else if (Platform.isAndroid || Platform.isIOS) {
+        // Bluetooth discovery only on mobile platforms.
         debugPrint('[PrintPage] Beginning Bluetooth discovery (isBle=false)');
         _subscription = printerManager
             .discovery(type: PrinterType.bluetooth, isBle: false)
@@ -675,20 +689,22 @@ class _PrintPageState extends State<PrintPage> {
             '[PrintPage] Skipping Bluetooth discovery on desktop platform (${Platform.operatingSystem}).');
       }
 
-      debugPrint('[PrintPage] Beginning USB discovery');
-      await printerManager.discovery(type: PrinterType.usb).forEach((device) {
-        debugPrint(
-            '[PrintPage] USB device found: name=${device.name}, vendorId=${device.vendorId}, productId=${device.productId}');
-        final printer = BluetoothPrinter(
-          deviceName: device.name,
-          vendorId: device.vendorId,
-          productId: device.productId,
-          typePrinter: PrinterType.usb,
-        );
-        setState(() {
-          devices.add(printer);
+      if (!Platform.isWindows) {
+        debugPrint('[PrintPage] Beginning USB discovery');
+        await printerManager.discovery(type: PrinterType.usb).forEach((device) {
+          debugPrint(
+              '[PrintPage] USB device found: name=${device.name}, vendorId=${device.vendorId}, productId=${device.productId}');
+          final printer = BluetoothPrinter(
+            deviceName: device.name,
+            vendorId: device.vendorId,
+            productId: device.productId,
+            typePrinter: PrinterType.usb,
+          );
+          setState(() {
+            devices.add(printer);
+          });
         });
-      });
+      }
       debugPrint(
           '[PrintPage] USB discovery completed. Total devices now: ${devices.length}');
     } catch (e, st) {

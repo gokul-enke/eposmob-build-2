@@ -58,6 +58,15 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
         return;
       }
 
+      if (await StandardPdfDirectPrintService.printBytes(
+        pdfBytes: pdfBytes,
+        selectedPrinter: params.selectedPrinter,
+        paperSize: params.selectedPaperSize,
+        jobName: 'Receipt ${params.orderNumber}',
+      )) {
+        return;
+      }
+
       // Save PDF to documents/epos folder
       final output = await _getEposDirectory();
 
@@ -1185,7 +1194,11 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
         child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text(isRtl ? params.returnsSectionHeadingArabic : params.returnsSectionHeading, style: sub),
+              pw.Text(
+                  isRtl
+                      ? params.returnsSectionHeadingArabic
+                      : params.returnsSectionHeading,
+                  style: sub),
               pw.SizedBox(height: 5),
               pw.Text('Return Items section...', style: body)
             ]));
