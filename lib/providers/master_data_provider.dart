@@ -8,8 +8,7 @@ import 'package:pos_machine/resources/app_url.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MasterDataProvider with ChangeNotifier {
-  static const String _paymentMethodsCacheKeyPrefix =
-      'payment_methods_cache';
+  static const String _paymentMethodsCacheKeyPrefix = 'payment_methods_cache';
   static const String _paymentMethodModelsCacheKeyPrefix =
       'payment_method_models_cache';
 
@@ -35,6 +34,11 @@ class MasterDataProvider with ChangeNotifier {
   List<MasterDataValue>? _cashDenominations;
   int? _cashDenominationsStoreId;
   bool _isLoadingCashDenominations = false;
+
+  // Quick-select notes shown on restaurant/KOT cart items.
+  List<MasterDataValue>? _kotItemNoteOptions;
+  int? _kotItemNoteOptionsStoreId;
+  bool _isLoadingKotItemNoteOptions = false;
 
   /// Maps API master data values (UPPERCASE) to Stock model field names (camelCase)
   static const Map<String, String> stockFieldMapping = {
@@ -105,6 +109,10 @@ class MasterDataProvider with ChangeNotifier {
   List<MasterDataValue>? get cashDenominations => _cashDenominations;
   bool get isLoadingCashDenominations => _isLoadingCashDenominations;
 
+  List<MasterDataValue> get kotItemNoteOptions =>
+      _kotItemNoteOptions ?? const [];
+  bool get isLoadingKotItemNoteOptions => _isLoadingKotItemNoteOptions;
+
   /// Returns the active stock grouping fields, falling back to price+unit
   /// if master data hasn't been fetched yet.
   Set<String> get activeStockGroupingFields =>
@@ -161,7 +169,8 @@ class MasterDataProvider with ChangeNotifier {
     }
 
     if (!forceRefresh) {
-      final cachedMethods = _loadPaymentMethodsFromLocalCache(prefs, activeStoreId);
+      final cachedMethods =
+          _loadPaymentMethodsFromLocalCache(prefs, activeStoreId);
       if (cachedMethods != null && cachedMethods.isNotEmpty) {
         _setPaymentMethods(cachedMethods, activeStoreId);
         _loadPaymentMethodModelsFromLocalCacheInto(prefs, activeStoreId);
@@ -181,8 +190,7 @@ class MasterDataProvider with ChangeNotifier {
 
     try {
       final baseUri = Uri.parse(APPUrl.getPaymentMethods);
-      final queryParameters =
-          Map<String, String>.from(baseUri.queryParameters);
+      final queryParameters = Map<String, String>.from(baseUri.queryParameters);
       if (activeStoreId != null) {
         queryParameters['store_id'] = activeStoreId.toString();
       }
@@ -250,7 +258,8 @@ class MasterDataProvider with ChangeNotifier {
     SharedPreferences prefs,
     int? activeStoreId,
   ) {
-    final cachedMethods = _loadPaymentMethodsFromLocalCache(prefs, activeStoreId);
+    final cachedMethods =
+        _loadPaymentMethodsFromLocalCache(prefs, activeStoreId);
     if (cachedMethods != null && cachedMethods.isNotEmpty) {
       _setPaymentMethods(cachedMethods, activeStoreId);
       _loadPaymentMethodModelsFromLocalCacheInto(prefs, activeStoreId);
@@ -406,8 +415,7 @@ class MasterDataProvider with ChangeNotifier {
         if (mappedFields.isNotEmpty) {
           _stockGroupingFields = mappedFields;
           _stockGroupingFieldsStoreId = activeStoreId;
-          debugPrint(
-              '📦 Stock grouping fields loaded: $_stockGroupingFields');
+          debugPrint('📦 Stock grouping fields loaded: $_stockGroupingFields');
           return _stockGroupingFields!;
         }
       }
@@ -549,6 +557,50 @@ class MasterDataProvider with ChangeNotifier {
   void clearCashDenominationsCache() {
     _cashDenominations = null;
     _cashDenominationsStoreId = null;
+    notifyListeners();
+  }
+
+  /// Fetches the quick-select item notes used by the restaurant KOT flow.
+  /// Results are cached per store because master-data values may be scoped to
+  /// the currently active store.
+  Future<List<MasterDataValue>> fetchKotItemNoteOptions({
+    bool forceRefresh = false,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final activeStoreId = prefs.getInt('active_store_id');
+
+    if (!forceRefresh &&
+        _kotItemNoteOptions != null &&
+        _kotItemNoteOptionsStoreId == activeStoreId) {
+      return _kotItemNoteOptions!;
+    }
+
+    _isLoadingKotItemNoteOptions = true;
+    notifyListeners();
+
+    try {
+      final result = await fetchMasterData('KOT_ITEM_NOTE_OPTIONS');
+      _kotItemNoteOptions = result?.data ?? const [];
+      _kotItemNoteOptionsStoreId = activeStoreId;
+      return _kotItemNoteOptions!;
+    } catch (error) {
+      debugPrint('⚠️ Failed to fetch KOT item note options: $error');
+
+      // Never expose options cached for another store.
+      if (_kotItemNoteOptionsStoreId != activeStoreId) {
+        _kotItemNoteOptions = null;
+        _kotItemNoteOptionsStoreId = activeStoreId;
+      }
+      return _kotItemNoteOptions ?? const [];
+    } finally {
+      _isLoadingKotItemNoteOptions = false;
+      notifyListeners();
+    }
+  }
+
+  void clearKotItemNoteOptionsCache() {
+    _kotItemNoteOptions = null;
+    _kotItemNoteOptionsStoreId = null;
     notifyListeners();
   }
 
