@@ -15,6 +15,7 @@
     "print": "طباعة",
     "more": "المزيد",
     "unknown": "غير معروف",
+    "close": "إغلاق",
     "reset": "إعادة تعيين"
   },
   "settings": {
@@ -121,8 +122,8 @@
     "transaction_reference": "مرجع المعاملة",
     "purchase_total": "إجمالي الشراء",
     "customer_prev_balance": "رصيد العميل السابق",
-    "to_customer_credit": "إلى رصيد العميل",
-    "cash_balance": "رصيد النقد",
+    "to_customer_credit": "إضافة إلى حساب العميل",
+    "cash_balance": "إرجاع كباقي",
     "apply_payment_methods": "تطبيق طرق الدفع",
     "posting_preview": "معاينة النشر",
     "net_due": "المبلغ المستحق",
@@ -642,8 +643,8 @@
     "na": "غير متاح",
     "payment_display": "دفع @name",
     "payment_hash": "دفع #@id",
-    "delivery_date": "????? ???????",
-    "delivery_time": "??? ???????"
+    "delivery_date": "تاريخ التوصيل",
+    "delivery_time": "وقت التوصيل"
   },
   "sales_return": {
     "title": "طلبات إرجاع المبيعات",
@@ -810,10 +811,10 @@
     "order_no": "رقم الطلب",
     "date": "التاريخ",
     "time": "الوقت",
-    "credit_collected": "???????? ??????",
-    "order_number": "??? ?????",
-    "previous_balance_collected": "?????? ?????? ??????",
-    "total_returns_sales_return": "?????? ????????? (??????? ????????)"
+    "credit_collected": "المبلغ الآجل المحصّل",
+    "order_number": "رقم الطلب",
+    "previous_balance_collected": "الرصيد السابق المحصّل",
+    "total_returns_sales_return": "إجمالي المرتجعات (مرتجعات المبيعات)"
   },
   "quotations": {
     "title": "قائمة عروض الأسعار",
@@ -2819,6 +2820,16 @@
     "msg_order_marked_served_2": "كـ'تم التقديم'",
     "btn_save_comment": "حفظ التعليق",
     "error_product_id_not_found_comment": "معرّف المنتج غير موجود لتحديث تعليق العنصر.",
+    "item_note_title": "ملاحظة العنصر",
+    "item_note_subtitle": "أضف تعليمات المطبخ لهذا العنصر",
+    "quick_notes": "ملاحظات سريعة",
+    "selected_count": "تم تحديد @count",
+    "custom_note": "ملاحظة مخصصة",
+    "custom_note_hint": "اكتب أي تعليمات إضافية...",
+    "clear_all": "مسح الكل",
+    "save_note": "حفظ الملاحظة",
+    "error_update_comment": "تعذر تحديث تعليق العنصر",
+    "error_update_comment_detail": "تعذر تحديث تعليق العنصر: @error",
     "error_product_id_not_found": "معرّف المنتج غير موجود للعنصر.",
     "error_select_order_first": "يرجى تحديد طلب أولاً",
     "error_no_pending_kot": "لا توجد عناصر KOT معلقة للطباعة",

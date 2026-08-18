@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -502,7 +501,7 @@ class PrinterSettingsLoadingState extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'printer_settings.loading'.tr,
+              'Loading printer settings…',
               textAlign: TextAlign.center,
               style: buildCustomStyle(
                 FontWeightManager.medium,

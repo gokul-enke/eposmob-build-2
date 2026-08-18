@@ -9,8 +9,6 @@ class LocalizationService {
 
   static final List<Locale> supportedLocales = <Locale>[
     const Locale('en'),
-    const Locale('hi'),
-    const Locale('ml'),
     const Locale('ar'),
   ];
 
@@ -25,7 +23,11 @@ class LocalizationService {
     final prefs = await SharedPreferences.getInstance();
     final savedCode = prefs.getString(_prefsKey);
     if (savedCode != null && savedCode.isNotEmpty) {
-      _locale = _localeFromCode(savedCode) ?? fallbackLocale;
+      final savedLocale = _localeFromCode(savedCode);
+      _locale = savedLocale ?? fallbackLocale;
+      if (savedLocale == null) {
+        await prefs.setString(_prefsKey, _codeFromLocale(fallbackLocale));
+      }
     }
 
     // Preload all supported locale JSON files
@@ -39,9 +41,9 @@ class LocalizationService {
   }
 
   static Future<void> updateLocale(Locale newLocale) async {
-    _locale = newLocale;
+    _locale = _localeFromCode(newLocale.languageCode) ?? fallbackLocale;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, _codeFromLocale(newLocale));
+    await prefs.setString(_prefsKey, _codeFromLocale(_locale));
   }
 
   static String _codeFromLocale(Locale l) => l.languageCode;
@@ -57,8 +59,9 @@ class LocalizationService {
   static Future<Map<String, String>> _loadJsonMap(String assetPath) async {
     try {
       final data = await rootBundle.loadString(assetPath);
-      final Map<String, dynamic> jsonMap = json.decode(data) as Map<String, dynamic>;
-      
+      final Map<String, dynamic> jsonMap =
+          json.decode(data) as Map<String, dynamic>;
+
       // Flatten nested JSON to dot notation
       return _flattenJson(jsonMap);
     } catch (_) {
@@ -68,12 +71,13 @@ class LocalizationService {
 
   /// Flattens nested JSON to dot notation keys
   /// Example: {"billing": {"title": "Billing"}} -> {"billing.title": "Billing"}
-  static Map<String, String> _flattenJson(Map<String, dynamic> json, [String prefix = '']) {
+  static Map<String, String> _flattenJson(Map<String, dynamic> json,
+      [String prefix = '']) {
     final Map<String, String> result = {};
-    
+
     json.forEach((key, value) {
       final newKey = prefix.isEmpty ? key : '$prefix.$key';
-      
+
       if (value is Map<String, dynamic>) {
         // Recursively flatten nested objects
         result.addAll(_flattenJson(value, newKey));
@@ -82,7 +86,7 @@ class LocalizationService {
         result[newKey] = value.toString();
       }
     });
-    
+
     return result;
   }
 }

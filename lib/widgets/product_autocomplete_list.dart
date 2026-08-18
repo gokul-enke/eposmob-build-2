@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
@@ -38,11 +37,9 @@ class ProductAutocomplete extends StatefulWidget {
 }
 
 class ProductAutocompleteState extends State<ProductAutocomplete> {
-  // Track the highlighted index
-  int? _highlightedOptionIndex;
-  final FocusNode _textFieldFocus = FocusNode();
   // Add scroll controller for automatic scrolling
   final ScrollController _scrollController = ScrollController();
+  int? _lastAutocompleteHighlightIndex;
   // Define item height for scrolling calculations - adjusted to include margins
   final double _itemHeight =
       48.0; // Increased to account for margins and padding
@@ -77,17 +74,14 @@ class ProductAutocompleteState extends State<ProductAutocomplete> {
 
   @override
   void dispose() {
-    _textFieldFocus.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
   // Function to scroll to the selected item
-  void _scrollToHighlightedItem() {
-    if (_highlightedOptionIndex == null) return;
-
+  void _scrollToHighlightedItem(int highlightedOptionIndex) {
     // Calculate the offset to scroll to, with the item index
-    final double scrollOffset = _highlightedOptionIndex! * _itemHeight;
+    final double scrollOffset = highlightedOptionIndex * _itemHeight;
 
     // Get the current scroll position and visible height
     final double currentScroll = _scrollController.offset;
@@ -154,31 +148,25 @@ class ProductAutocompleteState extends State<ProductAutocomplete> {
 
   @override
   Widget build(BuildContext context) {
-    // Store current options for Enter key selection
-    Iterable<GetProduct> currentOptions = const Iterable<GetProduct>.empty();
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2.0),
       child: Autocomplete<GetProduct>(
         key: widget.autocompleteProductKey,
         optionsBuilder: (TextEditingValue textEditingValue) {
           if (textEditingValue.text.isEmpty) {
-            currentOptions = const Iterable<GetProduct>.empty();
-            return currentOptions;
+            return const Iterable<GetProduct>.empty();
           }
 
           // Use our independent search method instead of calling listAllProducts
           final searchResults = _searchProducts(textEditingValue.text);
-
-          // Reset highlighted index when options change
-          _highlightedOptionIndex = null;
-          currentOptions = searchResults;
-          return currentOptions;
+          _lastAutocompleteHighlightIndex = null;
+          return searchResults;
         },
         displayStringForOption: (GetProduct product) =>
             product.productName ?? '',
         onSelected: (GetProduct selectedProduct) async {
           await _handleProductSelection(selectedProduct);
+          if (!context.mounted) return;
           // Hide virtual keyboard after product selection
           Provider.of<KeyboardProvider>(context, listen: false).hide();
         },
@@ -196,7 +184,7 @@ class ProductAutocompleteState extends State<ProductAutocomplete> {
                 widget.suppressSystemKeyboardOnAndroid,
           );
           // Make sure the autocomplete keeps focus while typing via virtual keyboard
-          void _ensureFocus() {
+          void ensureFocus() {
             if (!focusNode.hasFocus) {
               focusNode.requestFocus();
             }
@@ -222,83 +210,25 @@ class ProductAutocompleteState extends State<ProductAutocomplete> {
 
           // Attach the listener once; remove any existing to avoid duplicates
           _previousControllerText = textEditingController.text;
-          textEditingController.removeListener(_ensureFocus);
-          textEditingController.addListener(_ensureFocus);
-          // Replace the provided focusNode with our own
-          return KeyboardListener(
-            focusNode: _textFieldFocus,
-            onKeyEvent: (KeyEvent event) {
-              if (event is KeyDownEvent) {
-                if (event.logicalKey == LogicalKeyboardKey.keyA &&
-                    HardwareKeyboard.instance.isControlPressed) {
-                  // Ctrl+A: select all text in the field
-                  textEditingController.selection = TextSelection(
-                    baseOffset: 0,
-                    extentOffset: textEditingController.text.length,
-                  );
-                } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                  setState(() {
-                    if (_highlightedOptionIndex == null) {
-                      _highlightedOptionIndex = 0;
-                    } else {
-                      _highlightedOptionIndex = _highlightedOptionIndex! + 1;
-                    }
-                  });
-                  // Scroll to show the highlighted item
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    _scrollToHighlightedItem();
-                  });
-                } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                  setState(() {
-                    if (_highlightedOptionIndex == null) {
-                      _highlightedOptionIndex = 0;
-                    } else if (_highlightedOptionIndex! > 0) {
-                      _highlightedOptionIndex = _highlightedOptionIndex! - 1;
-                    }
-                  });
-                  // Scroll to show the highlighted item
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    _scrollToHighlightedItem();
-                  });
-                } else if (event.logicalKey == LogicalKeyboardKey.enter) {
-                  // Handle Enter key to select highlighted item
-                  if (_highlightedOptionIndex != null &&
-                      currentOptions.isNotEmpty &&
-                      _highlightedOptionIndex! < currentOptions.length) {
-                    // Get the selected product
-                    final selectedProduct =
-                        currentOptions.elementAt(_highlightedOptionIndex!);
-                    // Handle product selection with stock logic
-                    _handleProductSelection(selectedProduct);
-                    if (widget.onAdded == null) {
-                      // Preserve legacy behavior for callers that have not
-                      // opted into success-aware reset handling.
-                      textEditingController.clear();
-                      focusNode.unfocus();
-                    }
-
-                    // Hide virtual keyboard after selection via keyboard
-                    Provider.of<KeyboardProvider>(context, listen: false)
-                        .hide();
-                  }
-                }
-              }
+          textEditingController.removeListener(ensureFocus);
+          textEditingController.addListener(ensureFocus);
+          return buildColumnWidgetForTextFields(
+            controller: textEditingController,
+            focusNode: focusNode,
+            autofocus: widget.autofocus,
+            size: widget.size,
+            width: double.infinity,
+            hintText: 'common.search_product'.tr,
+            useSystemKeyboard: !suppressSystemKeyboard,
+            // RawAutocomplete owns arrow-key highlighting and Enter selection.
+            // Forwarding submission here is the only path that selects a
+            // keyboard-highlighted product.
+            onSubmitted: (_) => onFieldSubmitted(),
+            onTap: () {
+              // Show alphanumeric virtual keyboard connected to this controller
+              keyboardProvider.show('text', textEditingController,
+                  replaceOnFirstInput: true);
             },
-            child: buildColumnWidgetForTextFields(
-              controller: textEditingController,
-              focusNode: focusNode,
-              autofocus: widget.autofocus,
-              size: widget.size,
-              width: double.infinity,
-              hintText: 'common.search_product'.tr,
-              useSystemKeyboard: !suppressSystemKeyboard,
-              onSubmitted: (_) => onFieldSubmitted(),
-              onTap: () {
-                // Show alphanumeric virtual keyboard connected to this controller
-                keyboardProvider.show('text', textEditingController,
-                    replaceOnFirstInput: true);
-              },
-            ),
           );
         },
         optionsViewBuilder: (context, onSelected, options) {
@@ -309,13 +239,17 @@ class ProductAutocompleteState extends State<ProductAutocomplete> {
           final itemCodeEnabled =
               appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
 
-          // Update current options reference for Enter key handling
-          currentOptions = options;
-
-          // Ensure highlighted index is within bounds
-          if (_highlightedOptionIndex != null &&
-              _highlightedOptionIndex! >= options.length) {
-            _highlightedOptionIndex = options.length - 1;
+          // Use RawAutocomplete's highlight as the single source of truth so
+          // the visibly highlighted row is exactly what Enter selects.
+          final highlightedOptionIndex =
+              AutocompleteHighlightedOption.of(context);
+          if (_lastAutocompleteHighlightIndex != highlightedOptionIndex) {
+            _lastAutocompleteHighlightIndex = highlightedOptionIndex;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _scrollController.hasClients) {
+                _scrollToHighlightedItem(highlightedOptionIndex);
+              }
+            });
           }
 
           return Align(
@@ -336,14 +270,10 @@ class ProductAutocompleteState extends State<ProductAutocomplete> {
                 itemCount: options.length,
                 itemBuilder: (BuildContext context, int index) {
                   final option = options.elementAt(index);
-                  final bool isHighlighted = _highlightedOptionIndex == index;
+                  final bool isHighlighted = highlightedOptionIndex == index;
 
                   return MouseRegion(
-                    onEnter: (_) {
-                      setState(() {
-                        _highlightedOptionIndex = index;
-                      });
-                    },
+                    cursor: SystemMouseCursors.click,
                     child: Container(
                       margin: const EdgeInsets.symmetric(
                         horizontal: 4,

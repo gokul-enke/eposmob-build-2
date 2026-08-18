@@ -619,11 +619,14 @@ class StandardPrinter {
             // Customer Information Section - if available
             // Hidden when return-only with credit note config (customer shown in returns section)
             if ((customerName != null ||
-                customerPhone != null ||
-                customerEmail != null ||
-                customerAddress != null) &&
-                !(isReturnOnly && (billDocumentConfig?.resolvedLabels?.creditNoteNumber != null ||
-                    billDocumentConfig?.resolvedLabels?.creditNoteDate != null)))
+                    customerPhone != null ||
+                    customerEmail != null ||
+                    customerAddress != null) &&
+                !(isReturnOnly &&
+                    (billDocumentConfig?.resolvedLabels?.creditNoteNumber !=
+                            null ||
+                        billDocumentConfig?.resolvedLabels?.creditNoteDate !=
+                            null)))
               _buildCustomerDetailsPDF(
                 selectedPaperSize,
                 customerName,
@@ -2022,9 +2025,8 @@ class StandardPrinter {
     final hasCreditNoteConfig = retLabels?.creditNoteNumber != null ||
         retLabels?.creditNoteDate != null;
     String retLbl(String key, String? resolved, String def) {
-      final v = retDc?[key]?.visible == true
-          ? (retDc?[key]?.value as String?)
-          : null;
+      final v =
+          retDc?[key]?.visible == true ? (retDc?[key]?.value as String?) : null;
       if (v != null && v.isNotEmpty) return v;
       if (resolved != null && resolved.isNotEmpty) return resolved;
       return def;
@@ -2295,8 +2297,7 @@ class StandardPrinter {
               style: subheaderStyle,
             ),
             pw.SizedBox(height: 3),
-            if (retLabels?.creditNoteNumber != null &&
-                orderNumber != null)
+            if (retLabels?.creditNoteNumber != null && orderNumber != null)
               _buildLabelValueRow(
                 retLbl('showCreditNoteNumber', retLabels?.creditNoteNumber,
                     'Credit Note No:'),
@@ -2304,8 +2305,7 @@ class StandardPrinter {
                 summaryStyle,
                 isRtl: isRtl,
               ),
-            if (retLabels?.creditNoteDate != null &&
-                orderDate != null)
+            if (retLabels?.creditNoteDate != null && orderDate != null)
               _buildLabelValueRow(
                 retLbl('showCreditNoteDate', retLabels?.creditNoteDate,
                     'Credit Note Date:'),
@@ -2326,7 +2326,8 @@ class StandardPrinter {
 
           // — Customer Details —
           if (customerName != null && customerName.trim().isNotEmpty) ...[
-            pw.Text(retLabels?.customerHeading ?? 'CUSTOMER DETAILS', style: subheaderStyle),
+            pw.Text(retLabels?.customerHeading ?? 'CUSTOMER DETAILS',
+                style: subheaderStyle),
             pw.SizedBox(height: 3),
             _buildLabelValueRow(
               'Customer Name:',
@@ -2335,11 +2336,12 @@ class StandardPrinter {
               isRtl: isRtl,
             ),
             if (customerPhone != null && customerPhone.trim().isNotEmpty)
-              _buildLabelValueRow(
-                  'Phone:', customerPhone, summaryStyle, isRtl: isRtl),
+              _buildLabelValueRow('Phone:', customerPhone, summaryStyle,
+                  isRtl: isRtl),
             if (customerAddress != null && customerAddress.trim().isNotEmpty)
-              _buildLabelValueRow('Billing Address:', customerAddress,
-                  summaryStyle, isRtl: isRtl),
+              _buildLabelValueRow(
+                  'Billing Address:', customerAddress, summaryStyle,
+                  isRtl: isRtl),
             pw.SizedBox(height: 8),
           ],
 
@@ -2401,15 +2403,13 @@ class StandardPrinter {
                       retLabels?.creditNoteItemsCount != null
                           ? retLbl('showCreditNoteItemsCount',
                               retLabels?.creditNoteItemsCount, 'Total Items:')
-                          : ((displayConfig?['showReturnItemsCount']?.value
-                                          as String?)
+                          : ((displayConfig?['showReturnItemsCount']
+                                          ?.value as String?)
                                       ?.isNotEmpty ==
                                   true
                               ? displayConfig!['showReturnItemsCount']!.value
                                   as String
-                              : (isRtl
-                                  ? 'إجمالي العناصر:'
-                                  : 'Total Items:')),
+                              : (isRtl ? 'إجمالي العناصر:' : 'Total Items:')),
                       orderReturns.returnItems!.length.toString(),
                       summaryStyle,
                       isRtl: isRtl),
@@ -2420,12 +2420,10 @@ class StandardPrinter {
                     retLabels?.creditNoteTotalAmount != null) ...[
                   _buildLabelValueRow(
                       retLabels?.creditNoteTotalAmount != null
-                          ? retLbl(
-                              'showCreditNoteTotalAmount',
-                              retLabels?.creditNoteTotalAmount,
-                              'Total Amount:')
-                          : ((displayConfig?['showReturnTotalAmount']?.value
-                                          as String?)
+                          ? retLbl('showCreditNoteTotalAmount',
+                              retLabels?.creditNoteTotalAmount, 'Total Amount:')
+                          : ((displayConfig?['showReturnTotalAmount']
+                                          ?.value as String?)
                                       ?.isNotEmpty ==
                                   true
                               ? displayConfig!['showReturnTotalAmount']!.value
@@ -2444,15 +2442,13 @@ class StandardPrinter {
                       retLabels?.creditNoteRefund != null
                           ? retLbl('showCreditNoteRefund',
                               retLabels?.creditNoteRefund, 'Credit Note Total:')
-                          : ((displayConfig?['showReturnNetAmount']?.value
-                                          as String?)
+                          : ((displayConfig?['showReturnNetAmount']
+                                          ?.value as String?)
                                       ?.isNotEmpty ==
                                   true
                               ? displayConfig!['showReturnNetAmount']!.value
                                   as String
-                              : (isRtl
-                                  ? 'المجموع الصافي:'
-                                  : 'Net Total:')),
+                              : (isRtl ? 'المجموع الصافي:' : 'Net Total:')),
                       calculatedReturnTotal.toStringAsFixed(2),
                       netTotalStyle,
                       isRtl: isRtl),
@@ -2819,6 +2815,7 @@ class StandardPrinter {
       // ZATCA credentials for Saudi Arabia e-invoicing.
       final sharedPrefProvider = SharedPreferenceProvider();
       final zatcaVatNumber = await sharedPrefProvider.getZatcaVatNumber();
+      final zatcaCrNumber = await sharedPrefProvider.getZatcaCrNumber();
       final zatcaCompanyName = await sharedPrefProvider.getZatcaCompanyName();
 
       final bankProvider = Provider.of<BankProvider>(context, listen: false);
@@ -2856,6 +2853,7 @@ class StandardPrinter {
         documentTitleOverride: documentTitleOverride,
         paymentBreakdown: paymentBreakdown,
         zatcaVatNumber: zatcaVatNumber,
+        zatcaCrNumber: zatcaCrNumber,
         zatcaCompanyName: zatcaCompanyName,
         isDefaultCustomer: isDefaultCustomer,
         hideDefaultCustomerPhone: hideDefaultCustomerPhone,

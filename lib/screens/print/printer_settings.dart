@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -98,6 +97,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     {
       'id': 'boxed_bilingual_tax_invoice',
       'name': 'Boxed Bilingual Tax Invoice'
+    },
+    {
+      'id': 'boxed_header_tax_invoice',
+      'name': 'Boxed Header Tax Invoice'
     },
   ];
 
@@ -200,6 +203,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           return 'Bilingual centered Tax Invoice with Arabic details on the left, a centered logo and English details on the right';
         case 'boxed_bilingual_tax_invoice':
           return 'Boxed bilingual Tax Invoice with seller, buyer, invoice, items, bank and totals sections';
+        case 'boxed_header_tax_invoice':
+          return 'Boxed header Tax Invoice with seller, buyer, invoice, items, bank and totals sections';
         case 'corporate_tax_invoice':
           return 'Formal corporate Tax Invoice with logo header, buyer block, bank details and bilingual amount in words';
         case 'letterhead_tax_invoice':
@@ -294,11 +299,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('printer_settings.dialog_perm_title'.tr),
-        content: Text('printer_settings.dialog_perm_content'.tr),
+        title: const Text('Permissions Required'),
+        content: const Text(
+            'This app needs Bluetooth and Location permissions to scan for printers.'),
         actions: [
           TextButton(
-            child: Text('printer_settings.dialog_ok'.tr),
+            child: const Text('OK'),
             onPressed: () {
               Navigator.of(context).pop();
               openAppSettings();
@@ -407,7 +413,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: '${'printer_settings.error_scan'.tr}: $e',
+          message: 'Could not scan for printers: $e',
         );
       }
     } finally {
@@ -441,14 +447,14 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       showScaffold(
         context: context,
         message: printer.isDevelopment
-            ? 'printer_settings.toast_dev_printer_selected'.tr
-            : '${printer.deviceName.toString()} ${'printer_settings.toast_printer_selected'.tr}',
+            ? 'Development Printer selected. Prints will be saved to a folder.'
+            : "${printer.deviceName.toString()} Printer Selected",
       );
     } catch (error) {
       if (!mounted) return;
       showScaffoldError(
         context: context,
-        message: '${'printer_settings.error_save_selection'.tr}: $error',
+        message: 'Could not save printer selection: $error',
       );
     }
   }
@@ -554,7 +560,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       setState(() => isLoading = false);
       showScaffoldError(
         context: context,
-        message: '${'printer_settings.error_load_settings'.tr}: $error',
+        message: 'Could not load printer settings: $error',
       );
     }
   }
@@ -593,7 +599,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: '${'printer_settings.error_reset'.tr}: ${e.toString()}',
+          message: "Error resetting printer settings: ${e.toString()}",
         );
       }
     }
@@ -606,7 +612,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     if (mounted) {
       showScaffold(
         context: context,
-        message: 'printer_settings.toast_paper_size_saved'.tr,
+        message: "Default paper size saved",
       );
     }
   }
@@ -618,7 +624,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     if (mounted) {
       showScaffold(
         context: context,
-        message: 'printer_settings.toast_theme_saved'.tr,
+        message: "Receipt theme saved",
       );
     }
   }
@@ -630,7 +636,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     if (accessToken == null || accessToken.isEmpty) {
       showScaffoldError(
         context: context,
-        message: 'printer_settings.toast_missing_token'.tr,
+        message: 'Missing access token. Please login again.',
       );
       return;
     }
@@ -649,13 +655,13 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       if (!mounted) return;
       showScaffold(
         context: context,
-        message: 'printer_settings.toast_resync_success'.tr,
+        message: 'Document configuration resynced successfully',
       );
     } catch (e) {
       if (!mounted) return;
       showScaffoldError(
         context: context,
-        message: '${'printer_settings.error_resync'.tr}: ${e.toString()}',
+        message: 'Failed to resync document configurations: ${e.toString()}',
       );
     } finally {
       if (mounted) {
@@ -670,14 +676,16 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     if (selectedPrinter == null) {
       showScaffoldError(
         context: context,
-        message: 'printer_settings.toast_select_printer'.tr,
+        message: "Please select a printer first",
       );
       return;
     }
     if (selectedPrinter!.isDevelopment) {
       showScaffoldError(
         context: context,
-        message: 'printer_settings.toast_dev_preview'.tr,
+        message:
+            'Development Printer previews are created from actual receipts. '
+            'Print a bill or quotation to save its image.',
       );
       return;
     }
@@ -741,14 +749,14 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       if (mounted) {
         showScaffold(
           context: context,
-          message: 'printer_settings.toast_sample_sent'.tr,
+          message: "Sample receipt sent to printer",
         );
       }
     } catch (e) {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: '${'printer_settings.error_print_sample'.tr}: ${e.toString()}',
+          message: "Error printing sample: ${e.toString()}",
         );
       }
     }
@@ -1186,14 +1194,14 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       if (mounted) {
         showScaffold(
           context: context,
-          message: 'printer_settings.toast_hive_cleared'.tr,
+          message: "All Hive data cleared successfully",
         );
       }
     } catch (e) {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: '${'printer_settings.error_clear_hive'.tr}: ${e.toString()}',
+          message: "Error clearing Hive data: ${e.toString()}",
         );
       }
     }
@@ -1273,14 +1281,14 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              PrinterSectionHeader(
+              const PrinterSectionHeader(
                 icon: Icons.description_rounded,
-                title: 'printer_settings.section_paper_size'.tr,
-                subtitle: 'printer_settings.section_paper_size_sub'.tr,
+                title: 'Paper Size Settings',
+                subtitle: 'Choose the default paper width for receipts',
               ),
               SizedBox(height: fieldGap),
               PrinterDropdownField(
-                label: 'printer_settings.label_paper_size'.tr,
+                label: 'Paper Size',
                 value: paperSizes.contains(selectedPaperSize)
                     ? selectedPaperSize
                     : '80mm',
@@ -1328,14 +1336,14 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                PrinterSectionHeader(
+                const PrinterSectionHeader(
                   icon: Icons.palette_outlined,
-                  title: 'printer_settings.section_receipt_theme'.tr,
-                  subtitle: 'printer_settings.section_receipt_theme_sub'.tr,
+                  title: 'Receipt Theme',
+                  subtitle: 'Select the visual layout for printed receipts',
                 ),
                 SizedBox(height: fieldGap),
                 PrinterDropdownField(
-                  label: 'printer_settings.label_theme'.tr,
+                  label: 'Theme',
                   value: selectedReceiptTheme,
                   items: _activeThemes.map((Map<String, String> theme) {
                     return DropdownMenuItem<String>(
@@ -1514,7 +1522,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'printer_settings.title'.tr,
+                'Printer Settings',
                 style: buildCustomStyle(
                   FontWeightManager.semiBold,
                   isCompact ? FontSize.s18 : FontSize.s20,
@@ -1524,7 +1532,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
               ),
               const SizedBox(height: 4),
               Text(
-                'printer_settings.subtitle'.tr,
+                'Configure printers, paper sizes and receipt themes',
                 maxLines: isCompact ? 2 : 3,
                 overflow: TextOverflow.ellipsis,
                 style: buildCustomStyle(
@@ -1545,7 +1553,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         if (selectedSettingsType != 'Barcode' && !_isStandardPdf)
           CustomRoundButton(
             fct: _printSample,
-            title: 'printer_settings.btn_test_print'.tr,
+            title: 'Test Print',
             height: 44,
             width: isCompact ? double.infinity : 120,
             fontSize: 14,
@@ -1556,8 +1564,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         CustomRoundButton(
           fct: _isResyncingDocConfig ? () {} : _resyncDocumentConfigurations,
           title: _isResyncingDocConfig
-              ? 'printer_settings.btn_resyncing'.tr
-              : (isCompact ? 'printer_settings.btn_resync_doc'.tr : 'printer_settings.btn_resync_doc_config'.tr),
+              ? 'Resyncing...'
+              : (isCompact ? 'Resync Doc' : 'Resync Doc Config'),
           height: 44,
           width: isCompact ? double.infinity : 180,
           fontSize: isCompact ? 13 : 14,
@@ -1568,7 +1576,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         ),
         CustomRoundButton(
           fct: () => {clearDefaultPrinter()},
-          title: isCompact ? 'printer_settings.btn_clear'.tr : 'printer_settings.btn_clear_printer'.tr,
+          title: isCompact ? 'Clear' : 'Clear Default Printer',
           height: 44,
           width: isCompact ? double.infinity : 170,
           fontSize: isCompact ? 13 : 14,
@@ -1645,13 +1653,13 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         children: [
           PrinterSectionHeader(
             icon: Icons.devices_rounded,
-            title: 'printer_settings.section_printers'.tr,
+            title: 'Available Printers',
             subtitle: _developerModeEnabled && _supportsDevelopmentPrinter
-                ? 'printer_settings.section_printers_sub_dev'.tr
-                : 'printer_settings.section_printers_sub'.tr,
+                ? 'Select a physical printer or save output to a folder'
+                : 'Scan and select a default printer',
             trailing: CustomRoundButton(
               fct: () => _isScanning ? null : _checkPermissions(),
-              title: _isScanning ? 'printer_settings.btn_scanning'.tr : 'printer_settings.btn_scan'.tr,
+              title: _isScanning ? 'Scanning...' : 'Scan for Printers',
               height: 44,
               width: isCompact ? double.infinity : 160,
               fontSize: 14,
@@ -1668,8 +1676,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           SizedBox(height: listGap),
           PrinterInfoStrip(
             text: _isScanning
-                ? 'printer_settings.info_scanning'.tr
-                : '${displayDevices.length} ${'printer_settings.info_devices_found'.tr}',
+                ? 'Scanning for printers...'
+                : '${displayDevices.length} devices found',
             icon: _isScanning
                 ? Icons.bluetooth_searching_rounded
                 : Icons.devices_other_rounded,
@@ -1677,7 +1685,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           if (selectedPrinter != null) ...[
             const SizedBox(height: 10),
             SettingsStatusBadge(
-              label: selectedPrinter!.deviceName ?? 'printer_settings.status_printer_selected'.tr,
+              label: selectedPrinter!.deviceName ?? 'Printer selected',
               isPositive: true,
               icon: Icons.check_circle_outline_rounded,
             ),
@@ -1688,7 +1696,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                 builder: (context, snapshot) => PrinterInfoStrip(
                   text: snapshot.hasData
                       ? 'Output folder: ${snapshot.data!.path}'
-                      : 'printer_settings.info_preparing_folder'.tr,
+                      : 'Preparing development output folder...',
                   icon: Icons.folder_outlined,
                 ),
               ),
@@ -1696,9 +1704,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           ],
           SizedBox(height: listGap),
           displayDevices.isEmpty
-              ? PrinterEmptyState(
-                  title: 'printer_settings.empty_title'.tr,
-                  subtitle: 'printer_settings.empty_subtitle'.tr,
+              ? const PrinterEmptyState(
+                  title: 'No printers found',
+                  subtitle:
+                      'Tap the scan button above to search for nearby printers',
                 )
               : ListView.separated(
                   shrinkWrap: true,
@@ -1729,7 +1738,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     required bool isSelected,
     required bool isCompact,
   }) {
-    final deviceName = printer.deviceName ?? 'printer_settings.unknown_device'.tr;
+    final deviceName = printer.deviceName ?? 'Unknown device';
     final subtitle = printer.isDevelopment
         ? 'Saves PDFs and thermal receipt images to a local folder'
         : printer.address ?? printer.typePrinter.name;
@@ -1809,7 +1818,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             const SizedBox(height: 12),
             CustomRoundButton(
               fct: () => selectPrinter(printer),
-              title: isSelected ? 'printer_settings.btn_selected'.tr : 'printer_settings.btn_select'.tr,
+              title: isSelected ? 'Selected' : 'Select',
               height: 44,
               width: double.infinity,
               fontSize: 14,
@@ -1879,7 +1888,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         ),
         trailing: CustomRoundButton(
           fct: () => selectPrinter(printer),
-          title: isSelected ? 'printer_settings.btn_selected'.tr : 'printer_settings.btn_select'.tr,
+          title: isSelected ? 'Selected' : 'Select',
           height: 44,
           width: 108,
           fontSize: 14,

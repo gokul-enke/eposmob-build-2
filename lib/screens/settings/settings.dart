@@ -129,7 +129,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       showScaffoldError(
         context: context,
-        message: '${'settings_ui.clear_product_cache_error'.tr}: ${e.toString()}',
+        message:
+            '${'settings_ui.clear_product_cache_error'.tr}: ${e.toString()}',
       );
     }
   }
@@ -181,7 +182,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: '${'settings_ui.clear_local_storage_error'.tr}: ${e.toString()}',
+          message:
+              '${'settings_ui.clear_local_storage_error'.tr}: ${e.toString()}',
         );
       }
     }
@@ -261,7 +263,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     custom_dialog_box.setNotificationPosition(result);
     if (!mounted) return;
     setState(() {});
-    showScaffold(context: context, message: 'settings_ui.toast_notification_updated'.tr);
+    showScaffold(
+        context: context, message: 'settings_ui.toast_notification_updated'.tr);
   }
 
   Future<void> _showOrientationModePicker() async {
@@ -320,7 +323,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await OrientationHelper.apply(modeOverride: result);
     if (!mounted) return;
     setState(() {});
-    showScaffold(context: context, message: 'settings_ui.toast_orientation_updated'.tr);
+    showScaffold(
+        context: context, message: 'settings_ui.toast_orientation_updated'.tr);
   }
 
   Future<void> _toggleDeveloperMode() async {
@@ -621,18 +625,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   RadioListTile<String>(
                     title: const Text('English'),
                     value: 'en',
-                    groupValue: selected,
-                    onChanged: (v) => setState(() => selected = v!),
-                  ),
-                  RadioListTile<String>(
-                    title: const Text('हिन्दी'),
-                    value: 'hi',
-                    groupValue: selected,
-                    onChanged: (v) => setState(() => selected = v!),
-                  ),
-                  RadioListTile<String>(
-                    title: const Text('മലയാളം'),
-                    value: 'ml',
                     groupValue: selected,
                     onChanged: (v) => setState(() => selected = v!),
                   ),

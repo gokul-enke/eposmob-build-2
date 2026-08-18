@@ -241,6 +241,7 @@ class PrintPage extends StatefulWidget {
       // Fetch ZATCA credentials
       final sharedPrefProvider = SharedPreferenceProvider();
       final zatcaVatNumber = await sharedPrefProvider.getZatcaVatNumber();
+      final zatcaCrNumber = await sharedPrefProvider.getZatcaCrNumber();
       final zatcaCompanyName = await sharedPrefProvider.getZatcaCompanyName();
 
       // Create params
@@ -287,6 +288,7 @@ class PrintPage extends StatefulWidget {
         paymentBreakdown:
             _resolvePaymentBreakdown(context, paymentBreakdown, paymentMethod),
         zatcaVatNumber: zatcaVatNumber,
+        zatcaCrNumber: zatcaCrNumber,
         zatcaCompanyName: zatcaCompanyName,
         isDefaultCustomer: isDefaultCustomer,
         hideDefaultCustomerPhone: appSettings.hideDefaultPhone,
@@ -963,6 +965,7 @@ class _PrintPageState extends State<PrintPage> {
     // Fetch ZATCA credentials for Saudi Arabia e-invoicing
     final sharedPrefProvider = SharedPreferenceProvider();
     final zatcaVatNumber = await sharedPrefProvider.getZatcaVatNumber();
+    final zatcaCrNumber = await sharedPrefProvider.getZatcaCrNumber();
     final zatcaCompanyName = await sharedPrefProvider.getZatcaCompanyName();
 
     if (zatcaVatNumber != null && zatcaCompanyName != null) {
@@ -1022,6 +1025,7 @@ class _PrintPageState extends State<PrintPage> {
       paymentBreakdown: PrintPage._resolvePaymentBreakdown(
           context, widget.paymentBreakdown, widget.paymentMethod),
       zatcaVatNumber: zatcaVatNumber,
+      zatcaCrNumber: zatcaCrNumber,
       zatcaCompanyName: zatcaCompanyName,
       isDefaultCustomer: widget.isDefaultCustomer,
       hideDefaultCustomerPhone: hideDefaultCustomerPhone,
@@ -1080,6 +1084,7 @@ class _PrintPageState extends State<PrintPage> {
     // Fetch ZATCA credentials for Saudi Arabia e-invoicing
     final sharedPrefProvider = SharedPreferenceProvider();
     final zatcaVatNumber = await sharedPrefProvider.getZatcaVatNumber();
+    final zatcaCrNumber = await sharedPrefProvider.getZatcaCrNumber();
     final zatcaCompanyName = await sharedPrefProvider.getZatcaCompanyName();
 
     if (zatcaVatNumber != null && zatcaCompanyName != null) {
@@ -1133,6 +1138,7 @@ class _PrintPageState extends State<PrintPage> {
       paymentBreakdown: PrintPage._resolvePaymentBreakdown(
           context, widget.paymentBreakdown, widget.paymentMethod),
       zatcaVatNumber: zatcaVatNumber,
+      zatcaCrNumber: zatcaCrNumber,
       zatcaCompanyName: zatcaCompanyName,
       isDefaultCustomer: widget.isDefaultCustomer,
       hideDefaultCustomerPhone: hideDefaultCustomerPhone,
