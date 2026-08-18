@@ -162,7 +162,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
     if (!canViewPurchasePrice(context)) {
       return const SafeArea(
         child: Center(
-          child: Text('Purchase permission is required to add purchases.'),
+          child: Text('add_purchase.permission_required'.tr),
         ),
       );
     }
@@ -209,13 +209,13 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                     onPressed: () {
                       sideBarController.index.value = 19;
                     },
-                    text: 'All Purchases',
+                    text: 'add_purchase.all_purchases'.tr,
                     // Optionally, you can customize the color and size
                     // color: ColorManager.customColor,
                     // size: 20.0,
                   ),
                   Text(
-                    'Create New Purchase',
+                    'add_purchase.create_new_purchase'.tr,
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s20, 0.30, ColorManager.textColor),
                   ),
@@ -252,7 +252,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                               BuildTextTile(
                                                 isStarRed: true,
                                                 isTextField: true,
-                                                title: "Select Category ",
+                                                title: 'add_purchase.select_category'.tr,
                                                 textStyle: buildCustomStyle(
                                                   FontWeightManager.regular,
                                                   FontSize.s14,
@@ -277,7 +277,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                       DropdownButton2<Category>(
                                                     isExpanded: true,
                                                     hint: Text(
-                                                      '--Select--',
+                                                      'add_purchase.select_hint'.tr,
                                                       style: buildCustomStyle(
                                                         FontWeightManager
                                                             .regular,
@@ -475,7 +475,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                               BuildTextTile(
                                                 isStarRed: true,
                                                 isTextField: true,
-                                                title: "Product ",
+                                                title: 'add_purchase.product_label'.tr,
                                                 textStyle: buildCustomStyle(
                                                   FontWeightManager.regular,
                                                   FontSize.s14,
@@ -498,7 +498,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                       GetProduct>(
                                                     isExpanded: true,
                                                     hint: Text(
-                                                      '--Select--',
+                                                      'add_purchase.select_hint'.tr,
                                                       style: buildCustomStyle(
                                                         FontWeightManager
                                                             .regular,
@@ -666,7 +666,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                             BuildTextTile(
                                               isStarRed: true,
                                               isTextField: true,
-                                              title: "Quantity ",
+                                              title: 'add_purchase.quantity_label'.tr,
                                               textStyle: buildCustomStyle(
                                                 FontWeightManager.regular,
                                                 FontSize.s14,
@@ -695,7 +695,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                 validator: (value) {
                                                   if (value == null ||
                                                       value.isEmpty) {
-                                                    return 'This field is required';
+                                                    return 'add_purchase.field_required'.tr;
                                                   }
                                                   return null;
                                                 },
@@ -789,7 +789,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                             BuildTextTile(
                                               isStarRed: true,
                                               isTextField: true,
-                                              title: "Unit",
+                                              title: 'add_purchase.unit_label'.tr,
                                               textStyle: buildCustomStyle(
                                                 FontWeightManager.regular,
                                                 FontSize.s14,
@@ -815,7 +815,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                 ),
                                                 value: selectedProperty,
                                                 hint: Text(
-                                                  'Choose A Unit',
+                                                  'add_purchase.choose_unit'.tr,
                                                   style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s12,
@@ -863,7 +863,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                             BuildTextTile(
                                               isStarRed: false,
                                               isTextField: true,
-                                              title: "Batch Number ",
+                                              title: 'add_purchase.batch_number'.tr,
                                               textStyle: buildCustomStyle(
                                                 FontWeightManager.regular,
                                                 FontSize.s14,
@@ -892,7 +892,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                 validator: (value) {
                                                   if (value == null ||
                                                       value.isEmpty) {
-                                                    return 'This field is required';
+                                                    return 'add_purchase.field_required'.tr;
                                                   }
                                                   return null;
                                                 },
@@ -984,7 +984,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                             BuildTextTile(
                                               isStarRed: true,
                                               isTextField: true,
-                                              title: "Select Supplier",
+                                              title: 'add_purchase.select_supplier'.tr,
                                               textStyle: buildCustomStyle(
                                                 FontWeightManager.regular,
                                                 FontSize.s14,
@@ -1010,7 +1010,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                 ),
                                                 value: supplier,
                                                 hint: Text(
-                                                  'Select Supplier',
+                                                  'add_purchase.select_supplier'.tr,
                                                   style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s12,
@@ -1065,7 +1065,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                         BuildTextTile(
                                           isStarRed: true,
                                           isTextField: true,
-                                          title: "Select Store",
+                                          title: 'add_purchase.select_store'.tr,
                                           textStyle: buildCustomStyle(
                                             FontWeightManager.regular,
                                             FontSize.s14,
@@ -1090,7 +1090,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                             ),
                                             value: storeSelected,
                                             hint: Text(
-                                              'Select Store',
+                                              'add_purchase.select_store'.tr,
                                               style: buildCustomStyle(
                                                 FontWeightManager.medium,
                                                 FontSize.s12,
@@ -1138,7 +1138,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                           padding:
                                               const EdgeInsets.only(left: 10.0),
                                           child: CustomRoundButton(
-                                            title: "Add",
+                                            title: 'add_purchase.btn_add'.tr,
                                             fct: () async {
                                               if (formKey.currentState!
                                                   .validate()) {
@@ -1173,7 +1173,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                   showScaffold(
                                                     context: context,
                                                     message:
-                                                        'Please Fill the Required Fields',
+                                                        'add_purchase.fill_required'.tr,
                                                   );
                                                 } else {
                                                   showDialog(
@@ -1255,7 +1255,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                           padding:
                                               const EdgeInsets.only(left: 10.0),
                                           child: CustomRoundButton(
-                                            title: "Back",
+                                            title: 'add_purchase.btn_back'.tr,
                                             boxColor: Colors.white,
                                             textColor:
                                                 ColorManager.kPrimaryColor,
@@ -1275,7 +1275,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                       thickness: 0.5,
                                     ),
                                     BuildTextTile(
-                                      title: "Purchase Items",
+                                      title: 'add_purchase.purchase_items'.tr,
                                       textStyle: buildCustomStyle(
                                         FontWeightManager.regular,
                                         FontSize.s14,
@@ -1330,7 +1330,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                                 .all(15.0),
                                                         child: Center(
                                                             child: Text(
-                                                          "No",
+                                                          'add_purchase.col_no'.tr,
                                                           style:
                                                               buildCustomStyle(
                                                             FontWeightManager
@@ -1352,7 +1352,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                                 .all(15.0),
                                                         child: Center(
                                                             child: Text(
-                                                          "Product Name",
+                                                          'add_purchase.col_product_name'.tr,
                                                           style:
                                                               buildCustomStyle(
                                                             FontWeightManager
@@ -1374,7 +1374,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                                 .all(15.0),
                                                         child: Center(
                                                             child: Text(
-                                                          "Quantity",
+                                                          'add_purchase.col_quantity'.tr,
                                                           style:
                                                               buildCustomStyle(
                                                             FontWeightManager
@@ -1396,7 +1396,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                                 .all(15.0),
                                                         child: Center(
                                                             child: Text(
-                                                          "Supplier Name",
+                                                          'add_purchase.col_supplier_name'.tr,
                                                           style:
                                                               buildCustomStyle(
                                                             FontWeightManager
@@ -1418,7 +1418,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                                 .all(15.0),
                                                         child: Center(
                                                             child: Text(
-                                                          "Store Name",
+                                                          'add_purchase.col_store_name'.tr,
                                                           style:
                                                               buildCustomStyle(
                                                             FontWeightManager
@@ -1440,7 +1440,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                                 .all(15.0),
                                                         child: Center(
                                                             child: Text(
-                                                          "Price",
+                                                          'add_purchase.col_price'.tr,
                                                           style:
                                                               buildCustomStyle(
                                                             FontWeightManager
@@ -1462,7 +1462,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                                 .all(15.0),
                                                         child: Center(
                                                             child: Text(
-                                                          "Total Price",
+                                                          'add_purchase.col_total_price'.tr,
                                                           style:
                                                               buildCustomStyle(
                                                             FontWeightManager
@@ -1484,7 +1484,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                                                 .all(15.0),
                                                         child: Center(
                                                             child: Text(
-                                                          "Action",
+                                                          'add_purchase.col_action'.tr,
                                                           style:
                                                               buildCustomStyle(
                                                             FontWeightManager
@@ -1760,7 +1760,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                       padding:
                                           const EdgeInsets.only(left: 10.0),
                                       child: CustomRoundButton(
-                                        title: "Finish",
+                                        title: 'add_purchase.btn_finish'.tr,
                                         fct: () async {
                                           debugPrint(
                                               " purchase id finish button$purchaseId");
@@ -1768,7 +1768,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                                           if (purchaseId == null) {
                                             showScaffold(
                                                 context: context,
-                                                message: "Failed");
+                                                message: 'add_purchase.failed'.tr);
                                             sideBarController.index.value = 19;
                                           } else {
                                             showDialog(
