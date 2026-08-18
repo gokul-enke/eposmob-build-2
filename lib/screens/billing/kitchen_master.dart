@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import '../../components/build_round_button.dart';
 import '../../components/build_dialog_box.dart';
@@ -50,28 +51,28 @@ Color _getItemStatusColor(ItemStatus status) {
 String _getStatusText(OrderStatus status) {
   switch (status) {
     case OrderStatus.all:
-      return 'All';
+      return 'kitchen.status_all'.tr;
     case OrderStatus.pending:
-      return 'Pending';
+      return 'kitchen.status_pending'.tr;
     case OrderStatus.preparing:
-      return 'Preparing';
+      return 'kitchen.status_preparing'.tr;
     case OrderStatus.ready:
-      return 'Ready';
+      return 'kitchen.status_ready'.tr;
     case OrderStatus.served:
-      return 'Served';
+      return 'kitchen.status_served'.tr;
   }
 }
 
 String _getItemStatusText(ItemStatus status) {
   switch (status) {
     case ItemStatus.pending:
-      return 'NEW';
+      return 'kitchen.item_status_new'.tr;
     case ItemStatus.preparing:
-      return 'STARTED';
+      return 'kitchen.item_status_started'.tr;
     case ItemStatus.ready:
-      return 'READY';
+      return 'kitchen.item_status_ready'.tr;
     case ItemStatus.served:
-      return 'SERVED';
+      return 'kitchen.item_status_served'.tr;
   }
 }
 
@@ -228,7 +229,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
       } else {
         setState(() {
           _errorMessage =
-              response['message']?.toString() ?? 'Failed to load saved orders';
+              response['message']?.toString() ?? 'kitchen.failed_load_orders'.tr;
         });
         debugPrint('❌ Failed to load saved orders: $_errorMessage');
       }
@@ -475,7 +476,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
     return KitchenOrder(
       id: id.isNotEmpty ? id : 'ORD-${DateTime.now().millisecondsSinceEpoch}',
       internalId: _parseInt(order['id']) ?? 0,
-      tableId: tableDisplay.isNotEmpty ? tableDisplay : 'Table',
+      tableId: tableDisplay.isNotEmpty ? tableDisplay : 'kitchen.table_fallback'.tr,
       showTableLabel: showTableLabel,
       timestamp: timestamp,
       items: items,
@@ -633,7 +634,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
   }
 
   String _extractItemName(dynamic item) {
-    if (item == null) return 'Item';
+    if (item == null) return 'kitchen.item_fallback'.tr;
     if (item['product'] != null && item['product']['name'] != null) {
       return item['product']['name'].toString();
     }
@@ -645,7 +646,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
       if (first is Map && first['name'] != null)
         return first['name'].toString();
     }
-    return 'Item';
+    return 'kitchen.item_fallback'.tr;
   }
 
   int? _parseInt(dynamic value) {
@@ -858,7 +859,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
               backgroundColor: const Color(0xFF2563EB),
               elevation: 0,
               title: Text(
-                'Kitchen Orders',
+                'kitchen.kitchen_orders'.tr,
                 style: buildCustomStyle(
                     FontWeightManager.bold, FontSize.s18, 0.30, Colors.white),
               ),
@@ -876,7 +877,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
               actions: [
                 IconButton(
                   icon: const Icon(Icons.refresh, color: Colors.white),
-                  tooltip: 'Refresh Orders',
+                  tooltip: 'kitchen.refresh_orders'.tr,
                   onPressed: () async {
                     await _refreshOrdersAndUpdateSelection();
                     await _fetchCartItemStatuses();
@@ -885,7 +886,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
                 IconButton(
                   icon:
                       const Icon(Icons.analytics_outlined, color: Colors.white),
-                  tooltip: 'Kitchen Stats',
+                  tooltip: 'kitchen.kitchen_stats'.tr,
                   onPressed: () {
                     _scaffoldKey.currentState?.openEndDrawer();
                   },
@@ -1061,7 +1062,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'Kitchen Stats',
+                    'kitchen.kitchen_stats'.tr,
                     style: buildCustomStyle(FontWeightManager.bold,
                         FontSize.s18, 0.30, const Color(0xFF1E293B)),
                   ),
@@ -1086,7 +1087,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
                     _fetchCartItemStatuses();
                   },
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Refresh Orders'),
+                  label: Text('kitchen.refresh_orders'.tr),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2563EB),
                     foregroundColor: Colors.white,
@@ -1163,25 +1164,25 @@ class _KitchenMasterState extends State<KitchenMaster> {
           childAspectRatio: 1.0,
           children: [
             _buildStatCard(
-              'Pending Orders',
+              'kitchen.pending_orders'.tr,
               stats['pending'].toString(),
               Icons.access_time,
               const Color(0xFFD97706),
             ),
             _buildStatCard(
-              'Preparing',
+              'kitchen.status_preparing'.tr,
               stats['preparing'].toString(),
               Icons.local_fire_department,
               const Color(0xFF2563EB),
             ),
             _buildStatCard(
-              'Ready to Serve',
+              'kitchen.ready_to_serve'.tr,
               stats['ready'].toString(),
               Icons.check_circle,
               const Color(0xFF059669),
             ),
             _buildStatCard(
-              'Completed',
+              'kitchen.completed'.tr,
               stats['completed'].toString(),
               Icons.done_all,
               const Color(0xFF6B7280),
@@ -1191,14 +1192,14 @@ class _KitchenMasterState extends State<KitchenMaster> {
         const SizedBox(height: 20),
         // Performance section
         Text(
-          'Performance',
+          'kitchen.performance'.tr,
           style: buildCustomStyle(FontWeightManager.bold, FontSize.s16, 0.21,
               const Color(0xFF1E293B)),
         ),
         const SizedBox(height: 12),
-        _buildPerformanceRow('Avg. Prep Time', '${stats['avgPrepTime']} min'),
+        _buildPerformanceRow('kitchen.avg_prep_time'.tr, '${stats['avgPrepTime']}${'kitchen.min_unit'.tr}'),
         const SizedBox(height: 8),
-        _buildPerformanceRow('Total Items', stats['totalItems'].toString()),
+        _buildPerformanceRow('kitchen.total_items'.tr, stats['totalItems'].toString()),
       ],
     );
   }
@@ -1421,7 +1422,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
         if (mounted) {
           showScaffold(
             context: context,
-            message: 'Item status updated to ${statusValue ?? 'new status'}',
+            message: '${'kitchen.item_status_updated'.tr}${statusValue ?? 'new status'}',
           );
         }
       } else {
@@ -1431,7 +1432,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
         if (mounted) {
           showScaffoldError(
             context: context,
-            message: 'Failed to update item status: ${response['message']}',
+            message: '${'kitchen.failed_update_status'.tr}${response['message']}',
           );
         }
       }
@@ -1442,7 +1443,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error updating item status: $e',
+          message: '${'kitchen.error_update_status'.tr}$e',
         );
       }
     } finally {
@@ -1460,7 +1461,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
     final statusId = _findStatusIdByValue('SERVED');
     if (statusId == null) {
       debugPrint('❌ SERVED status ID not found');
-      showScaffoldError(context: context, message: 'Status "SERVED" not found');
+      showScaffoldError(context: context, message: 'kitchen.served_status_not_found'.tr);
       return;
     }
 
@@ -1487,7 +1488,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
         if (mounted) {
           showScaffold(
             context: context,
-            message: 'Order $displayOrderId items marked as SERVED',
+            message: '${'kitchen.order_items_served_prefix'.tr}$displayOrderId${'kitchen.order_items_served_suffix'.tr}',
           );
         }
       } else {
@@ -1496,7 +1497,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
           showScaffoldError(
             context: context,
             message:
-                'Failed to update items for $displayOrderId: ${response['message']}',
+                '${'kitchen.failed_update_items_prefix'.tr}$displayOrderId: ${response['message']}',
           );
         }
       }
@@ -1505,7 +1506,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error updating items for $displayOrderId: $e',
+          message: '${'kitchen.error_update_items_prefix'.tr}$displayOrderId: $e',
         );
       }
     } finally {
@@ -1688,7 +1689,7 @@ class _OrderQueuePanel extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      'Kitchen Orders',
+                      'kitchen.kitchen_orders'.tr,
                       style: buildCustomStyle(
                           FontWeightManager.bold,
                           isCompact ? FontSize.s16 : FontSize.s18,
@@ -1803,7 +1804,7 @@ class _OrderQueuePanel extends StatelessWidget {
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          "No Orders Found",
+                          "${'sales.no_orders_found'.tr}",
                           style: buildCustomStyle(
                               FontWeightManager.semiBold,
                               isCompact ? FontSize.s12 : FontSize.s14,
@@ -1814,7 +1815,7 @@ class _OrderQueuePanel extends StatelessWidget {
                         if (onRetry != null) ...[
                           const SizedBox(height: 16),
                           CustomRoundButton(
-                            title: 'Retry',
+                            title: 'restaurant.retry'.tr,
                             fct: onRetry!,
                             height: 36,
                             width: 100,
@@ -1843,7 +1844,7 @@ class _OrderQueuePanel extends StatelessWidget {
                             ),
                             const SizedBox(height: 20),
                             Text(
-                              'No ${_getStatusText(selectedFilter).toLowerCase()} orders',
+                              '${'kitchen.no_status_orders'.tr}${_getStatusText(selectedFilter).toLowerCase()}${'kitchen.no_status_orders_suffix'.tr}',
                               style: buildCustomStyle(
                                   FontWeightManager.semiBold,
                                   isCompact ? FontSize.s14 : FontSize.s16,
@@ -1852,7 +1853,7 @@ class _OrderQueuePanel extends StatelessWidget {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Orders will appear here when they match this status',
+                              'kitchen.orders_match_hint'.tr,
                               style: buildCustomStyle(
                                   FontWeightManager.regular,
                                   isCompact ? FontSize.s11 : FontSize.s12,
@@ -2066,7 +2067,7 @@ class _ExpandableOrderCardState extends State<_ExpandableOrderCard> {
                     onPressed: () => onPrintOrder(order),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
-                    tooltip: 'Print KOT',
+                    tooltip: 'kitchen.print_kot'.tr,
                   ),
                   const Spacer(),
                   Column(
@@ -2207,8 +2208,8 @@ class _ExpandableOrderCardState extends State<_ExpandableOrderCard> {
                       children: [
                         Text(
                           _isExpanded
-                              ? 'View Less'
-                              : 'View More (${order.items.length - 4} more)',
+                              ? 'kitchen.view_less'.tr
+                              : '${'kitchen.view_more_prefix'.tr}${order.items.length - 4}${'kitchen.view_more_suffix'.tr}',
                           style: buildCustomStyle(FontWeightManager.semiBold,
                               FontSize.s11, 0.21, const Color(0xFF2563EB)),
                         ),
@@ -2257,7 +2258,7 @@ class _ExpandableOrderCardState extends State<_ExpandableOrderCard> {
                             ),
                           )
                         : Text(
-                            'Mark As Served',
+                            'kitchen.mark_as_served'.tr,
                             style: buildCustomStyle(FontWeightManager.semiBold,
                                 FontSize.s12, 0.21, Colors.white),
                           ),
@@ -2380,7 +2381,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Order Details',
+                  'kitchen.order_details'.tr,
                   style: buildCustomStyle(FontWeightManager.bold, FontSize.s18,
                       0.30, const Color(0xFF1E293B)),
                 ),
@@ -2393,7 +2394,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    selectedOrder != null ? '1 Selected' : 'None Selected',
+                    selectedOrder != null ? 'kitchen.one_selected'.tr : 'kitchen.none_selected'.tr,
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s12, 0.21, const Color(0xFF2563EB)),
                   ),
@@ -2422,13 +2423,13 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          'Select an Order',
+                          'kitchen.select_an_order'.tr,
                           style: buildCustomStyle(FontWeightManager.semiBold,
                               FontSize.s16, 0.21, const Color(0xFF64748B)),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Click on an order from the Kitchen Orders panel to view details and manage item status',
+                          'kitchen.select_order_hint'.tr,
                           style: buildCustomStyle(FontWeightManager.regular,
                               FontSize.s12, 0.21, const Color(0xFF94A3B8)),
                           textAlign: TextAlign.center,
@@ -2506,7 +2507,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'Order Notes: ${order.notes}',
+                                  '${'kitchen.order_notes_prefix'.tr}${order.notes}',
                                   style: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,
@@ -2524,7 +2525,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                 const SizedBox(height: 16),
                 // Order items
                 Text(
-                  'Order Items (${order.items.length})',
+                  '${'kitchen.order_items_count'.tr}${order.items.length})',
                   style: buildCustomStyle(FontWeightManager.bold, FontSize.s16,
                       0.21, const Color(0xFF1E293B)),
                 ),
@@ -2564,7 +2565,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
     final printButton = IconButton(
       icon: const Icon(Icons.print, color: Colors.white, size: 24),
       onPressed: () => widget.onPrintOrder(order),
-      tooltip: 'Print KOT',
+      tooltip: 'kitchen.print_kot'.tr,
     );
 
     final statusSummary = Column(
@@ -2590,7 +2591,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
             borderRadius: BorderRadius.circular(6),
           ),
           child: Text(
-            '${timeSinceOrder.inMinutes}m ago',
+            '${timeSinceOrder.inMinutes}${'kitchen.time_ago_suffix'.tr}',
             style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
                 0.21, const Color(0xFF64748B)),
           ),
@@ -2764,7 +2765,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Item Served',
+                    'kitchen.item_served'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s14,
@@ -2832,20 +2833,20 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
               // Use more descriptive button text based on status
               switch (status.value.toUpperCase()) {
                 case 'START':
-                  buttonText = 'Start Cooking';
+                  buttonText = 'kitchen.start_cooking'.tr;
                   break;
                 case 'READY':
-                  buttonText = 'Mark Ready';
+                  buttonText = 'kitchen.mark_ready'.tr;
                   break;
                 case 'SERVED':
-                  buttonText = '✓ Mark Served'; // Add check icon indicator
+                  buttonText = 'kitchen.mark_served'.tr;
                   break;
               }
 
               return Container(
                 width: double.infinity,
                 child: _buildStatusButton(
-                  isLoading ? 'Processing...' : buttonText,
+                  isLoading ? 'kitchen.processing'.tr : buttonText,
                   color,
                   !isLoading, // Disable button when loading
                   isLoading, // Show loading indicator
@@ -2923,7 +2924,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
               children: [
                 Expanded(
                   child: _buildStatusButton(
-                    'Start',
+                    'kitchen.start_fallback'.tr,
                     const Color(0xFF2563EB),
                     item.status == ItemStatus.pending,
                     false, // Not loading for fallback buttons
@@ -2934,7 +2935,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _buildStatusButton(
-                    'Ready',
+                    'kitchen.ready_fallback'.tr,
                     const Color(0xFF059669),
                     item.status == ItemStatus.preparing,
                     false, // Not loading for fallback buttons
@@ -2945,7 +2946,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _buildStatusButton(
-                    'Served',
+                    'kitchen.served_fallback'.tr,
                     const Color(0xFF6B7280),
                     item.status == ItemStatus.ready,
                     false, // Not loading for fallback buttons
@@ -3157,7 +3158,7 @@ class _KitchenStatsPanel extends StatelessWidget {
                 const SizedBox(width: 12),
                 Flexible(
                   child: Text(
-                    'Kitchen Stats',
+                    'kitchen.kitchen_stats'.tr,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: buildCustomStyle(
@@ -3189,7 +3190,7 @@ class _KitchenStatsPanel extends StatelessWidget {
       children: [
         Expanded(
           child: _buildStatCard(
-            'Pending',
+            'kitchen.status_pending'.tr,
             stats['pending'].toString(),
             const Color(0xFFD97706),
             Icons.schedule,
@@ -3199,7 +3200,7 @@ class _KitchenStatsPanel extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: _buildStatCard(
-            'Cooking',
+            'kitchen.cooking'.tr,
             stats['preparing'].toString(),
             const Color(0xFF2563EB),
             Icons.local_fire_department,
@@ -3209,7 +3210,7 @@ class _KitchenStatsPanel extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: _buildStatCard(
-            'Ready',
+            'kitchen.status_ready'.tr,
             stats['ready'].toString(),
             const Color(0xFF059669),
             Icons.check_circle,
@@ -3228,7 +3229,7 @@ class _KitchenStatsPanel extends StatelessWidget {
           children: [
             Expanded(
               child: _buildStatCard(
-                'Pending Orders',
+                'kitchen.pending_orders'.tr,
                 stats['pending'].toString(),
                 const Color(0xFFD97706),
                 Icons.schedule,
@@ -3238,7 +3239,7 @@ class _KitchenStatsPanel extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _buildStatCard(
-                'Preparing',
+                'kitchen.status_preparing'.tr,
                 stats['preparing'].toString(),
                 const Color(0xFF2563EB),
                 Icons.local_fire_department,
@@ -3252,7 +3253,7 @@ class _KitchenStatsPanel extends StatelessWidget {
           children: [
             Expanded(
               child: _buildStatCard(
-                'Ready to Serve',
+                'kitchen.ready_to_serve'.tr,
                 stats['ready'].toString(),
                 const Color(0xFF059669),
                 Icons.check_circle,
@@ -3262,7 +3263,7 @@ class _KitchenStatsPanel extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _buildStatCard(
-                'Completed',
+                'kitchen.completed'.tr,
                 stats['served'].toString(),
                 const Color(0xFF6B7280),
                 Icons.done_all,
@@ -3283,7 +3284,7 @@ class _KitchenStatsPanel extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Performance',
+                'kitchen.performance'.tr,
                 style: buildCustomStyle(FontWeightManager.bold, FontSize.s14,
                     0.21, const Color(0xFF1E293B)),
               ),
@@ -3292,12 +3293,12 @@ class _KitchenStatsPanel extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Avg. Prep Time',
+                    'kitchen.avg_prep_time'.tr,
                     style: buildCustomStyle(FontWeightManager.medium,
                         FontSize.s12, 0.21, const Color(0xFF64748B)),
                   ),
                   Text(
-                    '${stats['avgPrepTime']} min',
+                    '${stats['avgPrepTime']}${'kitchen.min_unit'.tr}',
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s12, 0.21, const Color(0xFF1E293B)),
                   ),
@@ -3308,7 +3309,7 @@ class _KitchenStatsPanel extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Total Items',
+                    'kitchen.total_items'.tr,
                     style: buildCustomStyle(FontWeightManager.medium,
                         FontSize.s12, 0.21, const Color(0xFF64748B)),
                   ),
@@ -3351,7 +3352,7 @@ class _KitchenStatsPanel extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Refresh Orders',
+                        'kitchen.refresh_orders'.tr,
                         style: buildCustomStyle(FontWeightManager.semiBold,
                             FontSize.s12, 0.21, const Color(0xFF2563EB)),
                       ),

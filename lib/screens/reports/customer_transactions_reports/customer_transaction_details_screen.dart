@@ -233,7 +233,7 @@ class _SimpleTransactionDetailsScreenState
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text("Failed to load transaction data"),
+              content: Text('customer_transaction_report.failed_load_transaction_data'.tr),
               backgroundColor: Colors.red,
             ),
           );
@@ -244,7 +244,7 @@ class _SimpleTransactionDetailsScreenState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Error loading transactions: $error"),
+            content: Text('customer_transaction_report.err_loading_transactions'.tr.replaceAll('@error', error.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -408,7 +408,7 @@ class _SimpleTransactionDetailsScreenState
                   : controller.text,
               decoration: decoration.copyWith(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                hintText: "All $label",
+                hintText: 'customer_transaction_report.all_prefix'.tr.replaceAll('@label', label),
                 hintStyle: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s10,
@@ -420,11 +420,11 @@ class _SimpleTransactionDetailsScreenState
               ),
               dropdownColor: Colors.white,
               items: [
-                const DropdownMenuItem(
+                DropdownMenuItem(
                   value: null,
                   child: Text(
-                    "All",
-                    style: TextStyle(
+                    'customer_transaction_report.all'.tr,
+                    style: const TextStyle(
                       fontSize: 12,
                       color: Colors.grey,
                     ),
@@ -502,7 +502,7 @@ class _SimpleTransactionDetailsScreenState
                   : null,
               firstDate: DateTime(2000),
               lastDate: DateTime(2101),
-              hintText: "Select Date",
+              hintText: 'customer_transaction_report.select_date_hint'.tr,
               isAllowEdit: true,
             ),
           ),
@@ -525,15 +525,15 @@ class _SimpleTransactionDetailsScreenState
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '#$slNo  ${tx.orderNumber?.toString() ?? 'N/A'}',
+                  '#$slNo  ${tx.orderNumber?.toString() ?? 'customer_transaction_report.na'.tr}',
                   style: buildCustomStyle(FontWeightManager.semiBold,
                       FontSize.s13, 0.20, ColorManager.textColor),
                 ),
                 Row(
                   children: [
-                    _buildTypeCell(tx.type ?? 'N/A'),
+                    _buildTypeCell(tx.type ?? 'customer_transaction_report.na'.tr),
                     const SizedBox(width: 6),
-                    _buildStatusChipInline(tx.status ?? 'N/A'),
+                    _buildStatusChipInline(tx.status ?? 'customer_transaction_report.na'.tr),
                   ],
                 ),
               ],
@@ -541,13 +541,13 @@ class _SimpleTransactionDetailsScreenState
             const Divider(height: 12),
             Row(
               children: [
-                _buildMobileCardStat('Txn Type', tx.transactionType ?? 'N/A'),
-                _buildMobileCardStat('Amount', tx.amount ?? '0.00'),
+                _buildMobileCardStat('customer_transaction_report.txn_type_stat'.tr, tx.transactionType ?? 'customer_transaction_report.na'.tr),
+                _buildMobileCardStat('customer_transaction_report.amount_col'.tr, tx.amount ?? '0.00'),
               ],
             ),
             const SizedBox(height: 4),
             Text(
-              tx.date ?? 'N/A',
+              tx.date ?? 'customer_transaction_report.na'.tr,
               style: buildCustomStyle(
                   FontWeightManager.regular, FontSize.s10, 0.15, Colors.grey),
             ),
@@ -567,26 +567,26 @@ class _SimpleTransactionDetailsScreenState
       case 'COMPLETED':
         bg = Colors.green.withOpacity(0.1);
         fg = Colors.green;
-        label = 'Success';
+        label = 'customer_transaction_report.success_label'.tr;
         break;
       case 'INIT':
       case 'INITIATED':
       case 'PENDING':
         bg = Colors.orange.withOpacity(0.1);
         fg = Colors.orange;
-        label = 'Pending';
+        label = 'customer_transaction_report.pending_label'.tr;
         break;
       case 'FAIL':
       case 'FAILED':
       case 'CANCELLED':
         bg = Colors.red.withOpacity(0.1);
         fg = Colors.red;
-        label = 'Failed';
+        label = 'customer_transaction_report.failed_label'.tr;
         break;
       default:
         bg = Colors.grey.withOpacity(0.1);
         fg = Colors.grey;
-        label = status.isEmpty ? 'N/A' : status;
+        label = status.isEmpty ? 'customer_transaction_report.na'.tr : status;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -672,13 +672,13 @@ class _SimpleTransactionDetailsScreenState
                     children: [
                       TableRow(
                         children: [
-                          _buildTableHeader("Sl No"),
-                          _buildTableHeader("Order Number"),
-                          _buildTableHeader("Transaction Type"),
-                          _buildTableHeader("Amount"),
-                          _buildTableHeader("Type"),
-                          _buildTableHeader("Transaction Date"),
-                          _buildTableHeader("Status"),
+                          _buildTableHeader('customer_transaction_report.sl_no_col'.tr),
+                          _buildTableHeader('customer_transaction_report.order_number_col'.tr),
+                          _buildTableHeader('customer_transaction_report.transaction_type_label'.tr),
+                          _buildTableHeader('customer_transaction_report.amount_col'.tr),
+                          _buildTableHeader('customer_transaction_report.type_label'.tr),
+                          _buildTableHeader('customer_transaction_report.transaction_date_col'.tr),
+                          _buildTableHeader('customer_transaction_report.status_label'.tr),
                         ],
                       ),
                     ],
@@ -750,7 +750,7 @@ class _SimpleTransactionDetailsScreenState
           ),
           const SizedBox(height: 15),
           Text(
-            'No transactions available',
+            'customer_transaction_report.no_transactions_available'.tr,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s18,
@@ -760,7 +760,7 @@ class _SimpleTransactionDetailsScreenState
           ),
           const SizedBox(height: 8),
           Text(
-            'Try adjusting your filters',
+            'customer_transaction_report.try_adjusting_filters'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,
@@ -820,26 +820,26 @@ class _SimpleTransactionDetailsScreenState
       case 'COMPLETED':
         bg = Colors.green.withOpacity(0.1);
         fg = Colors.green;
-        label = 'Success';
+        label = 'customer_transaction_report.success_label'.tr;
         break;
       case 'INIT':
       case 'INITIATED':
       case 'PENDING':
         bg = Colors.orange.withOpacity(0.1);
         fg = Colors.orange;
-        label = 'Pending';
+        label = 'customer_transaction_report.pending_label'.tr;
         break;
       case 'FAIL':
       case 'FAILED':
       case 'CANCELLED':
         bg = Colors.red.withOpacity(0.1);
         fg = Colors.red;
-        label = 'Failed';
+        label = 'customer_transaction_report.failed_label'.tr;
         break;
       default:
         bg = Colors.grey.withOpacity(0.1);
         fg = Colors.grey;
-        label = status.isEmpty ? 'N/A' : status;
+        label = status.isEmpty ? 'customer_transaction_report.na'.tr : status;
     }
 
     return TableCell(
@@ -897,19 +897,19 @@ class _SimpleTransactionDetailsScreenState
       ),
       children: [
         _buildTableCell(slNo.toString()),
-        _buildTableCell(transaction.orderNumber?.toString() ?? "N/A"),
-        _buildTableCell(transaction.transactionType ?? "N/A"),
+        _buildTableCell(transaction.orderNumber?.toString() ?? 'customer_transaction_report.na'.tr),
+        _buildTableCell(transaction.transactionType ?? 'customer_transaction_report.na'.tr),
         _buildTableCell(transaction.amount ?? "0.00"),
         TableCell(
           verticalAlignment: TableCellVerticalAlignment.middle,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 10.0),
-            child: Center(child: _buildTypeCell(transaction.type ?? "N/A")),
+            child: Center(child: _buildTypeCell(transaction.type ?? 'customer_transaction_report.na'.tr)),
           ),
         ),
-        _buildTableCell(transaction.date ?? "N/A"),
+        _buildTableCell(transaction.date ?? 'customer_transaction_report.na'.tr),
         // _buildStatusChip already returns a TableCell. It must not be wrapped in Center.
-        _buildStatusChip(transaction.status ?? "N/A"),
+        _buildStatusChip(transaction.status ?? 'customer_transaction_report.na'.tr),
       ],
     );
   }
@@ -919,7 +919,7 @@ class _SimpleTransactionDetailsScreenState
     if (mounted) {
       showScaffold(
         context: context,
-        message: "Preparing transaction report...",
+        message: 'customer_transaction_report.preparing_report'.tr,
       );
     }
 
@@ -1092,7 +1092,7 @@ class _SimpleTransactionDetailsScreenState
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Preparing transaction report for printing..."),
+          content: Text('customer_transaction_report.preparing_report_printing'.tr),
           backgroundColor: ColorManager.kPrimaryColor,
         ),
       );
@@ -1158,10 +1158,10 @@ class _SimpleTransactionDetailsScreenState
                   onPressed: () {
                     sideBarController.index.value = 65;
                   },
-                  text: 'All Customers',
+                  text: 'customer_transaction_report.all_customers'.tr,
                 ),
                 Text(
-                  "Transaction Details",
+                  'customer_transaction_report.transaction_details'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.semiBold,
                     FontSize.s20,
@@ -1173,7 +1173,7 @@ class _SimpleTransactionDetailsScreenState
             ),
             if (!_isMobile(context))
               CustomRoundButton(
-                title: "Print",
+                title: 'customer_transaction_report.print'.tr,
                 boxColor: ColorManager.kPrimaryColor,
                 textColor: Colors.white,
                 fct: _printReport,
@@ -1190,7 +1190,7 @@ class _SimpleTransactionDetailsScreenState
                   color: ColorManager.kPrimaryColor,
                 ),
                 label: Text(
-                  _showFilters ? 'Hide' : 'Filters',
+                  _showFilters ? 'customer_transaction_report.hide'.tr : 'customer_transaction_report.filters'.tr,
                   style: const TextStyle(
                       color: ColorManager.kPrimaryColor, fontSize: 12),
                 ),
@@ -1200,7 +1200,7 @@ class _SimpleTransactionDetailsScreenState
         if (_isMobile(context)) const SizedBox(height: 8),
         if (_isMobile(context))
           CustomRoundButton(
-            title: "Print",
+            title: 'customer_transaction_report.print'.tr,
             boxColor: ColorManager.kPrimaryColor,
             textColor: Colors.white,
             fct: _printReport,
@@ -1221,7 +1221,7 @@ class _SimpleTransactionDetailsScreenState
             children: [
               Expanded(
                 child: _buildDropdownField(
-                  "Type",
+                  'customer_transaction_report.type_label'.tr,
                   _transactionTypeController,
                   transactionTypes,
                   (value) {
@@ -1233,7 +1233,7 @@ class _SimpleTransactionDetailsScreenState
               const SizedBox(width: 8),
               Expanded(
                 child: _buildDropdownField(
-                  "Status",
+                  'customer_transaction_report.status_label'.tr,
                   _statusController,
                   statuses,
                   (value) {
@@ -1249,7 +1249,7 @@ class _SimpleTransactionDetailsScreenState
             children: [
               Expanded(
                 child: _buildDropdownField(
-                  "Cr/Dr",
+                  'customer_transaction_report.cr_dr_label'.tr,
                   _typeController,
                   types,
                   (value) {
@@ -1260,7 +1260,7 @@ class _SimpleTransactionDetailsScreenState
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _buildDateField("From Date", _fromDateController, true),
+                child: _buildDateField('customer_transaction_report.from_date'.tr, _fromDateController, true),
               ),
             ],
           ),
@@ -1268,14 +1268,14 @@ class _SimpleTransactionDetailsScreenState
           Row(
             children: [
               Expanded(
-                child: _buildDateField("To Date", _toDateController, false),
+                child: _buildDateField('customer_transaction_report.to_date'.tr, _toDateController, false),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 42),
                   child: CustomRoundButton(
-                    title: "Reset",
+                    title: 'customer_transaction_report.reset'.tr,
                     boxColor: Colors.white,
                     textColor: ColorManager.kPrimaryColor,
                     fct: _resetFilters,
@@ -1303,7 +1303,7 @@ class _SimpleTransactionDetailsScreenState
               Expanded(
                 flex: 1,
                 child: _buildDropdownField(
-                  "Transaction Type",
+                  'customer_transaction_report.transaction_type_label'.tr,
                   _transactionTypeController,
                   transactionTypes,
                   (value) {
@@ -1317,7 +1317,7 @@ class _SimpleTransactionDetailsScreenState
               Expanded(
                 flex: 1,
                 child: _buildDropdownField(
-                  "Status",
+                  'customer_transaction_report.status_label'.tr,
                   _statusController,
                   statuses,
                   (value) {
@@ -1331,7 +1331,7 @@ class _SimpleTransactionDetailsScreenState
               Expanded(
                 flex: 1,
                 child: _buildDropdownField(
-                  "Type",
+                  'customer_transaction_report.type_label'.tr,
                   _typeController,
                   types,
                   (value) {
@@ -1353,7 +1353,7 @@ class _SimpleTransactionDetailsScreenState
               Expanded(
                 flex: 1,
                 child: _buildDateField(
-                  "From Date",
+                  'customer_transaction_report.from_date'.tr,
                   _fromDateController,
                   true,
                 ),
@@ -1361,7 +1361,7 @@ class _SimpleTransactionDetailsScreenState
               Expanded(
                 flex: 1,
                 child: _buildDateField(
-                  "To Date",
+                  'customer_transaction_report.to_date'.tr,
                   _toDateController,
                   false,
                 ),
@@ -1375,7 +1375,7 @@ class _SimpleTransactionDetailsScreenState
                 child: Padding(
                   padding: const EdgeInsets.only(top: 42, left: 10),
                   child: CustomRoundButton(
-                    title: "Reset",
+                    title: 'customer_transaction_report.reset'.tr,
                     boxColor: Colors.white,
                     textColor: ColorManager.kPrimaryColor,
                     fct: _resetFilters,

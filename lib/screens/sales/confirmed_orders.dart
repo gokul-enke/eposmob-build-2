@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -70,8 +71,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                   final confirmedOrders = provider.confirmedOrders;
 
                   if (confirmedOrders.isEmpty) {
-                    return const Center(
-                      child: Text('No confirmed orders found'),
+                    return Center(
+                      child: Text('confirmed_orders.no_orders_found'.tr),
                     );
                   }
 
@@ -121,7 +122,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                                         children: [
                                           Expanded(
                                             child: Text(
-                                              'Order #${order.orderNumber}',
+                                              '${'sales.order_number_short'.tr}${order.orderNumber}',
                                               style: buildCustomStyle(
                                                 FontWeightManager.bold,
                                                 FontSize.s14,
@@ -191,7 +192,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                                           order.deliveryDate!.isNotEmpty) ...[
                                         const SizedBox(height: 4),
                                         Text(
-                                          'Delivery Date: ${DateHelper.formatToISODateOnlyFromISO(order.deliveryDate!)}',
+                                          '${'confirmed_orders.delivery_date_prefix'.tr}${DateHelper.formatToISODateOnlyFromISO(order.deliveryDate!)}',
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s10,
@@ -205,7 +206,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                                           order.deliveryTime!.isNotEmpty) ...[
                                         const SizedBox(height: 4),
                                         Text(
-                                          'Delivery Time: ${order.deliveryTime!}',
+                                          '${'confirmed_orders.delivery_time_prefix'.tr}${order.deliveryTime!}',
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s10,
@@ -229,7 +230,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                                                 size: 12, color: Colors.orange),
                                             const SizedBox(width: 4),
                                             Text(
-                                              'Discount Applied',
+                                              'confirmed_orders.discount_applied'.tr,
                                               style: buildCustomStyle(
                                                 FontWeightManager.medium,
                                                 FontSize.s10,
@@ -245,7 +246,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                                             MainAxisAlignment.spaceBetween,
                                         children: [
                                           Text(
-                                            'Items: ${order.items.length}',
+                                            '${'confirmed_orders.items_prefix'.tr}${order.items.length}',
                                             style: buildCustomStyle(
                                               FontWeightManager.medium,
                                               FontSize.s12,
@@ -445,7 +446,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
       debugPrint("Error printing order: ${error.toString()}");
       showScaffoldError(
           context: context,
-          message: "Failed to print order. Please try again.");
+          message: "confirmed_orders.failed_print".tr);
     }
   }
 
@@ -461,13 +462,13 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
   void _showDeleteConfirmationDialog(BuildContext context, SavedOrder order) {
     DeleteConfirmationDialog.show(
       context: context,
-      title: "Delete Confirmed Order",
+      title: "confirmed_orders.delete_title".tr,
       itemName: order.orderNumber,
       message:
-          "This confirmed order will be permanently removed from your local storage. This action cannot be undone.",
+          "confirmed_orders.delete_message".tr,
       warningIcon: Icons.receipt_long_outlined,
       warningIconColor: ColorManager.kButtonRed,
-      deleteButtonText: "Delete",
+      deleteButtonText: "confirmed_orders.delete".tr,
       onDelete: () {
         // Delete the confirmed order from local storage
         final provider =
@@ -477,7 +478,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
         // Show success message
         showScaffold(
           context: context,
-          message: "Confirmed order deleted successfully",
+          message: "confirmed_orders.delete_success".tr,
         );
       },
     );
@@ -490,7 +491,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            "Confirmed Orders",
+            "confirmed_orders.title".tr,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s20,
@@ -502,14 +503,14 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               CustomRoundButton(
-                title: "Sync with Database",
+                title: "confirmed_orders.sync_btn".tr,
                 fct: () {
                   final provider =
                       Provider.of<LocalProductProvider>(context, listen: false);
                   if (provider.confirmedOrders.isEmpty) {
                     showScaffoldError(
                         context: context,
-                        message: "No confirmed orders to sync");
+                        message: "confirmed_orders.no_orders_to_sync".tr);
                     return;
                   }
                   _syncConfirmedOrders(context);
@@ -567,12 +568,12 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          "Syncing Orders",
-                          style: TextStyle(
+                          "confirmed_orders.syncing_title".tr,
+                          style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
@@ -583,7 +584,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      "Uploading ${confirmedOrders.length} confirmed orders to the server. Please wait...",
+                      'confirmed_orders.uploading_orders'.tr.replaceAll('@count', '${confirmedOrders.length}'),
                       style:
                           const TextStyle(fontSize: 16, color: Colors.black54),
                     ),
@@ -599,8 +600,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                           // Display the correct count (current order being processed)
                           Text(
                             currentSyncIndex < totalOrdersToSync
-                                ? 'Saving ${currentSyncIndex + 1} out of $totalOrdersToSync'
-                                : 'Completed $currentSyncIndex out of $totalOrdersToSync',
+                                ? 'confirmed_orders.saving_orders'.tr.replaceAll('@current', '${currentSyncIndex + 1}').replaceAll('@total', '$totalOrdersToSync')
+                                : 'confirmed_orders.completed_orders'.tr.replaceAll('@current', '$currentSyncIndex').replaceAll('@total', '$totalOrdersToSync'),
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -636,7 +637,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
       Navigator.of(context).pop(); // Close dialog
       showScaffoldError(
           context: context,
-          message: "Authentication token not found. Please login again.");
+          message: "confirmed_orders.auth_token_not_found".tr);
       setState(() {
         isSyncing = false;
       });
@@ -985,7 +986,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
       showScaffold(
           context: context,
           message:
-              "Synced $successCount orders successfully${failureCount > 0 ? ", $failureCount failed" : ""}");
+              'confirmed_orders.sync_success'.tr.replaceAll('@count', '$successCount') + (failureCount > 0 ? 'confirmed_orders.sync_failed_part'.tr.replaceAll('@count', '$failureCount') : ''));
     }
 
     setState(() {

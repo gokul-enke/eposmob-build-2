@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/screens/transactions/widgets/supplier_auto_complete_search.dart';
 import 'package:provider/provider.dart';
@@ -72,7 +73,12 @@ class _TransactionScreenState extends State<TransactionScreen> {
     } catch (error) {
       debugPrint("Error loading transactions: $error");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error loading transactions: $error")),
+        SnackBar(
+          content: Text(
+            'supplier_transactions.error_loading'
+                .trParams({'error': '$error'}),
+          ),
+        ),
       );
       setState(() => initLoading = false);
       debugPrint('TransactionScreen:loadInitData error=$error');
@@ -265,21 +271,21 @@ class _TransactionScreenState extends State<TransactionScreen> {
     showDialog(
       context: context,
       builder: (context) => CommonDetailsDialog(
-        title: 'Transaction Details',
+        title: 'supplier_transactions.dialog_title'.tr,
         gridColumns: [
           [
-            CommonDetailsDialog.buildKeyValueRow('Supplier Name', transaction.supplier.user.name),
-            CommonDetailsDialog.buildKeyValueRow('Date', DateHelper.formatISODate(transaction.date)),
-            CommonDetailsDialog.buildKeyValueRow('Type', transaction.type),
-            CommonDetailsDialog.buildKeyValueRow('Transaction Type', transaction.transactionType),
-            CommonDetailsDialog.buildKeyValueRow('Payment Mode', transaction.paymentMode),
+            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.supplier_name'.tr, transaction.supplier.user.name),
+            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.date'.tr, DateHelper.formatISODate(transaction.date)),
+            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.type'.tr, transaction.type),
+            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.transaction_type'.tr, transaction.transactionType),
+            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.payment_mode'.tr, transaction.paymentMode),
           ],
           [
-            CommonDetailsDialog.buildKeyValueRow('Amount', '${transaction.currency} ${transaction.amount}'),
-            CommonDetailsDialog.buildKeyValueRow('Tax Amount', transaction.taxAmount ?? 'N/A'),
-            CommonDetailsDialog.buildKeyValueRow('Reference', transaction.reference, copyable: true),
-            CommonDetailsDialog.buildKeyValueRow('Status', transaction.status),
-            CommonDetailsDialog.buildKeyValueRow('Comment', transaction.transactionComment ?? 'N/A'),
+            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.amount'.tr, '${transaction.currency} ${transaction.amount}'),
+            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.tax_amount'.tr, transaction.taxAmount ?? 'supplier_transactions.na'.tr),
+            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.reference'.tr, transaction.reference, copyable: true),
+            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.status'.tr, transaction.status),
+            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.comment'.tr, transaction.transactionComment ?? 'supplier_transactions.na'.tr),
           ],
         ],
       ),
@@ -382,7 +388,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Supplier Transactions',
+                  'supplier_transactions.title'.tr,
                   style: buildCustomStyle(FontWeightManager.semiBold,
                       FontSize.s18, 0.25, ColorManager.textColor),
                 ),
@@ -432,7 +438,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Supplier Transactions",
+                      'supplier_transactions.title'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         FontSize.s20,
@@ -450,12 +456,12 @@ class _TransactionScreenState extends State<TransactionScreen> {
                   children: [
                     Expanded(
                       child: _buildSearchField(
-                        title: "Search",
+                        title: 'supplier_transactions.search'.tr,
                         child: TextField(
                           controller: searchController,
                           onChanged: (value) => searchTransactions(),
                           decoration: InputDecoration(
-                            hintText: 'Search by name, reference',
+                            hintText: 'supplier_transactions.hint_search'.tr,
                             hintStyle: buildCustomStyle(
                               FontWeightManager.medium,
                               FontSize.s12,
@@ -482,7 +488,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                           final supplierOptions = transactionProvider.getSupplierOptions();
                           debugPrint('TransactionScreen:supplierOptions length=${supplierOptions.length}');
                           return _buildSearchField(
-                            title: "Supplier",
+                            title: 'supplier_transactions.supplier'.tr,
                             child: SupplierAutocomplete(
                               size: size,
                               onSelected: (_) => searchTransactions(),
@@ -496,7 +502,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: _buildFilterDropdown(
-                        title: "Trans. Type",
+                        title: 'supplier_transactions.trans_type'.tr,
                         controller: transactionTypeController,
                         options: const ["All", "Invoice", "Voucher"],
                         width: size.width,
@@ -506,7 +512,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: _buildFilterDropdown(
-                        title: "Type",
+                        title: 'supplier_transactions.type'.tr,
                         controller: typeController,
                         options: const ["All Types", "Credit", "Debit"],
                         width: size.width,
@@ -516,7 +522,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: _buildFilterDropdown(
-                        title: "Status",
+                        title: 'supplier_transactions.status'.tr,
                         controller: statusController,
                         options: transactionProvider.getStatusOptions(),
                         width: size.width,
@@ -543,7 +549,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                       child: Padding(
                         padding: const EdgeInsets.only(top: 10.0),
                         child: CustomRoundButton(
-                          title: "Reset",
+                          title: 'supplier_transactions.btn_reset'.tr,
                           boxColor: Colors.white,
                           textColor: ColorManager.kPrimaryColor,
                           fct: resetSearch,
@@ -651,14 +657,14 @@ class _TransactionScreenState extends State<TransactionScreen> {
           const SizedBox(height: 16),
           Text(
             provider.allTransactions?.isEmpty ?? true
-                ? "No transactions available"
-                : "No transactions match your filters",
+                ? 'supplier_transactions.no_transactions'.tr
+                : 'supplier_transactions.no_filter_match'.tr,
             style: const TextStyle(color: Colors.grey),
           ),
           if (hasFilters)
             TextButton(
               onPressed: resetSearch,
-              child: const Text("Reset filters"),
+              child: Text('supplier_transactions.btn_reset_filters'.tr),
             ),
         ],
       ),
@@ -703,16 +709,16 @@ class _TransactionScreenState extends State<TransactionScreen> {
               children: [
                 TableRow(
                   children: [
-                    _buildTableHeader('SI No'),
-                    _buildTableHeader('Supplier'),
-                    _buildTableHeader('Date'),
-                    _buildTableHeader('Type'),
-                    _buildTableHeader('Transaction Type'),
-                    _buildTableHeader('Payment Mode'),
-                    _buildTableHeader('Amount'),
-                    _buildTableHeader('Reference'),
-                    _buildTableHeader('Status'),
-                    _buildTableHeader('Action'),
+                    _buildTableHeader('supplier_transactions.col_si_no'.tr),
+                    _buildTableHeader('supplier_transactions.supplier'.tr),
+                    _buildTableHeader('supplier_transactions.col_date'.tr),
+                    _buildTableHeader('supplier_transactions.type'.tr),
+                    _buildTableHeader('supplier_transactions.col_transaction_type'.tr),
+                    _buildTableHeader('supplier_transactions.col_payment_mode'.tr),
+                    _buildTableHeader('supplier_transactions.col_amount'.tr),
+                    _buildTableHeader('supplier_transactions.col_reference'.tr),
+                    _buildTableHeader('supplier_transactions.status'.tr),
+                    _buildTableHeader('supplier_transactions.col_action'.tr),
                   ],
                 ),
               ],
@@ -826,7 +832,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                           text: transaction.reference));
                       showScaffold(
                         context: context,
-                        message: 'Reference copied to clipboard',
+                        message: 'supplier_transactions.ref_copied'.tr,
                       );
                     },
                     child: const Icon(
@@ -881,7 +887,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
       ),
       child: ExpansionTile(
         leading: const Icon(Icons.filter_list, size: 18),
-        title: Text('Filters',
+        title: Text('supplier_transactions.filters'.tr,
             style: buildCustomStyle(FontWeightManager.medium,
                 FontSize.s12, 0.18, ColorManager.textColor)),
         children: [
@@ -893,19 +899,19 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 TextFormField(
                   controller: searchController,
                   onChanged: (_) => searchTransactions(),
-                  decoration: _mobileInputDecoration('Search by name, reference'),
+                  decoration: _mobileInputDecoration('supplier_transactions.hint_search'.tr),
                 ),
                 const SizedBox(height: 8),
                 // Supplier autocomplete — reuse existing field in a box
                 TextFormField(
                   controller: supplierSearchController,
                   onChanged: (_) => searchTransactions(),
-                  decoration: _mobileInputDecoration('Supplier'),
+                  decoration: _mobileInputDecoration('supplier_transactions.supplier'.tr),
                 ),
                 const SizedBox(height: 8),
                 _mobileDropdown(
                   value: transactionTypeController.text,
-                  hint: 'Trans. Type',
+                  hint: 'supplier_transactions.trans_type'.tr,
                   items: const ['All', 'Invoice', 'Voucher'],
                   onChanged: (v) {
                     setState(() => transactionTypeController.text = v!);
@@ -915,7 +921,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 const SizedBox(height: 8),
                 _mobileDropdown(
                   value: typeController.text,
-                  hint: 'Type',
+                  hint: 'supplier_transactions.type'.tr,
                   items: const ['All Types', 'Credit', 'Debit'],
                   onChanged: (v) {
                     setState(() => typeController.text = v!);
@@ -925,7 +931,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 const SizedBox(height: 8),
                 _mobileDropdown(
                   value: statusController.text,
-                  hint: 'Status',
+                  hint: 'supplier_transactions.status'.tr,
                   items: transactionProvider.getStatusOptions(),
                   onChanged: (v) {
                     setState(() => statusController.text = v!);
@@ -943,7 +949,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(6)),
                     ),
-                    child: const Text('Reset Filters'),
+                    child: Text('supplier_transactions.btn_reset_filters'.tr),
                   ),
                 ),
               ],
@@ -1060,7 +1066,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'Ref: ${tx.reference}',
+                              '${'supplier_transactions.ref_prefix'.tr} ${tx.reference}',
                               style: buildCustomStyle(FontWeightManager.regular,
                                   FontSize.s11, 0.16, Colors.grey),
                             ),
@@ -1072,7 +1078,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                                       text: tx.reference));
                                   showScaffold(
                                     context: context,
-                                    message: 'Reference copied to clipboard',
+                                    message: 'supplier_transactions.ref_copied'.tr,
                                   );
                                 },
                                 child: const Icon(
@@ -1108,7 +1114,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                                   size: 13,
                                   color: ColorManager.kPrimaryColor),
                               const SizedBox(width: 4),
-                              Text('View',
+                              Text('supplier_transactions.btn_view'.tr,
                                   style: TextStyle(
                                       fontSize: 11,
                                       color: ColorManager.kPrimaryColor)),

@@ -203,28 +203,12 @@ class OrderDetailWidget extends StatelessWidget {
                                 BuildPaymentRow(
                                   amount:
                                       "$currency ${_formatAmount(effectivePriceSummary.totalTax)}",
-                                  title: "Tax Amount",
+                                  title: (effectivePriceSummary.discount ?? 0) > 0
+                                      ? "Tax Amount After Discount"
+                                      : "Tax Amount",
                                   color: ColorManager.textColor,
                                 ),
                                 const Divider(thickness: 2),
-                                BuildPaymentRow(
-                                  amount:
-                                      "$currency ${_formatAmount(effectivePriceSummary.subTotal)}",
-                                  title: "Sub Total",
-                                  secondRowTextStyle: buildCustomStyle(
-                                    FontWeightManager.bold,
-                                    FontSize.s15,
-                                    0.23,
-                                    ColorManager.kButtonGreen,
-                                  ),
-                                  firstRowTextStyle: buildCustomStyle(
-                                    FontWeightManager.bold,
-                                    FontSize.s15,
-                                    0.23,
-                                    ColorManager.kButtonGreen,
-                                  ),
-                                  color: ColorManager.kButtonGreen,
-                                ),
                                 BuildPaymentRow(
                                   amount:
                                       "$currency ${_formatAmount(effectivePriceSummary.netPayable)}",

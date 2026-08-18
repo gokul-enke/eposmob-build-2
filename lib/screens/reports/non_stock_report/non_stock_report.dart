@@ -103,8 +103,8 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(
-            const SnackBar(
-              content: Text('Non-stock report is currently unavailable.'),
+            SnackBar(
+              content: Text('non_stock_report.unavailable'.tr),
               backgroundColor: Colors.red,
             ),
           );
@@ -182,7 +182,7 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
       children: [
         Expanded(
           child: Text(
-            "Non-Stock Report",
+            'non_stock_report.title'.tr,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s20,
@@ -200,7 +200,7 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
               color: ColorManager.kPrimaryColor,
             ),
             label: Text(
-              _showFilters ? 'Hide' : 'Filters',
+              _showFilters ? 'non_stock_report.hide'.tr : 'non_stock_report.filters'.tr,
               style: const TextStyle(
                   color: ColorManager.kPrimaryColor, fontSize: 12),
             ),
@@ -215,8 +215,8 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
     final productProvider = Provider.of<LocalProductProvider>(context);
 
     final storeDropdown = _buildFilterDropdown<Store>(
-      label: "Store",
-      hint: "Select a store",
+      label: 'non_stock_report.store'.tr,
+      hint: 'non_stock_report.select_store'.tr,
       value: selectedStoreName != null
           ? storeProvider.availableStores
               .firstWhereOrNull((s) => s.storeName == selectedStoreName)
@@ -233,8 +233,8 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
     );
 
     final categoryDropdown = _buildFilterDropdown<Category>(
-      label: "Category",
-      hint: "Select a category",
+      label: 'non_stock_report.category'.tr,
+      hint: 'non_stock_report.select_category'.tr,
       value: selectedCategoryName != null
           ? categoryProvider.category
               ?.firstWhereOrNull((c) => c.categoryName == selectedCategoryName)
@@ -251,8 +251,8 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
     );
 
     final productDropdown = _buildFilterDropdown<GetProduct>(
-      label: "Product",
-      hint: "Select a product",
+      label: 'non_stock_report.product'.tr,
+      hint: 'non_stock_report.select_product'.tr,
       value: selectedProductName != null
           ? productProvider.products
               .firstWhereOrNull((p) => p.productName == selectedProductName)
@@ -274,7 +274,7 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(
-            "Barcode",
+            'non_stock_report.barcode'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,
@@ -297,7 +297,7 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
               loadInitData();
             },
             decoration: InputDecoration(
-              hintText: "Filter by Barcode",
+              hintText: 'non_stock_report.filter_by_barcode'.tr,
               hintStyle: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s12,
@@ -330,7 +330,7 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
           ]),
           const SizedBox(height: 8),
           CustomRoundButton(
-            title: "Reset",
+            title: 'general.reset'.tr,
             boxColor: Colors.white,
             textColor: ColorManager.kPrimaryColor,
             fct: _resetFilters,
@@ -358,7 +358,7 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 45),
               child: CustomRoundButton(
-                title: "Reset",
+                title: 'general.reset'.tr,
                 boxColor: Colors.white,
                 textColor: ColorManager.kPrimaryColor,
                 fct: _resetFilters,
@@ -406,7 +406,7 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
           height: 45,
           margin: EdgeInsets.zero,
           onChanged: onChanged,
-          searchHintText: 'Search...',
+          searchHintText: 'non_stock_report.search_hint'.tr,
           width: double.infinity,
         ),
       ],
@@ -450,26 +450,26 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                _buildMobileCardStat('Category', item.categoryName ?? '-',
+                _buildMobileCardStat('non_stock_report.category_stat'.tr, item.categoryName ?? '-',
                     selectable: true),
-                _buildMobileCardStat('Store', item.store ?? '-'),
+                _buildMobileCardStat('non_stock_report.store_stat'.tr, item.store ?? '-'),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                _buildMobileCardStat('Barcode', item.barcode ?? '-',
+                _buildMobileCardStat('non_stock_report.barcode_stat'.tr, item.barcode ?? '-',
                     copyable: true),
-                _buildMobileCardStat('Unit', item.unit ?? '-'),
+                _buildMobileCardStat('non_stock_report.unit_stat'.tr, item.unit ?? '-'),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: [
                 _buildMobileCardStat(
-                    'Stock', item.totalQuantity?.toString() ?? '0'),
+                    'non_stock_report.stock_stat'.tr, item.totalQuantity?.toString() ?? '0'),
                 _buildMobileCardStat(
-                    'Reorder', item.reorderLevel?.toString() ?? '0'),
+                    'non_stock_report.reorder_stat'.tr, item.reorderLevel?.toString() ?? '0'),
               ],
             ),
           ],
@@ -509,7 +509,7 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
                     Clipboard.setData(ClipboardData(text: value));
                     showScaffold(
                       context: context,
-                      message: '$label copied to clipboard',
+                      message: 'non_stock_report.copied_to_clipboard'.tr.replaceAll('@label', label),
                     );
                   },
                   child: const Icon(
@@ -582,15 +582,15 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
                 children: [
                   TableRow(
                     children: [
-                      _buildTableHeaderCell("No"),
-                      _buildTableHeaderCell("Product Name"),
-                      _buildTableHeaderCell("Category"),
-                      _buildTableHeaderCell("Store"),
-                      _buildTableHeaderCell("Barcode"),
-                      _buildTableHeaderCell("Current\nStock"),
-                      _buildTableHeaderCell("Reorder\nLevel"),
-                      _buildTableHeaderCell("Unit"),
-                      _buildTableHeaderCell("Status"),
+                      _buildTableHeaderCell('non_stock_report.col_no'.tr),
+                      _buildTableHeaderCell('non_stock_report.col_product_name'.tr),
+                      _buildTableHeaderCell('non_stock_report.col_category'.tr),
+                      _buildTableHeaderCell('non_stock_report.col_store'.tr),
+                      _buildTableHeaderCell('non_stock_report.col_barcode'.tr),
+                      _buildTableHeaderCell('non_stock_report.col_current_stock'.tr),
+                      _buildTableHeaderCell('non_stock_report.col_reorder_level'.tr),
+                      _buildTableHeaderCell('non_stock_report.col_unit'.tr),
+                      _buildTableHeaderCell('non_stock_report.col_status'.tr),
                     ],
                   ),
                 ],
@@ -736,7 +736,7 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
                         Clipboard.setData(ClipboardData(text: item.barcode!));
                         showScaffold(
                           context: context,
-                          message: 'Barcode copied to clipboard',
+                          message: 'non_stock_report.barcode_copied'.tr,
                         );
                       },
                       child: const Icon(
@@ -822,7 +822,7 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
               size: 64, color: Colors.grey.shade300),
           const SizedBox(height: 16),
           Text(
-            "No data found",
+            'non_stock_report.no_data_found'.tr,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s16,

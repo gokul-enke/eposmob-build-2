@@ -23,10 +23,12 @@ class DailySalesCloseDetailScreen extends StatefulWidget {
   const DailySalesCloseDetailScreen({super.key});
 
   @override
-  State<DailySalesCloseDetailScreen> createState() => _DailySalesCloseDetailScreenState();
+  State<DailySalesCloseDetailScreen> createState() =>
+      _DailySalesCloseDetailScreenState();
 }
 
-class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScreen> {
+class _DailySalesCloseDetailScreenState
+    extends State<DailySalesCloseDetailScreen> {
   final SideBarController sideBarController = Get.find();
   final TextEditingController _orderNumberController = TextEditingController();
   String _paymentTypeFilter = 'All';
@@ -44,7 +46,7 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
     final salesProvider = Provider.of<SalesProvider>(context, listen: false);
     final authModel = Provider.of<AuthModel>(context, listen: false);
     final basicData = salesProvider.selectedDailySalesCloseData;
-    
+
     if (basicData != null && basicData.id != null) {
       try {
         final detailData = await salesProvider.fetchDailySalesCloseDetail(
@@ -81,17 +83,19 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
   void _filterTransactions() {
     final salesProvider = Provider.of<SalesProvider>(context, listen: false);
     final data = salesProvider.selectedDailySalesCloseData;
-    
+
     if (data == null || data.transactions == null) return;
 
     final orderNumberQuery = _orderNumberController.text.toLowerCase();
-    
+
     setState(() {
       _filteredTransactions = data.transactions!.where((tx) {
-        final matchesOrderNumber = orderNumberQuery.isEmpty || 
+        final matchesOrderNumber =
+            orderNumberQuery.isEmpty ||
             (tx.orderNumber?.toLowerCase().contains(orderNumberQuery) ?? false);
-        
-        final matchesPaymentType = _paymentTypeFilter == 'All' || 
+
+        final matchesPaymentType =
+            _paymentTypeFilter == 'All' ||
             (tx.paymentType?.toUpperCase() == _paymentTypeFilter.toUpperCase());
 
         return matchesOrderNumber && matchesPaymentType;
@@ -107,27 +111,45 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
     });
   }
 
+  String _getLocalizedAction(String action) {
+    if (action.toLowerCase() == 'print') {
+      return 'general.print'.tr;
+    } else if (action.toLowerCase() == 'export') {
+      return 'daily_sales_close.export'.tr;
+    }
+    return action;
+  }
+
   Future<bool?> _askIncludeTransactions({String action = 'Print'}) async {
+    final localizedAction = _getLocalizedAction(action);
     return showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: Text('$action Transaction List?'),
+          title: Text(
+            'daily_sales_close.confirm_action_title'.tr.replaceAll(
+              '@action',
+              localizedAction,
+            ),
+          ),
           content: Text(
-            'Do you want to include transaction details in this ${action.toLowerCase()}?',
+            'daily_sales_close.confirm_action_body'.tr.replaceAll(
+              '@action',
+              localizedAction,
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
+              child: Text('daily_sales_close.cancel'.tr),
             ),
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('No'),
+              child: Text('daily_sales_close.no'.tr),
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Yes'),
+              child: Text('daily_sales_close.yes'.tr),
             ),
           ],
         );
@@ -151,7 +173,7 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
       if (!mounted) return;
       showScaffold(
         context: context,
-        message: 'Daily Close Report printed successfully!',
+        message: 'daily_sales_close.msg_print_success'.tr,
       );
       return;
     }
@@ -178,15 +200,11 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
     Size size = MediaQuery.of(context).size;
 
     if (_isLoading) {
-      return const SafeArea(
-        child: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const SafeArea(child: Center(child: CircularProgressIndicator()));
     }
 
     if (data == null) {
-      return const Center(child: Text("No data selected"));
+      return Center(child: Text("daily_sales_close.no_data_selected".tr));
     }
 
     return SafeArea(
@@ -196,48 +214,85 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
           margin: const EdgeInsets.all(10.0),
           padding: const EdgeInsets.all(8.0),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 10.0),
+            padding: const EdgeInsets.symmetric(
+              vertical: 20.0,
+              horizontal: 10.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(),
                 const SizedBox(height: 10),
                 Text(
-                  'Daily Sales Close - ${data.closingPeriod ?? ""}',
+                  'daily_sales_close.detail_title'.tr.replaceAll(
+                    '@period',
+                    data.closingPeriod ?? "",
+                  ),
                   style: ResponsiveWidget.isMobile(context)
-                      ? buildCustomStyle(FontWeightManager.semiBold, FontSize.s12, 0.30, ColorManager.textColor)
-                      : buildCustomStyle(FontWeightManager.semiBold, FontSize.s20, 0.30, ColorManager.textColor),
+                      ? buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s12,
+                          0.30,
+                          ColorManager.textColor,
+                        )
+                      : buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s20,
+                          0.30,
+                          ColorManager.textColor,
+                        ),
                 ),
                 const SizedBox(height: 20),
-                _buildSectionHeader('Closing Period Details', Icons.calendar_today),
+                _buildSectionHeader(
+                  'daily_sales_close.closing_period_details'.tr,
+                  Icons.calendar_today,
+                ),
                 const SizedBox(height: 10),
                 _buildClosingPeriodDetails(data),
                 const SizedBox(height: 20),
                 _buildSalesSummary(context, data),
                 const SizedBox(height: 20),
-                _buildSectionHeader('Expenses Breakdown', Icons.receipt_long_outlined),
+                _buildSectionHeader(
+                  'daily_sales_close.expenses_breakdown'.tr,
+                  Icons.receipt_long_outlined,
+                ),
                 const SizedBox(height: 10),
                 _buildExpensesBreakdown(data),
                 const SizedBox(height: 20),
                 if (data.cashSummary != null) ...[
-                  _buildSectionHeader('Cash Summary', Icons.account_balance_wallet_outlined),
+                  _buildSectionHeader(
+                    'daily_sales_close.cash_summary'.tr,
+                    Icons.account_balance_wallet_outlined,
+                  ),
                   const SizedBox(height: 10),
                   _buildCashSummary(context, data.cashSummary!),
                   const SizedBox(height: 20),
-                  _buildSectionHeader('Cash Denomination Breakdown', Icons.payments_outlined),
+                  _buildSectionHeader(
+                    'daily_sales_close.cash_denomination_breakdown'.tr,
+                    Icons.payments_outlined,
+                  ),
                   const SizedBox(height: 10),
                   _buildCashBreakdownSection(context, data.cashSummary!),
                   const SizedBox(height: 20),
                 ],
-                _buildSectionHeader('Key Fields', Icons.info_outline),
+                _buildSectionHeader(
+                  'daily_sales_close.key_fields'.tr,
+                  Icons.info_outline,
+                ),
                 const SizedBox(height: 10),
                 _buildKeyFields(data),
                 const SizedBox(height: 20),
-                _buildSectionHeader('Closing Range Details', Icons.access_time),
+                _buildSectionHeader(
+                  'daily_sales_close.closing_range_details'.tr,
+                  Icons.access_time,
+                ),
                 const SizedBox(height: 10),
                 _buildClosingRangeDetails(data),
                 const SizedBox(height: 20),
-                _buildSectionHeader('Transaction Details', Icons.receipt_long),
+                _buildSectionHeader(
+                  'daily_sales_close.transaction_details'.tr,
+                  Icons.receipt_long,
+                ),
                 const SizedBox(height: 10),
                 _buildTransactionDetails(context, size),
                 const SizedBox(height: 20),
@@ -256,10 +311,12 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
       children: [
         CustomBackButton(
           onPressed: () {
-            sideBarController.index.value =
-                Provider.of<SalesProvider>(context, listen: false).returnIndex;
+            sideBarController.index.value = Provider.of<SalesProvider>(
+              context,
+              listen: false,
+            ).returnIndex;
           },
-          text: 'Back to List',
+          text: 'daily_sales_close.back_to_list'.tr,
         ),
         CustomBoxShadowContainer(
           width: 30,
@@ -269,10 +326,16 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
           child: IconButton(
             padding: EdgeInsets.zero,
             onPressed: () {
-              sideBarController.index.value =
-                  Provider.of<SalesProvider>(context, listen: false).returnIndex;
+              sideBarController.index.value = Provider.of<SalesProvider>(
+                context,
+                listen: false,
+              ).returnIndex;
             },
-            icon: const Icon(Icons.close_rounded, size: 18, color: Colors.white),
+            icon: const Icon(
+              Icons.close_rounded,
+              size: 18,
+              color: Colors.white,
+            ),
           ),
         ),
       ],
@@ -311,18 +374,37 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
     return _buildCard(
       child: Column(
         children: [
-          _buildDetailRow('Closing Period', data.closingPeriod ?? '-', isHighlight: true),
+          _buildDetailRow(
+            'daily_sales_close.closing'.tr,
+            data.closingPeriod ?? '-',
+            isHighlight: true,
+          ),
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: _buildDetailItem('Sales Executive', data.salesExecutive?.name ?? '-')),
-              Expanded(child: _buildDetailItem('Store', data.store?.name ?? '-')),
+              Expanded(
+                child: _buildDetailItem(
+                  'daily_sales_close.sales_executive'.tr,
+                  data.salesExecutive?.name ?? '-',
+                ),
+              ),
+              Expanded(
+                child: _buildDetailItem(
+                  'daily_sales_close.store'.tr,
+                  data.store?.name ?? '-',
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: _buildDetailItem('Phone', data.salesExecutive?.phone ?? '-')),
+              Expanded(
+                child: _buildDetailItem(
+                  'daily_sales_close.phone'.tr,
+                  data.salesExecutive?.phone ?? '-',
+                ),
+              ),
               const Expanded(child: SizedBox()), // Spacer
             ],
           ),
@@ -338,16 +420,18 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
 
         // Build payment breakdown rows dynamically
         final List<Widget> breakdownRows = [];
-        final breakdown = data.paymentMethodBreakdown ?? {
-          'BANK': '0.00',
-          'CARD': '0.00',
-          'CASH': '0.00',
-          'COD': '0.00',
-          'ONLINE': '0.00',
-          'UPI': '0.00',
-          'CHEQUE': '0.00',
-          'CREDIT': '0.00',
-        };
+        final breakdown =
+            data.paymentMethodBreakdown ??
+            {
+              'BANK': '0.00',
+              'CARD': '0.00',
+              'CASH': '0.00',
+              'COD': '0.00',
+              'ONLINE': '0.00',
+              'UPI': '0.00',
+              'CHEQUE': '0.00',
+              'CREDIT': '0.00',
+            };
 
         String formatKey(String key) {
           final upper = key.toUpperCase();
@@ -393,29 +477,66 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionHeader('Day Close Summary', Icons.summarize_outlined),
+            _buildSectionHeader(
+              'daily_sales_close.day_close_summary'.tr,
+              Icons.summarize_outlined,
+            ),
             const SizedBox(height: 10),
             _buildCard(
               child: Column(
                 children: [
                   Row(
                     children: [
-                      Expanded(child: _buildDetailItem('Total Orders', data.totalOrders?.toString() ?? '0', isValueBold: true)),
-                      Expanded(child: _buildDetailItem('Total Sales', '$currency ${data.totalSales ?? '0.00'}', valueColor: ColorManager.kSuccessColor, isValueBold: true)),
+                      Expanded(
+                        child: _buildDetailItem(
+                          'daily_sales_close.total_orders'.tr,
+                          data.totalOrders?.toString() ?? '0',
+                          isValueBold: true,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildDetailItem(
+                          'daily_sales_close.total_sales'.tr,
+                          '$currency ${data.totalSales ?? '0.00'}',
+                          valueColor: ColorManager.kSuccessColor,
+                          isValueBold: true,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
                   Row(
                     children: [
-                      Expanded(child: _buildDetailItem('Total Payment Received', '$currency ${data.totalPaymentReceived ?? '0.00'}', isValueBold: true)),
-                      Expanded(child: _buildDetailItem('Total Amount Collected On Sale', '$currency ${data.totalAmountCollectedOnSale ?? '0.00'}')),
+                      Expanded(
+                        child: _buildDetailItem(
+                          'daily_sales_close.total_payment_received'.tr,
+                          '$currency ${data.totalPaymentReceived ?? '0.00'}',
+                          isValueBold: true,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildDetailItem(
+                          'daily_sales_close.total_amount_collected_on_sale'.tr,
+                          '$currency ${data.totalAmountCollectedOnSale ?? '0.00'}',
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
                   Row(
                     children: [
-                      Expanded(child: _buildDetailItem('Total Credit Collected (Prev Balance)', '$currency ${data.totalCreditCollected ?? '0.00'}')),
-                      Expanded(child: _buildDetailItem('Business Date', data.businessDate ?? data.openingDate ?? '-')),
+                      Expanded(
+                        child: _buildDetailItem(
+                          'daily_sales_close.total_credit_collected_prev'.tr,
+                          '$currency ${data.totalCreditCollected ?? '0.00'}',
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildDetailItem(
+                          'daily_sales_close.business_date'.tr,
+                          data.businessDate ?? data.openingDate ?? '-',
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -423,35 +544,80 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
             ),
             const SizedBox(height: 20),
 
-            _buildSectionHeader('Collection Summary', Icons.payments_outlined),
+            _buildSectionHeader(
+              'daily_sales_close.collection_summary'.tr,
+              Icons.payments_outlined,
+            ),
             const SizedBox(height: 10),
             _buildCard(
               child: Row(
                 children: [
-                  Expanded(child: _buildDetailItem('Total Cash Sales', '$currency ${data.totalCash ?? '0.00'}')),
-                  Expanded(child: _buildDetailItem('Total Online Sales', '$currency ${data.totalOnline ?? '0.00'}')),
-                  Expanded(child: _buildDetailItem('Total Credit Amount', '$currency ${data.totalCredit ?? '0.00'}')),
+                  Expanded(
+                    child: _buildDetailItem(
+                      'daily_sales_close.total_cash_sales'.tr,
+                      '$currency ${data.totalCash ?? '0.00'}',
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      'daily_sales_close.total_online_sales'.tr,
+                      '$currency ${data.totalOnline ?? '0.00'}',
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      'daily_sales_close.total_credit_amount'.tr,
+                      '$currency ${data.totalCredit ?? '0.00'}',
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 20),
 
-            _buildSectionHeader('Return & Refund', Icons.assignment_return_outlined),
+            _buildSectionHeader(
+              'daily_sales_close.return_refund'.tr,
+              Icons.assignment_return_outlined,
+            ),
             const SizedBox(height: 10),
             _buildCard(
               child: Column(
                 children: [
                   Row(
                     children: [
-                      Expanded(child: _buildDetailItem('Total Returns (Sales Return)', '$currency ${data.totalReturns ?? '0.00'}', valueColor: Colors.red)),
-                      Expanded(child: _buildDetailItem('Total Refunds (Vouchers)', '$currency ${data.totalRefunds ?? '0.00'}', valueColor: Colors.red)),
+                      Expanded(
+                        child: _buildDetailItem(
+                          'daily_sales_close.total_returns_sales_return'.tr,
+                          '$currency ${data.totalReturns ?? '0.00'}',
+                          valueColor: Colors.red,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildDetailItem(
+                          'daily_sales_close.total_refunds_vouchers'.tr,
+                          '$currency ${data.totalRefunds ?? '0.00'}',
+                          valueColor: Colors.red,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
                   Row(
                     children: [
-                      Expanded(child: _buildDetailItem('Refund — Cash', '$currency ${data.refundCash ?? '0.00'}', valueColor: Colors.red)),
-                      Expanded(child: _buildDetailItem('Refund — Online', '$currency ${data.refundOnline ?? '0.00'}', valueColor: Colors.red)),
+                      Expanded(
+                        child: _buildDetailItem(
+                          'daily_sales_close.refund_cash'.tr,
+                          '$currency ${data.refundCash ?? '0.00'}',
+                          valueColor: Colors.red,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildDetailItem(
+                          'daily_sales_close.refund_online'.tr,
+                          '$currency ${data.refundOnline ?? '0.00'}',
+                          valueColor: Colors.red,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -459,13 +625,12 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
             ),
             const SizedBox(height: 20),
 
-            _buildSectionHeader('Payment Method Breakdown', Icons.list_alt_outlined),
-            const SizedBox(height: 10),
-            _buildCard(
-              child: Column(
-                children: breakdownRows,
-              ),
+            _buildSectionHeader(
+              'daily_sales_close.payment_method_breakdown'.tr,
+              Icons.list_alt_outlined,
             ),
+            const SizedBox(height: 10),
+            _buildCard(child: Column(children: breakdownRows)),
           ],
         );
       },
@@ -476,10 +641,30 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
     return _buildCard(
       child: Row(
         children: [
-          Expanded(child: _buildDetailItem('Opening Date', data.openingDate ?? '-')),
-          Expanded(child: _buildDetailItem('Opening Time', data.openingTime ?? '-')),
-          Expanded(child: _buildDetailItem('Closing Date', data.closingDate ?? '-')),
-          Expanded(child: _buildDetailItem('Closing Time', data.closingTime ?? '-')),
+          Expanded(
+            child: _buildDetailItem(
+              'daily_sales_close.opening_date'.tr,
+              data.openingDate ?? '-',
+            ),
+          ),
+          Expanded(
+            child: _buildDetailItem(
+              'daily_sales_close.opening_time'.tr,
+              data.openingTime ?? '-',
+            ),
+          ),
+          Expanded(
+            child: _buildDetailItem(
+              'daily_sales_close.closing_date'.tr,
+              data.closingDate ?? '-',
+            ),
+          ),
+          Expanded(
+            child: _buildDetailItem(
+              'daily_sales_close.closing_time'.tr,
+              data.closingTime ?? '-',
+            ),
+          ),
         ],
       ),
     );
@@ -494,21 +679,21 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
             children: [
               Expanded(
                 child: _buildDetailItem(
-                  'Cash Expenses',
+                  'daily_sales_close.cash_expenses'.tr,
                   '$currency ${data.cashExpenses ?? '0.00'}',
                   valueColor: Colors.red,
                 ),
               ),
               Expanded(
                 child: _buildDetailItem(
-                  'Bank Expenses',
+                  'daily_sales_close.bank_expenses'.tr,
                   '$currency ${data.bankExpenses ?? '0.00'}',
                   valueColor: Colors.red,
                 ),
               ),
               Expanded(
                 child: _buildDetailItem(
-                  'Total Expense',
+                  'daily_sales_close.total_expense'.tr,
                   '$currency ${data.totalExpenses ?? '0.00'}',
                   valueColor: Colors.red,
                   isValueBold: true,
@@ -530,47 +715,133 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
             children: [
               Row(
                 children: [
-                  Expanded(child: _buildDetailItem('Sales Count', cashSummary.totalSalesCount?.toString() ?? '0', isValueBold: true)),
-                  Expanded(child: _buildDetailItem('Sales Amount', '$currency ${cashSummary.totalSalesAmount ?? '0.00'}', isValueBold: true)),
-                  Expanded(child: _buildDetailItem('Cash Collected', '$currency ${cashSummary.cashCollected ?? '0.00'}')),
+                  Expanded(
+                    child: _buildDetailItem(
+                      'daily_sales_close.sales_count'.tr,
+                      cashSummary.totalSalesCount?.toString() ?? '0',
+                      isValueBold: true,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      'daily_sales_close.sales_amount'.tr,
+                      '$currency ${cashSummary.totalSalesAmount ?? '0.00'}',
+                      isValueBold: true,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      'daily_sales_close.cash_collected'.tr,
+                      '$currency ${cashSummary.cashCollected ?? '0.00'}',
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
               Row(
                 children: [
-                  Expanded(child: _buildDetailItem('Online Collected', '$currency ${cashSummary.onlineCollected ?? '0.00'}')),
-                  Expanded(child: _buildDetailItem('Credit Amount', '$currency ${cashSummary.creditAmount ?? '0.00'}')),
-                  Expanded(child: _buildDetailItem('Previous Balance Collected', '$currency ${cashSummary.previousBalanceCollected ?? '0.00'}')),
+                  Expanded(
+                    child: _buildDetailItem(
+                      'daily_sales_close.online_collected'.tr,
+                      '$currency ${cashSummary.onlineCollected ?? '0.00'}',
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      'daily_sales_close.credit_amount'.tr,
+                      '$currency ${cashSummary.creditAmount ?? '0.00'}',
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      'daily_sales_close.previous_balance_collected'.tr,
+                      '$currency ${cashSummary.previousBalanceCollected ?? '0.00'}',
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
               Row(
                 children: [
-                  Expanded(child: _buildDetailItem('Cash Refunds', '$currency ${cashSummary.cashRefunds ?? '0.00'}', valueColor: Colors.red)),
-                  Expanded(child: _buildDetailItem('Cash Expenses', '$currency ${cashSummary.cashExpenses ?? '0.00'}', valueColor: Colors.red)),
-                  Expanded(child: _buildDetailItem('Cash Drop Amount', '$currency ${cashSummary.cashDropAmount ?? '0.00'}')),
+                  Expanded(
+                    child: _buildDetailItem(
+                      'daily_sales_close.cash_refunds'.tr,
+                      '$currency ${cashSummary.cashRefunds ?? '0.00'}',
+                      valueColor: Colors.red,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      'daily_sales_close.cash_expenses'.tr,
+                      '$currency ${cashSummary.cashExpenses ?? '0.00'}',
+                      valueColor: Colors.red,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      'daily_sales_close.cash_drop_amount'.tr,
+                      '$currency ${cashSummary.cashDropAmount ?? '0.00'}',
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
               Row(
                 children: [
-                  Expanded(child: _buildDetailItem('Opening Cash In Hand', '$currency ${cashSummary.openingCashInHand ?? '0.00'}')),
-                  Expanded(child: _buildDetailItem('Expected Closing Cash', '$currency ${cashSummary.expectedClosingCash ?? '0.00'}')),
-                  Expanded(child: _buildDetailItem('Today Cash Collection', '$currency ${cashSummary.todayCashCollection ?? '0.00'}')),
+                  Expanded(
+                    child: _buildDetailItem(
+                      'daily_sales_close.opening_cash_in_hand'.tr,
+                      '$currency ${cashSummary.openingCashInHand ?? '0.00'}',
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      'daily_sales_close.expected_closing_cash'.tr,
+                      '$currency ${cashSummary.expectedClosingCash ?? '0.00'}',
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      'daily_sales_close.today_cash_collection'.tr,
+                      '$currency ${cashSummary.todayCashCollection ?? '0.00'}',
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
               Row(
                 children: [
-                  Expanded(child: _buildDetailItem('Closing Cash In Hand', '$currency ${cashSummary.closingCashInHand ?? '0.00'}')),
-                  Expanded(child: _buildDetailItem('Short Cash', '$currency ${cashSummary.shortCash ?? '0.00'}', valueColor: Colors.red)),
-                  Expanded(child: _buildDetailItem('Excess Cash', '$currency ${cashSummary.excessCash ?? '0.00'}', valueColor: ColorManager.kSuccessColor)),
+                  Expanded(
+                    child: _buildDetailItem(
+                      'daily_sales_close.closing_cash_in_hand'.tr,
+                      '$currency ${cashSummary.closingCashInHand ?? '0.00'}',
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      'daily_sales_close.short_cash'.tr,
+                      '$currency ${cashSummary.shortCash ?? '0.00'}',
+                      valueColor: Colors.red,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      'daily_sales_close.excess_cash'.tr,
+                      '$currency ${cashSummary.excessCash ?? '0.00'}',
+                      valueColor: ColorManager.kSuccessColor,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
               Row(
                 children: [
-                  Expanded(child: _buildDetailItem('Notes', cashSummary.notes ?? '-')),
+                  Expanded(
+                    child: _buildDetailItem(
+                      'daily_sales_close.notes'.tr,
+                      cashSummary.notes ?? '-',
+                    ),
+                  ),
                   const Expanded(child: SizedBox.shrink()),
                   const Expanded(child: SizedBox.shrink()),
                 ],
@@ -582,22 +853,25 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
     );
   }
 
-  Widget _buildCashBreakdownSection(BuildContext context, CashSummary cashSummary) {
+  Widget _buildCashBreakdownSection(
+    BuildContext context,
+    CashSummary cashSummary,
+  ) {
     return Consumer<AppSettingsProvider>(
       builder: (context, appSettingsProvider, child) {
         final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
         return Column(
           children: [
             _buildBreakdownCard(
-              title: 'Opening Cash Breakdown',
-              subtitle: 'Saved denomination details for this cash stage.',
+              title: 'daily_sales_close.opening_cash_breakdown'.tr,
+              subtitle: 'daily_sales_close.saved_denomination_details'.tr,
               rows: cashSummary.openingCashBreakdown,
               currency: currency,
             ),
             const SizedBox(height: 14),
             _buildBreakdownCard(
-              title: 'Closing Cash Breakdown',
-              subtitle: 'Saved denomination details for this cash stage.',
+              title: 'daily_sales_close.closing_cash_breakdown'.tr,
+              subtitle: 'daily_sales_close.saved_denomination_details'.tr,
               rows: cashSummary.closingCashBreakdown,
               currency: currency,
             ),
@@ -613,10 +887,11 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
     required List<dynamic>? rows,
     required String currency,
   }) {
-    final normalizedRows = rows
-        ?.whereType<Map>()
-        .map((row) => Map<String, dynamic>.from(row))
-        .toList() ??
+    final normalizedRows =
+        rows
+            ?.whereType<Map>()
+            .map((row) => Map<String, dynamic>.from(row))
+            .toList() ??
         [];
 
     return _buildCard(
@@ -644,7 +919,7 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
           const SizedBox(height: 14),
           if (normalizedRows.isEmpty)
             Text(
-              'No denomination details available',
+              'daily_sales_close.no_denominations_available'.tr,
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 12,
@@ -656,10 +931,10 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
               scrollDirection: Axis.horizontal,
               child: DataTable(
                 headingRowColor: MaterialStateProperty.all(Colors.grey[50]),
-                columns: const [
-                  DataColumn(label: Text('Denomination')),
-                  DataColumn(label: Text('Count')),
-                  DataColumn(label: Text('Total')),
+                columns: [
+                  DataColumn(label: Text('daily_sales_close.denomination'.tr)),
+                  DataColumn(label: Text('daily_sales_close.count'.tr)),
+                  DataColumn(label: Text('daily_sales_close.total_col'.tr)),
                 ],
                 rows: normalizedRows.map((row) {
                   final denomination = row['denomination']?.toString() ?? '-';
@@ -688,9 +963,26 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
         children: [
           Row(
             children: [
-              Expanded(child: _buildDetailItem('Shift Name', data.shiftName ?? '-')),
-              Expanded(child: _buildDetailItem('Business Date', data.businessDate ?? '-')),
-              Expanded(child: _buildDetailItem('Credit Collected', data.totalCreditCollected ?? '0.00', valueColor: ColorManager.kSuccessColor, isValueBold: true)),
+              Expanded(
+                child: _buildDetailItem(
+                  'daily_sales_close.shift_name'.tr,
+                  data.shiftName ?? '-',
+                ),
+              ),
+              Expanded(
+                child: _buildDetailItem(
+                  'daily_sales_close.business_date'.tr,
+                  data.businessDate ?? '-',
+                ),
+              ),
+              Expanded(
+                child: _buildDetailItem(
+                  'daily_sales_close.credit_collected'.tr,
+                  data.totalCreditCollected ?? '0.00',
+                  valueColor: ColorManager.kSuccessColor,
+                  isValueBold: true,
+                ),
+              ),
             ],
           ),
         ],
@@ -714,16 +1006,16 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
                   child: CustomMinimalTextField(
                     size: size,
                     controller: _orderNumberController,
-                    title: 'Order Number',
-                    hintText: 'Enter Order Number',
+                    title: 'daily_sales_close.order_number'.tr,
+                    hintText: 'daily_sales_close.enter_order_number'.tr,
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   flex: 2,
                   child: CustomDropDownWithSearch<String>(
-                    title: 'Payment Type',
-                    hintText: 'All',
+                    title: 'daily_sales_close.payment_type'.tr,
+                    hintText: 'common.all'.tr,
                     value: _paymentTypeFilter,
                     items: const [
                       'All',
@@ -733,7 +1025,7 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
                       'ONLINE',
                       'UPI',
                       'CARD',
-                      'CASH'
+                      'CASH',
                     ],
                     onChanged: (val) {
                       if (val != null) {
@@ -743,8 +1035,10 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
                         });
                       }
                     },
-                    displayText: (item) => item,
-                    height: size.height * 0.048, // Match minimal text field height
+                    displayText: (item) =>
+                        item == 'All' ? 'common.all'.tr : item,
+                    height:
+                        size.height * 0.048, // Match minimal text field height
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -752,7 +1046,10 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
                   padding: const EdgeInsets.only(bottom: 4),
                   child: TextButton(
                     onPressed: _resetFilters,
-                    child: const Text('Reset', style: TextStyle(color: Colors.red)),
+                    child: Text(
+                      'general.reset'.tr,
+                      style: const TextStyle(color: Colors.red),
+                    ),
                   ),
                 ),
               ],
@@ -764,59 +1061,86 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
             scrollDirection: Axis.horizontal,
             child: Consumer<AppSettingsProvider>(
               builder: (context, appSettingsProvider, child) {
-                final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+                final currency =
+                    appSettingsProvider.appSettings?.currency ?? 'INR';
                 return DataTable(
                   headingRowColor: MaterialStateProperty.all(Colors.grey[50]),
-                  columns: const [
-                    DataColumn(label: Text('SL No')),
-                    DataColumn(label: Text('Customer')),
-                    DataColumn(label: Text('Order No')),
-                    DataColumn(label: Text('Order Amount')),
-                    DataColumn(label: Text('Paid Amount')),
-                    DataColumn(label: Text('Payment Type')),
-                    DataColumn(label: Text('Date')),
-                    DataColumn(label: Text('Time')),
+                  columns: [
+                    DataColumn(label: Text('daily_sales_close.sl_no'.tr)),
+                    DataColumn(label: Text('daily_sales_close.customer'.tr)),
+                    DataColumn(label: Text('daily_sales_close.order_no'.tr)),
+                    DataColumn(
+                      label: Text('daily_sales_close.order_amount'.tr),
+                    ),
+                    DataColumn(label: Text('daily_sales_close.paid_amount'.tr)),
+                    DataColumn(
+                      label: Text('daily_sales_close.payment_type'.tr),
+                    ),
+                    DataColumn(label: Text('daily_sales_close.date'.tr)),
+                    DataColumn(label: Text('daily_sales_close.time'.tr)),
                   ],
                   rows: _filteredTransactions.asMap().entries.map((entry) {
                     final index = entry.key + 1;
                     final tx = entry.value;
-                    return DataRow(cells: [
-                      DataCell(Text(index.toString())),
-                      DataCell(Text(tx.customerName ?? '-')),
-                      DataCell(Text(tx.orderNumber ?? '-')),
-                      DataCell(Text('$currency ${tx.orderAmount ?? 0}')),
-                      DataCell(Text(
-                        '$currency ${tx.paidAmount ?? 0}',
-                        style: const TextStyle(color: ColorManager.kSuccessColor, fontWeight: FontWeight.bold),
-                      )),
-                      DataCell(Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.grey.shade300),
+                    return DataRow(
+                      cells: [
+                        DataCell(Text(index.toString())),
+                        DataCell(Text(tx.customerName ?? '-')),
+                        DataCell(Text(tx.orderNumber ?? '-')),
+                        DataCell(Text('$currency ${tx.orderAmount ?? 0}')),
+                        DataCell(
+                          Text(
+                            '$currency ${tx.paidAmount ?? 0}',
+                            style: const TextStyle(
+                              color: ColorManager.kSuccessColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                        child: Text(tx.paymentType ?? '-', style: const TextStyle(fontSize: 12)),
-                      )),
-                      DataCell(Text(tx.date ?? '-')),
-                      DataCell(Text(tx.time ?? '-')),
-                    ]);
+                        DataCell(
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: Text(
+                              tx.paymentType ?? '-',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ),
+                        DataCell(Text(tx.date ?? '-')),
+                        DataCell(Text(tx.time ?? '-')),
+                      ],
+                    );
                   }).toList(),
                 );
               },
             ),
           ),
           if (_filteredTransactions.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(20),
-              child: Center(child: Text('No transactions found')),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Center(
+                child: Text('daily_sales_close.no_transactions_found'.tr),
+              ),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildDetailItem(String label, String value, {Color? valueColor, bool isValueBold = false}) {
+  Widget _buildDetailItem(
+    String label,
+    String value, {
+    Color? valueColor,
+    bool isValueBold = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -841,7 +1165,11 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
     );
   }
 
-  Widget _buildDetailRow(String label, String value, {bool isHighlight = false}) {
+  Widget _buildDetailRow(
+    String label,
+    String value, {
+    bool isHighlight = false,
+  }) {
     return Row(
       children: [
         Text(
@@ -890,7 +1218,7 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
         runSpacing: 12,
         children: [
           CustomRoundButton(
-            title: "Print",
+            title: "general.print".tr,
             boxColor: Colors.white,
             textColor: ColorManager.kPrimaryColor,
             fct: () {
@@ -901,7 +1229,7 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
             fontSize: FontSize.s12,
           ),
           CustomRoundButton(
-            title: "Export",
+            title: "daily_sales_close.export".tr,
             boxColor: ColorManager.kPrimaryColor,
             textColor: Colors.white,
             fct: () {
@@ -916,4 +1244,3 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
     );
   }
 }
-

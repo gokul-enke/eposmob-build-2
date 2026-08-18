@@ -204,7 +204,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
           _buildSearchField(size),
           const SizedBox(height: 12),
           CustomRoundButton(
-            title: "Reset",
+            title: 'general.reset'.tr,
             boxColor: Colors.white,
             textColor: ColorManager.kPrimaryColor,
             fct: resetSearch,
@@ -226,7 +226,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
           Expanded(
             flex: 1,
             child: CustomRoundButton(
-              title: "Reset",
+              title: 'general.reset'.tr,
               boxColor: Colors.white,
               textColor: ColorManager.kPrimaryColor,
               fct: resetSearch,
@@ -247,7 +247,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
         Padding(
           padding: const EdgeInsetsDirectional.only(start: 4, bottom: 6),
           child: Text(
-            "Search Category",
+            'category.search_label'.tr,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s12,
@@ -276,7 +276,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                 ColorManager.textColor,
               ),
               decoration: InputDecoration(
-                hintText: 'Type to search...',
+                hintText: 'category.search_hint'.tr,
                 hintStyle: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s10,
@@ -322,7 +322,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            "Category List",
+            'category.title'.tr,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: buildCustomStyle(
@@ -334,7 +334,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
           ),
           const SizedBox(height: 12),
           CustomRoundButton(
-            title: "Add Category",
+            title: 'category.add'.tr,
             fct: () {
               sideBarController.index.value = 16;
             },
@@ -351,7 +351,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
       children: [
         Expanded(
           child: Text(
-            "Category List",
+            'category.title'.tr,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: buildCustomStyle(
@@ -364,7 +364,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
         ),
         const SizedBox(width: 12),
         CustomRoundButton(
-          title: "Add Category",
+          title: 'category.add'.tr,
           fct: () {
             sideBarController.index.value = 16;
           },
@@ -405,7 +405,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'No categories available',
+                  'category.no_categories'.tr,
                   textAlign: TextAlign.center,
                   style: buildCustomStyle(
                     FontWeightManager.semiBold,
@@ -518,10 +518,10 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                     children: [
                       TableRow(
                         children: [
-                          _buildTableHeader("No"),
-                          _buildTableHeader("Category Name"),
-                          _buildTableHeader("Slug"),
-                          _buildTableHeader("Action"),
+                          _buildTableHeader('category.col_no'.tr),
+                          _buildTableHeader('category.col_name'.tr),
+                          _buildTableHeader('category.col_slug'.tr),
+                          _buildTableHeader('category.action'.tr),
                         ],
                       ),
                     ],

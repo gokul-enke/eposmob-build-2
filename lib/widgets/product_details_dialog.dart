@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/models/category_list.dart';
@@ -355,7 +356,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     if (baseText.isEmpty) {
       showScaffoldError(
         context: context,
-        message: 'Please enter Product Name before translating.',
+        message: 'product_detail.enter_name_before_translate'.tr,
       );
       return;
     }
@@ -385,12 +386,12 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       _languageNameControllers[language.id]!.text = translated;
       showScaffold(
         context: context,
-        message: 'Translated to ${language.name}',
+        message: 'product_detail.translated_to'.tr.replaceAll('@language', language.name),
       );
     } else {
       showScaffoldError(
         context: context,
-        message: 'Translation failed. Please try again.',
+        message: 'product_detail.translation_failed'.tr,
       );
     }
 
@@ -450,7 +451,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       if (product == null && mounted) {
         showScaffoldError(
           context: context,
-          message: 'Product with barcode "$barcode" not found',
+          message: 'product_detail.barcode_not_found'.tr.replaceAll('@barcode', barcode),
         );
       }
     } catch (e) {
@@ -460,7 +461,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error fetching product: $e',
+          message: 'product_detail.error_fetching_product'.tr.replaceAll('@error', '$e'),
         );
       }
     }
@@ -605,7 +606,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     if (enabled && (_selectedUnitId == null || _selectedUnitId!.isEmpty)) {
       showScaffoldError(
         context: context,
-        message: 'Select the product unit before enabling multi sale units.',
+        message: 'product_detail.select_unit_before_multi'.tr,
       );
       return;
     }
@@ -669,7 +670,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     if (!_canEditProduct(context)) {
       showScaffoldError(
         context: context,
-        message: 'You do not have permission to edit this product.',
+        message: 'product_detail.no_edit_permission'.tr,
       );
       return;
     }
@@ -803,7 +804,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         });
         showScaffoldError(
           context: context,
-          message: 'Authentication token not found.',
+          message: 'product_detail.auth_token_missing_short'.tr,
         );
       }
       return;
@@ -812,7 +813,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     try {
       final String productId = (product.productId ?? '').toString();
       if (productId.isEmpty) {
-        throw const HttpException('Product ID missing.');
+        throw HttpException('product_detail.product_id_missing'.tr);
       }
 
       debugPrint('[EDIT_PRODUCT] sending request id=$productId '
@@ -848,7 +849,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       );
 
       final String successMessage = response['message']?.toString() ??
-          'Product details updated successfully.';
+          'product_detail.product_details_updated'.tr;
 
       debugPrint('[EDIT_PRODUCT] server success id=$productId '
           'message="$successMessage" responseDataType=${response['data']?.runtimeType}');
@@ -1112,7 +1113,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           ),
           const SizedBox(width: 8),
           Text(
-            'Loading languages...',
+            'product_detail.loading_languages'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s11,
@@ -1140,7 +1141,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           ),
           TextButton(
             onPressed: _retryFetchLanguages,
-            child: const Text('Retry'),
+            child: Text('product_detail.retry'.tr),
           ),
         ],
       );
@@ -1272,10 +1273,10 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       ),
       child: Text(
         isOutOfStock
-            ? 'Out of Stock'
+            ? 'product_detail.status_out_of_stock'.tr
             : atReorderLevel
-                ? 'At Reorder Level'
-                : 'Low Stock',
+                ? 'product_detail.status_at_reorder_level'.tr
+                : 'product_detail.status_low_stock'.tr,
         style: buildCustomStyle(
           FontWeightManager.semiBold,
           FontSize.s11,
@@ -1311,7 +1312,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           SizedBox(
             width: 150,
             child: Text(
-              'Available Qty:',
+              'product_detail.available_qty_label'.tr,
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s14,
@@ -1328,7 +1329,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
               children: [
                 SelectableText(
                   availableQuantity == null
-                      ? 'N/A'
+                      ? 'product.na'.tr
                       : _formatStockNumber(availableQuantity),
                   style: buildCustomStyle(
                     FontWeightManager.regular,
@@ -1417,7 +1418,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                     overflow: TextOverflow.visible,
                   ),
                 ),
-                if (value.isNotEmpty && value != 'N/A')
+                if (value.isNotEmpty && value != 'product.na'.tr)
                   Padding(
                     padding: const EdgeInsets.only(left: 8.0),
                     child: GestureDetector(
@@ -1425,7 +1426,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                         Clipboard.setData(ClipboardData(text: value));
                         showScaffold(
                           context: context,
-                          message: '$label copied to clipboard',
+                          message: 'product_detail.copied_to_clipboard'.tr.replaceAll('@label', label),
                         );
                       },
                       child: Icon(
@@ -1455,7 +1456,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Product Name (${language.name})',
+          'product_detail.product_name_in_language'.tr.replaceAll('@language', language.name),
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s12,
@@ -1498,7 +1499,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
               height: fieldHeight,
               width: fieldHeight,
               child: Tooltip(
-                message: 'Translate',
+                message: 'product_detail.translate_tooltip'.tr,
                 child: ElevatedButton(
                   onPressed:
                       isTranslating ? null : () => _translateLanguage(language),
@@ -1560,77 +1561,77 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         appSettingsProvider.appSettings?.showMrpPos == true;
 
     final identityRows = <Widget>[
-      _buildDetailRow('Product Name', product.productName ?? 'N/A'),
-      _buildDetailRow('Slug', product.productSlug ?? 'N/A'),
-      _buildDetailRow('Category', product.category?.name ?? 'N/A'),
+      _buildDetailRow('product.product_name'.tr, product.productName ?? 'product.na'.tr),
+      _buildDetailRow('product_detail.slug'.tr, product.productSlug ?? 'product.na'.tr),
+      _buildDetailRow('product.category'.tr, product.category?.name ?? 'product.na'.tr),
       if (itemCodeEnabled)
-        _buildDetailRowWithCopy('Item Code', product.itemCode ?? 'N/A'),
-      _buildDetailRowWithCopy('Barcode', product.barcode ?? 'N/A'),
-      _buildDetailRow('Unit', product.unit ?? 'N/A'),
+        _buildDetailRowWithCopy('product.item_code'.tr, product.itemCode ?? 'product.na'.tr),
+      _buildDetailRowWithCopy('product.barcode'.tr, product.barcode ?? 'product.na'.tr),
+      _buildDetailRow('product.unit'.tr, product.unit ?? 'product.na'.tr),
       if (product.taxes != null && product.taxes!.isNotEmpty)
         ...product.taxes!.map((tax) => _buildDetailRow(
-              tax.name ?? 'Tax',
+              tax.name ?? 'product_detail.tax_fallback'.tr,
               '${tax.rate ?? 0}%',
             )),
     ];
 
     final pricingRows = <Widget>[
       _buildDetailRow(
-          'Price',
+          'product.price'.tr,
           product.price?.price != null
               ? '$currency ${product.price!.price}'
-              : 'N/A'),
+              : 'product.na'.tr),
       if (showMrp)
         _buildDetailRow(
-            'MRP', product.mrp != null ? '$currency ${product.mrp}' : 'N/A'),
+            'product.mrp'.tr, product.mrp != null ? '$currency ${product.mrp}' : 'product.na'.tr),
       if (canViewPurchasePrice)
         _buildDetailRow(
-          'Purchase Price',
+          'product.purchase_price'.tr,
           (product.purchasePrice != null && product.purchasePrice!.isNotEmpty
               ? '$currency ${product.purchasePrice}'
               : (product.stock != null && product.stock!.isNotEmpty
                   ? (product.stock!.first.purchasePrice != null &&
                           product.stock!.first.purchasePrice!.isNotEmpty
                       ? '$currency ${product.stock!.first.purchasePrice}'
-                      : 'N/A')
-                  : 'N/A')),
+                      : 'product.na'.tr)
+                  : 'product.na'.tr)),
         ),
       _buildDetailRow(
-          'Offer Price',
+          'product_detail.offer_price'.tr,
           product.offerPrice != null
               ? '$currency ${product.offerPrice}'
-              : 'N/A'),
+              : 'product.na'.tr),
       _buildDetailRow(
-          'Max Discount Percentage',
+          'product_detail.max_discount_percentage'.tr,
           _formatNumericString(product.minMarginPercentage).isNotEmpty
               ? '${_formatNumericString(product.minMarginPercentage)}%'
-              : 'N/A'),
+              : 'product.na'.tr),
       _buildDetailRow(
-          'Max Discount Amount',
+          'product_detail.max_discount_amount'.tr,
           _formatNumericString(product.minMarginPrice).isNotEmpty
               ? '$currency ${_formatNumericString(product.minMarginPrice)}'
-              : 'N/A'),
-      _buildDetailRow('SKU', product.sku ?? 'Not Available'),
+              : 'product.na'.tr),
+      _buildDetailRow('product_detail.sku'.tr, product.sku ?? 'product_detail.not_available'.tr),
     ];
 
     final metaRows = <Widget>[
-      _buildDetailRow('Rating', product.rating ?? 'N/A'),
+      _buildDetailRow('product_detail.rating'.tr, product.rating ?? 'product.na'.tr),
       _buildStockStatusRow(
         product,
         stockEnabled: stockEnabled,
         stockRows: stockRows,
       ),
       _buildDetailRow(
-          'Reorder Level', product.reorderLevel?.toString() ?? 'N/A'),
-      _buildDetailRow('Location', product.productLocation?.toString() ?? 'N/A'),
+          'product_detail.reorder_level'.tr, product.reorderLevel?.toString() ?? 'product.na'.tr),
+      _buildDetailRow('product_detail.location'.tr, product.productLocation?.toString() ?? 'product.na'.tr),
       if (product.weightInfo != null) ...[
         _buildDetailRow(
-            'Weight', product.weightInfo!.weight?.toString() ?? 'N/A'),
-        _buildDetailRow('Is Weighted',
-            product.weightInfo!.isWeighted == true ? 'Yes' : 'No'),
+            'product_detail.weight'.tr, product.weightInfo!.weight?.toString() ?? 'product.na'.tr),
+        _buildDetailRow('product_detail.is_weighted'.tr,
+            product.weightInfo!.isWeighted == true ? 'product_detail.yes'.tr : 'product_detail.no'.tr),
       ] else ...[
-        _buildDetailRow('Weight', 'N/A'),
-        _buildDetailRow('Is Weighted', 'N/A'),
+        _buildDetailRow('product_detail.weight'.tr, 'product.na'.tr),
+        _buildDetailRow('product_detail.is_weighted'.tr, 'product.na'.tr),
       ],
     ];
 
@@ -1671,7 +1672,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           if (nonBaseUnits.isNotEmpty) ...[
             const SizedBox(height: 16),
             Text(
-              'Additional Sale Units',
+              'product_detail.additional_sale_units'.tr,
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s16,
@@ -1696,7 +1697,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                       children: [
                         Expanded(
                           flex: 2,
-                          child: Text('Unit',
+                          child: Text('product.unit'.tr,
                               style: buildCustomStyle(
                                   FontWeightManager.semiBold,
                                   FontSize.s14,
@@ -1705,7 +1706,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                         ),
                         Expanded(
                           flex: 3,
-                          child: Text('Barcode',
+                          child: Text('product.barcode'.tr,
                               style: buildCustomStyle(
                                   FontWeightManager.semiBold,
                                   FontSize.s14,
@@ -1714,7 +1715,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                         ),
                         Expanded(
                           flex: 2,
-                          child: Text('Price',
+                          child: Text('product.price'.tr,
                               style: buildCustomStyle(
                                   FontWeightManager.semiBold,
                                   FontSize.s14,
@@ -1733,7 +1734,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                             children: [
                               Expanded(
                                 flex: 2,
-                                child: Text(saleUnit.unitName ?? 'N/A',
+                                child: Text(saleUnit.unitName ?? 'product.na'.tr,
                                     style: buildCustomStyle(
                                         FontWeightManager.regular,
                                         FontSize.s14,
@@ -1745,7 +1746,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                                 child: Row(
                                   children: [
                                     Flexible(
-                                      child: Text(saleUnit.barcode ?? 'N/A',
+                                      child: Text(saleUnit.barcode ?? 'product.na'.tr,
                                           style: buildCustomStyle(
                                               FontWeightManager.regular,
                                               FontSize.s14,
@@ -1763,7 +1764,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                                                 text: saleUnit.barcode!));
                                             showScaffold(
                                               context: context,
-                                              message: 'Barcode copied',
+                                              message: 'product_detail.barcode_copied_static'.tr,
                                             );
                                           },
                                           child: Icon(
@@ -1782,7 +1783,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                                 child: Text(
                                     resolvedPrice != null
                                         ? '$currency ${resolvedPrice.toStringAsFixed(2)}'
-                                        : 'N/A',
+                                        : 'product.na'.tr,
                                     style: buildCustomStyle(
                                         FontWeightManager.regular,
                                         FontSize.s14,
@@ -1803,7 +1804,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
               product.description.toString().isNotEmpty) ...[
             const SizedBox(height: 16),
             Text(
-              'Description',
+              'product_detail.description'.tr,
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s16,
@@ -1838,7 +1839,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                   (prop.masterValue?.isNotEmpty ?? false))) ...[
             const SizedBox(height: 16),
             Text(
-              'Product Properties',
+              'product_detail.product_properties'.tr,
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s16,
@@ -1901,7 +1902,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           ],
           const SizedBox(height: 16),
           Text(
-            'Stock Information',
+            'product_detail.stock_information'.tr,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s16,
@@ -1940,21 +1941,21 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                             color: ColorManager.tableBGColor,
                           ),
                           children: [
-                            _buildStockTableHeader('Sl No'),
-                            _buildStockTableHeader('Quantity'),
-                            _buildStockTableHeader('Price'),
-                            if (showMrp) _buildStockTableHeader('MRP'),
+                            _buildStockTableHeader('product_detail.sl_no'.tr),
+                            _buildStockTableHeader('product_detail.quantity'.tr),
+                            _buildStockTableHeader('product.price'.tr),
+                            if (showMrp) _buildStockTableHeader('product.mrp'.tr),
                             if (canViewPurchasePrice)
-                              _buildStockTableHeader('Purchase Price'),
-                            _buildStockTableHeader('Supplier'),
-                            _buildStockTableHeader('Store Name'),
-                            _buildStockTableHeader('Wholesale Price'),
-                            _buildStockTableHeader('Min Count'),
-                            _buildStockTableHeader('SKU'),
-                            _buildStockTableHeader('Date'),
-                            _buildStockTableHeader('Expiry Date'),
-                            _buildStockTableHeader('Rack'),
-                            _buildStockTableHeader('Action'),
+                              _buildStockTableHeader('product.purchase_price'.tr),
+                            _buildStockTableHeader('product_detail.supplier'.tr),
+                            _buildStockTableHeader('product_detail.store_name'.tr),
+                            _buildStockTableHeader('product_detail.wholesale_price'.tr),
+                            _buildStockTableHeader('product_detail.min_count'.tr),
+                            _buildStockTableHeader('product_detail.sku'.tr),
+                            _buildStockTableHeader('product_detail.date_col'.tr),
+                            _buildStockTableHeader('product_detail.expiry_date'.tr),
+                            _buildStockTableHeader('product_detail.rack'.tr),
+                            _buildStockTableHeader('product.action'.tr),
                           ],
                         ),
                         ...stockRows.asMap().entries.map((entry) {
@@ -1980,7 +1981,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                             children: [
                               _buildStockTableCell('${index + 1}'),
                               _buildStockTableCell(
-                                stock.quantity?.toString() ?? 'N/A',
+                                stock.quantity?.toString() ?? 'product.na'.tr,
                                 textColor:
                                     isLowStock ? Colors.white : Colors.black,
                                 bgColor: isLowStock
@@ -1990,31 +1991,31 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                               _buildStockTableCell(
                                   stock.price != null && stock.price!.isNotEmpty
                                       ? '$currency ${stock.price}'
-                                      : 'N/A'),
+                                      : 'product.na'.tr),
                               if (showMrp)
                                 _buildStockTableCell(
                                     stock.mrp != null && stock.mrp!.isNotEmpty
                                         ? '$currency ${stock.mrp}'
-                                        : 'N/A'),
+                                        : 'product.na'.tr),
                               if (canViewPurchasePrice)
                                 _buildStockTableCell(
                                     stock.purchasePrice != null &&
                                             stock.purchasePrice!.isNotEmpty
                                         ? '$currency ${stock.purchasePrice}'
-                                        : 'N/A'),
-                              _buildStockTableCell(stock.supplier ?? 'N/A'),
-                              _buildStockTableCell(stock.storeName ?? 'N/A'),
+                                        : 'product.na'.tr),
+                              _buildStockTableCell(stock.supplier ?? 'product.na'.tr),
+                              _buildStockTableCell(stock.storeName ?? 'product.na'.tr),
                               _buildStockTableCell(
                                   stock.wholesalePrice != null &&
                                           stock.wholesalePrice!.isNotEmpty
                                       ? '$currency ${stock.wholesalePrice}'
-                                      : 'N/A'),
+                                      : 'product.na'.tr),
                               _buildStockTableCell(
-                                  stock.wholesaleMinUnit?.toString() ?? 'N/A'),
-                              _buildStockTableCell(stock.sku ?? 'N/A'),
-                              _buildStockTableCell(stock.date ?? 'N/A'),
-                              _buildStockTableCell(stock.expiryDate ?? 'N/A'),
-                              _buildStockTableCell(stock.rack ?? 'N/A'),
+                                  stock.wholesaleMinUnit?.toString() ?? 'product.na'.tr),
+                              _buildStockTableCell(stock.sku ?? 'product.na'.tr),
+                              _buildStockTableCell(stock.date ?? 'product.na'.tr),
+                              _buildStockTableCell(stock.expiryDate ?? 'product.na'.tr),
+                              _buildStockTableCell(stock.rack ?? 'product.na'.tr),
                               _buildRackTableCell(
                                 stock,
                                 canEditProduct: canEditProduct,
@@ -2038,7 +2039,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
               ),
               child: Center(
                 child: Text(
-                  'No stock information available',
+                  'product_detail.no_stock_info'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.medium,
                     FontSize.s14,
@@ -2051,7 +2052,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           if (product.attachment != null && product.attachment!.isNotEmpty) ...[
             const SizedBox(height: 16),
             Text(
-              'Product Images',
+              'product_detail.product_images'.tr,
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s16,
@@ -2130,7 +2131,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     if (accessToken.isEmpty) {
       showScaffoldError(
         context: context,
-        message: 'Authentication token not found. Please log in again.',
+        message: 'product_detail.auth_token_missing_full'.tr,
       );
       return;
     }
@@ -2146,19 +2147,19 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           result['status'] == 'success' &&
           result['data'] != null) {
         target.text = result['data']['barcode'].toString();
-        showScaffold(context: context, message: 'Barcode generated');
+        showScaffold(context: context, message: 'product_detail.barcode_generated'.tr);
       } else {
         showScaffoldError(
           context: context,
           message:
-              result?['message']?.toString() ?? 'Failed to generate barcode',
+              result?['message']?.toString() ?? 'product_detail.failed_generate_barcode'.tr,
         );
       }
     } catch (e) {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error generating barcode: $e',
+          message: 'product_detail.failed_generate_barcode_error'.tr.replaceAll('@error', '$e'),
         );
       }
     } finally {
@@ -2194,7 +2195,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           Row(
             children: [
               Expanded(
-                child: Text('Multi Sale Unit',
+                child: Text('product_sale_unit.multi_sale_unit'.tr,
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s12, 0.27, ColorManager.textColor)),
               ),
@@ -2207,7 +2208,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             ],
           ),
           const SizedBox(height: 4),
-          Text('Base unit is required before adding additional sale units.',
+          Text('product_sale_unit.base_unit_required'.tr,
               style: buildCustomStyle(FontWeightManager.regular, FontSize.s11,
                   0.27, Colors.black54)),
           const SizedBox(height: 12),
@@ -2229,7 +2230,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                   _saleUnitRows.add(AddProductSaleUnitRow(conversionRate: '1'));
                 }),
                 icon: const Icon(Icons.add),
-                label: const Text('Add Sale Unit'),
+                label: Text('product_sale_unit.add_sale_unit'.tr),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: ColorManager.kPrimaryColor,
                   side: BorderSide(color: ColorManager.kPrimaryColor),
@@ -2248,8 +2249,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.orange.withOpacity(0.35)),
               ),
-              child: const Text(
-                  'Select a base unit, then enable this section to add additional sale units.'),
+              child: Text(
+                  'product_detail.select_base_unit_enable'.tr),
             ),
         ],
       ),
@@ -2273,19 +2274,19 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('$unitLabel (Base Unit)',
+          Text('product_sale_unit.base_unit_label'.tr.replaceAll('@unit', unitLabel),
               style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s12,
                   0.27, ColorManager.textColor)),
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _buildEditInfoField('Sale Unit', unitLabel)),
+              Expanded(child: _buildEditInfoField('product_sale_unit.sale_unit_label'.tr, unitLabel)),
               const SizedBox(width: 8),
-              Expanded(child: _buildEditInfoField('Conversion Rate', '1')),
+              Expanded(child: _buildEditInfoField('product_sale_unit.conversion_rate'.tr, '1')),
               const SizedBox(width: 8),
               Expanded(
                   child: _buildEditInfoField(
-                      'Barcode',
+                      'product.barcode'.tr,
                       _barcodeController.text.trim().isEmpty
                           ? '-'
                           : _barcodeController.text.trim())),
@@ -2361,8 +2362,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             children: [
               Expanded(
                 child: CustomDropDownWithSearch<String>(
-                  title: 'Sale Unit *',
-                  hintText: 'Select unit',
+                  title: 'product_sale_unit.sale_unit_star'.tr,
+                  hintText: 'product_sale_unit.select_unit_hint'.tr,
                   value: row.selectedUnitId,
                   height: size.height * 0.048,
                   margin: EdgeInsets.zero,
@@ -2395,7 +2396,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             children: [
               Expanded(
                 child: inputField(
-                  'Conversion rate *',
+                  'product_detail.conversion_rate_required'.tr,
                   row.conversionRateController,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
@@ -2407,7 +2408,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                        child: inputField('Barcode *', row.barcodeController)),
+                        child: inputField('product_detail.barcode_required'.tr, row.barcodeController)),
                     const SizedBox(width: 8),
                     Padding(
                       padding: EdgeInsets.only(top: size.height * 0.021),
@@ -2454,7 +2455,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
               const SizedBox(width: 8),
               Expanded(
                 child: inputField(
-                  'Price *',
+                  'product_detail.price_required'.tr,
                   row.priceController,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
@@ -2482,13 +2483,13 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         showScaffoldError(
           context: context,
           message:
-              result?['message']?.toString() ?? 'Failed to generate barcode',
+              result?['message']?.toString() ?? 'product_detail.failed_generate_barcode'.tr,
         );
       }
     } catch (error) {
       if (mounted) {
         showScaffoldError(
-            context: context, message: 'Failed to generate barcode: $error');
+            context: context, message: 'product_detail.failed_generate_barcode_error'.tr.replaceAll('@error', '$error'));
       }
     }
   }
@@ -2717,15 +2718,15 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                           child: buildColumnWidgetForTextFields(
                             controller: _nameController,
                             size: size,
-                            title: 'Product Name',
-                            hintText: 'Enter product name',
+                            title: 'product.product_name'.tr,
+                            hintText: 'product_detail.enter_product_name'.tr,
                             width: fieldWidth,
                             height: fieldHeight,
                             margin: EdgeInsets.zero,
                             readOnly: false,
                             validator: (value) =>
                                 value == null || value.trim().isEmpty
-                                    ? 'Required'
+                                    ? 'product_detail.required'.tr
                                     : null,
                             onchanged: (value) {
                               if (value == null) return;
@@ -2745,15 +2746,15 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                           child: buildColumnWidgetForTextFields(
                             controller: _slugController,
                             size: size,
-                            title: 'Slug',
-                            hintText: 'Enter slug',
+                            title: 'product_detail.slug'.tr,
+                            hintText: 'product_detail.enter_slug'.tr,
                             width: fieldWidth,
                             height: fieldHeight,
                             margin: EdgeInsets.zero,
                             readOnly: false,
                             validator: (value) =>
                                 value == null || value.trim().isEmpty
-                                    ? 'Required'
+                                    ? 'product_detail.required'.tr
                                     : null,
                           ),
                         ),
@@ -2763,8 +2764,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                           child: buildColumnWidgetForTextFields(
                             controller: _barcodeController,
                             size: size,
-                            title: 'Barcode',
-                            hintText: 'Enter barcode',
+                            title: 'product.barcode'.tr,
+                            hintText: 'product_detail.enter_barcode'.tr,
                             width: fieldWidth,
                             height: fieldHeight,
                             margin: EdgeInsets.zero,
@@ -2786,8 +2787,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                         SizedBox(
                           width: fieldWidth,
                           child: CustomDropDownWithSearch<Category>(
-                            title: 'Category',
-                            hintText: 'Select category',
+                            title: 'product.category'.tr,
+                            hintText: 'product_detail.select_category_hint'.tr,
                             value: selectedCategory,
                             items: categories,
                             height: fieldHeight,
@@ -2799,10 +2800,10 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                               });
                             },
                             displayText: (category) =>
-                                category.categoryName ?? 'Unknown',
+                                category.categoryName ?? 'product.unknown'.tr,
                             isRequired: true,
                             width: fieldWidth,
-                            searchHintText: 'Search category...',
+                            searchHintText: 'product_detail.search_category'.tr,
                             autofocus: false,
                           ),
                         ),
@@ -2810,8 +2811,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                         SizedBox(
                           width: fieldWidth,
                           child: CustomDropDownWithSearch<_DropdownOption>(
-                            title: 'Unit',
-                            hintText: 'Select unit',
+                            title: 'product.unit'.tr,
+                            hintText: 'product_detail.select_unit_hint'.tr,
                             value: selectedUnitOption,
                             items: unitOptions,
                             onChanged: (option) {
@@ -2825,7 +2826,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                             width: fieldWidth,
                             height: fieldHeight,
                             margin: EdgeInsets.zero,
-                            searchHintText: 'Search unit...',
+                            searchHintText: 'product_detail.search_unit'.tr,
                             autofocus: false,
                           ),
                         ),
@@ -2835,8 +2836,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                           child: buildColumnWidgetForTextFields(
                             controller: _priceController,
                             size: size,
-                            title: 'Price',
-                            hintText: 'Enter price',
+                            title: 'product.price'.tr,
+                            hintText: 'product_detail.enter_price'.tr,
                             width: fieldWidth,
                             height: fieldHeight,
                             margin: EdgeInsets.zero,
@@ -2856,8 +2857,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                           child: buildColumnWidgetForTextFields(
                             controller: _quantityController,
                             size: size,
-                            title: 'Quantity',
-                            hintText: 'Enter quantity',
+                            title: 'product_detail.quantity'.tr,
+                            hintText: 'product_detail.enter_quantity'.tr,
                             width: fieldWidth,
                             height: fieldHeight,
                             margin: EdgeInsets.zero,
@@ -2879,8 +2880,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                             child: buildColumnWidgetForTextFields(
                               controller: _mrpController,
                               size: size,
-                              title: 'MRP',
-                              hintText: 'Enter MRP',
+                              title: 'product.mrp'.tr,
+                              hintText: 'product_detail.enter_mrp'.tr,
                               width: fieldWidth,
                               height: fieldHeight,
                               margin: EdgeInsets.zero,
@@ -2898,8 +2899,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                             child: buildColumnWidgetForTextFields(
                               controller: _purchasePriceController,
                               size: size,
-                              title: 'Purchase Price',
-                              hintText: 'Enter purchase price',
+                              title: 'product.purchase_price'.tr,
+                              hintText: 'product_detail.enter_purchase_price'.tr,
                               width: fieldWidth,
                               height: fieldHeight,
                               margin: EdgeInsets.zero,
@@ -2943,8 +2944,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                           child: buildColumnWidgetForTextFields(
                             controller: _minMarginController,
                             size: size,
-                            title: 'Max Discount Percentage',
-                            hintText: 'Enter max discount percentage',
+                            title: 'product_detail.max_discount_percentage'.tr,
+                            hintText: 'product_detail.enter_max_discount_percentage'.tr,
                             width: fieldWidth,
                             height: fieldHeight,
                             margin: EdgeInsets.zero,
@@ -2959,8 +2960,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                           child: buildColumnWidgetForTextFields(
                             controller: _minMarginPriceController,
                             size: size,
-                            title: 'Max Discount Amount',
-                            hintText: 'Enter max discount amount',
+                            title: 'product_detail.max_discount_amount'.tr,
+                            hintText: 'product_detail.enter_max_discount_amount'.tr,
                             width: fieldWidth,
                             height: fieldHeight,
                             margin: EdgeInsets.zero,
@@ -3119,7 +3120,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     if (stock.id == null) {
       showScaffoldError(
         context: context,
-        message: 'Stock id missing. Unable to edit this row.',
+        message: 'stock.edit_missing_id'.tr,
       );
       return;
     }
@@ -3163,12 +3164,12 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         ),
         child: Container(
           padding: const EdgeInsets.all(24),
-          child: const Column(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Loading product details...'),
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text('product_detail.loading_product_details'.tr),
             ],
           ),
         ),
@@ -3187,10 +3188,10 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             children: [
               const Icon(Icons.error, size: 48, color: Colors.red),
               const SizedBox(height: 16),
-              const Text('Product not found'),
+              Text('product_detail.product_not_found'.tr),
               const SizedBox(height: 16),
               CustomRoundButton(
-                title: "Close",
+                title: 'product_detail.close'.tr,
                 boxColor: Colors.white,
                 textColor: ColorManager.kPrimaryColor,
                 borderColor: ColorManager.kPrimaryColor,
@@ -3246,7 +3247,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Product Details',
+                  'product_detail.title'.tr,
                   style: titleStyle,
                 ),
                 IconButton(
@@ -3264,8 +3265,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
               unselectedLabelColor: ColorManager.textColor.withOpacity(0.6),
               indicatorColor: ColorManager.kPrimaryColor,
               tabs: [
-                const Tab(text: 'View'),
-                if (canEditProduct) const Tab(text: 'Edit'),
+                Tab(text: 'product_detail.tab_view'.tr),
+                if (canEditProduct) Tab(text: 'product_detail.tab_edit'.tr),
               ],
             ),
             const SizedBox(height: 12),
@@ -3289,7 +3290,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                   Padding(
                     padding: const EdgeInsets.only(right: 12.0),
                     child: CustomRoundButton(
-                      title: _isSaving ? "Saving..." : "Save",
+                      title: _isSaving ? 'product_detail.saving'.tr : 'general.save'.tr,
                       fct: _isSaving ? () {} : _handleSave,
                       height: 45,
                       width: 140,
@@ -3299,7 +3300,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                     ),
                   ),
                 CustomRoundButton(
-                  title: "Close",
+                  title: 'product_detail.close'.tr,
                   boxColor: Colors.white,
                   textColor: ColorManager.kPrimaryColor,
                   borderColor: ColorManager.kPrimaryColor,

@@ -98,6 +98,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       'id': 'boxed_bilingual_tax_invoice',
       'name': 'Boxed Bilingual Tax Invoice'
     },
+    {
+      'id': 'boxed_header_tax_invoice',
+      'name': 'Boxed Header Tax Invoice'
+    },
   ];
 
   /// Returns the appropriate theme list based on selected paper size
@@ -199,6 +203,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           return 'Bilingual centered Tax Invoice with Arabic details on the left, a centered logo and English details on the right';
         case 'boxed_bilingual_tax_invoice':
           return 'Boxed bilingual Tax Invoice with seller, buyer, invoice, items, bank and totals sections';
+        case 'boxed_header_tax_invoice':
+          return 'Boxed header Tax Invoice with seller, buyer, invoice, items, bank and totals sections';
         case 'corporate_tax_invoice':
           return 'Formal corporate Tax Invoice with logo header, buyer block, bank details and bilingual amount in words';
         case 'letterhead_tax_invoice':

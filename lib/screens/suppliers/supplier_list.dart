@@ -270,14 +270,21 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                           children: [
                                             TableRow(
                                               children: [
-                                                _buildTableHeader('No'),
-                                                _buildTableHeader('Name'),
-                                                _buildTableHeader('Email'),
-                                                _buildTableHeader('Phone'),
-                                                _buildTableHeader('Address'),
                                                 _buildTableHeader(
-                                                    'Current Balance'),
-                                                _buildTableHeader('Action'),
+                                                    'suppliers.number'.tr),
+                                                _buildTableHeader(
+                                                    'suppliers.name'.tr),
+                                                _buildTableHeader(
+                                                    'suppliers.email'.tr),
+                                                _buildTableHeader(
+                                                    'suppliers.phone'.tr),
+                                                _buildTableHeader(
+                                                    'suppliers.address'.tr),
+                                                _buildTableHeader(
+                                                    'suppliers.current_balance'
+                                                        .tr),
+                                                _buildTableHeader(
+                                                    'suppliers.action'.tr),
                                               ],
                                             ),
                                           ],
@@ -523,9 +530,12 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                                       .medium,
                                                                   FontSize.s9,
                                                                   0.13,
-                                                                  supplier.currentBalance >= 0
-                                                                      ? ColorManager.kSuccessColor
-                                                                      : Colors.red,
+                                                                  supplier.currentBalance >=
+                                                                          0
+                                                                      ? ColorManager
+                                                                          .kSuccessColor
+                                                                      : Colors
+                                                                          .red,
                                                                 ),
                                                               ),
                                                             ),
@@ -620,12 +630,12 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Supplier List",
+          'suppliers.list'.tr,
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
               0.30, ColorManager.textColor),
         ),
         CustomRoundButton(
-          title: "Add New Supplier",
+          title: 'suppliers.add'.tr,
           fct: () async {
             // Show the add supplier modal
             final result = await showAddSupplierModal(
@@ -660,7 +670,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Text(
-                      "Name",
+                      'suppliers.name'.tr,
                       style: buildCustomStyle(FontWeightManager.regular,
                           FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
                     ),
@@ -691,7 +701,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                     },
                     controller: searchTextController,
                     size: size,
-                    hintText: 'Name',
+                    hintText: 'suppliers.name'.tr,
                   ),
                 ],
               ),
@@ -709,7 +719,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Text(
-                      "Email",
+                      'suppliers.email'.tr,
                       style: buildCustomStyle(FontWeightManager.regular,
                           FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
                     ),
@@ -740,7 +750,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                     },
                     controller: searchEmailController,
                     size: size,
-                    hintText: 'Email',
+                    hintText: 'suppliers.email'.tr,
                   ),
                 ],
               ),
@@ -758,7 +768,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Text(
-                      "Phone",
+                      'suppliers.phone'.tr,
                       style: buildCustomStyle(FontWeightManager.regular,
                           FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
                     ),
@@ -789,7 +799,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                     },
                     controller: searchPhoneController,
                     size: size,
-                    hintText: 'Phone',
+                    hintText: 'suppliers.phone'.tr,
                   ),
                 ],
               ),
@@ -807,7 +817,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Text(
-                      "Balance",
+                      'suppliers.balance'.tr,
                       style: buildCustomStyle(FontWeightManager.regular,
                           FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
                     ),
@@ -824,7 +834,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                       isExpanded: true,
                       value: selectedBalanceFilter,
                       hint: Text(
-                        "Select Balance",
+                        'suppliers.select_balance'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.regular,
                           FontSize.s12,
@@ -841,7 +851,12 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                         return DropdownMenuItem<String>(
                           value: value,
                           child: Text(
-                            value,
+                            switch (value) {
+                              'Positive (+ve)' => 'suppliers.positive'.tr,
+                              'Negative (-ve)' => 'suppliers.negative'.tr,
+                              'Zero (0)' => 'suppliers.zero'.tr,
+                              _ => 'suppliers.all'.tr,
+                            },
                             style: buildCustomStyle(
                               FontWeightManager.regular,
                               FontSize.s12,
@@ -893,7 +908,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
             child: Padding(
               padding: const EdgeInsets.only(left: 10.0, top: 30),
               child: CustomRoundButton(
-                title: "Reset",
+                title: 'suppliers.reset'.tr,
                 boxColor: Colors.white,
                 textColor: ColorManager.kPrimaryColor,
                 fct: () {
@@ -988,7 +1003,8 @@ class SupplierDetailModal extends StatelessWidget {
                     _buildInfoRow(
                         "Product Categories", supplier.productCategories),
                     const SizedBox(height: 8),
-                    _buildInfoRow("Balance", supplier.balance.toStringAsFixed(2)),
+                    _buildInfoRow(
+                        "Balance", supplier.balance.toStringAsFixed(2)),
                     const SizedBox(height: 8),
                     _buildInfoRowWithColor(
                         "Current Balance",

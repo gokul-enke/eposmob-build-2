@@ -250,26 +250,26 @@ class _CreateSupplierVoucherScreenState
   Future<void> _submitVoucher() async {
     if (!_formKey.currentState!.validate()) return;
     if (selectedSupplierId == null) {
-      showScaffoldError(context: context, message: 'Please select a supplier');
+      showScaffoldError(context: context, message: 'supplier_voucher.select_supplier_required'.tr);
       return;
     }
     if (selectedType == null) {
-      showScaffoldError(context: context, message: 'Please select a type');
+      showScaffoldError(context: context, message: 'supplier_voucher.select_type_required'.tr);
       return;
     }
     if (selectedStatus == null) {
-      showScaffoldError(context: context, message: 'Please select a status');
+      showScaffoldError(context: context, message: 'supplier_voucher.select_status_required'.tr);
       return;
     }
     if (selectedPaymentMethod == null) {
       showScaffoldError(
-          context: context, message: 'Please select a payment method');
+          context: context, message: 'supplier_voucher.select_payment_method_required'.tr);
       return;
     }
     if (voucherItems.isEmpty ||
         voucherItems.every((item) => item.itemNameController.text.isEmpty)) {
       showScaffoldError(
-          context: context, message: 'Please add at least one item');
+          context: context, message: 'supplier_voucher.add_at_least_one_item_required'.tr);
       return;
     }
 
@@ -309,18 +309,18 @@ class _CreateSupplierVoucherScreenState
       if (result['success']) {
         showScaffold(
           context: context,
-          message: result['message'] ?? 'Voucher created successfully',
+          message: result['message'] ?? 'supplier_voucher.created_successfully'.tr,
         );
         sideBarController.index.value =
             (sideBarController.index.value == 76) ? 75 : 72;
       } else {
         showScaffoldError(
           context: context,
-          message: result['message'] ?? 'Failed to create voucher',
+          message: result['message'] ?? 'supplier_voucher.create_failed'.tr,
         );
       }
     } catch (e) {
-      showScaffoldError(context: context, message: 'Error: $e');
+      showScaffoldError(context: context, message: 'supplier_voucher.error_generic'.tr.replaceAll('@error', e.toString()));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -355,7 +355,7 @@ class _CreateSupplierVoucherScreenState
                 children: [
                   Expanded(
                     child: Text(
-                      "Create Supplier Voucher",
+                      'supplier_voucher.create_voucher_button'.tr,
                       style: buildCustomStyle(FontWeightManager.bold,
                           isMobile ? FontSize.s18 : FontSize.s24, 0.36, Colors.black),
                       overflow: TextOverflow.ellipsis,
@@ -384,7 +384,7 @@ class _CreateSupplierVoucherScreenState
                                 _buildTypeDropdown(),
                                 const SizedBox(height: 12),
                                 _buildDateField(
-                                  'Voucher date',
+                                  'supplier_voucher.voucher_date_label'.tr,
                                   selectedVoucherDate,
                                   (DateTime date) =>
                                       setState(() => selectedVoucherDate = date),
@@ -400,7 +400,7 @@ class _CreateSupplierVoucherScreenState
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: _buildDateField(
-                                    'Voucher date',
+                                    'supplier_voucher.voucher_date_label'.tr,
                                     selectedVoucherDate,
                                     (DateTime date) =>
                                         setState(() => selectedVoucherDate = date),
@@ -451,7 +451,7 @@ class _CreateSupplierVoucherScreenState
                       // ),
                       // const SizedBox(height: 24),
                       Text(
-                        'Voucher items',
+                        'supplier_voucher.voucher_items_label'.tr,
                         style: buildCustomStyle(FontWeightManager.semiBold,
                             FontSize.s16, 0.27, Colors.black),
                       ),
@@ -488,9 +488,9 @@ class _CreateSupplierVoucherScreenState
                                 const SizedBox(height: 16),
                                 const Divider(),
                                 const SizedBox(height: 8),
-                                _buildSummaryLine('Net Total', netTotalController.text),
-                                _buildSummaryLine('Total Tax', totalTaxController.text),
-                                _buildSummaryLine('Total Payable', totalAmountController.text),
+                                _buildSummaryLine('supplier_voucher.net_total_label'.tr, netTotalController.text),
+                                _buildSummaryLine('supplier_voucher.total_tax_label'.tr, totalTaxController.text),
+                                _buildSummaryLine('supplier_voucher.total_payable_label'.tr, totalAmountController.text),
                               ],
                             )
                           : Row(
@@ -503,9 +503,9 @@ class _CreateSupplierVoucherScreenState
                                     children: [
                                       const Divider(),
                                       const SizedBox(height: 8),
-                                      _buildSummaryLine('Net Total', netTotalController.text),
-                                      _buildSummaryLine('Total Tax', totalTaxController.text),
-                                      _buildSummaryLine('Total Payable', totalAmountController.text),
+                                      _buildSummaryLine('supplier_voucher.net_total_label'.tr, netTotalController.text),
+                                      _buildSummaryLine('supplier_voucher.total_tax_label'.tr, totalTaxController.text),
+                                      _buildSummaryLine('supplier_voucher.total_payable_label'.tr, totalAmountController.text),
                                     ],
                                   ),
                                 ),
@@ -538,7 +538,7 @@ class _CreateSupplierVoucherScreenState
                         SizedBox(
                           width: double.infinity,
                           child: CustomRoundButton(
-                            title: _isLoading ? "Submitting..." : "Submit",
+                            title: _isLoading ? 'supplier_voucher.submitting'.tr : 'supplier_voucher.submit_button'.tr,
                             boxColor: ColorManager.kPrimaryColor,
                             textColor: Colors.white,
                             fct: _isLoading ? () {} : _submitVoucher,
@@ -551,7 +551,7 @@ class _CreateSupplierVoucherScreenState
                         SizedBox(
                           width: double.infinity,
                           child: CustomRoundButton(
-                            title: "Cancel",
+                            title: 'general.cancel'.tr,
                             boxColor: Colors.white,
                             textColor: ColorManager.kPrimaryColor,
                             borderColor: ColorManager.kPrimaryColor,
@@ -568,7 +568,7 @@ class _CreateSupplierVoucherScreenState
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         CustomRoundButton(
-                          title: "Cancel",
+                          title: 'general.cancel'.tr,
                           boxColor: Colors.white,
                           textColor: ColorManager.kPrimaryColor,
                           borderColor: ColorManager.kPrimaryColor,
@@ -580,7 +580,7 @@ class _CreateSupplierVoucherScreenState
                         ),
                         const SizedBox(width: 16),
                         CustomRoundButton(
-                          title: _isLoading ? "Submitting..." : "Submit",
+                          title: _isLoading ? 'supplier_voucher.submitting'.tr : 'supplier_voucher.submit_button'.tr,
                           boxColor: ColorManager.kPrimaryColor,
                           textColor: Colors.white,
                           fct: _isLoading ? () {} : _submitVoucher,
@@ -668,7 +668,7 @@ class _CreateSupplierVoucherScreenState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Type',
+          'supplier_voucher.type_label'.tr,
           style: buildCustomStyle(FontWeightManager.regular, FontSize.s14, 0.27,
               Colors.black.withOpacity(0.6)),
         ),
@@ -677,7 +677,7 @@ class _CreateSupplierVoucherScreenState
           focusNode: typeFocus,
           title: null,
           showName: false,
-          hintText: 'Select Type',
+          hintText: 'supplier_voucher.select_type_hint'.tr,
           value: selectedType,
           items: typeOptions.map((t) => t['value']!).toList(),
           onChanged: (String? value) {
@@ -685,10 +685,17 @@ class _CreateSupplierVoucherScreenState
             // Navigate to next field after selection
           },
           displayText: (String? value) {
-            if (value == null) return 'Select Type';
-            final type = typeOptions.firstWhere((t) => t['value'] == value,
-                orElse: () => {'display': 'Unknown'});
-            return type['display']!;
+            if (value == null) return 'supplier_voucher.select_type_hint'.tr;
+            switch (value) {
+              case 'order':
+                return 'supplier_voucher.type_order'.tr;
+              case 'discount':
+                return 'supplier_voucher.type_discount'.tr;
+              case 'other':
+                return 'supplier_voucher.type_other'.tr;
+              default:
+                return 'general.unknown'.tr;
+            }
           },
           height: 45,
         ),
@@ -760,7 +767,7 @@ class _CreateSupplierVoucherScreenState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Payment method',
+          'supplier_voucher.payment_method_label'.tr,
           style: buildCustomStyle(FontWeightManager.regular, FontSize.s14, 0.27,
               Colors.black.withOpacity(0.6)),
         ),
@@ -770,7 +777,7 @@ class _CreateSupplierVoucherScreenState
           title: null,
           showName: false,
           hintText:
-              _isLoadingPaymentMethods ? 'Loading...' : 'Select Payment Method',
+              _isLoadingPaymentMethods ? 'supplier_voucher.loading'.tr : 'supplier_voucher.select_payment_method_hint'.tr,
           value: selectedPaymentMethod,
           items: _paymentMethods.map((m) => m.value).toList(),
           onChanged: (String? value) {
@@ -778,7 +785,7 @@ class _CreateSupplierVoucherScreenState
             // Navigate to next field after selection
           },
           displayText: (String? value) {
-            if (value == null) return 'Select Payment Method';
+            if (value == null) return 'supplier_voucher.select_payment_method_hint'.tr;
             try {
               return _paymentMethods
                   .firstWhere((m) => m.value == value)
@@ -810,7 +817,7 @@ class _CreateSupplierVoucherScreenState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Supplier*',
+          'supplier_voucher.supplier_label'.tr,
           style: buildCustomStyle(FontWeightManager.regular, FontSize.s14, 0.27,
               Colors.black.withOpacity(0.6)),
         ),
@@ -819,7 +826,7 @@ class _CreateSupplierVoucherScreenState
           focusNode: supplierFocus,
           title: null,
           showName: false,
-          hintText: 'Select a supplier',
+          hintText: 'supplier_voucher.select_supplier_hint'.tr,
           value: selectedSupplierId,
           items: suppliers.map((c) => c['id'] as int).toList(),
           onChanged: (int? value) {
@@ -835,10 +842,10 @@ class _CreateSupplierVoucherScreenState
             // Focus will move to first item name field
           },
           displayText: (int? id) {
-            if (id == null) return 'Select a supplier';
+            if (id == null) return 'supplier_voucher.select_supplier_hint'.tr;
             final supplier =
                 suppliers.firstWhere((c) => c['id'] == id, orElse: () => {});
-            return supplier['name'] ?? supplier['user']?['name'] ?? 'Unknown';
+            return supplier['name'] ?? supplier['user']?['name'] ?? 'general.unknown'.tr;
           },
           height: 45,
         ),
@@ -859,7 +866,7 @@ class _CreateSupplierVoucherScreenState
             child: Padding(
               padding: const EdgeInsets.all(12.0),
               child: Text(
-                'Item name*',
+                'supplier_voucher.col_item_name_required'.tr,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s11, 0.18, ColorManager.kPrimaryColor),
               ),
@@ -869,7 +876,7 @@ class _CreateSupplierVoucherScreenState
             child: Padding(
               padding: const EdgeInsets.all(12.0),
               child: Text(
-                'Unit amount*',
+                'supplier_voucher.col_unit_amount_required'.tr,
                 textAlign: TextAlign.center,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s11, 0.18, ColorManager.kPrimaryColor),
@@ -880,7 +887,7 @@ class _CreateSupplierVoucherScreenState
             child: Padding(
               padding: const EdgeInsets.all(12.0),
               child: Text(
-                'Tax %',
+                'supplier_voucher.col_tax_percent'.tr,
                 textAlign: TextAlign.center,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s11, 0.18, ColorManager.kPrimaryColor),
@@ -891,7 +898,7 @@ class _CreateSupplierVoucherScreenState
             child: Padding(
               padding: const EdgeInsets.all(12.0),
               child: Text(
-                'Quantity',
+                'supplier_voucher.col_quantity'.tr,
                 textAlign: TextAlign.center,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s11, 0.18, ColorManager.kPrimaryColor),
@@ -902,7 +909,7 @@ class _CreateSupplierVoucherScreenState
             child: Padding(
               padding: const EdgeInsets.all(12.0),
               child: Text(
-                'Total',
+                'supplier_voucher.col_total'.tr,
                 textAlign: TextAlign.center,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s11, 0.18, ColorManager.kPrimaryColor),
@@ -952,10 +959,10 @@ class _CreateSupplierVoucherScreenState
                       onFieldSubmitted: (_) {
                         FocusScope.of(context).requestFocus(item.unitAmountFocus);
                       },
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         border: InputBorder.none,
-                        hintText: 'Item name',
-                        contentPadding: EdgeInsets.only(left: 15),
+                        hintText: 'supplier_voucher.item_name_hint'.tr,
+                        contentPadding: const EdgeInsets.only(left: 15),
                       ),
                       style: buildCustomStyle(FontWeightManager.medium,
                           FontSize.s12, 0.27, ColorManager.textColor),
