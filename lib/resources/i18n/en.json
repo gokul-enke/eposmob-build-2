@@ -3320,6 +3320,26 @@
     "err_unknown": "An unknown error occurred",
     "err_prefix": "Error: "
   },
+  "company_accounts": {
+    "title": "Company Accounts",
+    "auth_token_missing": "Authentication token missing. Please login again.",
+    "payment_method_filter": "Payment Method",
+    "all_methods": "All Methods",
+    "type_filter": "Type",
+    "all_types": "All Types",
+    "status_filter": "Status",
+    "all_status": "All Status",
+    "col_name": "Name",
+    "col_payment_method_type": "Payment Method Type",
+    "col_type": "Type",
+    "col_received": "Received Amount",
+    "col_sent": "Sent Amount",
+    "col_status": "Status",
+    "col_action": "Action",
+    "no_accounts": "No company accounts found",
+    "no_data": "No company account data available at this time",
+    "btn_refresh": "Refresh"
+  },
   "add_company_account": {
     "title": "Add Company Account",
     "is_active": "Is Active",

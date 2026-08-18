@@ -3320,6 +3320,26 @@
     "err_unknown": "حدث خطأ غير معروف",
     "err_prefix": "خطأ: "
   },
+  "company_accounts": {
+    "title": "حسابات الشركة",
+    "auth_token_missing": "رمز المصادقة مفقود. يرجى تسجيل الدخول مجدداً.",
+    "payment_method_filter": "طريقة الدفع",
+    "all_methods": "جميع الطرق",
+    "type_filter": "النوع",
+    "all_types": "جميع الأنواع",
+    "status_filter": "الحالة",
+    "all_status": "جميع الحالات",
+    "col_name": "الاسم",
+    "col_payment_method_type": "نوع طريقة الدفع",
+    "col_type": "النوع",
+    "col_received": "المبلغ المستلم",
+    "col_sent": "المبلغ المرسل",
+    "col_status": "الحالة",
+    "col_action": "الإجراء",
+    "no_accounts": "لم يتم العثور على حسابات شركة",
+    "no_data": "لا توجد بيانات حسابات شركة متاحة حالياً",
+    "btn_refresh": "تحديث"
+  },
   "add_company_account": {
     "title": "إضافة حساب شركة",
     "is_active": "نشط",
