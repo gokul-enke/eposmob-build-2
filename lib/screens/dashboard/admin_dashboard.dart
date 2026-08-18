@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
@@ -226,7 +227,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Supplier Dashboard",
+                'admin_dashboard.title'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.semiBold,
                   FontSize.s20,
@@ -273,7 +274,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Column(
       children: [
         DashboardSectionHeader(
-          title: "Supplier Overview",
+          title: 'admin_dashboard.section_supplier_overview'.tr,
           trailing: BuildBoxShadowContainer(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               height: 38,
@@ -300,7 +301,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     child: SizedBox(
                       width: double.infinity,
                       child: Text(
-                        value,
+                        'admin_dashboard.period_${value.toLowerCase()}'.tr,
                         textAlign: TextAlign.center,
                         style: buildCustomStyle(
                           FontWeightManager.bold,
@@ -330,7 +331,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     return Container(
                       alignment: Alignment.center,
                       child: Text(
-                        value,
+                        'admin_dashboard.period_${value.toLowerCase()}'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.bold,
                           FontSize.s12,
@@ -372,7 +373,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "Total Suppliers",
+                'admin_dashboard.card_total_suppliers'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s14,
@@ -404,7 +405,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
           ),
           Text(
-            "Active suppliers in your business",
+            'admin_dashboard.card_total_suppliers_subtitle'.tr,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s12,
@@ -433,7 +434,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "New Suppliers",
+                'admin_dashboard.card_new_suppliers'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s14,
@@ -465,7 +466,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
           ),
           Text(
-            "Added in the selected period",
+            'admin_dashboard.card_new_suppliers_subtitle'.tr,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s12,
@@ -482,7 +483,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const DashboardSectionHeader(title: "Supplier Purchase Graph"),
+        DashboardSectionHeader(title: 'admin_dashboard.section_purchase_graph'.tr),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Container(
@@ -525,7 +526,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
             const SizedBox(height: 16),
             Text(
-              "No purchase data available",
+              'admin_dashboard.no_purchase_data'.tr,
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s14,
@@ -564,7 +565,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Purchase Amount by Supplier",
+          'admin_dashboard.chart_purchase_amount'.tr,
           style: buildCustomStyle(
             FontWeightManager.medium,
             FontSize.s14,
@@ -680,7 +681,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const DashboardSectionHeader(title: "Supplier Transactions Graph"),
+        DashboardSectionHeader(title: 'admin_dashboard.section_transactions_graph'.tr),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Container(
@@ -723,7 +724,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
             const SizedBox(height: 16),
             Text(
-              "No transaction data available",
+              'admin_dashboard.no_transaction_data'.tr,
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s14,
@@ -758,7 +759,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Transactions Over Time",
+          'admin_dashboard.chart_transactions_over_time'.tr,
           style: buildCustomStyle(
             FontWeightManager.medium,
             FontSize.s14,
@@ -879,7 +880,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         final color = isReceived
                             ? ColorManager.kSuccessColor
                             : ColorManager.kErrorColor;
-                        final label = isReceived ? 'Received' : 'Paid';
+                        final label = isReceived ? 'admin_dashboard.label_received'.tr : 'admin_dashboard.label_paid'.tr;
 
                         return LineTooltipItem(
                           '$label\n',
@@ -910,9 +911,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildLegendItem(ColorManager.kSuccessColor, 'Received'),
+            _buildLegendItem(ColorManager.kSuccessColor, 'admin_dashboard.label_received'.tr),
             const SizedBox(width: 20),
-            _buildLegendItem(ColorManager.kErrorColor, 'Paid'),
+            _buildLegendItem(ColorManager.kErrorColor, 'admin_dashboard.label_paid'.tr),
           ],
         ),
       ],
@@ -923,7 +924,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const DashboardSectionHeader(title: "Supplier Credit/Balance Graph"),
+        DashboardSectionHeader(title: 'admin_dashboard.section_credit_balance_graph'.tr),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Container(
@@ -967,7 +968,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
             const SizedBox(height: 16),
             Text(
-              "No credit/balance data available",
+              'admin_dashboard.no_credit_balance_data'.tr,
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s14,
@@ -1002,7 +1003,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Credit vs Balance Over Time",
+          'admin_dashboard.chart_credit_vs_balance'.tr,
           style: buildCustomStyle(
             FontWeightManager.medium,
             FontSize.s14,
@@ -1122,7 +1123,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         final color = isCredit
                             ? ColorManager.kPrimaryColor
                             : ColorManager.kOrange;
-                        final label = isCredit ? 'Credit' : 'Balance';
+                        final label = isCredit ? 'admin_dashboard.label_credit'.tr : 'admin_dashboard.label_balance'.tr;
 
                         return LineTooltipItem(
                           '$label\n',
@@ -1153,9 +1154,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildLegendItem(ColorManager.kPrimaryColor, 'Credit'),
+            _buildLegendItem(ColorManager.kPrimaryColor, 'admin_dashboard.label_credit'.tr),
             const SizedBox(width: 20),
-            _buildLegendItem(ColorManager.kOrange, 'Balance'),
+            _buildLegendItem(ColorManager.kOrange, 'admin_dashboard.label_balance'.tr),
           ],
         ),
       ],

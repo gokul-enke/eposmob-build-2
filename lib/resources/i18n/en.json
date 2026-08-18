@@ -1,4 +1,29 @@
 {
+  "admin_dashboard": {
+    "title": "Supplier Dashboard",
+    "section_supplier_overview": "Supplier Overview",
+    "period_today": "Today",
+    "period_week": "Week",
+    "period_month": "Month",
+    "period_year": "Year",
+    "card_total_suppliers": "Total Suppliers",
+    "card_total_suppliers_subtitle": "Active suppliers in your business",
+    "card_new_suppliers": "New Suppliers",
+    "card_new_suppliers_subtitle": "Added in the selected period",
+    "section_purchase_graph": "Supplier Purchase Graph",
+    "no_purchase_data": "No purchase data available",
+    "chart_purchase_amount": "Purchase Amount by Supplier",
+    "section_transactions_graph": "Supplier Transactions Graph",
+    "no_transaction_data": "No transaction data available",
+    "chart_transactions_over_time": "Transactions Over Time",
+    "label_received": "Received",
+    "label_paid": "Paid",
+    "section_credit_balance_graph": "Supplier Credit/Balance Graph",
+    "no_credit_balance_data": "No credit/balance data available",
+    "chart_credit_vs_balance": "Credit vs Balance Over Time",
+    "label_credit": "Credit",
+    "label_balance": "Balance"
+  },
   "app": {
     "title": "CLOUDPOS"
   },

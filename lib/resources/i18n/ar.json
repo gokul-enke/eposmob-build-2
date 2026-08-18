@@ -1,4 +1,29 @@
 {
+  "admin_dashboard": {
+    "title": "لوحة الموردين",
+    "section_supplier_overview": "نظرة عامة على الموردين",
+    "period_today": "اليوم",
+    "period_week": "الأسبوع",
+    "period_month": "الشهر",
+    "period_year": "السنة",
+    "card_total_suppliers": "إجمالي الموردين",
+    "card_total_suppliers_subtitle": "الموردون النشطون في عملك",
+    "card_new_suppliers": "موردون جدد",
+    "card_new_suppliers_subtitle": "تمت الإضافة في الفترة المحددة",
+    "section_purchase_graph": "رسم بياني لمشتريات الموردين",
+    "no_purchase_data": "لا توجد بيانات شراء متاحة",
+    "chart_purchase_amount": "مبلغ الشراء حسب المورد",
+    "section_transactions_graph": "رسم بياني لمعاملات الموردين",
+    "no_transaction_data": "لا توجد بيانات معاملات متاحة",
+    "chart_transactions_over_time": "المعاملات عبر الزمن",
+    "label_received": "مستلم",
+    "label_paid": "مدفوع",
+    "section_credit_balance_graph": "رسم بياني للائتمان/الرصيد للموردين",
+    "no_credit_balance_data": "لا توجد بيانات ائتمان/رصيد متاحة",
+    "chart_credit_vs_balance": "الائتمان مقابل الرصيد عبر الزمن",
+    "label_credit": "ائتمان",
+    "label_balance": "رصيد"
+  },
   "app": {
     "title": "كلاود بوس"
   },
