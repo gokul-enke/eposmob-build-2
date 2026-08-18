@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -472,7 +473,7 @@ class _RealtimeSyncTestPageState extends State<RealtimeSyncTestPage> {
   }
 
   String? _required(String? value) {
-    if (value == null || value.trim().isEmpty) return 'Required';
+    if (value == null || value.trim().isEmpty) return 'realtime_sync.validator_required'.tr;
     return null;
   }
 
@@ -490,12 +491,11 @@ class _RealtimeSyncTestPageState extends State<RealtimeSyncTestPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SettingsSubPageHeader(
-            backLabel: 'Settings',
+            backLabel: 'realtime_sync.back_label'.tr,
             onBack: () => Navigator.of(context).pop(),
             onClose: () => Navigator.of(context).pop(),
-            title: 'Realtime Sync Tester',
-            subtitle:
-                'Temporary diagnostics only — no Provider, Hive, cart, or production cursor updates',
+            title: 'realtime_sync.title'.tr,
+            subtitle: 'realtime_sync.subtitle'.tr,
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -522,12 +522,12 @@ class _RealtimeSyncTestPageState extends State<RealtimeSyncTestPage> {
 
   Widget _buildStatusCard() {
     final status = _subscribed
-        ? 'Subscribed'
+        ? 'realtime_sync.status_subscribed'.tr
         : _connected
-            ? 'Connected'
+            ? 'realtime_sync.status_connected'.tr
             : _connecting
-                ? 'Connecting'
-                : 'Disconnected';
+                ? 'realtime_sync.status_connecting'.tr
+                : 'realtime_sync.status_disconnected'.tr;
     final positive = _subscribed || _connected;
 
     return SettingsContentCard(
@@ -535,10 +535,10 @@ class _RealtimeSyncTestPageState extends State<RealtimeSyncTestPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SettingsSectionHeader(
-            title: 'Test status',
+            title: 'realtime_sync.status_title'.tr,
             subtitle: _subscribed
-                ? 'Listening on $_channelName'
-                : 'Configure the public Reverb values and connect',
+                ? '${'realtime_sync.status_sub_listening'.tr} $_channelName'
+                : 'realtime_sync.status_sub_connect'.tr,
             trailing: SettingsStatusBadge(
               label: status,
               isPositive: positive,
@@ -550,10 +550,10 @@ class _RealtimeSyncTestPageState extends State<RealtimeSyncTestPage> {
             spacing: 20,
             runSpacing: 8,
             children: [
-              _StatusValue(label: 'Socket ID', value: _socketId ?? '-'),
-              _StatusValue(label: 'Channel', value: _channelName),
+              _StatusValue(label: 'realtime_sync.label_socket_id'.tr, value: _socketId ?? '-'),
+              _StatusValue(label: 'realtime_sync.label_channel'.tr, value: _channelName),
               _StatusValue(
-                label: 'Last synced_at',
+                label: 'realtime_sync.label_last_synced'.tr,
                 value: _lastSyncedAt ?? '-',
               ),
             ],
@@ -567,9 +567,9 @@ class _RealtimeSyncTestPageState extends State<RealtimeSyncTestPage> {
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: const Color(0xFFFFD54F)),
             ),
-            child: const Text(
-              'This tester makes real auth and sync-change requests. It stores only temporary tester configuration and a tester-only since cursor.',
-              style: TextStyle(fontSize: 12, color: Color(0xFF6D4C41)),
+            child: Text(
+              'realtime_sync.warning_text'.tr,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF6D4C41)),
             ),
           ),
         ],
@@ -582,9 +582,9 @@ class _RealtimeSyncTestPageState extends State<RealtimeSyncTestPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SettingsSectionHeader(
-            title: 'Connection and tenant',
-            subtitle: 'Values are prefilled from the current logged-in session',
+          SettingsSectionHeader(
+            title: 'realtime_sync.connection_title'.tr,
+            subtitle: 'realtime_sync.connection_sub'.tr,
           ),
           const SizedBox(height: 16),
           LayoutBuilder(
@@ -600,27 +600,27 @@ class _RealtimeSyncTestPageState extends State<RealtimeSyncTestPage> {
                   _field(
                     width: fieldWidth,
                     controller: _backendController,
-                    label: 'Backend base URL',
+                    label: 'realtime_sync.field_backend_url'.tr,
                     hint: 'https://tenant.example.com',
                     validator: _required,
                   ),
                   _field(
                     width: fieldWidth,
                     controller: _hostController,
-                    label: 'Reverb host',
+                    label: 'realtime_sync.field_reverb_host'.tr,
                     hint: 'tenant.example.com',
                     validator: _required,
                   ),
                   _field(
                     width: fieldWidth,
                     controller: _portController,
-                    label: 'Reverb port',
+                    label: 'realtime_sync.field_reverb_port'.tr,
                     hint: '443',
                     keyboardType: TextInputType.number,
                     validator: (value) {
                       final port = int.tryParse(value?.trim() ?? '');
                       if (port == null || port < 1 || port > 65535) {
-                        return 'Enter a valid port';
+                        return 'realtime_sync.validator_port'.tr;
                       }
                       return null;
                     },
@@ -628,27 +628,27 @@ class _RealtimeSyncTestPageState extends State<RealtimeSyncTestPage> {
                   _field(
                     width: fieldWidth,
                     controller: _appKeyController,
-                    label: 'Public Reverb app key',
+                    label: 'realtime_sync.field_app_key'.tr,
                     hint: 'REVERB_APP_KEY',
                     validator: _required,
                   ),
                   _field(
                     width: fieldWidth,
                     controller: _companyIdController,
-                    label: 'Company ID',
+                    label: 'realtime_sync.field_company_id'.tr,
                     hint: '1',
                     keyboardType: TextInputType.number,
                     validator: (value) {
                       final id = int.tryParse(value?.trim() ?? '');
                       return id == null || id <= 0
-                          ? 'Enter a valid company ID'
+                          ? 'realtime_sync.validator_company_id'.tr
                           : null;
                     },
                   ),
                   _field(
                     width: fieldWidth,
                     controller: _apiKeyController,
-                    label: 'Tenant API key (X-Tenant)',
+                    label: 'realtime_sync.field_api_key'.tr,
                     hint: 'Current company API key',
                     obscureText: _obscureApiKey,
                     validator: _required,
@@ -666,7 +666,7 @@ class _RealtimeSyncTestPageState extends State<RealtimeSyncTestPage> {
                   _field(
                     width: constraints.maxWidth,
                     controller: _sinceController,
-                    label: 'Temporary since cursor',
+                    label: 'realtime_sync.field_since_cursor'.tr,
                     hint: 'Empty for first pull',
                   ),
                 ],
@@ -689,7 +689,7 @@ class _RealtimeSyncTestPageState extends State<RealtimeSyncTestPage> {
                         ? null
                         : (value) => setState(() => _useTls = value),
                   ),
-                  Text(_useTls ? 'Secure WebSocket (wss)' : 'WebSocket (ws)'),
+                  Text(_useTls ? 'realtime_sync.toggle_secure_ws'.tr : 'realtime_sync.toggle_plain_ws'.tr),
                 ],
               ),
               Row(
@@ -700,7 +700,7 @@ class _RealtimeSyncTestPageState extends State<RealtimeSyncTestPage> {
                     activeThumbColor: ColorManager.kPrimaryColor,
                     onChanged: (value) => setState(() => _autoPull = value),
                   ),
-                  const Text('Auto-pull after data.changed'),
+                  Text('realtime_sync.toggle_auto_pull'.tr),
                 ],
               ),
             ],
@@ -722,12 +722,12 @@ class _RealtimeSyncTestPageState extends State<RealtimeSyncTestPage> {
                         ),
                       )
                     : const Icon(Icons.cable),
-                label: Text(_connecting ? 'Connecting...' : 'Connect'),
+                label: Text(_connecting ? 'realtime_sync.btn_connecting'.tr : 'realtime_sync.btn_connect'.tr),
               ),
               OutlinedButton.icon(
                 onPressed: _connected || _connecting ? _disconnect : null,
                 icon: const Icon(Icons.link_off),
-                label: const Text('Disconnect'),
+                label: Text('realtime_sync.btn_disconnect'.tr),
               ),
               OutlinedButton.icon(
                 onPressed: _pulling ? null : _pullChanges,
@@ -738,12 +738,12 @@ class _RealtimeSyncTestPageState extends State<RealtimeSyncTestPage> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.sync),
-                label: Text(_pulling ? 'Pulling...' : 'Pull changes'),
+                label: Text(_pulling ? 'realtime_sync.btn_pulling'.tr : 'realtime_sync.btn_pull'.tr),
               ),
               TextButton.icon(
                 onPressed: _clearTestCursor,
                 icon: const Icon(Icons.restart_alt),
-                label: const Text('Clear test cursor'),
+                label: Text('realtime_sync.btn_clear_cursor'.tr),
               ),
             ],
           ),
@@ -781,28 +781,28 @@ class _RealtimeSyncTestPageState extends State<RealtimeSyncTestPage> {
 
   Widget _buildResultCard() {
     final prettyChanges = _lastChanges == null
-        ? 'No /sync/changes response yet.'
+        ? 'realtime_sync.result_no_response'.tr
         : const JsonEncoder.withIndent('  ').convert(_lastChanges);
 
     return SettingsContentCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SettingsSectionHeader(
-            title: 'Latest result',
-            subtitle: 'Socket event and authoritative pull response',
+          SettingsSectionHeader(
+            title: 'realtime_sync.result_title'.tr,
+            subtitle: 'realtime_sync.result_sub'.tr,
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Last data.changed event',
-            style: TextStyle(fontWeight: FontWeight.w600),
+          Text(
+            'realtime_sync.result_last_event'.tr,
+            style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 6),
-          _CodePanel(text: _lastEvent ?? 'No event received yet.'),
+          _CodePanel(text: _lastEvent ?? 'realtime_sync.result_no_event'.tr),
           const SizedBox(height: 12),
-          const Text(
-            'Last changes payload',
-            style: TextStyle(fontWeight: FontWeight.w600),
+          Text(
+            'realtime_sync.result_last_payload'.tr,
+            style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 6),
           _CodePanel(text: prettyChanges),
@@ -817,18 +817,18 @@ class _RealtimeSyncTestPageState extends State<RealtimeSyncTestPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SettingsSectionHeader(
-            title: 'Protocol log',
-            subtitle: 'Newest entries first; sensitive auth values are hidden',
+            title: 'realtime_sync.log_title'.tr,
+            subtitle: 'realtime_sync.log_sub'.tr,
             trailing: TextButton.icon(
               onPressed:
                   _logs.isEmpty ? null : () => setState(() => _logs.clear()),
               icon: const Icon(Icons.clear_all),
-              label: const Text('Clear'),
+              label: Text('realtime_sync.log_btn_clear'.tr),
             ),
           ),
           const SizedBox(height: 10),
           if (_logs.isEmpty)
-            const Text('No protocol activity yet.')
+            Text('realtime_sync.log_empty'.tr)
           else
             ..._logs.map(
               (entry) => Padding(

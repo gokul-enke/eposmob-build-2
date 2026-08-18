@@ -88,7 +88,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
       _appVersion = '${packageInfo.version}.${packageInfo.buildNumber}';
     } catch (e) {
       debugPrint('Error loading app version: $e');
-      _appVersion = 'Not available';
+      _appVersion = 'company_info.not_available'.tr;
     }
   }
 
@@ -190,7 +190,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
 
         // If still no company name, use a default
         if (_companyName == null || _companyName!.isEmpty) {
-          _companyName = 'Company Name Not Available';
+          _companyName = 'company_info.name_not_available'.tr;
         }
       }
     } catch (e) {
@@ -227,7 +227,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SettingsSubPageHeader(
-            backLabel: 'Settings',
+            backLabel: 'company_info.back'.tr,
             onBack: () {
               sideBarController.index.value =
                   62; // Navigate back to Settings
@@ -236,8 +236,8 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
               sideBarController.index.value =
                   62; // Navigate back to Settings
             },
-            title: 'Company Information',
-            subtitle: 'Account, tenant, and app configuration details',
+            title: 'company_info.title'.tr,
+            subtitle: 'company_info.subtitle'.tr,
           ),
           const SizedBox(height: 20),
           Expanded(
@@ -246,30 +246,30 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                 : SingleChildScrollView(
                     child: SettingsInfoList(
                       entries: [
-                        MapEntry('Admin User Info', _userName ?? 'Loading...'),
-                        MapEntry('Company Name', _companyName ?? 'Loading...'),
+                        MapEntry('company_info.label_admin_user'.tr, _userName ?? 'company_info.loading'.tr),
+                        MapEntry('company_info.label_company_name'.tr, _companyName ?? 'company_info.loading'.tr),
                         MapEntry(
-                          'Logged In Username',
-                          _loggedInUserName ?? 'Loading...',
+                          'company_info.label_username'.tr,
+                          _loggedInUserName ?? 'company_info.loading'.tr,
                         ),
                         MapEntry(
-                          'Logged In Email',
-                          _loggedInUserEmail ?? 'Loading...',
+                          'company_info.label_email'.tr,
+                          _loggedInUserEmail ?? 'company_info.loading'.tr,
                         ),
-                        MapEntry('User Role', _userRole ?? 'Loading...'),
+                        MapEntry('company_info.label_user_role'.tr, _userRole ?? 'company_info.loading'.tr),
                         MapEntry(
-                          'Customer ID',
-                          _customerId?.toString() ?? 'Loading...',
+                          'company_info.label_customer_id'.tr,
+                          _customerId?.toString() ?? 'company_info.loading'.tr,
                         ),
                         MapEntry(
-                          'Company ID',
-                          _companyId?.toString() ?? 'Loading...',
+                          'company_info.label_company_id'.tr,
+                          _companyId?.toString() ?? 'company_info.loading'.tr,
                         ),
-                        MapEntry('Token Type', _tokenType ?? 'Loading...'),
-                        MapEntry('Timezone', _timeZone ?? 'Not available'),
-                        MapEntry('Base URL', APPUrl.baseURL),
-                        MapEntry('App Version', _appVersion ?? 'Loading...'),
-                        MapEntry('API Key', _apiKey ?? 'Not available'),
+                        MapEntry('company_info.label_token_type'.tr, _tokenType ?? 'company_info.loading'.tr),
+                        MapEntry('company_info.label_timezone'.tr, _timeZone ?? 'company_info.not_available'.tr),
+                        MapEntry('company_info.label_base_url'.tr, APPUrl.baseURL),
+                        MapEntry('company_info.label_app_version'.tr, _appVersion ?? 'company_info.loading'.tr),
+                        MapEntry('company_info.label_api_key'.tr, _apiKey ?? 'company_info.not_available'.tr),
                       ],
                     ),
                   ),
@@ -278,7 +278,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
           SettingsActionRow(
             children: [
               CustomRoundButton(
-                title: 'Back to Settings',
+                title: 'company_info.back'.tr,
                 boxColor: Colors.white,
                 textColor: ColorManager.kPrimaryColor,
                 borderColor: ColorManager.kPrimaryColor,

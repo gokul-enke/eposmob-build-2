@@ -477,21 +477,21 @@ class _SalesScreenState extends State<SalesScreen> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.warning, color: Colors.orange),
-                SizedBox(width: 8),
-                Text('WhatsApp Not Connected'),
+                const Icon(Icons.warning, color: Colors.orange),
+                const SizedBox(width: 8),
+                Text('sales.wa_not_connected_title'.tr),
               ],
             ),
             content: Text(
-              'WhatsApp bot is not connected. Would you like to connect now?\n\n'
-              'Status: ${whatsappProvider.connectionStatus}',
+              '${'sales.wa_not_connected_body'.tr}\n\n'
+              '${'sales.wa_status_label'.tr} ${whatsappProvider.connectionStatus}',
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
+                child: Text('general.cancel'.tr),
               ),
               ElevatedButton(
                 onPressed: () async {
@@ -500,7 +500,7 @@ class _SalesScreenState extends State<SalesScreen> {
                   Get.find<SideBarController>().index.value =
                       63; // Adjust this index to your WhatsApp settings page
                 },
-                child: const Text('Connect WhatsApp'),
+                child: Text('sales.btn_connect_wa'.tr),
               ),
             ],
           ),
@@ -567,32 +567,32 @@ class _SalesScreenState extends State<SalesScreen> {
       await showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.message, color: Color(0xFF25D366)),
-              SizedBox(width: 8),
-              Text('Send via WhatsApp Bot'),
+              const Icon(Icons.message, color: Color(0xFF25D366)),
+              const SizedBox(width: 8),
+              Text('sales.title_send_wa_bot'.tr),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Customer: $customerName'),
-              Text('Phone: $customerPhone'),
-              Text('Order: #${order.orderNumber}'),
-              Text('Amount: $currency $totalAmount'),
+              Text('${'sales.label_customer'.tr} $customerName'),
+              Text('${'sales.label_phone_wa'.tr} $customerPhone'),
+              Text('${'sales.label_order'.tr} #${order.orderNumber}'),
+              Text('${'sales.label_amount'.tr} $currency $totalAmount'),
               const SizedBox(height: 16),
-              const Text(
-                'Choose what to send:',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              Text(
+                'sales.label_choose_what'.tr,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child: Text('general.cancel'.tr),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -625,7 +625,7 @@ class _SalesScreenState extends State<SalesScreen> {
                 backgroundColor: const Color(0xFF25D366),
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Send Invoice Link'),
+              child: Text('sales.btn_send_invoice_link'.tr),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -636,7 +636,7 @@ class _SalesScreenState extends State<SalesScreen> {
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Send with PDF'),
+              child: Text('sales.btn_send_with_pdf'.tr),
             ),
           ],
         ),
@@ -943,7 +943,7 @@ Powered by CloudPOS''',
             showScaffoldError(
               context: context,
               message:
-                  'Failed to send WhatsApp message: ${whatsappProvider.lastError}',
+                  '${'sales.msg_wa_send_failed'.tr} ${whatsappProvider.lastError}',
             );
           }
         }
@@ -977,20 +977,20 @@ Powered by CloudPOS''',
             children: [
               Icon(Icons.picture_as_pdf, color: Colors.red[700]),
               const SizedBox(width: 8),
-              const Text('PDF Invoice Ready'),
+              Text('sales.title_pdf_ready'.tr),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Invoice: ${order.orderNumber}'),
+              Text('${'sales.label_invoice'.tr} ${order.orderNumber}'),
               const SizedBox(height: 8),
-              Text('File: ${pdfFile.path.split('/').last}'),
+              Text('${'sales.label_file'.tr} ${pdfFile.path.split('/').last}'),
               const SizedBox(height: 16),
-              const Text(
-                'Choose how to share your PDF:',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              Text(
+                'sales.label_choose_share_pdf'.tr,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -1018,7 +1018,7 @@ Powered by CloudPOS''',
                 }
               },
               icon: const Icon(Icons.folder_open),
-              label: const Text('Open File Location'),
+              label: Text('sales.btn_open_file_location'.tr),
             ),
             // Option 2: Open PDF directly
             TextButton.icon(
@@ -1042,7 +1042,7 @@ Powered by CloudPOS''',
                 }
               },
               icon: const Icon(Icons.open_in_new),
-              label: const Text('Open PDF'),
+              label: Text('sales.btn_open_pdf'.tr),
             ),
             // Option 3: Copy path
             TextButton.icon(
@@ -1061,7 +1061,7 @@ Powered by CloudPOS''',
                 }
               },
               icon: const Icon(Icons.copy),
-              label: const Text('Copy Path'),
+              label: Text('sales.btn_copy_path'.tr),
             ),
           ],
         ),
@@ -1936,9 +1936,9 @@ Powered by CloudPOS''',
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
-                        const Text(
-                          'More Options',
-                          style: TextStyle(
+                        Text(
+                          'sales.title_more_options'.tr,
+                          style: const TextStyle(
                               fontSize: 16, fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 8),
@@ -1951,7 +1951,7 @@ Powered by CloudPOS''',
                             child: const Icon(Icons.share,
                                 color: ColorManager.kPrimaryColor),
                           ),
-                          title: const Text('Share'),
+                          title: Text('sales.btn_share'.tr),
                           onTap: () async {
                             Navigator.pop(ctx);
                             // Handle share option - show share modal
@@ -2040,9 +2040,9 @@ Powered by CloudPOS''',
                                                   BorderRadius.circular(2),
                                             ),
                                           ),
-                                          const Text(
-                                            'Share invoice',
-                                            style: TextStyle(
+                                          Text(
+                                            'sales.title_share_invoice_sheet'.tr,
+                                            style: const TextStyle(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.w600),
                                           ),
@@ -2058,7 +2058,7 @@ Powered by CloudPOS''',
                                                   color: ColorManager
                                                       .kPrimaryColor),
                                             ),
-                                            title: const Text('Share'),
+                                            title: Text('sales.btn_share'.tr),
                                             onTap: () async {
                                               Navigator.pop(ctx);
                                               // On Windows, sharing a file tends to open the native Share UI more reliably
@@ -2099,8 +2099,8 @@ Powered by CloudPOS''',
                                             title: Text(
                                               (customerEmail != null &&
                                                       customerEmail.isNotEmpty)
-                                                  ? 'Share to Email ($customerEmail)'
-                                                  : 'Share to Email',
+                                                  ? '${'sales.opt_share_email'.tr} ($customerEmail)'
+                                                  : 'sales.opt_share_email'.tr,
                                             ),
                                             onTap: () async {
                                               Navigator.pop(ctx);
@@ -2150,8 +2150,8 @@ Powered by CloudPOS''',
                                             ),
                                             title: Text(
                                               intlPhone != null
-                                                  ? 'Share to WhatsApp ($intlPhone)'
-                                                  : 'Share to WhatsApp',
+                                                  ? '${'sales.opt_share_whatsapp'.tr} ($intlPhone)'
+                                                  : 'sales.opt_share_whatsapp'.tr,
                                             ),
                                             onTap: () async {
                                               Navigator.pop(ctx);
@@ -2167,7 +2167,7 @@ Powered by CloudPOS''',
                                                   Icons.picture_as_pdf_outlined,
                                                   color: Color(0xFFE53E3E)),
                                             ),
-                                            title: const Text('Share as PDF'),
+                                            title: Text('sales.opt_share_pdf'.tr),
                                             onTap: () async {
                                               Navigator.pop(ctx);
                                               await _sharePDFInvoice(order);
@@ -2199,7 +2199,7 @@ Powered by CloudPOS''',
                             child: Icon(Icons.assignment_return,
                                 color: Color(0xFFE53E3E)),
                           ),
-                          title: const Text('Return'),
+                          title: Text('sales.btn_return'.tr),
                           onTap: () async {
                             Navigator.pop(ctx);
 
@@ -2257,7 +2257,7 @@ Powered by CloudPOS''',
                             child: Icon(Icons.cancel_outlined,
                                 color: Color(0xFFE53E3E)),
                           ),
-                          title: const Text('Cancel Order'),
+                          title: Text('sales.btn_cancel_order'.tr),
                           onTap: () async {
                             Navigator.pop(ctx);
                             if (!context.mounted) return;
@@ -2321,7 +2321,7 @@ Powered by CloudPOS''',
                             child: Icon(Icons.swap_horiz_outlined,
                                 color: Color(0xFF6A1B9A)),
                           ),
-                          title: const Text('Change Order Status'),
+                          title: Text('sales.btn_change_order_status'.tr),
                           onTap: () async {
                             Navigator.pop(ctx);
                             showDialog(
@@ -2388,7 +2388,7 @@ Powered by CloudPOS''',
                             child: Icon(Icons.payment_outlined,
                                 color: Color(0xFF1E88E5)),
                           ),
-                          title: const Text('Change Payment Status'),
+                          title: Text('sales.btn_change_payment_status'.tr),
                           onTap: () async {
                             Navigator.pop(ctx);
                             if (!context.mounted) return;

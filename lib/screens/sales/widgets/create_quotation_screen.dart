@@ -191,17 +191,17 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
             _inlineCustomerPhoneController.text.trim().isNotEmpty;
     if (!_useInlineCustomer && !customerProvider.hasSelectedCustomer) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select a customer')));
+          SnackBar(content: Text('create_quotation.msg_select_customer'.tr)));
       return;
     }
     if (_useInlineCustomer && !hasInlineCustomer) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Please enter customer name and phone')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('create_quotation.msg_enter_customer_info'.tr)));
       return;
     }
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please add at least one item')));
+          SnackBar(content: Text('create_quotation.msg_add_item'.tr)));
       return;
     }
 
@@ -250,11 +250,12 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
       if (!mounted) return;
       if (response['success'] == true || response['status'] == 'success') {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Quotation created successfully')));
+            SnackBar(content: Text('create_quotation.msg_success'.tr)));
         Get.find<SideBarController>().index.value = 87;
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(response['message'] ?? 'Failed')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                response['message'] ?? 'create_quotation.msg_failed'.tr)));
       }
     } catch (e) {
       debugPrint('💥 QUOTATION ERROR: $e');
@@ -328,7 +329,7 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
             icon: const Icon(Icons.arrow_back_ios_new,
                 color: ColorManager.kPrimaryColor, size: 20),
           ),
-          Text('Create Quotation',
+          Text('create_quotation.title'.tr,
               style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s18,
                   0.2, ColorManager.textColor)),
         ],
@@ -348,7 +349,7 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
               const Icon(Icons.info_outline,
                   size: 20, color: ColorManager.kPrimaryColor),
               const SizedBox(width: 8),
-              Text('Quotation Details',
+              Text('create_quotation.section_details'.tr,
                   style: buildCustomStyle(FontWeightManager.semiBold,
                       FontSize.s15, 0.1, ColorManager.textColor)),
             ],
@@ -360,22 +361,25 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
                 children: [
                   Expanded(
                       child: _buildFieldColumn(
-                          'Quotation No.',
+                          'create_quotation.field_quotation_no'.tr,
                           _simpleEntryField(
                               controller: _quotationNoController,
                               hint: 'Auto Generated'))),
                   const SizedBox(width: 16),
                   Expanded(
                       child: _buildFieldColumn(
-                          'Quotation Date*', _buildDateField(true))),
+                          'create_quotation.field_quotation_date'.tr,
+                          _buildDateField(true))),
                   const SizedBox(width: 16),
                   Expanded(
                       child: _buildFieldColumn(
-                          'Expiry Date*', _buildDateField(false))),
+                          'create_quotation.field_expiry_date'.tr,
+                          _buildDateField(false))),
                   const SizedBox(width: 16),
                   Expanded(
-                      child:
-                          _buildFieldColumn('Store*', _buildStoreDropdown())),
+                      child: _buildFieldColumn(
+                          'create_quotation.field_store'.tr,
+                          _buildStoreDropdown())),
                 ],
               ),
               const SizedBox(height: 16),
@@ -383,7 +387,8 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
                 children: [
                   Expanded(
                       child: _buildFieldColumn(
-                          'Customer*', _buildCustomerSelector())),
+                          'create_quotation.field_customer'.tr,
+                          _buildCustomerSelector())),
                   const Expanded(
                       flex: 3,
                       child: SizedBox()), // Fill remaining 3/4 of the row
@@ -413,7 +418,9 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
             ),
             const SizedBox(width: 8),
             Text(
-              _useInlineCustomer ? 'Quote-only customer' : 'Existing customer',
+              _useInlineCustomer
+                  ? 'create_quotation.toggle_quote_only'.tr
+                  : 'create_quotation.toggle_existing'.tr,
               style: const TextStyle(fontSize: 12),
             ),
           ],
@@ -422,12 +429,12 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
         if (_useInlineCustomer) ...[
           _simpleEntryField(
             controller: _inlineCustomerNameController,
-            hint: 'Customer name',
+            hint: 'create_quotation.hint_customer_name'.tr,
           ),
           const SizedBox(height: 8),
           _simpleEntryField(
             controller: _inlineCustomerPhoneController,
-            hint: 'Customer phone',
+            hint: 'create_quotation.hint_customer_phone'.tr,
             type: TextInputType.phone,
           ),
         ] else
@@ -480,7 +487,7 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
       return BuildDropDownWithSearch<Store>(
         title: null,
         showName: false,
-        hintText: "Select Store",
+        hintText: 'create_quotation.hint_select_store'.tr,
         value: sel,
         items: list,
         onChanged: (v) {},
@@ -497,7 +504,7 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
       return BuildDropDownWithSearch<CustomerListModelData>(
         title: null,
         showName: false,
-        hintText: "Select Customer",
+        hintText: 'create_quotation.hint_select_customer'.tr,
         value: cp.selectedCustomer,
         items: prov.allCustomers ?? [],
         onChanged: (v) {
@@ -522,7 +529,7 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
               const Icon(Icons.shopping_cart_outlined,
                   size: 20, color: ColorManager.kPrimaryColor),
               const SizedBox(width: 8),
-              Text('Product Selection',
+              Text('create_quotation.section_products'.tr,
                   style: buildCustomStyle(FontWeightManager.semiBold,
                       FontSize.s15, 0.1, ColorManager.textColor)),
             ],
@@ -533,13 +540,13 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
             children: [
               Expanded(
                 flex: 3,
-                child: _buildFieldColumn('Product*', _buildProductSelector()),
+                child: _buildFieldColumn('create_quotation.field_product'.tr, _buildProductSelector()),
               ),
               const SizedBox(width: 12),
               Expanded(
                 flex: 1,
                 child: _buildFieldColumn(
-                    'Qty',
+                    'create_quotation.field_qty'.tr,
                     _simpleEntryField(
                       controller: _qtyController,
                       hint: '1',
@@ -551,7 +558,7 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
               Expanded(
                 flex: 1,
                 child: _buildFieldColumn(
-                    'Price (SAR)',
+                    'create_quotation.field_price'.tr,
                     _simpleEntryField(
                       controller: _priceController,
                       hint: '0.00',
@@ -562,7 +569,7 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
               const SizedBox(width: 12),
               Expanded(
                 flex: 1,
-                child: _buildFieldColumn('Tax', _buildTaxDropdown()),
+                child: _buildFieldColumn('create_quotation.field_tax'.tr, _buildTaxDropdown()),
               ),
             ],
           ),
@@ -573,7 +580,7 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
               Expanded(
                 flex: 1,
                 child: _buildFieldColumn(
-                    'Total',
+                    'create_quotation.field_total'.tr,
                     _simpleEntryField(
                       controller: TextEditingController(text: _calcItemTotal()),
                       readOnly: true,
@@ -583,7 +590,7 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
               const SizedBox(width: 12),
               const Spacer(flex: 2),
               CustomRoundButton(
-                title: 'Add to List',
+                title: 'create_quotation.btn_add_to_list'.tr,
                 fct: _selectedProduct == null ? () {} : _addItem,
                 height: 45,
                 width: 160,
@@ -612,7 +619,7 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
       return BuildDropDownWithSearch<GetProduct>(
         title: null,
         showName: false,
-        hintText: "Search product..",
+        hintText: 'create_quotation.hint_search_product'.tr,
         value: _selectedProduct,
         items: prov.products,
         onChanged: (v) {
@@ -715,26 +722,26 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
       decoration: BoxDecoration(
           color: ColorManager.kPrimaryColor.withOpacity(0.05),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(12))),
-      child: const Row(children: [
+      child: Row(children: [
         Expanded(
             flex: 3,
-            child: Text('Product',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+            child: Text('create_quotation.col_product'.tr,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
         Expanded(
-            child: Text('Qty',
+            child: Text('create_quotation.col_qty'.tr,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
         Expanded(
             flex: 2,
-            child: Text('Price',
+            child: Text('create_quotation.col_price'.tr,
                 textAlign: TextAlign.right,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
         Expanded(
             flex: 2,
-            child: Text('Total',
+            child: Text('create_quotation.col_total'.tr,
                 textAlign: TextAlign.right,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-        SizedBox(width: 40),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+        const SizedBox(width: 40),
       ]),
     );
   }
@@ -779,23 +786,25 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
       children: [
         Expanded(
             child: _buildFieldColumn(
-                'Comment',
+                'create_quotation.field_comment'.tr,
                 _simpleEntryField(
-                    controller: _commentController, hint: 'Add notes..'))),
+                    controller: _commentController,
+                    hint: 'create_quotation.hint_notes'.tr))),
         const SizedBox(width: 40),
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            _sumLine('Subtotal', _subTotal, curr),
-            _sumLine('Tax', _totalTax, curr),
+            _sumLine('create_quotation.sum_subtotal'.tr, _subTotal, curr),
+            _sumLine('create_quotation.sum_tax'.tr, _totalTax, curr),
             const SizedBox(height: 8),
             Container(width: 200, height: 1, color: Colors.grey.shade100),
             const SizedBox(height: 8),
-            _sumLine('Grand Total', _grandTotal, curr, isTotal: true),
+            _sumLine('create_quotation.sum_grand_total'.tr, _grandTotal, curr,
+                isTotal: true),
             const SizedBox(height: 20),
             Row(children: [
               CustomRoundButton(
-                  title: 'Clear',
+                  title: 'create_quotation.btn_clear'.tr,
                   fct: () => setState(() => _items.clear()),
                   height: 45,
                   width: 100,
@@ -804,7 +813,7 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
                   textColor: Colors.white),
               const SizedBox(width: 12),
               CustomRoundButton(
-                  title: 'Save Quotation',
+                  title: 'create_quotation.btn_save'.tr,
                   fct: _saveQuotation,
                   height: 45,
                   width: 160,

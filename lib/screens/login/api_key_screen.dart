@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../components/build_round_button.dart';
 import '../../components/build_title.dart';
@@ -115,10 +116,10 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
 
   String? _validateApiKey(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'API key is required';
+      return 'login.validator_api_key_required'.tr;
     }
     if (value.trim().length < 10) {
-      return 'API key must be at least 10 characters';
+      return 'login.validator_api_key_short'.tr;
     }
     return null;
   }
@@ -152,12 +153,12 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
                     children: [
                       SizedBox(height: titleTopSpace),
                       BuildTextTile(
-                        title: 'API Key Required',
+                        title: 'login.api_key_title'.tr,
                         textStyle: buildTitleStyle,
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Please enter your API key to continue',
+                        'login.api_key_subtitle'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.regular,
                           FontSize.s14,
@@ -204,7 +205,7 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
                                       color: ColorManager.kPrimaryColor
                                           .withOpacity(0.5),
                                     ),
-                                    hintText: 'Enter your API key',
+                                    hintText: 'login.api_key_hint'.tr,
                                     hintStyle: buildTextFieldStyle,
                                     suffixIcon: GestureDetector(
                                       onTap: () {
@@ -273,7 +274,7 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
                                       width: formWidth,
                                       fontSize: FontSize.s12,
                                       height: size.height * .07,
-                                      title: 'Submit',
+                                      title: 'login.btn_submit'.tr,
                                       fct: _verifyAndSaveApiKey,
                                       isLoading: _isLoading,
                                     ),
@@ -286,7 +287,7 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            "Don't have an API key? ",
+                            'login.api_key_no_key'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.regular,
                               FontSize.s14,
@@ -303,7 +304,7 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
                               }
                             },
                             child: Text(
-                              'Register Here',
+                              'login.api_key_register'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.semiBold,
                                 FontSize.s14,
@@ -338,8 +339,8 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
                   ),
                   tooltip:
                       Provider.of<KeyboardProvider>(context).showKeyboardFeature
-                          ? 'Hide Keyboard'
-                          : 'Show Keyboard',
+                          ? 'login.tooltip_hide_keyboard'.tr
+                          : 'login.tooltip_show_keyboard'.tr,
                   onPressed: () {
                     final keyboardProvider =
                         Provider.of<KeyboardProvider>(context, listen: false);

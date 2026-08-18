@@ -83,8 +83,7 @@ class _SignInScreenState extends State<SignInScreen> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message:
-              'API key saved. Domain verification failed, so default server URL is being used.',
+          message: 'login.error_default_domain'.tr,
         );
       }
     } catch (_) {}
@@ -140,7 +139,7 @@ class _SignInScreenState extends State<SignInScreen> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Failed to reset API key. Please try again.',
+          message: 'login.error_reset_api_key'.tr,
         );
       }
     }
@@ -194,7 +193,7 @@ class _SignInScreenState extends State<SignInScreen> {
                           height: titleTopSpace,
                         ),
                         BuildTextTile(
-                          title: 'Login',
+                          title: 'login.title'.tr,
                           textStyle: buildTitleStyle,
                         ),
                         SizedBox(
@@ -366,9 +365,9 @@ class _SignInScreenState extends State<SignInScreen> {
                                               ),
                                               SizedBox(
                                                   width: isMobile ? 12 : 10),
-                                              const Text(
-                                                'Remember Me',
-                                                style: TextStyle(
+                                              Text(
+                                                'login.remember_me'.tr,
+                                                style: const TextStyle(
                                                   fontWeight:
                                                       FontWeightManager.regular,
                                                   fontFamily:
@@ -389,9 +388,9 @@ class _SignInScreenState extends State<SignInScreen> {
                                                     builder: (context) =>
                                                         const ForgotPasswordScreen()));
                                           },
-                                          child: const Text(
-                                            'Forgot Password?',
-                                            style: TextStyle(
+                                          child: Text(
+                                            'login.forgot_password'.tr,
+                                            style: const TextStyle(
                                               fontWeight:
                                                   FontWeightManager.medium,
                                               fontFamily:
@@ -420,13 +419,13 @@ class _SignInScreenState extends State<SignInScreen> {
                                           fontSize: FontSize.s12,
                                           height: size.height * .07,
                                           key: const Key("Button_Sign_in"),
-                                          title: 'Continue',
+                                          title: 'login.btn_continue'.tr,
                                           fct: () async {
                                             if (_formKey.currentState!
                                                 .validate()) {
                                               // Show our new loading overlay instead of the dialog
                                               _updateLoadingState(
-                                                  true, "Logging in...");
+                                                  true, 'login.loading_logging_in'.tr);
 
                                               // Save remember me state when login button is pressed
                                               _handleRememberMe(_rememberMe);
@@ -635,8 +634,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                                         false, "");
                                                     showScaffoldError(
                                                       context: context,
-                                                      message:
-                                                          "You have no permission to any store. Please contact your administrator.",
+                                                      message: 'login.error_no_store_permission'.tr,
                                                     );
                                                   }
                                                 } else {
@@ -665,8 +663,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                             } else {
                                               showScaffoldError(
                                                   context: context,
-                                                  message:
-                                                      'Please Fill Details!');
+                                                  message: 'login.error_fill_details'.tr);
                                             }
                                           },
                                         ),
@@ -684,9 +681,9 @@ class _SignInScreenState extends State<SignInScreen> {
                                         size: 16,
                                         color: ColorManager.kPrimaryColor,
                                       ),
-                                      label: const Text(
-                                        'Reset API Key',
-                                        style: TextStyle(
+                                      label: Text(
+                                        'login.btn_reset_api_key'.tr,
+                                        style: const TextStyle(
                                           fontWeight: FontWeightManager.medium,
                                           fontFamily: FontConstants.fontFamily,
                                           fontSize: FontSize.s10,
@@ -721,8 +718,8 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                   tooltip:
                       Provider.of<KeyboardProvider>(context).showKeyboardFeature
-                          ? 'Hide Keyboard'
-                          : 'Show Keyboard',
+                          ? 'login.tooltip_hide_keyboard'.tr
+                          : 'login.tooltip_show_keyboard'.tr,
                   onPressed: () {
                     final keyboardProvider =
                         Provider.of<KeyboardProvider>(context, listen: false);
@@ -787,11 +784,11 @@ class _SignInScreenState extends State<SignInScreen> {
     final regex = RegExp(pattern);
 
     if (value == null || value.isEmpty) {
-      return 'Email is required';
+      return 'login.validator_email_required'.tr;
     }
 
     if (!regex.hasMatch(value)) {
-      return 'Enter a valid email address';
+      return 'login.validator_email_invalid'.tr;
     }
 
     return null;

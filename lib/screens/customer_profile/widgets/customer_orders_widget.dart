@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/models/customer_list.dart';
@@ -59,8 +60,8 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
         isLoading = false;
         orders = [];
         errorMessage = customerId == null
-            ? 'Customer ID is not available.'
-            : 'Please login again.';
+            ? 'customer_orders.err_no_customer_id'.tr
+            : 'customer_orders.err_login_again'.tr;
       });
       return;
     }
@@ -93,7 +94,7 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
       setState(() {
         isLoading = false;
         orders = [];
-        errorMessage = 'Failed to load orders';
+        errorMessage = 'customer_orders.err_load'.tr;
       });
     }
   }
@@ -177,7 +178,7 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Order History',
+                        'customer_orders.title'.tr,
                         overflow: TextOverflow.ellipsis,
                         style: buildCustomStyle(FontWeightManager.bold,
                             FontSize.s16, 0, ColorManager.kTitleTextColor),
@@ -187,7 +188,7 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
                       icon: const Icon(Icons.sort, size: 20),
                       onPressed: () {},
                       color: ColorManager.kGreyColor,
-                      tooltip: 'Sort orders',
+                      tooltip: 'customer_orders.tooltip_sort'.tr,
                       constraints: const BoxConstraints(),
                       padding: const EdgeInsets.all(4),
                     ),
@@ -213,7 +214,7 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
                         color: ColorManager.kPrimaryColor, size: 28),
                     const SizedBox(width: 12),
                     Text(
-                      'Order History (${orders.length})',
+                      '${'customer_orders.title'.tr} (${orders.length})',
                       style: buildCustomStyle(FontWeightManager.bold,
                           FontSize.s18, 0, ColorManager.kTitleTextColor),
                     ),
@@ -223,7 +224,7 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
                   icon: const Icon(Icons.sort),
                   onPressed: () {},
                   color: ColorManager.kGreyColor,
-                  tooltip: 'Sort orders',
+                  tooltip: 'customer_orders.tooltip_sort'.tr,
                 ),
               ],
             ),
@@ -239,13 +240,13 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
               size: 60, color: ColorManager.kPrimaryColor.withOpacity(0.4)),
           const SizedBox(height: 20),
           Text(
-            'No Orders Found',
+            'customer_orders.title_empty'.tr,
             style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s18, 0,
                 ColorManager.kTitleTextColor),
           ),
           const SizedBox(height: 8),
           Text(
-            'This customer has not placed any orders yet.',
+            'customer_orders.msg_empty'.tr,
             textAlign: TextAlign.center,
             style: buildCustomStyle(FontWeightManager.regular, FontSize.s14, 0,
                 ColorManager.kGreyColor),
@@ -267,7 +268,7 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
                 size: isMobile ? 40 : 50, color: ColorManager.kRed),
             const SizedBox(height: 16),
             Text(
-              'Error Loading Orders',
+              'customer_orders.title_error'.tr,
               textAlign: TextAlign.center,
               style: buildCustomStyle(FontWeightManager.semiBold,
                   isMobile ? FontSize.s16 : FontSize.s18, 0,
@@ -278,7 +279,7 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
               padding: EdgeInsets.symmetric(
                   horizontal: isMobile ? 8 : 0),
               child: Text(
-                errorMessage ?? 'An unknown error occurred.',
+                errorMessage ?? 'customer_orders.err_unknown'.tr,
                 textAlign: TextAlign.center,
                 softWrap: true,
                 style: buildCustomStyle(FontWeightManager.regular,
@@ -289,7 +290,7 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
             ElevatedButton.icon(
               onPressed: () => _loadOrders(page: currentPage, showLoader: true),
               icon: const Icon(Icons.refresh),
-              label: const Text('Try Again'),
+              label: Text('customer_orders.btn_try_again'.tr),
               style: ElevatedButton.styleFrom(
                   backgroundColor: ColorManager.kPrimaryColor),
             ),
@@ -410,18 +411,18 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildDetailRow('Payment Status', order.paymentStatus,
+          _buildDetailRow('customer_orders.label_payment_status'.tr, order.paymentStatus,
               valueColor: _getPaymentStatusColor(order.paymentStatus)),
-          _buildDetailRow('Customer', _getCustomerDisplayName(order)),
+          _buildDetailRow('customer_orders.label_customer'.tr, _getCustomerDisplayName(order)),
           const Divider(height: 20),
           ..._buildOrderItemsList(order.cartItems),
           if (order.cartItems != null && order.cartItems!.isNotEmpty)
             const Divider(height: 20),
           if ((order.priceSummary?.taxTotal ?? '').isNotEmpty &&
               order.priceSummary?.taxTotal != '0.00')
-            _buildTotalRow('Tax', order.priceSummary?.taxTotal),
+            _buildTotalRow('customer_orders.label_tax'.tr, order.priceSummary?.taxTotal),
           const SizedBox(height: 8),
-          _buildTotalRow('Grand Total', _getGrandTotal(order), isGrandTotal: true),
+          _buildTotalRow('customer_orders.label_grand_total'.tr, _getGrandTotal(order), isGrandTotal: true),
         ],
       ),
     );
@@ -429,7 +430,7 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
 
   List<Widget> _buildOrderItemsList(List<CartItem>? items) {
     if (items == null || items.isEmpty) {
-      return [const Text('No items in this order.')];
+      return [Text('customer_orders.msg_no_items'.tr)];
     }
 
     final currency = Provider.of<AppSettingsProvider>(context, listen: false)
@@ -444,7 +445,7 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Product: ${item.productName ?? 'N/A'} (x${item.quantity ?? 0})',
+                      '${'customer_orders.label_product'.tr} ${item.productName ?? 'N/A'} (x${item.quantity ?? 0})',
                       style: buildCustomStyle(FontWeightManager.regular,
                           FontSize.s12, 0, ColorManager.kTitleTextColor),
                     ),
@@ -557,6 +558,6 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
     if (paymentMethod == null) return 'N/A';
     if (paymentMethod is String) return paymentMethod;
     if (paymentMethod is List) return paymentMethod.join(', ');
-    return 'Multiple';
+    return 'customer_orders.label_multiple'.tr;
   }
 }

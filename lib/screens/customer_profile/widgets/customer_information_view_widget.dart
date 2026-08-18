@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_detail_row.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:provider/provider.dart';
@@ -143,7 +144,7 @@ class _CustomerInformationViewWidgetState
                           BorderRadius.circular(size.width < 600 ? 12 : 20),
                     ),
                     child: Text(
-                      "Active",
+                      'customer_profile.view_label_active'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         size.width < 600 ? FontSize.s10 : FontSize.s12,
@@ -166,25 +167,25 @@ class _CustomerInformationViewWidgetState
                     children: [
                       // Contact Information Card
                       _buildInfoCard(
-                        title: "Contact Information",
+                        title: 'customer_profile.view_section_contact'.tr,
                         icon: Icons.contact_phone,
                         children: [
                           _buildInfoRow(
                             icon: Icons.email_outlined,
-                            label: "Email",
-                            value: widget.customer?.email ?? "Not provided",
+                            label: 'customer_profile.view_label_email'.tr,
+                            value: widget.customer?.email ?? 'customer_profile.view_msg_not_provided'.tr,
                           ),
                           const SizedBox(height: 16),
                           _buildInfoRow(
                             icon: Icons.phone_outlined,
-                            label: "Phone",
-                            value: widget.customer?.phone ?? "Not provided",
+                            label: 'customer_profile.view_label_phone'.tr,
+                            value: widget.customer?.phone ?? 'customer_profile.view_msg_not_provided'.tr,
                           ),
                           const SizedBox(height: 16),
                           _buildInfoRow(
                             icon: Icons.phone_android_outlined,
-                            label: "Alt Phone",
-                            value: widget.customer?.altPhone ?? "Not provided",
+                            label: 'customer_profile.view_label_alt_phone'.tr,
+                            value: widget.customer?.altPhone ?? 'customer_profile.view_msg_not_provided'.tr,
                           ),
                         ],
                       ),
@@ -193,12 +194,12 @@ class _CustomerInformationViewWidgetState
 
                       // Account Information Card
                       _buildInfoCard(
-                        title: "Account Information",
+                        title: 'customer_profile.view_section_account'.tr,
                         icon: Icons.account_circle,
                         children: [
                           _buildInfoRow(
                             icon: Icons.account_balance_wallet_outlined,
-                            label: "Balance",
+                            label: 'customer_profile.view_label_balance'.tr,
                             value:
                                 "${widget.customer?.balance?.toStringAsFixed(2) ?? "0.00"}",
                             valueColor: (widget.customer?.balance ?? 0) >= 0
@@ -208,7 +209,7 @@ class _CustomerInformationViewWidgetState
                           const SizedBox(height: 16),
                           _buildInfoRow(
                             icon: Icons.payment_outlined,
-                            label: "Payment Type",
+                            label: 'customer_profile.view_label_payment_type'.tr,
                             value: _getPaymentTypeDisplay(
                                 widget.customer?.paymentType),
                             valueColor: _getPaymentTypeColor(
@@ -217,7 +218,7 @@ class _CustomerInformationViewWidgetState
                           const SizedBox(height: 16),
                           _buildInfoRow(
                             icon: Icons.credit_score_outlined,
-                            label: "Loyalty Points",
+                            label: 'customer_profile.view_label_loyalty_points'.tr,
                             value: widget.customer?.loyaltyPoints?.toString() ??
                                 "0",
                             valueColor: ColorManager.kSuccessColor,
@@ -225,34 +226,34 @@ class _CustomerInformationViewWidgetState
                           const SizedBox(height: 16),
                           _buildInfoRow(
                             icon: Icons.person_outlined,
-                            label: "Gender",
+                            label: 'customer_profile.view_label_gender'.tr,
                             value: widget.customer?.gender != null &&
                                     widget.customer!.gender!.isNotEmpty
                                 ? widget.customer!.gender![0].toUpperCase() +
                                     widget.customer!.gender!.substring(1)
-                                : "Not provided",
+                                : 'customer_profile.view_msg_not_provided'.tr,
                           ),
                           const SizedBox(height: 16),
                           _buildInfoRow(
                             icon: Icons.calendar_today_outlined,
-                            label: "Date of Birth",
+                            label: 'customer_profile.view_label_dob'.tr,
                             value: widget.customer?.dob != null &&
                                     widget.customer!.dob!.isNotEmpty
                                 ? widget.customer!.dob!
-                                : "Not provided",
+                                : 'customer_profile.view_msg_not_provided'.tr,
                           ),
                           const SizedBox(height: 16),
                           _buildInfoRow(
                             icon: Icons.calendar_today_outlined,
-                            label: "Member Since",
+                            label: 'customer_profile.view_label_member_since'.tr,
                             value: widget.customer?.createdAt != null
                                 ? "${widget.customer!.createdAt!.day}/${widget.customer!.createdAt!.month}/${widget.customer!.createdAt!.year}"
-                                : "Not available",
+                                : 'customer_profile.view_msg_not_available'.tr,
                           ),
                           const SizedBox(height: 16),
                           _buildInfoRow(
                             icon: Icons.shopping_bag_outlined,
-                            label: "Total Orders",
+                            label: 'customer_profile.view_label_total_orders'.tr,
                             value: widget.customer?.orders?.length.toString() ??
                                 "0",
                           ),
@@ -445,7 +446,7 @@ class _CustomerInformationViewWidgetState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Quick Actions",
+            'customer_profile.view_section_quick_actions'.tr,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s16,
@@ -459,7 +460,7 @@ class _CustomerInformationViewWidgetState
               Expanded(
                 child: _buildActionButton(
                   icon: Icons.edit_outlined,
-                  label: "Edit Customer",
+                  label: 'customer_profile.view_label_edit_customer'.tr,
                   color: ColorManager.kPrimaryColor,
                   onTap: widget.onEditCustomer ?? () {},
                 ),
@@ -468,7 +469,7 @@ class _CustomerInformationViewWidgetState
               Expanded(
                 child: _buildActionButton(
                   icon: Icons.history_outlined,
-                  label: "View Orders",
+                  label: 'customer_profile.view_label_view_orders'.tr,
                   color: ColorManager.kButtonGreen,
                   onTap: widget.onViewOrders ?? () {},
                 ),
@@ -477,7 +478,7 @@ class _CustomerInformationViewWidgetState
               Expanded(
                 child: _buildActionButton(
                   icon: Icons.chat_outlined,
-                  label: "Message",
+                  label: 'customer_profile.view_label_message'.tr,
                   color: ColorManager.kButtonBlue,
                   onTap: widget.onMessage ?? () {},
                 ),
@@ -531,15 +532,15 @@ class _CustomerInformationViewWidgetState
 
   Widget _buildKycInfoCard() {
     return _buildInfoCard(
-      title: "KYC Information",
+      title: 'customer_profile.view_section_kyc'.tr,
       icon: Icons.verified_user,
       children: widget.customer!.kyc!
           .map((kyc) => Column(
                 children: [
                   _buildInfoRow(
                     icon: Icons.document_scanner,
-                    label: kyc.key ?? "Document",
-                    value: kyc.value ?? "Not provided",
+                    label: kyc.key ?? 'customer_profile.view_label_document'.tr,
+                    value: kyc.value ?? 'customer_profile.view_msg_not_provided'.tr,
                   ),
                   if (kyc.expiryDate != null && kyc.expiryDate!.isNotEmpty)
                     Padding(
@@ -553,7 +554,7 @@ class _CustomerInformationViewWidgetState
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            "Expires: ${kyc.expiryDate}",
+                            '${'customer_profile.view_label_expires'.tr}: ${kyc.expiryDate}',
                             style: buildCustomStyle(
                               FontWeightManager.regular,
                               FontSize.s11,
@@ -573,13 +574,13 @@ class _CustomerInformationViewWidgetState
 
   Widget _buildStoreInfoCard() {
     return _buildInfoCard(
-      title: "Store Information",
+      title: 'customer_profile.view_section_store'.tr,
       icon: Icons.store,
       children: [
         _buildInfoRow(
           icon: Icons.business,
-          label: "Store Name",
-          value: widget.customer?.storeName ?? "Not available",
+          label: 'customer_profile.view_label_store_name'.tr,
+          value: widget.customer?.storeName ?? 'customer_profile.view_msg_not_available'.tr,
         ),
         if (widget.customer?.companyId != null)
           Column(
@@ -587,7 +588,7 @@ class _CustomerInformationViewWidgetState
               const SizedBox(height: 16),
               _buildInfoRow(
                 icon: Icons.corporate_fare,
-                label: "Company ID",
+                label: 'customer_profile.view_label_company_id'.tr,
                 value: widget.customer!.companyId!.toString(),
               ),
             ],
@@ -598,7 +599,7 @@ class _CustomerInformationViewWidgetState
 
   Widget _buildLoyaltyCardInfoCard() {
     return _buildInfoCard(
-      title: "Loyalty Card Information",
+      title: 'customer_profile.view_section_loyalty'.tr,
       icon: Icons.card_giftcard,
       children: [
         if (widget.customer?.cardNumber != null &&
@@ -607,7 +608,7 @@ class _CustomerInformationViewWidgetState
             children: [
               _buildInfoRow(
                 icon: Icons.credit_card,
-                label: "Card Number",
+                label: 'customer_profile.view_label_card_number'.tr,
                 value: widget.customer!.cardNumber!,
               ),
               const SizedBox(height: 16),
@@ -619,7 +620,7 @@ class _CustomerInformationViewWidgetState
             children: [
               _buildInfoRow(
                 icon: Icons.star,
-                label: "Membership",
+                label: 'customer_profile.view_label_membership'.tr,
                 value: widget.customer!.membershipName!,
               ),
               const SizedBox(height: 16),
@@ -631,7 +632,7 @@ class _CustomerInformationViewWidgetState
             children: [
               _buildInfoRow(
                 icon: Icons.qr_code,
-                label: "Membership Code",
+                label: 'customer_profile.view_label_membership_code'.tr,
                 value: widget.customer!.membershipCode!,
               ),
               const SizedBox(height: 16),
@@ -643,7 +644,7 @@ class _CustomerInformationViewWidgetState
             children: [
               _buildInfoRow(
                 icon: Icons.calendar_today,
-                label: "Valid From",
+                label: 'customer_profile.view_label_valid_from'.tr,
                 value: widget.customer!.validFrom!,
               ),
               const SizedBox(height: 16),
@@ -655,7 +656,7 @@ class _CustomerInformationViewWidgetState
             children: [
               _buildInfoRow(
                 icon: Icons.event_busy,
-                label: "Valid Until",
+                label: 'customer_profile.view_label_valid_until'.tr,
                 value: widget.customer!.validUntil!,
               ),
               const SizedBox(height: 16),
@@ -667,7 +668,7 @@ class _CustomerInformationViewWidgetState
             children: [
               _buildInfoRow(
                 icon: Icons.info,
-                label: "Card Status",
+                label: 'customer_profile.view_label_card_status'.tr,
                 value: widget.customer!.cardStatus!,
                 valueColor:
                     widget.customer!.cardStatus!.toLowerCase() == 'active'
@@ -682,7 +683,7 @@ class _CustomerInformationViewWidgetState
             children: [
               _buildInfoRow(
                 icon: Icons.redeem,
-                label: "Min Redeemable Points",
+                label: 'customer_profile.view_label_min_redeemable'.tr,
                 value: widget.customer!.minRedeemablePoints!.toString(),
               ),
               const SizedBox(height: 16),
@@ -691,7 +692,7 @@ class _CustomerInformationViewWidgetState
         if (widget.customer?.pricePerPoint != null)
           _buildInfoRow(
             icon: Icons.currency_rupee,
-            label: "Price Per Point",
+            label: 'customer_profile.view_label_price_per_point'.tr,
             value: "${widget.customer!.pricePerPoint!.toStringAsFixed(2)}",
           ),
         // Show message if no loyalty information
@@ -706,7 +707,7 @@ class _CustomerInformationViewWidgetState
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Text(
-              "No loyalty card information available",
+              'customer_profile.view_msg_no_loyalty_info'.tr,
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s14,
@@ -753,7 +754,7 @@ class _CustomerInformationViewWidgetState
                 const SizedBox(width: 8),
                 Flexible(
                   child: Text(
-                    "Recent Transactions",
+                    'customer_profile.view_section_transactions'.tr,
                     overflow: TextOverflow.ellipsis,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
@@ -765,7 +766,7 @@ class _CustomerInformationViewWidgetState
                 ),
                 const Spacer(),
                 Text(
-                  "${widget.customer!.transactions!.length} transactions",
+                  "${widget.customer!.transactions!.length} ${'customer_profile.view_label_transactions'.tr}",
                   style: buildCustomStyle(
                     FontWeightManager.regular,
                     FontSize.s12,
@@ -835,7 +836,7 @@ class _CustomerInformationViewWidgetState
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            "Ref: ${transaction.referenceId ?? 'N/A'}",
+                            '${'customer_profile.view_label_ref'.tr}: ${transaction.referenceId ?? 'N/A'}',
                             style: buildCustomStyle(
                               FontWeightManager.regular,
                               FontSize.s12,
@@ -899,7 +900,7 @@ class _CustomerInformationViewWidgetState
               ),
               child: Center(
                 child: Text(
-                  "And ${widget.customer!.transactions!.length - 3} more transactions...",
+                  '${'customer_profile.view_label_and'.tr} ${widget.customer!.transactions!.length - 3} ${'customer_profile.view_label_more_transactions'.tr}',
                   style: buildCustomStyle(
                     FontWeightManager.medium,
                     FontSize.s12,
@@ -940,15 +941,15 @@ class _CustomerInformationViewWidgetState
 
   String _getPaymentTypeDisplay(String? paymentType) {
     if (paymentType == null || paymentType.isEmpty) {
-      return "Not set";
+      return 'customer_profile.view_msg_not_set'.tr;
     }
     switch (paymentType.toLowerCase()) {
       case 'to_pay':
-        return "To Pay";
+        return 'customer_profile.field_payment_to_pay'.tr;
       case 'to_receive':
-        return "To Receive";
+        return 'customer_profile.field_payment_to_receive'.tr;
       default:
-        return "Not set";
+        return 'customer_profile.view_msg_not_set'.tr;
     }
   }
 

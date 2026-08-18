@@ -62,8 +62,7 @@ void _tolerateOverflow() {
 
 void main() {
   group('ProductCard — action buttons are always enabled', () {
-    testWidgets(
-        'tapping card body on a no-stock product calls onDirectAdd',
+    testWidgets('tapping card body on a no-stock product calls onDirectAdd',
         (tester) async {
       int directAddCount = 0;
       final product = _noStockProduct(name: 'Body Tap Product');
@@ -192,6 +191,7 @@ void main() {
           height: 240,
           child: ProductCard(
             product: product,
+            stockEnabled: true,
             onInfoTap: () {},
             onAddWithOptions: () {},
           ),
@@ -204,8 +204,7 @@ void main() {
   });
 
   group('ProductListRow — action buttons are always enabled', () {
-    testWidgets(
-        'tapping card body on a no-stock product calls onDirectAdd',
+    testWidgets('tapping card body on a no-stock product calls onDirectAdd',
         (tester) async {
       _tolerateOverflow();
       int directAddCount = 0;
@@ -316,6 +315,7 @@ void main() {
           height: 80,
           child: ProductListRow(
             product: product,
+            stockEnabled: true,
             onInfoTap: () {},
             onAddWithOptions: () {},
           ),

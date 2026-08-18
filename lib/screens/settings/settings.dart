@@ -96,18 +96,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
-        title: const Text('Clear Product Cache'),
-        content: const Text(
-          'This will clear locally cached products and last product sync timestamp. Continue?',
-        ),
+        title: Text('settings_ui.clear_product_cache_title'.tr),
+        content: Text('settings_ui.clear_product_cache_content'.tr),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text('general.cancel'.tr),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Clear'),
+            child: Text('settings_ui.clear_product_cache_btn_clear'.tr),
           ),
         ],
       ),
@@ -124,14 +122,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       showScaffold(
         context: context,
-        message: 'Local product cache cleared (debug)',
+        message: 'settings_ui.clear_product_cache_success'.tr,
       );
       setState(() {});
     } catch (e) {
       if (!mounted) return;
       showScaffoldError(
         context: context,
-        message: 'Failed to clear product cache: ${e.toString()}',
+        message:
+            '${'settings_ui.clear_product_cache_error'.tr}: ${e.toString()}',
       );
     }
   }
@@ -142,20 +141,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         context: context,
         builder: (context) => AlertDialog(
           backgroundColor: Colors.white,
-          title: const Text('Clear Local Storage'),
-          content: const Text(
-            'This will clear all local data except login credentials and log you out. Are you sure?',
-          ),
+          title: Text('settings_ui.clear_local_storage_title'.tr),
+          content: Text('settings_ui.clear_local_storage_content'.tr),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: Text('general.cancel'.tr),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text(
-                'Clear & Logout',
-                style: TextStyle(color: ColorManager.kButtonRed),
+              child: Text(
+                'settings_ui.clear_local_storage_btn_confirm'.tr,
+                style: const TextStyle(color: ColorManager.kButtonRed),
               ),
             ),
           ],
@@ -171,7 +168,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) {
         showScaffold(
           context: context,
-          message: 'Local storage cleared successfully',
+          message: 'settings_ui.clear_local_storage_success'.tr,
         );
 
         Future.delayed(const Duration(milliseconds: 500), () {
@@ -185,7 +182,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error clearing local storage: ${e.toString()}',
+          message:
+              '${'settings_ui.clear_local_storage_error'.tr}: ${e.toString()}',
         );
       }
     }
@@ -219,25 +217,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
-        title: const Text('Notification Position'),
+        title: Text('settings_ui.notification_position'.tr),
         content: StatefulBuilder(
           builder: (context, setState) => Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               RadioListTile<String>(
-                title: const Text('Left'),
+                title: Text('settings_ui.left'.tr),
                 value: 'left',
                 groupValue: selected,
                 onChanged: (v) => setState(() => selected = v!),
               ),
               RadioListTile<String>(
-                title: const Text('Center'),
+                title: Text('settings_ui.center'.tr),
                 value: 'center',
                 groupValue: selected,
                 onChanged: (v) => setState(() => selected = v!),
               ),
               RadioListTile<String>(
-                title: const Text('Right'),
+                title: Text('settings_ui.right'.tr),
                 value: 'right',
                 groupValue: selected,
                 onChanged: (v) => setState(() => selected = v!),
@@ -248,11 +246,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            child: Text('general.cancel'.tr),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(selected),
-            child: const Text('Save'),
+            child: Text('general.save'.tr),
           ),
         ],
       ),
@@ -265,7 +263,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     custom_dialog_box.setNotificationPosition(result);
     if (!mounted) return;
     setState(() {});
-    showScaffold(context: context, message: 'Notification position updated');
+    showScaffold(
+        context: context, message: 'settings_ui.toast_notification_updated'.tr);
   }
 
   Future<void> _showOrientationModePicker() async {
@@ -278,27 +277,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
-        title: const Text('Screen Orientation'),
+        title: Text('settings_ui.screen_orientation'.tr),
         content: StatefulBuilder(
           builder: (context, setState) => Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               RadioListTile<String>(
-                title: const Text('Auto'),
-                subtitle:
-                    const Text('Portrait on phones, landscape on tablets'),
+                title: Text('settings_ui.auto'.tr),
+                subtitle: Text('settings_ui.portrait_sub'.tr),
                 value: OrientationHelper.modeAuto,
                 groupValue: selected,
                 onChanged: (v) => setState(() => selected = v!),
               ),
               RadioListTile<String>(
-                title: const Text('Portrait'),
+                title: Text('settings_ui.portrait'.tr),
                 value: OrientationHelper.modePortrait,
                 groupValue: selected,
                 onChanged: (v) => setState(() => selected = v!),
               ),
               RadioListTile<String>(
-                title: const Text('Landscape'),
+                title: Text('settings_ui.landscape'.tr),
                 value: OrientationHelper.modeLandscape,
                 groupValue: selected,
                 onChanged: (v) => setState(() => selected = v!),
@@ -309,11 +307,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            child: Text('general.cancel'.tr),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(selected),
-            child: const Text('Save'),
+            child: Text('general.save'.tr),
           ),
         ],
       ),
@@ -325,7 +323,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await OrientationHelper.apply(modeOverride: result);
     if (!mounted) return;
     setState(() {});
-    showScaffold(context: context, message: 'Screen orientation updated');
+    showScaffold(
+        context: context, message: 'settings_ui.toast_orientation_updated'.tr);
   }
 
   Future<void> _toggleDeveloperMode() async {
@@ -630,18 +629,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onChanged: (v) => setState(() => selected = v!),
                   ),
                   RadioListTile<String>(
-                    title: const Text('हिन्दी'),
-                    value: 'hi',
-                    groupValue: selected,
-                    onChanged: (v) => setState(() => selected = v!),
-                  ),
-                  RadioListTile<String>(
-                    title: const Text('മലയാളം'),
-                    value: 'ml',
-                    groupValue: selected,
-                    onChanged: (v) => setState(() => selected = v!),
-                  ),
-                  RadioListTile<String>(
                     title: const Text('العربية'),
                     value: 'ar',
                     groupValue: selected,
@@ -681,7 +668,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (ctx) {
         return AlertDialog(
           backgroundColor: Colors.white,
-          title: const Text('Last Product Sync'),
+          title: Text('settings_ui.last_product_sync'.tr),
           content: Text(displayTime),
           actions: [
             TextButton(
@@ -695,7 +682,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Get.back();
                     }
                   : null,
-              child: const Text('Reset'),
+              child: Text('general.reset'.tr),
             ),
             TextButton(
               onPressed: () => Get.back(),

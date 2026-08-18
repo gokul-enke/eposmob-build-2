@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
 import 'package:pos_machine/newcomponents/custom_radio_group.dart';
@@ -266,20 +267,20 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
             size,
             [
               _buildTextField(
-                "First Name",
+                'add_customer.label_first_name'.tr,
                 firstNameTextController,
                 TextInputType.text,
                 size,
                 focusNode: firstNameFocusNode,
               ),
               _buildTextField(
-                "Last Name",
+                'add_customer.label_last_name'.tr,
                 lastNameTextController,
                 TextInputType.text,
                 size,
               ),
               _buildTextField(
-                "Email Address",
+                'add_customer.label_email'.tr,
                 emailTextController,
                 TextInputType.emailAddress,
                 size,
@@ -292,7 +293,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
             size,
             [
               _buildTextField(
-                "Phone Number",
+                'add_customer.label_phone'.tr,
                 phoneNumberController,
                 TextInputType.number,
                 size,
@@ -301,13 +302,13 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                 isRequired: true,
               ),
               _buildTextField(
-                "Building / Apartment",
+                'add_customer.label_building'.tr,
                 addressTextController,
                 TextInputType.text,
                 size,
               ),
               _buildTextField(
-                "Country",
+                'add_customer.label_country'.tr,
                 countryTextController,
                 TextInputType.text,
                 size,
@@ -322,7 +323,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "Street Address",
+                    'add_customer.label_street_address'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.regular,
                       FontSize.s12,
@@ -338,9 +339,9 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                     ),
                     icon: const Icon(Icons.location_pin,
                         size: 14, color: Colors.blue),
-                    label: const Text(
-                      "Pick on Map",
-                      style: TextStyle(fontSize: 12, color: Colors.blue),
+                    label: Text(
+                      'add_customer.btn_pick_on_map'.tr,
+                      style: const TextStyle(fontSize: 12, color: Colors.blue),
                     ),
                     onPressed: _openLocationPicker,
                   ),
@@ -368,7 +369,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                   ),
                   decoration: InputDecoration(
                     border: InputBorder.none,
-                    hintText: "Street name, area, locality",
+                    hintText: 'add_customer.hint_street_address'.tr,
                     hintStyle: buildCustomStyle(
                       FontWeightManager.regular,
                       FontSize.s12,
@@ -402,7 +403,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
               _buildGenderDropdown(size),
               _buildDobField(size),
               _buildTextField(
-                "Alternate Phone",
+                'add_customer.label_alt_phone'.tr,
                 altPhoneTextController,
                 TextInputType.phone,
                 size,
@@ -415,7 +416,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
               size,
               [
                 CustomRadioGroup<String>(
-                  title: "Customer Type",
+                  title: 'add_customer.label_customer_type'.tr,
                   value: selectedCustomerType,
                   options: const ['B2C', 'B2B'],
                   onChanged: (String? newValue) {
@@ -427,7 +428,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                   isRequired: true,
                 ),
                 _buildTextField(
-                  "CR Number",
+                  'add_customer.label_cr_number'.tr,
                   crNumberController,
                   TextInputType.text,
                   size,
@@ -435,13 +436,13 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                   validator: (value) {
                     if (selectedCustomerType == 'B2B' &&
                         (value == null || value.trim().isEmpty)) {
-                      return 'CR Number is required for B2B';
+                      return 'add_customer.err_cr_required'.tr;
                     }
                     return null;
                   },
                 ),
                 _buildTextField(
-                  "VAT Number",
+                  'add_customer.label_vat_number'.tr,
                   vatNumberController,
                   TextInputType.text,
                   size,
@@ -449,7 +450,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                   validator: (value) {
                     if (selectedCustomerType == 'B2B' &&
                         (value == null || value.trim().isEmpty)) {
-                      return 'VAT Number is required for B2B';
+                      return 'add_customer.err_vat_required'.tr;
                     }
                     return null;
                   },
@@ -463,7 +464,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _buildTextField(
-                      "Balance",
+                      'add_customer.label_balance'.tr,
                       balanceTextController,
                       TextInputType.number,
                       size,
@@ -472,7 +473,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                     ),
                     const SizedBox(height: 16),
                     CustomRadioGroup<PaymentType>(
-                      title: "Payment Type",
+                      title: 'add_customer.label_payment_type'.tr,
                       value: selectedPaymentType,
                       options: const [PaymentType.toPay, PaymentType.toReceive],
                       onChanged: (PaymentType? newValue) {
@@ -483,9 +484,9 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                       displayText: (PaymentType value) {
                         switch (value) {
                           case PaymentType.toPay:
-                            return "To Pay";
+                            return 'add_customer.payment_to_pay'.tr;
                           case PaymentType.toReceive:
-                            return "To Receive";
+                            return 'add_customer.payment_to_receive'.tr;
                           default:
                             return "";
                         }
@@ -498,7 +499,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                   children: [
                     Expanded(
                       child: _buildTextField(
-                        "Balance",
+                        'add_customer.label_balance'.tr,
                         balanceTextController,
                         TextInputType.number,
                         size,
@@ -510,7 +511,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                     Expanded(
                       flex: 2,
                       child: CustomRadioGroup<PaymentType>(
-                        title: "Payment Type",
+                        title: 'add_customer.label_payment_type'.tr,
                         value: selectedPaymentType,
                         options: const [
                           PaymentType.toPay,
@@ -524,9 +525,9 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                         displayText: (PaymentType value) {
                           switch (value) {
                             case PaymentType.toPay:
-                              return "To Pay";
+                              return 'add_customer.payment_to_pay'.tr;
                             case PaymentType.toReceive:
-                              return "To Receive";
+                              return 'add_customer.payment_to_receive'.tr;
                             default:
                               return "";
                           }
@@ -713,7 +714,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "States / Provinces",
+          'add_customer.label_states'.tr,
           style: buildCustomStyle(FontWeightManager.regular, FontSize.s12, 0.27,
                   Colors.black.withOpacity(0.6))
               .copyWith(height: 1.0),
@@ -722,7 +723,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
         CustomDropDownWithSearch<String>(
           key: stateDropdownKey,
           title: "",
-          hintText: "Select State",
+          hintText: 'add_customer.hint_select_state'.tr,
           value: selectedStateId,
           height: _fieldHeight(size),
           margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
@@ -745,7 +746,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
             return state.value;
           },
           searchController: stateSearchController,
-          searchHintText: "Search State...",
+          searchHintText: 'add_customer.hint_search_state'.tr,
         ),
       ],
     );
@@ -757,7 +758,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "District / City",
+          'add_customer.label_district'.tr,
           style: buildCustomStyle(FontWeightManager.regular, FontSize.s12, 0.27,
                   Colors.black.withOpacity(0.6))
               .copyWith(height: 1.0),
@@ -768,7 +769,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           title: "",
           height: _fieldHeight(size),
           margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-          hintText: "Select District",
+          hintText: 'add_customer.hint_select_district'.tr,
           value: selectedDistrictId,
           items: locationProvider.districtList
               .map((district) => district.key)
@@ -808,7 +809,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
             return district.value;
           },
           searchController: districtSearchController,
-          searchHintText: "Search District...",
+          searchHintText: 'add_customer.hint_search_district'.tr,
         ),
       ],
     );
@@ -820,7 +821,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "States / Provinces",
+          'add_customer.label_states'.tr,
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s12,
@@ -841,7 +842,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
             isExpanded: true,
             value: selectedStateId,
             hint: Text(
-              "Select State",
+              'add_customer.hint_select_state'.tr,
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s12,
@@ -890,7 +891,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "District / City",
+          'add_customer.label_district'.tr,
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s12,
@@ -923,10 +924,10 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                   value: selectedDistrictId,
                   hint: Text(
                     selectedStateId == null
-                        ? "Select State First"
+                        ? 'add_customer.hint_select_state_first'.tr
                         : locationProvider.districtList.isEmpty
-                            ? "No districts available"
-                            : "Select District",
+                            ? 'add_customer.hint_no_districts'.tr
+                            : 'add_customer.hint_select_district'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.regular,
                       FontSize.s12,
@@ -1000,7 +1001,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Pincode",
+          'add_customer.label_pincode'.tr,
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s12,
@@ -1033,10 +1034,10 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                   value: selectedPincodeId,
                   hint: Text(
                     selectedDistrictId == null
-                        ? "Select District First"
+                        ? 'add_customer.hint_select_district_first'.tr
                         : locationProvider.pincodeList.isEmpty
-                            ? "No pincodes available"
-                            : "Select Pincode",
+                            ? 'add_customer.hint_no_pincodes'.tr
+                            : 'add_customer.hint_select_pincode'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.regular,
                       FontSize.s12,
@@ -1097,9 +1098,9 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text(
-              'Submit',
-              style: TextStyle(
+            child: Text(
+              'add_customer.btn_submit'.tr,
+              style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
               ),
@@ -1122,9 +1123,9 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text(
-              'Close',
-              style: TextStyle(
+            child: Text(
+              'add_customer.btn_close'.tr,
+              style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
               ),
@@ -1142,7 +1143,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           children: [
             // Close Button
             CustomRoundButtonAdvanced(
-              title: "Close",
+              title: 'add_customer.btn_close'.tr,
               fct: () {
                 if (widget.onCancel != null) {
                   widget.onCancel!();
@@ -1160,7 +1161,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
             const SizedBox(width: 10),
             // Submit Button
             CustomRoundButtonAdvanced(
-              title: "Submit",
+              title: 'add_customer.btn_submit'.tr,
               fct: () => _submitForm(locationProvider, accessToken),
               height: 50,
               width: 120,
@@ -1293,14 +1294,14 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
             ? errorResponse.values.map((error) {
                 return error is List ? error.join(', ') : error.toString();
               }).join('\n')
-            : value['message']?.toString() ?? "An unknown error occurred";
+            : value['message']?.toString() ?? 'add_customer.err_unknown'.tr;
 
         showScaffoldError(context: context, message: errorMessage);
         Navigator.pop(context);
       } catch (error) {
         if (!mounted) return;
         Navigator.pop(context);
-        showScaffoldError(context: context, message: 'Error: $error');
+        showScaffoldError(context: context, message: '${'add_customer.err_prefix'.tr}$error');
       }
     }
   }
@@ -1310,7 +1311,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Gender",
+          'add_customer.label_gender'.tr,
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s12,
@@ -1330,7 +1331,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
             isExpanded: true,
             value: selectedGender,
             hint: Text(
-              "Select an option",
+              'add_customer.hint_select_gender'.tr,
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s12,
@@ -1338,10 +1339,10 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                 ColorManager.colorPlaceholder,
               ),
             ),
-            items: const [
-              DropdownMenuItem(value: 'male', child: Text('Male')),
-              DropdownMenuItem(value: 'female', child: Text('Female')),
-              DropdownMenuItem(value: 'other', child: Text('Other')),
+            items: [
+              DropdownMenuItem(value: 'male', child: Text('add_customer.gender_male'.tr)),
+              DropdownMenuItem(value: 'female', child: Text('add_customer.gender_female'.tr)),
+              DropdownMenuItem(value: 'other', child: Text('add_customer.gender_other'.tr)),
             ],
             onChanged: (val) {
               setState(() {
@@ -1364,7 +1365,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Date of Birth",
+          'add_customer.label_dob'.tr,
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s12,
@@ -1621,17 +1622,17 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
     const pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$";
     final regex = RegExp(pattern);
     return value!.isNotEmpty && !regex.hasMatch(value)
-        ? 'Enter a valid email address'
+        ? 'add_customer.err_email_invalid'.tr
         : null;
   }
 
   String? validatePhoneNumber(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Phone number is required';
+      return 'add_customer.err_phone_required'.tr;
     }
     final phoneNumber = value.replaceAll("-", "");
     if (phoneNumber.length < 10) {
-      return 'Enter a valid phone number';
+      return 'add_customer.err_phone_invalid'.tr;
     }
     return null;
   }

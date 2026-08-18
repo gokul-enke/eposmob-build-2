@@ -1637,7 +1637,9 @@ class OrderPanelState extends State<OrderPanel> {
 
     final statusId = _findStatusIdByValue('SERVED');
     if (statusId == null) {
-      showScaffoldError(context: context, message: 'Status "SERVED" not found');
+      showScaffoldError(
+          context: context,
+          message: 'order_panel.error_status_served_not_found'.tr);
       return false;
     }
 
@@ -1679,7 +1681,8 @@ class OrderPanelState extends State<OrderPanel> {
         if (mounted) {
           showScaffold(
             context: context,
-            message: 'Order $displayOrderId items marked as SERVED',
+            message:
+                '${'order_panel.msg_order_marked_served_1'.tr} $displayOrderId ${'order_panel.msg_order_marked_served_2'.tr}',
           );
         }
         return true;
@@ -2631,7 +2634,7 @@ class OrderPanelState extends State<OrderPanel> {
                   children: [
                     Expanded(
                       child: CustomRoundButton(
-                        title: "Cancel",
+                        title: 'general.cancel'.tr,
                         fct: () => Navigator.of(context).pop(),
                         fontSize: FontSize.s14,
                         height: 45,
@@ -2644,7 +2647,7 @@ class OrderPanelState extends State<OrderPanel> {
                     Expanded(
                       flex: 2,
                       child: CustomRoundButton(
-                        title: "Save Comment",
+                        title: 'order_panel.btn_save_comment'.tr,
                         fct: () {
                           setState(() {
                             _orderComment = controller.text.trim();
@@ -2759,13 +2762,13 @@ class OrderPanelState extends State<OrderPanel> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Item Note',
+                                'order_panel.item_note_title'.tr,
                                 style: buildCustomStyle(FontWeightManager.bold,
                                     FontSize.s16, 0.21, textColor),
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Add kitchen instructions for this item',
+                                'order_panel.item_note_subtitle'.tr,
                                 style: buildCustomStyle(
                                     FontWeightManager.regular,
                                     FontSize.s12,
@@ -2777,7 +2780,7 @@ class OrderPanelState extends State<OrderPanel> {
                         ),
                         IconButton(
                           onPressed: () => Navigator.of(dialogContext).pop(),
-                          tooltip: 'Close',
+                          tooltip: 'general.close'.tr,
                           icon: const Icon(Icons.close,
                               size: 20, color: Color(0xFF64748B)),
                         ),
@@ -2797,7 +2800,7 @@ class OrderPanelState extends State<OrderPanel> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    'Quick notes',
+                                    'order_panel.quick_notes'.tr,
                                     style: buildCustomStyle(
                                         FontWeightManager.semiBold,
                                         FontSize.s13,
@@ -2807,7 +2810,10 @@ class OrderPanelState extends State<OrderPanel> {
                                 ),
                                 if (selectedOptionIds.isNotEmpty)
                                   Text(
-                                    '${selectedOptionIds.length} selected',
+                                    'order_panel.selected_count'.trParams({
+                                      'count':
+                                          selectedOptionIds.length.toString(),
+                                    }),
                                     style: buildCustomStyle(
                                         FontWeightManager.medium,
                                         FontSize.s11,
@@ -2907,7 +2913,7 @@ class OrderPanelState extends State<OrderPanel> {
                             const SizedBox(height: 20),
                           ],
                           Text(
-                            'Custom note',
+                            'order_panel.custom_note'.tr,
                             style: buildCustomStyle(FontWeightManager.semiBold,
                                 FontSize.s13, 0.21, const Color(0xFF334155)),
                           ),
@@ -2920,7 +2926,7 @@ class OrderPanelState extends State<OrderPanel> {
                             onChanged: (_) => setDialogState(() {}),
                             textCapitalization: TextCapitalization.sentences,
                             decoration: InputDecoration(
-                              hintText: 'Type any additional instruction...',
+                              hintText: 'order_panel.custom_note_hint'.tr,
                               hintStyle: buildCustomStyle(
                                   FontWeightManager.regular,
                                   FontSize.s13,
@@ -2959,7 +2965,7 @@ class OrderPanelState extends State<OrderPanel> {
                               });
                             },
                             icon: const Icon(Icons.delete_outline, size: 18),
-                            label: const Text('Clear all'),
+                            label: Text('order_panel.clear_all'.tr),
                             style: TextButton.styleFrom(
                               foregroundColor: const Color(0xFFDC2626),
                             ),
@@ -2971,7 +2977,7 @@ class OrderPanelState extends State<OrderPanel> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 18, vertical: 13),
                           ),
-                          child: Text('Cancel',
+                          child: Text('general.cancel'.tr,
                               style: buildCustomStyle(FontWeightManager.medium,
                                   FontSize.s14, 0.21, const Color(0xFF64748B))),
                         ),
@@ -2990,7 +2996,7 @@ class OrderPanelState extends State<OrderPanel> {
                             Navigator.of(dialogContext).pop(comment);
                           },
                           icon: const Icon(Icons.check, size: 18),
-                          label: const Text('Save note'),
+                          label: Text('order_panel.save_note'.tr),
                           style: ElevatedButton.styleFrom(
                             elevation: 0,
                             backgroundColor: primaryColor,
@@ -3049,7 +3055,7 @@ class OrderPanelState extends State<OrderPanel> {
         if (productId == null) {
           showScaffoldError(
             context: context,
-            message: 'Product ID not found for item comment update.',
+            message: 'order_panel.error_product_id_not_found_comment'.tr,
           );
           return;
         }
@@ -3078,14 +3084,16 @@ class OrderPanelState extends State<OrderPanel> {
           showScaffoldError(
             context: context,
             message: response?['message']?.toString() ??
-                'Failed to update item comment',
+                'order_panel.error_update_comment'.tr,
           );
         }
       } catch (e) {
         if (!mounted) return;
         showScaffoldError(
           context: context,
-          message: 'Failed to update item comment: ${e.toString()}',
+          message: 'order_panel.error_update_comment_detail'.trParams({
+            'error': e.toString(),
+          }),
         );
       }
     }
@@ -4287,7 +4295,7 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ _printNewKOT: No order selected');
       showScaffoldError(
         context: context,
-        message: 'Please select an order first',
+        message: 'order_panel.error_select_order_first'.tr,
       );
       return;
     }
@@ -4324,7 +4332,7 @@ class OrderPanelState extends State<OrderPanel> {
           'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â _printNewKOT: No pending add-on or cancel KOT items');
       showScaffoldError(
         context: context,
-        message: 'No pending KOT items to print',
+        message: 'order_panel.error_no_pending_kot'.tr,
       );
       return;
     }
@@ -5031,7 +5039,7 @@ class OrderPanelState extends State<OrderPanel> {
           'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â _printSavedOrderKot: KOT printing is disabled in app settings');
       showScaffoldError(
         context: context,
-        message: 'KOT printing is disabled in settings',
+        message: 'order_panel.error_kot_disabled'.tr,
       );
     }
   }
@@ -6511,7 +6519,8 @@ class OrderPanelState extends State<OrderPanel> {
 
         if (productId == null) {
           showScaffoldError(
-              context: context, message: 'Product ID not found for item.');
+              context: context,
+              message: 'order_panel.error_product_id_not_found'.tr);
           return;
         }
 
@@ -8277,7 +8286,8 @@ class OrderPanelState extends State<OrderPanel> {
 
         showScaffold(
           context: context,
-          message: 'Order $orderNumber confirmed successfully!',
+          message:
+              '${'order_panel.msg_order_confirmed_1'.tr} $orderNumber ${'order_panel.msg_order_confirmed_2'.tr}',
         );
 
         // Refresh saved orders to show updated status
@@ -8349,7 +8359,7 @@ class OrderPanelState extends State<OrderPanel> {
     return _showCheckoutModal(
       mode: CheckoutModalMode.selectionOnly,
       initialStep: 0,
-      title: 'Select Customer',
+      title: 'order_panel.modal_select_customer'.tr,
     );
   }
 
@@ -8357,7 +8367,7 @@ class OrderPanelState extends State<OrderPanel> {
     return _showCheckoutModal(
       mode: CheckoutModalMode.selectionOnly,
       initialStep: 1,
-      title: 'Select Delivery Method',
+      title: 'order_panel.modal_select_delivery'.tr,
     );
   }
 
@@ -8365,7 +8375,7 @@ class OrderPanelState extends State<OrderPanel> {
     return _showCheckoutModal(
       mode: CheckoutModalMode.selectionOnly,
       initialStep: 3,
-      title: 'Select Payment Method',
+      title: 'order_panel.modal_select_payment'.tr,
     );
   }
 

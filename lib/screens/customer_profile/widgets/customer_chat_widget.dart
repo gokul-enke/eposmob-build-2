@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -75,7 +76,7 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
       });
     } catch (error) {
       setState(() {
-        errorMessage = 'Failed to load chat history';
+        errorMessage = 'customer_chat.err_load'.tr;
         isLoading = false;
       });
     }
@@ -162,7 +163,7 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.customer.name ?? 'Customer Name',
+                  widget.customer.name ?? 'customer_chat.label_customer_name'.tr,
                   softWrap: true,
                   style: buildCustomStyle(
                     FontWeightManager.bold,
@@ -172,7 +173,7 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
                   ),
                 ),
                 Text(
-                  'Online',
+                  'customer_chat.label_online'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.regular,
                     FontSize.s12,
@@ -209,7 +210,7 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Error Loading Chat',
+              'customer_chat.title_error'.tr,
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s18,
@@ -219,7 +220,7 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
             ),
             const SizedBox(height: 8),
             Text(
-              errorMessage ?? 'An unknown error occurred.',
+              errorMessage ?? 'customer_chat.err_unknown'.tr,
               textAlign: TextAlign.center,
               style: buildCustomStyle(
                 FontWeightManager.regular,
@@ -232,7 +233,7 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
             ElevatedButton.icon(
               onPressed: _loadChatHistory,
               icon: const Icon(Icons.refresh),
-              label: const Text('Try Again'),
+              label: Text('customer_chat.btn_try_again'.tr),
               style: ElevatedButton.styleFrom(
                 backgroundColor: ColorManager.kPrimaryColor,
                 foregroundColor: Colors.white,
@@ -281,7 +282,7 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
           ),
           const SizedBox(height: 20),
           Text(
-            'No Messages Yet',
+            'customer_chat.title_no_messages'.tr,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s18,
@@ -291,7 +292,7 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Start a conversation with ${widget.customer.name}.',
+            '${'customer_chat.msg_start_conversation'.tr} ${widget.customer.name}.',
             textAlign: TextAlign.center,
             style: buildCustomStyle(
               FontWeightManager.regular,
@@ -387,10 +388,10 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
           Expanded(
             child: TextField(
               controller: _messageController,
-              decoration: const InputDecoration(
-                hintText: 'Type your message here...',
+              decoration: InputDecoration(
+                hintText: 'customer_chat.hint_message'.tr,
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 8),
               ),
               onSubmitted: (_) => _sendMessage(),
             ),

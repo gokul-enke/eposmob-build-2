@@ -199,7 +199,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                           _buildHeader(),
                           const SizedBox(height: 10),
                           SelectableText(
-                            'Order Details - # $orderNumber',
+                            '${'sales_order_details.title'.tr} $orderNumber',
                             style: ResponsiveWidget.isMobile(context)
                                 ? buildCustomStyle(FontWeightManager.semiBold,
                                     FontSize.s12, 0.30, ColorManager.textColor)
@@ -251,7 +251,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                                         padding:
                                             const EdgeInsets.only(top: 4.0),
                                         child: Text(
-                                          'Delivery Date: 	${DateHelper.formatISODate(effectiveDeliveryDate)}',
+                                          '${'sales_order_details.label_delivery_date'.tr}\t${DateHelper.formatISODate(effectiveDeliveryDate)}',
                                           style: buildCustomStyle(
                                               FontWeightManager.medium,
                                               isMobile
@@ -267,7 +267,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                                         padding:
                                             const EdgeInsets.only(top: 2.0),
                                         child: Text(
-                                          'Delivery Time: 	${effectiveDeliveryTime}',
+                                          '${'sales_order_details.label_delivery_time'.tr}\t$effectiveDeliveryTime',
                                           style: buildCustomStyle(
                                               FontWeightManager.medium,
                                               isMobile
@@ -308,7 +308,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 .isOnlineSalesNavigation;
             sideBarController.index.value = isOnline ? 92 : 2;
           },
-          text: 'All Orders',
+          text: 'sales_order_details.btn_all_orders'.tr,
         ),
         BuildBoxShadowContainer(
           width: 15,
@@ -333,7 +333,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
 
   Widget _buildOrderDetails() {
     if (orderDetailsModelData == null) {
-      return const Text("No order details available.");
+      return Text('sales_order_details.msg_no_order_data'.tr);
     }
     return OrderDetailWidget(
       orderDetailsModelData: orderDetailsModelData,
@@ -377,7 +377,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
             alignment: isMobile ? WrapAlignment.center : WrapAlignment.start,
             children: [
               CustomRoundButton(
-                title: "Print",
+                title: 'sales_order_details.btn_print'.tr,
             boxColor: Colors.white,
             textColor: ColorManager.kPrimaryColor,
             fct: () async {
@@ -385,8 +385,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                   cartItems == null ||
                   cartItems!.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('No order data available for printing'),
+                  SnackBar(
+                    content: Text('sales_order_details.msg_no_print_data'.tr),
                     backgroundColor: Colors.red,
                   ),
                 );
@@ -553,7 +553,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 fontSize: buttonFontSize,
               ),
               CustomRoundButton(
-                title: "Share",
+                title: 'sales_order_details.btn_share'.tr,
             boxColor: Colors.white,
             textColor: Colors.blue,
             fct: () async {
@@ -564,7 +564,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 fontSize: buttonFontSize,
               ),
               CustomRoundButton(
-                title: "Return",
+                title: 'sales_order_details.btn_return'.tr,
             boxColor: Colors.white,
             textColor: const Color(0xFFE53E3E),
             fct: () async {
@@ -572,7 +572,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
               if (orderNo == null || orderNo.isEmpty) {
                 showScaffoldError(
                   context: context,
-                  message: 'Order number not available for return.',
+                  message: 'sales_order_details.msg_no_order_number'.tr,
                 );
                 return;
               }
@@ -598,7 +598,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 if (context.mounted) {
                   showScaffold(
                     context: context,
-                    message: 'Preparing return for order #$orderNo',
+                    message: '${'sales_order_details.msg_preparing_return'.tr} #$orderNo',
                   );
                 }
               } catch (e) {
@@ -606,7 +606,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 if (context.mounted) {
                   showScaffoldError(
                     context: context,
-                    message: 'Error preparing order return. Please try again.',
+                    message: 'sales_order_details.msg_error_return'.tr,
                   );
                 }
               }
@@ -616,7 +616,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 fontSize: buttonFontSize,
               ),
               CustomRoundButton(
-                title: "Order Status",
+                title: 'sales_order_details.btn_order_status'.tr,
             boxColor: Colors.white,
             textColor: const Color(0xFF6A1B9A),
             fct: () {
@@ -651,7 +651,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                       if (context.mounted) {
                         showScaffold(
                           context: context,
-                          message: 'Order status updated to $newStatus',
+                          message: '${'sales_order_details.msg_status_updated'.tr} $newStatus',
                         );
                         getOrderDetails();
                       }
@@ -659,7 +659,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                       if (context.mounted) {
                         showScaffoldError(
                           context: context,
-                          message: 'Failed to update order status: $e',
+                          message: '${'sales_order_details.msg_failed_status'.tr} $e',
                         );
                       }
                     }
@@ -672,7 +672,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 fontSize: buttonFontSize,
               ),
               CustomRoundButton(
-                title: "Payment Status",
+                title: 'sales_order_details.btn_payment_status'.tr,
             boxColor: Colors.white,
             textColor: const Color(0xFF1E88E5),
             fct: () {
@@ -698,7 +698,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                       if (context.mounted) {
                         showScaffold(
                           context: context,
-                          message: 'Payment status updated to $newStatus',
+                          message: '${'sales_order_details.msg_payment_updated'.tr} $newStatus',
                         );
                         getOrderDetails();
                       }
@@ -706,7 +706,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                       if (context.mounted) {
                         showScaffoldError(
                           context: context,
-                          message: 'Failed to update payment status: $e',
+                          message: '${'sales_order_details.msg_failed_payment'.tr} $e',
                         );
                       }
                     }
@@ -729,7 +729,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
     if (orderDetailsModelData == null) {
       showScaffoldError(
         context: context,
-        message: 'Order details not available.',
+        message: 'sales_order_details.msg_not_available'.tr,
       );
       return;
     }
@@ -756,9 +756,9 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const Text(
-                  'Share Invoice',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                Text(
+                  'sales_order_details.title_share_invoice'.tr,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
                 const Divider(height: 1),
@@ -769,7 +769,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                     child: Icon(Icons.picture_as_pdf_outlined,
                         color: Color(0xFFE53E3E)),
                   ),
-                  title: const Text('Share as PDF'),
+                  title: Text('sales_order_details.opt_share_pdf'.tr),
                   onTap: () async {
                     Navigator.pop(ctx);
                     await _sharePDFInvoice();
@@ -784,8 +784,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                   title: Text(
                     customerDetails?.email != null &&
                             customerDetails!.email!.isNotEmpty
-                        ? 'Share to Email (${customerDetails!.email})'
-                        : 'Share to Email',
+                        ? '${'sales_order_details.opt_share_email'.tr} (${customerDetails!.email})'
+                        : 'sales_order_details.opt_share_email'.tr,
                   ),
                   onTap: () async {
                     Navigator.pop(ctx);
@@ -801,8 +801,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                   title: Text(
                     customerDetails?.phone != null &&
                             customerDetails!.phone!.isNotEmpty
-                        ? 'Share via WhatsApp (${customerDetails!.phone})'
-                        : 'Share via WhatsApp',
+                        ? '${'sales_order_details.opt_share_whatsapp'.tr} (${customerDetails!.phone})'
+                        : 'sales_order_details.opt_share_whatsapp'.tr,
                   ),
                   onTap: () async {
                     Navigator.pop(ctx);
@@ -835,7 +835,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: 'Order details not available for PDF generation.',
+            message: 'sales_order_details.msg_no_pdf_data'.tr,
           );
         }
         return;
@@ -857,7 +857,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: 'App settings or document configuration not loaded.',
+            message: 'sales_order_details.msg_no_app_settings'.tr,
           );
         }
         return;
@@ -926,7 +926,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: 'Failed to generate PDF invoice.',
+            message: 'sales_order_details.msg_pdf_failed'.tr,
           );
         }
         return;
@@ -953,7 +953,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
             if (context.mounted) {
               showScaffold(
                 context: context,
-                message: 'Sharing cancelled by user.',
+                message: 'sales_order_details.msg_sharing_cancelled'.tr,
               );
             }
             return;
@@ -984,7 +984,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: 'PDF invoice shared successfully!',
+          message: 'sales_order_details.msg_pdf_shared'.tr,
         );
       }
     } catch (e) {
@@ -996,7 +996,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error generating or sharing PDF invoice. Please try again.',
+          message: 'sales_order_details.msg_pdf_share_error'.tr,
         );
       }
     }
@@ -1007,24 +1007,24 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.picture_as_pdf, color: Colors.red),
-              SizedBox(width: 8),
-              Text('PDF Invoice Ready'),
+              const Icon(Icons.picture_as_pdf, color: Colors.red),
+              const SizedBox(width: 8),
+              Text('sales_order_details.title_pdf_ready'.tr),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Invoice: $orderNumber'),
+              Text('${'sales_order_details.label_invoice'.tr} $orderNumber'),
               const SizedBox(height: 8),
-              Text('File: ${pdfFile.path.split('/').last}'),
+              Text('${'sales_order_details.label_file'.tr} ${pdfFile.path.split('/').last}'),
               const SizedBox(height: 16),
-              const Text(
-                'Choose how to share your PDF:',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              Text(
+                'sales_order_details.label_choose_share'.tr,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -1041,8 +1041,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                   if (context.mounted) {
                     showScaffold(
                       context: context,
-                      message:
-                          'File location opened. The PDF is saved in Documents/epos folder.',
+                      message: 'sales_order_details.msg_file_location_opened'.tr,
                     );
                   }
                 } catch (e) {
@@ -1050,7 +1049,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 }
               },
               icon: const Icon(Icons.folder_open),
-              label: const Text('Open File Location'),
+              label: Text('sales_order_details.btn_open_file_location'.tr),
             ),
             TextButton.icon(
               onPressed: () async {
@@ -1064,8 +1063,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                   if (context.mounted) {
                     showScaffold(
                       context: context,
-                      message:
-                          'PDF opened. You can now share it from your PDF viewer.',
+                      message: 'sales_order_details.msg_pdf_opened'.tr,
                     );
                   }
                 } catch (e) {
@@ -1073,7 +1071,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 }
               },
               icon: const Icon(Icons.open_in_new),
-              label: const Text('Open PDF'),
+              label: Text('sales_order_details.btn_open_pdf'.tr),
             ),
             TextButton.icon(
               onPressed: () async {
@@ -1083,7 +1081,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                   if (context.mounted) {
                     showScaffold(
                       context: context,
-                      message: 'File path copied to clipboard!',
+                      message: 'sales_order_details.msg_path_copied'.tr,
                     );
                   }
                 } catch (e) {
@@ -1091,7 +1089,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 }
               },
               icon: const Icon(Icons.copy),
-              label: const Text('Copy Path'),
+              label: Text('sales_order_details.btn_copy_path'.tr),
             ),
           ],
         ),
@@ -1107,7 +1105,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
     if (invoiceUrl == null) {
       showScaffoldError(
         context: context,
-        message: 'Invoice URL not available.',
+        message: 'sales_order_details.msg_no_invoice_url'.tr,
       );
       return;
     }
@@ -1128,7 +1126,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'No email app found to share the invoice.',
+          message: 'sales_order_details.msg_no_email_app'.tr,
         );
       }
     }
@@ -1143,28 +1141,28 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.warning, color: Colors.orange),
-                SizedBox(width: 8),
-                Text('WhatsApp Not Connected'),
+                const Icon(Icons.warning, color: Colors.orange),
+                const SizedBox(width: 8),
+                Text('sales_order_details.title_wa_not_connected'.tr),
               ],
             ),
             content: Text(
-              'WhatsApp bot is not connected. Would you like to connect now?\n\n'
-              'Status: ${whatsappProvider.connectionStatus}',
+              '${'sales_order_details.msg_wa_not_connected'.tr}\n\n'
+              '${'sales_order_details.label_wa_status'.tr} ${whatsappProvider.connectionStatus}',
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
+                child: Text('general.cancel'.tr),
               ),
               ElevatedButton(
                 onPressed: () async {
                   Navigator.of(context).pop();
                   Get.find<SideBarController>().index.value = 63;
                 },
-                child: const Text('Connect WhatsApp'),
+                child: Text('sales_order_details.btn_connect_whatsapp'.tr),
               ),
             ],
           ),
@@ -1175,7 +1173,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
       if (customerDetails?.phone == null || customerDetails!.phone!.isEmpty) {
         showScaffoldError(
           context: context,
-          message: 'Customer phone number not available.',
+          message: 'sales_order_details.msg_no_phone'.tr,
         );
         return;
       }
@@ -1203,13 +1201,13 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         if (success) {
           showScaffold(
             context: context,
-            message: 'Invoice sent via WhatsApp to $customerPhone',
+            message: '${'sales_order_details.msg_invoice_sent_wa'.tr} $customerPhone',
           );
         } else {
           showScaffoldError(
             context: context,
             message:
-                'Failed to send WhatsApp message: ${whatsappProvider.lastError}',
+                '${'sales_order_details.msg_wa_send_failed'.tr} ${whatsappProvider.lastError}',
           );
         }
       }
@@ -1218,7 +1216,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error sending WhatsApp message. Please try again.',
+          message: 'sales_order_details.msg_wa_error'.tr,
         );
       }
     }

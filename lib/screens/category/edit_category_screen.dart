@@ -219,10 +219,10 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                     onPressed: () {
                       sideBarController.index.value = 12;
                     },
-                    text: 'All Categories',
+                    text: 'category.all_categories'.tr,
                   ),
                   Text(
-                    'Edit Category',
+                    'category.edit_title'.tr,
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s20, 0.30, ColorManager.kTitleTextColor),
                   ),
@@ -264,7 +264,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                         BuildTextTile(
                                           isStarRed: false,
                                           isTextField: true,
-                                          title: "Select Parent Category",
+                                          title: 'category.select_parent'.tr,
                                           textStyle: buildCustomStyle(
                                             FontWeightManager.regular,
                                             FontSize.s14,
@@ -291,7 +291,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                                 ? categoryList![categoryProvider
                                                     .selectedCategoryIndex]
                                                 : null,
-                                            hint: Text('Select Category',
+                                            hint: Text('category.hint_select_category'.tr,
                                                 style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s12,
@@ -302,7 +302,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                               DropdownMenuItem<Category>(
                                                 value: null,
                                                 child: Text(
-                                                  'None',
+                                                  'category.none'.tr,
                                                   maxLines: 1,
                                                   overflow: TextOverflow.ellipsis,
                                                   style: buildCustomStyle(
@@ -319,7 +319,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                                   value: category,
                                                   child: Text(
                                                     category.categoryName == "ALL"
-                                                        ? 'New Category'
+                                                        ? 'category.new_category'.tr
                                                         : category.categoryName ??
                                                             '',
                                                     maxLines: 1,
@@ -377,16 +377,16 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                     readOnly: false,
                                     controller: categoryNameController,
                                     size: size,
-                                    title: 'Category Name',
-                                    hintText: 'Category Name',
+                                    title: 'category.col_name'.tr,
+                                    hintText: 'category.col_name'.tr,
                                   ),
                                   buildColumnWidgetForTextFields(
                                     onchanged: (value) {},
                                     isLeft: false,
                                     controller: categorySlugController,
                                     size: size,
-                                    title: "Category Slug",
-                                    hintText: 'Url Slug',
+                                    title: 'category.field_slug'.tr,
+                                    hintText: 'category.field_slug_hint'.tr,
                                     readOnly: true,
                                   ),
                                 ];
@@ -400,8 +400,8 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                       readOnly: false,
                                       controller: categoryNameHindiController,
                                       size: size,
-                                      title: "Category Name - Hindi(IND)",
-                                      hintText: 'Enter...',
+                                      title: 'category.field_name_hindi'.tr,
+                                      hintText: 'category.field_lang_hint'.tr,
                                     ),
                                   );
                                 }
@@ -412,8 +412,8 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                       isLeft: false,
                                       controller: categoryNameArabicController,
                                       size: size,
-                                      title: "Category Name - Arabic(AR)",
-                                      hintText: 'Enter...',
+                                      title: 'category.field_name_arabic'.tr,
+                                      hintText: 'category.field_lang_hint'.tr,
                                       readOnly: false,
                                     ),
                                   );
@@ -480,7 +480,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                           activeColor: ColorManager.kPrimaryColor,
                                         ),
                                         const SizedBox(width: 8),
-                                        Text('Sellable',
+                                        Text('category.label_sellable'.tr,
                                             style: buildCustomStyle(FontWeightManager.regular,
                                                 FontSize.s14, 0.27, Colors.black.withOpacity(0.6))),
                                       ],
@@ -495,7 +495,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                           activeColor: ColorManager.kPrimaryColor,
                                         ),
                                         const SizedBox(width: 8),
-                                        Text('Purchasable',
+                                        Text('category.label_purchasable'.tr,
                                             style: buildCustomStyle(FontWeightManager.regular,
                                                 FontSize.s14, 0.27, Colors.black.withOpacity(0.6))),
                                       ],
@@ -630,7 +630,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                   Padding(
                                     padding: const EdgeInsets.only(left: 10.0),
                                     child: CustomRoundButton(
-                                      title: "Submit",
+                                      title: 'category.btn_submit'.tr,
                                       fct: () async {
                                         idController.text =
                                             categoryProvider.getParentCategory;
@@ -652,8 +652,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                                 "isEmptycategorySlugController");
                                             showScaffold(
                                               context: context,
-                                              message:
-                                                  'Please Fill the Required Fields',
+                                              message: 'category.err_fill_required'.tr,
                                             );
                                           } else {
                                             debugPrint(
@@ -742,7 +741,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                   Padding(
                                     padding: const EdgeInsets.only(left: 10.0),
                                     child: CustomRoundButton(
-                                      title: "Back",
+                                      title: 'category.btn_back'.tr,
                                       boxColor: Colors.white,
                                       textColor: ColorManager.kPrimaryColor,
                                       fct: () async {
@@ -804,7 +803,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      "Select Image",
+                                      'category.dialog_select_image'.tr,
                                       style: buildCustomStyle(
                                         FontWeightManager.medium,
                                         FontSize.s14,
@@ -846,7 +845,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                 child: Row(
                                   children: [
                                     CustomRoundButton(
-                                      title: "Upload from Device",
+                                      title: 'category.btn_upload_device'.tr,
                                       fct: () async {
                                         FilePickerResult? result = await FilePicker.platform.pickFiles(
                                           type: FileType.image,
@@ -911,7 +910,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                                     const EdgeInsets.all(15.0),
                                                 child: Center(
                                                     child: Text(
-                                                  "Select",
+                                                  'category.tbl_select'.tr,
                                                   style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s12,
@@ -929,7 +928,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                                     const EdgeInsets.all(15.0),
                                                 child: Center(
                                                     child: Text(
-                                                  "Image Title",
+                                                  'category.tbl_image_title'.tr,
                                                   style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s12,
@@ -947,7 +946,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                                     const EdgeInsets.all(15.0),
                                                 child: Center(
                                                     child: Text(
-                                                  "Preview",
+                                                  'category.tbl_preview'.tr,
                                                   style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s12,
@@ -1071,7 +1070,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                       padding:
                                           const EdgeInsets.only(left: 10.0),
                                       child: CustomRoundButton(
-                                        title: "Cancel",
+                                        title: 'category.btn_cancel'.tr,
                                         boxColor: Colors.white,
                                         textColor: ColorManager.kPrimaryColor,
                                         fct: () async {
@@ -1086,7 +1085,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                       padding:
                                           const EdgeInsets.only(left: 10.0),
                                       child: CustomRoundButton(
-                                        title: "Choose",
+                                        title: 'category.btn_choose'.tr,
                                         boxColor: Colors.white,
                                         textColor: ColorManager.kPrimaryColor,
                                         fct: () async {
@@ -1147,7 +1146,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      "Select Image",
+                                      'category.dialog_select_image'.tr,
                                       style: buildCustomStyle(
                                         FontWeightManager.medium,
                                         FontSize.s14,
@@ -1189,7 +1188,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                 child: Row(
                                   children: [
                                     CustomRoundButton(
-                                      title: "Upload from Device",
+                                      title: 'category.btn_upload_device'.tr,
                                       fct: () async {
                                         FilePickerResult? result = await FilePicker.platform.pickFiles(
                                           type: FileType.image,
@@ -1254,7 +1253,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                                     const EdgeInsets.all(15.0),
                                                 child: Center(
                                                     child: Text(
-                                                  "Select",
+                                                  'category.tbl_select'.tr,
                                                   style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s12,
@@ -1272,7 +1271,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                                     const EdgeInsets.all(15.0),
                                                 child: Center(
                                                     child: Text(
-                                                  "Image Title",
+                                                  'category.tbl_image_title'.tr,
                                                   style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s12,
@@ -1290,7 +1289,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                                     const EdgeInsets.all(15.0),
                                                 child: Center(
                                                     child: Text(
-                                                  "Preview",
+                                                  'category.tbl_preview'.tr,
                                                   style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s12,
@@ -1413,7 +1412,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                       padding:
                                           const EdgeInsets.only(left: 10.0),
                                       child: CustomRoundButton(
-                                        title: "Cancel",
+                                        title: 'category.btn_cancel'.tr,
                                         boxColor: Colors.white,
                                         textColor: ColorManager.kPrimaryColor,
                                         fct: () async {
@@ -1428,7 +1427,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                       padding:
                                           const EdgeInsets.only(left: 10.0),
                                       child: CustomRoundButton(
-                                        title: "Choose",
+                                        title: 'category.btn_choose'.tr,
                                         boxColor: Colors.white,
                                         textColor: ColorManager.kPrimaryColor,
                                         fct: () async {

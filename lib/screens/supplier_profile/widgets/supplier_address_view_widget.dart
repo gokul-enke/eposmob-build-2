@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/models/supplier.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -78,7 +79,7 @@ class _SupplierAddressViewWidgetState extends State<SupplierAddressViewWidget> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Address Information",
+                  'supplier_profile.addr_title'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.bold,
                     FontSize.s20,
@@ -88,7 +89,7 @@ class _SupplierAddressViewWidgetState extends State<SupplierAddressViewWidget> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  "Supplier: ${widget.supplier.name ?? "N/A"}",
+                  '${'supplier_profile.addr_supplier_prefix'.tr} ${widget.supplier.name ?? "N/A"}',
                   style: buildCustomStyle(
                     FontWeightManager.regular,
                     FontSize.s14,
@@ -107,7 +108,7 @@ class _SupplierAddressViewWidgetState extends State<SupplierAddressViewWidget> {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              "Business",
+              'supplier_profile.addr_badge_business'.tr,
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s12,
@@ -130,25 +131,25 @@ class _SupplierAddressViewWidgetState extends State<SupplierAddressViewWidget> {
           children: [
             // Address Information Card
             _buildInfoCard(
-              title: "Address Details",
+              title: 'supplier_profile.addr_card_title'.tr,
               icon: Icons.location_on_outlined,
               children: [
                 _buildInfoRow(
                   icon: Icons.place_outlined,
-                  label: "Address",
-                  value: widget.supplier.address ?? "Not provided",
+                  label: 'supplier_profile.label_address'.tr,
+                  value: widget.supplier.address ?? 'supplier_profile.not_provided'.tr,
                 ),
                 const SizedBox(height: 16),
                 _buildInfoRow(
                   icon: Icons.phone_outlined,
-                  label: "Phone",
-                  value: widget.supplier.phone ?? "Not provided",
+                  label: 'supplier_profile.label_phone'.tr,
+                  value: widget.supplier.phone ?? 'supplier_profile.not_provided'.tr,
                 ),
                 const SizedBox(height: 16),
                 _buildInfoRow(
                   icon: Icons.email_outlined,
-                  label: "Email",
-                  value: widget.supplier.email ?? "Not provided",
+                  label: 'supplier_profile.label_email'.tr,
+                  value: widget.supplier.email ?? 'supplier_profile.not_provided'.tr,
                 ),
               ],
             ),

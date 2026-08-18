@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:marionette_flutter/marionette_flutter.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -450,6 +451,12 @@ class MyApp extends StatelessWidget {
                         AppTranslations(LocalizationService.translations),
                     locale: LocalizationService.locale,
                     fallbackLocale: LocalizationService.fallbackLocale,
+                    supportedLocales: LocalizationService.supportedLocales,
+                    localizationsDelegates: const [
+                      GlobalMaterialLocalizations.delegate,
+                      GlobalWidgetsLocalizations.delegate,
+                      GlobalCupertinoLocalizations.delegate,
+                    ],
                     builder: (context, child) {
                       final screenSize = MediaQuery.of(context).size;
                       final platform = Theme.of(context).platform;
