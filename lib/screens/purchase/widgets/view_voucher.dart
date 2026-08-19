@@ -23,9 +23,9 @@ class ViewVoucherWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!canViewPurchasePrice(context)) {
-      return const SafeArea(
+      return SafeArea(
         child: Center(
-          child: Text('Purchase permission is required to view voucher details.'),
+          child: Text('view_voucher.permission_required'.tr),
         ),
       );
     }
@@ -73,7 +73,7 @@ class ViewVoucherWidget extends StatelessWidget {
               onPressed: () {
                 sideBarController.index.value = 26;
               },
-              text: 'All Vouchers',
+              text: 'view_voucher.btn_all_vouchers'.tr,
               // Optionally, you can customize the color and size
               // color: ColorManager.customColor,
               // size: 20.0,
@@ -82,7 +82,7 @@ class ViewVoucherWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "Voucher Details",
+                  'view_voucher.page_title'.tr,
                   style: buildCustomStyle(FontWeightManager.semiBold,
                       FontSize.s20, 0.30, ColorManager.textColor),
                 ),
@@ -120,7 +120,7 @@ class ViewVoucherWidget extends StatelessWidget {
               margin: const EdgeInsets.only(
                   top: 20, bottom: 0, left: 10, right: 10),
               child: Text(
-                " Voucher Details",
+                'view_voucher.section_title'.tr,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s15, 0.30, Colors.white),
               ),
@@ -137,25 +137,25 @@ class ViewVoucherWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     BuildDetailRow(
-                      title1: "Purchase Date",
+                      title1: 'view_voucher.label_purchase_date'.tr,
                       content1: voucherDetails?.purchaseDate ?? "",
-                      title2: "Store",
+                      title2: 'view_voucher.label_store'.tr,
                       content2: store,
                     ),
                     BuildDetailRow(
-                      title1: "Voucher Number",
+                      title1: 'view_voucher.label_voucher_number'.tr,
                       content1: voucherDetails?.voucherNumber ?? "",
-                      title2: "Amount",
+                      title2: 'view_voucher.label_amount'.tr,
                       content2: voucherDetails?.amountTotal?.toString() ?? "",
                     ),
                     BuildDetailRow(
-                      title1: "Tax",
+                      title1: 'view_voucher.label_tax'.tr,
                       content1: voucherDetails?.taxAmount ?? "",
-                      title2: "Currency",
+                      title2: 'view_voucher.label_currency'.tr,
                       content2: voucherDetails?.currency ?? "",
                     ),
                     BuildDetailRow(
-                      title1: "Supplier",
+                      title1: 'view_voucher.label_supplier'.tr,
                       content1: supplier,
                       title2: "",
                       content2: "",
@@ -197,7 +197,7 @@ class ViewVoucherWidget extends StatelessWidget {
                                           padding: const EdgeInsets.all(15.0),
                                           child: Center(
                                               child: Text(
-                                            "Product Name",
+                                            'view_voucher.col_product_name'.tr,
                                             style: buildCustomStyle(
                                               FontWeightManager.medium,
                                               FontSize.s12,
@@ -213,7 +213,7 @@ class ViewVoucherWidget extends StatelessWidget {
                                           padding: const EdgeInsets.all(15.0),
                                           child: Center(
                                               child: Text(
-                                            "Quantity",
+                                            'view_voucher.col_quantity'.tr,
                                             style: buildCustomStyle(
                                               FontWeightManager.medium,
                                               FontSize.s12,
@@ -229,7 +229,7 @@ class ViewVoucherWidget extends StatelessWidget {
                                           padding: const EdgeInsets.all(15.0),
                                           child: Center(
                                               child: Text(
-                                            "Unit",
+                                            'view_voucher.col_unit'.tr,
                                             style: buildCustomStyle(
                                               FontWeightManager.medium,
                                               FontSize.s12,
@@ -245,7 +245,7 @@ class ViewVoucherWidget extends StatelessWidget {
                                           padding: const EdgeInsets.all(15.0),
                                           child: Center(
                                               child: Text(
-                                            "Unit Price",
+                                            'view_voucher.col_unit_price'.tr,
                                             style: buildCustomStyle(
                                               FontWeightManager.medium,
                                               FontSize.s12,
@@ -261,7 +261,7 @@ class ViewVoucherWidget extends StatelessWidget {
                                           padding: const EdgeInsets.all(15.0),
                                           child: Center(
                                               child: Text(
-                                            "Action",
+                                            'view_voucher.col_action'.tr,
                                             style: buildCustomStyle(
                                               FontWeightManager.medium,
                                               FontSize.s12,
@@ -385,7 +385,7 @@ class ViewVoucherWidget extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(left: 10.0),
                       child: CustomRoundButton(
-                        title: "Back",
+                        title: 'view_voucher.btn_back'.tr,
                         boxColor: Colors.white,
                         textColor: ColorManager.kPrimaryColor,
                         fct: () async {

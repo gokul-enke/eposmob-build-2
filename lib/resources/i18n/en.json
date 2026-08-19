@@ -1,4 +1,23 @@
 {
+  "view_voucher": {
+    "permission_required": "Purchase permission is required to view voucher details.",
+    "btn_all_vouchers": "All Vouchers",
+    "page_title": "Voucher Details",
+    "section_title": " Voucher Details",
+    "label_purchase_date": "Purchase Date",
+    "label_store": "Store",
+    "label_voucher_number": "Voucher Number",
+    "label_amount": "Amount",
+    "label_tax": "Tax",
+    "label_currency": "Currency",
+    "label_supplier": "Supplier",
+    "col_product_name": "Product Name",
+    "col_quantity": "Quantity",
+    "col_unit": "Unit",
+    "col_unit_price": "Unit Price",
+    "col_action": "Action",
+    "btn_back": "Back"
+  },
   "account_book": {
     "error_unavailable": "Customer account book is currently unavailable.",
     "page_title": "Customer Account Book",

@@ -1,4 +1,23 @@
 {
+  "view_voucher": {
+    "permission_required": "مطلوب إذن الشراء لعرض تفاصيل القسيمة.",
+    "btn_all_vouchers": "جميع القسائم",
+    "page_title": "تفاصيل القسيمة",
+    "section_title": " تفاصيل القسيمة",
+    "label_purchase_date": "تاريخ الشراء",
+    "label_store": "المتجر",
+    "label_voucher_number": "رقم القسيمة",
+    "label_amount": "المبلغ",
+    "label_tax": "الضريبة",
+    "label_currency": "العملة",
+    "label_supplier": "المورد",
+    "col_product_name": "اسم المنتج",
+    "col_quantity": "الكمية",
+    "col_unit": "الوحدة",
+    "col_unit_price": "سعر الوحدة",
+    "col_action": "الإجراء",
+    "btn_back": "رجوع"
+  },
   "account_book": {
     "error_unavailable": "دفتر حسابات العميل غير متاح حالياً.",
     "page_title": "دفتر حسابات العميل",
