@@ -1,4 +1,24 @@
 {
+  "create_new_voucher": {
+    "page_title": "Create New Voucher",
+    "error_fill_required_fields": "Please fill all required fields",
+    "error_select_required_fields": "Please select all required fields",
+    "error_required": "This field is required",
+    "label_account_type": "Account Type",
+    "hint_account_type": "Select account type",
+    "label_payment_method": "Payment Method",
+    "hint_payment_method": "Select payment method",
+    "label_payment_ref": "Payment Reference",
+    "hint_payment_ref": "Enter reference",
+    "label_amount": "Amount",
+    "label_to": "To",
+    "hint_to": "Select user",
+    "label_comment": "Comment",
+    "hint_comment": "Optional comment",
+    "label_particulars": "Particulars",
+    "hint_particulars": "Enter particulars",
+    "btn_submit": "Submit"
+  },
   "kiosk_billing": {
     "page_title": "Billing Details",
     "label_first_name": "FirstName",

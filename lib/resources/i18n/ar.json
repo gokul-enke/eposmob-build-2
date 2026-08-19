@@ -1,4 +1,24 @@
 {
+  "create_new_voucher": {
+    "page_title": "إنشاء قسيمة جديدة",
+    "error_fill_required_fields": "يرجى ملء جميع الحقول المطلوبة",
+    "error_select_required_fields": "يرجى اختيار جميع الحقول المطلوبة",
+    "error_required": "هذا الحقل مطلوب",
+    "label_account_type": "نوع الحساب",
+    "hint_account_type": "اختر نوع الحساب",
+    "label_payment_method": "طريقة الدفع",
+    "hint_payment_method": "اختر طريقة الدفع",
+    "label_payment_ref": "مرجع الدفع",
+    "hint_payment_ref": "أدخل المرجع",
+    "label_amount": "المبلغ",
+    "label_to": "إلى",
+    "hint_to": "اختر المستخدم",
+    "label_comment": "تعليق",
+    "hint_comment": "تعليق اختياري",
+    "label_particulars": "التفاصيل",
+    "hint_particulars": "أدخل التفاصيل",
+    "btn_submit": "إرسال"
+  },
   "kiosk_billing": {
     "page_title": "تفاصيل الفاتورة",
     "label_first_name": "الاسم الأول",
