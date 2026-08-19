@@ -1,4 +1,27 @@
 {
+  "purchase": {
+    "permission_required": "مطلوب إذن الشراء لعرض المشتريات.",
+    "page_title": "قائمة المشتريات",
+    "btn_create_new": "إنشاء مشترى جديد",
+    "filter_name": "الاسم",
+    "hint_purchaser_name": "اسم المشتري",
+    "filter_product": "المنتج",
+    "hint_product_name": "اسم المنتج",
+    "filter_store": "المتجر",
+    "hint_select_store": "اختر المتجر",
+    "filter_supplier": "المورد",
+    "hint_select_supplier": "اختر المورد",
+    "filter_date": "التاريخ",
+    "btn_search": "بحث",
+    "error_loading_list": "خطأ في تحميل قائمة المشتريات",
+    "no_data": "لا توجد بيانات",
+    "col_no": "رقم",
+    "col_purchaser_name": "اسم المشتري",
+    "col_amount": "المبلغ",
+    "col_action": "الإجراء",
+    "sales_executive": "مندوب المبيعات",
+    "error_building_table": "خطأ في بناء الجدول: @error"
+  },
   "edit_primary_details": {
     "label_select_category": "اختر الفئة",
     "hint_select_category": "اختر الفئة",

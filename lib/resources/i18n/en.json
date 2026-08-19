@@ -1,4 +1,27 @@
 {
+  "purchase": {
+    "permission_required": "Purchase permission is required to view purchases.",
+    "page_title": "Purchase List",
+    "btn_create_new": "Create New Purchase",
+    "filter_name": "Name",
+    "hint_purchaser_name": "Purchaser Name",
+    "filter_product": "Product",
+    "hint_product_name": "Product Name",
+    "filter_store": "Store",
+    "hint_select_store": "Select Store",
+    "filter_supplier": "Supplier",
+    "hint_select_supplier": "Select Supplier",
+    "filter_date": "Date",
+    "btn_search": "Search",
+    "error_loading_list": "Error loading purchase list",
+    "no_data": "No data available",
+    "col_no": "No",
+    "col_purchaser_name": "Purchaser Name",
+    "col_amount": "Amount",
+    "col_action": "Action",
+    "sales_executive": "Sales Executive",
+    "error_building_table": "Error building table: @error"
+  },
   "edit_primary_details": {
     "label_select_category": "Select Category",
     "hint_select_category": "Select Category",
