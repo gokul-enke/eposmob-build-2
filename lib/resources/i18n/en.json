@@ -1,4 +1,13 @@
 {
+  "add_product_names": {
+    "label_name_english": "Product Name - English (US)*",
+    "label_name_hindi": "Product Name - Hindi(IND)*",
+    "label_name_arabic": "Product Name - Arabic(AR)*",
+    "btn_prev": "Prev",
+    "btn_next": "Next",
+    "error_required": "This field is required",
+    "error_failed": "Failed"
+  },
   "edit_product_names": {
     "label_name_english": "Product Name - English (US)*",
     "label_name_hindi": "Product Name - Hindi(IND)*",

@@ -1,4 +1,13 @@
 {
+  "add_product_names": {
+    "label_name_english": "اسم المنتج - الإنجليزية (US)*",
+    "label_name_hindi": "اسم المنتج - الهندية (IND)*",
+    "label_name_arabic": "اسم المنتج - العربية (AR)*",
+    "btn_prev": "السابق",
+    "btn_next": "التالي",
+    "error_required": "هذا الحقل مطلوب",
+    "error_failed": "فشل"
+  },
   "edit_product_names": {
     "label_name_english": "اسم المنتج - الإنجليزية (US)*",
     "label_name_hindi": "اسم المنتج - الهندية (IND)*",
