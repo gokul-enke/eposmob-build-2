@@ -1,4 +1,24 @@
 {
+  "add_primary_details": {
+    "label_select_category": "اختر الفئة",
+    "hint_select_category": "اختر الفئة",
+    "option_please_select": "الرجاء الاختيار",
+    "label_name": "الاسم",
+    "hint_product_name": "اسم المنتج",
+    "error_required": "هذا الحقل مطلوب",
+    "label_product_slug": "معرف المنتج",
+    "hint_product_slug": "معرف المنتج",
+    "label_price": "السعر",
+    "hint_price": "السعر",
+    "label_barcode": "الباركود",
+    "hint_barcode": "الباركود",
+    "label_unit": "الوحدة",
+    "hint_choose_unit": "اختر وحدة المنتج",
+    "label_currency": "العملة",
+    "hint_choose_currency": "اختر العملة",
+    "btn_next": "التالي",
+    "error_fill_required": "يرجى ملء الحقول المطلوبة"
+  },
   "purchase_voucher": {
     "permission_required": "مطلوب إذن الشراء لعرض القسائم.",
     "page_title": "قائمة القسائم",

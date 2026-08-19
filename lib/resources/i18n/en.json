@@ -1,4 +1,24 @@
 {
+  "add_primary_details": {
+    "label_select_category": "Select Category",
+    "hint_select_category": "Select Category",
+    "option_please_select": "Please Select",
+    "label_name": "Name",
+    "hint_product_name": "Product Name",
+    "error_required": "This field is required",
+    "label_product_slug": "Product Slug",
+    "hint_product_slug": "Product Slug",
+    "label_price": "Price",
+    "hint_price": "Price",
+    "label_barcode": "Barcode",
+    "hint_barcode": "Barcode",
+    "label_unit": "Unit",
+    "hint_choose_unit": "Choose Product Unit",
+    "label_currency": "Currency",
+    "hint_choose_currency": "Choose Currency",
+    "btn_next": "Next",
+    "error_fill_required": "Please Fill the Required Fields"
+  },
   "purchase_voucher": {
     "permission_required": "Purchase permission is required to view vouchers.",
     "page_title": "Voucher List",
