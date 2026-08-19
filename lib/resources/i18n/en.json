@@ -1,4 +1,22 @@
 {
+  "account_book": {
+    "error_unavailable": "Customer account book is currently unavailable.",
+    "page_title": "Customer Account Book",
+    "filter_customer": "Customer ",
+    "hint_customer_name": "Customer Name",
+    "filter_from_date": "From Date ",
+    "filter_to_date": "To Date ",
+    "filter_amount": "Amount ",
+    "hint_amount": "Amount",
+    "btn_search": "Search",
+    "col_no": "No",
+    "col_customer_name": "Customer Name",
+    "col_debit_amount": "Debit Amount",
+    "col_credit_amount": "Credit Amount",
+    "col_balance_amount": "Balance Amount",
+    "col_date": "Date",
+    "col_action": "Action"
+  },
   "sales_report": {
     "error_unavailable": "Sales report is currently unavailable.",
     "page_title": "Customer Sales Report ",

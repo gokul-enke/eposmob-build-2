@@ -1,4 +1,22 @@
 {
+  "account_book": {
+    "error_unavailable": "دفتر حسابات العميل غير متاح حالياً.",
+    "page_title": "دفتر حسابات العميل",
+    "filter_customer": "العميل ",
+    "hint_customer_name": "اسم العميل",
+    "filter_from_date": "من تاريخ ",
+    "filter_to_date": "إلى تاريخ ",
+    "filter_amount": "المبلغ ",
+    "hint_amount": "المبلغ",
+    "btn_search": "بحث",
+    "col_no": "الرقم",
+    "col_customer_name": "اسم العميل",
+    "col_debit_amount": "المبلغ المدين",
+    "col_credit_amount": "المبلغ الدائن",
+    "col_balance_amount": "مبلغ الرصيد",
+    "col_date": "التاريخ",
+    "col_action": "الإجراء"
+  },
   "sales_report": {
     "error_unavailable": "تقرير المبيعات غير متاح حالياً.",
     "page_title": "تقرير مبيعات العملاء ",
