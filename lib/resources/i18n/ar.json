@@ -1,4 +1,22 @@
 {
+  "sales_report": {
+    "error_unavailable": "تقرير المبيعات غير متاح حالياً.",
+    "page_title": "تقرير مبيعات العملاء ",
+    "filter_customer": "العميل ",
+    "hint_customer_name": "اسم العميل",
+    "filter_created_by": "أنشئ بواسطة ",
+    "hint_created_by": "أنشئ بواسطة",
+    "filter_from_date": "من تاريخ ",
+    "filter_to_date": "إلى تاريخ ",
+    "btn_search": "بحث",
+    "section_title": "تقرير مبيعات العملاء",
+    "col_no": "الرقم",
+    "col_customer_name": "اسم العميل",
+    "col_created_by": "أنشئ بواسطة",
+    "col_price": "السعر",
+    "col_date": "التاريخ",
+    "col_action": "الإجراء"
+  },
   "supplier_sales_report": {
     "error_unavailable": "تقرير مبيعات الموردين غير متاح حالياً.",
     "page_title": "تقرير مبيعات الموردين ",

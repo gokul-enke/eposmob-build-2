@@ -1,4 +1,22 @@
 {
+  "sales_report": {
+    "error_unavailable": "Sales report is currently unavailable.",
+    "page_title": "Customer Sales Report ",
+    "filter_customer": "Customer ",
+    "hint_customer_name": "Customer Name",
+    "filter_created_by": "Created By ",
+    "hint_created_by": "Created By",
+    "filter_from_date": "From Date ",
+    "filter_to_date": "To Date ",
+    "btn_search": "Search",
+    "section_title": "Customer Sales Report",
+    "col_no": "No",
+    "col_customer_name": "Customer Name",
+    "col_created_by": "Created By",
+    "col_price": "Price",
+    "col_date": "Date",
+    "col_action": "Action"
+  },
   "supplier_sales_report": {
     "error_unavailable": "Supplier sales report is currently unavailable.",
     "page_title": "Supplier Sales Report ",
