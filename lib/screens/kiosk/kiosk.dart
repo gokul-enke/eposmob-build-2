@@ -56,9 +56,9 @@ class _KioskScreenState extends State<KioskScreen> {
           },
         ),
         centerTitle: true,
-        title: const Text(
-          'Place Your Order',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: FontSize.s16),
+        title: Text(
+          'kiosk.page_title'.tr,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: FontSize.s16),
         ),
         actions: [
           IconButton(
@@ -133,7 +133,7 @@ class _KioskScreenState extends State<KioskScreen> {
                 final category = categoryProvider.category![index];
                 final isSelected =
                     categoryProvider.selectedCategoryIndex == index;
-                return _categoryButton(category.categoryName ?? 'Unknown',
+                return _categoryButton(category.categoryName ?? 'general.unknown'.tr,
                     isSelected, index, categoryProvider);
               },
             ),
@@ -202,7 +202,7 @@ class _KioskScreenState extends State<KioskScreen> {
 
         if (productProvider.productList!.isEmpty) {
           return showEmptyMessege(
-            message: 'No products available',
+            message: 'kiosk.no_products'.tr,
           );
         }
 
@@ -213,8 +213,8 @@ class _KioskScreenState extends State<KioskScreen> {
             itemBuilder: (context, index) {
               final product = productProvider.productList![index];
               return _menuItem(
-                product.productName ?? 'Name',
-                product.description ?? 'This is description',
+                product.productName ?? 'kiosk.default_product_name'.tr,
+                product.description ?? 'kiosk.default_description'.tr,
                 product.attachment?.isNotEmpty == true
                     ? product.attachment![0].filePath ??
                         'https://via.placeholder.com/150'
@@ -239,7 +239,7 @@ class _KioskScreenState extends State<KioskScreen> {
 
         if (productProvider.productList!.isEmpty) {
           return showEmptyMessege(
-            message: 'No products available',
+            message: 'kiosk.no_products'.tr,
           );
         }
 
@@ -332,14 +332,14 @@ class _KioskScreenState extends State<KioskScreen> {
       if (value["status"] == "success") {
         showScaffold(
             context: context,
-            message: addToCartModel.message ?? "Added to Cart");
+            message: addToCartModel.message ?? 'kiosk.added_to_cart'.tr);
         // Notify the cart provider of the change so it updates count
         Provider.of<CartProvider>(context, listen: false)
             .incrementCount(productId);
       } else {
         showScaffoldError(
             context: context,
-            message: addToCartModel.message ?? "Error Occurred! Try Again!");
+            message: addToCartModel.message ?? 'kiosk.error_occurred'.tr);
       }
     });
   }
@@ -369,14 +369,14 @@ class _KioskScreenState extends State<KioskScreen> {
       if (value["status"] == "success") {
         showScaffold(
             context: context,
-            message: addToCartModel.message ?? "Removed From Cart");
+            message: addToCartModel.message ?? 'kiosk.removed_from_cart'.tr);
         // Notify the cart provider of the change so it updates count
         Provider.of<CartProvider>(context, listen: false)
             .decrementCount(productId);
       } else {
         showScaffoldError(
             context: context,
-            message: addToCartModel.message ?? "Error Occurred! Try Again!");
+            message: addToCartModel.message ?? 'kiosk.error_occurred'.tr);
       }
     });
   }
@@ -394,8 +394,7 @@ class _KioskScreenState extends State<KioskScreen> {
             fct: () {
               Get.to(() => const KioskOrderPage());
             },
-            title:
-                'CHECKOUT INR ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal)}',
+            title: 'kiosk.btn_checkout'.trParams({'amount': 'INR ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal)}'}),
           ),
         );
       },

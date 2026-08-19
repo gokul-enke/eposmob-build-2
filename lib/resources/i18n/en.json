@@ -1,4 +1,14 @@
 {
+  "kiosk": {
+    "page_title": "Place Your Order",
+    "no_products": "No products available",
+    "default_product_name": "Name",
+    "default_description": "This is description",
+    "added_to_cart": "Added to Cart",
+    "removed_from_cart": "Removed From Cart",
+    "error_occurred": "Error Occurred! Try Again!",
+    "btn_checkout": "CHECKOUT @amount"
+  },
   "view_voucher": {
     "permission_required": "Purchase permission is required to view voucher details.",
     "btn_all_vouchers": "All Vouchers",

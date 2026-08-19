@@ -1,4 +1,14 @@
 {
+  "kiosk": {
+    "page_title": "ضع طلبك",
+    "no_products": "لا توجد منتجات متاحة",
+    "default_product_name": "اسم",
+    "default_description": "هذا وصف",
+    "added_to_cart": "تمت الإضافة إلى السلة",
+    "removed_from_cart": "تمت الإزالة من السلة",
+    "error_occurred": "حدث خطأ! حاول مجدداً!",
+    "btn_checkout": "الدفع @amount"
+  },
   "view_voucher": {
     "permission_required": "مطلوب إذن الشراء لعرض تفاصيل القسيمة.",
     "btn_all_vouchers": "جميع القسائم",
