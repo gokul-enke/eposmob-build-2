@@ -50,13 +50,13 @@ class ViewReceiptDetailsWidget extends StatelessWidget {
                 onPressed: () {
                   sideBarController.index.value = 47;
                 },
-                text: 'All Receipts',
+                text: 'view_receipt_details.btn_all_receipts'.tr,
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "Receipt Details  ",
+                    'view_receipt_details.page_title'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s20,
@@ -79,7 +79,7 @@ class ViewReceiptDetailsWidget extends StatelessWidget {
                 margin: const EdgeInsets.only(
                     top: 20, bottom: 0, left: 10, right: 10),
                 child: Text(
-                  " Details  ",
+                  'view_receipt_details.section_details'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.semiBold,
                     FontSize.s15,
@@ -100,34 +100,34 @@ class ViewReceiptDetailsWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     BuildDetailRow(
-                      title1: "Receipt Number",
+                      title1: 'view_receipt_details.label_receipt_number'.tr,
                       content1: receiptData?.receiptNumber ?? "",
-                      title2: "Company",
+                      title2: 'view_receipt_details.label_company'.tr,
                       content2: receiptData?.company.name ?? "",
                     ),
                     BuildDetailRow(
-                      title1: "Customer Name",
+                      title1: 'view_receipt_details.label_customer_name'.tr,
                       content1: receiptData?.customer.user.name ?? "",
-                      title2: "Amount",
+                      title2: 'view_receipt_details.label_amount'.tr,
                       content2: receiptData?.amount ?? "",
                     ),
                     BuildDetailRow(
-                      title1: "Payment Method",
+                      title1: 'view_receipt_details.label_payment_method'.tr,
                       content1: receiptData?.paymentMethod ?? "",
-                      title2: "Status",
+                      title2: 'view_receipt_details.label_status'.tr,
                       content2: receiptData?.receiptStatus ?? "",
                     ),
                     BuildDetailRow(
-                      title1: "Payment Reference",
+                      title1: 'view_receipt_details.label_payment_reference'.tr,
                       content1: receiptData?.paymentReference ?? "",
-                      title2: "Date",
+                      title2: 'view_receipt_details.label_date'.tr,
                       content2: receiptData?.createdAt.toString() ?? "",
                     ),
                     const SizedBox(height: 50),
                     Padding(
                       padding: const EdgeInsets.only(left: 10.0),
                       child: CustomRoundButton(
-                        title: "Back",
+                        title: 'view_receipt_details.btn_back'.tr,
                         boxColor: Colors.white,
                         textColor: ColorManager.kPrimaryColor,
                         fct: () async {

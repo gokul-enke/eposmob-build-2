@@ -82,7 +82,7 @@ class ShareHelper {
                     child: Icon(Icons.picture_as_pdf_outlined,
                         color: Color(0xFFE53E3E)),
                   ),
-                  title: const Text('Share as PDF'),
+                  title: Text('share_helper.opt_share_pdf'.tr),
                   onTap: () async {
                     Navigator.pop(ctx);
                     await _generateAndSharePDF(
@@ -319,18 +319,18 @@ class ShareHelper {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.picture_as_pdf, color: Colors.red),
-            SizedBox(width: 8),
-            Text('PDF Invoice Ready'),
+            const Icon(Icons.picture_as_pdf, color: Colors.red),
+            const SizedBox(width: 8),
+            Text('share_helper.dialog_pdf_ready'.tr),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Invoice: $invoiceNumber'),
+            Text('share_helper.dialog_invoice_label'.trParams({'number': invoiceNumber})),
             const SizedBox(height: 8),
             Text('File: ${pdfFile.path.split('/').last}'),
             const SizedBox(height: 16),
@@ -456,11 +456,11 @@ class ShareHelper {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.warning, color: Colors.orange),
-                SizedBox(width: 8),
-                Text('WhatsApp Not Connected'),
+                const Icon(Icons.warning, color: Colors.orange),
+                const SizedBox(width: 8),
+                Text('share_helper.dialog_wa_not_connected'.tr),
               ],
             ),
             content: Text(
@@ -470,14 +470,14 @@ class ShareHelper {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
+                child: Text('general.cancel'.tr),
               ),
               ElevatedButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                   Get.find<SideBarController>().index.value = 63;
                 },
-                child: const Text('Connect WhatsApp'),
+                child: Text('share_helper.btn_connect_wa'.tr),
               ),
             ],
           ),
@@ -576,7 +576,7 @@ class ShareHelper {
                     child: Icon(Icons.picture_as_pdf_outlined,
                         color: Color(0xFFE53E3E)),
                   ),
-                  title: const Text('Share as PDF'),
+                  title: Text('share_helper.opt_share_pdf'.tr),
                   onTap: () async {
                     Navigator.pop(ctx);
                     await _generateAndShareReceiptPDF(
@@ -591,7 +591,7 @@ class ShareHelper {
                     backgroundColor: Color(0x1A1E88E5),
                     child: Icon(Icons.email, color: Color(0xFF1E88E5)),
                   ),
-                  title: const Text('Share to Email'),
+                  title: Text('share_helper.opt_share_email'.tr),
                   onTap: () async {
                     Navigator.pop(ctx);
                     await _shareReceiptViaEmail(
@@ -820,11 +820,11 @@ class ShareHelper {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.warning, color: Colors.orange),
-                SizedBox(width: 8),
-                Text('WhatsApp Not Connected'),
+                const Icon(Icons.warning, color: Colors.orange),
+                const SizedBox(width: 8),
+                Text('share_helper.dialog_wa_not_connected'.tr),
               ],
             ),
             content: Text(
@@ -834,14 +834,14 @@ class ShareHelper {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
+                child: Text('general.cancel'.tr),
               ),
               ElevatedButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                   Get.find<SideBarController>().index.value = 63;
                 },
-                child: const Text('Connect WhatsApp'),
+                child: Text('share_helper.btn_connect_wa'.tr),
               ),
             ],
           ),
@@ -1008,7 +1008,7 @@ class ShareHelper {
                     child: Icon(Icons.picture_as_pdf_outlined,
                         color: Color(0xFFE53E3E)),
                   ),
-                  title: const Text('Share as PDF'),
+                  title: Text('share_helper.opt_share_pdf'.tr),
                   onTap: () async {
                     Navigator.pop(ctx);
                     await _generateAndShareVoucherPDF(
@@ -1364,7 +1364,7 @@ class ShareHelper {
                     child: Icon(Icons.picture_as_pdf_outlined,
                         color: Color(0xFFE53E3E)),
                   ),
-                  title: const Text('Share as PDF'),
+                  title: Text('share_helper.opt_share_pdf'.tr),
                   onTap: () async {
                     Navigator.pop(ctx);
                     await _generateAndShareSupplierVoucherPDF(

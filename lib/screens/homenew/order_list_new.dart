@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_order_list_design.dart';
@@ -184,14 +185,14 @@ class _OrderListNewState extends State<OrderListNew> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'New Order',
+              'order_list_new.title'.tr,
               style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
                   0.30, ColorManager.textColor),
             ),
           ],
         ),
         Text(
-          'Order No #00000',
+          'order_list_new.label_order_no'.tr,
           style: buildCustomStyle(FontWeightManager.regular, FontSize.s12, 0.18,
               ColorManager.textColor),
         ),
@@ -274,7 +275,7 @@ class _OrderListNewState extends State<OrderListNew> {
                       mobileNumberTextController, // Ensure this is correctly set
                   focusNode: focusNode,
                   decoration: InputDecoration(
-                    hintText: 'Enter mobile number',
+                    hintText: 'order_list_new.hint_mobile'.tr,
                     hintStyle: buildCustomStyle(
                       FontWeight.w500,
                       12,
@@ -507,10 +508,10 @@ class _OrderListNewState extends State<OrderListNew> {
                                           controller: priceController,
                                           keyboardType: TextInputType.number,
                                           textAlign: TextAlign.end,
-                                          decoration: const InputDecoration(
+                                          decoration: InputDecoration(
                                             border: InputBorder.none,
-                                            hintText: 'Price',
-                                            hintStyle: TextStyle(
+                                            hintText: 'order_list_new.hint_price'.tr,
+                                            hintStyle: const TextStyle(
                                               color: Colors.grey,
                                             ),
                                           ),
@@ -560,7 +561,7 @@ class _OrderListNewState extends State<OrderListNew> {
                                               showScaffold(
                                                 context: context,
                                                 message:
-                                                    'Price Updated Successfully',
+                                                    'order_list_new.msg_price_updated'.tr,
                                               );
                                             }
                                           },
@@ -601,7 +602,7 @@ class _OrderListNewState extends State<OrderListNew> {
                   },
                 );
               } else if (snapshot.hasError) {
-                return Text('Error: ${snapshot.error}');
+                return Text('order_list_new.err_snapshot'.trParams({'error': '${snapshot.error}'}));
               } else {
                 return const BuildOrderListDesign();
               }
@@ -657,7 +658,7 @@ class _OrderListNewState extends State<OrderListNew> {
                     controller: amountController,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
-                      labelText: 'Enter New Price',
+                      labelText: 'order_list_new.label_enter_price'.tr,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: const BorderSide(color: Colors.grey),
@@ -677,14 +678,14 @@ class _OrderListNewState extends State<OrderListNew> {
               onPressed: () {
                 Navigator.of(context).pop(); // Close the dialog
               },
-              child: const Text('Close'),
+              child: Text('general.close'.tr),
             ),
             ElevatedButton(
               onPressed: () {
                 if (amountController.text.isEmpty) {
                   showScaffoldError(
                     context: context,
-                    message: 'Please enter a valid price',
+                    message: 'order_list_new.msg_invalid_price'.tr,
                   );
                   return;
                 } else {
@@ -702,12 +703,12 @@ class _OrderListNewState extends State<OrderListNew> {
                   );
                   showScaffold(
                     context: context,
-                    message: 'Price Updated Successfully',
+                    message: 'order_list_new.msg_price_updated'.tr,
                   );
                   Navigator.of(context).pop(); // Close the dialog
                 }
               },
-              child: const Text('Update'),
+              child: Text('order_list_new.btn_update'.tr),
             ),
           ],
         );
@@ -731,7 +732,7 @@ class _OrderListNewState extends State<OrderListNew> {
             child: TextField(
               controller: coupenCodeTextController,
               decoration: InputDecoration(
-                hintText: 'Apply Coupon',
+                hintText: 'order_list_new.hint_coupon'.tr,
                 hintStyle: buildCustomStyle(
                   FontWeight.w500,
                   12,
@@ -878,7 +879,7 @@ class _OrderListNewState extends State<OrderListNew> {
                           fit: BoxFit.none,
                         ),
                         Text(
-                          'Cash',
+                          'order_list_new.payment_cash'.tr,
                           style: buildCustomStyle(FontWeightManager.medium,
                               FontSize.s8, 0.12, Colors.black),
                         ),
@@ -910,7 +911,7 @@ class _OrderListNewState extends State<OrderListNew> {
                           fit: BoxFit.none,
                         ),
                         Text(
-                          'Card',
+                          'order_list_new.payment_card'.tr,
                           style: buildCustomStyle(FontWeightManager.medium,
                               FontSize.s8, 0.12, Colors.black),
                         ),
@@ -942,7 +943,7 @@ class _OrderListNewState extends State<OrderListNew> {
                           fit: BoxFit.none,
                         ),
                         Text(
-                          'Upi',
+                          'order_list_new.payment_upi'.tr,
                           style: buildCustomStyle(FontWeightManager.medium,
                               FontSize.s8, 0.12, Colors.black),
                         ),
@@ -957,8 +958,8 @@ class _OrderListNewState extends State<OrderListNew> {
                       child: iconColor != 1
                           ? TextFormField(
                               controller: _transactionNumberController,
-                              decoration: const InputDecoration(
-                                hintText: 'Transaction Reference No:',
+                              decoration: InputDecoration(
+                                hintText: 'order_list_new.hint_transaction_ref'.tr,
                               ),
                             )
                           : TextFormField(
@@ -966,8 +967,8 @@ class _OrderListNewState extends State<OrderListNew> {
                               onChanged: (value) {
                                 _getBalanceAmount();
                               },
-                              decoration: const InputDecoration(
-                                hintText: 'Enter Paid Amount Here:',
+                              decoration: InputDecoration(
+                                hintText: 'order_list_new.hint_paid_amount'.tr,
                               ),
                             ),
                     ),
@@ -978,7 +979,7 @@ class _OrderListNewState extends State<OrderListNew> {
             if (iconColor == 1)
               BuildPaymentRow(
                 amount: "$currency ${_balanceAmount.toStringAsFixed(2)}",
-                title: "Balance amount",
+                title: 'order_list_new.label_balance_amount'.tr,
                 secondRowTextStyle: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s15,
@@ -1035,14 +1036,14 @@ class _OrderListNewState extends State<OrderListNew> {
                           mobileNumberText == "") {
                         showScaffoldError(
                           context: context,
-                          message: "Please select a customer",
+                          message: 'order_list_new.msg_select_customer'.tr,
                         );
                       } else if (iconColor != 1 &&
                           iconColor != 2 &&
                           iconColor != 3) {
                         showScaffoldError(
                           context: context,
-                          message: "Please chose a Payment Method",
+                          message: 'order_list_new.msg_select_payment'.tr,
                         );
                       } else {
                         String? accessToken =
@@ -1139,7 +1140,7 @@ class _OrderListNewState extends State<OrderListNew> {
                         color: ColorManager.kPrimaryColor,
                       ),
                       child: Text(
-                        'Save Sales ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal)}',
+                        'order_list_new.btn_save_sales'.trParams({'amount': AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal)}),
                         style: buildCustomStyle(FontWeightManager.medium,
                             FontSize.s16, 0.27, Colors.white),
                       ),
@@ -1184,7 +1185,7 @@ class _OrderListNewState extends State<OrderListNew> {
                           fit: BoxFit.none,
                         ),
                         Text(
-                          'Print',
+                          'general.print'.tr,
                           style: buildCustomStyle(FontWeightManager.medium,
                               FontSize.s10, 0.16, Colors.white),
                         ),
@@ -1228,22 +1229,22 @@ class _OrderListNewState extends State<OrderListNew> {
 
           showScaffold(
             context: context,
-            message: result['message'] ?? 'Coupon Applied Successfully',
+            message: result['message'] ?? 'order_list_new.msg_coupon_applied'.tr,
           );
         } else {
           showScaffoldError(
             context: context,
-            message: result['message'] ?? 'Failed to Apply Coupon',
+            message: result['message'] ?? 'order_list_new.msg_coupon_failed'.tr,
           );
         }
       } else {
         showScaffoldError(
           context: context,
-          message: 'Error Occurred! Try Again',
+          message: 'order_list_new.msg_error'.tr,
         );
       }
     } else {
-      showScaffoldError(context: context, message: 'Not Authenticated');
+      showScaffoldError(context: context, message: 'order_list_new.msg_not_authenticated'.tr);
     }
   }
 
@@ -1263,7 +1264,7 @@ class _OrderListNewState extends State<OrderListNew> {
       discountAmount = discountValue;
       return discountAmount > discountLimit ? discountLimit : discountAmount;
     } else {
-      showScaffoldError(context: context, message: 'Unknown discount type');
+      showScaffoldError(context: context, message: 'order_list_new.msg_unknown_discount'.tr);
       return 0.0; // Default value in case of an error
     }
   }

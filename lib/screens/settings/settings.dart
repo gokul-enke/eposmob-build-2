@@ -41,8 +41,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       showScaffoldError(
         context: context,
         message: billingProvider.isManualOfflineMode
-            ? 'Offline Mode is enabled. Disable it to resync products.'
-            : 'No internet connection. Cannot resync products.',
+            ? 'settings_ui.msg_offline_mode_on'.tr
+            : 'settings_ui.msg_no_internet_resync'.tr,
       );
       return;
     }
@@ -71,13 +71,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         showScaffoldError(
           context: context,
           message:
-              'Resync finished but no products were returned. Check tenant/API key or internet.',
+              'settings_ui.msg_resync_empty'.tr,
         );
       } else {
         showScaffold(
           context: context,
           message:
-              'Products resynced successfully (${localProductProvider.sellableProducts.length} items)',
+              'settings_ui.msg_resync_success'.trParams({'count': '${localProductProvider.sellableProducts.length}'}),
         );
         setState(() {});
       }
@@ -86,7 +86,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       Navigator.of(context).pop();
       showScaffoldError(
         context: context,
-        message: 'Failed to resync products: ${e.toString()}',
+        message: 'settings_ui.msg_resync_failed'.trParams({'error': e.toString()}),
       );
     }
   }
@@ -200,10 +200,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showScaffold(
       context: context,
       message: enableOfflineMode
-          ? 'Offline Mode enabled. Online actions are now blocked.'
+          ? 'settings_ui.msg_offline_enabled'.tr
           : billingProvider.deviceHasInternet
-              ? 'Offline Mode disabled. Online actions are available again.'
-              : 'Offline Mode disabled, but internet is still unavailable.',
+              ? 'settings_ui.msg_offline_disabled'.tr
+              : 'settings_ui.msg_offline_disabled_no_internet'.tr,
     );
   }
 
@@ -337,14 +337,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       showScaffold(
         context: context,
         message: isEnabled
-            ? 'Developer Mode enabled. Select Development Printer in Printer settings.'
-            : 'Developer Mode disabled. Physical printer settings restored.',
+            ? 'settings_ui.msg_dev_mode_enabled'.tr
+            : 'settings_ui.msg_dev_mode_disabled'.tr,
       );
     } catch (error) {
       if (!mounted) return;
       showScaffoldError(
         context: context,
-        message: 'Could not update Developer Mode: $error',
+        message: 'settings_ui.msg_dev_mode_error'.trParams({'error': '$error'}),
       );
     }
   }
@@ -623,7 +623,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   RadioListTile<String>(
-                    title: const Text('English'),
+                    title: Text('settings_ui.lang_english'.tr),
                     value: 'en',
                     groupValue: selected,
                     onChanged: (v) => setState(() => selected = v!),

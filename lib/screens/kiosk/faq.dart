@@ -8,6 +8,7 @@ import 'package:pos_machine/models/get_faq.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/resources/app_url.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -87,9 +88,9 @@ class FaqPageState extends State<FaqPage> {
           onPressed: () => Navigator.pop(context),
         ),
         centerTitle: true,
-        title: const Text(
-          'Frequently Asked Questions',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        title: Text(
+          'faq.page_title'.tr,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
       ),
       body: _buildBody(size),
@@ -102,7 +103,7 @@ class FaqPageState extends State<FaqPage> {
     }
 
     if (faqList == null || faqList!.isEmpty) {
-      return const Center(child: Text('No FAQs available.'));
+      return Center(child: Text('faq.empty_no_faqs'.tr));
     }
 
     return BuildBoxShadowContainer(
@@ -117,7 +118,7 @@ class FaqPageState extends State<FaqPage> {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 8.0),
             child: ExpansionTile(
-              title: Text(faq.question ?? 'No Question'),
+              title: Text(faq.question ?? 'faq.fallback_no_question'.tr),
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.start,

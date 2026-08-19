@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -122,7 +123,7 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
                       builder: (context, provider, child) {
                         final methods = provider.paymentMethods ?? [];
                         if (methods.isEmpty) {
-                          return const Text("No payment methods available");
+                          return Text('cancel_order_modal.empty_payment_methods'.tr);
                         }
                         return Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -133,7 +134,7 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<String>(
                               isExpanded: true,
-                              hint: const Text('Select Payment Method'),
+                              hint: Text('cancel_order_modal.hint_payment_method'.tr),
                               value: _selectedPaymentMethodId,
                               items: methods.map((MasterDataValue method) {
                                 return DropdownMenuItem<String>(
@@ -172,7 +173,7 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
                   ),
                 ],
                 decoration: InputDecoration(
-                  hintText: 'Enter refund amount',
+                  hintText: 'cancel_order_modal.hint_refund_amount'.tr,
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                   enabledBorder: OutlineInputBorder(

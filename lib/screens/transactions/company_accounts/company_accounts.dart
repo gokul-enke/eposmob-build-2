@@ -78,9 +78,9 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
         debugPrint('No access token available');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content:
-                  Text('Authentication token missing. Please login again.'),
+                  Text('company_accounts.auth_token_missing'.tr),
               backgroundColor: Colors.red,
             ),
           );
@@ -219,7 +219,7 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Company Accounts",
+          'company_accounts.title'.tr,
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
               0.30, ColorManager.textColor),
         ),
@@ -261,7 +261,7 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
                 child: Padding(
                   padding: const EdgeInsets.only(top: 42),
                   child: CustomRoundButton(
-                    title: "Reset",
+                    title: 'general.reset'.tr,
                     boxColor: Colors.white,
                     textColor: ColorManager.kPrimaryColor,
                     fct: resetFilters,
@@ -405,7 +405,7 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(
-            "Payment Method",
+            'company_accounts.payment_method_filter'.tr,
             style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
                 0.27, Colors.black.withOpacity(0.6)),
           ),
@@ -419,7 +419,7 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
             return BuildDropDownWithSearch<String>(
               title: null,
               showName: false,
-              hintText: 'All Methods',
+              hintText: 'company_accounts.all_methods'.tr,
               value: selectedPaymentMethod,
               items: paymentMethodOptions
                   .where((method) => method != "All Methods")
@@ -447,7 +447,7 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(
-            "Type",
+            'company_accounts.type_filter'.tr,
             style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
                 0.27, Colors.black.withOpacity(0.6)),
           ),
@@ -460,7 +460,7 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
             return BuildDropDownWithSearch<String>(
               title: null,
               showName: false,
-              hintText: 'All Types',
+              hintText: 'company_accounts.all_types'.tr,
               value: selectedType,
               items: typeOptions.where((type) => type != "All Types").toList(),
               onChanged: (String? newValue) {
@@ -486,7 +486,7 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(
-            "Status",
+            'company_accounts.status_filter'.tr,
             style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
                 0.27, Colors.black.withOpacity(0.6)),
           ),
@@ -500,7 +500,7 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
             return BuildDropDownWithSearch<String>(
               title: null,
               showName: false,
-              hintText: 'All Status',
+              hintText: 'company_accounts.all_status'.tr,
               value: selectedStatus,
               items: statusOptions
                   .where((status) => status != "All Status")
@@ -564,13 +564,13 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
                           children: [
                             TableRow(
                               children: [
-                                _buildTableHeader("Name"),
-                                _buildTableHeader("Payment Method Type"),
-                                _buildTableHeader("Type"),
-                                _buildTableHeader("Received Amount"),
-                                _buildTableHeader("Sent Amount"),
-                                _buildTableHeader("Status"),
-                                _buildTableHeader("Action"),
+                                _buildTableHeader('company_accounts.col_name'.tr),
+                                _buildTableHeader('company_accounts.col_payment_method_type'.tr),
+                                _buildTableHeader('company_accounts.col_type'.tr),
+                                _buildTableHeader('company_accounts.col_received'.tr),
+                                _buildTableHeader('company_accounts.col_sent'.tr),
+                                _buildTableHeader('company_accounts.col_status'.tr),
+                                _buildTableHeader('company_accounts.col_action'.tr),
                               ],
                             ),
                           ],
@@ -689,16 +689,16 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
           Icon(Icons.business,
               size: 60, color: ColorManager.kPrimaryColor.withOpacity(0.7)),
           const SizedBox(height: 15),
-          Text('No company accounts found',
+          Text('company_accounts.no_accounts'.tr,
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s18,
                   0.27, ColorManager.textColor)),
           const SizedBox(height: 8),
-          Text('No company account data available at this time',
+          Text('company_accounts.no_data'.tr,
               style: buildCustomStyle(
                   FontWeightManager.regular, FontSize.s14, 0.27, Colors.grey)),
           const SizedBox(height: 15),
           CustomRoundButton(
-            title: "Refresh",
+            title: 'company_accounts.btn_refresh'.tr,
             boxColor: ColorManager.kPrimaryColor,
             textColor: Colors.white,
             fct: loadAccountsData,

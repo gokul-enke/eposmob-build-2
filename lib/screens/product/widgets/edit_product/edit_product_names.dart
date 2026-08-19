@@ -65,7 +65,7 @@ class _EditProductNamePageScreenState extends State<EditProductNamePageScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             BuildTextTile(
-                              title: "Product Name - English (US)*",
+                              title: 'edit_product_names.label_name_english'.tr,
                               textStyle: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s14,
@@ -102,7 +102,7 @@ class _EditProductNamePageScreenState extends State<EditProductNamePageScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             BuildTextTile(
-                              title: "Product Name - Hindi(IND)*",
+                              title: 'edit_product_names.label_name_hindi'.tr,
                               textStyle: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s14,
@@ -140,7 +140,7 @@ class _EditProductNamePageScreenState extends State<EditProductNamePageScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         BuildTextTile(
-                          title: "Product Name - Arabic(AR)*",
+                          title: 'edit_product_names.label_name_arabic'.tr,
                           textStyle: buildCustomStyle(
                             FontWeightManager.regular,
                             FontSize.s14,
@@ -179,7 +179,7 @@ class _EditProductNamePageScreenState extends State<EditProductNamePageScreen> {
                         Padding(
                           padding: const EdgeInsets.only(left: 10.0),
                           child: CustomRoundButton(
-                            title: "Prev",
+                            title: 'edit_product_names.btn_prev'.tr,
                             boxColor: Colors.white,
                             textColor: ColorManager.kPrimaryColor,
                             fct: () async {
@@ -194,12 +194,12 @@ class _EditProductNamePageScreenState extends State<EditProductNamePageScreen> {
                         Padding(
                           padding: const EdgeInsets.only(left: 10.0),
                           child: CustomRoundButton(
-                            title: "Next",
+                            title: 'edit_product_names.btn_next'.tr,
                             fct: () async {
                               if (getProduct!.productId == null) {
                                 showScaffold(
                                   context: context,
-                                  message: 'Failed',
+                                  message: 'edit_product_names.error_failed'.tr,
                                 );
                               } else {
                                 if (productNameArabicController.text.isEmpty ||
@@ -207,7 +207,7 @@ class _EditProductNamePageScreenState extends State<EditProductNamePageScreen> {
                                     productNameArabicController.text.isEmpty) {
                                   showScaffold(
                                     context: context,
-                                    message: 'Please Fill the Required Fields',
+                                    message: 'edit_product_names.error_fill_required'.tr,
                                   );
                                   sideBarController.index.value = 14;
                                 } else {

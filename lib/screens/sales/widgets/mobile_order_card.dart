@@ -180,7 +180,7 @@ class MobileOrderCard extends StatelessWidget {
                     child: const Icon(Icons.share,
                         color: ColorManager.kPrimaryColor),
                   ),
-                  title: const Text('Share'),
+                  title: Text('mobile_order_card.opt_share'.tr),
                   onTap: () async {
                     Navigator.pop(ctx);
                     _showShareOptions(context);
@@ -193,7 +193,7 @@ class MobileOrderCard extends StatelessWidget {
                     child:
                         const Icon(Icons.assignment_return, color: Colors.red),
                   ),
-                  title: const Text('Return Order'),
+                  title: Text('mobile_order_card.opt_return'.tr),
                   onTap: () async {
                     Navigator.pop(ctx);
                     _handleReturnOrder(context);
@@ -205,7 +205,7 @@ class MobileOrderCard extends StatelessWidget {
                     backgroundColor: Colors.red.withOpacity(0.12),
                     child: const Icon(Icons.cancel_outlined, color: Colors.red),
                   ),
-                  title: const Text('Cancel Order'),
+                  title: Text('mobile_order_card.opt_cancel'.tr),
                   onTap: () async {
                     Navigator.pop(ctx);
                     if (!context.mounted) return;
@@ -280,13 +280,13 @@ class MobileOrderCard extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Text('Share Invoice'),
+        title: Text('mobile_order_card.opt_share_invoice'.tr),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Icon(Icons.picture_as_pdf, color: Colors.red),
-              title: const Text('Share PDF'),
+              title: Text('mobile_order_card.opt_share_pdf'.tr),
               onTap: () {
                 Navigator.pop(context);
                 onSharePDF(order);
@@ -294,7 +294,7 @@ class MobileOrderCard extends StatelessWidget {
             ),
             ListTile(
               leading: Icon(Icons.message, color: Color(0xFF25D366)),
-              title: const Text('WhatsApp Bot'),
+              title: Text('mobile_order_card.opt_whatsapp_bot'.tr),
               onTap: () {
                 Navigator.pop(context);
                 onShareWhatsApp(order);

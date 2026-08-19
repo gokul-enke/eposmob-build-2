@@ -103,9 +103,9 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
   @override
   Widget build(BuildContext context) {
     if (!canViewPurchasePrice(context)) {
-      return const SafeArea(
+      return SafeArea(
         child: Center(
-          child: Text('Purchase permission is required to view vouchers.'),
+          child: Text('purchase_voucher.permission_required'.tr),
         ),
       );
     }
@@ -134,7 +134,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
           child: ListView(
             children: [
               Text(
-                "Voucher List",
+                'purchase_voucher.page_title'.tr,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s20, 0.30, ColorManager.textColor),
               ),
@@ -156,7 +156,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Text(
-                              "Store",
+                              'purchase_voucher.filter_store'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s14,
@@ -183,7 +183,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                                 ),
                                 value: storeSelected,
                                 hint: Text(
-                                  'Select Store',
+                                  'purchase_voucher.hint_select_store'.tr,
                                   style: buildCustomStyle(
                                     FontWeightManager.medium,
                                     FontSize.s12,
@@ -231,7 +231,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Text(
-                              "Date",
+                              'purchase_voucher.filter_date'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s14,
@@ -264,7 +264,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Text(
-                              "Amount",
+                              'purchase_voucher.filter_amount'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s14,
@@ -279,7 +279,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                             onchanged: (value) {},
                             controller: amountController,
                             size: size,
-                            hintText: 'Amount',
+                            hintText: 'purchase_voucher.filter_amount'.tr,
                           ),
                         ],
                       ),
@@ -287,7 +287,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                     Padding(
                       padding: const EdgeInsets.only(left: 10.0, top: 30),
                       child: CustomRoundButton(
-                        title: "Search",
+                        title: 'purchase_voucher.btn_search'.tr,
                         fct: () {
                           searchPurchaseVoucher(1);
                         },
@@ -299,7 +299,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                     Padding(
                       padding: const EdgeInsets.only(left: 10.0, top: 30),
                       child: CustomRoundButton(
-                        title: "Reset",
+                        title: 'general.reset'.tr,
                         boxColor: Colors.white,
                         textColor: ColorManager.kPrimaryColor,
                         fct: () {
@@ -350,7 +350,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                                         padding: const EdgeInsets.all(15.0),
                                         child: Center(
                                             child: Text(
-                                          "No",
+                                          'purchase_voucher.col_no'.tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -366,7 +366,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                                         padding: const EdgeInsets.all(15.0),
                                         child: Center(
                                             child: Text(
-                                          "Purchase Date",
+                                          'purchase_voucher.col_purchase_date'.tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -382,7 +382,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                                         padding: const EdgeInsets.all(15.0),
                                         child: Center(
                                             child: Text(
-                                          "Store",
+                                          'purchase_voucher.col_store'.tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -398,7 +398,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                                         padding: const EdgeInsets.all(15.0),
                                         child: Center(
                                             child: Text(
-                                          "Supplier",
+                                          'purchase_voucher.col_supplier'.tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -414,7 +414,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                                         padding: const EdgeInsets.all(15.0),
                                         child: Center(
                                             child: Text(
-                                          "Amount",
+                                          'purchase_voucher.col_amount'.tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -430,7 +430,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                                         padding: const EdgeInsets.all(15.0),
                                         child: Center(
                                             child: Text(
-                                          "Action",
+                                          'purchase_voucher.col_action'.tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -476,7 +476,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                                             padding: const EdgeInsets.all(15.0),
                                             child: Center(
                                                 child: Text(
-                                              "No",
+                                              'purchase_voucher.col_no'.tr,
                                               style: buildCustomStyle(
                                                 FontWeightManager.medium,
                                                 FontSize.s12,
@@ -492,7 +492,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                                             padding: const EdgeInsets.all(15.0),
                                             child: Center(
                                                 child: Text(
-                                              "Purchase Date",
+                                              'purchase_voucher.col_purchase_date'.tr,
                                               style: buildCustomStyle(
                                                 FontWeightManager.medium,
                                                 FontSize.s12,
@@ -508,7 +508,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                                             padding: const EdgeInsets.all(15.0),
                                             child: Center(
                                                 child: Text(
-                                              "Store",
+                                              'purchase_voucher.col_store'.tr,
                                               style: buildCustomStyle(
                                                 FontWeightManager.medium,
                                                 FontSize.s12,
@@ -524,7 +524,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                                             padding: const EdgeInsets.all(15.0),
                                             child: Center(
                                                 child: Text(
-                                              "SUpplier",
+                                              'purchase_voucher.col_supplier'.tr,
                                               style: buildCustomStyle(
                                                 FontWeightManager.medium,
                                                 FontSize.s12,
@@ -540,7 +540,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                                             padding: const EdgeInsets.all(15.0),
                                             child: Center(
                                                 child: Text(
-                                              "Amount",
+                                              'purchase_voucher.col_amount'.tr,
                                               style: buildCustomStyle(
                                                 FontWeightManager.medium,
                                                 FontSize.s12,
@@ -556,7 +556,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
                                             padding: const EdgeInsets.all(15.0),
                                             child: Center(
                                                 child: Text(
-                                              "Action",
+                                              'purchase_voucher.col_action'.tr,
                                               style: buildCustomStyle(
                                                 FontWeightManager.medium,
                                                 FontSize.s12,

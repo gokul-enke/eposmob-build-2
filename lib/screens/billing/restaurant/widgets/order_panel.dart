@@ -2608,7 +2608,7 @@ class OrderPanelState extends State<OrderPanel> {
                     controller: controller,
                     maxLines: 4,
                     decoration: InputDecoration(
-                      hintText: 'Enter order comment',
+                      hintText: 'order_panel.hint_order_comment'.tr,
                       hintStyle: buildCustomStyle(
                         FontWeight.w500,
                         12,

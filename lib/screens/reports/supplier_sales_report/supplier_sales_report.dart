@@ -34,8 +34,8 @@ class _SupplierSalesReportScreenState extends State<SupplierSalesReportScreen> {
   void _showLoadError(Object error) {
     debugPrint('Supplier sales report unavailable: $error');
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('Supplier sales report is currently unavailable.'),
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('supplier_sales_report.error_unavailable'.tr),
       backgroundColor: Colors.red,
     ));
   }
@@ -134,7 +134,7 @@ class _SupplierSalesReportScreenState extends State<SupplierSalesReportScreen> {
             child: ListView(
             children: [
               Text(
-                "Supplier Sales Report ",
+                'supplier_sales_report.page_title'.tr,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s20, 0.30, ColorManager.textColor),
               ),
@@ -154,7 +154,7 @@ class _SupplierSalesReportScreenState extends State<SupplierSalesReportScreen> {
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Text(
-                              "Supplier ",
+                              'supplier_sales_report.filter_supplier'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s14,
@@ -178,7 +178,7 @@ class _SupplierSalesReportScreenState extends State<SupplierSalesReportScreen> {
                               style: buildCustomStyle(FontWeightManager.medium,
                                   FontSize.s10, 0.18, ColorManager.textColor),
                               decoration: decoration.copyWith(
-                                  hintText: "Supplier Name    ",
+                                  hintText: 'supplier_sales_report.hint_supplier_name'.tr,
                                   hintStyle: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s10,
@@ -200,7 +200,7 @@ class _SupplierSalesReportScreenState extends State<SupplierSalesReportScreen> {
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Text(
-                              "From Date ",
+                              'supplier_sales_report.filter_from_date'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s14,
@@ -232,7 +232,7 @@ class _SupplierSalesReportScreenState extends State<SupplierSalesReportScreen> {
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Text(
-                              "To Date ",
+                              'supplier_sales_report.filter_to_date'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s14,
@@ -271,7 +271,7 @@ class _SupplierSalesReportScreenState extends State<SupplierSalesReportScreen> {
                             Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: Text(
-                                "Amount ",
+                                'supplier_sales_report.filter_amount'.tr,
                                 style: buildCustomStyle(
                                   FontWeightManager.regular,
                                   FontSize.s14,
@@ -298,7 +298,7 @@ class _SupplierSalesReportScreenState extends State<SupplierSalesReportScreen> {
                                     0.18,
                                     ColorManager.textColor),
                                 decoration: decoration.copyWith(
-                                    hintText: "Amount    ",
+                                    hintText: 'supplier_sales_report.hint_amount'.tr,
                                     hintStyle: buildCustomStyle(
                                         FontWeightManager.medium,
                                         FontSize.s10,
@@ -318,7 +318,7 @@ class _SupplierSalesReportScreenState extends State<SupplierSalesReportScreen> {
                       Padding(
                         padding: const EdgeInsets.only(left: 10.0, top: 30),
                         child: CustomRoundButton(
-                          title: "Search",
+                          title: 'supplier_sales_report.btn_search'.tr,
                           fct: searchAccountBook,
                           height: 50,
                           width: size.width * 0.09,
@@ -328,7 +328,7 @@ class _SupplierSalesReportScreenState extends State<SupplierSalesReportScreen> {
                       Padding(
                         padding: const EdgeInsets.only(left: 10.0, top: 30),
                         child: CustomRoundButton(
-                          title: "Reset",
+                          title: 'general.reset'.tr,
                           boxColor: Colors.white,
                           textColor: ColorManager.kPrimaryColor,
                           fct: resetSearch,
@@ -344,7 +344,7 @@ class _SupplierSalesReportScreenState extends State<SupplierSalesReportScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 18.0),
                 child: Text(
-                  "Supplier Sales Report   ",
+                  'supplier_sales_report.section_title'.tr,
                   style: buildCustomStyle(FontWeightManager.semiBold,
                       FontSize.s20, 0.30, ColorManager.textColor),
                 ),
@@ -378,12 +378,12 @@ class _SupplierSalesReportScreenState extends State<SupplierSalesReportScreen> {
                       decoration:
                           const BoxDecoration(color: ColorManager.tableBGColor),
                       children: [
-                        _buildTableHeader("No"),
-                        _buildTableHeader("Customer Name"),
-                        _buildTableHeader("Created By"),
-                        _buildTableHeader("Price"),
-                        _buildTableHeader("Date"),
-                        _buildTableHeader("Action"),
+                        _buildTableHeader('supplier_sales_report.col_no'.tr),
+                        _buildTableHeader('supplier_sales_report.col_customer_name'.tr),
+                        _buildTableHeader('supplier_sales_report.col_created_by'.tr),
+                        _buildTableHeader('supplier_sales_report.col_price'.tr),
+                        _buildTableHeader('supplier_sales_report.col_date'.tr),
+                        _buildTableHeader('supplier_sales_report.col_action'.tr),
                       ],
                     ),
                     if (reportsProvider.supplierSalesReport != null)
