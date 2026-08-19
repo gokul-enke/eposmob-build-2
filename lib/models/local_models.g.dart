@@ -650,13 +650,14 @@ class HiveCategoryAdapter extends TypeAdapter<HiveCategory> {
       categoryIcon: fields[5] as String?,
       parent: fields[6] as HiveParentCategory?,
       translations: (fields[7] as Map?)?.cast<String, String>(),
+      taxIds: (fields[8] as List?)?.cast<int>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveCategory obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.categoryId)
       ..writeByte(1)
@@ -672,7 +673,9 @@ class HiveCategoryAdapter extends TypeAdapter<HiveCategory> {
       ..writeByte(6)
       ..write(obj.parent)
       ..writeByte(7)
-      ..write(obj.translations);
+      ..write(obj.translations)
+      ..writeByte(8)
+      ..write(obj.taxIds);
   }
 
   @override

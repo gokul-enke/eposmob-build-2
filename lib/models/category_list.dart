@@ -48,6 +48,7 @@ class Category {
   final String? categoryImage;
   final String? categoryIcon;
   final ParentCategory? parent;
+  final List<int> taxIds;
 
   Category({
     this.categoryId,
@@ -58,6 +59,7 @@ class Category {
     this.categoryImage,
     this.categoryIcon,
     this.parent,
+    this.taxIds = const [],
   });
 
   factory Category.fromJson(Map<String, dynamic> json) {
@@ -67,6 +69,32 @@ class Category {
           n['code'] as String: n['name'] as String
     };
     print('Category: ${json["name"]} | translations: $translations');
+
+    final taxIdsList = <int>[];
+    final categoryTaxes = json['category_taxes'];
+    if (categoryTaxes is List) {
+      for (final tax in categoryTaxes) {
+        if (tax is Map<String, dynamic>) {
+          final taxId = tax['tax_id'];
+          if (taxId is int) {
+            taxIdsList.add(taxId);
+          } else if (taxId is String) {
+            final parsed = int.tryParse(taxId);
+            if (parsed != null) taxIdsList.add(parsed);
+          }
+        }
+      }
+    } else if (json['tax_ids'] is List) {
+      for (final id in json['tax_ids']) {
+        if (id is int) {
+          taxIdsList.add(id);
+        } else if (id is String) {
+          final parsed = int.tryParse(id);
+          if (parsed != null) taxIdsList.add(parsed);
+        }
+      }
+    }
+
     return Category(
       categoryId: json["id"],
       categoryName: json["name"],
@@ -78,6 +106,7 @@ class Category {
       parent: json["parent"] == null
           ? null
           : ParentCategory.fromJson(json["parent"]),
+      taxIds: taxIdsList,
     );
   }
 
@@ -90,6 +119,7 @@ class Category {
         "category_image": categoryImage,
         "category_icon": categoryIcon,
         "parent": parent?.toJson(),
+        "tax_ids": taxIds,
       };
 }
 
