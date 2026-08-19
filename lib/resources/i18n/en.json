@@ -1,4 +1,25 @@
 {
+  "support": {
+    "page_title": "Support"
+  },
+  "add_category_properties": {
+    "page_title": "Category Properties"
+  },
+  "notifications": {
+    "page_title": "Notifications"
+  },
+  "view_product_names": {
+    "label_name_english": "Product Name - English (US)",
+    "label_name_hindi": "Product Name - Hindi (IND)",
+    "label_name_arabic": "Product Name - Arabic (AR)",
+    "btn_prev": "Prev",
+    "btn_next": "Next"
+  },
+  "faq": {
+    "page_title": "Frequently Asked Questions",
+    "empty_no_faqs": "No FAQs available.",
+    "fallback_no_question": "No Question"
+  },
   "view_category": {
     "btn_all_categories": "All Categories",
     "page_title": "Show Category",

@@ -1,4 +1,25 @@
 {
+  "support": {
+    "page_title": "الدعم"
+  },
+  "add_category_properties": {
+    "page_title": "خصائص الفئة"
+  },
+  "notifications": {
+    "page_title": "الإشعارات"
+  },
+  "view_product_names": {
+    "label_name_english": "اسم المنتج - الإنجليزية (US)",
+    "label_name_hindi": "اسم المنتج - الهندية (IND)",
+    "label_name_arabic": "اسم المنتج - العربية (AR)",
+    "btn_prev": "السابق",
+    "btn_next": "التالي"
+  },
+  "faq": {
+    "page_title": "الأسئلة الشائعة",
+    "empty_no_faqs": "لا توجد أسئلة شائعة.",
+    "fallback_no_question": "لا يوجد سؤال"
+  },
   "view_category": {
     "btn_all_categories": "جميع الفئات",
     "page_title": "عرض الفئة",
