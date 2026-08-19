@@ -31,7 +31,16 @@
   "add_product_properties": {
     "hint_enter_prop": "أدخل @code",
     "msg_failed": "فشل",
-    "msg_failed_add": "فشل في إضافة الخصائص"
+    "msg_failed_add": "فشل في إضافة الخصائص",
+    "no_properties": "لا توجد خصائص",
+    "label_stock_applicable": "قابل للمخزون"
+  },
+  "edit_product_properties": {
+    "no_properties": "لا توجد خصائص",
+    "label_stock_applicable": "قابل للمخزون",
+    "hint_enter_prop": "أدخل @label",
+    "msg_failed": "فشل",
+    "msg_failed_update": "فشل في تحديث الخصائص"
   },
   "dashboard_ui": {
     "title": "جميع لوحات التحكم",

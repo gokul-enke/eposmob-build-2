@@ -77,7 +77,7 @@ class _AddProductPropertiesScreenState
                       if (categoryProvider.propValues == null) {
                         return const Center(child: CircularProgressIndicator());
                       } else if (categoryProvider.propValues!.isEmpty) {
-                        return const Center(child: Text("No properties found"));
+                        return Center(child: Text("add_product_properties.no_properties".tr));
                       } else {
                         return Flexible(
                           child: ListView.builder(
@@ -144,7 +144,7 @@ class _AddProductPropertiesScreenState
                                     SizedBox(
                                       width: size.width * .40,
                                       child: CheckboxListTile(
-                                        title: const Text("Stock Applicable"),
+                                        title: Text("add_product_properties.label_stock_applicable".tr),
                                         value: stockApplicableMap[propsCode] ??
                                             false,
                                         onChanged: (bool? value) {
@@ -245,7 +245,7 @@ class _AddProductPropertiesScreenState
                                     SizedBox(
                                       width: size.width * .40,
                                       child: CheckboxListTile(
-                                        title: const Text("Stock Applicable"),
+                                        title: Text("add_product_properties.label_stock_applicable".tr),
                                         value: stockApplicableMap[propsCode] ??
                                             false,
                                         onChanged: (bool? value) {

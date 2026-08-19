@@ -31,7 +31,16 @@
   "add_product_properties": {
     "hint_enter_prop": "Enter @code",
     "msg_failed": "Failed",
-    "msg_failed_add": "Failed to add properties"
+    "msg_failed_add": "Failed to add properties",
+    "no_properties": "No properties found",
+    "label_stock_applicable": "Stock Applicable"
+  },
+  "edit_product_properties": {
+    "no_properties": "No properties found",
+    "label_stock_applicable": "Stock Applicable",
+    "hint_enter_prop": "Enter @label",
+    "msg_failed": "Failed",
+    "msg_failed_update": "Failed to update properties"
   },
   "dashboard_ui": {
     "title": "All Dashboards",

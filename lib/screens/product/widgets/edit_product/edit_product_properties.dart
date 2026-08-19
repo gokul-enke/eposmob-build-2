@@ -157,6 +157,7 @@
 // }
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_title.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -274,7 +275,7 @@ class _EditProductPropertiesScreenState
                       if (categoryProvider.propValues == null) {
                         return const Center(child: CircularProgressIndicator());
                       } else if (categoryProvider.propValues!.isEmpty) {
-                        return const Center(child: Text("No properties found"));
+                        return Center(child: Text("edit_product_properties.no_properties".tr));
                       } else {
                         return Flexible(
                           child: ListView.builder(
@@ -327,7 +328,7 @@ class _EditProductPropertiesScreenState
                                         cursorColor: ColorManager.kPrimaryColor,
                                         decoration: InputDecoration(
                                           border: InputBorder.none,
-                                          hintText: 'Enter $propsLabel',
+                                          hintText: 'edit_product_properties.hint_enter_prop'.trParams({'label': propsLabel.toString()}),
                                           hintStyle: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -348,7 +349,7 @@ class _EditProductPropertiesScreenState
                                     SizedBox(
                                       width: size.width * .40,
                                       child: CheckboxListTile(
-                                        title: const Text("Stock Applicable"),
+                                        title: Text("edit_product_properties.label_stock_applicable".tr),
                                         value: stockApplicableMap[propsCode] ??
                                             false,
                                         onChanged: (bool? value) {
@@ -453,7 +454,7 @@ class _EditProductPropertiesScreenState
                                     SizedBox(
                                       width: size.width * .40,
                                       child: CheckboxListTile(
-                                        title: const Text("Stock Applicable"),
+                                        title: Text("edit_product_properties.label_stock_applicable".tr),
                                         value: stockApplicableMap[propsCode] ??
                                             false,
                                         onChanged: (bool? value) {
@@ -504,7 +505,7 @@ class _EditProductPropertiesScreenState
                             int? productId = getProduct!.productId;
                             if (productId == null) {
                               showScaffoldError(
-                                  context: context, message: 'Failed');
+                                  context: context, message: 'edit_product_properties.msg_failed'.tr);
                             } else {
                               showDialog(
                                   context: context,
@@ -547,7 +548,7 @@ class _EditProductPropertiesScreenState
 
                                     showScaffoldError(
                                         context: context,
-                                        message: 'Failed to update properties');
+                                        message: 'edit_product_properties.msg_failed_update'.tr);
                                   }
                                 },
                               );
