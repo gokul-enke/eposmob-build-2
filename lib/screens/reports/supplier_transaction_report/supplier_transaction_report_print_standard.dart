@@ -12,6 +12,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:open_file/open_file.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
+import 'package:pos_machine/services/standard_pdf_direct_print_service.dart';
 import 'package:pos_machine/models/supplier.dart';
 import 'package:flutter/foundation.dart';
 
@@ -396,6 +397,24 @@ class SupplierTransactionReportStandardPrinter {
       final file =
           File('${output.path}/SupplierTransactionReport_$sanitizedOrderNumber.pdf');
       await file.writeAsBytes(await pdf.save());
+
+      if (selectedPrinter != null) {
+        final printed = await StandardPdfDirectPrintService.printBytes(
+          pdfBytes: await file.readAsBytes(),
+          selectedPrinter: selectedPrinter,
+          paperSize: selectedPaperSize,
+          jobName: 'Supplier Transaction Report $sanitizedOrderNumber',
+        );
+        if (printed) {
+          if (context.mounted) {
+            showScaffold(
+              context: context,
+              message: 'Report sent to ${selectedPrinter.deviceName}',
+            );
+          }
+          return;
+        }
+      }
 
       // Determine if running on Windows
       final bool isWindows = Platform.isWindows;

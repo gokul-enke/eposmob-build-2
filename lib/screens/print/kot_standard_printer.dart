@@ -4,10 +4,13 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/document_configurations.dart';
+import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 import 'package:open_file/open_file.dart';
+import 'package:pos_machine/screens/print/kot_print_helpers.dart';
+import 'package:pos_machine/services/standard_pdf_direct_print_service.dart';
 
 /// Kitchen Order Ticket (KOT) Standard Printer
 /// Generates A4/A5 PDF for KOT printing using Document Configuration
@@ -75,6 +78,7 @@ class KotStandardPrinter {
 
   /// Generate and print/open KOT PDF using document configuration
   Future<void> generateAndPrintKotPDF({
+    required BluetoothPrinter selectedPrinter,
     required String orderNumber,
     String? tokenNumber,
     required String tableName,
@@ -87,6 +91,10 @@ class KotStandardPrinter {
     DocumentConfig? kotDocumentConfig,
   }) async {
     try {
+      if (!isKotDocumentConfigEnabled(kotDocumentConfig)) {
+        throw StateError('Kitchen Order document configuration is inactive.');
+      }
+
       debugPrint("===== KOT STANDARD PDF GENERATION =====");
       debugPrint("Paper size: $selectedPaperSize");
       debugPrint("Order: $orderNumber, Table: $tableName");
@@ -153,11 +161,13 @@ class KotStandardPrinter {
       final showTableNumber =
           displayConfig?['showTableNumber']?.visible ?? true;
       final showDateTime = displayConfig?['showDateTime']?.visible ?? true;
-      final showSLNumber = displayConfig?['showSLNumber']?.visible ?? true;
+      final showTokenNumber =
+          displayConfig?['showTokenNumber']?.visible ?? true;
+      final showSLNumber = displayConfig?['showSLNumber']?.visible ?? false;
       final showParticulars =
           displayConfig?['showParticulars']?.visible ?? true;
       final showQty = displayConfig?['showQty']?.visible ?? true;
-      final showTotal = displayConfig?['showTotal']?.visible ?? true;
+      final showTotal = displayConfig?['showTotal']?.visible ?? false;
       final showComment = displayConfig?['showComment']?.visible ?? true;
       final showMRP = displayConfig?['showMRP']?.visible ?? false;
       final showRate = displayConfig?['showRate']?.visible ?? false;
@@ -170,7 +180,7 @@ class KotStandardPrinter {
               : (kotDocumentConfig?.header?.isNotEmpty == true
                   ? kotDocumentConfig!.header!
                   : 'KITCHEN ORDER');
-        final resolvedHeaderText = _resolveKotHeader(headerText, kotType);
+      final resolvedHeaderText = _resolveKotHeader(headerText, kotType);
 
       final orderLabel =
           (displayConfig?['showOrderNumber']?.value as String?)?.isNotEmpty ==
@@ -190,7 +200,11 @@ class KotStandardPrinter {
           (displayConfig?['showDateTime']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showDateTime']!.value as String
               : 'Time';
-      final tokenLabel = 'Token';
+      final tokenLabel =
+          (displayConfig?['showTokenNumber']?.value as String?)?.isNotEmpty ==
+                  true
+              ? displayConfig!['showTokenNumber']!.value as String
+              : 'Token';
       final hasToken = tokenNumber != null && tokenNumber.trim().isNotEmpty;
 
       final slLabel =
@@ -265,6 +279,10 @@ class KotStandardPrinter {
         columnWidths.add(const pw.FlexColumnWidth(1));
         headerLabels.add(rateLabel);
       }
+      if (showTotal) {
+        columnWidths.add(const pw.FlexColumnWidth(1.2));
+        headerLabels.add(totalLabel);
+      }
 
       // Add page
       pdf.addPage(
@@ -300,25 +318,27 @@ class KotStandardPrinter {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      if (showOrderNumber && hasToken)
+                      if (showOrderNumber && showTokenNumber && hasToken)
                         pw.Row(
                           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                           children: [
                             pw.Text('$orderLabel: $orderNumber',
                                 style: subheaderStyle),
-                            pw.Text('$tokenLabel: ${tokenNumber!.trim()}',
+                            pw.Text('$tokenLabel: ${tokenNumber.trim()}',
                                 style: subheaderStyle),
                           ],
                         )
-                      else
+                      else if (showOrderNumber)
                         pw.Row(
                           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                           children: [
-                            if (showOrderNumber)
-                              pw.Text('$orderLabel: $orderNumber',
-                                  style: subheaderStyle),
+                            pw.Text('$orderLabel: $orderNumber',
+                                style: subheaderStyle),
                           ],
                         ),
+                      if (!showOrderNumber && showTokenNumber && hasToken)
+                        pw.Text('$tokenLabel: ${tokenNumber.trim()}',
+                            style: subheaderStyle),
                       if (showDateTime) ...[
                         pw.SizedBox(height: 2),
                         pw.Align(
@@ -350,108 +370,126 @@ class KotStandardPrinter {
                 pw.Divider(thickness: 1),
 
                 // Items table with dynamic columns
-                pw.Table(
-                  border: null,
-                  columnWidths: Map.fromIterables(
-                    List.generate(columnWidths.length, (i) => i),
-                    columnWidths,
-                  ),
-                  children: [
-                    // Header row
-                    pw.TableRow(
-                      decoration: const pw.BoxDecoration(
-                        border: pw.Border(
-                          bottom: pw.BorderSide(width: 1),
-                        ),
-                      ),
-                      children: headerLabels
-                          .map(
-                            (label) => pw.Padding(
-                              padding:
-                                  const pw.EdgeInsets.symmetric(vertical: 4),
-                              child: pw.Text(label,
-                                  style: tableHeaderStyle,
-                                  textAlign:
-                                      (label == qtyLabel || label == slLabel)
-                                          ? pw.TextAlign.center
-                                          : (label == mrpLabel ||
-                                                  label == rateLabel)
-                                              ? pw.TextAlign.right
-                                              : pw.TextAlign.left),
-                            ),
-                          )
-                          .toList(),
+                if (headerLabels.isNotEmpty)
+                  pw.Table(
+                    border: null,
+                    columnWidths: Map.fromIterables(
+                      List.generate(columnWidths.length, (i) => i),
+                      columnWidths,
                     ),
-                    // Item rows
-                    ...items.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final item = entry.value;
-                      final qty = item['quantity']?.toString() ?? '1';
-                      final name = item['productName']?.toString() ?? 'Unknown';
-                      final mrp = item['mrp']?.toString() ?? '';
-                      final rate = item['unitPrice']?.toString() ??
-                          item['rate']?.toString() ??
-                          '';
-
-                      List<pw.Widget> rowCells = [];
-
-                      if (showSLNumber) {
-                        rowCells.add(pw.Padding(
-                          padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                          child: pw.Text('${index + 1}',
-                              style: itemStyle, textAlign: pw.TextAlign.center),
-                        ));
-                      }
-                      if (showParticulars) {
-                        final itemNotes = item['notes']?.toString() ??
-                            item['comment']?.toString();
-                        rowCells.add(pw.Padding(
-                          padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                          child: pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              pw.Text(name, style: itemStyle, textDirection: pw.TextDirection.ltr),
-                              if (itemNotes != null && itemNotes.isNotEmpty)
-                                pw.Text('  Note: $itemNotes',
-                                    style: commentStyle),
-                            ],
-                          ),
-                        ));
-                      }
-                      if (showQty) {
-                        rowCells.add(pw.Padding(
-                          padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                          child: pw.Text(qty,
-                              style: itemStyle, textAlign: pw.TextAlign.center),
-                        ));
-                      }
-                      if (showMRP) {
-                        rowCells.add(pw.Padding(
-                          padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                          child: pw.Text(mrp,
-                              style: itemStyle, textAlign: pw.TextAlign.right),
-                        ));
-                      }
-                      if (showRate) {
-                        rowCells.add(pw.Padding(
-                          padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                          child: pw.Text(rate,
-                              style: itemStyle, textAlign: pw.TextAlign.right),
-                        ));
-                      }
-
-                      return pw.TableRow(
+                    children: [
+                      // Header row
+                      pw.TableRow(
                         decoration: const pw.BoxDecoration(
                           border: pw.Border(
-                            bottom: pw.BorderSide(
-                                width: 0.5, color: PdfColors.grey400),
+                            bottom: pw.BorderSide(width: 1),
                           ),
                         ),
-                        children: rowCells,
-                      );
-                    }),
-                  ],
-                ),
+                        children: headerLabels
+                            .map(
+                              (label) => pw.Padding(
+                                padding:
+                                    const pw.EdgeInsets.symmetric(vertical: 4),
+                                child: pw.Text(label,
+                                    style: tableHeaderStyle,
+                                    textAlign:
+                                        (label == qtyLabel || label == slLabel)
+                                            ? pw.TextAlign.center
+                                            : (label == mrpLabel ||
+                                                    label == rateLabel ||
+                                                    label == totalLabel)
+                                                ? pw.TextAlign.right
+                                                : pw.TextAlign.left),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                      // Item rows
+                      ...items.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final item = entry.value;
+                        final qty = item['quantity']?.toString() ?? '1';
+                        final name =
+                            item['productName']?.toString() ?? 'Unknown';
+                        final mrp = item['mrp']?.toString() ?? '';
+                        final rate = item['unitPrice']?.toString() ??
+                            item['rate']?.toString() ??
+                            '';
+
+                        List<pw.Widget> rowCells = [];
+
+                        if (showSLNumber) {
+                          rowCells.add(pw.Padding(
+                            padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                            child: pw.Text('${index + 1}',
+                                style: itemStyle,
+                                textAlign: pw.TextAlign.center),
+                          ));
+                        }
+                        if (showParticulars) {
+                          final itemNotes = item['notes']?.toString() ??
+                              item['comment']?.toString();
+                          rowCells.add(pw.Padding(
+                            padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                            child: pw.Column(
+                              crossAxisAlignment: pw.CrossAxisAlignment.start,
+                              children: [
+                                pw.Text(name,
+                                    style: itemStyle,
+                                    textDirection: pw.TextDirection.ltr),
+                                if (itemNotes != null && itemNotes.isNotEmpty)
+                                  pw.Text('  Note: $itemNotes',
+                                      style: commentStyle),
+                              ],
+                            ),
+                          ));
+                        }
+                        if (showQty) {
+                          rowCells.add(pw.Padding(
+                            padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                            child: pw.Text(qty,
+                                style: itemStyle,
+                                textAlign: pw.TextAlign.center),
+                          ));
+                        }
+                        if (showMRP) {
+                          rowCells.add(pw.Padding(
+                            padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                            child: pw.Text(mrp,
+                                style: itemStyle,
+                                textAlign: pw.TextAlign.right),
+                          ));
+                        }
+                        if (showRate) {
+                          rowCells.add(pw.Padding(
+                            padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                            child: pw.Text(rate,
+                                style: itemStyle,
+                                textAlign: pw.TextAlign.right),
+                          ));
+                        }
+                        if (showTotal) {
+                          final lineTotal = calculateKotTotal([item]);
+                          rowCells.add(pw.Padding(
+                            padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                            child: pw.Text(formatKotAmount(lineTotal),
+                                style: itemStyle,
+                                textAlign: pw.TextAlign.right),
+                          ));
+                        }
+
+                        return pw.TableRow(
+                          decoration: const pw.BoxDecoration(
+                            border: pw.Border(
+                              bottom: pw.BorderSide(
+                                  width: 0.5, color: PdfColors.grey400),
+                            ),
+                          ),
+                          children: rowCells,
+                        );
+                      }),
+                    ],
+                  ),
                 pw.Divider(thickness: 1),
                 pw.SizedBox(height: 5),
 
@@ -460,7 +498,8 @@ class KotStandardPrinter {
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.end,
                     children: [
-                      pw.Text('$totalLabel Items: ${items.length}',
+                      pw.Text(
+                          '$totalLabel: ${formatKotAmount(calculateKotTotal(items))}',
                           style: bodyStyle),
                     ],
                   ),
@@ -500,6 +539,22 @@ class KotStandardPrinter {
 
       debugPrint("KOT PDF saved to: ${file.path}");
 
+      final printed = await StandardPdfDirectPrintService.printBytes(
+        pdfBytes: await file.readAsBytes(),
+        selectedPrinter: selectedPrinter,
+        paperSize: selectedPaperSize,
+        jobName: 'KOT $sanitizedOrderNumber',
+      );
+      if (printed) {
+        if (context.mounted) {
+          showScaffold(
+            context: context,
+            message: 'KOT sent to ${selectedPrinter.deviceName}',
+          );
+        }
+        return;
+      }
+
       // Open the PDF
       final bool isWindows = Platform.isWindows;
 
@@ -508,7 +563,7 @@ class KotStandardPrinter {
       } else {
         try {
           final result = await OpenFile.open(file.path);
-          if (result.type != 'done') {
+          if (result.type != ResultType.done) {
             await _sharePdfFallback(file);
           } else {
             if (context.mounted) {

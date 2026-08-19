@@ -17,6 +17,7 @@ import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/screens/print/kot_thermal_printer.dart';
 import 'package:pos_machine/screens/print/kot_standard_printer.dart';
+import 'package:pos_machine/screens/print/kot_print_helpers.dart';
 import 'package:pos_machine/services/printer_permission_service.dart';
 
 /// Kitchen Order Ticket Print Page
@@ -94,8 +95,6 @@ class KotPrintPage extends StatefulWidget {
       // Load document config from cache (NO API CALL - instant!)
       final docConfigProvider =
           Provider.of<DocumentConfigProvider>(context, listen: false);
-      final accessToken = Provider.of<AuthModel>(context, listen: false).token;
-
       DocumentConfig? kotDocumentConfig;
 
       // Try multiple config name patterns to find cached config
@@ -106,11 +105,21 @@ class KotPrintPage extends StatefulWidget {
         debugPrint('[KotPrintPage] Document config not loaded');
         return false;
       }
+      if (!isKotDocumentConfigEnabled(kotDocumentConfig)) {
+        debugPrint('[KotPrintPage] KOT document configuration is inactive');
+        if (context.mounted) {
+          showScaffold(
+            context: context,
+            message: 'KOT printing is disabled in document configuration.',
+          );
+        }
+        return true;
+      }
 
       // Get paper size
-      String paperSize = prefs.getString('kot_paper_size') ?? '80mm';
-      if (paperSize == null || paperSize.isEmpty) {
-        paperSize = prefs.getString('default_paper_size') ?? '80mm';
+      String paperSize = prefs.getString('kot_paper_size')?.trim() ?? '';
+      if (paperSize.isEmpty) {
+        paperSize = prefs.getString('default_paper_size')?.trim() ?? '80mm';
       }
       if (paperSize == 'Thermal') {
         paperSize = '80mm';
@@ -139,6 +148,7 @@ class KotPrintPage extends StatefulWidget {
         String formattedTime = DateHelper.formatISODateToIST(orderTime);
 
         await kotStandardPrinter.generateAndPrintKotPDF(
+          selectedPrinter: selectedPrinter,
           orderNumber: orderNumber,
           tokenNumber: tokenNumber,
           tableName: tableName,
@@ -489,6 +499,16 @@ class _KotPrintPageState extends State<KotPrintPage> {
       }
       return;
     }
+    if (!isKotDocumentConfigEnabled(_kotDocumentConfig)) {
+      debugPrint('ERROR: KOT document configuration is inactive.');
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'KOT printing is disabled in document configuration.',
+        );
+      }
+      return;
+    }
 
     if (selectedPaperSize == '112mm' ||
         selectedPaperSize == '80mm' ||
@@ -557,6 +577,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
       String formattedTime = DateHelper.formatISODateToIST(widget.orderTime);
 
       await kotStandardPrinter.generateAndPrintKotPDF(
+        selectedPrinter: selectedPrinter!,
         orderNumber: widget.orderNumber,
         tokenNumber: widget.tokenNumber,
         tableName: widget.tableName,

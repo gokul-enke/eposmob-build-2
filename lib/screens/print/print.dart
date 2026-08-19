@@ -49,6 +49,7 @@ class PrintPage extends StatefulWidget {
   final double? paidAmount;
   final String? orderComment;
   final String? deliveryMethod;
+  final String? deliveryPhone;
   final String? customerAlternatePhone;
   final String? paymentMethod;
   final String? customerVatNumber;
@@ -83,6 +84,7 @@ class PrintPage extends StatefulWidget {
     this.paidAmount,
     this.orderComment,
     this.deliveryMethod,
+    this.deliveryPhone,
     this.customerAlternatePhone,
     this.paymentMethod,
     this.customerVatNumber,
@@ -122,6 +124,7 @@ class PrintPage extends StatefulWidget {
     double? paidAmount,
     String? orderComment,
     String? deliveryMethod,
+    String? deliveryPhone,
     String? customerAlternatePhone,
     String? paymentMethod,
     String? customerVatNumber,
@@ -280,6 +283,7 @@ class PrintPage extends StatefulWidget {
         paidAmount: paidAmount,
         orderComment: orderComment,
         deliveryMethod: deliveryMethod,
+        deliveryPhone: deliveryPhone ?? customerAlternatePhone,
         customerAlternatePhone: customerAlternatePhone,
         paymentMethod: paymentMethod,
         customerVatNumber: customerVatNumber,
@@ -1032,6 +1036,7 @@ class _PrintPageState extends State<PrintPage> {
       paidAmount: widget.paidAmount,
       orderComment: widget.orderComment,
       deliveryMethod: widget.deliveryMethod,
+      deliveryPhone: widget.deliveryPhone ?? widget.customerAlternatePhone,
       customerAlternatePhone: widget.customerAlternatePhone,
       paymentMethod: widget.paymentMethod,
       customerVatNumber: widget.customerVatNumber,
@@ -1145,6 +1150,7 @@ class _PrintPageState extends State<PrintPage> {
       paidAmount: widget.paidAmount,
       orderComment: widget.orderComment,
       deliveryMethod: widget.deliveryMethod,
+      deliveryPhone: widget.deliveryPhone ?? widget.customerAlternatePhone,
       customerAlternatePhone: widget.customerAlternatePhone,
       paymentMethod: widget.paymentMethod,
       customerVatNumber: widget.customerVatNumber,

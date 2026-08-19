@@ -68,6 +68,7 @@ class DocumentConfig {
   final dynamic createdAt; // Can be null
   final String? updatedAt;
   final String? language; // Added language field
+  final int? isActive;
   final String?
       activeTheme; // Theme identifier for layout selection (e.g., "classic", "modern", "minimal")
   final DisplayConfiguration? displayConfiguration; // Nested object
@@ -100,6 +101,7 @@ class DocumentConfig {
     this.createdAt,
     this.updatedAt,
     this.language, // Added to constructor
+    this.isActive,
     this.activeTheme, // Theme identifier
     this.displayConfiguration,
     this.resolvedLabels,
@@ -163,6 +165,7 @@ class DocumentConfig {
       createdAt: json["created_at"],
       updatedAt: json["updated_at"],
       language: json["language"], // Parse language from JSON
+      isActive: _parseIntegerFlag(json["is_active"]),
       activeTheme: json["active_theme"], // Parse active theme from JSON
       displayConfiguration: displayConfiguration,
       resolvedLabels: parseResolvedLabels(json["resolved_labels"]),
@@ -212,10 +215,20 @@ class DocumentConfig {
         "created_at": createdAt,
         "updated_at": updatedAt,
         "language": language,
+        "is_active": isActive,
         "active_theme": activeTheme,
         "display_configuration": displayConfiguration?.toJson(),
         "resolved_labels": resolvedLabels?.toJson(),
       };
+
+  bool get isEnabled => isActive == null || isActive == 1;
+
+  static int? _parseIntegerFlag(dynamic value) {
+    if (value == null) return null;
+    if (value is bool) return value ? 1 : 0;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString());
+  }
 }
 
 // This class is used for itemName, taxName, unitName, priceName, and amountName as they share the same structure

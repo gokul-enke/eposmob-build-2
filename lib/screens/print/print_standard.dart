@@ -31,6 +31,7 @@ import 'package:pos_machine/screens/print/standard_layouts/standard_pdf_layout_f
 import 'package:pos_machine/screens/print/print_unit_helper.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 import 'package:pos_machine/screens/print/receipt_customer_segment.dart';
+import 'package:pos_machine/screens/print/pdf_share_settings.dart';
 import 'logo_loader.dart';
 
 class StandardPrinter {
@@ -2738,18 +2739,11 @@ class StandardPrinter {
   }
 
   // Generate PDF for sharing without printing
-  /// Generates a shareable PDF that honors the matching B2B/B2C Billing Printer
-  /// settings (paper size + receipt theme), rendering through
-  /// [StandardPdfLayoutFactory] so the selected template (e.g. Simplified Tax
-  /// Invoice) is used instead of the hardcoded classic layout.
+  /// Generates a shareable PDF using the matching B2B/B2C PDF Sharing profile,
+  /// rendering through [StandardPdfLayoutFactory].
   ///
-  /// Resolution order:
-  /// - B2B paper size: `default_paper_size_b2b` → `default_paper_size` → `A4`
-  /// - B2C paper size: `default_paper_size` → `A4`
-  ///   (thermal sizes are coerced to A4 since share output is an A-series PDF).
-  /// - B2B theme: `billing_receipt_theme_b2b` → `billing_receipt_theme`
-  /// - B2C theme: `billing_receipt_theme`
-  /// - Theme fallback: document config `activeTheme` → `classic`.
+  /// Dedicated share settings win. Legacy Billing Printer settings are read
+  /// only as a compatibility fallback until a share profile is configured.
   ///
   /// All Share-PDF buttons route through here. Returns the saved [File] or null.
   Future<File?> generateThemedPDFForSharing({
@@ -2802,25 +2796,16 @@ class StandardPrinter {
         vatNumber: customerVatNumber,
         crNumber: customerCrNumber,
       );
-      String paperSize = (isB2B
-              ? prefs.getString('default_paper_size_b2b') ??
-                  prefs.getString('default_paper_size')
-              : prefs.getString('default_paper_size')) ??
-          'A4';
-      // Shared output is an A-series PDF; coerce thermal sizes to A4.
-      if (paperSize != 'A4' && paperSize != 'A5') {
-        paperSize = 'A4';
-      }
-
-      final theme = (isB2B
-              ? prefs.getString('billing_receipt_theme_b2b') ??
-                  prefs.getString('billing_receipt_theme')
-              : prefs.getString('billing_receipt_theme')) ??
-          billDocumentConfig.activeTheme ??
-          'classic';
+      final shareProfile = PdfShareSettings.resolve(
+        prefs,
+        isB2B: isB2B,
+        documentTheme: billDocumentConfig.activeTheme,
+      );
+      final paperSize = shareProfile.paperSize;
+      final theme = shareProfile.theme;
 
       debugPrint(
-          '[StandardPrinter.share] Using ${isB2B ? 'B2B' : 'B2C'} billing settings -> paperSize=$paperSize, theme=$theme');
+          '[StandardPrinter.share] Using ${isB2B ? 'B2B' : 'B2C'} PDF Sharing profile -> paperSize=$paperSize, theme=$theme');
 
       // ZATCA credentials for Saudi Arabia e-invoicing.
       final sharedPrefProvider = SharedPreferenceProvider();

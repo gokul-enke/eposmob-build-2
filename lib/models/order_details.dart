@@ -51,6 +51,7 @@ class OrderDetailsModelData {
   final List<OrderDetailsModelDataOrderProp>? orderProps;
   final String? deliveryMethodId;
   final String? deliveryMethodName;
+  final String? deliveryPhone;
   final OrderReturns? orderReturns;
   final dynamic points;
   final Map<String, dynamic>? payments;
@@ -77,6 +78,7 @@ class OrderDetailsModelData {
     this.orderProps,
     this.deliveryMethodId,
     this.deliveryMethodName,
+    this.deliveryPhone,
     this.orderReturns,
     this.points,
     this.payments,
@@ -124,6 +126,10 @@ class OrderDetailsModelData {
                 .map((x) => OrderDetailsModelDataOrderProp.fromJson(x))),
         deliveryMethodId: json["delivery_method_id"]?.toString(),
         deliveryMethodName: json["delivery_method_name"]?.toString(),
+        deliveryPhone: (json["delivery_phone"] ??
+                json["shipping_phone"] ??
+                json["delivery_contact_phone"])
+            ?.toString(),
         orderReturns: _parseOrderReturns(json["order_returns"]),
         points: json["points"],
         payments: json["payments"] is Map<String, dynamic>
@@ -169,6 +175,27 @@ class OrderDetailsModelData {
       }
     } catch (e) {
       // ignore
+    }
+    return null;
+  }
+
+  /// Returns the phone number attached to the delivery, when the API supplies
+  /// it either as a first-class order field or as an order property.
+  String? getDeliveryPhoneForDisplay() {
+    final direct = deliveryPhone?.trim();
+    if (direct != null && direct.isNotEmpty) return direct;
+
+    const supportedCodes = {
+      'DELIVERY_PHONE',
+      'DELIVERY_CONTACT_PHONE',
+      'SHIPPING_PHONE',
+    };
+    for (final prop in orderProps ?? const <OrderDetailsModelDataOrderProp>[]) {
+      if (!supportedCodes.contains(prop.propsCode?.trim().toUpperCase())) {
+        continue;
+      }
+      final value = prop.propsValue?.trim();
+      if (value != null && value.isNotEmpty) return value;
     }
     return null;
   }
@@ -380,6 +407,7 @@ class OrderDetailsModelData {
             : List<dynamic>.from(orderProps!.map((x) => x.toJson())),
         "delivery_method_id": deliveryMethodId,
         "delivery_method_name": deliveryMethodName,
+        "delivery_phone": deliveryPhone,
         "order_returns": orderReturns?.toJson(),
         "points": points,
         "payments": payments,
@@ -463,6 +491,7 @@ class OrderDetailsModelDataCartItem {
   final int? productVariantId; // Variant chosen for this order line (nullable)
   final Map<String, dynamic>?
       variantAttributes; // Snapshot map e.g. {"COLOR":"Red","SIZE":"L"}
+  final bool warrantyEnabled;
 
   OrderDetailsModelDataCartItem({
     this.id,
@@ -486,6 +515,7 @@ class OrderDetailsModelDataCartItem {
     this.names, // Add to constructor
     this.productVariantId,
     this.variantAttributes,
+    this.warrantyEnabled = false,
   });
 
   /// Formatted variant attribute line (values joined with " | "), matching
@@ -547,7 +577,17 @@ class OrderDetailsModelDataCartItem {
                 : Names.fromJson(json["product_names"]),
         productVariantId: _parseNullableInt(json["product_variant_id"]),
         variantAttributes: _parseVariantAttributes(json["variant_attributes"]),
+        warrantyEnabled: _parseBool(
+          json["warranty_enabled"] ?? json["warrantyEnabled"],
+        ),
       );
+
+  static bool _parseBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    final normalized = value?.toString().trim().toLowerCase();
+    return normalized == '1' || normalized == 'true' || normalized == 'yes';
+  }
 
   // variant_attributes may arrive as a Map or as a JSON-encoded String; parse
   // defensively and return null when empty/unparseable.
@@ -599,6 +639,7 @@ class OrderDetailsModelDataCartItem {
         names: names,
         productVariantId: productVariantId,
         variantAttributes: variantAttributes,
+        warrantyEnabled: warrantyEnabled,
       );
 
   Map<String, dynamic> toJson() => {
@@ -625,6 +666,7 @@ class OrderDetailsModelDataCartItem {
         "names": names?.toJson(), // Add names to serialization
         "product_variant_id": productVariantId,
         "variant_attributes": variantAttributes,
+        "warranty_enabled": warrantyEnabled,
       };
 
   static int? _parseNullableInt(dynamic value) {

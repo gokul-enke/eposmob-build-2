@@ -1,10 +1,11 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/screens/print/thermal/debug_image_saver.dart';
 import 'package:pos_machine/screens/print/thermal/printer_utils.dart';
+import 'package:pos_machine/screens/print/kot_print_helpers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image/image.dart' as img;
 import 'dart:ui' as ui;
@@ -68,6 +69,8 @@ class KotThermalPrinter {
   /// Get quantity column width (fixed for alignment)
   static double getQtyColumnWidth(bool is58mm) => is58mm ? 82.0 : 110.0;
 
+  static double getSlColumnWidth(bool is58mm) => is58mm ? 44.0 : 58.0;
+
   KotThermalPrinter(this.context);
 
   /// Clean order number by removing prefix and leading zeros
@@ -123,6 +126,10 @@ class KotThermalPrinter {
         "Document Config: ${kotDocumentConfig != null ? 'Loaded' : 'Not loaded'}");
 
     try {
+      if (!isKotDocumentConfigEnabled(kotDocumentConfig)) {
+        throw StateError('Kitchen Order document configuration is inactive.');
+      }
+
       debugPrint("Connecting to printer...");
       await _printerUtils.connectToPrinter(selectedPrinter);
       debugPrint("Connected successfully.");
@@ -166,6 +173,8 @@ class KotThermalPrinter {
       final showTableNumber =
           displayConfig?['showTableNumber']?.visible ?? true;
       final showDateTime = displayConfig?['showDateTime']?.visible ?? true;
+      final showTokenNumber =
+          displayConfig?['showTokenNumber']?.visible ?? true;
 
       // Get dynamic labels
       final orderLabel =
@@ -186,7 +195,11 @@ class KotThermalPrinter {
           (displayConfig?['showDateTime']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showDateTime']!.value as String
               : 'Time';
-      const tokenLabel = 'TOKEN #';
+      final tokenLabel =
+          (displayConfig?['showTokenNumber']?.value as String?)?.isNotEmpty ==
+                  true
+              ? displayConfig!['showTokenNumber']!.value as String
+              : 'TOKEN #';
       final hasToken = tokenNumber != null && tokenNumber.trim().isNotEmpty;
 
       rows.add(_KotSpacingRow(getSectionSpacing(is58mm) * 0.5));
@@ -203,7 +216,7 @@ class KotThermalPrinter {
       }
 
       // Order number and token in one row (two ends)
-      if (showOrderNumber && hasToken) {
+      if (showOrderNumber && showTokenNumber && hasToken) {
         rows.add(_KotTableRow(
           [
             _KotTableColumn(
@@ -224,6 +237,13 @@ class KotThermalPrinter {
       } else if (showOrderNumber) {
         rows.add(_KotTextRow(
           '$orderLabel: ${_cleanOrderNumber(orderNumber)}',
+          isBold: true,
+          scale: getOrderScale(is58mm),
+          center: true,
+        ));
+      } else if (showTokenNumber && hasToken) {
+        rows.add(_KotTextRow(
+          '$tokenLabel: ${tokenNumber.trim()}',
           isBold: true,
           scale: getOrderScale(is58mm),
           center: true,
@@ -281,9 +301,32 @@ class KotThermalPrinter {
                   ? resolvedLabels!.rate!
                   : 'Rate');
 
+      final showTotal = displayConfig?['showTotal']?.visible ?? false;
+      final totalLabel =
+          (displayConfig?['showTotal']?.value as String?)?.isNotEmpty == true
+              ? displayConfig!['showTotal']!.value as String
+              : (resolvedLabels?.total?.isNotEmpty == true
+                  ? resolvedLabels!.total!
+                  : 'Total');
+
+      final slLabel =
+          (displayConfig?['showSLNumber']?.value as String?)?.isNotEmpty == true
+              ? displayConfig!['showSLNumber']!.value as String
+              : (resolvedLabels?.slNumber?.isNotEmpty == true
+                  ? resolvedLabels!.slNumber!
+                  : 'SL#');
+
       // Items header row using table layout for better alignment
-      if (showQty || showParticulars) {
+      if (showSLNumber || showQty || showParticulars) {
         List<_KotTableColumn> headerCols = [];
+        if (showSLNumber) {
+          headerCols.add(_KotTableColumn(
+            slLabel,
+            width: getSlColumnWidth(is58mm),
+            isBold: true,
+            align: TextAlign.center,
+          ));
+        }
         if (showParticulars) {
           headerCols.add(_KotTableColumn(
             particularsLabel,
@@ -314,15 +357,20 @@ class KotThermalPrinter {
         final rate =
             item['unitPrice']?.toString() ?? item['rate']?.toString() ?? '';
 
-        // Build item name with optional SL number
-        String itemName = showSLNumber ? '${slNo++}. $name' : name;
-
         // Main item row with ITEM | QTY layout
         List<_KotTableColumn> itemCols = [];
 
+        if (showSLNumber) {
+          itemCols.add(_KotTableColumn(
+            '${slNo++}',
+            width: getSlColumnWidth(is58mm),
+            align: TextAlign.center,
+          ));
+        }
+
         if (showParticulars) {
           itemCols.add(_KotTableColumn(
-            itemName,
+            name,
             flex: 1,
             align: TextAlign.left,
           ));
@@ -339,13 +387,19 @@ class KotThermalPrinter {
           ));
         }
 
-        rows.add(_KotTableRow(itemCols, scale: getItemScale(is58mm)));
+        if (itemCols.isNotEmpty) {
+          rows.add(_KotTableRow(itemCols, scale: getItemScale(is58mm)));
+        }
 
-        // Print MRP/Rate on separate line if visible (indented)
-        if (showMRP || showRate) {
+        // Print configured monetary values on a separate line (indented).
+        if (showMRP || showRate || showTotal) {
           List<String> priceInfo = [];
           if (showMRP && mrp.isNotEmpty) priceInfo.add('$mrpLabel: $mrp');
           if (showRate && rate.isNotEmpty) priceInfo.add('$rateLabel: $rate');
+          if (showTotal) {
+            priceInfo.add(
+                '$totalLabel: ${formatKotAmount(calculateKotTotal([item]))}');
+          }
           if (priceInfo.isNotEmpty) {
             rows.add(_KotTextRow(
               '  ${priceInfo.join('  ')}',
@@ -375,17 +429,10 @@ class KotThermalPrinter {
       }
 
       // ========== TOTAL SECTION ==========
-      final showTotal = displayConfig?['showTotal']?.visible ?? false;
       if (showTotal) {
-        final totalLabel =
-            (displayConfig?['showTotal']?.value as String?)?.isNotEmpty == true
-                ? displayConfig!['showTotal']!.value as String
-                : (resolvedLabels?.total?.isNotEmpty == true
-                    ? resolvedLabels!.total!
-                    : 'Total');
         rows.add(_KotSpacingRow(getSectionSpacing(is58mm) * 0.5));
         rows.add(_KotTextRow(
-          '$totalLabel Items: ${items.length}',
+          '$totalLabel: ${formatKotAmount(calculateKotTotal(items))}',
           scale: getSecondaryScale(is58mm),
           isBold: true,
           center: true,

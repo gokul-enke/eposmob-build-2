@@ -32,6 +32,7 @@ class ReceiptLayoutParams {
   final double? paidAmount;
   final String? orderComment;
   final String? deliveryMethod;
+  final String? deliveryPhone;
   final String? customerAlternatePhone;
   final String? paymentMethod;
   final String? customerVatNumber;
@@ -85,6 +86,7 @@ class ReceiptLayoutParams {
     this.paidAmount,
     this.orderComment,
     this.deliveryMethod,
+    this.deliveryPhone,
     this.customerAlternatePhone,
     this.paymentMethod,
     this.customerVatNumber,
@@ -276,7 +278,7 @@ class ReceiptLayoutParams {
   double get totalQuantity {
     double qty = 0.0;
     for (var item in cartItems) {
-      if (isFromLocalStorage) {
+      if (isFromLocalStorage || item is Map) {
         qty += double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
       } else {
         qty += double.tryParse(item.quantity?.toString() ?? '0') ?? 0.0;

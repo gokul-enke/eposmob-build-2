@@ -68,6 +68,7 @@ class DailyClosePrintPage extends StatefulWidget {
       } else {
         final standardPrinter = DailyCloseStandardPrinter(context);
         await standardPrinter.generateAndPrintDailyClosePDF(
+          selectedPrinter: selectedPrinter,
           data: data,
           selectedPaperSize: paperSize,
           includeTransactions: includeTransactions,
@@ -408,6 +409,7 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
       final printer = DailyCloseStandardPrinter(context);
 
       await printer.generateAndPrintDailyClosePDF(
+        selectedPrinter: selectedPrinter!,
         data: widget.data,
         selectedPaperSize: selectedPaperSize,
         includeTransactions: includeTransactions,

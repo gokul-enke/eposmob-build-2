@@ -11,7 +11,8 @@ import 'package:pos_machine/screens/settings/widgets/settings_responsive.dart';
 
 const double kPrinterPhoneBreakpoint = kSettingsPhoneBreakpoint;
 
-double printerHorizontalPadding(double width) => settingsHorizontalPadding(width);
+double printerHorizontalPadding(double width) =>
+    settingsHorizontalPadding(width);
 
 double printerVerticalPadding(double width) => settingsVerticalPadding(width);
 
@@ -160,7 +161,7 @@ class PrinterSectionHeader extends StatelessWidget {
   }
 }
 
-/// Horizontally scrollable tab bar for Billing / Quotation / Kitchen / Barcode.
+/// Horizontally scrollable selector for printer and shared-PDF profiles.
 class PrinterTabSelector extends StatelessWidget {
   final String selectedType;
   final ValueChanged<String> onSelected;
@@ -176,6 +177,7 @@ class PrinterTabSelector extends StatelessWidget {
     ('Quotation', 'Quotation Printer'),
     ('Kitchen', 'Kitchen Printer'),
     ('Barcode', 'Barcode Printer'),
+    ('PDF Sharing', 'PDF Sharing'),
   ];
 
   @override
@@ -388,8 +390,7 @@ class PrinterDropdownField extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isStacked =
-            constraints.maxWidth < kPrinterPhoneBreakpoint ||
+        final isStacked = constraints.maxWidth < kPrinterPhoneBreakpoint ||
             printerIsCompact(context);
 
         final labelWidget = Text(
