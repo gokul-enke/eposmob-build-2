@@ -666,7 +666,9 @@ class LocalProductProvider extends ChangeNotifier {
     double? fallbackTaxRate,
   }) {
     final stockTaxRate = selectedStock?.taxRate?.trim();
-    if (stockTaxRate != null && stockTaxRate.isNotEmpty) {
+    if (stockTaxRate != null &&
+        stockTaxRate.isNotEmpty &&
+        (double.tryParse(stockTaxRate) ?? 0.0) > 0) {
       return double.tryParse(stockTaxRate) ?? 0.0;
     }
     return fallbackTaxRate ?? product.totalTaxRate;

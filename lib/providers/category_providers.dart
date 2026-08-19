@@ -753,6 +753,11 @@ class CategoryProvider extends ChangeNotifier {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final decoded = json.decode(response.body);
         await _refreshAfterCategoryMutation(decoded);
+        final data = decoded['data'];
+        if (data is Map<String, dynamic>) {
+          final newCategory = Category.fromJson(data);
+          await upsertCategoryInCache(newCategory);
+        }
         return decoded;
       }
 

@@ -59,18 +59,18 @@ class HiveLocalCartItemAdapter extends TypeAdapter<HiveLocalCartItem> {
       taxRate: fields[7] as double?,
       serializedProduct: fields[4] as HiveStringValue,
       serializedSelectedStock: fields[5] as HiveStringValue?,
-      stockDeducted: fields[8] == null ? 0 : fields[8] as num,
+      stockDeducted: fields[8] as num,
       comment: fields[9] as String?,
       serializedStockGroupIds: fields[10] as HiveStringValue?,
       serializedStockReservations: fields[11] as HiveStringValue?,
-      isManualPriceOverride: fields[12] == null ? false : fields[12] as bool,
+      isManualPriceOverride: fields[12] as bool,
       saleUnitId: fields[13] as int?,
       saleUnitName: fields[14] as String?,
       saleUnitConversionRate: fields[15] as double?,
       variantId: fields[16] as int?,
       serializedVariantAttributes: fields[17] as HiveStringValue?,
       lineId: fields[18] as String?,
-      warrantyEnabled: fields[19] == null ? false : fields[19] as bool,
+      warrantyEnabled: fields[19] as bool,
     );
   }
 
@@ -325,7 +325,7 @@ class HiveGetProductAdapter extends TypeAdapter<HiveGetProduct> {
       description: fields[10] as String?,
       attachment: (fields[14] as List?)?.cast<HiveAttachment>(),
       sku: fields[15] as String?,
-      isSelected: fields[16] == null ? false : fields[16] as bool,
+      isSelected: fields[16] as bool,
       offerPrice: fields[17] as String?,
       productLocation: fields[18] as String?,
       totalTaxRate: fields[19] as String?,
@@ -650,13 +650,14 @@ class HiveCategoryAdapter extends TypeAdapter<HiveCategory> {
       categoryIcon: fields[5] as String?,
       parent: fields[6] as HiveParentCategory?,
       translations: (fields[7] as Map?)?.cast<String, String>(),
+      taxIds: (fields[8] as List?)?.cast<int>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveCategory obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.categoryId)
       ..writeByte(1)
@@ -672,7 +673,9 @@ class HiveCategoryAdapter extends TypeAdapter<HiveCategory> {
       ..writeByte(6)
       ..write(obj.parent)
       ..writeByte(7)
-      ..write(obj.translations);
+      ..write(obj.translations)
+      ..writeByte(8)
+      ..write(obj.taxIds);
   }
 
   @override
