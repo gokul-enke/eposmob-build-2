@@ -1,4 +1,13 @@
 {
+  "loyality": {
+    "page_title": "بطاقة الولاء ",
+    "hint_search": "ابحث عن العملاء.....",
+    "label_first_name": "الاسم الأول",
+    "label_last_name": "اسم العائلة",
+    "label_select_category": "اختر الفئة",
+    "label_select_card": "اختر البطاقة",
+    "label_card_number": "رقم البطاقة"
+  },
   "view_invoice": {
     "btn_invoice_list": "قائمة الفواتير",
     "page_title": " تفاصيل الفاتورة  ",

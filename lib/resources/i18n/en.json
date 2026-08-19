@@ -1,4 +1,13 @@
 {
+  "loyality": {
+    "page_title": "Loyality Card ",
+    "hint_search": "Search Customers.....",
+    "label_first_name": "FirstName",
+    "label_last_name": "Last Name",
+    "label_select_category": "Select Category",
+    "label_select_card": "Select Card",
+    "label_card_number": "Card number"
+  },
   "view_invoice": {
     "btn_invoice_list": "Invoice List",
     "page_title": " Invoice Details  ",
