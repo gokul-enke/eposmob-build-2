@@ -501,11 +501,12 @@ class CategoryProvider extends ChangeNotifier {
     if (categoryId == null) return;
 
     for (final scope in CategoryListScope.values) {
+      final cache = _scopeCaches[scope]!;
+      cache.items.removeWhere((item) => item.categoryId == categoryId);
+
       if (scope == CategoryListScope.sellable && !isSellable) continue;
       if (scope == CategoryListScope.purchasable && !isPurchasable) continue;
 
-      final cache = _scopeCaches[scope]!;
-      cache.items.removeWhere((item) => item.categoryId == categoryId);
       cache.items.insert(0, category);
     }
 
@@ -518,10 +519,18 @@ class CategoryProvider extends ChangeNotifier {
       allCategories,
       boxName: _hiveBoxAll,
     );
+    await saveCategoriesToHive(
+      purchasableCategories,
+      boxName: _hiveBoxPurchasable,
+    );
     notifyListeners();
   }
 
-  Future<void> _refreshAfterCategoryMutation(Map<String, dynamic> decoded) async {
+  Future<void> _refreshAfterCategoryMutation(
+    Map<String, dynamic> decoded, {
+    required bool isSellable,
+    required bool isPurchasable,
+  }) async {
     invalidateCategories();
     await prefetchAllScopesForStore(force: true);
 
@@ -537,14 +546,6 @@ class CategoryProvider extends ChangeNotifier {
       debugPrint(
         '🏷️ [CategoryProvider] New category ${newCategory.categoryId} missing from list API — upserting locally',
       );
-      final isSellable = data['is_sellable'] == true ||
-          data['is_sellable'] == 1 ||
-          data['is_sellable'] == '1' ||
-          data['is_sellable'] == null;
-      final isPurchasable = data['is_purchasable'] == true ||
-          data['is_purchasable'] == 1 ||
-          data['is_purchasable'] == '1' ||
-          data['is_purchasable'] == null;
       await upsertCategoryInCache(
         newCategory,
         isSellable: isSellable,
@@ -771,24 +772,11 @@ class CategoryProvider extends ChangeNotifier {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final decoded = json.decode(response.body);
-        await _refreshAfterCategoryMutation(decoded);
-        final data = decoded['data'];
-        if (data is Map<String, dynamic>) {
-          final newCategory = Category.fromJson(data);
-          final isSellable = data['is_sellable'] == true ||
-              data['is_sellable'] == 1 ||
-              data['is_sellable'] == '1' ||
-              data['is_sellable'] == null;
-          final isPurchasable = data['is_purchasable'] == true ||
-              data['is_purchasable'] == 1 ||
-              data['is_purchasable'] == '1' ||
-              data['is_purchasable'] == null;
-          await upsertCategoryInCache(
-            newCategory,
-            isSellable: isSellable,
-            isPurchasable: isPurchasable,
-          );
-        }
+        await _refreshAfterCategoryMutation(
+          decoded,
+          isSellable: isSellable,
+          isPurchasable: isPurchasable,
+        );
         return decoded;
       }
 
@@ -943,7 +931,11 @@ class CategoryProvider extends ChangeNotifier {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final decoded = json.decode(response.body);
-        await _refreshAfterCategoryMutation(decoded);
+        await _refreshAfterCategoryMutation(
+          decoded,
+          isSellable: isSellable,
+          isPurchasable: isPurchasable,
+        );
         return decoded;
       }
 

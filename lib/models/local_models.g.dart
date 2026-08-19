@@ -325,7 +325,7 @@ class HiveGetProductAdapter extends TypeAdapter<HiveGetProduct> {
       description: fields[10] as String?,
       attachment: (fields[14] as List?)?.cast<HiveAttachment>(),
       sku: fields[15] as String?,
-      isSelected: fields[16] as bool,
+      isSelected: fields[16] == null ? false : fields[16] as bool,
       offerPrice: fields[17] as String?,
       productLocation: fields[18] as String?,
       totalTaxRate: fields[19] as String?,
