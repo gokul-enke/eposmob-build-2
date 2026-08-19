@@ -531,7 +531,7 @@
     "hint_price": "Price",
     "btn_reset_filters": "Reset Filters"
   },
-  "sales_return": {
+  "sales_return_form": {
     "btn_back": "Sales Return List",
     "page_title": "Sales Return",
     "subtitle_selected": "Select items to return, then complete the return",

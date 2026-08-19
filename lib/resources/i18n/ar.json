@@ -531,7 +531,7 @@
     "hint_price": "السعر",
     "btn_reset_filters": "إعادة تعيين الفلاتر"
   },
-  "sales_return": {
+  "sales_return_form": {
     "btn_back": "قائمة مرتجعات المبيعات",
     "page_title": "مرتجعات المبيعات",
     "subtitle_selected": "اختر العناصر للإرجاع، ثم أتمّ عملية الإرجاع",

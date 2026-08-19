@@ -138,7 +138,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
           if (mounted) {
             _initLoadError = e is Exception
                 ? e.toString().replaceFirst('Exception: ', '')
-                : 'sales_return.error_failed_load_order'.tr;
+                : 'sales_return_form.error_failed_load_order'.tr;
             showScaffoldError(context: context, message: _initLoadError!);
           }
         } finally {
@@ -314,11 +314,11 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
 
     return SalesReturnStepBar(
       steps: [
-        _buildStepChip('1', 'sales_return.step_return_items'.tr, active: true, done: hasDraft),
+        _buildStepChip('1', 'sales_return_form.step_return_items'.tr, active: true, done: hasDraft),
         Icon(Icons.arrow_forward, size: 14, color: Colors.grey.shade400),
         _buildStepChip(
           '2',
-          'sales_return.step_complete_return'.tr,
+          'sales_return_form.step_complete_return'.tr,
           active: step2Ready,
           done: false,
         ),
@@ -456,7 +456,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
           context: context,
           message: error is Exception
               ? error.toString().replaceFirst('Exception: ', '')
-              : 'sales_return.error_failed_load_items'.tr,
+              : 'sales_return_form.error_failed_load_items'.tr,
         );
       }
     } finally {
@@ -504,14 +504,14 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                         : () {
                             sideBarController.index.value = 50;
                           },
-                    text: 'sales_return.btn_back'.tr,
+                    text: 'sales_return_form.btn_back'.tr,
                   ),
                   const SizedBox(height: 8),
                   SalesReturnPageHeader(
-                    title: 'sales_return.page_title'.tr,
+                    title: 'sales_return_form.page_title'.tr,
                     subtitle: isOrderSelected
-                        ? 'sales_return.subtitle_selected'.tr
-                        : 'sales_return.subtitle_no_order'.tr,
+                        ? 'sales_return_form.subtitle_selected'.tr
+                        : 'sales_return_form.subtitle_no_order'.tr,
                   ),
                 ],
               ),
@@ -688,7 +688,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                             Row(
                               children: [
                                 SalesReturnLabelPill(
-                                    label: 'sales_return.order_details_label'.tr),
+                                    label: 'sales_return_form.order_details_label'.tr),
                                 const Spacer(),
                                 Container(
                                   padding:
@@ -708,7 +708,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        'sales_return.order_selected_badge'.tr,
+                                        'sales_return_form.order_selected_badge'.tr,
                                         style: buildCustomStyle(
                                           FontWeightManager.medium,
                                           FontSize.s10,
@@ -725,19 +725,19 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                             SalesReturnDetailGrid(
                               children: [
                                 _buildOrderDetailItem(
-                                  'sales_return.field_order_number'.tr,
+                                  'sales_return_form.field_order_number'.tr,
                                   '${order.orderNumber}',
                                   Icons.receipt_long,
                                 ),
                                 _buildOrderDetailItem(
-                                  'sales_return.field_date'.tr,
+                                  'sales_return_form.field_date'.tr,
                                   DateHelper.formatDate(
                                       order.orderDate ?? DateTime.now()),
                                   Icons.calendar_today,
                                 ),
                                 _buildOrderDetailItem(
-                                  'sales_return.field_customer'.tr,
-                                  order.customerName ?? 'sales_return.na'.tr,
+                                  'sales_return_form.field_customer'.tr,
+                                  order.customerName ?? 'sales_return_form.na'.tr,
                                   Icons.person,
                                 ),
                               ],
@@ -753,23 +753,23 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SalesReturnLabelPill(label: 'sales_return.order_details_label'.tr),
+                            SalesReturnLabelPill(label: 'sales_return_form.order_details_label'.tr),
                             const SizedBox(height: 16),
                             SalesReturnDetailGrid(
                               children: [
                                 _buildOrderDetailItem(
-                                  'sales_return.field_order_number'.tr,
+                                  'sales_return_form.field_order_number'.tr,
                                   '$selectedOrderNumber',
                                   Icons.receipt_long,
                                 ),
                                 _buildOrderDetailItem(
-                                  'sales_return.field_date'.tr,
+                                  'sales_return_form.field_date'.tr,
                                   DateHelper.formatDate(DateTime.now()),
                                   Icons.calendar_today,
                                 ),
                                 _buildOrderDetailItem(
-                                  'sales_return.field_customer'.tr,
-                                  'sales_return.order_ref'.trParams({'number': '$selectedOrderNumber'}),
+                                  'sales_return_form.field_customer'.tr,
+                                  'sales_return_form.order_ref'.trParams({'number': '$selectedOrderNumber'}),
                                   Icons.person,
                                 ),
                               ],
@@ -792,7 +792,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'sales_return.no_order_title'.tr,
+                            'sales_return_form.no_order_title'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.semiBold,
                               FontSize.s16,
@@ -802,7 +802,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'sales_return.no_order_subtitle'.tr,
+                            'sales_return_form.no_order_subtitle'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.regular,
                               FontSize.s12,
@@ -829,7 +829,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               //   },
               // ),
               const SizedBox(height: 16),
-              SalesReturnSectionTitle(title: 'sales_return.section_order_items'.tr),
+              SalesReturnSectionTitle(title: 'sales_return_form.section_order_items'.tr),
               const SizedBox(height: 12),
               Consumer<SalesProvider>(
                 builder: (context, salesProvider, _) {
@@ -1200,7 +1200,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     if (maxQuantity <= 0) {
       showScaffoldError(
         context: context,
-        message: 'sales_return.error_no_qty'.tr,
+        message: 'sales_return_form.error_no_qty'.tr,
       );
       return;
     }
@@ -1241,7 +1241,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              'sales_return.dialog_title'.trParams({'id': orderId}),
+                              'sales_return_form.dialog_title'.trParams({'id': orderId}),
                               style: buildCustomStyle(
                                 FontWeightManager.semiBold,
                                 FontSize.s18,
@@ -1267,16 +1267,16 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                             ? Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _buildDialogProductRow('sales_return.dialog_col_product'.tr, productName,
+                                  _buildDialogProductRow('sales_return_form.dialog_col_product'.tr, productName,
                                       bold: true),
                                   const SizedBox(height: 8),
                                   _buildDialogProductRow(
-                                      'sales_return.dialog_col_price'.tr, '$currency $unitPrice'),
+                                      'sales_return_form.dialog_col_price'.tr, '$currency $unitPrice'),
                                   const SizedBox(height: 8),
                                   _buildDialogProductRow(
-                                      'sales_return.dialog_col_total'.tr, '$currency $totalPrice'),
+                                      'sales_return_form.dialog_col_total'.tr, '$currency $totalPrice'),
                                   const SizedBox(height: 8),
-                                  _buildDialogProductRow('sales_return.dialog_col_order_qty'.tr, quantity),
+                                  _buildDialogProductRow('sales_return_form.dialog_col_order_qty'.tr, quantity),
                                 ],
                               )
                             : Column(
@@ -1287,7 +1287,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                       Expanded(
                                         flex: 3,
                                         child: Text(
-                                          'sales_return.dialog_col_product_name'.tr,
+                                          'sales_return_form.dialog_col_product_name'.tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -1299,7 +1299,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                       Expanded(
                                         flex: 2,
                                         child: Text(
-                                          'sales_return.dialog_col_price'.tr,
+                                          'sales_return_form.dialog_col_price'.tr,
                                           textAlign: TextAlign.center,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
@@ -1312,7 +1312,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                       Expanded(
                                         flex: 2,
                                         child: Text(
-                                          'sales_return.dialog_col_total_price'.tr,
+                                          'sales_return_form.dialog_col_total_price'.tr,
                                           textAlign: TextAlign.center,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
@@ -1325,7 +1325,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                       Expanded(
                                         flex: 2,
                                         child: Text(
-                                          'sales_return.dialog_col_order_quantity'.tr,
+                                          'sales_return_form.dialog_col_order_quantity'.tr,
                                           textAlign: TextAlign.center,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
@@ -1402,18 +1402,18 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                       TextField(
                         controller: quantityController,
                         decoration: InputDecoration(
-                          labelText: 'sales_return.field_quantity'.tr,
+                          labelText: 'sales_return_form.field_quantity'.tr,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
                           filled: true,
                           fillColor: Colors.grey[100],
                           helperText:
-                              'sales_return.helper_max_returnable'.trParams({'max': '${allowsDecimals ? maxQuantity.toStringAsFixed(3) : maxQuantity.toInt()}'}),
+                              'sales_return_form.helper_max_returnable'.trParams({'max': '${allowsDecimals ? maxQuantity.toStringAsFixed(3) : maxQuantity.toInt()}'}),
                           errorText:
                               (double.tryParse(quantityController.text) ?? 0) >
                                       maxQuantity
-                                  ? 'sales_return.error_max_qty'.tr
+                                  ? 'sales_return_form.error_max_qty'.tr
                                   : null,
                         ),
                         keyboardType: const TextInputType.numberWithOptions(
@@ -1440,7 +1440,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                       TextField(
                         controller: returnTotalController,
                         decoration: InputDecoration(
-                          labelText: 'sales_return.field_return_total'.tr,
+                          labelText: 'sales_return_form.field_return_total'.tr,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -1468,7 +1468,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                       TextField(
                         controller: reasonController,
                         decoration: InputDecoration(
-                          labelText: 'sales_return.field_reason'.tr,
+                          labelText: 'sales_return_form.field_reason'.tr,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -1502,7 +1502,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                       showScaffoldError(
                                         context: context,
                                         message:
-                                            'sales_return.error_invalid_order'.tr,
+                                            'sales_return_form.error_invalid_order'.tr,
                                       );
                                       return;
                                     }
@@ -1513,7 +1513,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                       showScaffoldError(
                                         context: context,
                                         message:
-                                            'sales_return.error_invalid_qty'.tr,
+                                            'sales_return_form.error_invalid_qty'.tr,
                                       );
                                       return;
                                     }
@@ -1521,7 +1521,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                       showScaffoldError(
                                         context: context,
                                         message:
-                                            'sales_return.error_qty_exceeds'.tr,
+                                            'sales_return_form.error_qty_exceeds'.tr,
                                       );
                                       return;
                                     }
@@ -1559,7 +1559,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
 
                                       showScaffold(
                                         context: context,
-                                        message: 'sales_return.msg_item_returned'.tr,
+                                        message: 'sales_return_form.msg_item_returned'.tr,
                                       );
 
                                       await getOrderDetails(
@@ -1580,7 +1580,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                             ? error
                                                 .toString()
                                                 .replaceFirst('Exception: ', '')
-                                            : 'sales_return.error_submit_failed'.tr,
+                                            : 'sales_return_form.error_submit_failed'.tr,
                                       );
                                     } finally {
                                       if (context.mounted) {
@@ -1612,7 +1612,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                     ),
                                   )
                                 : Text(
-                                    'sales_return.btn_submit'.tr,
+                                    'sales_return_form.btn_submit'.tr,
                                     style: const TextStyle(color: Colors.white),
                                   ),
                           ),
@@ -1679,7 +1679,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                     size: 40, color: Colors.grey.shade400),
                 const SizedBox(height: 10),
                 Text(
-                  initLoading ? 'sales_return.empty_loading'.tr : 'sales_return.empty_no_items'.tr,
+                  initLoading ? 'sales_return_form.empty_loading'.tr : 'sales_return_form.empty_no_items'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.medium,
                     FontSize.s13,
@@ -1732,14 +1732,14 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   children: [
                     TableRow(
                       children: [
-                        _buildTableHeader('sales_return.col_product_name'.tr),
-                        _buildTableHeader('sales_return.col_quantity'.tr),
-                        _buildTableHeader('sales_return.col_unit_price'.tr),
-                        _buildTableHeader('sales_return.col_total_price'.tr),
-                        _buildTableHeader('sales_return.col_returned_qty'.tr),
-                        _buildTableHeader('sales_return.col_returned_total'.tr),
-                        _buildTableHeader('sales_return.col_status'.tr),
-                        _buildTableHeader('sales_return.col_action'.tr),
+                        _buildTableHeader('sales_return_form.col_product_name'.tr),
+                        _buildTableHeader('sales_return_form.col_quantity'.tr),
+                        _buildTableHeader('sales_return_form.col_unit_price'.tr),
+                        _buildTableHeader('sales_return_form.col_total_price'.tr),
+                        _buildTableHeader('sales_return_form.col_returned_qty'.tr),
+                        _buildTableHeader('sales_return_form.col_returned_total'.tr),
+                        _buildTableHeader('sales_return_form.col_status'.tr),
+                        _buildTableHeader('sales_return_form.col_action'.tr),
                       ],
                     ),
                   ],
@@ -1877,23 +1877,23 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
             spacing: 12,
             runSpacing: 8,
             children: [
-              _buildMobileItemMetric('sales_return.metric_qty'.tr, item.quantity),
-              _buildMobileItemMetric('sales_return.metric_unit'.tr, item.unitPrice),
-              _buildMobileItemMetric('sales_return.metric_total'.tr, item.totalPrice),
+              _buildMobileItemMetric('sales_return_form.metric_qty'.tr, item.quantity),
+              _buildMobileItemMetric('sales_return_form.metric_unit'.tr, item.unitPrice),
+              _buildMobileItemMetric('sales_return_form.metric_total'.tr, item.totalPrice),
               _buildMobileItemMetric(
-                'sales_return.metric_returned'.tr,
+                'sales_return_form.metric_returned'.tr,
                 item.returnedQuantity == item.returnedQuantity.roundToDouble()
                     ? item.returnedQuantity.toInt().toString()
                     : item.returnedQuantity.toStringAsFixed(3),
               ),
               _buildMobileItemMetric(
-                  'sales_return.metric_ret_total'.tr, item.returnedTotal.toString()),
+                  'sales_return_form.metric_ret_total'.tr, item.returnedTotal.toString()),
             ],
           ),
           const SizedBox(height: 12),
           if (!canReturn)
             Text(
-              hasValidCartItemId ? 'sales_return.status_returned'.tr : 'sales_return.status_unavailable'.tr,
+              hasValidCartItemId ? 'sales_return_form.status_returned'.tr : 'sales_return_form.status_unavailable'.tr,
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s12,
@@ -1928,7 +1928,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   );
                 },
                 child: Text(
-                  'sales_return.btn_return_item'.tr,
+                  'sales_return_form.btn_return_item'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.semiBold,
                     FontSize.s12,
@@ -2009,7 +2009,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                           item) <=
                       0
               ? Text(
-                  item.cartItemId <= 0 ? 'sales_return.status_unavailable'.tr : 'sales_return.status_returned'.tr,
+                  item.cartItemId <= 0 ? 'sales_return_form.status_unavailable'.tr : 'sales_return_form.status_returned'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.medium,
                     FontSize.s12,
@@ -2032,7 +2032,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                       returnedQuantity: item.returnedQuantity,
                     );
                   },
-                  child: Text('sales_return.btn_return'.tr),
+                  child: Text('sales_return_form.btn_return'.tr),
                 ),
         ),
       ),
@@ -2129,7 +2129,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Text(
-              'sales_return.hint_min_one_item'.tr,
+              'sales_return_form.hint_min_one_item'.tr,
               textAlign: TextAlign.center,
               style: buildCustomStyle(
                 FontWeightManager.regular,
@@ -2142,7 +2142,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         Opacity(
           opacity: canComplete ? 1 : 0.45,
           child: CustomRoundButton(
-            title: isCompletingReturn ? 'sales_return.btn_completing'.tr : 'sales_return.btn_complete_return'.tr,
+            title: isCompletingReturn ? 'sales_return_form.btn_completing'.tr : 'sales_return_form.btn_complete_return'.tr,
             fct: canComplete
                 ? () async {
                     debugPrint('Return Order ID: $selectedOrderId');
@@ -2151,7 +2151,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                     if (_salesReturnItems.isEmpty) {
                       showScaffoldError(
                         context: context,
-                        message: 'sales_return.error_no_return_items'.tr,
+                        message: 'sales_return_form.error_no_return_items'.tr,
                       );
                       return;
                     }
@@ -2161,7 +2161,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                       showScaffoldError(
                         context: context,
                         message:
-                            'sales_return.error_no_return_order'.tr,
+                            'sales_return_form.error_no_return_order'.tr,
                       );
                       return;
                     }
@@ -2175,7 +2175,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                         if (paidAmountController.text.isEmpty) {
                           showScaffoldError(
                             context: context,
-                            message: 'sales_return.error_enter_amount'.tr,
+                            message: 'sales_return_form.error_enter_amount'.tr,
                           );
                           return;
                         }
@@ -2193,7 +2193,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                         if (paidAmount <= 0) {
                           showScaffoldError(
                             context: context,
-                            message: 'sales_return.error_amount_gt_zero'.tr,
+                            message: 'sales_return_form.error_amount_gt_zero'.tr,
                           );
                           return;
                         }
@@ -2202,7 +2202,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                           showScaffoldError(
                             context: context,
                             message:
-                                'sales_return.error_amount_exceeds'.trParams({'max': maxCashRefund.toStringAsFixed(2)}),
+                                'sales_return_form.error_amount_exceeds'.trParams({'max': maxCashRefund.toStringAsFixed(2)}),
                           );
                           return;
                         }
@@ -2232,7 +2232,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
 
                       showScaffold(
                         context: context,
-                        message: 'sales_return.msg_return_created'.tr,
+                        message: 'sales_return_form.msg_return_created'.tr,
                       );
 
                       sideBarController.index.value = 50;
@@ -2244,7 +2244,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                         context: context,
                         message: error is Exception
                             ? error.toString().replaceFirst('Exception: ', '')
-                            : 'sales_return.error_create_failed'.tr,
+                            : 'sales_return_form.error_create_failed'.tr,
                       );
                     } finally {
                       if (mounted) {
@@ -2398,7 +2398,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'sales_return.summary_order_title'.tr,
+                    'sales_return_form.summary_order_title'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s14,
@@ -2409,18 +2409,18 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              _buildSummaryRow('sales_return.summary_total_items'.tr, '$totalItems'),
+              _buildSummaryRow('sales_return_form.summary_total_items'.tr, '$totalItems'),
               const SizedBox(height: 6),
-              _buildSummaryRow('sales_return.summary_total_qty'.tr, '$totalQuantity'),
+              _buildSummaryRow('sales_return_form.summary_total_qty'.tr, '$totalQuantity'),
               const SizedBox(height: 6),
-              _buildSummaryRow('sales_return.summary_discount'.tr,
+              _buildSummaryRow('sales_return_form.summary_discount'.tr,
                   '${(orderDetailsModelData?.priceSummary?.discount ?? 0).toStringAsFixed(2)}'),
               const SizedBox(height: 6),
-              _buildSummaryRow('sales_return.summary_delivery'.tr,
+              _buildSummaryRow('sales_return_form.summary_delivery'.tr,
                   '${(orderDetailsModelData?.deliveryCharge ?? 0).toStringAsFixed(2)}'),
               const SizedBox(height: 6),
               _buildSummaryRow(
-                  'sales_return.summary_order_total'.tr, '${orderTotal.toStringAsFixed(2)}'),
+                  'sales_return_form.summary_order_total'.tr, '${orderTotal.toStringAsFixed(2)}'),
             ],
           ),
         ),
@@ -2445,7 +2445,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'sales_return.summary_return_title'.tr,
+                    'sales_return_form.summary_return_title'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s14,
@@ -2456,17 +2456,17 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              _buildSummaryRow('sales_return.summary_returned_items'.tr, '$returnedItems'),
+              _buildSummaryRow('sales_return_form.summary_returned_items'.tr, '$returnedItems'),
               const SizedBox(height: 6),
-              _buildSummaryRow('sales_return.summary_returned_qty'.tr, returnedQtyLabel),
+              _buildSummaryRow('sales_return_form.summary_returned_qty'.tr, returnedQtyLabel),
               const SizedBox(height: 6),
-              _buildSummaryRow('sales_return.summary_discount'.tr, returnDiscount.toStringAsFixed(2)),
+              _buildSummaryRow('sales_return_form.summary_discount'.tr, returnDiscount.toStringAsFixed(2)),
               const SizedBox(height: 6),
-              _buildSummaryRow('sales_return.summary_delivery'.tr,
+              _buildSummaryRow('sales_return_form.summary_delivery'.tr,
                   '${(_deliveryChargeRefundable ? shippingCost : 0.0).toStringAsFixed(2)}'),
               const SizedBox(height: 6),
               _buildSummaryRow(
-                  'sales_return.summary_return_total'.tr, '${returnedTotal.toStringAsFixed(2)}'),
+                  'sales_return_form.summary_return_total'.tr, '${returnedTotal.toStringAsFixed(2)}'),
             ],
           ),
         ),
@@ -2554,7 +2554,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'sales_return.payment_delivery_refundable'.tr,
+                        'sales_return_form.payment_delivery_refundable'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s14,
@@ -2564,7 +2564,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'sales_return.payment_delivery_hint'.tr,
+                        'sales_return_form.payment_delivery_hint'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.regular,
                           FontSize.s12,
@@ -2601,7 +2601,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'sales_return.payment_section_title'.tr,
+                        'sales_return_form.payment_section_title'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s16,
@@ -2616,7 +2616,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'sales_return.payment_has_payment'.tr,
+                      'sales_return_form.payment_has_payment'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s12,
@@ -2682,7 +2682,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'sales_return.payment_no_mode'.tr,
+                        'sales_return_form.payment_no_mode'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.regular,
                           FontSize.s12,
@@ -2703,7 +2703,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'sales_return.payment_method_label'.tr,
+                        'sales_return_form.payment_method_label'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.medium,
                           FontSize.s12,
@@ -2791,7 +2791,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'sales_return.payment_amount_label'.tr,
+                        'sales_return_form.payment_amount_label'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.medium,
                           FontSize.s12,
@@ -2823,7 +2823,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                               decoration: InputDecoration(
                                 isDense: true,
                                 errorText: isExceedingMax
-                                    ? 'sales_return.payment_amount_exceeds'.trParams({'max': maxCashRefund.toStringAsFixed(2)})
+                                    ? 'sales_return_form.payment_amount_exceeds'.trParams({'max': maxCashRefund.toStringAsFixed(2)})
                                     : null,
                                 prefixText: '$currency ',
                                 constraints:
@@ -2883,8 +2883,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               const SizedBox(height: 12),
               Text(
                 refundSummary.isFromServer
-                    ? 'sales_return.payment_returned_total'.trParams({'total': refundSummary.sessionItemsTotal.toStringAsFixed(2)})
-                    : 'sales_return.payment_items_total'.trParams({'total': refundSummary.sessionItemsTotal.toStringAsFixed(2)}),
+                    ? 'sales_return_form.payment_returned_total'.trParams({'total': refundSummary.sessionItemsTotal.toStringAsFixed(2)})
+                    : 'sales_return_form.payment_items_total'.trParams({'total': refundSummary.sessionItemsTotal.toStringAsFixed(2)}),
                 style: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s11,
@@ -2895,7 +2895,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               if (refundSummary.isFromServer) ...[
                 const SizedBox(height: 4),
                 Text(
-                  'sales_return.payment_server_calc'.tr,
+                  'sales_return_form.payment_server_calc'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.regular,
                     FontSize.s10,
@@ -2907,7 +2907,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               if (refundSummary.proRataDiscount > 0) ...[
                 const SizedBox(height: 4),
                 Text(
-                  'sales_return.payment_suggested'.trParams({'amount': suggestedRefund.toStringAsFixed(2)}),
+                  'sales_return_form.payment_suggested'.trParams({'amount': suggestedRefund.toStringAsFixed(2)}),
                   style: buildCustomStyle(
                     FontWeightManager.regular,
                     FontSize.s11,
@@ -2917,7 +2917,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'sales_return.payment_pro_rata'.trParams({'amount': refundSummary.proRataDiscount.toStringAsFixed(2)}),
+                  'sales_return_form.payment_pro_rata'.trParams({'amount': refundSummary.proRataDiscount.toStringAsFixed(2)}),
                   style: buildCustomStyle(
                     FontWeightManager.regular,
                     FontSize.s11,
@@ -2928,7 +2928,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               ],
               const SizedBox(height: 4),
               Text(
-                'sales_return.payment_max_refund'.trParams({'max': maxCashRefund.toStringAsFixed(2)}),
+                'sales_return_form.payment_max_refund'.trParams({'max': maxCashRefund.toStringAsFixed(2)}),
                 style: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s11,
@@ -2938,7 +2938,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'sales_return.payment_refund_note'.tr,
+                'sales_return_form.payment_refund_note'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s10,

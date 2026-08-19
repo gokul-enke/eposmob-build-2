@@ -35,7 +35,7 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
     for (var group in widget.menuItem.modifierGroups) {
       if (group.isRequired) {
         final defaultOption =
-            group.options.firstWhereOrNull((opt) => opt.isDefault);
+            group.options.firstMatchingOrNull((opt) => opt.isDefault);
         if (defaultOption != null) {
           _selectedModifiers[group.id] = [defaultOption];
         }
@@ -305,7 +305,7 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
 }
 
 extension ListExtension<T> on List<T> {
-  T? firstWhereOrNull(bool Function(T element) test) {
+  T? firstMatchingOrNull(bool Function(T element) test) {
     for (var element in this) {
       if (test(element)) return element;
     }
