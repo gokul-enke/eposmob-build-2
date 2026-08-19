@@ -392,7 +392,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
                 focusNode: typeFocusNode,
                 title: null,
                 showName: false,
-                hintText: 'All Types',
+                hintText: 'supplier_voucher.hint_all_types'.tr,
                 value: selectedType,
                 items:
                     typeOptions.where((type) => type != "All Types").toList(),
@@ -427,7 +427,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
                 focusNode: statusFocusNode,
                 title: null,
                 showName: false,
-                hintText: 'All Status',
+                hintText: 'supplier_voucher.hint_all_status'.tr,
                 value: selectedStatus,
                 items: statusOptions
                     .where((status) => status != "All Status")

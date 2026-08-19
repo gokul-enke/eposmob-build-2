@@ -677,7 +677,9 @@
     "more": "المزيد",
     "unknown": "غير معروف",
     "close": "إغلاق",
-    "reset": "إعادة تعيين"
+    "reset": "إعادة تعيين",
+    "hint_search_customer": "بحث عن عميل",
+    "hint_search_supplier": "بحث عن مورد"
   },
   "settings": {
     "title": "الإعدادات",
@@ -2630,7 +2632,9 @@
     "try_adjusting_filters": "حاول تعديل الفلاتر",
     "view_action": "عرض",
     "share_action": "مشاركة",
-    "ref_prefix": "مرجع: @reference"
+    "ref_prefix": "مرجع: @reference",
+    "hint_all_status": "كل الحالات",
+    "hint_all_payment": "كل المدفوعات"
   },
   "customer_voucher": {
     "list_title": "قائمة قسائم العملاء",
@@ -2715,7 +2719,10 @@
     "select_payment_method_required": "الرجاء اختيار طريقة دفع",
     "add_at_least_one_item_required": "الرجاء إضافة عنصر واحد على الأقل",
     "created_successfully": "تم إنشاء القسيمة بنجاح",
-    "create_failed": "فشل إنشاء القسيمة"
+    "create_failed": "فشل إنشاء القسيمة",
+    "hint_all_types": "كل الأنواع",
+    "hint_all_status": "كل الحالات",
+    "hint_select_status": "اختر الحالة"
   },
   "supplier_voucher": {
     "list_title": "قائمة قسائم الموردين",
@@ -2787,7 +2794,10 @@
     "col_tax_percent": "الضريبة %",
     "col_quantity": "الكمية",
     "col_total": "الإجمالي",
-    "item_name_hint": "اسم العنصر"
+    "item_name_hint": "اسم العنصر",
+    "hint_all_types": "كل الأنواع",
+    "hint_all_status": "كل الحالات",
+    "hint_select_status": "اختر الحالة"
   },
   "proforma_invoice": {
     "title": "الفواتير الأولية",
@@ -2820,7 +2830,8 @@
     "invoice_id_not_found": "معرّف الفاتورة غير موجود",
     "details_not_found": "التفاصيل غير موجودة",
     "failed_load_details": "فشل تحميل التفاصيل",
-    "page_of": "صفحة @current من @last"
+    "page_of": "صفحة @current من @last",
+    "hint_all": "الكل"
   },
   "nav": {
     "home": "الرئيسية",
@@ -3661,7 +3672,8 @@
     "msg_supplier_voucher_template_not_found": "قالب قسيمة المورد غير موجود.",
     "msg_supplier_voucher_shared": "تمت مشاركة ملف PDF لقسيمة المورد بنجاح!",
     "msg_no_phone_supplier": "رقم هاتف المورد فارغ.",
-    "msg_supplier_voucher_sent_wa": "تم إرسال قسيمة المورد عبر واتساب إلى"
+    "msg_supplier_voucher_sent_wa": "تم إرسال قسيمة المورد عبر واتساب إلى",
+    "dialog_invoice_label": "فاتورة: @number"
   },
   "edit_order": {
     "title_edit": "تعديل الطلب",

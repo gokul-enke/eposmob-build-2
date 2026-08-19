@@ -677,7 +677,9 @@
     "more": "More",
     "unknown": "Unknown",
     "close": "Close",
-    "reset": "Reset"
+    "reset": "Reset",
+    "hint_search_customer": "Search Customer",
+    "hint_search_supplier": "Search Supplier"
   },
   "settings": {
     "title": "Settings",
@@ -2630,7 +2632,9 @@
     "try_adjusting_filters": "Try adjusting your filters",
     "view_action": "View",
     "share_action": "Share",
-    "ref_prefix": "Ref: @reference"
+    "ref_prefix": "Ref: @reference",
+    "hint_all_status": "All Status",
+    "hint_all_payment": "All Payment"
   },
   "customer_voucher": {
     "list_title": "Customer Voucher List",
@@ -2715,7 +2719,10 @@
     "select_payment_method_required": "Please select a payment method",
     "add_at_least_one_item_required": "Please add at least one item",
     "created_successfully": "Voucher created successfully",
-    "create_failed": "Failed to create voucher"
+    "create_failed": "Failed to create voucher",
+    "hint_all_types": "All Types",
+    "hint_all_status": "All Status",
+    "hint_select_status": "Select Status"
   },
   "supplier_voucher": {
     "list_title": "Supplier Voucher List",
@@ -2787,7 +2794,10 @@
     "col_tax_percent": "Tax %",
     "col_quantity": "Quantity",
     "col_total": "Total",
-    "item_name_hint": "Item name"
+    "item_name_hint": "Item name",
+    "hint_all_types": "All Types",
+    "hint_all_status": "All Status",
+    "hint_select_status": "Select Status"
   },
   "proforma_invoice": {
     "title": "Proforma Invoices",
@@ -2820,7 +2830,8 @@
     "invoice_id_not_found": "Invoice id not found",
     "details_not_found": "Details not found",
     "failed_load_details": "Failed to load details",
-    "page_of": "Page @current of @last"
+    "page_of": "Page @current of @last",
+    "hint_all": "All"
   },
   "nav": {
     "home": "Home",
@@ -3661,7 +3672,8 @@
     "msg_supplier_voucher_template_not_found": "Supplier Voucher template config not found.",
     "msg_supplier_voucher_shared": "Supplier Voucher PDF shared successfully!",
     "msg_no_phone_supplier": "Supplier phone number is empty.",
-    "msg_supplier_voucher_sent_wa": "Supplier Voucher sent via WhatsApp to"
+    "msg_supplier_voucher_sent_wa": "Supplier Voucher sent via WhatsApp to",
+    "dialog_invoice_label": "Invoice: @number"
   },
   "edit_order": {
     "title_edit": "Edit Order",

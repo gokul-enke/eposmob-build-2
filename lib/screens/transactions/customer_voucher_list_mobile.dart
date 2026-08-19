@@ -160,14 +160,14 @@ class _CustomerVoucherMobileViewState
                     widget.voucherNoFocusNode, 'customer_voucher.mobile_voucher_no_hint'.tr),
                 const SizedBox(height: 8),
                 _dropdownField(
-                  hint: 'All Types',
+                  hint: 'customer_voucher.hint_all_types'.tr,
                   value: widget.selectedType,
                   items: widget.typeOptions,
                   onChanged: widget.onTypeChanged,
                 ),
                 const SizedBox(height: 8),
                 _dropdownField(
-                  hint: 'All Status',
+                  hint: 'customer_voucher.hint_all_status'.tr,
                   value: widget.selectedStatus,
                   items: widget.statusOptions,
                   onChanged: widget.onStatusChanged,

@@ -717,7 +717,7 @@ class _CreateSupplierVoucherScreenState
           focusNode: statusFocus,
           title: null,
           showName: false,
-          hintText: 'Select Status',
+          hintText: 'supplier_voucher.hint_select_status'.tr,
           value: selectedStatus,
           items: statusOptions.map((s) => s['value']!).toList(),
           onChanged: (String? value) {
