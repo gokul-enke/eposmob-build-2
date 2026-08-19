@@ -151,8 +151,8 @@ class _ModifierSelectionModalState extends State<ModifierSelectionModal> {
                     ),
                     Text(
                       group.maxSelections == 1
-                          ? '(Select ${'modifier_selection.select_one'.tr})'
-                          : '(Select ${'modifier_selection.select_up_to_prefix'.tr}${group.maxSelections}${'modifier_selection.select_up_to_suffix'.tr})',
+                          ? 'modifier_selection.select_one'.tr
+                          : '${'modifier_selection.select_up_to_prefix'.tr}${group.maxSelections}${'modifier_selection.select_up_to_suffix'.tr}',
                       style: buildCustomStyle(FontWeightManager.regular,
                           FontSize.s12, 0.21, ColorManager.kGreyColor),
                     ),
