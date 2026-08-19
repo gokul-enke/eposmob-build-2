@@ -1,4 +1,24 @@
 {
+  "view_receipt_details": {
+    "btn_all_receipts": "جميع الإيصالات",
+    "page_title": "تفاصيل الإيصال  ",
+    "section_details": " التفاصيل  ",
+    "label_receipt_number": "رقم الإيصال",
+    "label_company": "الشركة",
+    "label_customer_name": "اسم العميل",
+    "label_amount": "المبلغ",
+    "label_payment_method": "طريقة الدفع",
+    "label_status": "الحالة",
+    "label_payment_reference": "مرجع الدفع",
+    "label_date": "التاريخ",
+    "btn_back": "رجوع"
+  },
+  "view_product_properties": {
+    "empty_properties": "لا توجد خصائص متاحة",
+    "label_stock_applicable": "قابل للمخزون: @value",
+    "btn_prev": "السابق",
+    "btn_next": "التالي"
+  },
   "add_product_names": {
     "label_name_english": "اسم المنتج - الإنجليزية (US)*",
     "label_name_hindi": "اسم المنتج - الهندية (IND)*",

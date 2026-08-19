@@ -1,4 +1,24 @@
 {
+  "view_receipt_details": {
+    "btn_all_receipts": "All Receipts",
+    "page_title": "Receipt Details  ",
+    "section_details": " Details  ",
+    "label_receipt_number": "Receipt Number",
+    "label_company": "Company",
+    "label_customer_name": "Customer Name",
+    "label_amount": "Amount",
+    "label_payment_method": "Payment Method",
+    "label_status": "Status",
+    "label_payment_reference": "Payment Reference",
+    "label_date": "Date",
+    "btn_back": "Back"
+  },
+  "view_product_properties": {
+    "empty_properties": "No properties available",
+    "label_stock_applicable": "Stock Applicable: @value",
+    "btn_prev": "Prev",
+    "btn_next": "Next"
+  },
   "add_product_names": {
     "label_name_english": "Product Name - English (US)*",
     "label_name_hindi": "Product Name - Hindi(IND)*",
