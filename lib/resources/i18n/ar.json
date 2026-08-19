@@ -77,7 +77,9 @@
     "msg_coupon_failed": "فشل في تطبيق الكوبون",
     "msg_error": "حدث خطأ! أعد المحاولة",
     "msg_not_authenticated": "غير مصادق عليه",
-    "msg_unknown_discount": "نوع خصم غير معروف"
+    "msg_unknown_discount": "نوع خصم غير معروف",
+    "payment_card": "بطاقة",
+    "payment_upi": "UPI"
   },
   "kiosk_order": {
     "title_confirm": "تأكيد طلبك",

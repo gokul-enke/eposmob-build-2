@@ -911,7 +911,7 @@ class _OrderListNewState extends State<OrderListNew> {
                           fit: BoxFit.none,
                         ),
                         Text(
-                          'Card',
+                          'order_list_new.payment_card'.tr,
                           style: buildCustomStyle(FontWeightManager.medium,
                               FontSize.s8, 0.12, Colors.black),
                         ),
@@ -943,7 +943,7 @@ class _OrderListNewState extends State<OrderListNew> {
                           fit: BoxFit.none,
                         ),
                         Text(
-                          'Upi',
+                          'order_list_new.payment_upi'.tr,
                           style: buildCustomStyle(FontWeightManager.medium,
                               FontSize.s8, 0.12, Colors.black),
                         ),

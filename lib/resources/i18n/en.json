@@ -77,7 +77,9 @@
     "msg_coupon_failed": "Failed to Apply Coupon",
     "msg_error": "Error Occurred! Try Again",
     "msg_not_authenticated": "Not Authenticated",
-    "msg_unknown_discount": "Unknown discount type"
+    "msg_unknown_discount": "Unknown discount type",
+    "payment_card": "Card",
+    "payment_upi": "UPI"
   },
   "kiosk_order": {
     "title_confirm": "Confirm Your Order",
