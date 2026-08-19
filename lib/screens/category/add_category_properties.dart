@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../components/build_container_box.dart';
 import '../../resources/color_manager.dart';
@@ -40,7 +41,7 @@ class AddCategoryPropertiesScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Category Properties",
+                'add_category_properties.page_title'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.semiBold,
                   FontSize.s20,
