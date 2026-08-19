@@ -623,7 +623,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   RadioListTile<String>(
-                    title: const Text('English'),
+                    title: Text('settings_ui.lang_english'.tr),
                     value: 'en',
                     groupValue: selected,
                     onChanged: (v) => setState(() => selected = v!),

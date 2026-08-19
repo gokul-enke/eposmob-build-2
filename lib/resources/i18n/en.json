@@ -3023,7 +3023,8 @@
     "msg_offline_disabled_no_internet": "Offline Mode disabled, but internet is still unavailable.",
     "msg_dev_mode_enabled": "Developer Mode enabled. Select Development Printer in Printer settings.",
     "msg_dev_mode_disabled": "Developer Mode disabled. Physical printer settings restored.",
-    "msg_dev_mode_error": "Could not update Developer Mode: @error"
+    "msg_dev_mode_error": "Could not update Developer Mode: @error",
+    "lang_english": "English"
   },
   "company_info": {
     "title": "Company Information",

@@ -3023,7 +3023,8 @@
     "msg_offline_disabled_no_internet": "تم تعطيل وضع عدم الاتصال، لكن الإنترنت لا يزال غير متاح.",
     "msg_dev_mode_enabled": "تم تفعيل وضع المطور. حدد طابعة التطوير في إعدادات الطابعة.",
     "msg_dev_mode_disabled": "تم تعطيل وضع المطور. تم استعادة إعدادات الطابعة الفعلية.",
-    "msg_dev_mode_error": "تعذّر تحديث وضع المطور: @error"
+    "msg_dev_mode_error": "تعذّر تحديث وضع المطور: @error",
+    "lang_english": "الإنجليزية"
   },
   "company_info": {
     "title": "معلومات الشركة",
