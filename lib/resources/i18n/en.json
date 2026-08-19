@@ -714,6 +714,7 @@
     "select_payment_method": "Please select a payment method",
     "no_internet": "No internet connection. Cannot confirm order online.",
     "enter_car_number": "Please enter Car Number",
+    "dialog_tax_details": "Tax Details",
     "internet_lost": "No internet connection",
     "internet_restored": "Internet connection restored",
     "barcode_hint": "Barcode",
@@ -3476,7 +3477,8 @@
     "msg_order_confirmed_2": "confirmed successfully!",
     "modal_select_customer": "Select Customer",
     "modal_select_delivery": "Select Delivery Method",
-    "modal_select_payment": "Select Payment Method"
+    "modal_select_payment": "Select Payment Method",
+    "hint_order_comment": "Enter order comment"
   },
   "add_supplier": {
     "title": "Add New Supplier",
@@ -3534,7 +3536,12 @@
     "error_enter_customer_name": "Please enter customer name",
     "error_select_payment_method": "Please select at least one payment method",
     "error_paid_less_than_total": "Paid amount is less than the total amount",
-    "btn_print_receipt": "PRINT RECEIPT"
+    "btn_print_receipt": "PRINT RECEIPT",
+    "msg_order_created_print": "Order created and sent to print",
+    "msg_order_confirmed": "Order confirmed successfully",
+    "label_barcode": "Barcode",
+    "label_quantity": "Quantity",
+    "label_price": "Price"
   },
   "create_quotation": {
     "title": "Create Quotation",

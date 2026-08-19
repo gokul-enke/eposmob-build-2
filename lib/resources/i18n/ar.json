@@ -713,6 +713,7 @@
     "select_payment_method": "يرجى تحديد طريقة الدفع",
     "no_internet": "لا توجد اتصال بالإنترنت. لا يمكن تأكيد الطلب عبر الإنترنت.",
     "enter_car_number": "يرجى إدخال رقم السيارة",
+    "dialog_tax_details": "تفاصيل الضريبة",
     "internet_lost": "لا توجد اتصال بالإنترنت",
     "internet_restored": "تم استعادة اتصال الإنترنت",
     "barcode_hint": "الرمز الشريطي",
@@ -3476,7 +3477,8 @@
     "msg_order_confirmed_2": "بنجاح!",
     "modal_select_customer": "اختر عميلاً",
     "modal_select_delivery": "اختر طريقة التوصيل",
-    "modal_select_payment": "اختر طريقة الدفع"
+    "modal_select_payment": "اختر طريقة الدفع",
+    "hint_order_comment": "أدخل تعليق الطلب"
   },
   "add_supplier": {
     "title": "إضافة مورد جديد",
@@ -3534,7 +3536,12 @@
     "error_enter_customer_name": "يرجى إدخال اسم العميل",
     "error_select_payment_method": "يرجى اختيار طريقة دفع واحدة على الأقل",
     "error_paid_less_than_total": "المبلغ المدفوع أقل من الإجمالي",
-    "btn_print_receipt": "طباعة الإيصال"
+    "btn_print_receipt": "طباعة الإيصال",
+    "msg_order_created_print": "تم إنشاء الطلب وإرساله للطباعة",
+    "msg_order_confirmed": "تم تأكيد الطلب بنجاح",
+    "label_barcode": "الباركود",
+    "label_quantity": "الكمية",
+    "label_price": "السعر"
   },
   "create_quotation": {
     "title": "إنشاء عرض سعر",
