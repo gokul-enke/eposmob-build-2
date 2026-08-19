@@ -1,4 +1,20 @@
 {
+  "mobile_filters": {
+    "field_status": "الحالة",
+    "hint_select_status": "اختر الحالة",
+    "option_all": "الكل",
+    "field_order_num": "رقم الطلب",
+    "hint_order_number": "رقم الطلب",
+    "field_customer": "العميل",
+    "hint_customer_name": "اسم العميل",
+    "field_phone": "الهاتف",
+    "hint_phone": "الهاتف",
+    "field_date": "التاريخ",
+    "field_business_date": "تاريخ العمل",
+    "field_price": "السعر",
+    "hint_price": "السعر",
+    "btn_reset_filters": "إعادة تعيين الفلاتر"
+  },
   "sales_return": {
     "btn_back": "قائمة مرتجعات المبيعات",
     "page_title": "مرتجعات المبيعات",

@@ -1,4 +1,20 @@
 {
+  "mobile_filters": {
+    "field_status": "Status",
+    "hint_select_status": "Select Status",
+    "option_all": "All",
+    "field_order_num": "Order #",
+    "hint_order_number": "Order Number",
+    "field_customer": "Customer",
+    "hint_customer_name": "Customer Name",
+    "field_phone": "Phone",
+    "hint_phone": "Phone",
+    "field_date": "Date",
+    "field_business_date": "Business Date",
+    "field_price": "Price",
+    "hint_price": "Price",
+    "btn_reset_filters": "Reset Filters"
+  },
   "sales_return": {
     "btn_back": "Sales Return List",
     "page_title": "Sales Return",
