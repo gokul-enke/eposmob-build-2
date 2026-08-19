@@ -930,7 +930,11 @@
     "empty_cart_hint": "أضف منتجات باستخدام شريط البحث أعلاه",
     "customer": "العميل",
     "item_code": "كود الصنف",
-    "cart": "السلة"
+    "cart": "السلة",
+    "shift_not_opened": "الوردية غير مفتوحة",
+    "msg_shift_required": "يجب فتح وردية قبل بدء المبيعات.",
+    "btn_open_shift": "فتح الوردية",
+    "btn_go_back": "الرجوع"
   },
   "customers": {
     "title": "العملاء",

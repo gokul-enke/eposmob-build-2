@@ -930,7 +930,11 @@
     "total_payable_label": "Total Payable",
     "empty_cart_hint": "Add products using the search bar above",
     "customer": "Customer",
-    "item_code": "Item Code"
+    "item_code": "Item Code",
+    "shift_not_opened": "Shift Not Opened",
+    "msg_shift_required": "You must open a shift before starting sales.",
+    "btn_open_shift": "Open Shift",
+    "btn_go_back": "Go Back"
   },
   "customers": {
     "title": "Customers",
