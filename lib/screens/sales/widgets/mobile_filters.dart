@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 
@@ -101,7 +102,7 @@ class MobileFilters extends StatelessWidget {
 
   Widget _buildStatusDropdown() {
     return _buildFilterField(
-      label: "Status",
+      label: 'mobile_filters.field_status'.tr,
       child: SizedBox(
         height: 45,
         child: BuildBoxShadowContainer(
@@ -121,7 +122,7 @@ class MobileFilters extends StatelessWidget {
             isExpanded: true,
             dropdownColor: Colors.white,
             hint: Text(
-              'Select Status',
+              'mobile_filters.hint_select_status'.tr,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: buildCustomStyle(
@@ -135,7 +136,7 @@ class MobileFilters extends StatelessWidget {
               DropdownMenuItem<String>(
                 value: null,
                 child: Text(
-                  'All',
+                  'mobile_filters.option_all'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.medium,
                     FontSize.s10,
@@ -181,28 +182,28 @@ class MobileFilters extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildTextFilter(
-                label: "Order #",
-                hint: 'Order Number',
+                label: 'mobile_filters.field_order_num'.tr,
+                hint: 'mobile_filters.hint_order_number'.tr,
                 controller: orderNumberController,
                 size: size,
               ),
               const SizedBox(height: 12),
               _buildTextFilter(
-                label: "Customer",
-                hint: 'Customer Name',
+                label: 'mobile_filters.field_customer'.tr,
+                hint: 'mobile_filters.hint_customer_name'.tr,
                 controller: customerNameController,
                 size: size,
               ),
               const SizedBox(height: 12),
               _buildTextFilter(
-                label: "Phone",
-                hint: 'Phone',
+                label: 'mobile_filters.field_phone'.tr,
+                hint: 'mobile_filters.hint_phone'.tr,
                 controller: phoneController,
                 size: size,
               ),
               const SizedBox(height: 12),
               _buildFilterField(
-                label: "Date",
+                label: 'mobile_filters.field_date'.tr,
                 child: BuildBoxShadowContainer(
                   circleRadius: 10,
                   height: 45,
@@ -217,7 +218,7 @@ class MobileFilters extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               _buildFilterField(
-                label: "Business Date",
+                label: 'mobile_filters.field_business_date'.tr,
                 child: BuildBoxShadowContainer(
                   circleRadius: 10,
                   height: 45,
@@ -232,8 +233,8 @@ class MobileFilters extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               _buildTextFilter(
-                label: "Price",
-                hint: 'Price',
+                label: 'mobile_filters.field_price'.tr,
+                hint: 'mobile_filters.hint_price'.tr,
                 controller: amountController,
                 size: size,
               ),
@@ -241,7 +242,7 @@ class MobileFilters extends StatelessWidget {
               _buildStatusDropdown(),
               const SizedBox(height: 16),
               CustomRoundButton(
-                title: "Reset Filters",
+                title: 'mobile_filters.btn_reset_filters'.tr,
                 boxColor: Colors.white,
                 textColor: ColorManager.kPrimaryColor,
                 fct: onReset,
@@ -261,8 +262,8 @@ class MobileFilters extends StatelessWidget {
               children: [
                 Expanded(
                   child: _buildTextFilter(
-                    label: "Order #",
-                    hint: 'Order Number',
+                    label: 'mobile_filters.field_order_num'.tr,
+                    hint: 'mobile_filters.hint_order_number'.tr,
                     controller: orderNumberController,
                     size: size,
                   ),
@@ -270,8 +271,8 @@ class MobileFilters extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: _buildTextFilter(
-                    label: "Customer",
-                    hint: 'Customer Name',
+                    label: 'mobile_filters.field_customer'.tr,
+                    hint: 'mobile_filters.hint_customer_name'.tr,
                     controller: customerNameController,
                     size: size,
                   ),
@@ -284,8 +285,8 @@ class MobileFilters extends StatelessWidget {
               children: [
                 Expanded(
                   child: _buildTextFilter(
-                    label: "Phone",
-                    hint: 'Phone',
+                    label: 'mobile_filters.field_phone'.tr,
+                    hint: 'mobile_filters.hint_phone'.tr,
                     controller: phoneController,
                     size: size,
                   ),
@@ -293,7 +294,7 @@ class MobileFilters extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: _buildFilterField(
-                    label: "Date",
+                    label: 'mobile_filters.field_date'.tr,
                     child: BuildBoxShadowContainer(
                       circleRadius: 10,
                       height: 45,
@@ -315,7 +316,7 @@ class MobileFilters extends StatelessWidget {
               children: [
                 Expanded(
                   child: _buildFilterField(
-                    label: "Business Date",
+                    label: 'mobile_filters.field_business_date'.tr,
                     child: BuildBoxShadowContainer(
                       circleRadius: 10,
                       height: 45,
@@ -335,8 +336,8 @@ class MobileFilters extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _buildTextFilter(
-              label: "Price",
-              hint: 'Price',
+              label: 'mobile_filters.field_price'.tr,
+              hint: 'mobile_filters.hint_price'.tr,
               controller: amountController,
               size: size,
             ),
@@ -344,7 +345,7 @@ class MobileFilters extends StatelessWidget {
             _buildStatusDropdown(),
             const SizedBox(height: 16),
             CustomRoundButton(
-              title: "Reset Filters",
+              title: 'mobile_filters.btn_reset_filters'.tr,
               boxColor: Colors.white,
               textColor: ColorManager.kPrimaryColor,
               fct: onReset,

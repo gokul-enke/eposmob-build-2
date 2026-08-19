@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -166,7 +167,7 @@ class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       isExpanded: true,
-                      hint: const Text('Select Status'),
+                      hint: Text('change_order_status.hint_status'.tr),
                       value: _selectedStatus,
                       items: _statusOptions.map((String status) {
                         return DropdownMenuItem<String>(
@@ -203,7 +204,7 @@ class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
                   TextField(
                     controller: _deliveryLogisticsController,
                     decoration: InputDecoration(
-                      hintText: 'Enter logistics info',
+                      hintText: 'change_order_status.hint_logistics'.tr,
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 14),
                       enabledBorder: OutlineInputBorder(
@@ -251,7 +252,7 @@ class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
                               child: DropdownButtonHideUnderline(
                                 child: DropdownButton<String>(
                                   isExpanded: true,
-                                  hint: const Text('Select Payment Method'),
+                                  hint: Text('change_order_status.hint_payment_method'.tr),
                                   value: _selectedPaymentMethodId,
                                   items: methods.map((MasterDataValue method) {
                                     return DropdownMenuItem<String>(
@@ -290,7 +291,7 @@ class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
                       ),
                     ],
                     decoration: InputDecoration(
-                      hintText: 'Enter refund amount',
+                      hintText: 'change_order_status.hint_refund_amount'.tr,
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 14),
                       enabledBorder: OutlineInputBorder(

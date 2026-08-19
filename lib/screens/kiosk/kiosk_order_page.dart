@@ -112,9 +112,9 @@ class KioskOrderPageState extends State<KioskOrderPage> {
           onPressed: () => Navigator.pop(context),
         ),
         centerTitle: true,
-        title: const Text(
-          'Confirm Your Order',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: FontSize.s16),
+        title: Text(
+          'kiosk_order.title_confirm'.tr,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: FontSize.s16),
         ),
       ),
       body: _buildBody(size),
@@ -166,7 +166,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'New Order',
+          'kiosk_order.title_new'.tr,
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
               0.30, ColorManager.textColor),
         ),
@@ -249,7 +249,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
             controller: mobileNumberTextController,
             focusNode: focusNode,
             decoration: InputDecoration(
-              hintText: 'Enter mobile number',
+              hintText: 'kiosk_order.hint_mobile'.tr,
               hintStyle: buildCustomStyle(
                   FontWeight.w500, 12, 0.27, Colors.grey.withOpacity(.5)),
               border: InputBorder.none,
@@ -383,7 +383,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
               },
             );
           } else if (snapshot.hasError) {
-            return Text('Error: ${snapshot.error}');
+            return Text('kiosk_order.err_snapshot'.trParams({'error': '${snapshot.error}'}));
           } else {
             return const Center(child: CircularProgressIndicator());
           }
@@ -593,7 +593,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
       child: TextField(
         controller: coupenCodeTextController,
         decoration: InputDecoration(
-          hintText: 'Apply Coupon',
+          hintText: 'kiosk_order.hint_coupon'.tr,
           hintStyle: buildCustomStyle(
               FontWeight.w500, 12, 0.27, Colors.grey.withOpacity(.5)),
           border: InputBorder.none,
@@ -641,18 +641,18 @@ class KioskOrderPageState extends State<KioskOrderPage> {
 
           showScaffold(
               context: context,
-              message: result['message'] ?? 'Coupon Applied Successfully');
+              message: result['message'] ?? 'kiosk_order.msg_coupon_applied'.tr);
         } else {
           showScaffoldError(
               context: context,
-              message: result['message'] ?? 'Failed to Apply Coupon');
+              message: result['message'] ?? 'kiosk_order.msg_coupon_failed'.tr);
         }
       } else {
         showScaffoldError(
-            context: context, message: 'Error Occurred! Try Again');
+            context: context, message: 'kiosk_order.msg_error'.tr);
       }
     } else {
-      showScaffoldError(context: context, message: 'Not Authenticated');
+      showScaffoldError(context: context, message: 'kiosk_order.msg_not_authenticated'.tr);
     }
   }
 
@@ -672,7 +672,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
       discountAmount = discountValue;
       return discountAmount > discountLimit ? discountLimit : discountAmount;
     } else {
-      showScaffoldError(context: context, message: 'Unknown discount type');
+      showScaffoldError(context: context, message: 'kiosk_order.msg_unknown_discount'.tr);
       return 0.0; // Default value in case of an error
     }
   }
@@ -765,9 +765,9 @@ class KioskOrderPageState extends State<KioskOrderPage> {
   Widget _buildPaymentMethodSelection() {
     return Row(
       children: [
-        _buildPaymentMethodOption(Icons.monetization_on, 'Cash', 1),
-        _buildPaymentMethodOption(Icons.credit_card, 'Card', 2),
-        _buildPaymentMethodOption(Icons.mobile_friendly, 'UPI', 3),
+        _buildPaymentMethodOption(Icons.monetization_on, 'kiosk_order.payment_cash'.tr, 1),
+        _buildPaymentMethodOption(Icons.credit_card, 'kiosk_order.payment_card'.tr, 2),
+        _buildPaymentMethodOption(Icons.mobile_friendly, 'kiosk_order.payment_upi'.tr, 3),
       ],
     );
   }

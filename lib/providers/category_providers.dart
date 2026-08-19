@@ -492,13 +492,21 @@ class CategoryProvider extends ChangeNotifier {
     filterManagementCategories(page: 1);
   }
 
-  Future<void> upsertCategoryInCache(Category category) async {
+  Future<void> upsertCategoryInCache(
+    Category category, {
+    bool isSellable = true,
+    bool isPurchasable = true,
+  }) async {
     final categoryId = category.categoryId;
     if (categoryId == null) return;
 
     for (final scope in CategoryListScope.values) {
       final cache = _scopeCaches[scope]!;
       cache.items.removeWhere((item) => item.categoryId == categoryId);
+
+      if (scope == CategoryListScope.sellable && !isSellable) continue;
+      if (scope == CategoryListScope.purchasable && !isPurchasable) continue;
+
       cache.items.insert(0, category);
     }
 
@@ -511,10 +519,18 @@ class CategoryProvider extends ChangeNotifier {
       allCategories,
       boxName: _hiveBoxAll,
     );
+    await saveCategoriesToHive(
+      purchasableCategories,
+      boxName: _hiveBoxPurchasable,
+    );
     notifyListeners();
   }
 
-  Future<void> _refreshAfterCategoryMutation(Map<String, dynamic> decoded) async {
+  Future<void> _refreshAfterCategoryMutation(
+    Map<String, dynamic> decoded, {
+    required bool isSellable,
+    required bool isPurchasable,
+  }) async {
     invalidateCategories();
     await prefetchAllScopesForStore(force: true);
 
@@ -530,7 +546,11 @@ class CategoryProvider extends ChangeNotifier {
       debugPrint(
         '🏷️ [CategoryProvider] New category ${newCategory.categoryId} missing from list API — upserting locally',
       );
-      await upsertCategoryInCache(newCategory);
+      await upsertCategoryInCache(
+        newCategory,
+        isSellable: isSellable,
+        isPurchasable: isPurchasable,
+      );
     }
   }
 
@@ -752,7 +772,11 @@ class CategoryProvider extends ChangeNotifier {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final decoded = json.decode(response.body);
-        await _refreshAfterCategoryMutation(decoded);
+        await _refreshAfterCategoryMutation(
+          decoded,
+          isSellable: isSellable,
+          isPurchasable: isPurchasable,
+        );
         return decoded;
       }
 
@@ -907,7 +931,11 @@ class CategoryProvider extends ChangeNotifier {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final decoded = json.decode(response.body);
-        await _refreshAfterCategoryMutation(decoded);
+        await _refreshAfterCategoryMutation(
+          decoded,
+          isSellable: isSellable,
+          isPurchasable: isPurchasable,
+        );
         return decoded;
       }
 

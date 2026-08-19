@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -184,14 +185,14 @@ class StockPaginationBar extends StatelessWidget {
         runSpacing: 8,
         children: [
           _StockPageButton(
-            title: 'Previous',
+            title: 'pagination.previous'.tr,
             onPressed:
                 currentPage > 1 ? () => onPageChanged(currentPage - 1) : null,
           ),
           Padding(
             padding: const EdgeInsetsDirectional.symmetric(horizontal: 4),
             child: Text(
-              'Page $currentPage of $totalPages',
+              'pagination.page_of'.trParams({'current': '$currentPage', 'total': '$totalPages'}),
               textAlign: TextAlign.center,
               style: buildCustomStyle(
                 FontWeightManager.medium,
@@ -202,7 +203,7 @@ class StockPaginationBar extends StatelessWidget {
             ),
           ),
           _StockPageButton(
-            title: 'Next',
+            title: 'pagination.next'.tr,
             onPressed: currentPage < totalPages
                 ? () => onPageChanged(currentPage + 1)
                 : null,

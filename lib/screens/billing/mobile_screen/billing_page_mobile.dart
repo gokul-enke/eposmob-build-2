@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/screens/billing/mobile_screen/widgets/billing_widget.dart';
@@ -60,28 +61,28 @@ class _BillingPageMobileState extends State<BillingPageMobile> {
     localProvider.clearCart();
     
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Cart cleared successfully')),
+      SnackBar(content: Text('mobile_billing.msg_cart_cleared'.tr)),
     );
   }
 
   void _saveOrder() {
     // Implement save order logic
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Order saved successfully')),
+      SnackBar(content: Text('mobile_billing.msg_order_saved'.tr)),
     );
   }
 
   void _createOrderAndPrint() {
     // Implement create and print logic
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Order created and sent to print')),
+      SnackBar(content: Text('mobile_billing.msg_order_created_print'.tr)),
     );
   }
 
   void _confirmOrder() {
     // Implement confirm order logic
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Order confirmed successfully')),
+      SnackBar(content: Text('mobile_billing.msg_order_confirmed'.tr)),
     );
   }
 

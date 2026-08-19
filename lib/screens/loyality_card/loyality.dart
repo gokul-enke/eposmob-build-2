@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../components/build_container_box.dart';
 import '../../components/build_title.dart';
@@ -27,7 +28,7 @@ class LoyalityCardScreen extends StatelessWidget {
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(
-              "Loyality Card ",
+              'loyality.page_title'.tr,
               style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
                   0.30, ColorManager.textColor),
             ),
@@ -61,7 +62,7 @@ class LoyalityCardScreen extends StatelessWidget {
                               cursorColor: ColorManager.kPrimaryColor,
                               decoration: InputDecoration(
                                   border: InputBorder.none,
-                                  hintText: "Search Customers.....",
+                                  hintText: 'loyality.hint_search'.tr,
                                   hintStyle: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,
@@ -84,7 +85,7 @@ class LoyalityCardScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   BuildTextTile(
-                                    title: "FirstName",
+                                    title: 'loyality.label_first_name'.tr,
                                     textStyle: buildCustomStyle(
                                       FontWeightManager.regular,
                                       FontSize.s18,
@@ -122,7 +123,7 @@ class LoyalityCardScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   BuildTextTile(
-                                    title: "Last Name",
+                                    title: 'loyality.label_last_name'.tr,
                                     textStyle: buildCustomStyle(
                                       FontWeightManager.regular,
                                       FontSize.s18,
@@ -164,7 +165,7 @@ class LoyalityCardScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   BuildTextTile(
-                                    title: "Select Category",
+                                    title: 'loyality.label_select_category'.tr,
                                     textStyle: buildCustomStyle(
                                       FontWeightManager.regular,
                                       FontSize.s18,
@@ -230,7 +231,7 @@ class LoyalityCardScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   BuildTextTile(
-                                    title: "Select Card",
+                                    title: 'loyality.label_select_card'.tr,
                                     textStyle: buildCustomStyle(
                                       FontWeightManager.regular,
                                       FontSize.s18,
@@ -297,7 +298,7 @@ class LoyalityCardScreen extends StatelessWidget {
                           Row(
                             children: [
                               BuildTextTile(
-                                title: "Card number",
+                                title: 'loyality.label_card_number'.tr,
                                 textStyle: buildCustomStyle(
                                   FontWeightManager.regular,
                                   FontSize.s18,

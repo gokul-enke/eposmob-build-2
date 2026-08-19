@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../components/build_container_box.dart';
 import '../../resources/color_manager.dart';
@@ -19,7 +20,7 @@ class SupportScreen extends StatelessWidget {
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(
-                "Support ",
+                'support.page_title'.tr,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s20, 0.30, ColorManager.textColor),
               ),

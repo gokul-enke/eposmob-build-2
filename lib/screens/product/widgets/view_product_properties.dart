@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:provider/provider.dart';
@@ -22,14 +23,14 @@ class ViewProductPropertiesScreen extends StatelessWidget {
     GetProduct? getProduct = gridSelectionProvider.getProductDetails;
     List<Widget> buildProductProperties(List<ProductProp>? productProps) {
       if (productProps == null || productProps.isEmpty) {
-        return [const Text("No properties available")];
+        return [Text('view_product_properties.empty_properties'.tr)];
       }
 
       return productProps.map((prop) {
         return ListTile(
           title: Text("${prop.propsCode}"),
           subtitle: Text(prop.masterValue.toString()),
-          trailing: Text("Stock Applicable: ${prop.stockApplicable}"),
+          trailing: Text('view_product_properties.label_stock_applicable'.trParams({'value': prop.stockApplicable.toString()})),
         );
       }).toList();
     }
@@ -59,7 +60,7 @@ class ViewProductPropertiesScreen extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(left: 10.0),
                         child: CustomRoundButton(
-                          title: "Prev",
+                          title: 'view_product_properties.btn_prev'.tr,
                           fct: () async {
                             navigateToScreen(1);
                           },
@@ -71,7 +72,7 @@ class ViewProductPropertiesScreen extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(left: 10.0),
                         child: CustomRoundButton(
-                          title: "Next",
+                          title: 'view_product_properties.btn_next'.tr,
                           boxColor: Colors.white,
                           textColor: ColorManager.kPrimaryColor,
                           fct: () async {

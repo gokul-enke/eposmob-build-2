@@ -54,11 +54,11 @@ class ViewCategoryWidget extends StatelessWidget {
             onPressed: () {
               sideBarController.index.value = 12;
             },
-            text: 'All Categories',
+            text: 'view_category.btn_all_categories'.tr,
           ),
           const SizedBox(height: 8),
           Text(
-            "Show Category",
+            'view_category.page_title'.tr,
             style: buildCustomStyle(FontWeightManager.semiBold,
                 FontSize.s20, 0.30, ColorManager.kTitleTextColor),
           ),
@@ -73,27 +73,27 @@ class ViewCategoryWidget extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 BuildDetailRow(
-                  title1: "Name",
+                  title1: 'view_category.label_name'.tr,
                   content1: viewCategory?.name ?? "",
-                  title2: "Slug",
+                  title2: 'view_category.label_slug'.tr,
                   content2: viewCategory?.slug ?? "",
                 ),
                 BuildDetailRow(
-                  title1: "Sort",
+                  title1: 'view_category.label_sort'.tr,
                   content1: viewCategory?.sort ?? "",
-                  title2: "Arabic",
+                  title2: 'view_category.label_arabic'.tr,
                   content2: viewCategory?.names?.ar ?? "N/A",
                 ),
                 BuildDetailRow(
-                  title1: "English",
+                  title1: 'view_category.label_english'.tr,
                   content1: viewCategory?.names?.en ?? "N/A",
-                  title2: "Hindi",
+                  title2: 'view_category.label_hindi'.tr,
                   content2: viewCategory?.names?.hi ?? "N/A",
                 ),
-                const BuildDetailRow(
-                  title1: "Category Image ",
+                BuildDetailRow(
+                  title1: 'view_category.label_category_image'.tr,
                   content1: "",
-                  title2: "Category Icon ",
+                  title2: 'view_category.label_category_icon'.tr,
                   content2: "",
                 ),
                 isMobile
@@ -102,12 +102,12 @@ class ViewCategoryWidget extends StatelessWidget {
                         children: [
                           _buildImagePreview(
                             viewCategory?.categoryImageFullPath,
-                            'No image available',
+                            'view_category.empty_no_image'.tr,
                           ),
                           const SizedBox(height: 12),
                           _buildImagePreview(
                             viewCategory?.categoryIconFullPath,
-                            'No icon available',
+                            'view_category.empty_no_icon'.tr,
                           ),
                         ],
                       )
@@ -117,20 +117,20 @@ class ViewCategoryWidget extends StatelessWidget {
                           Expanded(
                             child: _buildImagePreview(
                               viewCategory?.categoryImageFullPath,
-                              'No image available',
+                              'view_category.empty_no_image'.tr,
                             ),
                           ),
                           Expanded(
                             child: _buildImagePreview(
                               viewCategory?.categoryIconFullPath,
-                              'No icon available',
+                              'view_category.empty_no_icon'.tr,
                             ),
                           ),
                         ],
                       ),
                 const SizedBox(height: 24),
                 CustomRoundButton(
-                  title: "Back",
+                  title: 'view_category.btn_back'.tr,
                   boxColor: Colors.white,
                   textColor: ColorManager.kPrimaryColor,
                   fct: () async {

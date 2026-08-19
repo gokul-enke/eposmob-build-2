@@ -35,13 +35,13 @@ class _AddProductNamePageScreenState extends State<AddProductNamePageScreen> {
   void validateFields() {
     setState(() {
       englishError = productNameEnglishController.text.isEmpty
-          ? "This field is required"
+          ? 'add_product_names.error_required'.tr
           : null;
       hindiError = productNameHindiController.text.isEmpty
-          ? "This field is required"
+          ? 'add_product_names.error_required'.tr
           : null;
       arabicError = productNameArabicController.text.isEmpty
-          ? "This field is required"
+          ? 'add_product_names.error_required'.tr
           : null;
     });
   }
@@ -76,7 +76,7 @@ class _AddProductNamePageScreenState extends State<AddProductNamePageScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             BuildTextTile(
-                              title: "Product Name - English (US)*",
+                              title: 'add_product_names.label_name_english'.tr,
                               textStyle: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s14,
@@ -114,7 +114,7 @@ class _AddProductNamePageScreenState extends State<AddProductNamePageScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             BuildTextTile(
-                              title: "Product Name - Hindi(IND)*",
+                              title: 'add_product_names.label_name_hindi'.tr,
                               textStyle: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s14,
@@ -153,7 +153,7 @@ class _AddProductNamePageScreenState extends State<AddProductNamePageScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         BuildTextTile(
-                          title: "Product Name - Arabic(AR)*",
+                          title: 'add_product_names.label_name_arabic'.tr,
                           textStyle: buildCustomStyle(
                             FontWeightManager.regular,
                             FontSize.s14,
@@ -193,7 +193,7 @@ class _AddProductNamePageScreenState extends State<AddProductNamePageScreen> {
                         Padding(
                           padding: const EdgeInsets.only(left: 10.0),
                           child: CustomRoundButton(
-                            title: "Prev",
+                            title: 'add_product_names.btn_prev'.tr,
                             boxColor: Colors.white,
                             textColor: ColorManager.kPrimaryColor,
                             fct: () async {
@@ -207,7 +207,7 @@ class _AddProductNamePageScreenState extends State<AddProductNamePageScreen> {
                         Padding(
                           padding: const EdgeInsets.only(left: 10.0),
                           child: CustomRoundButton(
-                            title: "Next",
+                            title: 'add_product_names.btn_next'.tr,
                             boxColor: Colors.white,
                             textColor: ColorManager.kPrimaryColor,
                             fct: () async {
@@ -220,7 +220,7 @@ class _AddProductNamePageScreenState extends State<AddProductNamePageScreen> {
                                 if (productId == null) {
                                   showScaffold(
                                     context: context,
-                                    message: 'Failed',
+                                    message: 'add_product_names.error_failed'.tr,
                                   );
                                 } else {
                                   showDialog(

@@ -113,9 +113,9 @@ class KioskBillingPageState extends State<KioskBillingPage> {
           onPressed: () => Navigator.pop(context),
         ),
         centerTitle: true,
-        title: const Text(
-          'Billing Details',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: FontSize.s16),
+        title: Text(
+          'kiosk_billing.page_title'.tr,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: FontSize.s16),
         ),
       ),
       body: _buildBody(size),
@@ -168,7 +168,7 @@ class KioskBillingPageState extends State<KioskBillingPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         BuildTextTile(
-          title: "FirstName",
+          title: 'kiosk_billing.label_first_name'.tr,
           textStyle: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s14,
@@ -225,7 +225,7 @@ class KioskBillingPageState extends State<KioskBillingPage> {
           ],
         ),
         BuildTextTile(
-          title: "Email Address",
+          title: 'kiosk_billing.label_email'.tr,
           textStyle: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s14,
@@ -258,7 +258,7 @@ class KioskBillingPageState extends State<KioskBillingPage> {
           ),
         ),
         BuildTextTile(
-          title: "Phone Number",
+          title: 'kiosk_billing.label_phone'.tr,
           textStyle: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s14,
@@ -290,7 +290,7 @@ class KioskBillingPageState extends State<KioskBillingPage> {
           ),
         ),
         BuildTextTile(
-          title: "Address",
+          title: 'kiosk_billing.label_address'.tr,
           textStyle: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s12,
@@ -333,12 +333,12 @@ class KioskBillingPageState extends State<KioskBillingPage> {
                       .priceSummary!
                       .subTotal ??
                   0.00),
-          title: "Net amount",
+          title: 'kiosk_billing.net_amount'.tr,
           color: ColorManager.textColor,
         ),
-        const BuildPaymentRow(
+        BuildPaymentRow(
           amount: "0.00",
-          title: "Shipping",
+          title: 'kiosk_billing.shipping'.tr,
           color: ColorManager.textColor,
         ),
         BuildPaymentRow(
@@ -347,7 +347,7 @@ class KioskBillingPageState extends State<KioskBillingPage> {
                       .priceSummary!
                       .discount ??
                   0.00),
-          title: "Discount",
+          title: 'kiosk_billing.discount'.tr,
           color: ColorManager.textColor,
         ),
         GestureDetector(
@@ -357,7 +357,7 @@ class KioskBillingPageState extends State<KioskBillingPage> {
                         .priceSummary!
                         .totalTax ??
                     0.00),
-            title: "GST",
+            title: 'kiosk_billing.gst'.tr,
             color: ColorManager.kPrimaryColor,
           ),
           onTap: () {
@@ -384,7 +384,7 @@ class KioskBillingPageState extends State<KioskBillingPage> {
                       .priceSummary!
                       .netTotal ??
                   0.00),
-          title: "Total Payable",
+          title: 'kiosk_billing.total_payable'.tr,
           secondRowTextStyle: buildCustomStyle(FontWeightManager.bold,
               FontSize.s15, 0.23, ColorManager.textColor),
           firstRowTextStyle: buildCustomStyle(FontWeightManager.bold,
@@ -403,7 +403,7 @@ class KioskBillingPageState extends State<KioskBillingPage> {
           const SizedBox(height: 5),
           BuildPaymentRow(
             amount: "",
-            title: "Chose Payment Method",
+            title: 'kiosk_billing.chose_payment_method'.tr,
             firstRowTextStyle: buildCustomStyle(FontWeightManager.semiBold,
                 FontSize.s14, 0.21, ColorManager.kPrimaryColor),
             color: ColorManager.kPrimaryColor,
@@ -418,9 +418,9 @@ class KioskBillingPageState extends State<KioskBillingPage> {
   Widget _buildPaymentMethodSelection() {
     return Row(
       children: [
-        _buildPaymentMethodOption(Icons.monetization_on, 'Cash', 1),
-        _buildPaymentMethodOption(Icons.credit_card, 'Card', 2),
-        _buildPaymentMethodOption(Icons.mobile_friendly, 'UPI', 3),
+        _buildPaymentMethodOption(Icons.monetization_on, 'kiosk_billing.payment_cash'.tr, 1),
+        _buildPaymentMethodOption(Icons.credit_card, 'kiosk_billing.payment_card'.tr, 2),
+        _buildPaymentMethodOption(Icons.mobile_friendly, 'kiosk_billing.payment_upi'.tr, 3),
       ],
     );
   }
@@ -493,7 +493,7 @@ class KioskBillingPageState extends State<KioskBillingPage> {
             ),
             child: Center(
               child: Text(
-                'Pay INR ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal)}',
+                'kiosk_billing.btn_pay'.trParams({'amount': 'INR ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal)}'}),
                 style: buildCustomStyle(
                     FontWeightManager.medium, FontSize.s16, 0.27, Colors.white),
               ),

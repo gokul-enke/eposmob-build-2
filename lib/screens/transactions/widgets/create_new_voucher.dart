@@ -149,7 +149,7 @@ class _CreateNewVoucherScreenState extends State<CreateNewVoucherScreen> {
                 (isRequired
                     ? (value) {
                         if (value == null || value.isEmpty) {
-                          return 'This field is required';
+                          return 'create_new_voucher.error_required'.tr;
                         }
                         return null;
                       }
@@ -168,7 +168,7 @@ class _CreateNewVoucherScreenState extends State<CreateNewVoucherScreen> {
     if (!_formKey.currentState!.validate()) {
       showScaffold(
         context: context,
-        message: 'Please fill all required fields',
+        message: 'create_new_voucher.error_fill_required_fields'.tr,
       );
       return;
     }
@@ -178,7 +178,7 @@ class _CreateNewVoucherScreenState extends State<CreateNewVoucherScreen> {
         _selectedUserId == null) {
       showScaffold(
         context: context,
-        message: 'Please select all required fields',
+        message: 'create_new_voucher.error_select_required_fields'.tr,
       );
       return;
     }
@@ -263,7 +263,7 @@ class _CreateNewVoucherScreenState extends State<CreateNewVoucherScreen> {
                           iconSize: 20,
                         ),
                         Text(
-                          'Create New Voucher',
+                          'create_new_voucher.page_title'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.semiBold,
                             FontSize.s20,
@@ -292,10 +292,10 @@ class _CreateNewVoucherScreenState extends State<CreateNewVoucherScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildLabel("Account Type", isRequired: true),
+                                _buildLabel('create_new_voucher.label_account_type'.tr, isRequired: true),
                                 const SizedBox(height: 4),
                                 CustomDropDownWithSearch<String>(
-                                  hintText: "Select account type",
+                                  hintText: 'create_new_voucher.hint_account_type'.tr,
                                   title: "",
                                   value: _selectedAccountType,
                                   items:
@@ -321,10 +321,10 @@ class _CreateNewVoucherScreenState extends State<CreateNewVoucherScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildLabel("Payment Method", isRequired: true),
+                                _buildLabel('create_new_voucher.label_payment_method'.tr, isRequired: true),
                                 const SizedBox(height: 4),
                                 CustomDropDownWithSearch<String>(
-                                  hintText: "Select payment method",
+                                  hintText: 'create_new_voucher.hint_payment_method'.tr,
                                   title: "",
                                   value: _selectedPaymentMethod,
                                   items: paymentList?.keys.toList() ?? [],
@@ -354,12 +354,12 @@ class _CreateNewVoucherScreenState extends State<CreateNewVoucherScreen> {
                         children: [
                           Expanded(
                             child: _buildTextField(
-                              "Payment Reference",
+                              'create_new_voucher.label_payment_ref'.tr,
                               _paymentRefController,
                               TextInputType.text,
                               size,
                               isRequired: true,
-                              placeholder: "Enter reference",
+                              placeholder: 'create_new_voucher.hint_payment_ref'.tr,
                               focusNode: _paymentRefFocus,
                               textInputAction: TextInputAction.next,
                               onFieldSubmitted: (_) {
@@ -371,7 +371,7 @@ class _CreateNewVoucherScreenState extends State<CreateNewVoucherScreen> {
                           const SizedBox(width: 16),
                           Expanded(
                             child: _buildTextField(
-                              "Amount",
+                              'create_new_voucher.label_amount'.tr,
                               _amountController,
                               TextInputType.number,
                               size,
@@ -396,10 +396,10 @@ class _CreateNewVoucherScreenState extends State<CreateNewVoucherScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildLabel("To", isRequired: true),
+                                _buildLabel('create_new_voucher.label_to'.tr, isRequired: true),
                                 const SizedBox(height: 4),
                                 CustomDropDownWithSearch<String>(
-                                  hintText: "Select user",
+                                  hintText: 'create_new_voucher.hint_to'.tr,
                                   title: "",
                                   value: _selectedUserId,
                                   items: usersList
@@ -421,7 +421,7 @@ class _CreateNewVoucherScreenState extends State<CreateNewVoucherScreen> {
                                       orElse: () =>
                                           GetUsersModelData(id: 0, name: ""),
                                     );
-                                    return user?.name ?? "Unknown";
+                                    return user?.name ?? 'general.unknown'.tr;
                                   },
                                   showName: false,
                                   height: 48,
@@ -432,11 +432,11 @@ class _CreateNewVoucherScreenState extends State<CreateNewVoucherScreen> {
                           const SizedBox(width: 16),
                           Expanded(
                             child: _buildTextField(
-                              "Comment",
+                              'create_new_voucher.label_comment'.tr,
                               _commentController,
                               TextInputType.text,
                               size,
-                              placeholder: "Optional comment",
+                              placeholder: 'create_new_voucher.hint_comment'.tr,
                               focusNode: _commentFocus,
                               textInputAction: TextInputAction.next,
                               onFieldSubmitted: (_) {
@@ -451,11 +451,11 @@ class _CreateNewVoucherScreenState extends State<CreateNewVoucherScreen> {
 
                       // Row 4: Particulars (full width)
                       _buildTextField(
-                        "Particulars",
+                        'create_new_voucher.label_particulars'.tr,
                         _particularsController,
                         TextInputType.text,
                         size,
-                        placeholder: "Enter particulars",
+                        placeholder: 'create_new_voucher.hint_particulars'.tr,
                         focusNode: _particularsFocus,
                         textInputAction: TextInputAction.done,
                         onFieldSubmitted: (_) {
@@ -472,7 +472,7 @@ class _CreateNewVoucherScreenState extends State<CreateNewVoucherScreen> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     CustomRoundButtonAdvanced(
-                      title: "Cancel",
+                      title: 'general.cancel'.tr,
                       fct: () => sideBarController.index.value = 22,
                       width: 120,
                       height: 45,
@@ -483,7 +483,7 @@ class _CreateNewVoucherScreenState extends State<CreateNewVoucherScreen> {
                     ),
                     const SizedBox(width: 12),
                     CustomRoundButtonAdvanced(
-                      title: "Submit",
+                      title: 'create_new_voucher.btn_submit'.tr,
                       fct: _submitVoucher,
                       width: 120,
                       height: 45,

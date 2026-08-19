@@ -775,7 +775,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                 focusNode: statusFocusNode,
                 title: null,
                 showName: false,
-                hintText: 'All Status',
+                hintText: 'receipt.hint_all_status'.tr,
                 value: selectedStatus,
                 items: statusOptions
                     .where((status) => status != "All Status")
@@ -812,7 +812,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                 focusNode: paymentMethodFocusNode,
                 title: null,
                 showName: false,
-                hintText: 'All Payment',
+                hintText: 'receipt.hint_all_payment'.tr,
                 value: paymentMethod,
                 items: paymentMethodOptions
                     .where((method) => method != "All Payment Methods")

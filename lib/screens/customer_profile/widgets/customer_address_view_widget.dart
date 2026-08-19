@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
@@ -254,7 +255,7 @@ class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
                                       },
                                       icon: const Icon(Icons.add_circle,
                                           color: ColorManager.kPrimaryColor),
-                                      tooltip: 'Add New Address',
+                                      tooltip: 'customer_address.tooltip_add'.tr,
                                       constraints: const BoxConstraints(),
                                       padding: const EdgeInsets.all(4),
                                     )
@@ -266,7 +267,7 @@ class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
                                         });
                                       },
                                       icon: const Icon(Icons.add, size: 18),
-                                      label: const Text("Add New"),
+                                      label: Text('customer_address.btn_add_new'.tr),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor:
                                             ColorManager.kPrimaryColor,
@@ -299,7 +300,7 @@ class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
                                                 bottom: 16.0),
                                             child: _buildInfoCard(
                                               title:
-                                                  "Address (${addr.type ?? 'Other'})",
+                                                  'customer_address.title_address'.trParams({'type': addr.type ?? 'customer_address.type_other'.tr}),
                                               icon: Icons.location_on_outlined,
                                               onEdit: () {
                                                 setState(() {
@@ -310,24 +311,24 @@ class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
                                               children: [
                                                 _buildInfoRow(
                                                     icon: Icons.place_outlined,
-                                                    label: "Address",
+                                                    label: 'customer_address.label_address'.tr,
                                                     value: addr.address ??
-                                                        "Not provided"),
+                                                        'customer_address.not_provided'.tr),
                                                 const SizedBox(height: 12),
                                                 _buildInfoRow(
                                                     icon: Icons
                                                         .location_city_outlined,
-                                                    label: "City",
+                                                    label: 'customer_address.label_city'.tr,
                                                     value: addr.city ??
-                                                        "Not provided"),
+                                                        'customer_address.not_provided'.tr),
                                                 const SizedBox(height: 12),
                                                 _buildInfoRow(
                                                     icon:
                                                         Icons.pin_drop_outlined,
-                                                    label: "Pincode ID",
+                                                    label: 'customer_address.label_pincode'.tr,
                                                     value: addr.pincodeId
                                                             ?.toString() ??
-                                                        "Not provided"),
+                                                        'customer_address.not_provided'.tr),
                                               ],
                                             ),
                                           ))
@@ -346,7 +347,7 @@ class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
                                                 .withOpacity(0.3)),
                                         const SizedBox(height: 16),
                                         Text(
-                                          "No address records found",
+                                          'customer_address.no_address_found'.tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s16,
@@ -525,7 +526,7 @@ class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
     }
 
     return addressParts.isEmpty
-        ? "No address information available"
+        ? 'customer_address.no_address_info'.tr
         : addressParts.join(", ");
   }
 }

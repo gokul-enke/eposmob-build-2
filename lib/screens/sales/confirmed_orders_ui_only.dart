@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:provider/provider.dart';
@@ -810,7 +811,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
     // Show print confirmation
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Printing order ${order.orderNumber}...'),
+        content: Text('confirmed_orders.msg_printing_order'.trParams({'number': order.orderNumber})),
         backgroundColor: ColorManager.successGreen,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -984,7 +985,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
                     Expanded(
                       child: TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: Text('Cancel'),
+                        child: Text('general.cancel'.tr),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -999,7 +1000,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content:
-                                  Text('Order ${order.orderNumber} deleted'),
+                                  Text('confirmed_orders.msg_order_deleted'.trParams({'number': order.orderNumber})),
                               backgroundColor: ColorManager.kButtonRed,
                               behavior: SnackBarBehavior.floating,
                               shape: RoundedRectangleBorder(
@@ -1013,7 +1014,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10)),
                         ),
-                        child: Text('Delete'),
+                        child: Text('confirmed_orders.delete'.tr),
                       ),
                     ),
                   ],
@@ -1068,7 +1069,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
     if (confirmedOrders.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text("No confirmed orders to sync"),
+          content: Text('confirmed_orders.no_orders_to_sync'.tr),
           backgroundColor: ColorManager.kButtonRed,
           behavior: SnackBarBehavior.floating,
           shape:

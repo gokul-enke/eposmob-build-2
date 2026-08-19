@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -176,7 +177,7 @@ class _CustomerAutocompleteState extends State<CustomerAutocomplete> {
                 focusNode: focusNode,
                 autofocus: widget.autofocus,
                 decoration: InputDecoration(
-                  hintText: 'Search Customer',
+                  hintText: 'general.hint_search_customer'.tr,
                   hintStyle: buildCustomStyle(
                     FontWeightManager.medium,
                     FontSize.s12,

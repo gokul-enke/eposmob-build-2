@@ -133,7 +133,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   BuildTextTile(
-                                    title: "Select Category",
+                                    title: 'edit_primary_details.label_select_category'.tr,
                                     isStarRed: true,
                                     isTextField: true,
                                     textStyle: buildCustomStyle(
@@ -163,7 +163,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
                                               .selectedCategoryIndex]
                                           : null,
                                       hint: Text(
-                                        'Select Category',
+                                        'edit_primary_details.hint_select_category'.tr,
                                         style: buildCustomStyle(
                                           FontWeightManager.medium,
                                           FontSize.s12,
@@ -179,7 +179,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
                                                 child: category.categoryName ==
                                                         "ALL"
                                                     ? Text(
-                                                        ' Please Select',
+                                                        'edit_primary_details.option_please_select'.tr,
                                                         style: buildCustomStyle(
                                                           FontWeightManager
                                                               .medium,
@@ -228,7 +228,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   BuildTextTile(
-                                    title: "Name",
+                                    title: 'edit_primary_details.label_name'.tr,
                                     isStarRed: true,
                                     isTextField: true,
                                     textStyle: buildCustomStyle(
@@ -256,7 +256,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
                                       cursorColor: ColorManager.kPrimaryColor,
                                       decoration: InputDecoration(
                                         border: InputBorder.none,
-                                        hintText: 'Product Name',
+                                        hintText: 'edit_primary_details.hint_product_name'.tr,
                                         hintStyle: buildCustomStyle(
                                           FontWeightManager.medium,
                                           FontSize.s12,
@@ -284,7 +284,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   BuildTextTile(
-                                    title: "Product Slug",
+                                    title: 'edit_primary_details.label_product_slug'.tr,
                                     isStarRed: true,
                                     isTextField: true,
                                     textStyle: buildCustomStyle(
@@ -308,7 +308,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
                                       cursorColor: ColorManager.kPrimaryColor,
                                       decoration: InputDecoration(
                                         border: InputBorder.none,
-                                        hintText: 'Product Slug',
+                                        hintText: 'edit_primary_details.hint_product_slug'.tr,
                                         hintStyle: buildCustomStyle(
                                           FontWeightManager.medium,
                                           FontSize.s12,
@@ -332,7 +332,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   BuildTextTile(
-                                    title: "Price",
+                                    title: 'edit_primary_details.label_price'.tr,
                                     isStarRed: true,
                                     isTextField: true,
                                     textStyle: buildCustomStyle(
@@ -355,7 +355,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
                                       cursorColor: ColorManager.kPrimaryColor,
                                       decoration: InputDecoration(
                                         border: InputBorder.none,
-                                        hintText: 'Price',
+                                        hintText: 'edit_primary_details.hint_price'.tr,
                                         hintStyle: buildCustomStyle(
                                           FontWeightManager.medium,
                                           FontSize.s12,
@@ -383,7 +383,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   BuildTextTile(
-                                    title: "Barcode",
+                                    title: 'edit_primary_details.label_barcode'.tr,
                                     textStyle: buildCustomStyle(
                                       FontWeightManager.regular,
                                       FontSize.s14,
@@ -405,7 +405,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
                                       cursorColor: ColorManager.kPrimaryColor,
                                       decoration: InputDecoration(
                                         border: InputBorder.none,
-                                        hintText: 'Barcode',
+                                        hintText: 'edit_primary_details.hint_barcode'.tr,
                                         hintStyle: buildCustomStyle(
                                           FontWeightManager.medium,
                                           FontSize.s12,
@@ -429,7 +429,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   BuildTextTile(
-                                    title: "Unit",
+                                    title: 'edit_primary_details.label_unit'.tr,
                                     isStarRed: true,
                                     isTextField: true,
                                     textStyle: buildCustomStyle(
@@ -453,7 +453,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
                                       ),
                                       value: selectedUnit,
                                       hint: Text(
-                                        'Choose Product Unit',
+                                        'edit_primary_details.hint_choose_unit'.tr,
                                         style: buildCustomStyle(
                                           FontWeightManager.medium,
                                           FontSize.s12,
@@ -496,7 +496,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   BuildTextTile(
-                                    title: "Currency",
+                                    title: 'edit_primary_details.label_currency'.tr,
                                     isStarRed: true,
                                     isTextField: true,
                                     textStyle: buildCustomStyle(
@@ -521,7 +521,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
                                       ),
                                       value: selectedCurrency,
                                       hint: Text(
-                                        'Choose Currency',
+                                        'edit_primary_details.hint_choose_currency'.tr,
                                         style: buildCustomStyle(
                                           FontWeightManager.medium,
                                           FontSize.s12,
@@ -570,7 +570,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
                             Padding(
                               padding: const EdgeInsets.only(left: 10.0),
                               child: CustomRoundButton(
-                                title: "Next",
+                                title: 'edit_primary_details.btn_next'.tr,
                                 fct: () async {
                                   // debugPrint(parentCategory);
                                   idController.text =
@@ -595,7 +595,7 @@ class _EditProductPageScreenState extends State<EditProductPageScreen> {
                                       showScaffold(
                                         context: context,
                                         message:
-                                            'Please Fill the Required Fields',
+                                            'edit_primary_details.error_fill_required'.tr,
                                       );
                                       sideBarController.index.value = 14;
                                     } else {

@@ -75,7 +75,7 @@ class _AdminSalesExecutiveReportScreenState
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error loading data: $error',
+          message: '${'exec_report.error_loading_data'.tr}: $error',
         );
       }
     } finally {
@@ -118,7 +118,7 @@ class _AdminSalesExecutiveReportScreenState
       if (response != null && response['status'] == 'error') {
         showScaffoldError(
           context: context,
-          message: response['message'] ?? 'Failed to fetch report data',
+          message: response['message'] ?? 'exec_report.error_fetch_failed'.tr,
         );
       }
     } catch (error) {
@@ -126,7 +126,7 @@ class _AdminSalesExecutiveReportScreenState
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error fetching report: $error',
+          message: '${'exec_report.error_fetching'.tr}: $error',
         );
       }
     }
@@ -138,8 +138,8 @@ class _AdminSalesExecutiveReportScreenState
     if (from == null || to == null || !from.isAfter(to)) return true;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(
-        content: Text('From Date cannot be after To Date.'),
+      ..showSnackBar(SnackBar(
+        content: Text('exec_report.error_date_range'.tr),
         backgroundColor: Colors.orange,
       ));
     return false;
@@ -260,7 +260,7 @@ class _AdminSalesExecutiveReportScreenState
       children: [
         Expanded(
           child: Text(
-            "Sales Executive Reports",
+            'exec_report.title'.tr,
             style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
                 0.30, ColorManager.textColor),
           ),
@@ -274,7 +274,7 @@ class _AdminSalesExecutiveReportScreenState
               color: ColorManager.kPrimaryColor,
             ),
             label: Text(
-              _showFilters ? 'Hide' : 'Filters',
+              _showFilters ? 'exec_report.btn_hide'.tr : 'exec_report.btn_filters'.tr,
               style: const TextStyle(
                   color: ColorManager.kPrimaryColor, fontSize: 12),
             ),
@@ -299,7 +299,7 @@ class _AdminSalesExecutiveReportScreenState
           _buildNameFilter(),
           const SizedBox(height: 8),
           CustomRoundButton(
-            title: "Reset",
+            title: 'general.reset'.tr,
             boxColor: Colors.white,
             textColor: ColorManager.kPrimaryColor,
             fct: resetSearch,
@@ -336,7 +336,7 @@ class _AdminSalesExecutiveReportScreenState
                 child: Padding(
                   padding: const EdgeInsets.only(top: 42),
                   child: CustomRoundButton(
-                    title: "Reset",
+                    title: 'general.reset'.tr,
                     boxColor: Colors.white,
                     textColor: ColorManager.kPrimaryColor,
                     fct: resetSearch,
@@ -360,7 +360,7 @@ class _AdminSalesExecutiveReportScreenState
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(
-            "From Date",
+            'exec_report.filter_from_date'.tr,
             style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
                 0.27, Colors.black.withOpacity(0.6)),
           ),
@@ -402,7 +402,7 @@ class _AdminSalesExecutiveReportScreenState
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(
-            "To Date",
+            'exec_report.filter_to_date'.tr,
             style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
                 0.27, Colors.black.withOpacity(0.6)),
           ),
@@ -444,7 +444,7 @@ class _AdminSalesExecutiveReportScreenState
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(
-            "Search Executive",
+            'exec_report.filter_search_executive'.tr,
             style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
                 0.27, Colors.black.withOpacity(0.6)),
           ),
@@ -461,7 +461,7 @@ class _AdminSalesExecutiveReportScreenState
             style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
                 0.18, ColorManager.textColor),
             decoration: decoration.copyWith(
-              hintText: "Type name...",
+              hintText: 'exec_report.filter_name_hint'.tr,
               hintStyle: buildCustomStyle(FontWeightManager.medium,
                   FontSize.s10, 0.18, ColorManager.textColor),
               prefixIcon: Container(
@@ -497,7 +497,7 @@ class _AdminSalesExecutiveReportScreenState
               children: [
                 Expanded(
                   child: SelectableText(
-                    report.name ?? 'N/A',
+                    report.name ?? 'exec_report.na'.tr,
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s14, 0.20, ColorManager.textColor),
                   ),
@@ -513,7 +513,7 @@ class _AdminSalesExecutiveReportScreenState
               ],
             ),
             SelectableText(
-              report.phone ?? 'N/A',
+              report.phone ?? 'exec_report.na'.tr,
               style: buildCustomStyle(
                   FontWeightManager.regular, FontSize.s12, 0.18, Colors.grey),
             ),
@@ -521,27 +521,27 @@ class _AdminSalesExecutiveReportScreenState
             Row(
               children: [
                 _buildMobileCardStat(
-                    'Orders', (report.orderCount ?? 0).toString()),
+                    'exec_report.card_orders'.tr, (report.orderCount ?? 0).toString()),
                 _buildMobileCardStat(
-                    'Total Sales', '$currency ${report.formattedTotalSales}'),
+                    'exec_report.card_total_sales'.tr, '$currency ${report.formattedTotalSales}'),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: [
                 _buildMobileCardStat(
-                    'Cash Sales', '$currency ${report.formattedCashSales}'),
+                    'exec_report.card_cash_sales'.tr, '$currency ${report.formattedCashSales}'),
                 _buildMobileCardStat(
-                    'Online Sales', '$currency ${report.formattedOnlineSales}'),
+                    'exec_report.card_online_sales'.tr, '$currency ${report.formattedOnlineSales}'),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: [
                 _buildMobileCardStat(
-                    'Credit Sales', '$currency ${report.formattedCreditSales}'),
+                    'exec_report.card_credit_sales'.tr, '$currency ${report.formattedCreditSales}'),
                 _buildMobileCardStat(
-                    'Collected', '$currency ${report.formattedCollectedSales}'),
+                    'exec_report.card_collected'.tr, '$currency ${report.formattedCollectedSales}'),
               ],
             ),
           ],
@@ -644,15 +644,15 @@ class _AdminSalesExecutiveReportScreenState
                         children: [
                           TableRow(
                             children: [
-                              _buildTableHeader("Executive Name"),
-                              _buildTableHeader("Phone"),
-                              _buildTableHeader("Total Orders"),
-                              _buildTableHeader("Total Sales"),
-                              _buildTableHeader("Online Sales"),
-                              _buildTableHeader("Cash Sales"),
-                              _buildTableHeader("Credit Sales"),
-                              _buildTableHeader("Collected Sales"),
-                              _buildTableHeader("Actions"),
+                              _buildTableHeader('exec_report.header_exec_name'.tr),
+                              _buildTableHeader('exec_report.header_phone'.tr),
+                              _buildTableHeader('exec_report.header_total_orders'.tr),
+                              _buildTableHeader('exec_report.card_total_sales'.tr),
+                              _buildTableHeader('exec_report.card_online_sales'.tr),
+                              _buildTableHeader('exec_report.card_cash_sales'.tr),
+                              _buildTableHeader('exec_report.card_credit_sales'.tr),
+                              _buildTableHeader('exec_report.card_collected_sales'.tr),
+                              _buildTableHeader('exec_report.header_actions'.tr),
                             ],
                           ),
                         ],
@@ -706,7 +706,7 @@ class _AdminSalesExecutiveReportScreenState
                                                   padding:
                                                       const EdgeInsets.all(8.0),
                                                   child: SelectableText(
-                                                    report.name ?? "N/A",
+                                                    report.name ?? 'exec_report.na'.tr,
                                                     textAlign: TextAlign.center,
                                                     style: buildCustomStyle(
                                                         FontWeightManager
@@ -725,7 +725,7 @@ class _AdminSalesExecutiveReportScreenState
                                                   padding:
                                                       const EdgeInsets.all(8.0),
                                                   child: SelectableText(
-                                                    report.phone ?? "N/A",
+                                                    report.phone ?? 'exec_report.na'.tr,
                                                     textAlign: TextAlign.center,
                                                     style: buildCustomStyle(
                                                         FontWeightManager
@@ -781,13 +781,13 @@ class _AdminSalesExecutiveReportScreenState
               size: 60, color: ColorManager.kPrimaryColor.withOpacity(0.7)),
           const SizedBox(height: 15),
           Text(
-            'No report data found',
+            'exec_report.no_data'.tr,
             style: buildCustomStyle(FontWeightManager.medium, FontSize.s18,
                 0.27, ColorManager.textColor),
           ),
           const SizedBox(height: 8),
           Text(
-            'Try adjusting the date filters or check back later',
+            'exec_report.no_data_hint'.tr,
             style: buildCustomStyle(
                 FontWeightManager.regular, FontSize.s14, 0.20, Colors.grey),
           ),
@@ -809,7 +809,7 @@ class _AdminSalesExecutiveReportScreenState
               size: 60, color: Colors.red.withOpacity(0.7)),
           const SizedBox(height: 15),
           Text(
-            'Error Loading Report',
+            'exec_report.error_title'.tr,
             style: buildCustomStyle(FontWeightManager.medium, FontSize.s18,
                 0.27, ColorManager.textColor),
           ),
@@ -832,7 +832,7 @@ class _AdminSalesExecutiveReportScreenState
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Retry'),
+            child: Text('exec_report.btn_retry'.tr),
           ),
         ],
       ),
@@ -925,7 +925,7 @@ class _AdminSalesExecutiveReportScreenState
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Executive Details',
+                        'exec_report.detail_title'.tr,
                         style: buildCustomStyle(FontWeightManager.semiBold,
                             FontSize.s20, 0.30, Colors.black),
                       ),
@@ -942,7 +942,7 @@ class _AdminSalesExecutiveReportScreenState
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 8),
                               child: Text(
-                                'Back',
+                                'exec_report.btn_back'.tr,
                                 style: buildCustomStyle(
                                     FontWeightManager.medium,
                                     FontSize.s14,
@@ -963,37 +963,37 @@ class _AdminSalesExecutiveReportScreenState
                     child: Column(
                       children: [
                         _buildSection(
-                          title: 'Executive Information',
+                          title: 'exec_report.section_exec_info'.tr,
                           children: [
                             _buildInfoRow(
-                              _buildInfoItem('Name', report.name ?? 'N/A'),
-                              _buildInfoItem('Phone', report.phone ?? 'N/A'),
+                              _buildInfoItem('exec_report.info_name'.tr, report.name ?? 'exec_report.na'.tr),
+                              _buildInfoItem('exec_report.info_phone'.tr, report.phone ?? 'exec_report.na'.tr),
                             ),
                             const SizedBox(height: 16),
                             _buildInfoRow(
-                              _buildInfoItem('Date Range', dateRange),
-                              _buildInfoItem('Total Orders',
+                              _buildInfoItem('exec_report.info_date_range'.tr, dateRange),
+                              _buildInfoItem('exec_report.info_total_orders'.tr,
                                   (report.orderCount ?? 0).toString()),
                             ),
                           ],
                         ),
                         const SizedBox(height: 16),
                         _buildSection(
-                          title: 'Financial Summary',
+                          title: 'exec_report.section_financial'.tr,
                           children: [
-                            _buildFinancialItem('Total Sales',
+                            _buildFinancialItem('exec_report.card_total_sales'.tr,
                                 '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedTotalSales}'),
-                            _buildFinancialItem('Online Sales',
+                            _buildFinancialItem('exec_report.card_online_sales'.tr,
                                 '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedOnlineSales}'),
-                            _buildFinancialItem('Cash Sales',
+                            _buildFinancialItem('exec_report.card_cash_sales'.tr,
                                 '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCashSales}'),
-                            _buildFinancialItem('Credit Sales',
+                            _buildFinancialItem('exec_report.card_credit_sales'.tr,
                                 '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCreditSales}'),
-                            _buildFinancialItem('Collected Sales',
+                            _buildFinancialItem('exec_report.card_collected_sales'.tr,
                                 '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCollectedSales}'),
-                            _buildFinancialItem('UPI Sales',
+                            _buildFinancialItem('exec_report.card_upi_sales'.tr,
                                 '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedUpiSales}'),
-                            _buildFinancialItem('Card Sales',
+                            _buildFinancialItem('exec_report.card_card_sales'.tr,
                                 '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCardSales}'),
                           ],
                         ),

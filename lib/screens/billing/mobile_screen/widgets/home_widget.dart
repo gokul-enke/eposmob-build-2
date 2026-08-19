@@ -325,7 +325,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                 controller: billingProvider.barcodeController,
                 focusNode: billingProvider.barcodeNode,
                 decoration: InputDecoration(
-                  labelText: 'Barcode',
+                  labelText: 'mobile_billing.label_barcode'.tr,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -407,7 +407,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                 controller: billingProvider.quantityController,
                 focusNode: billingProvider.quantityFocusNode,
                 decoration: InputDecoration(
-                  labelText: 'Quantity',
+                  labelText: 'mobile_billing.label_quantity'.tr,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -423,7 +423,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                 controller: billingProvider.unitPriceController,
                 focusNode: billingProvider.unitPriceFocusNode,
                 decoration: InputDecoration(
-                  labelText: 'Price',
+                  labelText: 'mobile_billing.label_price'.tr,
                   prefixText: ' ',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),

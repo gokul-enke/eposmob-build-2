@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -192,7 +193,7 @@ class _SupplierAutocompleteState extends State<SupplierAutocomplete> {
               focusNode: focusNode,
               autofocus: widget.autofocus,
               decoration: InputDecoration(
-                hintText: 'Search supplier',
+                hintText: 'general.hint_search_supplier'.tr,
                 hintStyle: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s12,
