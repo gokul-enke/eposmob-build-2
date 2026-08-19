@@ -1,4 +1,27 @@
 {
+  "mobile_order_card": {
+    "opt_share": "مشاركة",
+    "opt_return": "إرجاع الطلب",
+    "opt_cancel": "إلغاء الطلب",
+    "opt_share_invoice": "مشاركة الفاتورة",
+    "opt_share_pdf": "مشاركة PDF",
+    "opt_whatsapp_bot": "بوت واتساب"
+  },
+  "cancel_order_modal": {
+    "empty_payment_methods": "لا توجد طرق دفع متاحة",
+    "hint_payment_method": "اختر طريقة الدفع",
+    "hint_refund_amount": "أدخل مبلغ الاسترداد"
+  },
+  "change_order_status": {
+    "hint_status": "اختر الحالة",
+    "hint_payment_method": "اختر طريقة الدفع",
+    "hint_logistics": "أدخل معلومات الشحن",
+    "hint_refund_amount": "أدخل مبلغ الاسترداد"
+  },
+  "change_payment_status": {
+    "hint_status": "اختر الحالة",
+    "hint_amount": "أدخل المبلغ"
+  },
   "support": {
     "page_title": "الدعم"
   },
@@ -1283,7 +1306,9 @@
     "payment_display": "دفع @name",
     "payment_hash": "دفع #@id",
     "delivery_date": "تاريخ التوصيل",
-    "delivery_time": "وقت التوصيل"
+    "delivery_time": "وقت التوصيل",
+    "msg_printing_order": "جاري طباعة الطلب @number...",
+    "msg_order_deleted": "تم حذف الطلب @number"
   },
   "sales_return": {
     "title": "طلبات إرجاع المبيعات",
@@ -1370,6 +1395,8 @@
     "close_day": "إغلاق اليوم",
     "back": "رجوع",
     "next": "التالي",
+    "hint_select_employee": "اختر الموظف",
+    "btn_view_details": "عرض التفاصيل",
     "confirm_close_day": "تأكيد وإغلاق اليوم",
     "at": "في",
     "add_row": "إضافة صف",

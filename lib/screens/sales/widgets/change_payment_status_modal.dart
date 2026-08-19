@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -131,7 +132,7 @@ class _ChangePaymentStatusModalState extends State<ChangePaymentStatusModal> {
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     isExpanded: true,
-                    hint: const Text('Select Status'),
+                    hint: Text('change_payment_status.hint_status'.tr),
                     value: _selectedStatus,
                     items: _paymentStatusOptions.map((String status) {
                       return DropdownMenuItem<String>(
@@ -180,7 +181,7 @@ class _ChangePaymentStatusModalState extends State<ChangePaymentStatusModal> {
                   ),
                 ],
                 decoration: InputDecoration(
-                  hintText: 'Enter amount',
+                  hintText: 'change_payment_status.hint_amount'.tr,
                   contentPadding: const EdgeInsets.symmetric(
                       horizontal: 14, vertical: 14),
                   enabledBorder: OutlineInputBorder(
