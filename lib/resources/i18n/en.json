@@ -1,4 +1,23 @@
 {
+  "edit_primary_details": {
+    "label_select_category": "Select Category",
+    "hint_select_category": "Select Category",
+    "option_please_select": "Please Select",
+    "label_name": "Name",
+    "hint_product_name": "Product Name",
+    "label_product_slug": "Product Slug",
+    "hint_product_slug": "Product Slug",
+    "label_price": "Price",
+    "hint_price": "Price",
+    "label_barcode": "Barcode",
+    "hint_barcode": "Barcode",
+    "label_unit": "Unit",
+    "hint_choose_unit": "Choose Product Unit",
+    "label_currency": "Currency",
+    "hint_choose_currency": "Choose Currency",
+    "btn_next": "Next",
+    "error_fill_required": "Please Fill the Required Fields"
+  },
   "create_new_invoice": {
     "btn_invoice_list": "Invoice List",
     "page_title": "Create New Invoice",
