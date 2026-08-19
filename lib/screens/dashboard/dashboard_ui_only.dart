@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../providers/shared_preferences.dart';
 
@@ -54,12 +55,12 @@ class _DashboardUiScreenState extends State<DashboardUIScreen> {
         length: 3,
         child: Scaffold(
           appBar: AppBar(
-            title: const Text('All Dashboards'),
-            bottom: const TabBar(
+            title: Text('dashboard_ui.title'.tr),
+            bottom: TabBar(
               tabs: [
-                Tab(text: 'Admin'),
-                Tab(text: 'Company Admin'),
-                Tab(text: 'Sales Executive'),
+                Tab(text: 'dashboard_ui.tab_admin'.tr),
+                Tab(text: 'dashboard_ui.tab_company_admin'.tr),
+                Tab(text: 'dashboard_ui.tab_sales_executive'.tr),
               ],
             ),
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
@@ -254,7 +255,7 @@ class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
                                       },
                                       icon: const Icon(Icons.add_circle,
                                           color: ColorManager.kPrimaryColor),
-                                      tooltip: 'Add New Address',
+                                      tooltip: 'customer_address.tooltip_add'.tr,
                                       constraints: const BoxConstraints(),
                                       padding: const EdgeInsets.all(4),
                                     )
@@ -299,7 +300,7 @@ class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
                                                 bottom: 16.0),
                                             child: _buildInfoCard(
                                               title:
-                                                  "Address (${addr.type ?? 'Other'})",
+                                                  'customer_address.title_address'.trParams({'type': addr.type ?? 'customer_address.type_other'.tr}),
                                               icon: Icons.location_on_outlined,
                                               onEdit: () {
                                                 setState(() {

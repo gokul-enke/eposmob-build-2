@@ -33,6 +33,81 @@
     "msg_failed": "فشل",
     "msg_failed_add": "فشل في إضافة الخصائص"
   },
+  "dashboard_ui": {
+    "title": "جميع لوحات التحكم",
+    "tab_admin": "المشرف",
+    "tab_company_admin": "مشرف الشركة",
+    "tab_sales_executive": "مدير المبيعات"
+  },
+  "order_list_new": {
+    "title": "طلب جديد",
+    "label_order_no": "رقم الطلب #00000",
+    "hint_mobile": "أدخل رقم الجوال",
+    "hint_price": "السعر",
+    "hint_coupon": "تطبيق كوبون",
+    "label_enter_price": "أدخل السعر الجديد",
+    "btn_update": "تحديث",
+    "msg_price_updated": "تم تحديث السعر بنجاح",
+    "msg_invalid_price": "يرجى إدخال سعر صالح",
+    "err_snapshot": "خطأ: @error",
+    "payment_cash": "نقداً"
+  },
+  "kiosk_order": {
+    "title_confirm": "تأكيد طلبك",
+    "title_new": "طلب جديد",
+    "hint_mobile": "أدخل رقم الجوال",
+    "hint_coupon": "تطبيق كوبون",
+    "err_snapshot": "خطأ: @error",
+    "msg_coupon_applied": "تم تطبيق الكوبون بنجاح",
+    "msg_coupon_failed": "فشل تطبيق الكوبون",
+    "msg_error": "حدث خطأ! حاول مرة أخرى",
+    "msg_not_authenticated": "غير مصادق عليه",
+    "msg_unknown_discount": "نوع الخصم غير معروف",
+    "payment_cash": "نقداً",
+    "payment_card": "بطاقة",
+    "payment_upi": "UPI"
+  },
+  "supplier_details": {
+    "no_supplier": "لم يتم اختيار مورد",
+    "profile_title": "ملف المورد",
+    "btn_all_suppliers": "جميع الموردين",
+    "section_info": "معلومات المورد",
+    "label_name": "الاسم",
+    "label_email": "البريد الإلكتروني",
+    "label_phone": "الهاتف",
+    "label_alt_phone": "هاتف بديل",
+    "label_address": "العنوان",
+    "label_product_categories": "فئات المنتجات",
+    "label_balance": "الرصيد",
+    "label_current_balance": "الرصيد الحالي",
+    "label_balance_status": "حالة الرصيد",
+    "label_payment_type": "نوع الدفع",
+    "na": "غ.م"
+  },
+  "supplier_list_mobile": {
+    "title": "قائمة الموردين",
+    "btn_add_new": "إضافة جديد",
+    "hide_filters": "إخفاء الفلاتر",
+    "show_filters": "إظهار الفلاتر",
+    "hint_name": "الاسم",
+    "hint_email": "البريد الإلكتروني",
+    "hint_phone": "الهاتف",
+    "hint_balance": "الرصيد",
+    "btn_reset": "إعادة تعيين الفلاتر",
+    "no_suppliers": "لا يوجد موردون",
+    "balance_prefix": "الرصيد: @amount",
+    "btn_view": "عرض"
+  },
+  "category_list_new": {
+    "title_search": "بحث في الفئات",
+    "hint_search_category": "بحث في الفئة",
+    "hint_search_product": "بحث في المنتجات"
+  },
+  "customer_address": {
+    "tooltip_add": "إضافة عنوان جديد",
+    "title_address": "العنوان (@type)",
+    "type_other": "أخرى"
+  },
   "notifications": {
     "page_title": "الإشعارات"
   },
@@ -839,7 +914,9 @@
     "all": "الكل",
     "positive": "موجب",
     "negative": "سالب",
-    "zero": "صفر"
+    "zero": "صفر",
+    "msg_token_missing": "رمز المصادقة مفقود",
+    "msg_load_error": "خطأ في تحميل العملاء: @error"
   },
   "suppliers": {
     "title": "الموردون",
@@ -2926,7 +3003,18 @@
     "clear_local_storage_content": "سيؤدي هذا إلى مسح جميع البيانات المحلية باستثناء بيانات تسجيل الدخول وتسجيل خروجك. هل أنت متأكد؟",
     "clear_local_storage_btn_confirm": "مسح وتسجيل الخروج",
     "clear_local_storage_success": "تم مسح التخزين المحلي بنجاح",
-    "clear_local_storage_error": "خطأ في مسح التخزين المحلي"
+    "clear_local_storage_error": "خطأ في مسح التخزين المحلي",
+    "msg_offline_mode_on": "وضع عدم الاتصال مفعّل. قم بتعطيله لإعادة مزامنة المنتجات.",
+    "msg_no_internet_resync": "لا يوجد اتصال بالإنترنت. لا يمكن إعادة مزامنة المنتجات.",
+    "msg_resync_empty": "اكتملت إعادة المزامنة ولكن لم يتم إرجاع أي منتجات. تحقق من المستأجر/مفتاح API أو الإنترنت.",
+    "msg_resync_success": "تمت إعادة مزامنة المنتجات بنجاح (@count عناصر)",
+    "msg_resync_failed": "فشل في إعادة مزامنة المنتجات: @error",
+    "msg_offline_enabled": "تم تفعيل وضع عدم الاتصال. الإجراءات الإلكترونية محظورة الآن.",
+    "msg_offline_disabled": "تم تعطيل وضع عدم الاتصال. الإجراءات الإلكترونية متاحة مجدداً.",
+    "msg_offline_disabled_no_internet": "تم تعطيل وضع عدم الاتصال، لكن الإنترنت لا يزال غير متاح.",
+    "msg_dev_mode_enabled": "تم تفعيل وضع المطور. حدد طابعة التطوير في إعدادات الطابعة.",
+    "msg_dev_mode_disabled": "تم تعطيل وضع المطور. تم استعادة إعدادات الطابعة الفعلية.",
+    "msg_dev_mode_error": "تعذّر تحديث وضع المطور: @error"
   },
   "company_info": {
     "title": "معلومات الشركة",
@@ -3734,7 +3822,8 @@
     "msg_order_confirmed": "تم تأكيد الطلب بنجاح",
     "msg_coupon_applied": "تم تطبيق الكوبون بنجاح",
     "msg_failed_coupon": "فشل تطبيق الكوبون",
-    "msg_not_authenticated": "غير مصادق عليه"
+    "msg_not_authenticated": "غير مصادق عليه",
+    "err_snapshot": "خطأ: @error"
   },
   "sales_order_details": {
     "title": "تفاصيل الطلب - #",

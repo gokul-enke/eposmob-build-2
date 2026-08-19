@@ -52,7 +52,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
 
       if (accessToken == null || accessToken.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Authentication token is missing')),
+          SnackBar(content: Text('customers.msg_token_missing'.tr)),
         );
         return;
       }
@@ -65,7 +65,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
       debugPrint('Error loading customers: $error');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading customers: $error')),
+        SnackBar(content: Text('customers.msg_load_error'.trParams({'error': '$error'}))),
       );
     }
   }

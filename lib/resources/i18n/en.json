@@ -33,6 +33,81 @@
     "msg_failed": "Failed",
     "msg_failed_add": "Failed to add properties"
   },
+  "dashboard_ui": {
+    "title": "All Dashboards",
+    "tab_admin": "Admin",
+    "tab_company_admin": "Company Admin",
+    "tab_sales_executive": "Sales Executive"
+  },
+  "order_list_new": {
+    "title": "New Order",
+    "label_order_no": "Order No #00000",
+    "hint_mobile": "Enter mobile number",
+    "hint_price": "Price",
+    "hint_coupon": "Apply Coupon",
+    "label_enter_price": "Enter New Price",
+    "btn_update": "Update",
+    "msg_price_updated": "Price Updated Successfully",
+    "msg_invalid_price": "Please enter a valid price",
+    "err_snapshot": "Error: @error",
+    "payment_cash": "Cash"
+  },
+  "kiosk_order": {
+    "title_confirm": "Confirm Your Order",
+    "title_new": "New Order",
+    "hint_mobile": "Enter mobile number",
+    "hint_coupon": "Apply Coupon",
+    "err_snapshot": "Error: @error",
+    "msg_coupon_applied": "Coupon Applied Successfully",
+    "msg_coupon_failed": "Failed to Apply Coupon",
+    "msg_error": "Error Occurred! Try Again",
+    "msg_not_authenticated": "Not Authenticated",
+    "msg_unknown_discount": "Unknown discount type",
+    "payment_cash": "Cash",
+    "payment_card": "Card",
+    "payment_upi": "UPI"
+  },
+  "supplier_details": {
+    "no_supplier": "No supplier selected",
+    "profile_title": "Supplier Profile",
+    "btn_all_suppliers": "All Suppliers",
+    "section_info": "Supplier Information",
+    "label_name": "Name",
+    "label_email": "Email",
+    "label_phone": "Phone",
+    "label_alt_phone": "Alternative Phone",
+    "label_address": "Address",
+    "label_product_categories": "Product Categories",
+    "label_balance": "Balance",
+    "label_current_balance": "Current Balance",
+    "label_balance_status": "Balance Status",
+    "label_payment_type": "Payment Type",
+    "na": "N/A"
+  },
+  "supplier_list_mobile": {
+    "title": "Supplier List",
+    "btn_add_new": "Add New",
+    "hide_filters": "Hide Filters",
+    "show_filters": "Show Filters",
+    "hint_name": "Name",
+    "hint_email": "Email",
+    "hint_phone": "Phone",
+    "hint_balance": "Balance",
+    "btn_reset": "Reset Filters",
+    "no_suppliers": "No suppliers found",
+    "balance_prefix": "Balance: @amount",
+    "btn_view": "View"
+  },
+  "category_list_new": {
+    "title_search": "Search Category",
+    "hint_search_category": "Search category",
+    "hint_search_product": "Search Product"
+  },
+  "customer_address": {
+    "tooltip_add": "Add New Address",
+    "title_address": "Address (@type)",
+    "type_other": "Other"
+  },
   "notifications": {
     "page_title": "Notifications"
   },
@@ -839,7 +914,9 @@
     "all": "All",
     "positive": "Positive (+ve)",
     "negative": "Negative (-ve)",
-    "zero": "Zero (0)"
+    "zero": "Zero (0)",
+    "msg_token_missing": "Authentication token is missing",
+    "msg_load_error": "Error loading customers: @error"
   },
   "suppliers": {
     "title": "Suppliers",
@@ -2926,7 +3003,18 @@
     "clear_local_storage_content": "This will clear all local data except login credentials and log you out. Are you sure?",
     "clear_local_storage_btn_confirm": "Clear & Logout",
     "clear_local_storage_success": "Local storage cleared successfully",
-    "clear_local_storage_error": "Error clearing local storage"
+    "clear_local_storage_error": "Error clearing local storage",
+    "msg_offline_mode_on": "Offline Mode is enabled. Disable it to resync products.",
+    "msg_no_internet_resync": "No internet connection. Cannot resync products.",
+    "msg_resync_empty": "Resync finished but no products were returned. Check tenant/API key or internet.",
+    "msg_resync_success": "Products resynced successfully (@count items)",
+    "msg_resync_failed": "Failed to resync products: @error",
+    "msg_offline_enabled": "Offline Mode enabled. Online actions are now blocked.",
+    "msg_offline_disabled": "Offline Mode disabled. Online actions are available again.",
+    "msg_offline_disabled_no_internet": "Offline Mode disabled, but internet is still unavailable.",
+    "msg_dev_mode_enabled": "Developer Mode enabled. Select Development Printer in Printer settings.",
+    "msg_dev_mode_disabled": "Developer Mode disabled. Physical printer settings restored.",
+    "msg_dev_mode_error": "Could not update Developer Mode: @error"
   },
   "company_info": {
     "title": "Company Information",
@@ -3734,7 +3822,8 @@
     "msg_order_confirmed": "Order Confirmed Successfully",
     "msg_coupon_applied": "Coupon Applied Successfully",
     "msg_failed_coupon": "Failed to Apply Coupon",
-    "msg_not_authenticated": "Not Authenticated"
+    "msg_not_authenticated": "Not Authenticated",
+    "err_snapshot": "Error: @error"
   },
   "sales_order_details": {
     "title": "Order Details - #",

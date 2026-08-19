@@ -621,7 +621,7 @@ class _EditOrderState extends State<EditOrder> {
                         controller: quantityController,
                         onchanged: (query) {},
                         size: size,
-                        hintText: 'Quantity',
+                        hintText: 'edit_order.hint_quantity'.tr,
                         keyboardType: TextInputType.number,
                         inputFormatters: [
                           if (unitPriceController.text == 'KG' ||
@@ -897,7 +897,7 @@ class _EditOrderState extends State<EditOrder> {
                               DataCell(Align(
                                 alignment: Alignment.center,
                                 child: Text(
-                                  item.productName ?? 'Unknown',
+                                  item.productName ?? 'general.unknown'.tr,
                                   style: buildCustomStyle(
                                       FontWeightManager.regular,
                                       12,
@@ -978,7 +978,7 @@ class _EditOrderState extends State<EditOrder> {
                 },
               );
             } else if (snapshot.hasError) {
-              return Text('Error: ${snapshot.error}');
+              return Text('edit_order.err_snapshot'.trParams({'error': '${snapshot.error}'}));
             } else {
               return const Center(child: BuildCartListDesign());
             }
