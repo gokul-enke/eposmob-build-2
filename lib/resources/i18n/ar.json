@@ -1,4 +1,13 @@
 {
+  "edit_product_names": {
+    "label_name_english": "اسم المنتج - الإنجليزية (US)*",
+    "label_name_hindi": "اسم المنتج - الهندية (IND)*",
+    "label_name_arabic": "اسم المنتج - العربية (AR)*",
+    "btn_prev": "السابق",
+    "btn_next": "التالي",
+    "error_failed": "فشل",
+    "error_fill_required": "يرجى ملء الحقول المطلوبة"
+  },
   "order_list": {
     "items_count": "@count عناصر",
     "printing_order": "طباعة الطلب @number",

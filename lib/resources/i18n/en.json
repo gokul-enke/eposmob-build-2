@@ -1,4 +1,13 @@
 {
+  "edit_product_names": {
+    "label_name_english": "Product Name - English (US)*",
+    "label_name_hindi": "Product Name - Hindi(IND)*",
+    "label_name_arabic": "Product Name - Arabic(AR)*",
+    "btn_prev": "Prev",
+    "btn_next": "Next",
+    "error_failed": "Failed",
+    "error_fill_required": "Please Fill the Required Fields"
+  },
   "order_list": {
     "items_count": "@count items",
     "printing_order": "Printing order @number",
