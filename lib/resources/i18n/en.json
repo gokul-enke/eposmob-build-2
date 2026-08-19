@@ -1,4 +1,19 @@
 {
+  "purchase_voucher": {
+    "permission_required": "Purchase permission is required to view vouchers.",
+    "page_title": "Voucher List",
+    "filter_store": "Store",
+    "hint_select_store": "Select Store",
+    "filter_date": "Date",
+    "filter_amount": "Amount",
+    "btn_search": "Search",
+    "col_no": "No",
+    "col_purchase_date": "Purchase Date",
+    "col_store": "Store",
+    "col_supplier": "Supplier",
+    "col_amount": "Amount",
+    "col_action": "Action"
+  },
   "mobile_filters": {
     "field_status": "Status",
     "hint_select_status": "Select Status",

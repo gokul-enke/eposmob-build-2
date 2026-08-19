@@ -1,4 +1,19 @@
 {
+  "purchase_voucher": {
+    "permission_required": "مطلوب إذن الشراء لعرض القسائم.",
+    "page_title": "قائمة القسائم",
+    "filter_store": "المتجر",
+    "hint_select_store": "اختر المتجر",
+    "filter_date": "التاريخ",
+    "filter_amount": "المبلغ",
+    "btn_search": "بحث",
+    "col_no": "رقم",
+    "col_purchase_date": "تاريخ الشراء",
+    "col_store": "المتجر",
+    "col_supplier": "المورد",
+    "col_amount": "المبلغ",
+    "col_action": "الإجراء"
+  },
   "mobile_filters": {
     "field_status": "الحالة",
     "hint_select_status": "اختر الحالة",
