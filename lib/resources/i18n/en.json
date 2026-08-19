@@ -1,4 +1,19 @@
 {
+  "view_category": {
+    "btn_all_categories": "All Categories",
+    "page_title": "Show Category",
+    "label_name": "Name",
+    "label_slug": "Slug",
+    "label_sort": "Sort",
+    "label_arabic": "Arabic",
+    "label_english": "English",
+    "label_hindi": "Hindi",
+    "label_category_image": "Category Image",
+    "label_category_icon": "Category Icon",
+    "empty_no_image": "No image available",
+    "empty_no_icon": "No icon available",
+    "btn_back": "Back"
+  },
   "view_receipt_details": {
     "btn_all_receipts": "All Receipts",
     "page_title": "Receipt Details  ",

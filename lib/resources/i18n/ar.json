@@ -1,4 +1,19 @@
 {
+  "view_category": {
+    "btn_all_categories": "جميع الفئات",
+    "page_title": "عرض الفئة",
+    "label_name": "الاسم",
+    "label_slug": "الرابط المختصر",
+    "label_sort": "الترتيب",
+    "label_arabic": "العربية",
+    "label_english": "الإنجليزية",
+    "label_hindi": "الهندية",
+    "label_category_image": "صورة الفئة",
+    "label_category_icon": "أيقونة الفئة",
+    "empty_no_image": "لا توجد صورة",
+    "empty_no_icon": "لا توجد أيقونة",
+    "btn_back": "رجوع"
+  },
   "view_receipt_details": {
     "btn_all_receipts": "جميع الإيصالات",
     "page_title": "تفاصيل الإيصال  ",
