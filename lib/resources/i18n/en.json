@@ -1,4 +1,26 @@
 {
+  "create_new_invoice": {
+    "btn_invoice_list": "Invoice List",
+    "page_title": "Create New Invoice",
+    "label_account_type": "Account type",
+    "hint_select_account_type": "Select An Account type",
+    "error_required": "This field is required",
+    "label_payment_method": "Payment Method",
+    "hint_select_payment_method": "Select A Payment Method",
+    "hint_ref": "Ref",
+    "label_payment_method_ref": "Payment Method Ref",
+    "hint_amount": "Amount",
+    "label_amount": "Amount",
+    "label_from": "From",
+    "hint_select_user": "Select a User",
+    "hint_comment": "Comment",
+    "label_comment": "Comment",
+    "hint_particulars": "Particulars",
+    "label_particulars": "Particulars",
+    "btn_submit": "Submit",
+    "error_fill_required": "Please fill all required fields",
+    "btn_back": "Back"
+  },
   "add_voucher_details": {
     "permission_required": "Purchase permission is required to view voucher details.",
     "btn_all_vouchers": "All Vouchers",

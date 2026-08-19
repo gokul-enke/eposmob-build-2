@@ -69,10 +69,10 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                     onPressed: () {
                       sideBarController.index.value = 21;
                     },
-                    text: 'Invoice List',
+                    text: 'create_new_invoice.btn_invoice_list'.tr,
                   ),
                   Text(
-                    'Create New Invoice',
+                    'create_new_invoice.page_title'.tr,
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s20, 0.30, ColorManager.textColor),
                   ),
@@ -99,7 +99,7 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                           BuildTextTile(
                                             isStarRed: true,
                                             isTextField: true,
-                                            title: 'Account type',
+                                            title: 'create_new_invoice.label_account_type'.tr,
                                             textStyle: buildCustomStyle(
                                               FontWeightManager.regular,
                                               FontSize.s14,
@@ -123,7 +123,7 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                               ),
                                               value: invoiceSelected,
                                               hint: Text(
-                                                'Select An Account type',
+                                                'create_new_invoice.hint_select_account_type'.tr,
                                                 style: buildCustomStyle(
                                                   FontWeightManager.medium,
                                                   FontSize.s12,
@@ -158,7 +158,7 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                               validator: (value) {
                                                 if (value == null ||
                                                     value.isEmpty) {
-                                                  return 'This field is required';
+                                                  return 'create_new_invoice.error_required'.tr;
                                                 }
                                                 return null;
                                               },
@@ -172,7 +172,7 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                         BuildTextTile(
                                           isStarRed: true,
                                           isTextField: true,
-                                          title: "Payment Method",
+                                          title: 'create_new_invoice.label_payment_method'.tr,
                                           textStyle: buildCustomStyle(
                                             FontWeightManager.regular,
                                             FontSize.s14,
@@ -196,7 +196,7 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                             ),
                                             value: paymentSelected,
                                             hint: Text(
-                                              'Select A Payment Method',
+                                              'create_new_invoice.hint_select_payment_method'.tr,
                                               style: buildCustomStyle(
                                                 FontWeightManager.medium,
                                                 FontSize.s12,
@@ -243,11 +243,11 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                       isLeft: false,
                                       size: size,
                                       isStarRed: true,
-                                      hintText: 'Ref',
+                                      hintText: 'create_new_invoice.hint_ref'.tr,
                                       isTextField: true,
                                       read: false,
                                       controller: paymentMethodRefController,
-                                      title: "Payment Method Ref",
+                                      title: 'create_new_invoice.label_payment_method_ref'.tr,
                                       validator: (value) {
                                         if (value == null || value.isEmpty) {
                                           return 'This field is required';
@@ -263,9 +263,9 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                       read: false,
                                       textInputType: const TextInputType
                                           .numberWithOptions(),
-                                      hintText: 'Amount',
+                                      hintText: 'create_new_invoice.hint_amount'.tr,
                                       controller: amountController,
-                                      title: "Amount",
+                                      title: 'create_new_invoice.label_amount'.tr,
                                       validator: (value) {
                                         if (value == null || value.isEmpty) {
                                           return 'This field is required';
@@ -283,7 +283,7 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                       BuildTextTile(
                                         isStarRed: true,
                                         isTextField: true,
-                                        title: "From",
+                                        title: 'create_new_invoice.label_from'.tr,
                                         textStyle: buildCustomStyle(
                                           FontWeightManager.regular,
                                           FontSize.s14,
@@ -307,7 +307,7 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                           ),
                                           value: selectedUser,
                                           hint: Text(
-                                            'Select a User',
+                                            'create_new_invoice.hint_select_user'.tr,
                                             style: buildCustomStyle(
                                               FontWeightManager.medium,
                                               FontSize.s12,
@@ -357,12 +357,12 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                     isLeft: true,
                                     size: size,
                                     isStarRed: false,
-                                    hintText: 'Comment',
+                                    hintText: 'create_new_invoice.hint_comment'.tr,
                                     isTextField: true,
                                     read: false,
                                     maxlines: 3,
                                     controller: commentController,
-                                    title: "Comment",
+                                    title: 'create_new_invoice.label_comment'.tr,
                                   ),
                                 ]),
                                 Row(
@@ -372,10 +372,10 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                       isStarRed: false,
                                       isTextField: true,
                                       size: size,
-                                      hintText: 'Particulars',
+                                      hintText: 'create_new_invoice.hint_particulars'.tr,
                                       read: false,
                                       controller: particularsController,
-                                      title: "Particulars",
+                                      title: 'create_new_invoice.label_particulars'.tr,
                                     ),
                                   ],
                                 ),
@@ -386,7 +386,7 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                       padding:
                                           const EdgeInsets.only(left: 10.0),
                                       child: CustomRoundButton(
-                                        title: "Submit",
+                                        title: 'create_new_invoice.btn_submit'.tr,
                                         fct: () async {
                                           if (formKey.currentState!
                                               .validate()) {
@@ -454,7 +454,7 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                             showScaffold(
                                               context: context,
                                               message:
-                                                  'Please fill all required fields',
+                                                  'create_new_invoice.error_fill_required'.tr,
                                             );
                                           }
                                         },
@@ -468,7 +468,7 @@ class CreateNewInvoiceScreen extends StatelessWidget {
                                       padding:
                                           const EdgeInsets.only(left: 10.0),
                                       child: CustomRoundButton(
-                                        title: "Back",
+                                        title: 'create_new_invoice.btn_back'.tr,
                                         boxColor: Colors.white,
                                         textColor: ColorManager.kPrimaryColor,
                                         fct: () async {

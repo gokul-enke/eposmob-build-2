@@ -1,4 +1,26 @@
 {
+  "create_new_invoice": {
+    "btn_invoice_list": "قائمة الفواتير",
+    "page_title": "إنشاء فاتورة جديدة",
+    "label_account_type": "نوع الحساب",
+    "hint_select_account_type": "اختر نوع الحساب",
+    "error_required": "هذا الحقل مطلوب",
+    "label_payment_method": "طريقة الدفع",
+    "hint_select_payment_method": "اختر طريقة الدفع",
+    "hint_ref": "المرجع",
+    "label_payment_method_ref": "مرجع طريقة الدفع",
+    "hint_amount": "المبلغ",
+    "label_amount": "المبلغ",
+    "label_from": "من",
+    "hint_select_user": "اختر مستخدمًا",
+    "hint_comment": "التعليق",
+    "label_comment": "التعليق",
+    "hint_particulars": "التفاصيل",
+    "label_particulars": "التفاصيل",
+    "btn_submit": "إرسال",
+    "error_fill_required": "يرجى ملء جميع الحقول المطلوبة",
+    "btn_back": "رجوع"
+  },
   "add_voucher_details": {
     "permission_required": "مطلوب إذن الشراء لعرض تفاصيل القسيمة.",
     "btn_all_vouchers": "جميع القسائم",
