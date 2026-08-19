@@ -160,7 +160,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     if (!canViewPurchasePrice(context)) {
-      return const SafeArea(
+      return SafeArea(
         child: Center(
           child: Text('add_purchase.permission_required'.tr),
         ),

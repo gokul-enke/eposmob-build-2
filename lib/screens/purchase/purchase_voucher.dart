@@ -103,7 +103,7 @@ class _PurchaseVoucherScreenState extends State<PurchaseVoucherScreen> {
   @override
   Widget build(BuildContext context) {
     if (!canViewPurchasePrice(context)) {
-      return const SafeArea(
+      return SafeArea(
         child: Center(
           child: Text('purchase_voucher.permission_required'.tr),
         ),

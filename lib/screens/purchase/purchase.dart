@@ -564,9 +564,9 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
       );
     } catch (e) {
       debugPrint("Error in _buildPurchaseList: $e");
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(30.0),
+          padding: const EdgeInsets.all(30.0),
           child: Text('purchase.error_loading_list'.tr),
         ),
       );

@@ -104,7 +104,7 @@ class _SupplierDetailsScreenState extends State<SupplierDetailsScreen> {
                     : supplier == null
                         ? SizedBox(
                             height: size.height,
-                            child: const Center(
+                            child: Center(
                                 child: Text('supplier_details.no_supplier'.tr)))
                         : Column(
                             crossAxisAlignment: CrossAxisAlignment

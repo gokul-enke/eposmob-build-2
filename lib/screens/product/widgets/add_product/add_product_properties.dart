@@ -190,6 +190,7 @@ class _AddProductPropertiesScreenState
                                             .map((item) =>
                                                 MultiSelectItem<String>(
                                                     item, item))
+                                            .toList(),
                                         title: Text('add_product_properties.label_choose_prop'.trParams({'code': propsCode.toString()})),
                                         selectedColor:
                                             ColorManager.kPrimaryColor,
