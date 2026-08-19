@@ -1,4 +1,21 @@
 {
+  "kiosk_billing": {
+    "page_title": "تفاصيل الفاتورة",
+    "label_first_name": "الاسم الأول",
+    "label_email": "البريد الإلكتروني",
+    "label_phone": "رقم الهاتف",
+    "label_address": "العنوان",
+    "net_amount": "المبلغ الصافي",
+    "shipping": "الشحن",
+    "discount": "الخصم",
+    "gst": "ضريبة السلع والخدمات",
+    "total_payable": "إجمالي المستحق",
+    "chose_payment_method": "اختر طريقة الدفع",
+    "payment_cash": "نقدي",
+    "payment_card": "بطاقة",
+    "payment_upi": "UPI",
+    "btn_pay": "دفع @amount"
+  },
   "product_sales_report": {
     "error_unavailable": "تقرير مبيعات المنتجات غير متاح حالياً.",
     "page_title": "تقرير مبيعات المنتجات",

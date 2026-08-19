@@ -1,4 +1,21 @@
 {
+  "kiosk_billing": {
+    "page_title": "Billing Details",
+    "label_first_name": "FirstName",
+    "label_email": "Email Address",
+    "label_phone": "Phone Number",
+    "label_address": "Address",
+    "net_amount": "Net amount",
+    "shipping": "Shipping",
+    "discount": "Discount",
+    "gst": "GST",
+    "total_payable": "Total Payable",
+    "chose_payment_method": "Chose Payment Method",
+    "payment_cash": "Cash",
+    "payment_card": "Card",
+    "payment_upi": "UPI",
+    "btn_pay": "Pay @amount"
+  },
   "product_sales_report": {
     "error_unavailable": "Product sales report is currently unavailable.",
     "page_title": "Product Sales Report",
