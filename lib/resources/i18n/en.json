@@ -28,6 +28,11 @@
   "add_category_properties": {
     "page_title": "Category Properties"
   },
+  "add_product_properties": {
+    "hint_enter_prop": "Enter @code",
+    "msg_failed": "Failed",
+    "msg_failed_add": "Failed to add properties"
+  },
   "notifications": {
     "page_title": "Notifications"
   },
@@ -667,7 +672,8 @@
     "previous": "Previous",
     "next": "Next",
     "page": "Page",
-    "of": "of"
+    "of": "of",
+    "page_of": "Page @current of @total"
   },
   "general": {
     "ok": "OK",

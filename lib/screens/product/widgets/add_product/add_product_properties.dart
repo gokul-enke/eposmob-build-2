@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_title.dart';
 import 'package:pos_machine/providers/category_providers.dart';
@@ -122,7 +123,7 @@ class _AddProductPropertiesScreenState
                                         cursorColor: ColorManager.kPrimaryColor,
                                         decoration: InputDecoration(
                                           border: InputBorder.none,
-                                          hintText: 'Enter $propsCode',
+                                          hintText: 'add_product_properties.hint_enter_prop'.trParams({'code': propsCode}),
                                           hintStyle: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -303,7 +304,7 @@ class _AddProductPropertiesScreenState
                             int? productId = gridSelectionProvider.getProductId;
                             if (productId == null) {
                               showScaffoldError(
-                                  context: context, message: 'Failed');
+                                  context: context, message: 'add_product_properties.msg_failed'.tr);
                             } else {
                               showDialog(
                                   context: context,
@@ -359,7 +360,7 @@ class _AddProductPropertiesScreenState
                                     Navigator.pop(context);
                                     showScaffoldError(
                                       context: context,
-                                      message: 'Failed to add properties',
+                                      message: 'add_product_properties.msg_failed_add'.tr,
                                     );
                                   }
                                 },
