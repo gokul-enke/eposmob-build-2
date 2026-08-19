@@ -1,4 +1,26 @@
 {
+  "product_sales_report": {
+    "error_unavailable": "تقرير مبيعات المنتجات غير متاح حالياً.",
+    "page_title": "تقرير مبيعات المنتجات",
+    "filter_categories": "الفئات",
+    "hint_select_category": "اختر الفئة",
+    "option_please_select": "الرجاء الاختيار",
+    "filter_select_product": "اختر المنتج",
+    "hint_select_product": "--اختر--",
+    "filter_from_date": "من تاريخ",
+    "filter_to_date": "إلى تاريخ",
+    "filter_amount": "المبلغ",
+    "hint_amount": "المبلغ",
+    "btn_search": "بحث",
+    "section_title": "تقرير مبيعات المنتجات",
+    "col_no": "رقم",
+    "col_product_name": "اسم المنتج",
+    "col_category_name": "اسم الفئة",
+    "col_products_sold": "عدد المنتجات المباعة",
+    "col_unit_price": "سعر الوحدة",
+    "col_total_amount": "المبلغ الإجمالي",
+    "col_action": "الإجراء"
+  },
   "purchase": {
     "permission_required": "مطلوب إذن الشراء لعرض المشتريات.",
     "page_title": "قائمة المشتريات",

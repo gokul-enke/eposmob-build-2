@@ -1,5 +1,6 @@
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_border.dart';
@@ -39,8 +40,8 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
   void _showLoadError(Object error) {
     debugPrint('Product sales report unavailable: $error');
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('Product sales report is currently unavailable.'),
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('product_sales_report.error_unavailable'.tr),
       backgroundColor: Colors.red,
     ));
   }
@@ -161,7 +162,7 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
             child: ListView(
             children: [
               Text(
-                "Product Sales Report",
+                'product_sales_report.page_title'.tr,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s20, 0.30, ColorManager.textColor),
               ),
@@ -180,7 +181,7 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Text(
-                            "Categories ",
+                            'product_sales_report.filter_categories'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.regular,
                               FontSize.s14,
@@ -202,7 +203,7 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
                                     categoryProvider.selectedCategoryIndex]
                                 : null,
                             hint: Text(
-                              'Select Category',
+                              'product_sales_report.hint_select_category'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.medium,
                                 FontSize.s12,
@@ -216,7 +217,7 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
                                       value: category,
                                       child: category.categoryName == "ALL"
                                           ? Text(
-                                              ' Please Select',
+                                              'product_sales_report.option_please_select'.tr,
                                               style: buildCustomStyle(
                                                 FontWeightManager.medium,
                                                 FontSize.s12,
@@ -274,7 +275,7 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Text(
-                            "Select Product ",
+                            'product_sales_report.filter_select_product'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.regular,
                               FontSize.s14,
@@ -291,7 +292,7 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
                             child: DropdownButton2<GetProduct>(
                               isExpanded: true,
                               hint: Text(
-                                '--Select--',
+                                'product_sales_report.hint_select_product'.tr,
                                 style: buildCustomStyle(
                                   FontWeightManager.regular,
                                   FontSize.s14,
@@ -408,7 +409,7 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Text(
-                            "From Date ",
+                            'product_sales_report.filter_from_date'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.regular,
                               FontSize.s14,
@@ -440,7 +441,7 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Text(
-                            "To Date ",
+                            'product_sales_report.filter_to_date'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.regular,
                               FontSize.s14,
@@ -479,7 +480,7 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Text(
-                              "Amount ",
+                              'product_sales_report.filter_amount'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s14,
@@ -503,7 +504,7 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
                               style: buildCustomStyle(FontWeightManager.medium,
                                   FontSize.s10, 0.18, ColorManager.textColor),
                               decoration: decoration.copyWith(
-                                  hintText: "Amount    ",
+                                  hintText: 'product_sales_report.hint_amount'.tr,
                                   hintStyle: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s10,
@@ -523,7 +524,7 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
                     Padding(
                       padding: const EdgeInsets.only(left: 10.0, top: 30),
                       child: CustomRoundButton(
-                        title: "Search",
+                        title: 'product_sales_report.btn_search'.tr,
                         fct: searchAccountBook,
                         height: 45,
                         width: size.width * 0.09,
@@ -533,7 +534,7 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
                     Padding(
                       padding: const EdgeInsets.only(left: 10.0, top: 30),
                       child: CustomRoundButton(
-                        title: "Reset",
+                        title: 'general.reset'.tr,
                         boxColor: Colors.white,
                         textColor: ColorManager.kPrimaryColor,
                         fct: resetSearch,
@@ -548,7 +549,7 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 18.0),
                 child: Text(
-                  "Product Sales Report   ",
+                  'product_sales_report.section_title'.tr,
                   style: buildCustomStyle(FontWeightManager.semiBold,
                       FontSize.s20, 0.30, ColorManager.textColor),
                 ),
@@ -581,13 +582,13 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
                       decoration:
                           const BoxDecoration(color: ColorManager.tableBGColor),
                       children: [
-                        _buildTableHeader("No"),
-                        _buildTableHeader("Product Name"),
-                        _buildTableHeader("Category Name"),
-                        _buildTableHeader("No. of Product Sold"),
-                        _buildTableHeader("Unit Price"),
-                        _buildTableHeader("Total Amount"),
-                        _buildTableHeader("Action"),
+                        _buildTableHeader('product_sales_report.col_no'.tr),
+                        _buildTableHeader('product_sales_report.col_product_name'.tr),
+                        _buildTableHeader('product_sales_report.col_category_name'.tr),
+                        _buildTableHeader('product_sales_report.col_products_sold'.tr),
+                        _buildTableHeader('product_sales_report.col_unit_price'.tr),
+                        _buildTableHeader('product_sales_report.col_total_amount'.tr),
+                        _buildTableHeader('product_sales_report.col_action'.tr),
                       ],
                     ),
                     if (reportsProvider.productSalesReport != null)

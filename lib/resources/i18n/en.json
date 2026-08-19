@@ -1,4 +1,26 @@
 {
+  "product_sales_report": {
+    "error_unavailable": "Product sales report is currently unavailable.",
+    "page_title": "Product Sales Report",
+    "filter_categories": "Categories",
+    "hint_select_category": "Select Category",
+    "option_please_select": "Please Select",
+    "filter_select_product": "Select Product",
+    "hint_select_product": "--Select--",
+    "filter_from_date": "From Date",
+    "filter_to_date": "To Date",
+    "filter_amount": "Amount",
+    "hint_amount": "Amount",
+    "btn_search": "Search",
+    "section_title": "Product Sales Report",
+    "col_no": "No",
+    "col_product_name": "Product Name",
+    "col_category_name": "Category Name",
+    "col_products_sold": "No. of Product Sold",
+    "col_unit_price": "Unit Price",
+    "col_total_amount": "Total Amount",
+    "col_action": "Action"
+  },
   "purchase": {
     "permission_required": "Purchase permission is required to view purchases.",
     "page_title": "Purchase List",
