@@ -33,8 +33,8 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
   void _showLoadError(Object error) {
     debugPrint('Customer account book unavailable: $error');
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('Customer account book is currently unavailable.'),
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('account_book.error_unavailable'.tr),
       backgroundColor: Colors.red,
     ));
   }
@@ -134,7 +134,7 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
             child: ListView(
             children: [
               Text(
-                "Customer Account Book",
+                'account_book.page_title'.tr,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s20, 0.30, ColorManager.textColor),
               ),
@@ -151,7 +151,7 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Text(
-                            "Customer ",
+                            'account_book.filter_customer'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.regular,
                               FontSize.s14,
@@ -166,7 +166,7 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
                           onchanged: (value) {},
                           controller: customerController,
                           size: size,
-                          hintText: 'Customer Name',
+                          hintText: 'account_book.hint_customer_name'.tr,
                         ),
                       ],
                     ),
@@ -176,7 +176,7 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Text(
-                            "From Date ",
+                            'account_book.filter_from_date'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.regular,
                               FontSize.s14,
@@ -218,7 +218,7 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Text(
-                            "To Date ",
+                            'account_book.filter_to_date'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.regular,
                               FontSize.s14,
@@ -258,7 +258,7 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Text(
-                              "Amount ",
+                              'account_book.filter_amount'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s14,
@@ -273,7 +273,7 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
                             onchanged: (value) {},
                             controller: amountController,
                             size: size,
-                            hintText: 'Amount',
+                            hintText: 'account_book.hint_amount'.tr,
                           ),
                         ],
                       ),
@@ -283,7 +283,7 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
                       child: Column(
                         children: [
                           CustomRoundButton(
-                            title: "Search",
+                            title: 'account_book.btn_search'.tr,
                             fct: searchAccountBook,
                             height: 45,
                             width: size.width * 0.09,
@@ -297,7 +297,7 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
                       child: Column(
                         children: [
                           CustomRoundButton(
-                            title: "Reset",
+                            title: 'general.reset'.tr,
                             boxColor: Colors.white,
                             textColor: ColorManager.kPrimaryColor,
                             fct: resetSearch,
@@ -347,13 +347,13 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
                       decoration:
                           const BoxDecoration(color: ColorManager.tableBGColor),
                       children: [
-                        _buildTableHeader("No"),
-                        _buildTableHeader("Customer Name"),
-                        _buildTableHeader("Debit Amount"),
-                        _buildTableHeader("Credit Amount"),
-                        _buildTableHeader("Balance Amount"),
-                        _buildTableHeader("Date"),
-                        _buildTableHeader("Action"),
+                        _buildTableHeader('account_book.col_no'.tr),
+                        _buildTableHeader('account_book.col_customer_name'.tr),
+                        _buildTableHeader('account_book.col_debit_amount'.tr),
+                        _buildTableHeader('account_book.col_credit_amount'.tr),
+                        _buildTableHeader('account_book.col_balance_amount'.tr),
+                        _buildTableHeader('account_book.col_date'.tr),
+                        _buildTableHeader('account_book.col_action'.tr),
                       ],
                     ),
                     if (reportsProvider.customerAccountBook != null)

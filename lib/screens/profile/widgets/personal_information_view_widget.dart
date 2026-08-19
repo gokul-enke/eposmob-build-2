@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_detail_row.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import '../../../components/build_container_box.dart';
@@ -47,7 +48,7 @@ class _PersonalInformationViewWidgetState
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "Customer Information",
+                    'profile.customer_info_title'.tr,
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s20, 0.30, ColorManager.textColor),
                   ),
@@ -66,21 +67,21 @@ class _PersonalInformationViewWidgetState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     BuildDetailRow(
-                      title1: "Name",
+                      title1: 'profile.label_name'.tr,
                       content1: widget.customer!.name ?? "",
-                      title2: "Email",
+                      title2: 'profile.label_email'.tr,
                       content2: widget.customer!.email ?? "",
                     ),
                     BuildDetailRow(
-                      title1: "Phone",
+                      title1: 'profile.label_phone'.tr,
                       content1: widget.customer!.phone ?? "",
-                      title2: "Address",
+                      title2: 'profile.label_address'.tr,
                       content2: widget.customer!.name ?? "N/A",
                     ),
                     BuildDetailRow(
-                      title1: "Customer ID",
+                      title1: 'profile.label_customer_id'.tr,
                       content1: widget.customer!.id?.toString() ?? "",
-                      title2: "Loyalty Points",
+                      title2: 'profile.label_loyalty_points'.tr,
                       content2: "",
                     ),
                   ],

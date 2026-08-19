@@ -1,6 +1,7 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:drag_select_grid_view/drag_select_grid_view.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_category_container.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -76,7 +77,7 @@ class _CategoryListItemNewState extends State<CategoryListItemNew> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Search Category',
+              'category_list_new.title_search'.tr,
               style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
                   0.30, ColorManager.textColor),
             ),
@@ -115,7 +116,7 @@ class _CategoryListItemNewState extends State<CategoryListItemNew> {
                 categoryProvider.listAllCategory(filterName: query);
               },
               size: size,
-              hintText: 'Search category',
+              hintText: 'category_list_new.hint_search_category'.tr,
             ),
             const SizedBox(
               height: 10,
@@ -262,7 +263,7 @@ class _CategoryListItemNewState extends State<CategoryListItemNew> {
                 productProvider.listAllProducts(filterName: query);
               },
               size: size,
-              hintText: 'Search Product',
+              hintText: 'category_list_new.hint_search_product'.tr,
             ),
             const SizedBox(
               height: 10,

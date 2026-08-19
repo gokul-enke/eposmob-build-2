@@ -111,7 +111,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Select Taxes',
+          'category.select_taxes'.tr,
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s12,
@@ -133,7 +133,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
           )
         else if (availableTaxes.isEmpty)
           Text(
-            'No taxes available',
+            'category.no_taxes'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s11,
@@ -206,7 +206,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
         debugPrint("isEmptycategorySlugController");
         showScaffoldError(
           context: context,
-          message: 'Please Fill the Required Fields',
+          message: 'category.err_fill_required'.tr,
         );
       } else {
         debugPrint("categoryIdController ${categoryIDController.text}");
@@ -279,7 +279,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
 
     if (categoryNameController.text.isEmpty) {
       setState(() {
-        _categoryNameError = "Category Name is required";
+        _categoryNameError = 'category.err_name_required'.tr;
       });
       isValid = false;
     } else {
@@ -290,7 +290,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
 
     if (categorySlugController.text.isEmpty) {
       setState(() {
-        _categorySlugError = "Category Slug is required";
+        _categorySlugError = 'category.err_slug_required'.tr;
       });
       isValid = false;
     } else {
@@ -302,7 +302,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
     if (!isValid) {
       showScaffoldError(
         context: context,
-        message: 'Please fill all required fields',
+        message: 'category.err_fill_all_required'.tr,
       );
     }
 
@@ -351,7 +351,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             CustomRoundButton(
-              title: "Submit",
+              title: 'category.btn_submit'.tr,
               fct: () => _handleSubmit(
                 context,
                 categoryProvider,
@@ -364,7 +364,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
             ),
             const SizedBox(height: 10),
             CustomRoundButton(
-              title: "Back",
+              title: 'category.btn_back'.tr,
               boxColor: Colors.white,
               textColor: ColorManager.kPrimaryColor,
               fct: () async {
@@ -383,7 +383,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
           Padding(
             padding: const EdgeInsetsDirectional.only(start: 10.0),
             child: CustomRoundButton(
-              title: "Submit",
+              title: 'category.btn_submit'.tr,
               fct: () => _handleSubmit(
                 context,
                 categoryProvider,
@@ -399,7 +399,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
           Padding(
             padding: const EdgeInsetsDirectional.only(start: 10.0),
             child: CustomRoundButton(
-              title: "Back",
+              title: 'category.btn_back'.tr,
               boxColor: Colors.white,
               textColor: ColorManager.kPrimaryColor,
               fct: () async {
@@ -445,13 +445,12 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                   onPressed: () {
                     sideBarController.index.value = 12;
                   },
-                  text: 'All Categories',
+                  text: 'category.all_categories'.tr,
                 ),
                 const SizedBox(height: 12),
-                const CategoryPageHeader(
-                  title: 'Add New Category',
-                  subtitle:
-                      'Fill in the details below to create a new product category.',
+                CategoryPageHeader(
+                  title: 'category.add_title'.tr,
+                  subtitle: 'category.add_subtitle'.tr,
                 ),
                 SizedBox(height: isMobile ? 16 : 20),
                 CategoryFormCard(
@@ -513,8 +512,8 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                     controller: categoryNameController,
                                     size: size,
                                     width: fieldWidth,
-                                    title: 'Category Name',
-                                    hintText: 'Category Name',
+                                    title: 'category.col_name'.tr,
+                                    hintText: 'category.col_name'.tr,
                                   ),
                                 ),
                                 if (categoryProvider.allCategories.isNotEmpty)
@@ -533,8 +532,8 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                     size: size,
                                     width: fieldWidth,
                                     isStarRed: true,
-                                    title: "Category Slug",
-                                    hintText: 'Url Slug',
+                                    title: 'category.field_slug'.tr,
+                                    hintText: 'category.field_slug_hint'.tr,
                                     readOnly: true,
                                   ),
                                 ),
@@ -563,8 +562,8 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                           size: size,
                                           width: fieldWidth,
                                           title:
-                                              "Category Name - ${language.name}(${language.code.toUpperCase()})",
-                                          hintText: 'Enter...',
+                                              '${'category.field_lang_name_prefix'.tr} ${language.name}(${language.code.toUpperCase()})',
+                                          hintText: 'category.field_lang_hint'.tr,
                                           readOnly: false,
                                         ),
                                       ),
@@ -577,7 +576,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                           width: 44,
                                           child: Tooltip(
                                             message:
-                                                'Translate to ${language.name}',
+                                                '${'category.tooltip_translate_prefix'.tr} ${language.name}',
                                             child: ElevatedButton(
                                               onPressed: languageTranslating[
                                                           language.id] ==
@@ -800,7 +799,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'Sellable',
+                                    'category.label_sellable'.tr,
                                     style: buildCustomStyle(
                                       FontWeightManager.regular,
                                       FontSize.s14,
@@ -820,7 +819,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'Purchasable',
+                                    'category.label_purchasable'.tr,
                                     style: buildCustomStyle(
                                       FontWeightManager.regular,
                                       FontSize.s14,
@@ -856,7 +855,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
         BuildTextTile(
           isStarRed: false,
           isTextField: true,
-          title: "Select Parent Category",
+          title: 'category.select_parent'.tr,
           textStyle: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s14,
@@ -881,7 +880,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                 ? categoryList![categoryProvider.selectedCategoryIndex]
                 : null,
             hint: Text(
-              'Select Category',
+              'category.hint_select_category'.tr,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: buildCustomStyle(
@@ -895,7 +894,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
               DropdownMenuItem<Category>(
                 value: null,
                 child: Text(
-                  'None',
+                  'category.none'.tr,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: buildCustomStyle(
@@ -912,7 +911,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                         value: category,
                         child: category.categoryName == "ALL"
                             ? Text(
-                                ' New Category',
+                                ' ${'category.new_category'.tr}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: buildCustomStyle(
@@ -1001,7 +1000,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        "Select Image",
+                                        'category.dialog_select_image'.tr,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: buildCustomStyle(
@@ -1027,7 +1026,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                             CrossAxisAlignment.stretch,
                                         children: [
                                           CustomRoundButton(
-                                            title: "Upload from Device",
+                                            title: 'category.btn_upload_device'.tr,
                                             fct: () async {
                                               FilePickerResult? result =
                                                   await FilePicker.platform
@@ -1069,7 +1068,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                     : Row(
                                         children: [
                                           CustomRoundButton(
-                                            title: "Upload from Device",
+                                            title: 'category.btn_upload_device'.tr,
                                             fct: () async {
                                               FilePickerResult? result =
                                                   await FilePicker.platform
@@ -1205,7 +1204,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                                       15.0),
                                                   child: Center(
                                                       child: Text(
-                                                    "Select",
+                                                    'category.tbl_select'.tr,
                                                     style: buildCustomStyle(
                                                       FontWeightManager.medium,
                                                       FontSize.s12,
@@ -1224,7 +1223,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                                       15.0),
                                                   child: Center(
                                                       child: Text(
-                                                    "Image Title",
+                                                    'category.tbl_image_title'.tr,
                                                     style: buildCustomStyle(
                                                       FontWeightManager.medium,
                                                       FontSize.s12,
@@ -1243,7 +1242,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                                       15.0),
                                                   child: Center(
                                                       child: Text(
-                                                    "Preview",
+                                                    'category.tbl_preview'.tr,
                                                     style: buildCustomStyle(
                                                       FontWeightManager.medium,
                                                       FontSize.s12,
@@ -1365,7 +1364,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                             CrossAxisAlignment.stretch,
                                         children: [
                                           CustomRoundButton(
-                                            title: "Cancel",
+                                            title: 'category.btn_cancel'.tr,
                                             boxColor: Colors.white,
                                             textColor:
                                                 ColorManager.kPrimaryColor,
@@ -1378,7 +1377,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                           ),
                                           const SizedBox(height: 10),
                                           CustomRoundButton(
-                                            title: "Choose",
+                                            title: 'category.btn_choose'.tr,
                                             boxColor: Colors.white,
                                             textColor:
                                                 ColorManager.kPrimaryColor,
@@ -1397,7 +1396,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                             padding: const EdgeInsetsDirectional
                                                 .only(start: 10.0),
                                             child: CustomRoundButton(
-                                              title: "Cancel",
+                                              title: 'category.btn_cancel'.tr,
                                               boxColor: Colors.white,
                                               textColor:
                                                   ColorManager.kPrimaryColor,
@@ -1413,7 +1412,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                             padding: const EdgeInsetsDirectional
                                                 .only(start: 10.0),
                                             child: CustomRoundButton(
-                                              title: "Choose",
+                                              title: 'category.btn_choose'.tr,
                                               boxColor: Colors.white,
                                               textColor:
                                                   ColorManager.kPrimaryColor,
@@ -1479,7 +1478,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        "Select Icon",
+                                        'category.dialog_select_icon'.tr,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: buildCustomStyle(
@@ -1505,7 +1504,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                             CrossAxisAlignment.stretch,
                                         children: [
                                           CustomRoundButton(
-                                            title: "Upload from Device",
+                                            title: 'category.btn_upload_device'.tr,
                                             fct: () async {
                                               FilePickerResult? result =
                                                   await FilePicker.platform
@@ -1547,7 +1546,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                     : Row(
                                         children: [
                                           CustomRoundButton(
-                                            title: "Upload from Device",
+                                            title: 'category.btn_upload_device'.tr,
                                             fct: () async {
                                               FilePickerResult? result =
                                                   await FilePicker.platform
@@ -1683,7 +1682,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                                       15.0),
                                                   child: Center(
                                                       child: Text(
-                                                    "Select",
+                                                    'category.tbl_select'.tr,
                                                     style: buildCustomStyle(
                                                       FontWeightManager.medium,
                                                       FontSize.s12,
@@ -1702,7 +1701,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                                       15.0),
                                                   child: Center(
                                                       child: Text(
-                                                    "Image Title",
+                                                    'category.tbl_image_title'.tr,
                                                     style: buildCustomStyle(
                                                       FontWeightManager.medium,
                                                       FontSize.s12,
@@ -1721,7 +1720,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                                       15.0),
                                                   child: Center(
                                                       child: Text(
-                                                    "Preview",
+                                                    'category.tbl_preview'.tr,
                                                     style: buildCustomStyle(
                                                       FontWeightManager.medium,
                                                       FontSize.s12,
@@ -1843,7 +1842,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                             CrossAxisAlignment.stretch,
                                         children: [
                                           CustomRoundButton(
-                                            title: "Cancel",
+                                            title: 'category.btn_cancel'.tr,
                                             boxColor: Colors.white,
                                             textColor:
                                                 ColorManager.kPrimaryColor,
@@ -1856,7 +1855,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                           ),
                                           const SizedBox(height: 10),
                                           CustomRoundButton(
-                                            title: "Choose",
+                                            title: 'category.btn_choose'.tr,
                                             boxColor: Colors.white,
                                             textColor:
                                                 ColorManager.kPrimaryColor,
@@ -1875,7 +1874,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                             padding: const EdgeInsetsDirectional
                                                 .only(start: 10.0),
                                             child: CustomRoundButton(
-                                              title: "Cancel",
+                                              title: 'category.btn_cancel'.tr,
                                               boxColor: Colors.white,
                                               textColor:
                                                   ColorManager.kPrimaryColor,
@@ -1891,7 +1890,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                             padding: const EdgeInsetsDirectional
                                                 .only(start: 10.0),
                                             child: CustomRoundButton(
-                                              title: "Choose",
+                                              title: 'category.btn_choose'.tr,
                                               boxColor: Colors.white,
                                               textColor:
                                                   ColorManager.kPrimaryColor,

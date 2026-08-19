@@ -115,9 +115,9 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "Add New Supplier",
-                style: TextStyle(
+              Text(
+                'add_supplier.title'.tr,
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
@@ -129,9 +129,9 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
               ),
             ],
           ),
-          const Text(
-            "Enter supplier details to add them to your system",
-            style: TextStyle(fontSize: 16, color: Colors.black54),
+          Text(
+            'add_supplier.subtitle'.tr,
+            style: const TextStyle(fontSize: 16, color: Colors.black54),
           ),
           const SizedBox(height: 16),
           // Row 1: Name, Email
@@ -143,12 +143,12 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                       controller: nameTextController,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'This field is required';
+                          return 'add_supplier.validator_required'.tr;
                         }
                         return null;
                       },
                       onchanged: (value) {},
-                      hintText: 'Supplier Name',
+                      hintText: 'add_supplier.field_name'.tr,
                       size: size,
                       width: fieldWidth),
                   const SizedBox(height: 12),
@@ -158,7 +158,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                       keyboardType: TextInputType.emailAddress,
                       validator: validateEmail,
                       onchanged: (value) {},
-                      hintText: 'Email Address',
+                      hintText: 'add_supplier.field_email'.tr,
                       size: size,
                       width: fieldWidth),
                 ])
@@ -171,12 +171,12 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                           controller: nameTextController,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'This field is required';
+                              return 'add_supplier.validator_required'.tr;
                             }
                             return null;
                           },
                           onchanged: (value) {},
-                          hintText: 'Supplier Name',
+                          hintText: 'add_supplier.field_name'.tr,
                           size: size,
                           width: size.width / 4.5),
                       buildColumnWidgetForTextFields(
@@ -185,7 +185,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                           keyboardType: TextInputType.emailAddress,
                           validator: validateEmail,
                           onchanged: (value) {},
-                          hintText: 'Email Address',
+                          hintText: 'add_supplier.field_email'.tr,
                           size: size,
                           width: size.width / 4.5),
                     ]),
@@ -202,7 +202,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                       inputFormatters: [PhoneNumberFormatter()],
                       validator: validatePhoneNumber,
                       onchanged: (value) {},
-                      hintText: 'Phone Number',
+                      hintText: 'add_supplier.field_phone'.tr,
                       size: size,
                       width: fieldWidth),
                   const SizedBox(height: 12),
@@ -212,7 +212,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                       keyboardType: TextInputType.number,
                       inputFormatters: [PhoneNumberFormatter()],
                       onchanged: (value) {},
-                      hintText: 'Alternative Phone',
+                      hintText: 'add_supplier.field_alt_phone'.tr,
                       size: size,
                       width: fieldWidth),
                 ])
@@ -227,7 +227,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                           inputFormatters: [PhoneNumberFormatter()],
                           validator: validatePhoneNumber,
                           onchanged: (value) {},
-                          hintText: 'Phone Number',
+                          hintText: 'add_supplier.field_phone'.tr,
                           size: size,
                           width: size.width / 4.5),
                       buildColumnWidgetForTextFields(
@@ -236,7 +236,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                           keyboardType: TextInputType.number,
                           inputFormatters: [PhoneNumberFormatter()],
                           onchanged: (value) {},
-                          hintText: 'Alternative Phone',
+                          hintText: 'add_supplier.field_alt_phone'.tr,
                           size: size,
                           width: size.width / 4.5),
                     ]),
@@ -249,7 +249,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                       autofocus: true,
                       controller: addressTextController,
                       onchanged: (value) {},
-                      hintText: 'Address',
+                      hintText: 'add_supplier.field_address'.tr,
                       size: size,
                       width: fieldWidth),
                   const SizedBox(height: 12),
@@ -257,7 +257,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                       autofocus: true,
                       controller: taxNumberController,
                       onchanged: (value) {},
-                      hintText: 'Tax Number',
+                      hintText: 'add_supplier.field_tax_number'.tr,
                       size: size,
                       width: fieldWidth),
                 ])
@@ -268,14 +268,14 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                           autofocus: true,
                           controller: addressTextController,
                           onchanged: (value) {},
-                          hintText: 'Address',
+                          hintText: 'add_supplier.field_address'.tr,
                           size: size,
                           width: size.width / 4.5),
                       buildColumnWidgetForTextFields(
                           autofocus: true,
                           controller: taxNumberController,
                           onchanged: (value) {},
-                          hintText: 'Tax Number',
+                          hintText: 'add_supplier.field_tax_number'.tr,
                           size: size,
                           width: size.width / 4.5),
                     ]),
@@ -352,8 +352,8 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                       Expanded(
                         child: Text(
                           selectedCategories.isEmpty
-                              ? 'Select Categories'
-                              : '${selectedCategories.length} categories selected',
+                              ? 'add_supplier.category_select_hint'.tr
+                              : '${selectedCategories.length} ${'add_supplier.category_selected'.tr}',
                           style: TextStyle(
                             fontSize: 13,
                             color: selectedCategories.isEmpty
@@ -508,9 +508,9 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
-                                'Select Categories',
-                                style: TextStyle(
+                              Text(
+                                'add_supplier.dialog_select_categories'.tr,
+                                style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.black87,
@@ -544,7 +544,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                               onChanged: filterCategories,
                               style: const TextStyle(fontSize: 14),
                               decoration: InputDecoration(
-                                hintText: 'Search categories...',
+                                hintText: 'add_supplier.search_categories'.tr,
                                 hintStyle: TextStyle(
                                   color: Colors.grey.shade500,
                                   fontSize: 14,
@@ -591,8 +591,8 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                         children: [
                           Text(
                             tempSelected.isEmpty
-                                ? '${categories.length} categories available'
-                                : '${tempSelected.length} selected',
+                                ? '${categories.length} ${'add_supplier.category_available'.tr}'
+                                : '${tempSelected.length} ${'add_supplier.category_count_selected'.tr}',
                             style: TextStyle(
                               fontSize: 13,
                               color: tempSelected.isEmpty
@@ -609,7 +609,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                                 });
                               },
                               child: Text(
-                                'Clear all',
+                                'add_supplier.btn_clear_all'.tr,
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: ColorManager.kPrimaryColor,
@@ -639,7 +639,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                                       ),
                                       const SizedBox(height: 12),
                                       Text(
-                                        'No categories found',
+                                        'add_supplier.no_categories_found'.tr,
                                         style: TextStyle(
                                           color: Colors.grey.shade600,
                                           fontSize: 14,
@@ -797,7 +797,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                               Navigator.pop(dialogContext);
                             },
                             child: Text(
-                              'Cancel',
+                              'general.cancel'.tr,
                               style: TextStyle(
                                 color: Colors.grey.shade700,
                                 fontWeight: FontWeight.w500,
@@ -823,9 +823,9 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                                 vertical: 12,
                               ),
                             ),
-                            child: const Text(
-                              'Apply',
-                              style: TextStyle(
+                            child: Text(
+                              'add_supplier.btn_apply'.tr,
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -851,7 +851,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
       ],
-      title: 'Opening Balance',
+      title: 'add_supplier.field_opening_balance'.tr,
       onchanged: (value) {},
       hintText: '0.00',
       size: size,
@@ -863,14 +863,14 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
     final crField = buildColumnWidgetForTextFields(
       controller: crNumberController,
       onchanged: (value) {},
-      hintText: 'CR Number',
+      hintText: 'add_supplier.field_cr_number'.tr,
       size: size,
       width: double.infinity,
     );
     final vatField = buildColumnWidgetForTextFields(
       controller: vatNumberController,
       onchanged: (value) {},
-      hintText: 'VAT Number',
+      hintText: 'add_supplier.field_vat_number'.tr,
       size: size,
       width: double.infinity,
     );
@@ -878,9 +878,9 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'KYC Information',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        Text(
+          'add_supplier.section_kyc'.tr,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 8),
         size.width < 700
@@ -907,7 +907,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Payment Type *",
+          'add_supplier.field_payment_type'.tr,
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
@@ -917,9 +917,9 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
         const SizedBox(height: 8),
         Row(
           children: [
-            _buildRadioOption("To Pay", PaymentType.toPay),
+            _buildRadioOption('add_supplier.payment_to_pay'.tr, PaymentType.toPay),
             const SizedBox(width: 24),
-            _buildRadioOption("To Receive", PaymentType.toReceive),
+            _buildRadioOption('add_supplier.payment_to_receive'.tr, PaymentType.toReceive),
           ],
         ),
       ],
@@ -970,8 +970,8 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Create Supplier',
-                style: TextStyle(fontWeight: FontWeight.w600)),
+            child: Text('add_supplier.btn_create'.tr,
+                style: const TextStyle(fontWeight: FontWeight.w600)),
           ),
           if (widget.showCreateAnother) ...[
             const SizedBox(height: 10),
@@ -988,8 +988,8 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8)),
               ),
-              child: const Text('Create & Another',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
+              child: Text('add_supplier.btn_create_another'.tr,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
             ),
           ],
           const SizedBox(height: 10),
@@ -1002,7 +1002,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Close'),
+            child: Text('add_supplier.btn_close'.tr),
           ),
         ],
       );
@@ -1010,7 +1010,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
 
     List<Widget> buttons = [
       CustomRoundButton(
-        title: "Close",
+        title: 'add_supplier.btn_close'.tr,
         fontSize: FontSize.s12,
         height: MediaQuery.of(context).size.height * .05,
         width: 120,
@@ -1027,7 +1027,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
       buttons.addAll([
         const SizedBox(width: 10),
         CustomRoundButton(
-          title: "Create & Another",
+          title: 'add_supplier.btn_create_another'.tr,
           fontSize: FontSize.s12,
           height: MediaQuery.of(context).size.height * .05,
           width: 150,
@@ -1046,7 +1046,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
     buttons.addAll([
       const SizedBox(width: 10),
       CustomRoundButton(
-        title: "Create Supplier",
+        title: 'add_supplier.btn_create'.tr,
         fontSize: FontSize.s12,
         height: MediaQuery.of(context).size.height * .05,
         width: 140,
@@ -1069,18 +1069,18 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
     // Require payment type before submit
     if (selectedPaymentType == PaymentType.none) {
       showScaffoldError(
-          context: context, message: "Please select a payment type");
+          context: context, message: 'add_supplier.error_select_payment_type'.tr);
       return;
     }
 
     // Validate required fields
     if (nameTextController.text.trim().isEmpty) {
-      showScaffoldError(context: context, message: "Name is required");
+      showScaffoldError(context: context, message: 'add_supplier.error_name_required'.tr);
       return;
     }
 
     if (phoneNumberController.text.trim().isEmpty) {
-      showScaffoldError(context: context, message: "Phone number is required");
+      showScaffoldError(context: context, message: 'add_supplier.error_phone_required'.tr);
       return;
     }
 
@@ -1179,7 +1179,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
           showScaffoldError(
               context: context,
               message: safeResult['message']?.toString() ??
-                  "An unknown error occurred");
+                  'add_supplier.error_unknown'.tr);
         }
       }
     } catch (error) {
@@ -1224,17 +1224,17 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
     }
     const pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$";
     final regex = RegExp(pattern);
-    return !regex.hasMatch(value) ? 'Enter a valid email address' : null;
+    return !regex.hasMatch(value) ? 'add_supplier.validator_email_invalid'.tr : null;
   }
 
   String? validatePhoneNumber(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Phone number is required';
+      return 'add_supplier.error_phone_required'.tr;
     }
     // Check if the phone number is valid
     final phoneNumber = value.replaceAll("-", ""); // Remove formatting
     if (phoneNumber.length < 10) {
-      return 'Enter a valid phone number';
+      return 'add_supplier.validator_phone_invalid'.tr;
     }
     return null; // Return null if there are no errors
   }

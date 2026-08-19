@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -96,7 +97,7 @@ class _OpenProfileScreenState extends State<OpenProfileScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'User Profile',
+                          'profile.title'.tr,
                           style: buildCustomStyle(FontWeightManager.semiBold,
                               FontSize.s20, 0.30, ColorManager.textColor),
                         ),
@@ -184,7 +185,7 @@ class _OpenProfileScreenState extends State<OpenProfileScreen> {
                                             fit: BoxFit.none,
                                           ),
                                           title: Text(
-                                            'Personal Information',
+                                            'profile.tab_personal_info'.tr,
                                             style: tab == 0
                                                 ? buildCustomStyle(
                                                     FontWeightManager.medium,
@@ -234,7 +235,7 @@ class _OpenProfileScreenState extends State<OpenProfileScreen> {
                                                 BlendMode.srcIn,
                                               )),
                                           title: Text(
-                                            "Edit Profile",
+                                            'profile.tab_edit_profile'.tr,
                                             style: tab == 1
                                                 ? buildCustomStyle(
                                                     FontWeightManager.medium,
@@ -284,7 +285,7 @@ class _OpenProfileScreenState extends State<OpenProfileScreen> {
                                                 BlendMode.srcIn,
                                               )),
                                           title: Text(
-                                            "Change Password",
+                                            'profile.tab_change_password'.tr,
                                             style: tab == 2
                                                 ? buildCustomStyle(
                                                     FontWeightManager.medium,
@@ -378,7 +379,7 @@ class _OpenProfileScreenState extends State<OpenProfileScreen> {
                                               fit: BoxFit.none,
                                             ),
                                             title: Text(
-                                              'Logout',
+                                              'profile.btn_logout'.tr,
                                               style: buildCustomStyle(
                                                   FontWeightManager.medium,
                                                   FontSize.s12,
@@ -414,7 +415,7 @@ class _OpenProfileScreenState extends State<OpenProfileScreen> {
                                             fit: BoxFit.none,
                                           ),
                                           title: Text(
-                                            'Delete Account',
+                                            'profile.btn_delete_account'.tr,
                                             style: buildCustomStyle(
                                                 FontWeightManager.medium,
                                                 FontSize.s12,

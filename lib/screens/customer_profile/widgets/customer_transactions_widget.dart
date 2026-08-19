@@ -267,7 +267,7 @@ class _CustomerTransactionsWidgetState
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text("Preparing transaction report..."),
+          content: Text('customer_transactions.msg_preparing_report'.tr),
           backgroundColor: Theme.of(context).primaryColor,
         ),
       );
@@ -415,7 +415,7 @@ class _CustomerTransactionsWidgetState
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text("Preparing transaction report for printing..."),
+          content: Text('customer_transactions.msg_preparing_print'.tr),
           backgroundColor: Theme.of(context).primaryColor,
         ),
       );
@@ -503,7 +503,7 @@ class _CustomerTransactionsWidgetState
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Transactions',
+                        'customer_transactions.title'.tr,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 16,
@@ -516,7 +516,7 @@ class _CustomerTransactionsWidgetState
                       icon: const Icon(Icons.print, size: 20),
                       onPressed: _printReport,
                       color: const Color(0xFF7F8C8D),
-                      tooltip: 'Print transactions',
+                      tooltip: 'customer_transactions.tooltip_print'.tr,
                       constraints: const BoxConstraints(),
                       padding: const EdgeInsets.all(4),
                     ),
@@ -531,8 +531,8 @@ class _CustomerTransactionsWidgetState
                       onPressed: _toggleFilterPanel,
                       color: const Color(0xFF7F8C8D),
                       tooltip: _isFilterPanelVisible
-                          ? 'Close filters'
-                          : 'Filter transactions',
+                          ? 'customer_transactions.tooltip_close_filters'.tr
+                          : 'customer_transactions.tooltip_filter'.tr,
                       constraints: const BoxConstraints(),
                       padding: const EdgeInsets.all(4),
                     ),
@@ -561,7 +561,7 @@ class _CustomerTransactionsWidgetState
                         color: Color(0xFF3C92F5), size: 28),
                     const SizedBox(width: 12),
                     Text(
-                      'Transactions (${filteredTransactions.length})  Page $_currentPage/$_lastPage',
+                      '${'customer_transactions.title'.tr} (${filteredTransactions.length})  Page $_currentPage/$_lastPage',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -576,7 +576,7 @@ class _CustomerTransactionsWidgetState
                       icon: const Icon(Icons.print),
                       onPressed: _printReport,
                       color: const Color(0xFF7F8C8D),
-                      tooltip: 'Print transactions',
+                      tooltip: 'customer_transactions.tooltip_print'.tr,
                     ),
                     IconButton(
                       icon: Icon(_isFilterPanelVisible
@@ -585,8 +585,8 @@ class _CustomerTransactionsWidgetState
                       onPressed: _toggleFilterPanel,
                       color: const Color(0xFF7F8C8D),
                       tooltip: _isFilterPanelVisible
-                          ? 'Close filters'
-                          : 'Filter transactions',
+                          ? 'customer_transactions.tooltip_close_filters'.tr
+                          : 'customer_transactions.tooltip_filter'.tr,
                     ),
                   ],
                 ),
@@ -613,8 +613,8 @@ class _CustomerTransactionsWidgetState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Reference Number',
+                    Text(
+                      'customer_transactions.label_reference_number'.tr,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -624,11 +624,10 @@ class _CustomerTransactionsWidgetState
                     const SizedBox(height: 8),
                     TextField(
                       controller: _referenceController,
-                      decoration: const InputDecoration(
-                        hintText: 'Enter reference number',
-                        border: OutlineInputBorder(),
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                      decoration: InputDecoration(
+                        hintText: 'customer_transactions.hint_reference'.tr,
+                        border: const OutlineInputBorder(),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                       ),
                       onChanged: (value) {
                         setState(() {
@@ -644,8 +643,8 @@ class _CustomerTransactionsWidgetState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Transaction Type',
+                    Text(
+                      'customer_transactions.label_transaction_type'.tr,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -655,17 +654,16 @@ class _CustomerTransactionsWidgetState
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
                       value: _filterType,
-                      decoration: const InputDecoration(
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        hintText: "Select Type",
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        hintText: 'customer_transactions.hint_select_type'.tr,
+                        border: const OutlineInputBorder(),
                       ),
                       dropdownColor: Colors.white,
                       items: [
-                        const DropdownMenuItem(
+                        DropdownMenuItem(
                           value: null,
-                          child: Text("All Types"),
+                          child: Text('customer_transactions.label_all_types'.tr),
                         ),
                         ...transactionTypes.map((String type) {
                           return DropdownMenuItem<String>(
@@ -692,8 +690,8 @@ class _CustomerTransactionsWidgetState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'From Date',
+                    Text(
+                      'customer_transactions.label_from_date'.tr,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -716,7 +714,7 @@ class _CustomerTransactionsWidgetState
                         initialDate: _filterFromDate,
                         firstDate: DateTime(2000),
                         lastDate: DateTime(2101),
-                        hintText: "Select From Date",
+                        hintText: 'customer_transactions.hint_from_date'.tr,
                         isAllowEdit: true,
                       ),
                     ),
@@ -728,8 +726,8 @@ class _CustomerTransactionsWidgetState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'To Date',
+                    Text(
+                      'customer_transactions.label_to_date'.tr,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -752,7 +750,7 @@ class _CustomerTransactionsWidgetState
                         initialDate: _filterToDate,
                         firstDate: DateTime(2000),
                         lastDate: DateTime(2101),
-                        hintText: "Select To Date",
+                        hintText: 'customer_transactions.hint_to_date'.tr,
                         isAllowEdit: true,
                       ),
                     ),
@@ -767,12 +765,12 @@ class _CustomerTransactionsWidgetState
             children: [
               TextButton(
                 onPressed: _resetFilters,
-                child: const Text('Reset'),
+                child: Text('customer_transactions.btn_reset'.tr),
               ),
               const SizedBox(width: 8),
               ElevatedButton(
                 onPressed: _applyFiltersAndClose,
-                child: const Text('Apply Filters'),
+                child: Text('customer_transactions.btn_apply_filters'.tr),
               ),
             ],
           ),
@@ -789,12 +787,12 @@ class _CustomerTransactionsWidgetState
           Icon(Icons.receipt_long_outlined,
               size: 60, color: ColorManager.kPrimaryColor.withOpacity(0.4)),
           const SizedBox(height: 20),
-          Text('No Transactions Found',
+          Text('customer_transactions.title_empty'.tr,
               style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s18,
                   0, ColorManager.kTitleTextColor)),
           const SizedBox(height: 8),
           Text(
-            'This customer has not made any transactions yet or no transactions match your filters.',
+            'customer_transactions.msg_empty'.tr,
             textAlign: TextAlign.center,
             style: buildCustomStyle(FontWeightManager.regular, FontSize.s14, 0,
                 ColorManager.kGreyColor),
@@ -836,7 +834,7 @@ class _CustomerTransactionsWidgetState
           ),
           leading: _buildTransactionIcon(transaction.type),
           title: Text(
-            transaction.referenceId ?? 'No Reference',
+            transaction.referenceId ?? 'customer_transactions.label_no_reference'.tr,
             overflow: TextOverflow.ellipsis,
             style: buildCustomStyle(FontWeightManager.semiBold,
                 isMobile ? FontSize.s13 : FontSize.s15, 0,
@@ -919,12 +917,12 @@ class _CustomerTransactionsWidgetState
       child: Column(
         children: [
           _buildDetailRow(
-              'Transaction ID', transaction.id?.toString() ?? 'N/A'),
-          _buildDetailRow('Reference', transaction.reference ?? 'N/A'),
-          _buildDetailRow('Type', transaction.type ?? 'N/A'),
-          _buildDetailRow('Payment Method', transaction.paymentMethod ?? 'N/A'),
+              'customer_transactions.label_transaction_id'.tr, transaction.id?.toString() ?? 'N/A'),
+          _buildDetailRow('customer_transactions.label_reference'.tr, transaction.reference ?? 'N/A'),
+          _buildDetailRow('customer_transactions.label_type'.tr, transaction.type ?? 'N/A'),
+          _buildDetailRow('customer_transactions.label_payment_method'.tr, transaction.paymentMethod ?? 'N/A'),
           if (transaction.transactionComment != null)
-            _buildDetailRow('Comment', transaction.transactionComment!),
+            _buildDetailRow('customer_transactions.label_comment'.tr, transaction.transactionComment!),
         ],
       ),
     );

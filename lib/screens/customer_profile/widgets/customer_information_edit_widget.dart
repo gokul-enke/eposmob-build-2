@@ -174,8 +174,8 @@ class _CustomerInformationEditWidgetState
                       const SizedBox(height: 20),
                       buildColumnWidgetForTextFields(
                         controller: emailController,
-                        hintText: 'Email Address',
-                        title: 'Email Address',
+                        hintText: 'customer_profile.field_email'.tr,
+                        title: 'customer_profile.field_email'.tr,
                         size: widget.size,
                         width: double.infinity,
                         keyboardType: TextInputType.emailAddress,
@@ -184,7 +184,7 @@ class _CustomerInformationEditWidgetState
                               value.isNotEmpty &&
                               !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
                                   .hasMatch(value)) {
-                            return 'Please enter a valid email';
+                            return 'customer_profile.validator_email_invalid'.tr;
                           }
                           return null;
                         },
@@ -192,15 +192,15 @@ class _CustomerInformationEditWidgetState
                       const SizedBox(height: 20),
                       buildColumnWidgetForTextFields(
                         controller: phoneController,
-                        hintText: 'Phone Number',
-                        title: 'Phone Number',
+                        hintText: 'customer_profile.field_phone'.tr,
+                        title: 'customer_profile.field_phone'.tr,
                         size: widget.size,
                         width: double.infinity,
                         keyboardType: TextInputType.phone,
                         isStarRed: true,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Phone number is required';
+                            return 'customer_profile.validator_phone_required'.tr;
                           }
                           return null;
                         },
@@ -253,7 +253,7 @@ class _CustomerInformationEditWidgetState
           SizedBox(width: isMobile ? 8 : 12),
           Flexible(
             child: Text(
-              'Edit Customer Information',
+              'customer_profile.edit_header'.tr,
               overflow: TextOverflow.ellipsis,
               style: buildCustomStyle(FontWeightManager.bold,
                   isMobile ? FontSize.s16 : FontSize.s18, 0,
@@ -268,22 +268,22 @@ class _CustomerInformationEditWidgetState
   Widget _buildNameFields() {
     final firstNameField = buildColumnWidgetForTextFields(
       controller: firstNameController,
-      hintText: 'First Name',
-      title: 'First Name',
+      hintText: 'customer_profile.field_first_name'.tr,
+      title: 'customer_profile.field_first_name'.tr,
       size: widget.size,
       isStarRed: true,
       width: double.infinity,
       validator: (value) {
         if (value == null || value.isEmpty) {
-          return 'First name is required';
+          return 'customer_profile.validator_first_name_required'.tr;
         }
         return null;
       },
     );
     final lastNameField = buildColumnWidgetForTextFields(
       controller: lastNameController,
-      hintText: 'Last Name',
-      title: 'Last Name',
+      hintText: 'customer_profile.field_last_name'.tr,
+      title: 'customer_profile.field_last_name'.tr,
       size: widget.size,
       isStarRed: false,
       width: double.infinity,
@@ -315,7 +315,7 @@ class _CustomerInformationEditWidgetState
   Widget _buildActionButtons() {
     final saveButton = CustomRoundButton(
       radius: 10,
-      title: "Save Changes",
+      title: 'customer_profile.btn_save_changes'.tr,
       fct: _updateProfile,
       height: 50,
       width: double.infinity,
@@ -323,7 +323,7 @@ class _CustomerInformationEditWidgetState
     );
     final passwordButton = CustomRoundButton(
       radius: 10,
-      title: "Change Password",
+      title: 'customer_profile.btn_change_password'.tr,
       fct: () => _showPasswordChangeConfirmation(context),
       height: 50,
       width: double.infinity,
@@ -392,7 +392,7 @@ class _CustomerInformationEditWidgetState
 
     final accessToken = Provider.of<AuthModel>(context, listen: false).token;
     if (accessToken == null) {
-      showScaffoldError(context: context, message: "Please login again");
+      showScaffoldError(context: context, message: 'customer_profile.error_login_again'.tr);
       return;
     }
 
@@ -486,7 +486,7 @@ class _CustomerInformationEditWidgetState
         if (Navigator.canPop(context)) {
           Navigator.pop(context);
         }
-        showScaffold(context: context, message: "No changes to update");
+        showScaffold(context: context, message: 'customer_profile.msg_no_changes'.tr);
         return;
       }
 
@@ -630,8 +630,8 @@ class _CustomerInformationEditWidgetState
   Widget _buildAltPhoneField() {
     return buildColumnWidgetForTextFields(
       controller: altPhoneController,
-      hintText: 'Alternative Phone Number',
-      title: 'Alternative Phone Number',
+      hintText: 'customer_profile.field_alt_phone'.tr,
+      title: 'customer_profile.field_alt_phone'.tr,
       size: widget.size,
       width: double.infinity,
       keyboardType: TextInputType.phone,
@@ -641,8 +641,8 @@ class _CustomerInformationEditWidgetState
   Widget _buildGenderField() {
     return buildColumnWidgetForTextFields(
       controller: TextEditingController(text: selectedGender ?? ''),
-      hintText: 'Select Gender',
-      title: 'Gender',
+      hintText: 'customer_profile.field_gender_hint'.tr,
+      title: 'customer_profile.field_gender'.tr,
       size: widget.size,
       width: double.infinity,
       readOnly: true,
@@ -650,12 +650,12 @@ class _CustomerInformationEditWidgetState
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Select Gender'),
+            title: Text('customer_profile.dialog_select_gender'.tr),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 ListTile(
-                  title: const Text('Male'),
+                  title: Text('customer_profile.gender_male'.tr),
                   onTap: () {
                     setState(() {
                       selectedGender = 'male';
@@ -664,7 +664,7 @@ class _CustomerInformationEditWidgetState
                   },
                 ),
                 ListTile(
-                  title: const Text('Female'),
+                  title: Text('customer_profile.gender_female'.tr),
                   onTap: () {
                     setState(() {
                       selectedGender = 'female';
@@ -673,7 +673,7 @@ class _CustomerInformationEditWidgetState
                   },
                 ),
                 ListTile(
-                  title: const Text('Other'),
+                  title: Text('customer_profile.gender_other'.tr),
                   onTap: () {
                     setState(() {
                       selectedGender = 'other';
@@ -696,8 +696,8 @@ class _CustomerInformationEditWidgetState
             ? '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'
             : '',
       ),
-      hintText: 'Select Date of Birth',
-      title: 'Date of Birth',
+      hintText: 'customer_profile.field_dob_hint'.tr,
+      title: 'customer_profile.field_dob'.tr,
       size: widget.size,
       width: double.infinity,
       readOnly: true,
@@ -724,7 +724,7 @@ class _CustomerInformationEditWidgetState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         BuildTextTile(
-          title: 'Payment Type',
+          title: 'customer_profile.field_payment_type'.tr,
           isStarRed: true,
           textStyle: buildCustomStyle(
             FontWeightManager.regular,
@@ -758,7 +758,7 @@ class _CustomerInformationEditWidgetState
                 },
               ),
               Text(
-                'To Pay',
+                'customer_profile.field_payment_to_pay'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.medium,
                   isMobile ? FontSize.s12 : FontSize.s13,
@@ -783,7 +783,7 @@ class _CustomerInformationEditWidgetState
                 },
               ),
               Text(
-                'To Receive',
+                'customer_profile.field_payment_to_receive'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.medium,
                   isMobile ? FontSize.s12 : FontSize.s13,
@@ -799,8 +799,8 @@ class _CustomerInformationEditWidgetState
 
     final balanceField = buildColumnWidgetForTextFields(
       controller: balanceController,
-      hintText: 'Balance',
-      title: 'Balance',
+      hintText: 'customer_profile.field_balance'.tr,
+      title: 'customer_profile.field_balance'.tr,
       size: widget.size,
       width: double.infinity,
       keyboardType: TextInputType.number,
@@ -811,10 +811,10 @@ class _CustomerInformationEditWidgetState
         if (value != null && value.isNotEmpty) {
           final balance = double.tryParse(value);
           if (balance == null) {
-            return 'Please enter a valid balance';
+            return 'customer_profile.validator_balance_invalid'.tr;
           }
           if (balance < 0) {
-            return 'Balance cannot be negative';
+            return 'customer_profile.validator_balance_negative'.tr;
           }
         }
         return null;
@@ -847,8 +847,8 @@ class _CustomerInformationEditWidgetState
   Widget _buildCustomerTypeField() {
     return buildColumnWidgetForTextFields(
       controller: TextEditingController(text: _selectedCustomerType),
-      hintText: 'Select Customer Type',
-      title: 'Customer Type',
+      hintText: 'customer_profile.field_customer_type_hint'.tr,
+      title: 'customer_profile.field_customer_type'.tr,
       size: widget.size,
       width: double.infinity,
       readOnly: true,
@@ -856,7 +856,7 @@ class _CustomerInformationEditWidgetState
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Select Customer Type'),
+            title: Text('customer_profile.dialog_select_customer_type'.tr),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -888,8 +888,8 @@ class _CustomerInformationEditWidgetState
         Expanded(
           child: buildColumnWidgetForTextFields(
             controller: crNumberController,
-            hintText: 'CR Number',
-            title: 'CR Number',
+            hintText: 'customer_profile.field_cr_number'.tr,
+            title: 'customer_profile.field_cr_number'.tr,
             size: widget.size,
             width: double.infinity,
           ),
@@ -898,8 +898,8 @@ class _CustomerInformationEditWidgetState
         Expanded(
           child: buildColumnWidgetForTextFields(
             controller: vatNumberController,
-            hintText: 'VAT Number',
-            title: 'VAT Number',
+            hintText: 'customer_profile.field_vat_number'.tr,
+            title: 'customer_profile.field_vat_number'.tr,
             size: widget.size,
             width: double.infinity,
           ),
@@ -913,15 +913,15 @@ class _CustomerInformationEditWidgetState
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text("Change Password Request"),
-        content: const Column(
+        title: Text('customer_profile.dialog_change_password_title'.tr),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.mark_email_read_outlined,
+            const Icon(Icons.mark_email_read_outlined,
                 size: 48, color: ColorManager.kPrimaryColor),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
-              "A password reset link will be sent to the customer's registered email.",
+              'customer_profile.dialog_change_password_content'.tr,
               textAlign: TextAlign.center,
             ),
           ],
@@ -929,19 +929,19 @@ class _CustomerInformationEditWidgetState
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
+            child: Text('general.cancel'.tr),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Password reset link sent (demo)"),
+                SnackBar(
+                  content: Text('customer_profile.dialog_password_reset_sent'.tr),
                   backgroundColor: Colors.green,
                 ),
               );
             },
-            child: const Text("Send Link"),
+            child: Text('customer_profile.dialog_send_link'.tr),
           ),
         ],
       ),

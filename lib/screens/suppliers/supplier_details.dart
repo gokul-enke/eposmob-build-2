@@ -104,8 +104,8 @@ class _SupplierDetailsScreenState extends State<SupplierDetailsScreen> {
                     : supplier == null
                         ? SizedBox(
                             height: size.height,
-                            child: const Center(
-                                child: Text('No supplier selected')))
+                            child: Center(
+                                child: Text('supplier_details.no_supplier'.tr)))
                         : Column(
                             crossAxisAlignment: CrossAxisAlignment
                                 .start, // Align items to start
@@ -113,7 +113,7 @@ class _SupplierDetailsScreenState extends State<SupplierDetailsScreen> {
                               _buildHeader(),
                               const SizedBox(height: 10),
                               Text(
-                                'Supplier Profile',
+                                'supplier_details.profile_title'.tr,
                                 style: buildCustomStyle(
                                     FontWeightManager.semiBold,
                                     FontSize.s20,
@@ -152,7 +152,7 @@ class _SupplierDetailsScreenState extends State<SupplierDetailsScreen> {
             sideBarController.index.value =
                 52; // Navigate back to supplier list
           },
-          text: 'All Suppliers',
+          text: 'supplier_details.btn_all_suppliers'.tr,
         ),
         BuildBoxShadowContainer(
           width: 15,
@@ -182,7 +182,7 @@ class _SupplierDetailsScreenState extends State<SupplierDetailsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Supplier Information',
+            'supplier_details.section_info'.tr,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s16,
@@ -191,41 +191,41 @@ class _SupplierDetailsScreenState extends State<SupplierDetailsScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          _buildDetailRow('Name', supplier!.name),
+          _buildDetailRow('supplier_details.label_name'.tr, supplier!.name),
           const SizedBox(height: 8),
           _buildDetailRow(
-              'Email', supplier!.email.isNotEmpty ? supplier!.email : 'N/A'),
+              'supplier_details.label_email'.tr, supplier!.email.isNotEmpty ? supplier!.email : 'supplier_details.na'.tr),
           const SizedBox(height: 8),
           _buildDetailRow(
-              'Phone', supplier!.phone.isNotEmpty ? supplier!.phone : 'N/A'),
+              'supplier_details.label_phone'.tr, supplier!.phone.isNotEmpty ? supplier!.phone : 'supplier_details.na'.tr),
           const SizedBox(height: 8),
           _buildDetailRow(
-              'Alternative Phone',
+              'supplier_details.label_alt_phone'.tr,
               (supplier!.altPhone != null && supplier!.altPhone!.isNotEmpty)
                   ? supplier!.altPhone!
-                  : 'N/A'),
+                  : 'supplier_details.na'.tr),
           const SizedBox(height: 8),
-          _buildDetailRow('Address',
-              supplier!.address.isNotEmpty ? supplier!.address : 'N/A'),
+          _buildDetailRow('supplier_details.label_address'.tr,
+              supplier!.address.isNotEmpty ? supplier!.address : 'supplier_details.na'.tr),
           const SizedBox(height: 8),
           _buildDetailRow(
-              'Product Categories',
+              'supplier_details.label_product_categories'.tr,
               supplier!.productCategories.isNotEmpty
                   ? supplier!.productCategories
-                  : 'N/A'),
+                  : 'supplier_details.na'.tr),
           const SizedBox(height: 8),
-          _buildDetailRow('Balance',
-              supplier!.balance > 0 ? supplier!.balance.toStringAsFixed(2) : 'N/A'),
+          _buildDetailRow('supplier_details.label_balance'.tr,
+              supplier!.balance > 0 ? supplier!.balance.toStringAsFixed(2) : 'supplier_details.na'.tr),
           const SizedBox(height: 8),
           _buildDetailRowWithColor(
-              'Current Balance',
+              'supplier_details.label_current_balance'.tr,
               supplier!.currentBalance.toStringAsFixed(2),
               supplier!.paymentType),
           const SizedBox(height: 8),
           _buildDetailRowWithColor(
-              'Balance Status', supplier!.balanceStatus, supplier!.paymentType),
+              'supplier_details.label_balance_status'.tr, supplier!.balanceStatus, supplier!.paymentType),
           const SizedBox(height: 8),
-          _buildDetailRow('Payment Type', supplier!.paymentType),
+          _buildDetailRow('supplier_details.label_payment_type'.tr, supplier!.paymentType),
         ],
       ),
     );

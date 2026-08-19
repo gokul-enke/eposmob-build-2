@@ -696,7 +696,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                 focusNode: typeFocusNode,
                 title: null,
                 showName: false,
-                hintText: 'All Types',
+                hintText: 'customer_voucher.hint_all_types'.tr,
                 value: selectedType,
                 items:
                     typeOptions.where((type) => type != "All Types").toList(),
@@ -731,7 +731,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                 focusNode: statusFocusNode,
                 title: null,
                 showName: false,
-                hintText: 'All Status',
+                hintText: 'customer_voucher.hint_all_status'.tr,
                 value: selectedStatus,
                 items: statusOptions
                     .where((status) => status != "All Status")

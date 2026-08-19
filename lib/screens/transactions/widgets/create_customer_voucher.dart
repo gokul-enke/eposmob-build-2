@@ -672,7 +672,7 @@ class _CreateCustomerVoucherScreenState
           focusNode: statusFocus,
           title: null,
           showName: false,
-          hintText: 'Select Status',
+          hintText: 'customer_voucher.hint_select_status'.tr,
           value: selectedStatus,
           items: statusOptions.map((s) => s['value']!).toList(),
           onChanged: (String? value) {

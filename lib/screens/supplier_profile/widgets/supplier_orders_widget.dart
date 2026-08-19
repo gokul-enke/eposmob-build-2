@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/models/supplier.dart';
@@ -34,9 +35,9 @@ class _SupplierOrdersWidgetState extends State<SupplierOrdersWidget> {
   @override
   Widget build(BuildContext context) {
     if (!canViewPurchasePrice(context)) {
-      return const Expanded(
+      return Expanded(
         child: Center(
-          child: Text('Purchase permission is required to view orders.'),
+          child: Text('supplier_profile.orders_permission'.tr),
         ),
       );
     }
@@ -86,7 +87,7 @@ class _SupplierOrdersWidgetState extends State<SupplierOrdersWidget> {
                   color: ColorManager.kPrimaryColor, size: 28),
               const SizedBox(width: 12),
               Text(
-                'Purchase Orders (${purchases.length})',
+                '${'supplier_profile.orders_title'.tr} (${purchases.length})',
                 style: buildCustomStyle(FontWeightManager.bold, FontSize.s18, 0,
                     ColorManager.kTitleTextColor),
               ),
@@ -100,13 +101,13 @@ class _SupplierOrdersWidgetState extends State<SupplierOrdersWidget> {
                   // Add print functionality
                 },
                 color: ColorManager.kGreyColor,
-                tooltip: 'Print purchases',
+                tooltip: 'supplier_profile.orders_tooltip_print'.tr,
               ),
               IconButton(
                 icon: const Icon(Icons.sort),
                 onPressed: () {},
                 color: ColorManager.kGreyColor,
-                tooltip: 'Sort purchases',
+                tooltip: 'supplier_profile.orders_tooltip_sort'.tr,
               ),
             ],
           ),
@@ -124,13 +125,13 @@ class _SupplierOrdersWidgetState extends State<SupplierOrdersWidget> {
               size: 60, color: ColorManager.kPrimaryColor.withOpacity(0.4)),
           const SizedBox(height: 20),
           Text(
-            'No Purchase Orders Found',
+            'supplier_profile.orders_empty_title'.tr,
             style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s18, 0,
                 ColorManager.kTitleTextColor),
           ),
           const SizedBox(height: 8),
           Text(
-            'No purchase orders are available for this supplier.',
+            'supplier_profile.orders_empty_msg'.tr,
             textAlign: TextAlign.center,
             style: buildCustomStyle(FontWeightManager.regular, FontSize.s14, 0,
                 ColorManager.kGreyColor),
@@ -221,10 +222,10 @@ class _SupplierOrdersWidgetState extends State<SupplierOrdersWidget> {
     String displayStatus;
     switch (status?.toLowerCase()) {
       case 'y':
-        displayStatus = 'COMPLETED';
+        displayStatus = 'supplier_profile.orders_status_completed'.tr;
         break;
       case 'n':
-        displayStatus = 'PENDING';
+        displayStatus = 'supplier_profile.orders_status_pending'.tr;
         break;
       default:
         displayStatus = status?.toUpperCase() ?? 'N/A';
@@ -257,17 +258,17 @@ class _SupplierOrdersWidgetState extends State<SupplierOrdersWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildDetailRow('Purchase Number', purchase.purchaseNumber),
-          _buildDetailRow('Status', _getStatusDisplayText(purchase.status),
+          _buildDetailRow('supplier_profile.orders_label_purchase_number'.tr, purchase.purchaseNumber),
+          _buildDetailRow('supplier_profile.orders_label_status'.tr, _getStatusDisplayText(purchase.status),
               valueColor: _getStatusColor(purchase.status)),
           const Divider(height: 20),
           ..._buildPurchaseItemsList(purchase.items),
           const Divider(height: 20),
-          _buildTotalRow('Subtotal', purchase.amountTotal),
+          _buildTotalRow('supplier_profile.orders_label_subtotal'.tr, purchase.amountTotal),
           if (purchase.taxTotal != null && purchase.taxTotal != '0.00')
-            _buildTotalRow('Tax', purchase.taxTotal!),
+            _buildTotalRow('supplier_profile.orders_label_tax'.tr, purchase.taxTotal!),
           const SizedBox(height: 8),
-          _buildTotalRow('Total Amount', purchase.amountTotal, isGrandTotal: true),
+          _buildTotalRow('supplier_profile.orders_label_total'.tr, purchase.amountTotal, isGrandTotal: true),
         ],
       ),
     );
@@ -275,7 +276,7 @@ class _SupplierOrdersWidgetState extends State<SupplierOrdersWidget> {
 
   List<Widget> _buildPurchaseItemsList(List<PurchaseItem>? items) {
     if (items == null || items.isEmpty) {
-      return [const Text('No items in this purchase.')];
+      return [Text('supplier_profile.orders_msg_no_items'.tr)];
     }
 
     final currency = Provider.of<AppSettingsProvider>(context, listen: false)
@@ -375,9 +376,9 @@ class _SupplierOrdersWidgetState extends State<SupplierOrdersWidget> {
   String _getStatusDisplayText(String? status) {
     switch (status?.toLowerCase()) {
       case 'y':
-        return 'Completed';
+        return 'supplier_profile.orders_status_completed'.tr;
       case 'n':
-        return 'Pending';
+        return 'supplier_profile.orders_status_pending'.tr;
       default:
         return status ?? 'N/A';
     }

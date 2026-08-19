@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
@@ -65,7 +66,7 @@ class _WithdrawStockModalState extends State<WithdrawStockModal> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Withdraw Stock',
+                    'stock.withdraw_stock'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s20,
@@ -85,17 +86,17 @@ class _WithdrawStockModalState extends State<WithdrawStockModal> {
               Row(
                 children: [
                   Expanded(
-                    child: _buildField('Product', productController,
+                    child: _buildField('stock.col_product'.tr, productController,
                         readOnly: true),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
-                    child:
-                        _buildField('Store', storeController, readOnly: true),
+                    child: _buildField('stock.label_store'.tr, storeController,
+                        readOnly: true),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
-                    child: _buildField('Supplier', supplierController,
+                    child: _buildField('stock.supplier'.tr, supplierController,
                         readOnly: true),
                   ),
                 ],
@@ -106,18 +107,18 @@ class _WithdrawStockModalState extends State<WithdrawStockModal> {
               Row(
                 children: [
                   Expanded(
-                    child: _buildField('Retail Price', retailPriceController,
+                    child: _buildField('stock.retail_price'.tr, retailPriceController,
                         readOnly: true),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
-                    child: _buildField('MRP', mrpController, readOnly: true),
+                    child: _buildField('stock.mrp'.tr, mrpController, readOnly: true),
                   ),
                   if (canShowPurchasePrice) ...[
                     const SizedBox(width: 15),
                     Expanded(
                       child: _buildField(
-                          'Purchase Price', purchasePriceController,
+                          'stock.purchase_price'.tr, purchasePriceController,
                           readOnly: true),
                     ),
                   ],
@@ -134,7 +135,7 @@ class _WithdrawStockModalState extends State<WithdrawStockModal> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Available Stock',
+                          'stock.withdraw_available_label'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.medium,
                             FontSize.s14,
@@ -162,7 +163,7 @@ class _WithdrawStockModalState extends State<WithdrawStockModal> {
                       children: [
                         RichText(
                           text: TextSpan(
-                            text: 'Withdraw Quantity',
+                            text: 'stock.withdraw_qty_label'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.medium,
                               FontSize.s14,
@@ -197,7 +198,7 @@ class _WithdrawStockModalState extends State<WithdrawStockModal> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Enter the quantity to withdraw from stock',
+                          'stock.withdraw_qty_hint'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.regular,
                             FontSize.s10,
@@ -216,14 +217,14 @@ class _WithdrawStockModalState extends State<WithdrawStockModal> {
               Row(
                 children: [
                   CustomRoundButton(
-                    title: "Submit",
+                    title: 'stock.btn_submit'.tr,
                     boxColor: ColorManager.kPrimaryColor,
                     textColor: Colors.white,
                     fct: () async {
                       if (withdrawQtyController.text.isEmpty) {
                         showScaffoldError(
                             context: context,
-                            message: "Please enter withdraw quantity");
+                            message: 'stock.withdraw_err_qty_required'.tr);
                         return;
                       }
 
@@ -240,7 +241,7 @@ class _WithdrawStockModalState extends State<WithdrawStockModal> {
                       debugPrint('   QUANTITY: $qty');
 
                       showLoadingOverlay(context,
-                          message: 'Withdrawing Stock...');
+                          message: 'stock.withdraw_loading'.tr);
 
                       try {
                         final success = await stockProvider.withdrawStockAPI(
@@ -254,18 +255,18 @@ class _WithdrawStockModalState extends State<WithdrawStockModal> {
                         if (success) {
                           showScaffold(
                               context: context,
-                              message: "Stock withdrawn successfully");
+                              message: 'stock.withdraw_success'.tr);
                           Navigator.pop(context);
                         } else {
                           showScaffoldError(
                               context: context,
-                              message: "Failed to withdraw stock");
+                              message: 'stock.withdraw_err_failed'.tr);
                         }
                       } catch (e) {
                         hideLoadingOverlay();
                         showScaffoldError(
                             context: context,
-                            message: "An error occurred: ${e.toString()}");
+                            message: '${'stock.err_occurred'.tr}${e.toString()}');
                       }
                     },
                     height: 45,
@@ -274,7 +275,7 @@ class _WithdrawStockModalState extends State<WithdrawStockModal> {
                   ),
                   const SizedBox(width: 15),
                   CustomRoundButton(
-                    title: "Cancel",
+                    title: 'stock.btn_cancel'.tr,
                     boxColor: Colors.white,
                     textColor: Colors.black,
                     borderColor: Colors.grey.withOpacity(0.5),

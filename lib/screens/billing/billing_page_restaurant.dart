@@ -2418,7 +2418,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Tax Details'),
+            title: Text('billing.dialog_tax_details'.tr),
             content: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2440,7 +2440,7 @@ class BillingPageState extends State<BillingPageRestaurant>
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Close'),
+                child: Text('general.close'.tr),
               ),
             ],
           ),

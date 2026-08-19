@@ -543,7 +543,7 @@ class _AdminDailySalesCloseListScreenState extends State<AdminDailySalesCloseLis
                                     child: Center(
                                       child: CalendarPickerTableCell(
                                         key: calendarPickerKey,
-                                        hintText: 'Select Date',
+                                        hintText: 'daily_sales_close.select_date'.tr,
                                         onDateSelected: (DateTime date) {
                                           setState(() {
                                             selectedDate = date;
@@ -569,7 +569,7 @@ class _AdminDailySalesCloseListScreenState extends State<AdminDailySalesCloseLis
                                    Padding(
                                      padding: const EdgeInsets.all(8.0),
                                      child: Text(
-                                       "Employee",
+                                       'daily_sales_close.sales_executive'.tr,
                                        style: buildCustomStyle(
                                          FontWeightManager.regular,
                                          FontSize.s14,
@@ -581,7 +581,7 @@ class _AdminDailySalesCloseListScreenState extends State<AdminDailySalesCloseLis
                                    Consumer<SalesExecutiveProvider>(
                                      builder: (context, execProvider, child) {
                                        return CustomDropDownWithSearch<exec_model.SalesExecutive>(
-                                         hintText: 'Select Employee',
+                                         hintText: 'daily_sales_close.hint_select_employee'.tr,
                                          items: execProvider.salesExecutives,
                                          displayText: (exec) => exec.name,
                                          value: selectedExecutive,
@@ -606,7 +606,7 @@ class _AdminDailySalesCloseListScreenState extends State<AdminDailySalesCloseLis
                               child: Padding(
                                 padding: const EdgeInsets.only(top: 35.0),
                                 child: CustomRoundButton(
-                                  title: "Reset",
+                                  title: 'general.reset'.tr,
                                   boxColor: Colors.white,
                                   textColor: ColorManager.kPrimaryColor,
                                   fct: resetSearch,
@@ -814,7 +814,7 @@ class _AdminDailySalesCloseListScreenState extends State<AdminDailySalesCloseLis
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: const Text('View Details'),
+                child: Text('daily_sales_close.btn_view_details'.tr),
               ),
             ),
           ),

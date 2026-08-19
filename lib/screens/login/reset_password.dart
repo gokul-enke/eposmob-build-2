@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:get/get.dart';
 import 'package:pinput/pinput.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 
@@ -84,7 +84,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     height: height * .1,
                   ),
                   BuildTextTile(
-                    title: 'Reset Password',
+                    title: 'login.reset_title'.tr,
                     textStyle: buildTitleStyle,
                   ),
                   SizedBox(
@@ -149,10 +149,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                   RegExp regex = RegExp(
                                       r'^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[!@#\$&*~]).{8,}$');
                                   if (value!.isEmpty) {
-                                    return 'Please enter password here';
+                                    return 'login.validator_password_empty'.tr;
                                   } else {
                                     if (!regex.hasMatch(value)) {
-                                      return 'Enter valid password';
+                                      return 'login.validator_password_invalid'.tr;
                                     } else {
                                       return null;
                                     }
@@ -200,17 +200,17 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                 cursorHeight: 15,
                                 validator: (value) {
                                   if (value!.isEmpty) {
-                                    return 'Please enter password here';
+                                    return 'login.validator_password_empty'.tr;
                                   } else {
                                     if (_passwordTextController.text != value) {
-                                      return 'Password doesnot match';
+                                      return 'login.validator_password_mismatch'.tr;
                                     } else {
                                       return null;
                                     }
                                   }
                                 },
                                 decoration: decoration.copyWith(
-                                  hintText: 'Repeat Password',
+                                  hintText: 'login.hint_repeat_password'.tr,
                                   iconColor: ColorManager.kPrimaryWithOpacity10,
                                   prefixIcon: Icon(
                                     Icons.lock,
@@ -251,7 +251,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                     fontSize: FontSize.s12,
                                     height: size.height * .07,
                                     key: const Key("Button_Sign_in"),
-                                    title: 'Verify',
+                                    title: 'login.btn_verify'.tr,
                                     fct: () async {
                                       if (_passwordTextController
                                           .text.isNotEmpty) {
@@ -312,7 +312,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                       } else {
                                         showScaffoldError(
                                           context: context,
-                                          message: 'Please Fill Details!',
+                                          message: 'login.error_fill_details'.tr,
                                         );
                                       }
                                     },

@@ -10015,9 +10015,9 @@ class BillingPageState extends State<BillingPage>
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: const Text('Shift Not Opened'),
-        content: const Text(
-          'You must open a shift before starting sales.',
+        title: Text('billing.shift_not_opened'.tr),
+        content: Text(
+          'billing.msg_shift_required'.tr,
         ),
         actions: [
           TextButton(
@@ -10031,7 +10031,7 @@ class BillingPageState extends State<BillingPage>
                 ),
               );
             },
-            child: const Text('Open Shift'),
+            child: Text('billing.btn_open_shift'.tr),
           ),
           TextButton(
             onPressed: () {
@@ -10040,7 +10040,7 @@ class BillingPageState extends State<BillingPage>
                 Navigator.of(context).pop();
               }
             },
-            child: const Text('Go Back'),
+            child: Text('billing.btn_go_back'.tr),
           ),
         ],
       ),

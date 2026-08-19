@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 
@@ -72,7 +73,7 @@ class _HomeWidgetState extends State<HomeWidget> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           showScaffold(
             context: context,
-            message: 'Order loaded for editing',
+            message: 'mobile_billing.msg_order_loaded'.tr,
           );
         });
       }
@@ -142,7 +143,7 @@ class _HomeWidgetState extends State<HomeWidget> {
           if (matchedSaleUnit != null && !multiSaleUnitEnabled) {
             showScaffoldError(
               context: context,
-              message: 'Multi sale units are disabled for this store.',
+              message: 'mobile_billing.error_multi_sale_disabled'.tr,
             );
             return;
           }
@@ -179,7 +180,7 @@ class _HomeWidgetState extends State<HomeWidget> {
           // Handle barcode not found case
           showScaffoldError(
             context: context,
-            message: "Product not found for barcode: $barcode",
+            message: '${'mobile_billing.error_product_not_found_barcode'.tr}: $barcode',
           );
         }
       } catch (e) {
@@ -187,7 +188,7 @@ class _HomeWidgetState extends State<HomeWidget> {
         if (mounted) {
           showScaffoldError(
             context: context,
-            message: "Invalid barcode format",
+            message: 'mobile_billing.error_invalid_barcode'.tr,
           );
         }
       }
@@ -235,14 +236,14 @@ class _HomeWidgetState extends State<HomeWidget> {
       } else {
         showScaffoldError(
           context: context,
-          message: "Please select a product first",
+          message: 'mobile_billing.error_select_product_first'.tr,
         );
       }
     } catch (e) {
       debugPrint('Error adding item: $e');
       showScaffoldError(
         context: context,
-        message: "Error adding item to cart",
+        message: 'mobile_billing.error_adding_to_cart'.tr,
       );
     } finally {
       billingProvider.setLoadingAddItem(false);
@@ -324,7 +325,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                 controller: billingProvider.barcodeController,
                 focusNode: billingProvider.barcodeNode,
                 decoration: InputDecoration(
-                  labelText: 'Barcode',
+                  labelText: 'mobile_billing.label_barcode'.tr,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -383,7 +384,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                   _focusTextField();
                   showScaffold(
                     context: context,
-                    message: 'Product Details Cleared Successfully',
+                    message: 'mobile_billing.msg_product_cleared'.tr,
                   );
                 },
                 child: Center(
@@ -406,7 +407,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                 controller: billingProvider.quantityController,
                 focusNode: billingProvider.quantityFocusNode,
                 decoration: InputDecoration(
-                  labelText: 'Quantity',
+                  labelText: 'mobile_billing.label_quantity'.tr,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -422,7 +423,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                 controller: billingProvider.unitPriceController,
                 focusNode: billingProvider.unitPriceFocusNode,
                 decoration: InputDecoration(
-                  labelText: 'Price',
+                  labelText: 'mobile_billing.label_price'.tr,
                   prefixText: ' ',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -454,7 +455,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                       ),
                     )
                   : const Icon(Icons.add, color: Colors.white),
-              label: const Text('Add', style: TextStyle(color: Colors.white)),
+              label: Text('mobile_billing.btn_add'.tr, style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -574,7 +575,7 @@ class _HomeWidgetState extends State<HomeWidget> {
     if (provider.cartItems.isEmpty) {
       showScaffoldError(
         context: context,
-        message: "Please add items to cart",
+        message: 'mobile_billing.error_add_items_to_cart'.tr,
       );
       return;
     }
@@ -586,7 +587,7 @@ class _HomeWidgetState extends State<HomeWidget> {
     if (hasInvalidPricing) {
       showScaffoldError(
         context: context,
-        message: "Please ensure all items have valid prices before saving",
+        message: 'mobile_billing.error_invalid_prices'.tr,
       );
       return;
     }
@@ -606,7 +607,7 @@ class _HomeWidgetState extends State<HomeWidget> {
 
         showScaffold(
           context: context,
-          message: "Order Updated Successfully",
+          message: 'mobile_billing.msg_order_updated'.tr,
         );
       } else {
         // Save as new order
@@ -619,7 +620,7 @@ class _HomeWidgetState extends State<HomeWidget> {
 
         showScaffold(
           context: context,
-          message: "Order Saved Successfully",
+          message: 'mobile_billing.msg_order_saved'.tr,
         );
       }
 
@@ -635,7 +636,7 @@ class _HomeWidgetState extends State<HomeWidget> {
       debugPrint("Error saving order: $e");
       showScaffoldError(
         context: context,
-        message: "Failed to save order. Please try again.",
+        message: 'mobile_billing.error_save_order_failed'.tr,
       );
     }
   }
@@ -653,7 +654,7 @@ class _HomeWidgetState extends State<HomeWidget> {
               billingProvider.clearProductFieldsAndReset();
               showScaffold(
                 context: context,
-                message: 'Cart cleared successfully',
+                message: 'mobile_billing.msg_cart_cleared'.tr,
               );
             },
             style: OutlinedButton.styleFrom(

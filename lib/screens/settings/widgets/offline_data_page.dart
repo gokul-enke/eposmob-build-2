@@ -49,11 +49,11 @@ class _OfflineDataPageState extends State<OfflineDataPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SettingsSubPageHeader(
-            backLabel: 'Settings',
+            backLabel: 'offline_data.back_label'.tr,
             onBack: _goBackToSettings,
             onClose: _goBackToSettings,
-            title: 'Offline Data',
-            subtitle: 'Cached on this device for billing & offline use',
+            title: 'offline_data.title'.tr,
+            subtitle: 'offline_data.subtitle'.tr,
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -93,7 +93,7 @@ class _OfflineDataList extends StatelessWidget {
       if (!context.mounted) return;
       showScaffoldError(
         context: context,
-        message: 'Sync failed: ${e.toString()}',
+        message: '${'offline_data.error_sync'.tr}: ${e.toString()}',
       );
     }
   }
@@ -114,13 +114,13 @@ class _OfflineDataList extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
+            child: Text('offline_data.dialog_cancel'.tr),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text(
-              'Clear',
-              style: TextStyle(color: ColorManager.kButtonRed),
+            child: Text(
+              'offline_data.dialog_clear'.tr,
+              style: const TextStyle(color: ColorManager.kButtonRed),
             ),
           ),
         ],
@@ -142,7 +142,7 @@ class _OfflineDataList extends StatelessWidget {
       if (!context.mounted) return;
       showScaffoldError(
         context: context,
-        message: 'Clear failed: ${e.toString()}',
+        message: '${'offline_data.error_clear'.tr}: ${e.toString()}',
       );
     }
   }
@@ -173,8 +173,8 @@ class _OfflineDataList extends StatelessWidget {
     return Hive.box<HiveDocumentConfig>('document_configs').length;
   }
 
-  String _countLabel(int count, {String unit = 'items'}) {
-    if (count <= 0) return 'Not cached';
+  String _countLabel(int count, {String unit = ''}) {
+    if (count <= 0) return 'offline_data.not_cached'.tr;
     return '$count $unit';
   }
 
@@ -223,7 +223,7 @@ class _OfflineDataList extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         _SectionHeader(
-          title: 'Catalog & inventory',
+          title: 'offline_data.section_catalog'.tr,
           canSync: canSync,
           isSyncing: syncProvider.isSyncingKey(
             'section:${OfflineSyncSection.catalog.name}',
@@ -234,16 +234,16 @@ class _OfflineDataList extends StatelessWidget {
               context,
               OfflineSyncSection.catalog,
             ),
-            successMessage: 'Catalog data synced',
+            successMessage: 'offline_data.success_catalog'.tr,
           ),
         ),
         _OfflineDataTile(
           faIcon: FontAwesomeIcons.box,
           iconColor: const Color(0xFF5E35B1),
           backgroundColor: const Color(0xFFEDE7F6),
-          title: 'Products',
-          subtitle: 'Product catalog for billing & search',
-          value: _countLabel(productCount, unit: 'products'),
+          title: 'offline_data.tile_products'.tr,
+          subtitle: 'offline_data.tile_products_sub'.tr,
+          value: _countLabel(productCount, unit: 'offline_data.unit_products'.tr),
           canSync: canSync,
           isSyncing: syncProvider.isSyncingKey(OfflineSyncTarget.products.name),
           onSync: () => _runSync(
@@ -252,7 +252,7 @@ class _OfflineDataList extends StatelessWidget {
               context,
               OfflineSyncTarget.products,
             ),
-            successMessage: 'Products synced',
+            successMessage: 'offline_data.success_products'.tr,
           ),
           onClear: () => _runClear(
             context,
@@ -264,9 +264,9 @@ class _OfflineDataList extends StatelessWidget {
           faIcon: FontAwesomeIcons.tags,
           iconColor: const Color(0xFF1565C0),
           backgroundColor: const Color(0xFFE3F2FD),
-          title: 'Categories',
-          subtitle: 'Product categories and filters',
-          value: _countLabel(categoryCount, unit: 'categories'),
+          title: 'offline_data.tile_categories'.tr,
+          subtitle: 'offline_data.tile_categories_sub'.tr,
+          value: _countLabel(categoryCount, unit: 'offline_data.unit_categories'.tr),
           canSync: canSync,
           isSyncing:
               syncProvider.isSyncingKey(OfflineSyncTarget.categories.name),
@@ -276,7 +276,7 @@ class _OfflineDataList extends StatelessWidget {
               context,
               OfflineSyncTarget.categories,
             ),
-            successMessage: 'Categories synced',
+            successMessage: 'offline_data.success_categories'.tr,
           ),
           onClear: () => _runClear(
             context,
@@ -289,14 +289,14 @@ class _OfflineDataList extends StatelessWidget {
           builder: (context, snapshot) {
             final iso = snapshot.data;
             final label = iso == null
-                ? 'Never synced'
+                ? 'offline_data.never_synced'.tr
                 : DateHelper.formatISODateToIST(iso);
             return _OfflineDataTile(
               faIcon: FontAwesomeIcons.clockRotateLeft,
               iconColor: const Color(0xFFEF6C00),
               backgroundColor: const Color(0xFFFFF3E0),
-              title: 'Last product sync',
-              subtitle: 'When products were last downloaded',
+              title: 'offline_data.tile_last_sync'.tr,
+              subtitle: 'offline_data.tile_last_sync_sub'.tr,
               value: label,
               canClear: canClear && iso != null,
               onClear: () => _runClear(
@@ -308,7 +308,7 @@ class _OfflineDataList extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         _SectionHeader(
-          title: 'Billing & checkout',
+          title: 'offline_data.section_billing'.tr,
           canSync: canSync,
           isSyncing: syncProvider.isSyncingKey(
             'section:${OfflineSyncSection.billing.name}',
@@ -319,16 +319,16 @@ class _OfflineDataList extends StatelessWidget {
               context,
               OfflineSyncSection.billing,
             ),
-            successMessage: 'Billing data synced',
+            successMessage: 'offline_data.success_billing'.tr,
           ),
         ),
         _OfflineDataTile(
           faIcon: FontAwesomeIcons.creditCard,
           iconColor: const Color(0xFF00897B),
           backgroundColor: const Color(0xFFE0F2F1),
-          title: 'Payment methods',
-          subtitle: 'Cash, card, UPI and other payment types',
-          value: _countLabel(paymentCount, unit: 'methods'),
+          title: 'offline_data.tile_payment'.tr,
+          subtitle: 'offline_data.tile_payment_sub'.tr,
+          value: _countLabel(paymentCount, unit: 'offline_data.unit_methods'.tr),
           canSync: canSync,
           isSyncing:
               syncProvider.isSyncingKey(OfflineSyncTarget.paymentMethods.name),
@@ -338,7 +338,7 @@ class _OfflineDataList extends StatelessWidget {
               context,
               OfflineSyncTarget.paymentMethods,
             ),
-            successMessage: 'Payment methods synced',
+            successMessage: 'offline_data.success_payment'.tr,
           ),
           onClear: () => _runClear(
             context,
@@ -350,9 +350,9 @@ class _OfflineDataList extends StatelessWidget {
           faIcon: FontAwesomeIcons.truck,
           iconColor: const Color(0xFF3949AB),
           backgroundColor: const Color(0xFFE8EAF6),
-          title: 'Delivery methods',
-          subtitle: 'Delivery options at checkout',
-          value: _countLabel(deliveryCount, unit: 'methods'),
+          title: 'offline_data.tile_delivery'.tr,
+          subtitle: 'offline_data.tile_delivery_sub'.tr,
+          value: _countLabel(deliveryCount, unit: 'offline_data.unit_methods'.tr),
           canSync: canSync,
           isSyncing: syncProvider.isSyncingKey(
             OfflineSyncTarget.deliveryMethods.name,
@@ -363,7 +363,7 @@ class _OfflineDataList extends StatelessWidget {
               context,
               OfflineSyncTarget.deliveryMethods,
             ),
-            successMessage: 'Delivery methods synced',
+            successMessage: 'offline_data.success_delivery'.tr,
           ),
           onClear: () => _runClear(
             context,
@@ -375,9 +375,9 @@ class _OfflineDataList extends StatelessWidget {
           faIcon: FontAwesomeIcons.fileLines,
           iconColor: const Color(0xFF6A1B9A),
           backgroundColor: const Color(0xFFF3E5F5),
-          title: 'Document configurations',
-          subtitle: 'Invoice & receipt templates',
-          value: _countLabel(_documentConfigsCount(), unit: 'configs'),
+          title: 'offline_data.tile_doc_configs'.tr,
+          subtitle: 'offline_data.tile_doc_configs_sub'.tr,
+          value: _countLabel(_documentConfigsCount(), unit: 'offline_data.unit_configs'.tr),
           canSync: canSync,
           isSyncing: syncProvider.isSyncingKey(
             OfflineSyncTarget.documentConfigs.name,
@@ -388,7 +388,7 @@ class _OfflineDataList extends StatelessWidget {
               context,
               OfflineSyncTarget.documentConfigs,
             ),
-            successMessage: 'Document configs synced',
+            successMessage: 'offline_data.success_doc_configs'.tr,
           ),
           onClear: () => _runClear(
             context,
@@ -398,7 +398,7 @@ class _OfflineDataList extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         _SectionHeader(
-          title: 'Customers & suppliers',
+          title: 'offline_data.section_customers_suppliers'.tr,
           canSync: canSync,
           isSyncing: syncProvider.isSyncingKey(
             'section:${OfflineSyncSection.customersAndSuppliers.name}',
@@ -409,16 +409,16 @@ class _OfflineDataList extends StatelessWidget {
               context,
               OfflineSyncSection.customersAndSuppliers,
             ),
-            successMessage: 'Customers & suppliers synced',
+            successMessage: 'offline_data.success_customers_suppliers'.tr,
           ),
         ),
         _OfflineDataTile(
           faIcon: FontAwesomeIcons.users,
           iconColor: const Color(0xFF0277BD),
           backgroundColor: const Color(0xFFE1F5FE),
-          title: 'Customers',
-          subtitle: 'Customer directory for billing',
-          value: _countLabel(customerCount, unit: 'customers'),
+          title: 'offline_data.tile_customers'.tr,
+          subtitle: 'offline_data.tile_customers_sub'.tr,
+          value: _countLabel(customerCount, unit: 'offline_data.unit_customers'.tr),
           canSync: canSync,
           isSyncing:
               syncProvider.isSyncingKey(OfflineSyncTarget.customers.name),
@@ -428,7 +428,7 @@ class _OfflineDataList extends StatelessWidget {
               context,
               OfflineSyncTarget.customers,
             ),
-            successMessage: 'Customers synced',
+            successMessage: 'offline_data.success_customers'.tr,
           ),
           onClear: () => _runClear(
             context,
@@ -440,9 +440,9 @@ class _OfflineDataList extends StatelessWidget {
           faIcon: FontAwesomeIcons.truckField,
           iconColor: const Color(0xFF558B2F),
           backgroundColor: const Color(0xFFF1F8E9),
-          title: 'Suppliers',
-          subtitle: 'Supplier list for purchases',
-          value: _countLabel(supplierCount, unit: 'suppliers'),
+          title: 'offline_data.tile_suppliers'.tr,
+          subtitle: 'offline_data.tile_suppliers_sub'.tr,
+          value: _countLabel(supplierCount, unit: 'offline_data.unit_suppliers'.tr),
           canSync: canSync,
           isSyncing:
               syncProvider.isSyncingKey(OfflineSyncTarget.suppliers.name),
@@ -452,7 +452,7 @@ class _OfflineDataList extends StatelessWidget {
               context,
               OfflineSyncTarget.suppliers,
             ),
-            successMessage: 'Suppliers synced',
+            successMessage: 'offline_data.success_suppliers'.tr,
           ),
           onClear: () => _runClear(
             context,
@@ -462,7 +462,7 @@ class _OfflineDataList extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         _SectionHeader(
-          title: 'Store reference data',
+          title: 'offline_data.section_store'.tr,
           canSync: canSync,
           isSyncing: syncProvider.isSyncingKey(
             'section:${OfflineSyncSection.storeReference.name}',
@@ -473,16 +473,16 @@ class _OfflineDataList extends StatelessWidget {
               context,
               OfflineSyncSection.storeReference,
             ),
-            successMessage: 'Store reference data synced',
+            successMessage: 'offline_data.success_store_reference'.tr,
           ),
         ),
         _OfflineDataTile(
           faIcon: FontAwesomeIcons.store,
           iconColor: const Color(0xFF2E7D32),
           backgroundColor: const Color(0xFFE8F5E9),
-          title: 'Stores',
-          subtitle: 'Store locations linked to your account',
-          value: _countLabel(storeCount, unit: 'stores'),
+          title: 'offline_data.tile_stores'.tr,
+          subtitle: 'offline_data.tile_stores_sub'.tr,
+          value: _countLabel(storeCount, unit: 'offline_data.unit_stores'.tr),
           canSync: canSync,
           isSyncing: syncProvider.isSyncingKey(OfflineSyncTarget.stores.name),
           onSync: () => _runSync(
@@ -491,7 +491,7 @@ class _OfflineDataList extends StatelessWidget {
               context,
               OfflineSyncTarget.stores,
             ),
-            successMessage: 'Stores synced',
+            successMessage: 'offline_data.success_stores'.tr,
           ),
           onClear: () => _runClear(
             context,
@@ -503,9 +503,9 @@ class _OfflineDataList extends StatelessWidget {
           faIcon: FontAwesomeIcons.ruler,
           iconColor: const Color(0xFF455A64),
           backgroundColor: const Color(0xFFECEFF1),
-          title: 'Units of measure',
-          subtitle: 'Kg, pcs, box and other units',
-          value: _countLabel(unitCount, unit: 'units'),
+          title: 'offline_data.tile_units'.tr,
+          subtitle: 'offline_data.tile_units_sub'.tr,
+          value: _countLabel(unitCount, unit: 'offline_data.unit_units'.tr),
           canSync: canSync,
           isSyncing: syncProvider.isSyncingKey(OfflineSyncTarget.units.name),
           onSync: () => _runSync(
@@ -514,7 +514,7 @@ class _OfflineDataList extends StatelessWidget {
               context,
               OfflineSyncTarget.units,
             ),
-            successMessage: 'Units synced',
+            successMessage: 'offline_data.success_units'.tr,
           ),
           onClear: () => _runClear(
             context,
@@ -526,9 +526,9 @@ class _OfflineDataList extends StatelessWidget {
           faIcon: FontAwesomeIcons.warehouse,
           iconColor: const Color(0xFF5D4037),
           backgroundColor: const Color(0xFFEFEBE9),
-          title: 'Rack / master data',
-          subtitle: 'Warehouse rack metadata',
-          value: _countLabel(rackCount, unit: 'entries'),
+          title: 'offline_data.tile_racks'.tr,
+          subtitle: 'offline_data.tile_racks_sub'.tr,
+          value: _countLabel(rackCount, unit: 'offline_data.unit_entries'.tr),
           canSync: canSync,
           isSyncing: syncProvider.isSyncingKey(OfflineSyncTarget.racks.name),
           onSync: () => _runSync(
@@ -537,7 +537,7 @@ class _OfflineDataList extends StatelessWidget {
               context,
               OfflineSyncTarget.racks,
             ),
-            successMessage: 'Rack data synced',
+            successMessage: 'offline_data.success_racks'.tr,
           ),
           onClear: () => _runClear(
             context,
@@ -549,9 +549,9 @@ class _OfflineDataList extends StatelessWidget {
           faIcon: FontAwesomeIcons.userShield,
           iconColor: const Color(0xFF6A1B9A),
           backgroundColor: const Color(0xFFF3E5F5),
-          title: 'Roles & permissions',
-          subtitle: 'Current user access rules and permissions',
-          value: _countLabel(roleCount, unit: 'roles'),
+          title: 'offline_data.tile_roles'.tr,
+          subtitle: 'offline_data.tile_roles_sub'.tr,
+          value: _countLabel(roleCount, unit: 'offline_data.unit_roles'.tr),
           canSync: canSync,
           isSyncing: syncProvider.isSyncingKey(OfflineSyncTarget.roles.name),
           onSync: () => _runSync(
@@ -560,7 +560,7 @@ class _OfflineDataList extends StatelessWidget {
               context,
               OfflineSyncTarget.roles,
             ),
-            successMessage: 'Roles and permissions synced',
+            successMessage: 'offline_data.success_roles'.tr,
           ),
         ),
         FutureBuilder<Map<String, dynamic>?>(
@@ -571,26 +571,26 @@ class _OfflineDataList extends StatelessWidget {
             final id = store?['store_id']?.toString();
             final value = name != null && name.isNotEmpty
                 ? name
-                : (id != null ? 'Store #$id' : 'Not selected');
+                : (id != null ? 'Store #$id' : 'offline_data.not_selected'.tr);
             return _OfflineDataTile(
               faIcon: FontAwesomeIcons.locationDot,
               iconColor: const Color(0xFFC62828),
               backgroundColor: const Color(0xFFFFEBEE),
-              title: 'Active store',
-              subtitle: 'Currently selected store session',
+              title: 'offline_data.tile_active_store'.tr,
+              subtitle: 'offline_data.tile_active_store_sub'.tr,
               value: value,
             );
           },
         ),
         const SizedBox(height: 8),
-        _SectionHeader(title: 'Local drafts (on device)'),
+        _SectionHeader(title: 'offline_data.section_drafts'.tr),
         _OfflineDataTile(
           faIcon: FontAwesomeIcons.cartShopping,
           iconColor: const Color(0xFF1565C0),
           backgroundColor: const Color(0xFFE3F2FD),
-          title: 'Cart items',
-          subtitle: 'Items held in the local cart',
-          value: _countLabel(_cartItemsCount(), unit: 'items'),
+          title: 'offline_data.tile_cart'.tr,
+          subtitle: 'offline_data.tile_cart_sub'.tr,
+          value: _countLabel(_cartItemsCount(), unit: 'offline_data.unit_items'.tr),
           canClear: canClear && _cartItemsCount() > 0,
           onClear: () => _runClear(
             context,
@@ -601,9 +601,9 @@ class _OfflineDataList extends StatelessWidget {
           faIcon: FontAwesomeIcons.bookmark,
           iconColor: const Color(0xFFEF6C00),
           backgroundColor: const Color(0xFFFFF3E0),
-          title: 'Saved orders',
-          subtitle: 'Draft orders not yet confirmed',
-          value: _countLabel(_savedOrdersCount(), unit: 'orders'),
+          title: 'offline_data.tile_saved_orders'.tr,
+          subtitle: 'offline_data.tile_saved_orders_sub'.tr,
+          value: _countLabel(_savedOrdersCount(), unit: 'offline_data.unit_orders'.tr),
           canClear: canClear && _savedOrdersCount() > 0,
           onClear: () => _runClear(
             context,
@@ -614,9 +614,9 @@ class _OfflineDataList extends StatelessWidget {
           faIcon: FontAwesomeIcons.circleCheck,
           iconColor: const Color(0xFF2E7D32),
           backgroundColor: const Color(0xFFE8F5E9),
-          title: 'Confirmed orders',
-          subtitle: 'Orders confirmed locally',
-          value: _countLabel(_confirmedOrdersCount(), unit: 'orders'),
+          title: 'offline_data.tile_confirmed_orders'.tr,
+          subtitle: 'offline_data.tile_confirmed_orders_sub'.tr,
+          value: _countLabel(_confirmedOrdersCount(), unit: 'offline_data.unit_orders'.tr),
           canClear: canClear && _confirmedOrdersCount() > 0,
           onClear: () => _runClear(
             context,
@@ -624,7 +624,7 @@ class _OfflineDataList extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        _SectionHeader(title: 'Connection'),
+        _SectionHeader(title: 'offline_data.section_connection'.tr),
         _OfflineDataTile(
           materialIcon:
               billingProvider.hasInternet ? Icons.wifi : Icons.wifi_off,
@@ -634,20 +634,20 @@ class _OfflineDataList extends StatelessWidget {
           backgroundColor: billingProvider.hasInternet
               ? const Color(0xFFE8F5E9)
               : const Color(0xFFFFEBEE),
-          title: 'Internet',
+          title: 'offline_data.tile_internet'.tr,
           subtitle: billingProvider.isManualOfflineMode
-              ? 'Offline mode is manually enabled'
-              : 'Live connection status',
-          value: billingProvider.hasInternet ? 'Online' : 'Offline',
+              ? 'offline_data.tile_internet_sub_manual'.tr
+              : 'offline_data.tile_internet_sub_live'.tr,
+          value: billingProvider.hasInternet ? 'offline_data.online'.tr : 'offline_data.offline'.tr,
         ),
         _OfflineDataTile(
           faIcon: FontAwesomeIcons.arrowsRotate,
           iconColor: const Color(0xFF5E35B1),
           backgroundColor: const Color(0xFFEDE7F6),
-          title: 'Last full sync',
-          subtitle: 'Most recent sync from this session',
+          title: 'offline_data.tile_last_full_sync'.tr,
+          subtitle: 'offline_data.tile_last_full_sync_sub'.tr,
           value: syncProvider.lastSyncTime == null
-              ? 'Not synced yet'
+              ? 'offline_data.not_synced_yet'.tr
               : syncProvider.getFormattedLastSyncTime(),
         ),
       ],
@@ -692,7 +692,7 @@ class _SyncProgressBanner extends StatelessWidget {
                 child: Text(
                   syncProvider.syncMessage.isNotEmpty
                       ? syncProvider.syncMessage
-                      : 'Syncing offline data...',
+                      : 'offline_data.syncing_progress'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.medium,
                     FontSize.s11,
@@ -750,10 +750,10 @@ class _StatusBanner extends StatelessWidget {
           Expanded(
             child: Text(
               canSync
-                  ? 'Use sync or clear on each row, sync a whole section, or Sync All below.'
+                  ? 'offline_data.status_sync_available'.tr
                   : billingProvider.isManualOfflineMode
-                      ? 'Offline mode is on. Disable it in Settings to sync.'
-                      : 'No internet connection. Sync is unavailable right now.',
+                      ? 'offline_data.status_offline_manual'.tr
+                      : 'offline_data.status_no_internet'.tr,
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s10,
@@ -784,14 +784,14 @@ class _SyncFooter extends StatelessWidget {
       if (!context.mounted) return;
       showScaffold(
         context: context,
-        message: 'Offline data synced successfully',
+        message: 'offline_data.success_sync_all'.tr,
       );
       onSyncComplete();
     } catch (e) {
       if (!context.mounted) return;
       showScaffoldError(
         context: context,
-        message: 'Sync failed: ${e.toString()}',
+        message: '${'offline_data.error_sync'.tr}: ${e.toString()}',
       );
     }
   }
@@ -825,8 +825,8 @@ class _SyncFooter extends StatelessWidget {
                   : const Icon(Icons.sync, size: 18),
               label: Text(
                 syncProvider.isSyncing && syncProvider.activeSyncKey == 'all'
-                    ? 'Syncing...'
-                    : 'Sync All',
+                    ? 'offline_data.btn_syncing'.tr
+                    : 'offline_data.btn_sync_all'.tr,
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: ColorManager.kPrimaryColor,
@@ -897,7 +897,7 @@ class _SectionHeader extends StatelessWidget {
                           : Colors.grey.shade400,
                     ),
               label: Text(
-                isSyncing ? 'Syncing...' : 'Sync section',
+                isSyncing ? 'offline_data.btn_syncing'.tr : 'offline_data.btn_sync_section'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s9,
@@ -1015,7 +1015,7 @@ class _OfflineDataTile extends StatelessWidget {
                   FontWeightManager.medium,
                   FontSize.s10,
                   0.15,
-                  value == 'Not cached' || value == 'Never synced'
+                  value == 'offline_data.not_cached'.tr || value == 'offline_data.never_synced'.tr
                       ? Colors.grey.shade600
                       : ColorManager.textColor,
                 ),
@@ -1027,7 +1027,7 @@ class _OfflineDataTile extends StatelessWidget {
                   children: [
                     if (onSync != null)
                       _TileActionButton(
-                        label: isSyncing ? 'Syncing' : 'Sync',
+                        label: isSyncing ? 'offline_data.btn_syncing'.tr : 'offline_data.btn_sync'.tr,
                         icon: Icons.sync,
                         enabled: canSync && !isSyncing,
                         isLoading: isSyncing,
@@ -1038,7 +1038,7 @@ class _OfflineDataTile extends StatelessWidget {
                       const SizedBox(width: 8),
                     if (onClear != null)
                       _TileActionButton(
-                        label: 'Clear',
+                        label: 'offline_data.btn_clear'.tr,
                         icon: Icons.delete_outline,
                         enabled: canClear,
                         color: ColorManager.kButtonRed,

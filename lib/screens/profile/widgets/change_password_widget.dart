@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 
 import '../../../components/build_container_box.dart';
@@ -27,13 +28,13 @@ class ChangePasswordWidget extends StatelessWidget {
             children: [
               const SizedBox(height: 10),
               Text(
-                "Change Password",
+                'profile.change_password_title'.tr,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s15, 0.23, ColorManager.textColor),
               ),
               const SizedBox(height: 20),
-              const Text(
-                "Set the new password for you account so you login and access all the features",
+              Text(
+                'profile.change_password_subtitle'.tr,
                 style: TextStyle(
                     fontWeight: FontWeightManager.regular,
                     fontFamily: FontConstants.fontFamily,
@@ -48,7 +49,7 @@ class ChangePasswordWidget extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       BuildTitle(
-                        title: "Password",
+                        title: 'profile.field_password'.tr,
                         textStyle: buildCustomStyle(
                           FontWeightManager.regular,
                           FontSize.s10,
@@ -94,7 +95,7 @@ class ChangePasswordWidget extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       BuildTitle(
-                        title: "Confirm Password",
+                        title: 'profile.field_confirm_password'.tr,
                         textStyle: buildCustomStyle(
                           FontWeightManager.regular,
                           FontSize.s10,
@@ -141,7 +142,7 @@ class ChangePasswordWidget extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               RoundButton(
-                  radius: 14, title: "Reset Password", fct: () {}, size: size)
+                  radius: 14, title: 'profile.btn_reset_password'.tr, fct: () {}, size: size)
             ],
           )),
     );

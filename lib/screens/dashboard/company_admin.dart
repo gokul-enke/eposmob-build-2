@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -480,7 +481,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          "Company Admin Dashboard",
+          'company_admin.title'.tr,
           style: buildCustomStyle(
             FontWeightManager.semiBold,
             FontSize.s20,
@@ -491,8 +492,8 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
         const SizedBox(height: 4),
         Text(
           dashBoardModelData?.profileDetails?.isNotEmpty == true
-              ? "Welcome, ${dashBoardModelData!.profileDetails![0].name}!"
-              : "Welcome back!",
+              ? 'company_admin.welcome_user'.trParams({'name': dashBoardModelData!.profileDetails![0].name ?? ''})
+              : 'company_admin.welcome_back'.tr,
           style: buildCustomStyle(
             FontWeightManager.medium,
             FontSize.s12,
@@ -576,7 +577,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
 
   Widget _buildTodaysSales() {
     return DashboardSectionHeader(
-      title: "Sales Overview",
+      title: 'company_admin.section_sales_overview'.tr,
       trailing: BuildBoxShadowContainer(
         padding: const EdgeInsets.symmetric(horizontal: 10),
         height: 38,
@@ -601,7 +602,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                 child: SizedBox(
                   width: double.infinity,
                   child: Text(
-                    value,
+                    'company_admin.period_${value.toLowerCase()}'.tr,
                     textAlign: TextAlign.center,
                     style: buildCustomStyle(
                       FontWeightManager.bold,
@@ -631,7 +632,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                 return Container(
                   alignment: Alignment.center,
                   child: Text(
-                    value,
+                    'company_admin.period_${value.toLowerCase()}'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.bold,
                       FontSize.s12,
@@ -663,44 +664,44 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
   Widget _buildCompanyAccountOverview() {
     return Column(
       children: [
-        const DashboardSectionHeader(title: "Company Account Overview"),
+        DashboardSectionHeader(title: 'company_admin.section_company_account_overview'.tr),
         ResponsiveStatGrid(
           cards: [
             _buildCompanyAccountCard(
-                "Bank Accounts",
-                "Total Bank Balance",
+                'company_admin.card_bank_accounts'.tr,
+                'company_admin.card_bank_balance'.tr,
                 dashboardOverview != null
                     ? "${NumberFormat('#,##,###.##').format(dashboardOverview!.bankAccount.receivedAmount)}"
                     : "0",
                 ColorManager.kPrimaryColor,
                 Icons.account_balance),
             _buildCompanyAccountCard(
-                "Cash Accounts",
-                "Total Cash Balance",
+                'company_admin.card_cash_accounts'.tr,
+                'company_admin.card_cash_balance'.tr,
                 dashboardOverview != null
                     ? "${NumberFormat('#,##,###.##').format(dashboardOverview!.cashAccount.receivedAmount)}"
                     : "0",
                 ColorManager.kMagentha,
                 Icons.account_balance_wallet),
             _buildCompanyAccountCard(
-                "Total Revenue",
-                "Overall Revenue",
+                'company_admin.card_total_revenue'.tr,
+                'company_admin.card_overall_revenue'.tr,
                 dashboardOverview != null
                     ? "${NumberFormat('#,##,###.##').format(dashboardOverview!.revenue.totalSales)}"
                     : "0",
                 ColorManager.kOrange,
                 Icons.trending_up),
             _buildCompanyAccountCard(
-                "Total Customers",
-                "Active Customers",
+                'company_admin.card_total_customers'.tr,
+                'company_admin.card_active_customers'.tr,
                 dashboardOverview != null
                     ? dashboardOverview!.customers.totalCustomers.toString()
                     : "0",
                 ColorManager.kBlue,
                 Icons.people),
             _buildCompanyAccountCard(
-                "Total Orders",
-                "Completed Orders",
+                'company_admin.card_total_orders'.tr,
+                'company_admin.card_completed_orders'.tr,
                 dashboardOverview != null
                     ? dashboardOverview!.orders.totalOrders.toString()
                     : "0",
@@ -715,12 +716,12 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
   Widget _buildProductOverview() {
     return Column(
       children: [
-        const DashboardSectionHeader(title: "Product Overview"),
+        DashboardSectionHeader(title: 'company_admin.section_product_overview'.tr),
         ResponsiveStatGrid(
           cards: [
             _buildCompanyAccountCard(
-                "Total Products",
-                "All Products",
+                'company_admin.card_total_products'.tr,
+                'company_admin.card_all_products'.tr,
                 productStats != null
                     ? productStats!.totalProducts.toString()
                     : dashboardOverview != null
@@ -729,30 +730,30 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                 ColorManager.kPrimaryColor,
                 Icons.inventory),
             _buildCompanyAccountCard(
-                "Active Products",
-                "Currently Selling",
+                'company_admin.card_active_products'.tr,
+                'company_admin.card_currently_selling'.tr,
                 productStats != null
                     ? productStats!.activeProducts.toString()
                     : "0",
                 ColorManager.kMagentha,
                 Icons.check_circle),
             _buildCompanyAccountCard(
-                "Low Stock",
-                "Needs Attention",
+                'company_admin.card_low_stock'.tr,
+                'company_admin.card_needs_attention'.tr,
                 productStats != null ? productStats!.lowStock.toString() : "0",
                 ColorManager.kOrange,
                 Icons.warning),
             _buildCompanyAccountCard(
-                "Total Stock Qty",
-                "Overall Inventory",
+                'company_admin.card_total_stock_qty'.tr,
+                'company_admin.card_overall_inventory'.tr,
                 productStats != null
                     ? productStats!.totalProductsStockQty.toString()
                     : "0",
                 ColorManager.kBlue,
                 Icons.inventory_2),
             _buildCompanyAccountCard(
-                "Sellable Products",
-                "Ready for Sale",
+                'company_admin.card_sellable_products'.tr,
+                'company_admin.card_ready_for_sale'.tr,
                 productStats != null
                     ? productStats!.sellableProducts.toString()
                     : "0",
@@ -767,20 +768,20 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
   Widget _buildSalesExecutiveOverview() {
     return Column(
       children: [
-        const DashboardSectionHeader(title: "Sales Executive Overview"),
+        DashboardSectionHeader(title: 'company_admin.section_exec_overview'.tr),
         ResponsiveStatGrid(
           cards: [
             _buildCompanyAccountCard(
-                "Total Executives",
-                "Sales Executives",
+                'company_admin.card_total_executives'.tr,
+                'company_admin.card_sales_executives'.tr,
                 executivesOverview != null
                     ? executivesOverview!.totalExecutives.toString()
                     : "0",
                 ColorManager.kPrimaryColor,
                 Icons.group),
             _buildCompanyAccountCard(
-                "Total Sales",
-                "Overall Performance",
+                'company_admin.card_total_sales'.tr,
+                'company_admin.card_overall_performance'.tr,
                 executivesOverview != null
                     ? "${NumberFormat('#,##,###').format(executivesOverview!.salesExecutivesGraph.fold(0, (sum, executive) => sum + executive.sales.fold(0, (saleSum, sale) => saleSum + sale.amount)))}"
                     : "0",
@@ -824,10 +825,10 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
               Expanded(
                 flex: 2,
                 child: chartCard(
-                    "Sales Executive Performance", _buildExecutiveSalesChart()),
+                    'company_admin.chart_exec_performance'.tr, _buildExecutiveSalesChart()),
               ),
               Expanded(
-                child: chartCard("Sales Trend", _buildSalesOverviewChart()),
+                child: chartCard('company_admin.chart_sales_trend'.tr, _buildSalesOverviewChart()),
               ),
             ],
           );
@@ -837,7 +838,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
             chartCard(
                 "Sales Executive Performance", _buildExecutiveSalesChart()),
             const SizedBox(height: 20),
-            chartCard("Sales Trend", _buildSalesOverviewChart()),
+            chartCard('company_admin.chart_sales_trend'.tr, _buildSalesOverviewChart()),
           ],
         );
       },
@@ -847,12 +848,12 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
   Widget _buildCustomerOverview() {
     return Column(
       children: [
-        const DashboardSectionHeader(title: "Customer Overview"),
+        DashboardSectionHeader(title: 'company_admin.section_customer_overview'.tr),
         ResponsiveStatGrid(
           cards: [
             _buildCompanyAccountCard(
-                "Total Customers",
-                "All Customers",
+                'company_admin.card_total_customers'.tr,
+                'company_admin.card_all_customers'.tr,
                 customerStats != null
                     ? customerStats!.totalCustomers.toString()
                     : dashboardOverview != null
@@ -861,34 +862,34 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                 ColorManager.kPrimaryColor,
                 Icons.people),
             _buildCompanyAccountCard(
-                "Debit Customers",
-                "Pending Payments",
+                'company_admin.card_debit_customers'.tr,
+                'company_admin.card_pending_payments'.tr,
                 customerStats != null
                     ? customerStats!.debitCustomers.toString()
                     : "0",
                 ColorManager.kMagentha,
                 Icons.money_off),
             _buildCompanyAccountCard(
-                "Credit Customers",
-                "Balance Available",
+                'company_admin.card_credit_customers'.tr,
+                'company_admin.card_balance_available'.tr,
                 customerStats != null
                     ? customerStats!.creditCustomers.toString()
                     : "0",
                 ColorManager.kOrange,
                 Icons.account_balance_wallet),
             _buildCompanyAccountCard(
-                "Crucial Customers",
-                "VVIP Clients",
+                'company_admin.card_crucial_customers'.tr,
+                'company_admin.card_vvip_clients'.tr,
                 customerStats != null
                     ? customerStats!.crucialCustomers.toString()
                     : "0",
                 ColorManager.kBlue,
                 Icons.star),
             _buildCompanyAccountCard(
-                "New Customers",
-                "Added Today",
+                'company_admin.card_new_customers'.tr,
+                'company_admin.card_added_today'.tr,
                 customerStats != null && customerStats!.period == 'today'
-                    ? "N/A"
+                    ? 'company_admin.na'.tr
                     : dashboardOverview != null
                         ? dashboardOverview!.customers.newCustomers.toString()
                         : "0",
@@ -1486,14 +1487,14 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                     getTitlesWidget: (double value, TitleMeta meta) {
                       switch (value.toInt()) {
                         case 0:
-                          return const Text('POS',
-                              style: TextStyle(fontSize: 10));
+                          return Text('company_admin.pos'.tr,
+                              style: const TextStyle(fontSize: 10));
                         case 1:
-                          return const Text('Web',
-                              style: TextStyle(fontSize: 10));
+                          return Text('company_admin.web'.tr,
+                              style: const TextStyle(fontSize: 10));
                         case 2:
-                          return const Text('Kiosk',
-                              style: TextStyle(fontSize: 10));
+                          return Text('company_admin.kiosk'.tr,
+                              style: const TextStyle(fontSize: 10));
                         default:
                           return const Text('');
                       }
@@ -1947,17 +1948,17 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
   String _getCardSubtitle(String title) {
     switch (title) {
       case "Count":
-        return "Total Sales";
+        return 'company_admin.subtitle_total_sales'.tr;
       case "Amount":
-        return "Revenue";
+        return 'company_admin.subtitle_revenue'.tr;
       case "Customers":
-        return "Active Users";
+        return 'company_admin.subtitle_active_users'.tr;
       case "Products":
-        return "In Stock";
+        return 'company_admin.subtitle_in_stock'.tr;
       case "Revenue":
-        return "Overall Total";
+        return 'company_admin.subtitle_overall_total'.tr;
       case "Orders":
-        return "Overall Count";
+        return 'company_admin.subtitle_overall_count'.tr;
       default:
         return "";
     }
@@ -2016,7 +2017,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const DashboardSectionHeader(title: "Works Team"),
+        DashboardSectionHeader(title: 'company_admin.section_works_team'.tr),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8),
           height: 120,
@@ -2049,7 +2050,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            member.name ?? "Unknown",
+                            member.name ?? 'company_admin.unknown'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.semiBold,
                               FontSize.s14,

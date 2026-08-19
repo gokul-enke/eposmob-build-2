@@ -237,7 +237,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     final attributes = variant.formattedAttributes.trim();
     if (attributes.isNotEmpty) return attributes;
     final sku = variant.sku?.trim() ?? '';
-    return sku.isNotEmpty ? sku : 'Variant ${variant.id}';
+    return sku.isNotEmpty ? sku : '${'add_stock.variant'.tr} ${variant.id}';
   }
 
   void _applyVariantToItem(
@@ -4932,10 +4932,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                 item.unit,
                               ),
                               textAlign: TextAlign.right, // Right-aligned text
-                              decoration: const InputDecoration(
-                                hintText: 'Qty',
+                              decoration: InputDecoration(
+                                hintText: 'add_stock.qty'.tr,
                                 border: InputBorder.none,
-                                contentPadding: EdgeInsets.symmetric(
+                                contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 8,
                                   vertical: 8,
                                 ),
@@ -5589,10 +5589,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         item.unit,
                       ),
                       textAlign: TextAlign.right,
-                      decoration: const InputDecoration(
-                        hintText: 'Qty',
+                      decoration: InputDecoration(
+                        hintText: 'add_stock.qty'.tr,
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(
+                        contentPadding: const EdgeInsets.symmetric(
                           horizontal: 8,
                           vertical: 8,
                         ),
@@ -7342,7 +7342,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 Colors.green,
                 item.taxIncludePurchase,
                 footerTrailingText:
-                    'Total: ${_getPurchaseTotal(item).toStringAsFixed(2)}',
+                    'add_stock.total_colon'.trParams({'amount': _getPurchaseTotal(item).toStringAsFixed(2)}),
                 toggleLabel: 'add_stock.including_tax'.tr,
                 toggleValue: item.taxIncludePurchase,
                 onToggleChanged: (value) {

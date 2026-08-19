@@ -5,6 +5,7 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,6 +17,8 @@ import 'package:pos_machine/providers/location_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
+import 'package:pos_machine/resources/app_translations.dart';
+import 'package:pos_machine/resources/localization_service.dart';
 
 AppSettings _minimalAppSettings({bool companyB2BEnabled = false}) {
   return AppSettings(
@@ -89,8 +92,8 @@ Widget _wrap(Widget child, {bool companyB2BEnabled = false}) {
     providers: [
       ChangeNotifierProvider<AuthModel>.value(value: auth),
       ChangeNotifierProvider<AppSettingsProvider>(
-        create: (_) =>
-            _FakeAppSettingsProvider(_minimalAppSettings(companyB2BEnabled: companyB2BEnabled)),
+        create: (_) => _FakeAppSettingsProvider(
+            _minimalAppSettings(companyB2BEnabled: companyB2BEnabled)),
       ),
       ChangeNotifierProvider<LocationProvider>(
         create: (_) => _FakeLocationProvider(),
@@ -105,12 +108,22 @@ Widget _wrap(Widget child, {bool companyB2BEnabled = false}) {
         create: (_) => StoreSessionProvider(),
       ),
     ],
-    child: MaterialApp(home: child),
+    child: GetMaterialApp(
+      translations: AppTranslations(LocalizationService.translations),
+      locale: const Locale('en'),
+      fallbackLocale: LocalizationService.fallbackLocale,
+      home: child,
+    ),
   );
 }
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
+    await LocalizationService.init();
+  });
 
   final overflowErrors = <FlutterErrorDetails>[];
   FlutterExceptionHandler? originalOnError;

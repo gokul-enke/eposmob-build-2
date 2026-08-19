@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_title.dart';
 import 'package:pos_machine/providers/category_providers.dart';
@@ -76,7 +77,7 @@ class _AddProductPropertiesScreenState
                       if (categoryProvider.propValues == null) {
                         return const Center(child: CircularProgressIndicator());
                       } else if (categoryProvider.propValues!.isEmpty) {
-                        return const Center(child: Text("No properties found"));
+                        return Center(child: Text("add_product_properties.no_properties".tr));
                       } else {
                         return Flexible(
                           child: ListView.builder(
@@ -122,7 +123,7 @@ class _AddProductPropertiesScreenState
                                         cursorColor: ColorManager.kPrimaryColor,
                                         decoration: InputDecoration(
                                           border: InputBorder.none,
-                                          hintText: 'Enter $propsCode',
+                                          hintText: 'add_product_properties.hint_enter_prop'.trParams({'code': propsCode}),
                                           hintStyle: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -143,7 +144,7 @@ class _AddProductPropertiesScreenState
                                     SizedBox(
                                       width: size.width * .40,
                                       child: CheckboxListTile(
-                                        title: const Text("Stock Applicable"),
+                                        title: Text("add_product_properties.label_stock_applicable".tr),
                                         value: stockApplicableMap[propsCode] ??
                                             false,
                                         onChanged: (bool? value) {
@@ -190,7 +191,7 @@ class _AddProductPropertiesScreenState
                                                 MultiSelectItem<String>(
                                                     item, item))
                                             .toList(),
-                                        title: Text("Choose $propsCode"),
+                                        title: Text('add_product_properties.label_choose_prop'.trParams({'code': propsCode.toString()})),
                                         selectedColor:
                                             ColorManager.kPrimaryColor,
                                         decoration: BoxDecoration(
@@ -206,7 +207,7 @@ class _AddProductPropertiesScreenState
                                           color: Colors.grey,
                                         ),
                                         buttonText: Text(
-                                          "Choose $propsCode",
+                                          'add_product_properties.label_choose_prop'.trParams({'code': propsCode.toString()}),
                                           // "",
                                           style: TextStyle(
                                             color: Colors.grey[700],
@@ -244,7 +245,7 @@ class _AddProductPropertiesScreenState
                                     SizedBox(
                                       width: size.width * .40,
                                       child: CheckboxListTile(
-                                        title: const Text("Stock Applicable"),
+                                        title: Text("add_product_properties.label_stock_applicable".tr),
                                         value: stockApplicableMap[propsCode] ??
                                             false,
                                         onChanged: (bool? value) {
@@ -272,7 +273,7 @@ class _AddProductPropertiesScreenState
                       Padding(
                         padding: const EdgeInsets.only(left: 10.0),
                         child: CustomRoundButton(
-                          title: "Prev",
+                          title: 'add_product_properties.btn_prev'.tr,
                           boxColor: Colors.white,
                           textColor: ColorManager.kPrimaryColor,
                           fct: () async {
@@ -286,7 +287,7 @@ class _AddProductPropertiesScreenState
                       Padding(
                         padding: const EdgeInsets.only(left: 10.0),
                         child: CustomRoundButton(
-                          title: "Next",
+                          title: 'add_product_properties.btn_next'.tr,
                           boxColor: Colors.white,
                           textColor: ColorManager.kPrimaryColor,
                           fct: () async {
@@ -303,7 +304,7 @@ class _AddProductPropertiesScreenState
                             int? productId = gridSelectionProvider.getProductId;
                             if (productId == null) {
                               showScaffoldError(
-                                  context: context, message: 'Failed');
+                                  context: context, message: 'add_product_properties.msg_failed'.tr);
                             } else {
                               showDialog(
                                   context: context,
@@ -359,7 +360,7 @@ class _AddProductPropertiesScreenState
                                     Navigator.pop(context);
                                     showScaffoldError(
                                       context: context,
-                                      message: 'Failed to add properties',
+                                      message: 'add_product_properties.msg_failed_add'.tr,
                                     );
                                   }
                                 },

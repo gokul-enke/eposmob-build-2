@@ -93,7 +93,7 @@ class _AddCustomersModalState extends State<AddCustomersModal> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Add New Customer',
+                  'add_customer.title'.tr,
                   style: buildCustomStyle(FontWeightManager.semiBold,
                       FontSize.s20, 0.30, ColorManager.textColor),
                 ),

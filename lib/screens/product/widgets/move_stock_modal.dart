@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
@@ -70,7 +71,7 @@ class _MoveStockModalState extends State<MoveStockModal> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Move Stock',
+                    'stock.move_stock'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s20,
@@ -90,17 +91,17 @@ class _MoveStockModalState extends State<MoveStockModal> {
               Row(
                 children: [
                   Expanded(
-                    child: _buildField('Product', productController,
+                    child: _buildField('stock.col_product'.tr, productController,
                         readOnly: true),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
-                    child: _buildField('Store', currentStoreController,
+                    child: _buildField('stock.label_store'.tr, currentStoreController,
                         readOnly: true),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
-                    child: _buildField('Supplier', supplierController,
+                    child: _buildField('stock.supplier'.tr, supplierController,
                         readOnly: true),
                   ),
                 ],
@@ -111,18 +112,18 @@ class _MoveStockModalState extends State<MoveStockModal> {
               Row(
                 children: [
                   Expanded(
-                    child: _buildField('Retail Price', retailPriceController,
+                    child: _buildField('stock.retail_price'.tr, retailPriceController,
                         readOnly: true),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
-                    child: _buildField('MRP', mrpController, readOnly: true),
+                    child: _buildField('stock.mrp'.tr, mrpController, readOnly: true),
                   ),
                   if (canShowPurchasePrice) ...[
                     const SizedBox(width: 15),
                     Expanded(
                       child: _buildField(
-                          'Purchase Price', purchasePriceController,
+                          'stock.purchase_price'.tr, purchasePriceController,
                           readOnly: true),
                     ),
                   ],
@@ -136,7 +137,7 @@ class _MoveStockModalState extends State<MoveStockModal> {
                 children: [
                   RichText(
                     text: TextSpan(
-                      text: 'Destination Store',
+                      text: 'stock.move_dest_store_label'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s14,
@@ -162,7 +163,7 @@ class _MoveStockModalState extends State<MoveStockModal> {
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<GetStoreModelData>(
                         isExpanded: true,
-                        hint: const Text('Select an option'),
+                        hint: Text('stock.move_dest_store_hint'.tr),
                         value: selectedDestinationStore,
                         items: widget.stores
                             .where((s) =>
@@ -193,7 +194,7 @@ class _MoveStockModalState extends State<MoveStockModal> {
                 children: [
                   RichText(
                     text: TextSpan(
-                      text: 'Quantity',
+                      text: 'stock.quantity'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s14,
@@ -232,7 +233,7 @@ class _MoveStockModalState extends State<MoveStockModal> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Created by',
+                    'stock.move_created_by_label'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.medium,
                       FontSize.s14,
@@ -250,10 +251,10 @@ class _MoveStockModalState extends State<MoveStockModal> {
                       child: DropdownButton<String>(
                         isExpanded: true,
                         value: selectedUser,
-                        items: const [
+                        items: [
                           DropdownMenuItem<String>(
                             value: 'Super Admin',
-                            child: Text('Super Admin'),
+                            child: Text('stock.move_super_admin'.tr),
                           ),
                         ],
                         onChanged: (newValue) {
@@ -272,20 +273,21 @@ class _MoveStockModalState extends State<MoveStockModal> {
               Row(
                 children: [
                   CustomRoundButton(
-                    title: "Submit",
+                    title: 'stock.btn_submit'.tr,
                     boxColor: ColorManager.kPrimaryColor,
                     textColor: Colors.white,
                     fct: () async {
                       if (selectedDestinationStore == null) {
                         showScaffoldError(
                             context: context,
-                            message: "Please select destination store");
+                            message: 'stock.move_err_select_store'.tr);
                         return;
                       }
 
                       if (qtyController.text.isEmpty) {
                         showScaffoldError(
-                            context: context, message: "Please enter quantity");
+                            context: context,
+                            message: 'stock.move_err_qty_required'.tr);
                         return;
                       }
 
@@ -304,7 +306,7 @@ class _MoveStockModalState extends State<MoveStockModal> {
                           '   DEST STORE NAME: ${selectedDestinationStore!.name}');
                       debugPrint('   QUANTITY: $qty');
 
-                      showLoadingOverlay(context, message: 'Moving Stock...');
+                      showLoadingOverlay(context, message: 'stock.move_loading'.tr);
 
                       try {
                         final success = await stockProvider.moveStockAPI(
@@ -319,18 +321,18 @@ class _MoveStockModalState extends State<MoveStockModal> {
                         if (success) {
                           showScaffold(
                               context: context,
-                              message: "Stock moved successfully");
+                              message: 'stock.move_success'.tr);
                           Navigator.pop(context);
                         } else {
                           showScaffoldError(
                               context: context,
-                              message: "Failed to move stock");
+                              message: 'stock.move_err_failed'.tr);
                         }
                       } catch (e) {
                         hideLoadingOverlay();
                         showScaffoldError(
                             context: context,
-                            message: "An error occurred: ${e.toString()}");
+                            message: '${'stock.err_occurred'.tr}${e.toString()}');
                       }
                     },
                     height: 45,
@@ -339,7 +341,7 @@ class _MoveStockModalState extends State<MoveStockModal> {
                   ),
                   const SizedBox(width: 15),
                   CustomRoundButton(
-                    title: "Cancel",
+                    title: 'stock.btn_cancel'.tr,
                     boxColor: Colors.white,
                     textColor: Colors.black,
                     borderColor: Colors.grey.withOpacity(0.5),

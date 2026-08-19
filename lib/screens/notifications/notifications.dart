@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../components/build_container_box.dart';
 import '../../resources/color_manager.dart';
@@ -36,7 +37,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
             Padding(
               padding: const EdgeInsets.only(left: 10.0, bottom: 10),
               child: Text(
-                "Notifications ",
+                'notifications.page_title'.tr,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s20, 0.30, ColorManager.textColor),
               ),

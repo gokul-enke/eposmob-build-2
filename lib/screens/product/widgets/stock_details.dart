@@ -33,9 +33,9 @@ class StockDetailsWidget extends StatelessWidget {
     List<Widget> buildProductProperties(productProps) {
       if (productProps == null || productProps.isEmpty) {
         return [
-          const Padding(
-            padding: EdgeInsets.only(top: 8.0),
-            child: Text("No properties available"),
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text('stock.details_no_properties'.tr),
           )
         ];
       }
@@ -72,7 +72,7 @@ class StockDetailsWidget extends StatelessWidget {
               onPressed: () {
                 sideBarController.index.value = 15;
               },
-              text: 'All Stocks',
+              text: 'stock.details_all_stocks'.tr,
               // Optionally, you can customize the color and size
               // color: ColorManager.customColor,
               // size: 20.0,
@@ -81,7 +81,7 @@ class StockDetailsWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  " Stock Details  ",
+                  'stock.details_title'.tr,
                   style: buildCustomStyle(FontWeightManager.semiBold,
                       FontSize.s20, 0.30, ColorManager.textColor),
                 ),
@@ -119,7 +119,7 @@ class StockDetailsWidget extends StatelessWidget {
               margin: const EdgeInsets.only(
                   top: 20, bottom: 0, left: 10, right: 10),
               child: Text(
-                " Show Stock",
+                'stock.details_show_stock'.tr,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s15, 0.30, Colors.white),
               ),
@@ -138,7 +138,7 @@ class StockDetailsWidget extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Product Primary Details",
+                        'stock.details_primary_title'.tr,
                         style: buildCustomStyle(FontWeightManager.semiBold,
                             FontSize.s18, 0.30, ColorManager.textColor),
                       ),
@@ -174,17 +174,17 @@ class StockDetailsWidget extends StatelessWidget {
                       //   content2: stockDetails?.quantity?.toString() ?? "",
                       // ),
                       BuildDetailRow(
-                        title1: "Product Unit",
+                        title1: 'stock.details_product_unit'.tr,
                         content1: stockDetails?.unit ?? "",
-                        title2: canShowPurchasePrice ? "Purchase Rate" : "",
+                        title2: canShowPurchasePrice ? 'stock.details_purchase_rate'.tr : "",
                         content2: canShowPurchasePrice
                             ? stockDetails?.purchaseRate?.toString() ?? ""
                             : "",
                       ),
                       BuildDetailRow(
-                        title1: "Retail Price",
+                        title1: 'stock.retail_price'.tr,
                         content1: stockDetails?.retailPrice?.toString() ?? "",
-                        title2: "Wholesale Price",
+                        title2: 'stock.details_wholesale_price'.tr,
                         content2:
                             stockDetails?.wholesalePrice?.toString() ?? "",
                       ),
@@ -203,7 +203,7 @@ class StockDetailsWidget extends StatelessWidget {
                       // ),
                       const SizedBox(height: 20),
                       Text(
-                        "Product Properties",
+                        'stock.details_properties_title'.tr,
                         style: buildCustomStyle(FontWeightManager.semiBold,
                             FontSize.s18, 0.30, ColorManager.textColor),
                       ),
@@ -212,7 +212,7 @@ class StockDetailsWidget extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(left: 10.0),
                         child: CustomRoundButton(
-                          title: "Back",
+                          title: 'stock.btn_back'.tr,
                           boxColor: Colors.white,
                           textColor: ColorManager.kPrimaryColor,
                           fct: () async {

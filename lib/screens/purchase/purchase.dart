@@ -177,9 +177,9 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
   @override
   Widget build(BuildContext context) {
     if (!canViewPurchasePrice(context)) {
-      return const SafeArea(
+      return SafeArea(
         child: Center(
-          child: Text('Purchase permission is required to view purchases.'),
+          child: Text('purchase.permission_required'.tr),
         ),
       );
     }
@@ -259,12 +259,12 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Purchase List",
+          'purchase.page_title'.tr,
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
               0.30, ColorManager.textColor),
         ),
         CustomRoundButton(
-          title: "Create New Purchase",
+          title: 'purchase.btn_create_new'.tr,
           fct: () {
             sideBarController.index.value = 20;
           },
@@ -318,7 +318,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text(
-              "Name",
+              'purchase.filter_name'.tr,
               style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
                   0.27, Colors.black.withOpacity(0.6)),
             ),
@@ -328,7 +328,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
             width: 120,
             controller: purchaserNameController,
             size: size,
-            hintText: 'Purchaser Name',
+            hintText: 'purchase.hint_purchaser_name'.tr,
             onchanged: (value) {},
           ),
         ],
@@ -344,7 +344,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Text("Product",
+            child: Text('purchase.filter_product'.tr,
                 style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
                     0.27, Colors.black.withOpacity(0.6))),
           ),
@@ -353,7 +353,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
             width: 120,
             controller: productNameController,
             size: size,
-            hintText: 'Product Name',
+            hintText: 'purchase.hint_product_name'.tr,
             onchanged: (value) {},
           ),
         ],
@@ -369,7 +369,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Text("Store",
+            child: Text('purchase.filter_store'.tr,
                 style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
                     0.27, Colors.black.withOpacity(0.6))),
           ),
@@ -385,7 +385,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                 decoration: const InputDecoration(border: InputBorder.none),
                 value: storeSelected,
                 hint: Text(
-                  'Select Store',
+                  'purchase.hint_select_store'.tr,
                   style: buildCustomStyle(
                       FontWeightManager.medium,
                       FontSize.s12,
@@ -430,7 +430,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Text("Supplier",
+            child: Text('purchase.filter_supplier'.tr,
                 style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
                     0.27, Colors.black.withOpacity(0.6))),
           ),
@@ -446,7 +446,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                 decoration: const InputDecoration(border: InputBorder.none),
                 value: supplier,
                 hint: Text(
-                  'Select Supplier',
+                  'purchase.hint_select_supplier'.tr,
                   style: buildCustomStyle(
                       FontWeightManager.medium,
                       FontSize.s12,
@@ -488,7 +488,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Text("Date",
+            child: Text('purchase.filter_date'.tr,
                 style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
                     0.27, Colors.black.withOpacity(0.6))),
           ),
@@ -519,7 +519,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
           child: Column(
             children: [
               CustomRoundButton(
-                title: "Search",
+                title: 'purchase.btn_search'.tr,
                 fct: () {
                   searchPurchase(1);
                 },
@@ -535,7 +535,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
           child: Column(
             children: [
               CustomRoundButton(
-                title: "Reset",
+                title: 'general.reset'.tr,
                 boxColor: Colors.white,
                 textColor: ColorManager.kPrimaryColor,
                 fct: resetSearch,
@@ -564,10 +564,10 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
       );
     } catch (e) {
       debugPrint("Error in _buildPurchaseList: $e");
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(30.0),
-          child: Text("Error loading purchase list"),
+          padding: const EdgeInsets.all(30.0),
+          child: Text('purchase.error_loading_list'.tr),
         ),
       );
     }
@@ -633,7 +633,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                   padding: const EdgeInsets.all(15.0),
                   child: Center(
                     child: Text(
-                      "No data available",
+                      'purchase.no_data'.tr,
                       style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
                           0.18, ColorManager.textColor),
                     ),
@@ -652,7 +652,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
         child: Padding(
           padding: const EdgeInsets.all(15.0),
           child: Text(
-            "Error building table: $e",
+            'purchase.error_building_table'.trParams({'error': '$e'}),
             style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
                 0.18, ColorManager.textColor),
           ),
@@ -666,10 +666,10 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
     return TableRow(
       decoration: const BoxDecoration(color: ColorManager.tableBGColor),
       children: [
-        _buildTableCell("No"),
-        _buildTableCell("Purchaser Name"),
-        _buildTableCell("Amount"),
-        _buildTableCell("Action"),
+        _buildTableCell('purchase.col_no'.tr),
+        _buildTableCell('purchase.col_purchaser_name'.tr),
+        _buildTableCell('purchase.col_amount'.tr),
+        _buildTableCell('purchase.col_action'.tr),
       ],
     );
   }
@@ -701,7 +701,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
     return TableRow(
       children: [
         _buildTableCell((index + 1).toString()),
-        _buildTableCell("Sales Executive"),
+        _buildTableCell('purchase.sales_executive'.tr),
         _buildTableCell("${unitPrice * quantity}"),
         _buildActionCell(purchase, purchaseProvider)
       ],

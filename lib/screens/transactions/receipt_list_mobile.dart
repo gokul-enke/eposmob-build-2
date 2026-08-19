@@ -169,14 +169,14 @@ class _ReceiptMobileViewState extends State<ReceiptMobileView> {
                 _filterField(widget.emailController, widget.emailFocusNode, 'receipt.email_hint'.tr),
                 const SizedBox(height: 8),
                 _dropdownField(
-                  hint: 'All Status',
+                  hint: 'receipt.hint_all_status'.tr,
                   value: widget.selectedStatus,
                   items: widget.statusOptions,
                   onChanged: widget.onStatusChanged,
                 ),
                 const SizedBox(height: 8),
                 _dropdownField(
-                  hint: 'All Payment Methods',
+                  hint: 'receipt.hint_all_payment'.tr,
                   value: widget.selectedPaymentMethod,
                   items: widget.paymentMethodOptions,
                   onChanged: widget.onPaymentMethodChanged,

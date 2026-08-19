@@ -94,7 +94,7 @@ class AddProductPageScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               BuildTextTile(
-                                title: "Select Category",
+                                title: 'add_primary_details.label_select_category'.tr,
                                 isStarRed: true,
                                 isTextField: true,
                                 textStyle: buildCustomStyle(
@@ -126,7 +126,7 @@ class AddProductPageScreen extends StatelessWidget {
                                               .selectedCategoryIndex]
                                           : null,
                                       hint: Text(
-                                        'Select Category',
+                                        'add_primary_details.hint_select_category'.tr,
                                         style: buildCustomStyle(
                                           FontWeightManager.medium,
                                           FontSize.s12,
@@ -142,7 +142,7 @@ class AddProductPageScreen extends StatelessWidget {
                                                 child: category.categoryName ==
                                                         "ALL"
                                                     ? Text(
-                                                        ' Please Select',
+                                                        'add_primary_details.option_please_select'.tr,
                                                         style: buildCustomStyle(
                                                           FontWeightManager
                                                               .medium,
@@ -244,7 +244,7 @@ class AddProductPageScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               BuildTextTile(
-                                title: "Name",
+                                title: 'add_primary_details.label_name'.tr,
                                 isStarRed: true,
                                 isTextField: true,
                                 textStyle: buildCustomStyle(
@@ -272,7 +272,7 @@ class AddProductPageScreen extends StatelessWidget {
                                   cursorColor: ColorManager.kPrimaryColor,
                                   decoration: InputDecoration(
                                     border: InputBorder.none,
-                                    hintText: 'Product Name',
+                                    hintText: 'add_primary_details.hint_product_name'.tr,
                                     hintStyle: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,
@@ -283,7 +283,7 @@ class AddProductPageScreen extends StatelessWidget {
                                   ),
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
-                                      return 'This field is required';
+                                      return 'add_primary_details.error_required'.tr;
                                     }
                                     return null;
                                   },
@@ -306,7 +306,7 @@ class AddProductPageScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               BuildTextTile(
-                                title: "Product Slug",
+                                title: 'add_primary_details.label_product_slug'.tr,
                                 isStarRed: true,
                                 isTextField: true,
                                 textStyle: buildCustomStyle(
@@ -330,7 +330,7 @@ class AddProductPageScreen extends StatelessWidget {
                                   cursorColor: ColorManager.kPrimaryColor,
                                   decoration: InputDecoration(
                                     border: InputBorder.none,
-                                    hintText: 'Product Slug',
+                                    hintText: 'add_primary_details.hint_product_slug'.tr,
                                     hintStyle: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,
@@ -342,7 +342,7 @@ class AddProductPageScreen extends StatelessWidget {
                                   controller: productSlugController,
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
-                                      return 'This field is required';
+                                      return 'add_primary_details.error_required'.tr;
                                     }
                                     return null;
                                   },
@@ -360,7 +360,7 @@ class AddProductPageScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               BuildTextTile(
-                                title: "Price",
+                                title: 'add_primary_details.label_price'.tr,
                                 isStarRed: false,
                                 isTextField: true,
                                 textStyle: buildCustomStyle(
@@ -383,7 +383,7 @@ class AddProductPageScreen extends StatelessWidget {
                                   cursorColor: ColorManager.kPrimaryColor,
                                   decoration: InputDecoration(
                                     border: InputBorder.none,
-                                    hintText: 'Price',
+                                    hintText: 'add_primary_details.hint_price'.tr,
                                     hintStyle: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,
@@ -411,7 +411,7 @@ class AddProductPageScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               BuildTextTile(
-                                title: "Barcode",
+                                title: 'add_primary_details.label_barcode'.tr,
                                 textStyle: buildCustomStyle(
                                   FontWeightManager.regular,
                                   FontSize.s14,
@@ -433,7 +433,7 @@ class AddProductPageScreen extends StatelessWidget {
                                   cursorColor: ColorManager.kPrimaryColor,
                                   decoration: InputDecoration(
                                     border: InputBorder.none,
-                                    hintText: 'Barcode',
+                                    hintText: 'add_primary_details.hint_barcode'.tr,
                                     hintStyle: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,
@@ -457,7 +457,7 @@ class AddProductPageScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               BuildTextTile(
-                                title: "Unit",
+                                title: 'add_primary_details.label_unit'.tr,
                                 isStarRed: true,
                                 isTextField: true,
                                 textStyle: buildCustomStyle(
@@ -481,7 +481,7 @@ class AddProductPageScreen extends StatelessWidget {
                                   ),
                                   value: selectedUnit,
                                   hint: Text(
-                                    'Choose Product Unit',
+                                    'add_primary_details.hint_choose_unit'.tr,
                                     style: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,
@@ -524,7 +524,7 @@ class AddProductPageScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               BuildTextTile(
-                                title: "Currency",
+                                title: 'add_primary_details.label_currency'.tr,
                                 isStarRed: true,
                                 isTextField: true,
                                 textStyle: buildCustomStyle(
@@ -549,7 +549,7 @@ class AddProductPageScreen extends StatelessWidget {
                                   ),
                                   value: selectedCurrency,
                                   hint: Text(
-                                    'Choose Currency',
+                                    'add_primary_details.hint_choose_currency'.tr,
                                     style: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,
@@ -694,7 +694,7 @@ class AddProductPageScreen extends StatelessWidget {
                             Padding(
                               padding: const EdgeInsets.only(left: 10.0),
                               child: CustomRoundButton(
-                                title: "Next",
+                                title: 'add_primary_details.btn_next'.tr,
                                 boxColor: Colors.white,
                                 textColor: ColorManager.kPrimaryColor,
                                 fct: () async {
@@ -720,7 +720,7 @@ class AddProductPageScreen extends StatelessWidget {
                                       showScaffold(
                                         context: context,
                                         message:
-                                            'Please Fill the Required Fields',
+                                            'add_primary_details.error_fill_required'.tr,
                                       );
                                       // sideBarController.index.value = 14;
                                     } else {

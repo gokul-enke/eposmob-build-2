@@ -358,14 +358,16 @@ class _EditOrderState extends State<EditOrder> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              ordersId != "" ? 'Edit Order' : 'New Order',
+              ordersId != ""
+                  ? 'edit_order.title_edit'.tr
+                  : 'edit_order.title_new'.tr,
               style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
                   0.30, ColorManager.textColor),
             ),
           ],
         ),
         Text(
-          ordersId != "" ? ordersId : 'Order No #00000',
+          ordersId != "" ? ordersId : 'edit_order.label_order_no'.tr,
           style: buildCustomStyle(FontWeightManager.regular, FontSize.s12, 0.18,
               ColorManager.textColor),
         ),
@@ -463,7 +465,7 @@ class _EditOrderState extends State<EditOrder> {
                                                 context: context,
                                                 message:
                                                     addToCartModel.message ??
-                                                        'Added To Cart',
+                                                        'edit_order.msg_added_to_cart'.tr,
                                               );
                                               setState(() {
                                                 _autocompleteProductKey =
@@ -481,7 +483,7 @@ class _EditOrderState extends State<EditOrder> {
                                                 context: context,
                                                 message: addToCartModel
                                                         .message ??
-                                                    "Error Occured ! Try Again",
+                                                    'edit_order.msg_error_try_again'.tr,
                                               );
                                               //  'Added To Cart',
                                             }
@@ -530,7 +532,7 @@ class _EditOrderState extends State<EditOrder> {
                                                   context: context,
                                                   message:
                                                       addToCartModel.message ??
-                                                          'Added To Cart',
+                                                          'edit_order.msg_added_to_cart'.tr,
                                                 );
                                                 setState(() {
                                                   _autocompleteProductKey =
@@ -548,7 +550,7 @@ class _EditOrderState extends State<EditOrder> {
                                                   context: context,
                                                   message: addToCartModel
                                                           .message ??
-                                                      "Error Occured ! Try Again",
+                                                      'edit_order.msg_error_try_again'.tr,
                                                 );
                                                 //  'Added To Cart',
                                               }
@@ -566,7 +568,7 @@ class _EditOrderState extends State<EditOrder> {
                                 );
                               },
                               size: size,
-                              hintText: 'Barcode',
+                              hintText: 'edit_order.hint_barcode'.tr,
                             ),
                           ),
                         )
@@ -583,7 +585,7 @@ class _EditOrderState extends State<EditOrder> {
                               controller: selectedProductNameController,
                               onchanged: (query) {},
                               size: size,
-                              hintText: 'Quantity',
+                              hintText: 'edit_order.hint_quantity'.tr,
                             ),
                           ),
                         )
@@ -619,7 +621,7 @@ class _EditOrderState extends State<EditOrder> {
                         controller: quantityController,
                         onchanged: (query) {},
                         size: size,
-                        hintText: 'Quantity',
+                        hintText: 'edit_order.hint_quantity'.tr,
                         keyboardType: TextInputType.number,
                         inputFormatters: [
                           if (unitPriceController.text == 'KG' ||
@@ -641,7 +643,7 @@ class _EditOrderState extends State<EditOrder> {
                         controller: unitPriceController,
                         onchanged: (query) {},
                         size: size,
-                        hintText: 'Unit Price',
+                        hintText: 'edit_order.hint_unit_price'.tr,
                       ),
                     ),
                   ),
@@ -654,7 +656,7 @@ class _EditOrderState extends State<EditOrder> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             CustomRoundButton(
-                              title: "Add Item",
+                              title: 'edit_order.btn_add_item'.tr,
                               boxColor: ColorManager.kButtonGreen,
                               borderColor: ColorManager.kButtonGreen,
                               isLoading: isLoadingAddItem,
@@ -692,7 +694,7 @@ class _EditOrderState extends State<EditOrder> {
                                       showScaffold(
                                         context: context,
                                         message: addToCartModel.message ??
-                                            'Added To Cart',
+                                            'edit_order.msg_added_to_cart'.tr,
                                       );
                                       setState(() {
                                         _autocompleteProductKey = GlobalKey();
@@ -707,7 +709,7 @@ class _EditOrderState extends State<EditOrder> {
                                       showScaffoldError(
                                         context: context,
                                         message: addToCartModel.message ??
-                                            "Error Occured ! Try Again",
+                                            'edit_order.msg_error_try_again'.tr,
                                       );
                                       //  'Added To Cart',
                                     }
@@ -718,7 +720,7 @@ class _EditOrderState extends State<EditOrder> {
                                   showScaffoldError(
                                     context: context,
                                     message:
-                                        "Failed to add item. Please try again.",
+                                        'edit_order.msg_failed_add_item'.tr,
                                   );
                                 } finally {
                                   debugPrint('Finally adding item');
@@ -756,7 +758,7 @@ class _EditOrderState extends State<EditOrder> {
                               _focusTextField(),
                               showScaffold(
                                 context: context,
-                                message: 'Product Details Cleared Successfully',
+                                message: 'edit_order.msg_product_cleared'.tr,
                               )
                             },
                             child: Center(
@@ -824,7 +826,7 @@ class _EditOrderState extends State<EditOrder> {
                         columns: [
                           DataColumn(
                             label: Expanded(
-                              child: Text('Item Name',
+                              child: Text('edit_order.col_item_name'.tr,
                                   textAlign: TextAlign.center,
                                   style: buildCustomStyle(
                                       FontWeightManager.bold,
@@ -835,7 +837,7 @@ class _EditOrderState extends State<EditOrder> {
                           ),
                           DataColumn(
                             label: Expanded(
-                              child: Text('Unit',
+                              child: Text('edit_order.col_unit'.tr,
                                   textAlign: TextAlign.center,
                                   style: buildCustomStyle(
                                       FontWeightManager.bold,
@@ -846,7 +848,7 @@ class _EditOrderState extends State<EditOrder> {
                           ),
                           DataColumn(
                             label: Expanded(
-                              child: Text('Quantity',
+                              child: Text('edit_order.col_quantity'.tr,
                                   textAlign: TextAlign.center,
                                   style: buildCustomStyle(
                                       FontWeightManager.bold,
@@ -857,7 +859,7 @@ class _EditOrderState extends State<EditOrder> {
                           ),
                           DataColumn(
                             label: Expanded(
-                              child: Text('Unit Price',
+                              child: Text('edit_order.col_unit_price'.tr,
                                   textAlign: TextAlign.center,
                                   style: buildCustomStyle(
                                       FontWeightManager.bold,
@@ -868,7 +870,7 @@ class _EditOrderState extends State<EditOrder> {
                           ),
                           DataColumn(
                             label: Expanded(
-                              child: Text('Total Price',
+                              child: Text('edit_order.col_total_price'.tr,
                                   textAlign: TextAlign.center,
                                   style: buildCustomStyle(
                                       FontWeightManager.bold,
@@ -879,7 +881,7 @@ class _EditOrderState extends State<EditOrder> {
                           ),
                           DataColumn(
                             label: Expanded(
-                              child: Text('Actions',
+                              child: Text('edit_order.col_actions'.tr,
                                   textAlign: TextAlign.center,
                                   style: buildCustomStyle(
                                       FontWeightManager.bold,
@@ -895,7 +897,7 @@ class _EditOrderState extends State<EditOrder> {
                               DataCell(Align(
                                 alignment: Alignment.center,
                                 child: Text(
-                                  item.productName ?? 'Unknown',
+                                  item.productName ?? 'general.unknown'.tr,
                                   style: buildCustomStyle(
                                       FontWeightManager.regular,
                                       12,
@@ -936,9 +938,9 @@ class _EditOrderState extends State<EditOrder> {
                                     controller: TextEditingController(
                                         text: item.unitPrice.toString()),
                                     keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(
+                                    decoration: InputDecoration(
                                       border: InputBorder.none,
-                                      hintText: 'Unit Price',
+                                      hintText: 'edit_order.hint_unit_price'.tr,
                                       hintStyle: TextStyle(
                                         color: Colors.grey,
                                         fontSize: 12,
@@ -976,7 +978,7 @@ class _EditOrderState extends State<EditOrder> {
                 },
               );
             } else if (snapshot.hasError) {
-              return Text('Error: ${snapshot.error}');
+              return Text('edit_order.err_snapshot'.trParams({'error': '${snapshot.error}'}));
             } else {
               return const Center(child: BuildCartListDesign());
             }
@@ -1005,7 +1007,7 @@ class _EditOrderState extends State<EditOrder> {
 
       showScaffold(
         context: context,
-        message: 'Price Updated Successfully',
+        message: 'edit_order.msg_price_updated'.tr,
       );
     }
   }
@@ -1031,18 +1033,18 @@ class _EditOrderState extends State<EditOrder> {
         BuildPaymentRow(
           amount:
               "INR ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.subTotal ?? 0.00)}",
-          title: "Net amount",
+          title: 'edit_order.payment_net_amount'.tr,
           color: ColorManager.textColor,
         ),
-        const BuildPaymentRow(
+        BuildPaymentRow(
           amount: "INR 0.00",
-          title: "Shipping",
+          title: 'edit_order.payment_shipping'.tr,
           color: ColorManager.textColor,
         ),
         BuildPaymentRow(
           amount:
               "INR ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.discount ?? 0.00)}",
-          title: "Discount",
+          title: 'edit_order.payment_discount'.tr,
           color: ColorManager.textColor,
         ),
         GestureDetector(
@@ -1053,7 +1055,7 @@ class _EditOrderState extends State<EditOrder> {
                       .totalTax ??
                   0.00,
             )}",
-            title: "GST",
+            title: 'edit_order.payment_gst'.tr,
             color: ColorManager.kPrimaryColor,
           ),
           onTap: () {
@@ -1074,7 +1076,7 @@ class _EditOrderState extends State<EditOrder> {
         BuildPaymentRow(
           amount:
               "INR ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal ?? 0.00)}",
-          title: "Total Payable",
+          title: 'edit_order.payment_total_payable'.tr,
           secondRowTextStyle: buildCustomStyle(
             FontWeightManager.bold,
             FontSize.s15,
@@ -1098,7 +1100,7 @@ class _EditOrderState extends State<EditOrder> {
       children: [
         BuildPaymentRow(
           amount: "",
-          title: "Payment Method",
+          title: 'edit_order.payment_method_title'.tr,
           firstRowTextStyle: buildCustomStyle(
             FontWeightManager.semiBold,
             FontSize.s14,
@@ -1132,7 +1134,7 @@ class _EditOrderState extends State<EditOrder> {
                       fit: BoxFit.none,
                     ),
                     Text(
-                      'Cash',
+                      'edit_order.payment_cash'.tr,
                       style: buildCustomStyle(FontWeightManager.medium,
                           FontSize.s8, 0.12, Colors.black),
                     ),
@@ -1164,7 +1166,7 @@ class _EditOrderState extends State<EditOrder> {
                       fit: BoxFit.none,
                     ),
                     Text(
-                      'Card',
+                      'edit_order.payment_card'.tr,
                       style: buildCustomStyle(FontWeightManager.medium,
                           FontSize.s8, 0.12, Colors.black),
                     ),
@@ -1196,7 +1198,7 @@ class _EditOrderState extends State<EditOrder> {
                       fit: BoxFit.none,
                     ),
                     Text(
-                      'Upi',
+                      'edit_order.payment_upi'.tr,
                       style: buildCustomStyle(FontWeightManager.medium,
                           FontSize.s8, 0.12, Colors.black),
                     ),
@@ -1211,8 +1213,8 @@ class _EditOrderState extends State<EditOrder> {
                   child: iconColor != 1
                       ? TextFormField(
                           controller: _transactionNumberController,
-                          decoration: const InputDecoration(
-                            hintText: 'Transaction Reference No:',
+                          decoration: InputDecoration(
+                            hintText: 'edit_order.hint_transaction_ref'.tr,
                           ),
                         )
                       : TextFormField(
@@ -1220,8 +1222,8 @@ class _EditOrderState extends State<EditOrder> {
                           onChanged: (value) {
                             _getBalanceAmount();
                           },
-                          decoration: const InputDecoration(
-                            hintText: 'Enter Paid Amount Here:',
+                          decoration: InputDecoration(
+                            hintText: 'edit_order.hint_enter_paid_amount'.tr,
                           ),
                         ),
                 ),
@@ -1232,7 +1234,7 @@ class _EditOrderState extends State<EditOrder> {
         if (iconColor == 1)
           BuildPaymentRow(
             amount: "INR ${_balanceAmount.toStringAsFixed(2)}",
-            title: "Balance amount",
+            title: 'edit_order.payment_balance'.tr,
             secondRowTextStyle: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s15,
@@ -1266,7 +1268,7 @@ class _EditOrderState extends State<EditOrder> {
           children: [
             BuildPaymentRow(
               amount: "",
-              title: "Delivery Method",
+              title: 'edit_order.delivery_method_title'.tr,
               firstRowTextStyle: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s14,
@@ -1336,7 +1338,7 @@ class _EditOrderState extends State<EditOrder> {
                       size: size,
                       margin: const EdgeInsets.all(0),
                       height: size.height * .06,
-                      hintText: 'Car Number:',
+                      hintText: 'edit_order.hint_car_number'.tr,
                     ),
                     const SizedBox(height: 10),
                   ],
@@ -1372,7 +1374,7 @@ class _EditOrderState extends State<EditOrder> {
               margin: const EdgeInsets.all(0),
               size: size,
               height: size.height * .06,
-              hintText: 'Comment:',
+              hintText: 'edit_order.hint_comment'.tr,
             ),
             const SizedBox(height: 10),
           ],
@@ -1388,25 +1390,25 @@ class _EditOrderState extends State<EditOrder> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           _buildActionButton(
-            text: 'Clear Cart',
+            text: 'edit_order.btn_clear_cart'.tr,
             color: ColorManager.kButtonRed,
             onPressed: _clearCart,
             isLoading: isLoadingClearCart,
           ),
           _buildActionButton(
-            text: 'Save Order',
+            text: 'edit_order.btn_save_order'.tr,
             color: ColorManager.kButtonYellow,
             onPressed: _saveOrder,
             isLoading: isLoadingSaveOrder,
           ),
           _buildActionButton(
-            text: 'Create Order and Print',
+            text: 'edit_order.btn_create_order_print'.tr,
             color: ColorManager.kButtonBlue,
             onPressed: _createOrderAndPrint,
             isLoading: isLoadingCreateOrder,
           ),
           _buildActionButton(
-            text: 'Confirm Order',
+            text: 'edit_order.btn_confirm_order'.tr,
             color: ColorManager.kButtonGreen,
             onPressed: _confirmOrder,
             isLoading: isLoadingConfirmOrder,
@@ -1471,7 +1473,7 @@ class _EditOrderState extends State<EditOrder> {
                   controller: mobileNumberTextController,
                   readOnly: true,
                   size: size,
-                  hintText: 'Phone Number',
+                  hintText: 'edit_order.hint_phone_number'.tr,
                 ),
               )
             : Expanded(
@@ -1566,7 +1568,7 @@ class _EditOrderState extends State<EditOrder> {
                         controller: mobileNumberTextController,
                         focusNode: focusNode,
                         decoration: InputDecoration(
-                          hintText: 'Enter mobile number',
+                          hintText: 'edit_order.hint_enter_mobile'.tr,
                           hintStyle: buildCustomStyle(
                             FontWeight.w500,
                             12,
@@ -1682,7 +1684,7 @@ class _EditOrderState extends State<EditOrder> {
                     }),
                     showScaffold(
                       context: context,
-                      message: 'Customer Details Cleared Successfully',
+                      message: 'edit_order.msg_customer_cleared'.tr,
                     )
                   },
                   child: Center(
@@ -1750,7 +1752,7 @@ class _EditOrderState extends State<EditOrder> {
               controller: coupenCodeTextController,
               enabled: !isCouponApplied,
               decoration: InputDecoration(
-                hintText: 'Apply Coupon',
+                hintText: 'edit_order.hint_apply_coupon'.tr,
                 hintStyle: buildCustomStyle(
                   FontWeight.w500,
                   12,
@@ -1771,7 +1773,7 @@ class _EditOrderState extends State<EditOrder> {
         const SizedBox(width: 10),
         if (isCouponApplied) // Show remove button if coupon is applied
           CustomRoundButton(
-            title: "Remove",
+            title: 'edit_order.btn_remove_coupon'.tr,
             fct: () => {
               setState(() {
                 isCouponApplied = false; // Reset coupon state
@@ -1797,7 +1799,7 @@ class _EditOrderState extends State<EditOrder> {
           )
         else
           CustomRoundButton(
-            title: "Apply",
+            title: 'edit_order.btn_apply_coupon'.tr,
             fct: _applyCoupon,
             fontSize: FontSize.s14,
             height: MediaQuery.of(context).size.height * .07,
@@ -1835,14 +1837,14 @@ class _EditOrderState extends State<EditOrder> {
       });
       showScaffold(
         context: context,
-        message: "Cart Cleared Succesfully",
+        message: 'edit_order.msg_cart_cleared'.tr,
       );
       _focusTextField();
     } catch (e) {
       debugPrint("Error clearing cart: $e");
       showScaffoldError(
         context: context,
-        message: "Failed to clear cart. Please try again.",
+        message: 'edit_order.msg_failed_clear_cart'.tr,
       );
     } finally {
       setState(() {
@@ -1860,18 +1862,18 @@ class _EditOrderState extends State<EditOrder> {
       if (selectedCustomerID == null && mobileNumberText == "") {
         showScaffoldError(
           context: context,
-          message: "Please select a customer",
+          message: 'edit_order.msg_select_customer'.tr,
         );
       } else if (iconColor != 1 && iconColor != 2 && iconColor != 3) {
         showScaffoldError(
           context: context,
-          message: "Please chose a Payment Method",
+          message: 'edit_order.msg_select_payment'.tr,
         );
       } else if (deliveryMethod == "Car Delivery" &&
           _carNumberController.text == "") {
         showScaffoldError(
           context: context,
-          message: "Please enter Car Number",
+          message: 'edit_order.msg_enter_car_number'.tr,
         );
       } else {
         String? accessToken =
@@ -1950,7 +1952,7 @@ class _EditOrderState extends State<EditOrder> {
           } else {
             showScaffoldError(
               context: context,
-              message: "Failed to Save Order",
+              message: 'edit_order.msg_failed_save'.tr,
               // message: "${addToOrderModel.message}",
             );
           }
@@ -1988,18 +1990,18 @@ class _EditOrderState extends State<EditOrder> {
       if (selectedCustomerID == null && mobileNumberText == "") {
         showScaffoldError(
           context: context,
-          message: "Please select a customer",
+          message: 'edit_order.msg_select_customer'.tr,
         );
       } else if (iconColor != 1 && iconColor != 2 && iconColor != 3) {
         showScaffoldError(
           context: context,
-          message: "Please chose a Payment Method",
+          message: 'edit_order.msg_select_payment'.tr,
         );
       } else if (deliveryMethod == "Car Delivery" &&
           _carNumberController.text == "") {
         showScaffoldError(
           context: context,
-          message: "Please enter Car Number",
+          message: 'edit_order.msg_enter_car_number'.tr,
         );
       } else {
         String? accessToken =
@@ -2054,7 +2056,7 @@ class _EditOrderState extends State<EditOrder> {
           if (response["status"] == "success") {
             showScaffold(
               context: context,
-              message: "Order Confirmed Successfully",
+              message: 'edit_order.msg_order_confirmed'.tr,
             );
 
             try {
@@ -2170,18 +2172,18 @@ class _EditOrderState extends State<EditOrder> {
       if (selectedCustomerID == null && mobileNumberText == "") {
         showScaffoldError(
           context: context,
-          message: "Please select a customer",
+          message: 'edit_order.msg_select_customer'.tr,
         );
       } else if (iconColor != 1 && iconColor != 2 && iconColor != 3) {
         showScaffoldError(
           context: context,
-          message: "Please chose a Payment Method",
+          message: 'edit_order.msg_select_payment'.tr,
         );
       } else if (deliveryMethod == "Car Delivery" &&
           _carNumberController.text == "") {
         showScaffoldError(
           context: context,
-          message: "Please enter Car Number",
+          message: 'edit_order.msg_enter_car_number'.tr,
         );
       } else {
         String? accessToken =
@@ -2337,25 +2339,26 @@ class _EditOrderState extends State<EditOrder> {
 
           showScaffold(
             context: context,
-            message: result['message'] ?? 'Coupon Applied Successfully',
+            message: result['message'] ?? 'edit_order.msg_coupon_applied'.tr,
           );
         } else {
           // Handle failure to apply coupon
           showScaffoldError(
             context: context,
-            message: result['message'] ?? 'Failed to Apply Coupon',
+            message: result['message'] ?? 'edit_order.msg_failed_coupon'.tr,
           );
         }
       } else {
         // Handle case where result is null
         showScaffoldError(
           context: context,
-          message: 'Error Occurred! Try Again',
+          message: 'edit_order.msg_error_try_again'.tr,
         );
       }
     } else {
       // Handle unauthenticated state
-      showScaffoldError(context: context, message: 'Not Authenticated');
+      showScaffoldError(
+          context: context, message: 'edit_order.msg_not_authenticated'.tr);
     }
   }
 

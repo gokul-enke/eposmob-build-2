@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/delivery_method_modal.dart';
@@ -37,7 +38,7 @@ class _BillingWidgetState extends State<BillingWidget> {
                     TextField(
                       controller: billingProvider.mobileNumberTextController,
                       decoration: InputDecoration(
-                        labelText: 'Customer Name',
+                        labelText: 'mobile_billing.field_customer_name'.tr,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -120,7 +121,7 @@ class _BillingWidgetState extends State<BillingWidget> {
                                         billingProvider.paidAmountController,
                                     readOnly: true,
                                     decoration: InputDecoration(
-                                      labelText: 'Paid Amount',
+                                      labelText: 'mobile_billing.field_paid_amount'.tr,
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(8),
                                       ),
@@ -428,7 +429,7 @@ class _BillingWidgetState extends State<BillingWidget> {
     if (billingProvider.mobileNumberTextController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Please enter customer name'),
+          content: Text('mobile_billing.error_enter_customer_name'.tr),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
@@ -443,7 +444,7 @@ class _BillingWidgetState extends State<BillingWidget> {
         !billingProvider.isUpiSelected) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Please select at least one payment method'),
+          content: Text('mobile_billing.error_select_payment_method'.tr),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
@@ -457,7 +458,7 @@ class _BillingWidgetState extends State<BillingWidget> {
     if (totalPaid < grandTotal) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Paid amount is less than the total amount'),
+          content: Text('mobile_billing.error_paid_less_than_total'.tr),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
@@ -534,7 +535,7 @@ class _BillingWidgetState extends State<BillingWidget> {
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.grey[700],
                     ),
-                    child: const Text('PRINT RECEIPT'),
+                    child: Text('mobile_billing.btn_print_receipt'.tr),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
