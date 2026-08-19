@@ -1,4 +1,22 @@
 {
+  "supplier_sales_report": {
+    "error_unavailable": "تقرير مبيعات الموردين غير متاح حالياً.",
+    "page_title": "تقرير مبيعات الموردين ",
+    "filter_supplier": "المورد ",
+    "hint_supplier_name": "اسم المورد",
+    "filter_from_date": "من تاريخ ",
+    "filter_to_date": "إلى تاريخ ",
+    "filter_amount": "المبلغ ",
+    "hint_amount": "المبلغ",
+    "btn_search": "بحث",
+    "section_title": "تقرير مبيعات الموردين",
+    "col_no": "الرقم",
+    "col_customer_name": "اسم العميل",
+    "col_created_by": "أنشئ بواسطة",
+    "col_price": "السعر",
+    "col_date": "التاريخ",
+    "col_action": "الإجراء"
+  },
   "loyality": {
     "page_title": "بطاقة الولاء ",
     "hint_search": "ابحث عن العملاء.....",

@@ -1,4 +1,22 @@
 {
+  "supplier_sales_report": {
+    "error_unavailable": "Supplier sales report is currently unavailable.",
+    "page_title": "Supplier Sales Report ",
+    "filter_supplier": "Supplier ",
+    "hint_supplier_name": "Supplier Name",
+    "filter_from_date": "From Date ",
+    "filter_to_date": "To Date ",
+    "filter_amount": "Amount ",
+    "hint_amount": "Amount",
+    "btn_search": "Search",
+    "section_title": "Supplier Sales Report",
+    "col_no": "No",
+    "col_customer_name": "Customer Name",
+    "col_created_by": "Created By",
+    "col_price": "Price",
+    "col_date": "Date",
+    "col_action": "Action"
+  },
   "loyality": {
     "page_title": "Loyality Card ",
     "hint_search": "Search Customers.....",
