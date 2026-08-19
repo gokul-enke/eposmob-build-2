@@ -1,4 +1,13 @@
 {
+  "order_list": {
+    "items_count": "@count عناصر",
+    "printing_order": "طباعة الطلب @number",
+    "dialog_title_delete": "حذف الطلب",
+    "dialog_message_delete": "سيتم حذف هذا الطلب نهائياً من طلباتك المحفوظة.",
+    "success_order_deleted": "تم حذف الطلب بنجاح",
+    "empty_title": "لا توجد طلبات",
+    "empty_subtitle": "أنشئ طلبات في قسم الفواتير"
+  },
   "kiosk": {
     "page_title": "ضع طلبك",
     "no_products": "لا توجد منتجات متاحة",

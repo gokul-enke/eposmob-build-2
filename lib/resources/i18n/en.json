@@ -1,4 +1,13 @@
 {
+  "order_list": {
+    "items_count": "@count items",
+    "printing_order": "Printing order @number",
+    "dialog_title_delete": "Delete Order",
+    "dialog_message_delete": "This order will be permanently removed from your saved orders.",
+    "success_order_deleted": "Order deleted successfully",
+    "empty_title": "No orders found",
+    "empty_subtitle": "Create orders in the billing section"
+  },
   "kiosk": {
     "page_title": "Place Your Order",
     "no_products": "No products available",

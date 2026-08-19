@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
@@ -118,7 +119,7 @@ class ViewOrders extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        "${order.items.length} items",
+                        'order_list.items_count'.trParams({'count': order.items.length.toString()}),
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
@@ -163,7 +164,7 @@ class ViewOrders extends StatelessWidget {
     // Add your print logic here
     showScaffold(
       context: context,
-      message: "Printing order ${order.orderNumber}",
+      message: 'order_list.printing_order'.trParams({'number': order.orderNumber}),
     );
   }
 
@@ -171,9 +172,9 @@ class ViewOrders extends StatelessWidget {
       BuildContext context, LocalProductProvider provider, SavedOrder order) {
     DeleteConfirmationDialog.show(
       context: context,
-      title: "Delete Order",
+      title: 'order_list.dialog_title_delete'.tr,
       itemName: order.orderNumber,
-      message: "This order will be permanently removed from your saved orders.",
+      message: 'order_list.dialog_message_delete'.tr,
       warningIcon: Icons.receipt_long_outlined,
       onDelete: () {
         // Delete the order
@@ -182,7 +183,7 @@ class ViewOrders extends StatelessWidget {
         // Show success message
         showScaffold(
           context: context,
-          message: "Order deleted successfully",
+          message: 'order_list.success_order_deleted'.tr,
         );
       },
     );
@@ -200,7 +201,7 @@ class ViewOrders extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            "No orders found",
+            'order_list.empty_title'.tr,
             style: TextStyle(
               fontSize: 16,
               color: Colors.grey.withOpacity(0.7),
@@ -209,7 +210,7 @@ class ViewOrders extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            "Create orders in the billing section",
+            'order_list.empty_subtitle'.tr,
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey.withOpacity(0.6),
