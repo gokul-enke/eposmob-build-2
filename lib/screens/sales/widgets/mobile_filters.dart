@@ -262,8 +262,8 @@ class MobileFilters extends StatelessWidget {
               children: [
                 Expanded(
                   child: _buildTextFilter(
-                    label: "Order #",
-                    hint: 'Order Number',
+                    label: 'mobile_filters.field_order_num'.tr,
+                    hint: 'mobile_filters.hint_order_number'.tr,
                     controller: orderNumberController,
                     size: size,
                   ),
@@ -271,8 +271,8 @@ class MobileFilters extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: _buildTextFilter(
-                    label: "Customer",
-                    hint: 'Customer Name',
+                    label: 'mobile_filters.field_customer'.tr,
+                    hint: 'mobile_filters.hint_customer_name'.tr,
                     controller: customerNameController,
                     size: size,
                   ),
@@ -285,8 +285,8 @@ class MobileFilters extends StatelessWidget {
               children: [
                 Expanded(
                   child: _buildTextFilter(
-                    label: "Phone",
-                    hint: 'Phone',
+                    label: 'mobile_filters.field_phone'.tr,
+                    hint: 'mobile_filters.hint_phone'.tr,
                     controller: phoneController,
                     size: size,
                   ),
@@ -336,8 +336,8 @@ class MobileFilters extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _buildTextFilter(
-              label: "Price",
-              hint: 'Price',
+              label: 'mobile_filters.field_price'.tr,
+              hint: 'mobile_filters.hint_price'.tr,
               controller: amountController,
               size: size,
             ),
@@ -345,7 +345,7 @@ class MobileFilters extends StatelessWidget {
             _buildStatusDropdown(),
             const SizedBox(height: 16),
             CustomRoundButton(
-              title: "Reset Filters",
+              title: 'mobile_filters.btn_reset_filters'.tr,
               boxColor: Colors.white,
               textColor: ColorManager.kPrimaryColor,
               fct: onReset,
