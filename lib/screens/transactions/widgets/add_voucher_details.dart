@@ -28,10 +28,10 @@ class AddVoucherDetailsWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     if (!canViewPurchasePrice(context)) {
-      return const SafeArea(
+      return SafeArea(
         child: Center(
           child: Text(
-            'Purchase permission is required to view voucher details.',
+            'add_voucher_details.permission_required'.tr,
           ),
         ),
       );
@@ -81,7 +81,7 @@ class AddVoucherDetailsWidget extends StatelessWidget {
               onPressed: () {
                 sideBarController.index.value = 26;
               },
-              text: 'All Vouchers',
+              text: 'add_voucher_details.btn_all_vouchers'.tr,
               // Optionally, you can customize the color and size
               // color: ColorManager.customColor,
               // size: 20.0,
@@ -90,7 +90,7 @@ class AddVoucherDetailsWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "Add Voucher Details",
+                  'add_voucher_details.page_title'.tr,
                   style: buildCustomStyle(FontWeightManager.semiBold,
                       FontSize.s20, 0.30, ColorManager.textColor),
                 ),
@@ -128,7 +128,7 @@ class AddVoucherDetailsWidget extends StatelessWidget {
               margin: const EdgeInsets.only(
                   top: 20, bottom: 0, left: 10, right: 10),
               child: Text(
-                " Voucher Details",
+                'add_voucher_details.section_title'.tr,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s15, 0.30, Colors.white),
               ),
@@ -154,7 +154,7 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                             TextSpan(
                               children: [
                                 TextSpan(
-                                  text: "Purchase Date: ",
+                                  text: 'add_voucher_details.label_purchase_date'.tr,
                                   style: buildCustomStyle(
                                       FontWeightManager.bold,
                                       FontSize.s15,
@@ -184,7 +184,7 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                             TextSpan(
                               children: [
                                 TextSpan(
-                                  text: "Store: ",
+                                  text: 'add_voucher_details.label_store'.tr,
                                   style: buildCustomStyle(
                                       FontWeightManager.bold,
                                       FontSize.s15,
@@ -216,7 +216,7 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                             TextSpan(
                               children: [
                                 TextSpan(
-                                  text: "Voucher Number: ",
+                                  text: 'add_voucher_details.label_voucher_number'.tr,
                                   style: buildCustomStyle(
                                       FontWeightManager.bold,
                                       FontSize.s15,
@@ -246,7 +246,7 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                             TextSpan(
                               children: [
                                 TextSpan(
-                                  text: "Amount: ",
+                                  text: 'add_voucher_details.label_amount'.tr,
                                   style: buildCustomStyle(
                                       FontWeightManager.bold,
                                       FontSize.s15,
@@ -279,7 +279,7 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                             TextSpan(
                               children: [
                                 TextSpan(
-                                  text: "Tax: ",
+                                  text: 'add_voucher_details.label_tax'.tr,
                                   style: buildCustomStyle(
                                       FontWeightManager.bold,
                                       FontSize.s15,
@@ -309,7 +309,7 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                             TextSpan(
                               children: [
                                 TextSpan(
-                                  text: "Currency: ",
+                                  text: 'add_voucher_details.label_currency'.tr,
                                   style: buildCustomStyle(
                                       FontWeightManager.bold,
                                       FontSize.s15,
@@ -343,7 +343,7 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                             TextSpan(
                               children: [
                                 TextSpan(
-                                  text: "Supplier: ",
+                                  text: 'add_voucher_details.label_supplier'.tr,
                                   style: buildCustomStyle(
                                       FontWeightManager.bold,
                                       FontSize.s15,
@@ -409,7 +409,7 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                         padding: const EdgeInsets.all(15.0),
                                         child: Center(
                                             child: Text(
-                                          "Product Name",
+                                          'add_voucher_details.col_product_name'.tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -425,7 +425,7 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                         padding: const EdgeInsets.all(15.0),
                                         child: Center(
                                             child: Text(
-                                          "Quantity",
+                                          'add_voucher_details.col_quantity'.tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -441,7 +441,7 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                         padding: const EdgeInsets.all(15.0),
                                         child: Center(
                                             child: Text(
-                                          "Unit",
+                                          'add_voucher_details.col_unit'.tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -457,7 +457,7 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                         padding: const EdgeInsets.all(15.0),
                                         child: Center(
                                             child: Text(
-                                          "Purchase Rate",
+                                          'add_voucher_details.col_purchase_rate'.tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -473,7 +473,7 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                         padding: const EdgeInsets.all(15.0),
                                         child: Center(
                                             child: Text(
-                                          "Retail Price",
+                                          'add_voucher_details.col_retail_price'.tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -489,7 +489,7 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                         padding: const EdgeInsets.all(15.0),
                                         child: Center(
                                             child: Text(
-                                          "Wholesale Price",
+                                          'add_voucher_details.col_wholesale_price'.tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -505,7 +505,7 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                         padding: const EdgeInsets.all(15.0),
                                         child: Center(
                                             child: Text(
-                                          "Expiry Date",
+                                          'add_voucher_details.col_expiry_date'.tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -521,7 +521,7 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                         padding: const EdgeInsets.all(15.0),
                                         child: Center(
                                             child: Text(
-                                          "Batch No",
+                                          'add_voucher_details.col_batch_no'.tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -537,7 +537,7 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                         padding: const EdgeInsets.all(15.0),
                                         child: Center(
                                             child: Text(
-                                          "Action",
+                                          'add_voucher_details.col_action'.tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -604,14 +604,14 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                       child: Center(
                                         child: TextFormField(
                                           controller: quantityController,
-                                          decoration: const InputDecoration(
-                                            border: OutlineInputBorder(
+                                          decoration: InputDecoration(
+                                            border: const OutlineInputBorder(
                                               borderRadius: BorderRadius.all(
                                                   Radius.circular(10.0)),
                                             ),
                                             hintStyle:
-                                                TextStyle(fontSize: 10.0),
-                                            hintText: 'Quantity',
+                                                const TextStyle(fontSize: 10.0),
+                                            hintText: 'add_voucher_details.hint_quantity'.tr,
                                           ),
                                         ),
                                       ),
@@ -636,7 +636,7 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                             value: products.unit ??
                                                 unitList?.keys.first,
                                             hint: Text(
-                                              'Choose Product Unit',
+                                              'add_voucher_details.hint_choose_unit'.tr,
                                               style: buildCustomStyle(
                                                 FontWeightManager.medium,
                                                 FontSize.s12,
@@ -684,14 +684,14 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                       child: Center(
                                         child: TextFormField(
                                           controller: purchaseRateController,
-                                          decoration: const InputDecoration(
-                                            border: OutlineInputBorder(
+                                          decoration: InputDecoration(
+                                            border: const OutlineInputBorder(
                                               borderRadius: BorderRadius.all(
                                                   Radius.circular(10.0)),
                                             ),
                                             hintStyle:
-                                                TextStyle(fontSize: 10.0),
-                                            hintText: 'Purchase Rate',
+                                                const TextStyle(fontSize: 10.0),
+                                            hintText: 'add_voucher_details.hint_purchase_rate'.tr,
                                           ),
                                         ),
                                       ),
@@ -705,14 +705,14 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                       child: Center(
                                         child: TextFormField(
                                           controller: retailPriceController,
-                                          decoration: const InputDecoration(
-                                            border: OutlineInputBorder(
+                                          decoration: InputDecoration(
+                                            border: const OutlineInputBorder(
                                               borderRadius: BorderRadius.all(
                                                   Radius.circular(10.0)),
                                             ),
                                             hintStyle:
-                                                TextStyle(fontSize: 10.0),
-                                            hintText: 'Retail Price',
+                                                const TextStyle(fontSize: 10.0),
+                                            hintText: 'add_voucher_details.hint_retail_price'.tr,
                                           ),
                                         ),
                                       ),
@@ -730,28 +730,28 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                           TextFormField(
                                             controller:
                                                 wholesalePriceController,
-                                            decoration: const InputDecoration(
-                                              border: OutlineInputBorder(
+                                            decoration: InputDecoration(
+                                              border: const OutlineInputBorder(
                                                 borderRadius: BorderRadius.all(
                                                     Radius.circular(10.0)),
                                               ),
                                               hintStyle:
-                                                  TextStyle(fontSize: 10.0),
-                                              hintText: 'Wholesale Price',
+                                                  const TextStyle(fontSize: 10.0),
+                                              hintText: 'add_voucher_details.hint_wholesale_price'.tr,
                                             ),
                                           ),
                                           const SizedBox(height: 5),
                                           TextFormField(
                                             controller:
                                                 wholesaleMinUnitController,
-                                            decoration: const InputDecoration(
-                                              border: OutlineInputBorder(
+                                            decoration: InputDecoration(
+                                              border: const OutlineInputBorder(
                                                 borderRadius: BorderRadius.all(
                                                     Radius.circular(10.0)),
                                               ),
                                               hintStyle:
-                                                  TextStyle(fontSize: 10.0),
-                                              hintText: 'Min Unit',
+                                                  const TextStyle(fontSize: 10.0),
+                                              hintText: 'add_voucher_details.hint_min_unit'.tr,
                                             ),
                                           ),
                                         ],
@@ -780,14 +780,14 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                       child: Center(
                                         child: TextFormField(
                                           controller: batchNumberController,
-                                          decoration: const InputDecoration(
-                                            border: OutlineInputBorder(
+                                          decoration: InputDecoration(
+                                            border: const OutlineInputBorder(
                                               borderRadius: BorderRadius.all(
                                                   Radius.circular(10.0)),
                                             ),
                                             hintStyle:
-                                                TextStyle(fontSize: 10.0),
-                                            hintText: 'Batch Number',
+                                                const TextStyle(fontSize: 10.0),
+                                            hintText: 'add_voucher_details.hint_batch_number'.tr,
                                           ),
                                         ),
                                       ),
@@ -852,14 +852,14 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                                 showScaffoldError(
                                                   context: context,
                                                   message:
-                                                      'Product stock updated successfully',
+                                                      'add_voucher_details.success_stock_updated'.tr,
                                                 );
                                               } else {
                                                 // Show error message
                                                 showScaffoldError(
                                                   context: context,
                                                   message:
-                                                      'Failed to update product stock: ${result['message']}',
+                                                      'add_voucher_details.error_stock_update_failed'.trParams({'message': result['message']}),
                                                 );
                                               }
                                             },
@@ -878,7 +878,7 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(left: 10.0),
                     child: CustomRoundButton(
-                      title: "Back",
+                      title: 'add_voucher_details.btn_back'.tr,
                       boxColor: Colors.white,
                       textColor: ColorManager.kPrimaryColor,
                       fct: () async {
