@@ -492,11 +492,18 @@ class CategoryProvider extends ChangeNotifier {
     filterManagementCategories(page: 1);
   }
 
-  Future<void> upsertCategoryInCache(Category category) async {
+  Future<void> upsertCategoryInCache(
+    Category category, {
+    bool isSellable = true,
+    bool isPurchasable = true,
+  }) async {
     final categoryId = category.categoryId;
     if (categoryId == null) return;
 
     for (final scope in CategoryListScope.values) {
+      if (scope == CategoryListScope.sellable && !isSellable) continue;
+      if (scope == CategoryListScope.purchasable && !isPurchasable) continue;
+
       final cache = _scopeCaches[scope]!;
       cache.items.removeWhere((item) => item.categoryId == categoryId);
       cache.items.insert(0, category);
@@ -530,7 +537,19 @@ class CategoryProvider extends ChangeNotifier {
       debugPrint(
         '🏷️ [CategoryProvider] New category ${newCategory.categoryId} missing from list API — upserting locally',
       );
-      await upsertCategoryInCache(newCategory);
+      final isSellable = data['is_sellable'] == true ||
+          data['is_sellable'] == 1 ||
+          data['is_sellable'] == '1' ||
+          data['is_sellable'] == null;
+      final isPurchasable = data['is_purchasable'] == true ||
+          data['is_purchasable'] == 1 ||
+          data['is_purchasable'] == '1' ||
+          data['is_purchasable'] == null;
+      await upsertCategoryInCache(
+        newCategory,
+        isSellable: isSellable,
+        isPurchasable: isPurchasable,
+      );
     }
   }
 
@@ -756,7 +775,19 @@ class CategoryProvider extends ChangeNotifier {
         final data = decoded['data'];
         if (data is Map<String, dynamic>) {
           final newCategory = Category.fromJson(data);
-          await upsertCategoryInCache(newCategory);
+          final isSellable = data['is_sellable'] == true ||
+              data['is_sellable'] == 1 ||
+              data['is_sellable'] == '1' ||
+              data['is_sellable'] == null;
+          final isPurchasable = data['is_purchasable'] == true ||
+              data['is_purchasable'] == 1 ||
+              data['is_purchasable'] == '1' ||
+              data['is_purchasable'] == null;
+          await upsertCategoryInCache(
+            newCategory,
+            isSellable: isSellable,
+            isPurchasable: isPurchasable,
+          );
         }
         return decoded;
       }
