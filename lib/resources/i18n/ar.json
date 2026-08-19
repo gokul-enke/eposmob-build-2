@@ -33,14 +33,21 @@
     "msg_failed": "فشل",
     "msg_failed_add": "فشل في إضافة الخصائص",
     "no_properties": "لا توجد خصائص",
-    "label_stock_applicable": "قابل للمخزون"
+    "label_stock_applicable": "قابل للمخزون",
+    "btn_prev": "السابق",
+    "btn_next": "التالي",
+    "label_choose_prop": "اختر @code"
   },
   "edit_product_properties": {
     "no_properties": "لا توجد خصائص",
     "label_stock_applicable": "قابل للمخزون",
     "hint_enter_prop": "أدخل @label",
     "msg_failed": "فشل",
-    "msg_failed_update": "فشل في تحديث الخصائص"
+    "msg_failed_update": "فشل في تحديث الخصائص",
+    "btn_prev": "السابق",
+    "btn_save": "حفظ",
+    "label_choose_prop": "اختر @label",
+    "label_choose_prop_code": "اختر @code"
   },
   "dashboard_ui": {
     "title": "جميع لوحات التحكم",

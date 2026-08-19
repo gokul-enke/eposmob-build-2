@@ -33,14 +33,21 @@
     "msg_failed": "Failed",
     "msg_failed_add": "Failed to add properties",
     "no_properties": "No properties found",
-    "label_stock_applicable": "Stock Applicable"
+    "label_stock_applicable": "Stock Applicable",
+    "btn_prev": "Prev",
+    "btn_next": "Next",
+    "label_choose_prop": "Choose @code"
   },
   "edit_product_properties": {
     "no_properties": "No properties found",
     "label_stock_applicable": "Stock Applicable",
     "hint_enter_prop": "Enter @label",
     "msg_failed": "Failed",
-    "msg_failed_update": "Failed to update properties"
+    "msg_failed_update": "Failed to update properties",
+    "btn_prev": "Prev",
+    "btn_save": "Save",
+    "label_choose_prop": "Choose @label",
+    "label_choose_prop_code": "Choose @code"
   },
   "dashboard_ui": {
     "title": "All Dashboards",

@@ -400,7 +400,7 @@ class _EditProductPropertiesScreenState
                                         initialValue: productPropData[propsCode]
                                                 ?.cast<String>() ??
                                             [],
-                                        title: Text("Choose $propsLabel"),
+                                        title: Text('edit_product_properties.label_choose_prop'.trParams({'label': propsLabel.toString()})),
                                         selectedColor:
                                             ColorManager.kPrimaryColor,
                                         decoration: BoxDecoration(
@@ -416,7 +416,7 @@ class _EditProductPropertiesScreenState
                                           color: Colors.grey,
                                         ),
                                         buttonText: Text(
-                                          "Choose $propsCode",
+                                          'edit_product_properties.label_choose_prop_code'.trParams({'code': propsCode.toString()}),
                                           style: TextStyle(
                                             color: Colors.grey[700],
                                             fontSize: 16,
@@ -482,7 +482,7 @@ class _EditProductPropertiesScreenState
                       Padding(
                         padding: const EdgeInsets.only(left: 10.0),
                         child: CustomRoundButton(
-                          title: "Prev",
+                          title: 'edit_product_properties.btn_prev'.tr,
                           boxColor: Colors.white,
                           textColor: ColorManager.kPrimaryColor,
                           fct: () async {
@@ -496,7 +496,7 @@ class _EditProductPropertiesScreenState
                       Padding(
                         padding: const EdgeInsets.only(left: 10.0),
                         child: CustomRoundButton(
-                          title: "Save",
+                          title: 'edit_product_properties.btn_save'.tr,
                           boxColor: Colors.white,
                           textColor: ColorManager.kPrimaryColor,
                           fct: () async {

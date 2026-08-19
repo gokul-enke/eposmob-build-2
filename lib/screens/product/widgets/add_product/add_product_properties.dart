@@ -190,8 +190,7 @@ class _AddProductPropertiesScreenState
                                             .map((item) =>
                                                 MultiSelectItem<String>(
                                                     item, item))
-                                            .toList(),
-                                        title: Text("Choose $propsCode"),
+                                        title: Text('add_product_properties.label_choose_prop'.trParams({'code': propsCode.toString()})),
                                         selectedColor:
                                             ColorManager.kPrimaryColor,
                                         decoration: BoxDecoration(
@@ -207,7 +206,7 @@ class _AddProductPropertiesScreenState
                                           color: Colors.grey,
                                         ),
                                         buttonText: Text(
-                                          "Choose $propsCode",
+                                          'add_product_properties.label_choose_prop'.trParams({'code': propsCode.toString()}),
                                           // "",
                                           style: TextStyle(
                                             color: Colors.grey[700],
@@ -273,7 +272,7 @@ class _AddProductPropertiesScreenState
                       Padding(
                         padding: const EdgeInsets.only(left: 10.0),
                         child: CustomRoundButton(
-                          title: "Prev",
+                          title: 'add_product_properties.btn_prev'.tr,
                           boxColor: Colors.white,
                           textColor: ColorManager.kPrimaryColor,
                           fct: () async {
@@ -287,7 +286,7 @@ class _AddProductPropertiesScreenState
                       Padding(
                         padding: const EdgeInsets.only(left: 10.0),
                         child: CustomRoundButton(
-                          title: "Next",
+                          title: 'add_product_properties.btn_next'.tr,
                           boxColor: Colors.white,
                           textColor: ColorManager.kPrimaryColor,
                           fct: () async {
