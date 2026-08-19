@@ -59,7 +59,18 @@
     "msg_price_updated": "Price Updated Successfully",
     "msg_invalid_price": "Please enter a valid price",
     "err_snapshot": "Error: @error",
-    "payment_cash": "Cash"
+    "payment_cash": "Cash",
+    "hint_transaction_ref": "Transaction Reference No:",
+    "hint_paid_amount": "Enter Paid Amount Here:",
+    "label_balance_amount": "Balance amount",
+    "msg_select_customer": "Please select a customer",
+    "msg_select_payment": "Please choose a Payment Method",
+    "btn_save_sales": "Save Sales @amount",
+    "msg_coupon_applied": "Coupon Applied Successfully",
+    "msg_coupon_failed": "Failed to Apply Coupon",
+    "msg_error": "Error Occurred! Try Again",
+    "msg_not_authenticated": "Not Authenticated",
+    "msg_unknown_discount": "Unknown discount type"
   },
   "kiosk_order": {
     "title_confirm": "Confirm Your Order",
@@ -115,7 +126,14 @@
   "customer_address": {
     "tooltip_add": "Add New Address",
     "title_address": "Address (@type)",
-    "type_other": "Other"
+    "type_other": "Other",
+    "btn_add_new": "Add New",
+    "label_address": "Address",
+    "label_city": "City",
+    "label_pincode": "Pincode ID",
+    "not_provided": "Not provided",
+    "no_address_found": "No address records found",
+    "no_address_info": "No address information available"
   },
   "notifications": {
     "page_title": "Notifications"

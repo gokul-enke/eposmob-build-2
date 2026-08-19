@@ -59,7 +59,18 @@
     "msg_price_updated": "تم تحديث السعر بنجاح",
     "msg_invalid_price": "يرجى إدخال سعر صالح",
     "err_snapshot": "خطأ: @error",
-    "payment_cash": "نقداً"
+    "payment_cash": "نقداً",
+    "hint_transaction_ref": "رقم مرجع المعاملة:",
+    "hint_paid_amount": "أدخل المبلغ المدفوع هنا:",
+    "label_balance_amount": "المبلغ المتبقي",
+    "msg_select_customer": "الرجاء تحديد عميل",
+    "msg_select_payment": "الرجاء اختيار طريقة الدفع",
+    "btn_save_sales": "حفظ المبيعات @amount",
+    "msg_coupon_applied": "تم تطبيق الكوبون بنجاح",
+    "msg_coupon_failed": "فشل في تطبيق الكوبون",
+    "msg_error": "حدث خطأ! أعد المحاولة",
+    "msg_not_authenticated": "غير مصادق عليه",
+    "msg_unknown_discount": "نوع خصم غير معروف"
   },
   "kiosk_order": {
     "title_confirm": "تأكيد طلبك",
@@ -115,7 +126,14 @@
   "customer_address": {
     "tooltip_add": "إضافة عنوان جديد",
     "title_address": "العنوان (@type)",
-    "type_other": "أخرى"
+    "type_other": "أخرى",
+    "btn_add_new": "إضافة جديد",
+    "label_address": "العنوان",
+    "label_city": "المدينة",
+    "label_pincode": "رقم الرمز البريدي",
+    "not_provided": "غير متوفر",
+    "no_address_found": "لم يتم العثور على سجلات عناوين",
+    "no_address_info": "لا توجد معلومات عنوان متاحة"
   },
   "notifications": {
     "page_title": "الإشعارات"
