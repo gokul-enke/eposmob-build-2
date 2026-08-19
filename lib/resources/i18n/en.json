@@ -1,4 +1,16 @@
 {
+  "view_invoice": {
+    "btn_invoice_list": "Invoice List",
+    "page_title": " Invoice Details  ",
+    "section_details": " Details  ",
+    "col_invoice": "Invoice",
+    "col_item_name": "Item Name",
+    "col_quantity": "Quantity",
+    "col_unit_amount": "Unit Amount",
+    "col_tax": "Tax",
+    "col_total_amount": "Total Amount",
+    "btn_back": "Back"
+  },
   "create_new_voucher": {
     "page_title": "Create New Voucher",
     "error_fill_required_fields": "Please fill all required fields",

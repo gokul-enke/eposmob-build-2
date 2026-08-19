@@ -49,13 +49,13 @@ class ViewInvoiceDetailsWidget extends StatelessWidget {
                 onPressed: () {
                   sideBarController.index.value = 21;
                 },
-                text: 'Invoice List',
+                text: 'view_invoice.btn_invoice_list'.tr,
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    " Invoice Details  ",
+                    'view_invoice.page_title'.tr,
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s20, 0.30, ColorManager.textColor),
                   ),
@@ -77,7 +77,7 @@ class ViewInvoiceDetailsWidget extends StatelessWidget {
                 margin: const EdgeInsets.only(
                     top: 20, bottom: 0, left: 10, right: 10),
                 child: Text(
-                  " Details  ",
+                  'view_invoice.section_details'.tr,
                   style: buildCustomStyle(FontWeightManager.semiBold,
                       FontSize.s15, 0.30, Colors.white),
                 ),
@@ -99,13 +99,13 @@ class ViewInvoiceDetailsWidget extends StatelessWidget {
                         child: SingleChildScrollView(
                           scrollDirection: Axis.vertical,
                           child: DataTable(
-                            columns: const [
-                              DataColumn(label: Text('Invoice')),
-                              DataColumn(label: Text('Item Name')),
-                              DataColumn(label: Text('Quantity')),
-                              DataColumn(label: Text('Unit Amount')),
-                              DataColumn(label: Text('Tax')),
-                              DataColumn(label: Text('Total Amount')),
+                            columns: [
+                              DataColumn(label: Text('view_invoice.col_invoice'.tr)),
+                              DataColumn(label: Text('view_invoice.col_item_name'.tr)),
+                              DataColumn(label: Text('view_invoice.col_quantity'.tr)),
+                              DataColumn(label: Text('view_invoice.col_unit_amount'.tr)),
+                              DataColumn(label: Text('view_invoice.col_tax'.tr)),
+                              DataColumn(label: Text('view_invoice.col_total_amount'.tr)),
                             ],
                             rows: invoiceDetails?.invoiceItems.map((item) {
                                   return DataRow(cells: [
@@ -126,7 +126,7 @@ class ViewInvoiceDetailsWidget extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(left: 10.0),
                       child: CustomRoundButton(
-                        title: "Back",
+                        title: 'view_invoice.btn_back'.tr,
                         boxColor: Colors.white,
                         textColor: ColorManager.kPrimaryColor,
                         fct: () async {

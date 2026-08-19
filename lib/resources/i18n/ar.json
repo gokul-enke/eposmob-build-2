@@ -1,4 +1,16 @@
 {
+  "view_invoice": {
+    "btn_invoice_list": "قائمة الفواتير",
+    "page_title": " تفاصيل الفاتورة  ",
+    "section_details": " التفاصيل  ",
+    "col_invoice": "الفاتورة",
+    "col_item_name": "اسم العنصر",
+    "col_quantity": "الكمية",
+    "col_unit_amount": "سعر الوحدة",
+    "col_tax": "الضريبة",
+    "col_total_amount": "المبلغ الإجمالي",
+    "btn_back": "رجوع"
+  },
   "create_new_voucher": {
     "page_title": "إنشاء قسيمة جديدة",
     "error_fill_required_fields": "يرجى ملء جميع الحقول المطلوبة",
