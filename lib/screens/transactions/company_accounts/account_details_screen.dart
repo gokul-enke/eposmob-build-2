@@ -68,11 +68,11 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
         // Update the static account data with the detailed version
         AccountDetailsScreen.accountData = detailedAccount;
       } else {
-        _error = 'Could not load detailed account information';
+        _error = 'account_details.error_could_not_load'.tr;
       }
     } catch (e) {
       debugPrint('Error loading detailed account data: $e');
-      _error = 'Error loading account details: $e';
+      _error = '${'account_details.error_loading'.tr}: $e';
     } finally {
       setState(() {
         _isLoading = false;
@@ -87,12 +87,12 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
     if (account == null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Account Details'),
+          title: Text('account_details.appbar_title'.tr),
           backgroundColor: ColorManager.kPrimaryColor,
           foregroundColor: Colors.white,
         ),
-        body: const Center(
-          child: Text('No account data available'),
+        body: Center(
+          child: Text('account_details.no_data_available'.tr),
         ),
       );
     }
@@ -133,7 +133,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                     _buildHeader(),
                     const SizedBox(height: 10),
                     Text(
-                      'Account Details - ${account.name ?? "N/A"}',
+                      '${'account_details.title_prefix'.tr} - ${account.name ?? 'account_details.na'.tr}',
                       style: ResponsiveWidget.isMobile(context)
                           ? buildCustomStyle(FontWeightManager.semiBold,
                               FontSize.s12, 0.30, ColorManager.textColor)
@@ -184,7 +184,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         CustomRoundButton(
-                          title: 'Close',
+                          title: 'general.close'.tr,
                           boxColor: Colors.white,
                           textColor: ColorManager.kPrimaryColor,
                           borderColor: ColorManager.kPrimaryColor,
@@ -215,7 +215,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
             sideBarController.index.value =
                 59; // Navigate back to company accounts
           },
-          text: 'Company Accounts',
+          text: 'account_details.btn_company_accounts'.tr,
         ),
         Row(
           children: [
@@ -250,7 +250,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
   // 1) Account Information
   Widget _buildAccountInformation(CompanyAccountsData account) {
     return _buildSectionCard(
-      title: 'Account Information',
+      title: 'account_details.section_account_info'.tr,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0),
         child: Row(
@@ -261,9 +261,9 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildDetailRow('Account Name', account.name ?? 'N/A'),
+                  _buildDetailRow('account_details.field_account_name'.tr, account.name ?? 'account_details.na'.tr),
                   const SizedBox(height: 16),
-                  _buildDetailRow('Status', account.accountStatus),
+                  _buildDetailRow('account_details.field_status'.tr, account.accountStatus),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -306,7 +306,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                       SizedBox(
                         width: 150,
                         child: Text(
-                          'Type',
+                          'account_details.field_type'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.medium,
                             FontSize.s14,
@@ -316,7 +316,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                         ),
                       ),
                       const SizedBox(width: 16),
-                      _buildPill(account.type ?? 'N/A'),
+                      _buildPill(account.type ?? 'account_details.na'.tr),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -326,7 +326,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                       SizedBox(
                         width: 150,
                         child: Text(
-                          'Payment Methods',
+                          'account_details.field_payment_methods'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.medium,
                             FontSize.s14,
@@ -359,7 +359,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
   // 2) Financial Summary
   Widget _buildFinancialSummary(CompanyAccountsData account) {
     return _buildSectionCard(
-      title: 'Financial Summary',
+      title: 'account_details.section_financial'.tr,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 16.0),
         child: Row(
@@ -369,7 +369,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Received Amount',
+                  Text('account_details.field_received_amount'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s12,
@@ -387,7 +387,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Sent Amount',
+                  Text('account_details.field_sent_amount'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s12,
@@ -405,7 +405,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Balance',
+                  Text('account_details.field_balance'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s12,
@@ -434,7 +434,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
         'Building transactions section with ${transactions.length} transactions');
 
     return _buildSectionCard(
-      title: 'Company Account Transactions',
+      title: 'account_details.section_transactions'.tr,
       showDivider: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -444,52 +444,52 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
           Container(
             color: Colors.grey.shade100,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: const Row(
+            child: Row(
               children: [
                 Expanded(
-                  child: Text('FROM',
+                  child: Text('account_details.col_from'.tr,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                           fontSize: 11,
                           color: Colors.black54,
                           letterSpacing: 0.5)),
                 ),
                 Expanded(
-                  child: Text('TO',
+                  child: Text('account_details.col_to'.tr,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                           fontSize: 11,
                           color: Colors.black54,
                           letterSpacing: 0.5)),
                 ),
                 Expanded(
-                  child: Text('TYPE',
+                  child: Text('account_details.col_type'.tr,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                           fontSize: 11,
                           color: Colors.black54,
                           letterSpacing: 0.5)),
                 ),
                 Expanded(
-                  child: Text('STATUS',
+                  child: Text('account_details.col_status'.tr,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                           fontSize: 11,
                           color: Colors.black54,
                           letterSpacing: 0.5)),
                 ),
                 Expanded(
-                  child: Text('AMOUNT',
+                  child: Text('account_details.col_amount'.tr,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                           fontSize: 11,
                           color: Colors.black54,
                           letterSpacing: 0.5)),
                 ),
                 Expanded(
-                  child: Text('DATE',
+                  child: Text('account_details.col_date'.tr,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                           fontSize: 11,
                           color: Colors.black54,
                           letterSpacing: 0.5)),
@@ -500,12 +500,12 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
           const SizedBox(height: 8),
           // Display transactions or "No transactions found" message
           if (transactions.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24.0),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24.0),
               child: Center(
                 child: Text(
-                  'No transactions found',
-                  style: TextStyle(
+                  'account_details.no_transactions'.tr,
+                  style: const TextStyle(
                     fontSize: 12,
                     color: Colors.black54,
                   ),
@@ -657,7 +657,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
         const SizedBox(width: 16),
         Expanded(
           child: Text(
-            value.isNotEmpty ? value : 'N/A',
+            value.isNotEmpty ? value : 'account_details.na'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,
