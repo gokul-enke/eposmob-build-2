@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 import '../../../components/build_container_box.dart';
@@ -48,7 +48,7 @@ class ViewProductNameScreen extends StatelessWidget {
                               bottom: 8.0, left: 8.0, top: 10),
                           child: Text.rich(
                             TextSpan(
-                              text: 'Product Name - English (US) ',
+                              text: 'view_product_names.label_name_english'.tr,
                               style: buildCustomStyle(
                                   FontWeightManager.semiBold,
                                   FontSize.s15,
@@ -73,7 +73,7 @@ class ViewProductNameScreen extends StatelessWidget {
                               bottom: 8.0, left: 8.0, top: 10),
                           child: Text.rich(
                             TextSpan(
-                              text: 'Product Name - Hindi(IND) ',
+                              text: 'view_product_names.label_name_hindi'.tr,
                               style: buildCustomStyle(
                                   FontWeightManager.semiBold,
                                   FontSize.s15,
@@ -98,7 +98,7 @@ class ViewProductNameScreen extends StatelessWidget {
                               bottom: 8.0, left: 8.0, top: 10),
                           child: Text.rich(
                             TextSpan(
-                              text: 'Product Name - Arabic(AR) ',
+                              text: 'view_product_names.label_name_arabic'.tr,
                               style: buildCustomStyle(
                                   FontWeightManager.semiBold,
                                   FontSize.s15,
@@ -126,7 +126,7 @@ class ViewProductNameScreen extends StatelessWidget {
                         Padding(
                           padding: const EdgeInsets.only(left: 10.0),
                           child: CustomRoundButton(
-                            title: "Prev",
+                            title: 'view_product_names.btn_prev'.tr,
                             fct: () async {
                               navigateToScreen(0);
                               // sideBarController.index.value = 14;
@@ -139,7 +139,7 @@ class ViewProductNameScreen extends StatelessWidget {
                         Padding(
                           padding: const EdgeInsets.only(left: 10.0),
                           child: CustomRoundButton(
-                            title: "Next",
+                            title: 'view_product_names.btn_next'.tr,
                             boxColor: Colors.white,
                             textColor: ColorManager.kPrimaryColor,
                             fct: () async {
