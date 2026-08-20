@@ -2278,7 +2278,9 @@
     "summary": "Summary",
     "hint_all": "All",
     "hide_filters": "Hide Filters",
-    "show_filters": "Show Filters"
+    "show_filters": "Show Filters",
+    "already_fully_paid": "This purchase order is already fully paid.",
+    "payment_error_422": "Payment error. Please check your payment details and try again."
   },
   "sales_executive_report": {
     "title": "My Sales Report",

@@ -186,6 +186,9 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
   bool _isLoadingPaymentMethods = false;
   bool _isSubmitting = false;
   double? _lastKnownNetPayable;
+  // Payment disabled flag: true when the PO is already fully paid.
+  // When true, payment inputs are hidden and omitted from the payload.
+  bool _isPaymentDisabled = false;
 
   GetStoreModelData? selectedStore;
   GetSuppliersModelData? selectedSupplier;
@@ -646,6 +649,9 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         setState(() {
           // Header
           purchaseOrderId = _toInt(data['id']); // NEW! Capture the ID
+          // Read payment state and disable payment inputs if fully paid.
+          final paymentStatus = data['payment_status']?.toString();
+          _isPaymentDisabled = (paymentStatus == 'paid');
           voucherNumberController.text =
               data['voucher_number']?.toString() ?? "";
           invoiceRefController.text = data['invoice_ref']?.toString() ?? "";
@@ -1615,13 +1621,18 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
 
     final purchaseTotals = _purchaseTotals;
 
-    final apiPaymentData = _convertPaymentDataToPurchaseApiFormat(paymentData);
+    // When payment is disabled (PO already fully paid), skip payment entirely.
+    final bool effectivePaymentDisabled = _isPaymentDisabled;
+    final apiPaymentData = effectivePaymentDisabled
+        ? {'payment_methods': <String>[], 'paid_amounts': <String, double>{}}
+        : _convertPaymentDataToPurchaseApiFormat(paymentData);
     final List<String> paymentMethods =
         (apiPaymentData['payment_methods'] as List<String>);
     final Map<String, double> paidAmountsMap =
         (apiPaymentData['paid_amounts'] as Map<String, double>);
 
-    final bool hasPayment = paymentMethods.isNotEmpty;
+    final bool hasPayment =
+        !effectivePaymentDisabled && paymentMethods.isNotEmpty;
     final paidAmount = paidAmountsMap.values.fold<double>(
       0,
       (sum, amount) => sum + amount,
@@ -1789,6 +1800,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                   ? null
                   : invoiceRefController.text.trim(),
               discount: purchaseTotals.discountAmount,
+              // Omit payment fields entirely when disabled (fully paid PO).
               paymentMethods: hasPayment ? paymentMethods : null,
               paidAmounts: hasPayment ? paidAmountsMap : null,
               items: apiItems,
@@ -1805,6 +1817,55 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
               paidAmounts: hasPayment ? paidAmountsMap : null,
               items: apiItems,
             );
+
+      // ── Point 5: 422 fallback safety net ─────────────────────────────────
+      // The provider surfaces http_status_code for non-200/201 responses.
+      final httpStatus = result?['http_status_code'];
+      final is422 = httpStatus == 422;
+
+      if (is422) {
+        // Parse structured error envelope — support Envelope A, B, top-level.
+        String? errorMessage;
+
+        // Envelope A: { "success": false, "errors": { "field": ["msg"] } }
+        final errorsA = result?['errors'];
+        if (errorsA is Map && errorsA.isNotEmpty) {
+          final firstEntry = errorsA.values.first;
+          if (firstEntry is List && firstEntry.isNotEmpty) {
+            errorMessage = firstEntry.first?.toString();
+          } else {
+            errorMessage = firstEntry?.toString();
+          }
+        }
+
+        // Envelope B: { "data": { "field": ["msg"] } }
+        if (errorMessage == null) {
+          final dataB = result?['data'];
+          if (dataB is Map && dataB.isNotEmpty) {
+            final firstEntry = dataB.values.first;
+            if (firstEntry is List && firstEntry.isNotEmpty) {
+              errorMessage = firstEntry.first?.toString();
+            } else {
+              errorMessage = firstEntry?.toString();
+            }
+          }
+        }
+
+        // Top-level message fallback
+        errorMessage ??= result?['message']?.toString() ??
+            'purchase_order.payment_error_422'.tr;
+
+        // Show error, clear payment inputs, disable payment section.
+        if (mounted) {
+          setState(() {
+            paymentData = DynamicPaymentData();
+            _isPaymentDisabled = true;
+          });
+        }
+        _showErrorMessage(errorMessage);
+        return;
+      }
+      // ─────────────────────────────────────────────────────────────────────
 
       if (result != null &&
           (result['status'] == 'success' ||
@@ -4426,6 +4487,34 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
   }
 
   Widget _buildPaymentSection() {
+    if (_isPaymentDisabled) {
+      // PO is already fully paid — show a read-only info banner, hide selector.
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.green.shade50,
+          border: Border.all(color: Colors.green.shade300),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'purchase_order.already_fully_paid'.tr,
+                style: TextStyle(
+                  color: Colors.green.shade800,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return BuildDynamicPaymentSelector(
       title: 'purchase_order.select_payment_method'.tr,
       paymentMethods: _paymentMethods,

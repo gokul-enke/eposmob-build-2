@@ -1216,9 +1216,19 @@ class PurchaseProvider extends ChangeNotifier {
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body);
       } else {
+        // Surface the raw decoded body AND the HTTP status so the screen can
+        // detect 422 and parse structured error envelopes (A, B, top-level).
+        Map<String, dynamic> decoded = {};
+        try {
+          decoded = Map<String, dynamic>.from(json.decode(response.body));
+        } catch (_) {}
         return {
           'status': 'failed',
-          'message': 'API request failed with status: ${response.statusCode}',
+          'http_status_code': response.statusCode,
+          'message':
+              decoded['message'] ??
+              'API request failed with status: ${response.statusCode}',
+          ...decoded,
         };
       }
     } catch (e) {

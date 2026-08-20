@@ -2278,7 +2278,9 @@
     "summary": "الملخص",
     "hint_all": "الكل",
     "hide_filters": "إخفاء الفلاتر",
-    "show_filters": "إظهار الفلاتر"
+    "show_filters": "إظهار الفلاتر",
+    "already_fully_paid": "تم دفع أمر الشراء هذا بالكامل بالفعل.",
+    "payment_error_422": "خطأ في الدفع. يرجى التحقق من تفاصيل الدفع والمحاولة مرة أخرى."
   },
   "sales_executive_report": {
     "title": "تقرير مبيعاتي",
