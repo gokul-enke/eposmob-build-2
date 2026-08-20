@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pos_machine/helpers/keyboard_dispatcher.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
+import 'package:provider/provider.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -112,18 +115,26 @@ void main() {
       formController.dispose();
     });
 
-    testWidgets('text input remains editable while visual IME is suppressed',
+    testWidgets(
+        'physical key input edits a field while visual IME is suppressed',
         (tester) async {
       final keyboardProvider = KeyboardProvider(enablePersistence: false)
         ..featureOn();
       final controller = TextEditingController();
 
       await tester.pumpWidget(
-        MaterialApp(home: Scaffold(body: TextField(controller: controller))),
+        ChangeNotifierProvider<KeyboardProvider>.value(
+          value: keyboardProvider,
+          child: KeyboardDispatcher(
+            child: MaterialApp(
+              home: Scaffold(body: TextField(controller: controller)),
+            ),
+          ),
+        ),
       );
       await tester.tap(find.byType(TextField));
       await tester.pump();
-      await tester.enterText(find.byType(TextField), 'a');
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
 
       expect(controller.text, 'a');
 

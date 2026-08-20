@@ -2804,6 +2804,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                                     .appSettings!.barcodeSales,
                                 controller: barcodeController,
                                 focusNode: _barcodeNode,
+                                keyboardType: TextInputType.number,
                                 readOnly: selectedProductNameController
                                     .text.isNotEmpty,
                                 onSubmitted: (query) {

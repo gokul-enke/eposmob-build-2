@@ -180,7 +180,8 @@ class _HomeWidgetState extends State<HomeWidget> {
           // Handle barcode not found case
           showScaffoldError(
             context: context,
-            message: '${'mobile_billing.error_product_not_found_barcode'.tr}: $barcode',
+            message:
+                '${'mobile_billing.error_product_not_found_barcode'.tr}: $barcode',
           );
         }
       } catch (e) {
@@ -324,6 +325,7 @@ class _HomeWidgetState extends State<HomeWidget> {
               child: TextField(
                 controller: billingProvider.barcodeController,
                 focusNode: billingProvider.barcodeNode,
+                keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                   labelText: 'mobile_billing.label_barcode'.tr,
                   border: OutlineInputBorder(
@@ -332,7 +334,6 @@ class _HomeWidgetState extends State<HomeWidget> {
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
-                keyboardType: TextInputType.text,
                 onChanged: (query) {
                   if (query.isNotEmpty) {
                     processBarcode(query);
@@ -455,7 +456,8 @@ class _HomeWidgetState extends State<HomeWidget> {
                       ),
                     )
                   : const Icon(Icons.add, color: Colors.white),
-              label: Text('mobile_billing.btn_add'.tr, style: const TextStyle(color: Colors.white)),
+              label: Text('mobile_billing.btn_add'.tr,
+                  style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),

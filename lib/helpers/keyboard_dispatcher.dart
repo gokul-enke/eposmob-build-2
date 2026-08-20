@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
+import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:provider/provider.dart';
 
 class KeyboardDispatcher extends StatefulWidget {
@@ -30,15 +31,16 @@ class _KeyboardDispatcherState extends State<KeyboardDispatcher> {
     super.dispose();
   }
 
-  void _onKey(RawKeyEvent event) {
-    if (event is RawKeyDownEvent) {
-      // Check if any text field has focus - if so, don't intercept keyboard events
-      final primaryFocus = FocusManager.instance.primaryFocus;
-
-      final focusedWidget = primaryFocus?.context?.widget;
-      final isEditable = focusedWidget is EditableText;
-
-      if (isEditable) {
+  void _onKey(KeyEvent event) {
+    if (event is KeyDownEvent) {
+      final editable = _focusedEditableText();
+      if (editable != null) {
+        final keyboardProvider =
+            Provider.of<KeyboardProvider>(context, listen: false);
+        if (keyboardProvider.showKeyboardFeature ||
+            keyboardProvider.physicalKeyboardConnected) {
+          _insertPrintableCharacter(event, editable);
+        }
         return;
       }
 
@@ -83,11 +85,65 @@ class _KeyboardDispatcherState extends State<KeyboardDispatcher> {
     }
   }
 
+  EditableText? _focusedEditableText() {
+    final context = FocusManager.instance.primaryFocus?.context;
+    if (context == null) return null;
+    if (context.widget is EditableText) {
+      return context.widget as EditableText;
+    }
+    return context.findAncestorWidgetOfExactType<EditableText>();
+  }
+
+  /// Flutter's custom [TextInputControl] prevents Android from creating a
+  /// platform input connection. Printable USB/Bluetooth key events therefore
+  /// need to be applied to the focused EditableText here. Navigation,
+  /// deletion, selection and clipboard shortcuts remain handled by
+  /// EditableText's standard shortcut/action system.
+  void _insertPrintableCharacter(KeyDownEvent event, EditableText editable) {
+    if (HardwareKeyboard.instance.isControlPressed ||
+        HardwareKeyboard.instance.isAltPressed ||
+        HardwareKeyboard.instance.isMetaPressed) {
+      return;
+    }
+
+    String? character = event.character;
+    if (character == null || character.isEmpty) {
+      final label = event.logicalKey.keyLabel;
+      if (label.length != 1) return;
+      character = HardwareKeyboard.instance.isShiftPressed
+          ? label.toUpperCase()
+          : label.toLowerCase();
+    }
+
+    // Control characters (Enter, Tab, Escape, etc.) are handled by the normal
+    // EditableText action system, not inserted into single-line fields.
+    if (character.codeUnitAt(0) < 0x20) return;
+
+    final oldValue = editable.controller.value;
+    final selection = oldValue.selection.isValid
+        ? oldValue.selection
+        : TextSelection.collapsed(offset: oldValue.text.length);
+    var newValue = oldValue.copyWith(
+      text: selection.textBefore(oldValue.text) +
+          character +
+          selection.textAfter(oldValue.text),
+      selection: TextSelection.collapsed(
+        offset: selection.start + character.length,
+      ),
+      composing: TextRange.empty,
+    );
+
+    for (final formatter in editable.inputFormatters ?? const []) {
+      newValue = formatter.formatEditUpdate(oldValue, newValue);
+    }
+    editable.controller.value = newValue;
+  }
+
   @override
-  Widget build(BuildContext context) => RawKeyboardListener(
+  Widget build(BuildContext context) => KeyboardListener(
         autofocus: true,
         focusNode: _focusNode,
-        onKey: _onKey,
+        onKeyEvent: _onKey,
         child: widget.child,
       );
 }
