@@ -50,6 +50,11 @@ void main() {
     );
 
     expect(find.text('Receipt Setup & Live Preview'), findsOneWidget);
+    expect(find.text('Common visibility preview'), findsOneWidget);
+    expect(
+      find.textContaining('Classic is selected.'),
+      findsOneWidget,
+    );
     expect(find.text('Test Store'), findsWidgets);
     expect(find.text('متجر الاختبار'), findsWidgets);
 

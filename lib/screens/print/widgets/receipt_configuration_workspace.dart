@@ -267,7 +267,7 @@ class _ReceiptConfigurationWorkspaceState
               children: [
                 Expanded(flex: 7, child: _buildFieldsPanel()),
                 const SizedBox(width: 18),
-                Expanded(flex: 4, child: _buildPreviewPanel()),
+                Expanded(flex: 5, child: _buildPreviewPanel()),
               ],
             ),
         ],
@@ -655,13 +655,10 @@ class _ReceiptConfigurationWorkspaceState
         children: [
           Row(
             children: [
-              Expanded(
+              const Expanded(
                 child: Text(
-                  widget.themeId == 'premium2_bilingual'
-                      ? 'Exact renderer output'
-                      : 'Sample output',
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w700),
+                  'Common visibility preview',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                 ),
               ),
               Text(
@@ -697,36 +694,49 @@ class _ReceiptConfigurationWorkspaceState
             },
           ),
           const SizedBox(height: 12),
-          Center(
-            child: Container(
-              width: widget.paperSize == '58mm' ? 260 : 310,
-              padding: const EdgeInsets.fromLTRB(15, 18, 15, 22),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(2),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x18000000),
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // 400 logical pixels represents the 80mm paper width. Other
+              // thermal sizes scale from the same physical-width ratio, while
+              // the parent constraint prevents overflow on smaller screens.
+              final targetWidth = switch (widget.paperSize) {
+                '58mm' => 400.0 * 58 / 80,
+                '112mm' => 400.0 * 112 / 80,
+                _ => 400.0,
+              };
+              final paperWidth = constraints.constrainWidth(targetWidth);
+              return Center(
+                child: Container(
+                  width: paperWidth,
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(2),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x18000000),
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: _ExactReceiptPreview(
-                config: widget.config!,
-                paperSize: widget.paperSize,
-                themeId: widget.themeId,
-                options: _options,
-                language: _previewLanguage,
-                section: _selectedSection,
-              ),
-            ),
+                  child: _CommonReceiptPreview(
+                    config: widget.config!,
+                    paperSize: widget.paperSize,
+                    themeId: widget.themeId,
+                    options: _options,
+                    language: _previewLanguage,
+                    section: _selectedSection,
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 10),
           Text(
-            widget.themeId == 'premium2_bilingual'
-                ? 'The real Premium 2 renderer is used with controlled sample order data.'
-                : 'Sample order data is used so labels can be understood before printing.',
+            '${widget.themeName} is selected. This shared preview shows configured '
+            'visibility and language using sample order data; the selected template’s '
+            'styling and spacing may differ.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600),
           ),
@@ -889,7 +899,7 @@ class _ReceiptConfigurationWorkspaceState
   }
 }
 
-class _ExactReceiptPreview extends StatefulWidget {
+class _CommonReceiptPreview extends StatefulWidget {
   final DocumentConfig config;
   final String paperSize;
   final String themeId;
@@ -897,7 +907,7 @@ class _ExactReceiptPreview extends StatefulWidget {
   final _PreviewLanguage language;
   final String section;
 
-  const _ExactReceiptPreview({
+  const _CommonReceiptPreview({
     required this.config,
     required this.paperSize,
     required this.themeId,
@@ -907,29 +917,25 @@ class _ExactReceiptPreview extends StatefulWidget {
   });
 
   @override
-  State<_ExactReceiptPreview> createState() => _ExactReceiptPreviewState();
+  State<_CommonReceiptPreview> createState() => _CommonReceiptPreviewState();
 }
 
-class _ExactReceiptPreviewState extends State<_ExactReceiptPreview> {
+class _CommonReceiptPreviewState extends State<_CommonReceiptPreview> {
   Future<Uint8List>? _previewFuture;
-
-  bool get _supportsExactPreview =>
-      widget.themeId.toLowerCase() == 'premium2_bilingual';
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_supportsExactPreview) _previewFuture ??= _render();
+    _previewFuture ??= _render();
   }
 
   @override
-  void didUpdateWidget(covariant _ExactReceiptPreview oldWidget) {
+  void didUpdateWidget(covariant _CommonReceiptPreview oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_supportsExactPreview &&
-        (oldWidget.config != widget.config ||
-            oldWidget.paperSize != widget.paperSize ||
-            oldWidget.themeId != widget.themeId ||
-            oldWidget.language != widget.language)) {
+    if (oldWidget.config != widget.config ||
+        oldWidget.paperSize != widget.paperSize ||
+        oldWidget.themeId != widget.themeId ||
+        oldWidget.language != widget.language) {
       _previewFuture = _render();
     }
   }
@@ -979,7 +985,12 @@ class _ExactReceiptPreviewState extends State<_ExactReceiptPreview> {
       orderNumber: 'INV-010428',
       tokenNumber: '42',
       isFromLocalStorage: false,
-      selectedPaperSize: widget.paperSize,
+      // The common preview is a thermal visibility guide. Standard PDF paper
+      // sizes use the 80mm canvas here; their actual PDF layout is unchanged.
+      selectedPaperSize:
+          const {'58mm', '80mm', '112mm'}.contains(widget.paperSize)
+              ? widget.paperSize
+              : '80mm',
       billDocumentConfig: previewConfig,
       customerCareNumber: appSettings?.customerCarePhone ?? '',
       customerCareEmail: appSettings?.customerCareEmail ?? '',
@@ -1015,29 +1026,6 @@ class _ExactReceiptPreviewState extends State<_ExactReceiptPreview> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_supportsExactPreview) {
-      return Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(8),
-            margin: const EdgeInsets.only(bottom: 10),
-            color: Colors.amber.shade50,
-            child: Text(
-              'Exact preview support is being migrated for this template.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 10, color: Colors.amber.shade900),
-            ),
-          ),
-          _ReceiptSample(
-            options: widget.options,
-            language: widget.language,
-            section: widget.section,
-          ),
-        ],
-      );
-    }
-
     return FutureBuilder<Uint8List>(
       future: _previewFuture,
       builder: (context, snapshot) {
@@ -1049,24 +1037,32 @@ class _ExactReceiptPreviewState extends State<_ExactReceiptPreview> {
         }
         if (snapshot.hasError || snapshot.data == null) {
           return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 35, horizontal: 8),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
             child: Column(
               children: [
                 Icon(Icons.error_outline_rounded,
-                    color: Colors.red.shade400, size: 30),
+                    color: Colors.amber.shade700, size: 26),
                 const SizedBox(height: 9),
                 Text(
-                  'Exact preview could not be rendered.\n${snapshot.error}',
+                  'Rendered preview is unavailable. Showing the configuration '
+                  'visibility guide instead.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 10.5, color: Colors.red.shade700),
+                  style:
+                      TextStyle(fontSize: 10.5, color: Colors.amber.shade900),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 OutlinedButton.icon(
                   onPressed: () => setState(() {
                     _previewFuture = _render();
                   }),
                   icon: const Icon(Icons.refresh_rounded, size: 16),
-                  label: const Text('Retry preview'),
+                  label: const Text('Retry rendered preview'),
+                ),
+                const SizedBox(height: 10),
+                _ReceiptSample(
+                  options: widget.options,
+                  language: widget.language,
+                  section: widget.section,
                 ),
               ],
             ),
