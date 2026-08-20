@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'dart:io';
@@ -1199,15 +1200,17 @@ class PurchaseProvider extends ChangeNotifier {
       debugPrint('📤 [Purchase API] receivePurchaseOrder URL: $url');
       debugPrint(
           '📤 [Purchase API] receivePurchaseOrder Body: ${json.encode(apiBodyData)}');
-      final response = await http.post(
-        url,
-        body: json.encode(apiBodyData),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $accessToken',
-          'X-Tenant': apiKey,
-        },
-      );
+      final response = await http
+          .post(
+            url,
+            body: json.encode(apiBodyData),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $accessToken',
+              'X-Tenant': apiKey,
+            },
+          )
+          .timeout(const Duration(seconds: 30));
       debugPrint(
           '📥 [Purchase API] receivePurchaseOrder Status: ${response.statusCode}');
       debugPrint(
@@ -1231,6 +1234,12 @@ class PurchaseProvider extends ChangeNotifier {
           ...decoded,
         };
       }
+    } on TimeoutException {
+      debugPrint('⏱️ [Purchase API] receivePurchaseOrder timed out after 30s');
+      return {
+        'status': 'failed',
+        'message': 'purchase_order.receive_timeout'.tr,
+      };
     } catch (e) {
       return {
         'status': 'failed',
