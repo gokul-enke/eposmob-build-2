@@ -2729,10 +2729,10 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
 
   /// Calculate tax for the current item using the server API (same as stock page)
   Future<void> _calculateTaxForCurrentItem({
+    required PurchaseOrderItem item,
     bool isRetail = true,
     bool isPurchase = false,
   }) async {
-    final item = currentItem;
     final String calculationType = isPurchase
         ? 'Purchase'
         : (isRetail ? 'Retail' : 'Wholesale');
@@ -2773,7 +2773,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         : (isRetail
               ? (double.tryParse(item.retailPrice) ?? 0.0)
               : (double.tryParse(item.wholesalePrice) ?? 0.0));
-    final bool taxInclude = isPurchase ? includeTaxPurchase : includeTax;
+    final bool taxInclude = isPurchase ? item.taxIncludePurchase : item.taxInclude;
 
     debugPrint(
       '🧮 [PurchaseTax] Payload | type=$calculationType | productId=${item.productData!.productId} | categoryId=${item.categoryData!.categoryId} | price=$priceToCalculate | taxInclude=$taxInclude',
@@ -2896,10 +2896,11 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
   /// Trigger all three tax calculations for the current item (debounced)
   void _triggerTaxRecalculation() {
     _taxCalcDebounceTimer?.cancel();
+    final itemToCalc = currentItem;
     _taxCalcDebounceTimer = Timer(const Duration(milliseconds: 500), () {
-      _calculateTaxForCurrentItem(isRetail: true);
-      _calculateTaxForCurrentItem(isRetail: false);
-      _calculateTaxForCurrentItem(isPurchase: true);
+      _calculateTaxForCurrentItem(item: itemToCalc, isRetail: true);
+      _calculateTaxForCurrentItem(item: itemToCalc, isRetail: false);
+      _calculateTaxForCurrentItem(item: itemToCalc, isPurchase: true);
     });
   }
 
@@ -2908,8 +2909,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       includeTax = value;
       currentItem.taxInclude = value;
     });
-    _calculateTaxForCurrentItem(isRetail: true);
-    _calculateTaxForCurrentItem(isRetail: false);
+    _calculateTaxForCurrentItem(item: currentItem, isRetail: true);
+    _calculateTaxForCurrentItem(item: currentItem, isRetail: false);
     _saveDraftToHive();
   }
 
@@ -2918,7 +2919,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       includeTaxPurchase = value;
       currentItem.taxIncludePurchase = value;
     });
-    _calculateTaxForCurrentItem(isPurchase: true);
+    _calculateTaxForCurrentItem(item: currentItem, isPurchase: true);
     _saveDraftToHive();
   }
 
@@ -3571,9 +3572,9 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
   Widget _buildPurchaseListRow(int index, PurchaseOrderItem item) {
     final qty = double.tryParse(item.quantity) ?? 0;
     final purchaseRate = _effectivePurchaseRate(item);
-    final retailPrice = double.tryParse(item.retailPrice) ?? 0;
+    final retailPrice = _getEffectiveRetailPrice(item);
     final mrp = double.tryParse(item.mrp) ?? 0;
-    final wholesalePrice = double.tryParse(item.wholesalePrice) ?? 0;
+    final wholesalePrice = _getEffectiveWholesalePrice(item);
     final total = _purchaseLineTotal(item);
     final canEdit = !_isReceiveMode || !item.alreadyReceived;
     final canDelete = !_isReceiveMode && !item.alreadyReceived;
@@ -3882,6 +3883,44 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
     );
   }
 
+  double _getEffectiveRetailPrice(PurchaseOrderItem item) {
+    final basePrice = double.tryParse(item.retailPrice) ?? 0.0;
+    if (!item.taxInclude) {
+      final calculated =
+          item.calculatedTaxData?['price_including_tax_retail'] as num?;
+      if (calculated != null && calculated > 0) {
+        return calculated.toDouble();
+      }
+      final taxRate = item.productData?.totalTaxRate ?? 0.0;
+      if (taxRate > 0) {
+        return basePrice * (1 + taxRate / 100);
+      }
+      debugPrint(
+        '⚠️ [PurchaseTax] Fallback used for retail price of ${item.productData?.productName ?? "unknown product"} (ID: ${item.productData?.productId}). basePrice=$basePrice, calculatedTaxData=${item.calculatedTaxData}',
+      );
+    }
+    return basePrice;
+  }
+
+  double _getEffectiveWholesalePrice(PurchaseOrderItem item) {
+    final basePrice = double.tryParse(item.wholesalePrice) ?? 0.0;
+    if (!item.taxInclude) {
+      final calculated =
+          item.calculatedTaxData?['price_including_tax_wholesale'] as num?;
+      if (calculated != null && calculated > 0) {
+        return calculated.toDouble();
+      }
+      final taxRate = item.productData?.totalTaxRate ?? 0.0;
+      if (taxRate > 0) {
+        return basePrice * (1 + taxRate / 100);
+      }
+      debugPrint(
+        '⚠️ [PurchaseTax] Fallback used for wholesale price of ${item.productData?.productName ?? "unknown product"} (ID: ${item.productData?.productId}). basePrice=$basePrice, calculatedTaxData=${item.calculatedTaxData}',
+      );
+    }
+    return basePrice;
+  }
+
   double _getSupplierBalance() {
     return selectedSupplier?.currentBalance ?? 0.0;
   }
@@ -4053,11 +4092,9 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                           final item = entry.value;
                           final qty = double.tryParse(item.quantity) ?? 0;
                           final purchaseRate = _effectivePurchaseRate(item);
-                          final retailPrice =
-                              double.tryParse(item.retailPrice) ?? 0;
+                          final retailPrice = _getEffectiveRetailPrice(item);
                           final mrp = double.tryParse(item.mrp) ?? 0;
-                          final wholesalePrice =
-                              double.tryParse(item.wholesalePrice) ?? 0;
+                          final wholesalePrice = _getEffectiveWholesalePrice(item);
                           final rowTotal = _purchaseLineTotal(item);
 
                           totalQty += qty;
