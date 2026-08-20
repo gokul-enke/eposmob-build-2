@@ -929,10 +929,79 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       currentItem.taxIncludePurchase = includeTaxPurchase;
       currentItem.syncControllers();
 
+      final newProductId = currentItem.productData?.productId;
+      final newVariantId = currentItem.productVariantId;
+      final newBarcode = currentItem.barcode;
+
+      // Find match helper function
+      int? findMatchingItemIndex({int? skipIndex}) {
+        if (newProductId == null) return null;
+        for (int i = 0; i < orderItems.length; i++) {
+          if (skipIndex != null && i == skipIndex) continue;
+          final item = orderItems[i];
+          if (item.productData?.productId == newProductId &&
+              item.productVariantId == newVariantId &&
+              item.barcode == newBarcode) {
+            return i;
+          }
+        }
+        return null;
+      }
+
       if (_editingItemIndex != null && _editingItemIndex! < orderItems.length) {
-        orderItems[_editingItemIndex!] = currentItem;
+        // Edit Flow: check if the edited item now matches another row
+        final matchIdx = findMatchingItemIndex(skipIndex: _editingItemIndex);
+        if (matchIdx != null) {
+          // Merge currentItem into the existing row at matchIdx
+          final existing = orderItems[matchIdx];
+          final currentQty = double.tryParse(currentItem.quantity) ?? 0.0;
+          final existingQty = double.tryParse(existing.quantity) ?? 0.0;
+
+          existing.quantity = (existingQty + currentQty).toString();
+          // Update other fields to edited values (prices, units, rack, etc.)
+          existing.purchaseRate = currentItem.purchaseRate;
+          existing.retailPrice = currentItem.retailPrice;
+          existing.wholesalePrice = currentItem.wholesalePrice;
+          existing.mrp = currentItem.mrp;
+          existing.rack = currentItem.rack;
+          existing.selectedRack = currentItem.selectedRack;
+          existing.unit = currentItem.unit;
+          existing.selectedUnit = currentItem.selectedUnit;
+          existing.selectedPurchaseUnit = currentItem.selectedPurchaseUnit;
+          existing.purchaseQty = currentItem.purchaseQty;
+          existing.purchaseConversionRate = currentItem.purchaseConversionRate;
+          existing.pkgMfg = currentItem.pkgMfg;
+          existing.expDate = currentItem.expDate;
+          existing.taxInclude = currentItem.taxInclude;
+          existing.taxIncludePurchase = currentItem.taxIncludePurchase;
+          existing.calculatedTaxData = currentItem.calculatedTaxData != null
+              ? Map<String, dynamic>.from(currentItem.calculatedTaxData!)
+              : null;
+
+          existing.syncControllers();
+          // Remove the edited row from the list
+          orderItems.removeAt(_editingItemIndex!);
+        } else {
+          // No match, just update the edited item at index
+          orderItems[_editingItemIndex!] = currentItem;
+        }
       } else {
-        orderItems.add(currentItem);
+        // Add Flow: check if the new item matches an existing row
+        final matchIdx = findMatchingItemIndex();
+        if (matchIdx != null) {
+          // Duplicate found — sum quantity only. Do NOT overwrite prices or any
+          // other fields; if the user wants to change the price they must use
+          // the edit icon on the existing row.
+          final existing = orderItems[matchIdx];
+          final currentQty = double.tryParse(currentItem.quantity) ?? 0.0;
+          final existingQty = double.tryParse(existing.quantity) ?? 0.0;
+
+          existing.quantity = (existingQty + currentQty).toString();
+          existing.syncControllers();
+        } else {
+          // No match, add new item
+          orderItems.add(currentItem);
+        }
       }
 
       _clearCurrentItemForm();
