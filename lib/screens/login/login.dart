@@ -7,7 +7,6 @@ import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/providers/authentication_providers.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
-import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 import 'package:pos_machine/helpers/debug_login_autofill.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
@@ -40,13 +39,6 @@ class _SignInScreenState extends State<SignInScreen> {
   bool _obscureText = true;
   bool _rememberMe = false;
 
-  bool _shouldSuppressSystemKeyboard() {
-    return SystemKeyboardPolicy.shouldSuppressForContext(
-      context: context,
-      fieldWantsVirtualKeyboardOnly: true,
-    );
-  }
-
   final _emailController = TextEditingController();
   final _passwordTextController = TextEditingController();
   bool isLoading = false;
@@ -58,14 +50,7 @@ class _SignInScreenState extends State<SignInScreen> {
   void initState() {
     super.initState();
     _loadUserEmailPassword();
-    // Ensure on-screen keyboard feature is OFF by default when opening login
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      try {
-        final keyboardProvider =
-            Provider.of<KeyboardProvider>(context, listen: false);
-        keyboardProvider.featureOff();
-        keyboardProvider.clear();
-      } catch (_) {}
       _showDefaultDomainWarningIfAny();
     });
   }
@@ -216,7 +201,6 @@ class _SignInScreenState extends State<SignInScreen> {
                                       key: const Key("Phone_Number_Sign_in"),
                                       cursorColor: ColorManager.kPrimaryColor,
                                       controller: _emailController,
-                                      readOnly: _shouldSuppressSystemKeyboard(),
                                       showCursor: true,
                                       onTap: () {
                                         Provider.of<KeyboardProvider>(context,
@@ -265,7 +249,6 @@ class _SignInScreenState extends State<SignInScreen> {
                                       obscureText: _obscureText,
                                       cursorColor: ColorManager.kPrimaryColor,
                                       controller: _passwordTextController,
-                                      readOnly: _shouldSuppressSystemKeyboard(),
                                       showCursor: true,
                                       onTap: () {
                                         Provider.of<KeyboardProvider>(context,
@@ -425,7 +408,9 @@ class _SignInScreenState extends State<SignInScreen> {
                                                 .validate()) {
                                               // Show our new loading overlay instead of the dialog
                                               _updateLoadingState(
-                                                  true, 'login.loading_logging_in'.tr);
+                                                  true,
+                                                  'login.loading_logging_in'
+                                                      .tr);
 
                                               // Save remember me state when login button is pressed
                                               _handleRememberMe(_rememberMe);
@@ -634,7 +619,9 @@ class _SignInScreenState extends State<SignInScreen> {
                                                         false, "");
                                                     showScaffoldError(
                                                       context: context,
-                                                      message: 'login.error_no_store_permission'.tr,
+                                                      message:
+                                                          'login.error_no_store_permission'
+                                                              .tr,
                                                     );
                                                   }
                                                 } else {
@@ -663,7 +650,9 @@ class _SignInScreenState extends State<SignInScreen> {
                                             } else {
                                               showScaffoldError(
                                                   context: context,
-                                                  message: 'login.error_fill_details'.tr);
+                                                  message:
+                                                      'login.error_fill_details'
+                                                          .tr);
                                             }
                                           },
                                         ),

@@ -611,7 +611,9 @@ Widget buildColumnWidgetForTextFields({
             onFieldSubmitted: onSubmitted,
             autofocus: autofocus,
             focusNode: focusNode,
-            readOnly: readOnly || !useSystemKeyboard,
+            // TextInputType.none suppresses the IME without making the field
+            // read-only, so USB/Bluetooth keyboard input still works.
+            readOnly: readOnly,
             keyboardType: useSystemKeyboard
                 ? (keyboardType ?? TextInputType.text)
                 : TextInputType.none,

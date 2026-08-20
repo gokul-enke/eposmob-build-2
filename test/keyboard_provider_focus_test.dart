@@ -72,7 +72,67 @@ void main() {
   });
 
   group('KeyboardProvider focus auto-show', () {
-    testWidgets('binds the field that actually has focus, not the first '
+    testWidgets('covers TextField and TextFormField without per-field wiring',
+        (tester) async {
+      final keyboardProvider = KeyboardProvider(enablePersistence: false)
+        ..featureOn();
+      final plainController = TextEditingController();
+      final formController = TextEditingController();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                TextField(controller: plainController),
+                TextFormField(
+                  controller: formController,
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(TextField).first);
+      await tester.pump();
+      await tester.pump();
+      expect(identical(keyboardProvider.controller, plainController), isTrue);
+      expect(keyboardProvider.keyboardType, 'text');
+
+      await tester.tap(find.byType(TextFormField));
+      await tester.pump();
+      await tester.pump();
+      expect(identical(keyboardProvider.controller, formController), isTrue);
+      expect(keyboardProvider.keyboardType, 'number');
+
+      keyboardProvider.dispose();
+      plainController.dispose();
+      formController.dispose();
+    });
+
+    testWidgets('text input remains editable while visual IME is suppressed',
+        (tester) async {
+      final keyboardProvider = KeyboardProvider(enablePersistence: false)
+        ..featureOn();
+      final controller = TextEditingController();
+
+      await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: TextField(controller: controller))),
+      );
+      await tester.tap(find.byType(TextField));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'a');
+
+      expect(controller.text, 'a');
+
+      keyboardProvider.dispose();
+      controller.dispose();
+    });
+
+    testWidgets(
+        'binds the field that actually has focus, not the first '
         'field in tree order', (tester) async {
       final keyboardProvider = KeyboardProvider(enablePersistence: false)
         ..featureOn();

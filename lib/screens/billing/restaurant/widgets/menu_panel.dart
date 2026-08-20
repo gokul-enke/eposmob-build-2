@@ -93,7 +93,6 @@ class MenuPanelState extends State<MenuPanel> {
     final itemWasAdded = await widget.onItemAdd(product, quantity);
     if (!mounted || !itemWasAdded) return;
 
-    _clearSearch();
     focusSearch();
 
     // A product picker/dialog can restore its previous focus while its route

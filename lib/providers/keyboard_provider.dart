@@ -36,10 +36,22 @@ class KeyboardProvider extends ChangeNotifier {
   _KeyboardSuppressorObserver? _bindingObserver;
 
   bool _isDisposed = false;
+  bool _focusListenerInstalled = false;
+  bool _physicalKeyboardConnected = false;
+
+  static const MethodChannel _hardwareKeyboardChannel =
+      MethodChannel('com.enke.cloudposai/keyboard');
+  final TextInputControl _virtualKeyboardInputControl =
+      _VirtualKeyboardTextInputControl();
 
   // Constructor – load persisted preferences
   KeyboardProvider({bool enablePersistence = true})
       : _enablePersistence = enablePersistence {
+    // The in-memory default is enabled, so apply it synchronously. Waiting for
+    // Hive left a startup window in which Android's IME could open first.
+    _applySystemKeyboardPolicy();
+    _startListeningToFocus();
+    _listenForPhysicalKeyboardChanges();
     if (_enablePersistence) {
       _initHive();
     }
@@ -57,8 +69,7 @@ class KeyboardProvider extends ChangeNotifier {
       // Restore persisted values. If the key is absent, keep the in-memory
       // value (e.g. login/api-key screens call featureOff() before Hive opens).
       if (_settingsBox!.containsKey('showKeyboardFeature')) {
-        _showKeyboardFeature =
-            _settingsBox!.get('showKeyboardFeature') as bool;
+        _showKeyboardFeature = _settingsBox!.get('showKeyboardFeature') as bool;
       }
 
       _numericKeyboardSize = Size(
@@ -76,10 +87,12 @@ class KeyboardProvider extends ChangeNotifier {
         (_settingsBox!.get('posY') ?? 200).toDouble(),
       );
 
-      // Apply global keyboard control based on persisted preference
+      // Apply global keyboard control based on the persisted preference.
+      _applySystemKeyboardPolicy();
       if (_showKeyboardFeature) {
-        _installKeyboardSuppressor();
         _startListeningToFocus();
+      } else {
+        _stopListeningToFocus();
       }
 
       // Notify listeners so UI rebuilds with restored settings
@@ -105,6 +118,7 @@ class KeyboardProvider extends ChangeNotifier {
 
   bool get showKeyboard => _showKeyboard;
   bool get showKeyboardFeature => _showKeyboardFeature;
+  bool get physicalKeyboardConnected => _physicalKeyboardConnected;
   String get keyboardType => _keyboardType;
   TextEditingController? get controller => _controller;
   bool get shouldReplaceOnFirstInput => _shouldReplaceOnFirstInput;
@@ -158,7 +172,7 @@ class KeyboardProvider extends ChangeNotifier {
   void featureOn() {
     _showKeyboardFeature = true;
     _settingsBox?.put('showKeyboardFeature', true);
-    _installKeyboardSuppressor();
+    _applySystemKeyboardPolicy();
     _startListeningToFocus();
     notifyListeners();
   }
@@ -168,7 +182,7 @@ class KeyboardProvider extends ChangeNotifier {
     // Ensure keyboard is hidden when feature is turned off
     if (_showKeyboard) hide();
     _settingsBox?.put('showKeyboardFeature', false);
-    _removeKeyboardSuppressor();
+    _applySystemKeyboardPolicy();
     _stopListeningToFocus();
     notifyListeners();
   }
@@ -229,6 +243,10 @@ class KeyboardProvider extends ChangeNotifier {
   @override
   void dispose() {
     _isDisposed = true;
+    _hardwareKeyboardChannel.setMethodCallHandler(null);
+    // Do not leave a process-wide custom input control installed after the
+    // provider that owns it has gone away (important for tests and hot reload).
+    TextInput.restorePlatformInputControl();
     _removeKeyboardSuppressor();
     _stopListeningToFocus();
     // Clear references but don't dispose the controller as we don't own it
@@ -248,6 +266,49 @@ class KeyboardProvider extends ChangeNotifier {
     WidgetsBinding.instance.addObserver(_bindingObserver!);
   }
 
+  /// Installs a no-op visual input control before a field asks Flutter to show
+  /// the platform IME. Unlike calling `TextInput.hide` after a metrics change,
+  /// this prevents the Android keyboard from appearing in the first place.
+  ///
+  /// A connected physical keyboard also suppresses the platform IME, but does
+  /// not alter [_showKeyboardFeature]. The app's virtual keyboard therefore
+  /// remains controlled exclusively by its own Boolean.
+  void _applySystemKeyboardPolicy() {
+    final suppressSystemKeyboard =
+        _showKeyboardFeature || _physicalKeyboardConnected;
+    if (suppressSystemKeyboard) {
+      TextInput.setInputControl(_virtualKeyboardInputControl);
+      _installKeyboardSuppressor();
+      SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+    } else {
+      TextInput.restorePlatformInputControl();
+      _removeKeyboardSuppressor();
+    }
+  }
+
+  void _listenForPhysicalKeyboardChanges() {
+    _hardwareKeyboardChannel.setMethodCallHandler((call) async {
+      if (call.method == 'physicalKeyboardChanged') {
+        _setPhysicalKeyboardConnected(call.arguments == true);
+      }
+    });
+
+    _hardwareKeyboardChannel
+        .invokeMethod<bool>('isPhysicalKeyboardConnected')
+        .then((connected) => _setPhysicalKeyboardConnected(connected ?? false))
+        .catchError((Object _) {
+      // The channel exists only on Android. Other platforms keep their normal
+      // behavior, with suppression still following the feature Boolean.
+    });
+  }
+
+  void _setPhysicalKeyboardConnected(bool connected) {
+    if (_isDisposed || _physicalKeyboardConnected == connected) return;
+    _physicalKeyboardConnected = connected;
+    _applySystemKeyboardPolicy();
+    notifyListeners();
+  }
+
   void _removeKeyboardSuppressor() {
     if (_bindingObserver == null) return;
     WidgetsBinding.instance.removeObserver(_bindingObserver!);
@@ -259,11 +320,15 @@ class KeyboardProvider extends ChangeNotifier {
   // ---------------------------------------------------------------------------
 
   void _startListeningToFocus() {
+    if (_focusListenerInstalled) return;
     FocusManager.instance.addListener(_onGlobalFocusChange);
+    _focusListenerInstalled = true;
   }
 
   void _stopListeningToFocus() {
+    if (!_focusListenerInstalled) return;
     FocusManager.instance.removeListener(_onGlobalFocusChange);
+    _focusListenerInstalled = false;
   }
 
   void _onGlobalFocusChange() {
@@ -325,9 +390,8 @@ class KeyboardProvider extends ChangeNotifier {
       // Skip if already showing for this exact controller
       if (_showKeyboard && identical(_controller, controller)) return;
 
-      final type = isNumericKeyboardType(editableText.keyboardType)
-          ? 'number'
-          : 'text';
+      final type =
+          isNumericKeyboardType(editableText.keyboardType) ? 'number' : 'text';
       show(type, controller);
     }
     // If focus left every EditableText (button, list, keyboard chrome), keep
@@ -343,6 +407,11 @@ class KeyboardProvider extends ChangeNotifier {
         inputType.index == TextInputType.phone.index;
   }
 }
+
+/// Replaces Flutter's visual/platform text input control while retaining the
+/// normal EditableText connection. Direct controller edits from the virtual
+/// keyboard and key events from a USB/Bluetooth keyboard continue to work.
+class _VirtualKeyboardTextInputControl with TextInputControl {}
 
 /// Watches for system keyboard appearance via bottom inset changes and
 /// immediately hides it when the virtual keyboard feature is active.

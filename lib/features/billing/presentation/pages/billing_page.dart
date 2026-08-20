@@ -24,7 +24,6 @@ import 'package:pos_machine/features/subscription/presentation/subscription_acti
 import 'package:pos_machine/features/billing/domain/payment_validation.dart';
 import 'package:pos_machine/features/billing/domain/product_details_helpers.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
-import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/customer_purchase_history.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -304,13 +303,6 @@ class BillingPageState extends State<BillingPage>
 
   void _endOrderAction() {
     _isOrderActionInProgress = false;
-  }
-
-  bool _shouldSuppressSystemKeyboard() {
-    return SystemKeyboardPolicy.shouldSuppressForContext(
-      context: context,
-      fieldWantsVirtualKeyboardOnly: true,
-    );
   }
 
   VoidCallback? _appSettingsDebugListener;
@@ -2897,7 +2889,6 @@ class BillingPageState extends State<BillingPage>
                           size: size,
                           hintText: 'billing.quantity_hint'.tr,
                           focusNode: _quantityFocusNode,
-                          useSystemKeyboard: !_shouldSuppressSystemKeyboard(),
                           keyboardType: TextInputType.number,
                           onTap: () {
                             Provider.of<KeyboardProvider>(context,
@@ -2923,7 +2914,6 @@ class BillingPageState extends State<BillingPage>
                           size: size,
                           focusNode: _unitPriceFocusNode,
                           hintText: 'billing.unit_price_hint'.tr,
-                          useSystemKeyboard: !_shouldSuppressSystemKeyboard(),
                           keyboardType: TextInputType.number,
                           onTap: () {
                             Provider.of<KeyboardProvider>(context,
@@ -5377,7 +5367,6 @@ class BillingPageState extends State<BillingPage>
                               }
                             },
                             child: TextField(
-                              readOnly: _shouldSuppressSystemKeyboard(),
                               showCursor: true,
                               onTap: () {
                                 // Select all text for quick replacement
