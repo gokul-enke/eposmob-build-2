@@ -151,7 +151,7 @@ class _CreatePurchaseReturnScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${'purchase_return.returnable_qty'.tr}: ${maxQty.toStringAsFixed(0)}',
+              '${'purchase_return.returnable_qty'.tr}: ${_formatQty(maxQty)}',
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s12,
@@ -207,7 +207,7 @@ class _CreatePurchaseReturnScreenState
                 showScaffoldError(
                   context: context,
                   message:
-                      '${'purchase_return.qty_exceeds'.tr} ${maxQty.toStringAsFixed(0)}',
+                      '${'purchase_return.qty_exceeds'.tr} ${_formatQty(maxQty)}',
                 );
                 return;
               }
@@ -315,6 +315,13 @@ class _CreatePurchaseReturnScreenState
         message: result['message'] ?? 'purchase_return.err_create'.tr,
       );
     }
+  }
+
+  String _formatQty(double? value) {
+    if (value == null) return '0';
+    return value == value.truncateToDouble()
+        ? value.toInt().toString()
+        : value.toStringAsFixed(2);
   }
 
   void _updatePaidAmount() {
@@ -808,7 +815,7 @@ class _CreatePurchaseReturnScreenState
                                         settings.appSettings?.currency ??
                                             'INR';
                                     return Text(
-                                      '${'billing.table_qty'.tr}: ${item.quantity.toStringAsFixed(0)} • '
+                                      '${'billing.table_qty'.tr}: ${_formatQty(item.quantity)} • '
                                       '$currency ${item.amount.toStringAsFixed(2)}',
                                       style: buildCustomStyle(
                                         FontWeightManager.regular,
@@ -861,7 +868,7 @@ class _CreatePurchaseReturnScreenState
                         ),
                       ),
                       Text(
-                        _totalReturnQty.toStringAsFixed(0),
+                        _formatQty(_totalReturnQty),
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s14,
@@ -962,7 +969,7 @@ class _CreatePurchaseReturnScreenState
                         runSpacing: 4,
                         children: [
                           Text(
-                            '${'purchase_return.purchased'.tr}: ${item.purchasedQuantity?.toStringAsFixed(0) ?? '0'}',
+                            '${'purchase_return.purchased'.tr}: ${_formatQty(item.purchasedQuantity)}',
                             style: buildCustomStyle(
                               FontWeightManager.regular,
                               FontSize.s11,
@@ -971,7 +978,7 @@ class _CreatePurchaseReturnScreenState
                             ),
                           ),
                           Text(
-                            '${'purchase_return.returned'.tr}: ${item.returnedQuantity?.toStringAsFixed(0) ?? '0'}',
+                            '${'purchase_return.returned'.tr}: ${_formatQty(item.returnedQuantity)}',
                             style: buildCustomStyle(
                               FontWeightManager.regular,
                               FontSize.s11,
@@ -980,7 +987,7 @@ class _CreatePurchaseReturnScreenState
                             ),
                           ),
                           Text(
-                            '${'purchase_return.returnable'.tr}: ${item.returnableQuantity?.toStringAsFixed(0) ?? '0'}',
+                            '${'purchase_return.returnable'.tr}: ${_formatQty(item.returnableQuantity)}',
                             style: buildCustomStyle(
                               FontWeightManager.regular,
                               FontSize.s11,
