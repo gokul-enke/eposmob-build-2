@@ -7,14 +7,17 @@ required, and a prompt that can be reused for the next module.
 ## Current checkpoint
 
 - Total planned modules: **28**, numbered `00` through `27`.
-- Completed and evidence-recorded: **Modules 00–20**.
+- Completed and evidence-recorded: **Modules 00–21**.
 - Module 20 (Reports) is complete on
   `codex/feature-architecture-20-reports`: implementation
   `fd6c33003ad931c222abcc0b177e079b69b300c9`, evidence
   `e529344305f5928c759fff3e21ebec54c9172cd7`.
-- Module 21 (Printing and Documents) is the next branch to start from the
-  verified Module 20 evidence commit above.
-- Remaining after Module 20: Modules `21–27` (7 modules).
+- Module 21 (Printing and Documents) is complete on
+  `codex/feature-architecture-21-printing`: implementation `12504f1e`,
+  evidence `d63de987`.
+- Module 22 (Communications) is the next branch to start from the verified
+  Module 21 evidence commit above.
+- Remaining after Module 21: Modules `22–27` (6 modules).
 - The canonical branch is `gokul-dev`; numbered migration branches are stacked
   work branches and can be merged/cherry-picked into `gokul-dev` later.
 - The detailed branch/SHA ledger remains
@@ -82,6 +85,7 @@ were merely moved or because a focused widget test happens to pass.
 | 18 | Sales — sales orders, returns, quotations, edit-order, confirmed orders, daily close, typed resources, and lifecycle-safe controller; complete screens/providers remain app-owned behind a bridge. | `codex/feature-architecture-18-sales` / `628d3e14` | Implementation `cf75f742`; combined Sales/composition/registry/App Destination gate 15; architecture guard 13; full 1,331; guard 486 / 0 / 18; 29 export-only shims. |
 | 19 | Accounting — transaction/document values, invoices, receipts, vouchers, expenses, company accounts, dynamic context, controller lifecycle, and app-owned complete presentation. | `codex/feature-architecture-19-accounting` / `fdd2a382` | Base `628d3e14`; implementation `09c77dca`; evidence `fdd2a382`; Accounting/composition/registry gate 15; widget smoke 1; architecture guard 14; full 1,338; guard 486 / 0 / 19; 51 export-only shims. |
 | 20 | Reports — read-only report context/query/pagination, DTO projections, per-kind controller/runtime, and thirteen destination wrappers; source-feature state and Printing output remain excluded. | `codex/feature-architecture-20-reports` / `e5293443` | Base `fdd2a382`; implementation `fd6c3300`; evidence `e5293443`; Reports strict gate 8; composition 1; architecture guard 13; full 1,346; guard 486 / 0 / 20; 22 export-only shims and 6 Printing-owned printer exclusions. |
+| 21 | Printing and Documents — typed device/document/output values, barcode-layout settings, PrinterSettings runtime bridge, and behavior-compatible print/PDF/thermal/barcode/document/report-printer implementations. | `codex/feature-architecture-21-printing` / `d63de987` | Base `e5293443`; implementation `12504f1e`; evidence `d63de987`; Printing/document gate 138; architecture guard test 13; full 1,350; guard 486 / 0 / 21; exactly 99 export-only shims and 9 retained demo assets. |
 
 For each completed module, read its feature `README.md`, `FEATURE_SPEC.md`,
 `TODO.md`, and `CHANGELOG.md`; those files contain the exact compatibility
@@ -93,8 +97,8 @@ for navigation only; the architecture ledger contains full SHAs.
 | # | Module | Ownership focus | Important boundary |
 |---:|---|---|---|
 | 20 | Reports | Report pages/provider/DTO projections. | Complete; Reports are read-only consumers and do not own source state. |
-| 21 | Printing and Documents | Printer settings, document configuration, print/PDF/barcode output. | Next; keep source business state in owning modules and preserve user-owned printer changes. |
-| 22 | Communications | WhatsApp/settings/transaction-sharing adapter. | Keep messaging transport separate from Support and Sync. |
+| 21 | Printing and Documents | Printer settings, document configuration, print/PDF/barcode output. | Complete; output behavior is app-owned behind the strict Printing root; source business state remains with its owning modules. |
+| 22 | Communications | WhatsApp/settings/transaction-sharing adapter. | Next; keep messaging transport separate from Support, Printing, and Sync. |
 | 23 | Restaurant and KOT | Restaurant billing UI, tables/menu/order/KOT state. | Do not absorb generic Billing checkout or Fulfillment directory state. |
 | 24 | Billing | Billing screens, cart, checkout, non-restaurant flows, cart/local compatibility. | Consume Products/Categories/Promotions/Fulfillment/Payments through roots; own checkout policy. |
 | 25 | Kiosk | Kiosk screens and actions. | Consume public roots; keep legal/static pages and support boundaries explicit. |
@@ -247,8 +251,8 @@ for navigation only; the architecture ledger contains full SHAs.
   latest-wins; logout, store change, clear, and dispose invalidate generations.
 - Presentation/compatibility: full behavior-compatible implementations live
   under `lib/app/reports/`, registry imports only the Reports root, and exactly
-  22 old model/provider/screen paths are export-only shims. Six transaction
-  printer paths remain real Printing-owned implementations for Module 21;
+  22 old model/provider/screen paths are export-only shims. The six transaction
+  printer paths are now Printing-owned export-only compatibility paths;
   mixed `lib/models/pagination.dart` remains outside strict Reports.
 - Verification: Reports strict contract/controller gate 8/8; composition 1/1;
   architecture guard test 13/13; strict analyzer no issues; complete Flutter
@@ -256,9 +260,40 @@ for navigation only; the architecture ledger contains full SHAs.
   and diff checks are clean except normal Windows line-ending notices.
 - Known debt: deployed endpoint authorization/tenant/store/pagination/
   aggregation verification, typed replacement of the app-owned provider and
-  screens, Printing migration, inherited logging/responsive/localization work,
-  and final shim removal. Full details are in `docs/features/reports/` and the
-  ledger evidence record.
+  screens, inherited logging/responsive/localization work, and final shim
+  removal. Printing migration is recorded in Module 21. Full details are in
+  `docs/features/reports/` and the ledger evidence record.
+
+### Module 21 — Printing and Documents
+
+- Base: Module 20 Reports evidence
+  `e529344305f5928c759fff3e21ebec54c9172cd7`.
+- Implementation: `12504f1e`; evidence: `d63de987` (`docs: record Printing
+  migration evidence`).
+- Boundary: strict `features/printing` owns pure device/document/output values,
+  barcode-layout settings, and the typed PrinterSettings runtime. Complete
+  receipt, return-bill, KOT, daily-close, invoice-PDF, standard-PDF, thermal,
+  barcode, logo, document-config, printer-service, and six Reports
+  transaction-printer implementations are app-owned under
+  `lib/app/printing/legacy/`.
+- Preserved elsewhere: Sales, Billing, Accounting, Purchasing, Inventory,
+  Product, Reports query/source state, Restaurant/KOT source workflows,
+  Communications delivery, and Sync scheduling/cursors. Product still owns
+  barcode identity/selection; Printing renders supplied output projections.
+- Compatibility: exactly 99 old Dart paths remain export-only shims — 83
+  `lib/screens/print/**`, six report-printer paths, invoice PDF, three models,
+  the document-config provider, and five printer services. Nine historical
+  demo assets moved with the app implementation. No baseline reduction is
+  claimed while those shims remain consumed.
+- Verification: Printing/document/barcode/composition gate 138/138;
+  architecture guard test 13/13; strict Printing analyzer no issues; complete
+  Flutter suite 1,350/1,350; guard 486 legacy / 0 exceptions / 21 strict;
+  `git diff --check` clean apart from Windows line-ending notices.
+- Known debt: typed hardware discovery/permission ports, deployed
+  document-config and printer authorization verification, typed source
+  projections from later workflows, queue/retry/offline policy, platform/UI
+  modernization, and final shim removal. Full details are in
+  `docs/features/printing/` and the ledger evidence record.
 
 ## How to continue on a future module
 
@@ -284,6 +319,49 @@ for navigation only; the architecture ledger contains full SHAs.
    and remaining debt. Only then start the next module.
 
 ## Reusable future-agent prompt
+
+### Immediate next prompt — Module 22 Communications
+
+```text
+Continue the ENKE POS feature-architecture migration in D:\Projects\ENKE\eposmob.
+
+Work on exactly one module:
+- Module 22 — Communications
+- Branch: codex/feature-architecture-22-communications
+- Base: d63de987 (the verified Module 21 evidence commit)
+
+Before editing, verify the branch/base and read:
+- docs/architecture/MODULE_MIGRATION_CHECKLIST.md
+- docs/architecture/MIGRATION_LEDGER.md
+- docs/architecture/FEATURE_ARCHITECTURE_HANDOFF.md
+- docs/architecture/FEATURE_ARCHITECTURE.md
+- tool/architecture/strict_features.txt
+- tool/architecture/legacy_paths.txt
+- tool/architecture/cross_feature_exceptions.txt
+- docs/features/printing/{README,FEATURE_SPEC,TODO,CHANGELOG}.md
+
+Audit WhatsApp/share ownership, settings, permissions, recipient/session/
+tenant/store scoping, exact URI/header/payload behavior, failure/retry and
+platform-launch behavior, all consumers, backend routes, and current tests.
+Keep Printing document/output values and Sales/Accounting source projections
+behind their public roots or app bridges. Keep Support FAQ/chat, Restaurant,
+Billing checkout/cart, and Offline/Realtime Sync scheduling out of scope.
+
+Implement one public features/communications root, pure domain values/ports,
+injected data/application state where a real contract exists, and app-owned
+bridges for complete legacy UI/workflows. Preserve behavior, runtime names,
+destination slots, preference keys, parser quirks, and redaction. Delete only
+zero-consumer paths; otherwise use implementation-free export shims and list
+exact removal owners in the feature TODO.
+
+Add focused success/failure/malformed/credential/session/store-reset/late-
+completion and owned-widget tests. Run formatter, scoped analyzer, focused and
+downstream tests, architecture guard plus guard tests, git diff --check, and
+the full `flutter test --no-pub` suite. Stage and audit tracked and untracked
+files, commit implementation first, then a separate docs/evidence commit.
+Update the ledger/handoff/checklist with full SHAs and exact counts. Do not
+start Module 23 in the same branch.
+```
 
 ```text
 Continue the ENKE POS feature-architecture migration with Module <NN> — <NAME>.
