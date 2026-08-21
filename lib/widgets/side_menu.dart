@@ -680,15 +680,19 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value = 81;
                     },
                     listTitle1: 'nav.purchase_orders'.tr,
-                    // Permission-based visibility
                     showTitle1: hasPurchasePermission,
+                    onTapTitle2: () {
+                      sideBarController.index.value = 99;
+                    },
+                    listTitle2: 'nav.purchase_returns'.tr,
+                    showTitle2: hasPurchasePermission,
                     icon: fa.FontAwesomeIcons.clipboardList,
                     title: 'nav.purchase'.tr,
                     onTap: () async {
                       sideBarController.index.value = 81;
                     },
                     selected:
-                        [81, 82, 36].contains(sideBarController.index.value)),
+                        [81, 82, 36, 99, 100].contains(sideBarController.index.value)),
               );
             },
           ),

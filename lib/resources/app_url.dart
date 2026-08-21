@@ -318,4 +318,14 @@ class APPUrl {
       '$baseURL/api/v1/general-payment/account-options';
   static String get createGeneralPayment =>
       '$baseURL/api/v1/general-payment/create-general-payment';
+
+  // Purchase Returns
+  static String get listPurchaseReturns =>
+      '$baseURL/api/v1/purchase/returns';
+  static String purchaseReturnDetails(dynamic id) =>
+      '$baseURL/api/v1/purchase/returns/$id';
+  static String returnableItems(dynamic purchaseVoucherId) =>
+      '$baseURL/api/v1/purchase/$purchaseVoucherId/returnable-items';
+  static String get createPurchaseReturn =>
+      '$baseURL/api/v1/purchase/returns';
 }

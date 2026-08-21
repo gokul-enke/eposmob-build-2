@@ -16,6 +16,7 @@ import '../models/get_suppliers.dart';
 import '../models/list_purchase.dart';
 
 import '../models/purchase_order_model.dart';
+import '../models/purchase_return_model.dart';
 import '../resources/app_url.dart';
 
 class PurchaseProvider extends ChangeNotifier {
@@ -61,6 +62,13 @@ class PurchaseProvider extends ChangeNotifier {
   Map<String, String>? get getUnitList => unitList;
   Map<String, String>? masterDataValues;
   Map<String, dynamic>? activePurchaseOrderDetails;
+
+  // Purchase return state
+  List<PurchaseReturnData> purchaseReturnsList = [];
+  int purchaseReturnCurrentPage = 1;
+  int purchaseReturnTotalPages = 1;
+  List<ReturnableItem> returnableItemsList = [];
+  ReturnableItemsData? activeReturnableItemsData;
 
   Map<String, String>? get getMasterDataValues => masterDataValues;
   List<VoucherDetail>? get getVoucherDetailsList => voucherDetailsList;
@@ -1258,6 +1266,226 @@ class PurchaseProvider extends ChangeNotifier {
       return {
         'status': 'failed',
         'message': 'purchase_order.receive_timeout'.tr,
+      };
+    } catch (e) {
+      return {
+        'status': 'failed',
+        'message': 'Error: ${e.toString()}',
+      };
+    }
+  }
+
+  // ── Purchase Returns ────────────────────────────────────────────────
+
+  Future<void> listPurchaseReturns({
+    required String accessToken,
+    int? page,
+    String? supplierId,
+    String? dateFrom,
+    String? dateTo,
+  }) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    final queryParameters = <String, String>{
+      'page': page?.toString() ?? '1',
+    };
+    if (supplierId != null && supplierId.isNotEmpty) {
+      queryParameters['supplier_id'] = supplierId;
+    }
+    if (dateFrom != null && dateFrom.isNotEmpty) {
+      queryParameters['date_from'] = dateFrom;
+    }
+    if (dateTo != null && dateTo.isNotEmpty) {
+      queryParameters['date_to'] = dateTo;
+    }
+
+    final url = Uri.parse(APPUrl.listPurchaseReturns)
+        .replace(queryParameters: queryParameters);
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+    try {
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
+      });
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        if (jsonData["status"] == "success") {
+          final model = ListPurchaseReturnModel.fromJson(jsonData);
+          purchaseReturnCurrentPage = model.data?.currentPage ?? 1;
+          purchaseReturnTotalPages = model.data?.lastPage ?? 1;
+          purchaseReturnsList = model.data?.data ?? [];
+        } else {
+          purchaseReturnsList = [];
+        }
+        notifyListeners();
+      } else {
+        purchaseReturnsList = [];
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint("Error fetching purchase returns: $e");
+      purchaseReturnsList = [];
+      notifyListeners();
+    }
+  }
+
+  Future<PurchaseReturnData?> fetchPurchaseReturnDetails({
+    required String accessToken,
+    required int returnId,
+  }) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      return null;
+    }
+    try {
+      final url = Uri.parse(APPUrl.purchaseReturnDetails(returnId));
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
+      });
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        if (jsonData["status"] == "success" && jsonData["data"] != null) {
+          return PurchaseReturnData.fromJson(jsonData["data"]);
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint("Error fetching purchase return details: $e");
+      return null;
+    }
+  }
+
+  Future<void> fetchReturnableItems({
+    required String accessToken,
+    required int purchaseVoucherId,
+  }) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+    try {
+      final url = Uri.parse(APPUrl.returnableItems(purchaseVoucherId));
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
+      });
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        if (jsonData["status"] == "success") {
+          final parsed = ReturnableItemsResponse.fromJson(jsonData);
+          activeReturnableItemsData = parsed.data;
+          returnableItemsList = parsed.data?.items ?? [];
+        } else {
+          returnableItemsList = [];
+          activeReturnableItemsData = null;
+        }
+        notifyListeners();
+      } else {
+        returnableItemsList = [];
+        activeReturnableItemsData = null;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint("Error fetching returnable items: $e");
+      returnableItemsList = [];
+      activeReturnableItemsData = null;
+      notifyListeners();
+    }
+  }
+
+  Future<Map<String, dynamic>> createPurchaseReturn({
+    required String accessToken,
+    required int purchaseVoucherId,
+    required String returnDate,
+    required List<Map<String, dynamic>> items,
+    bool hasPayment = false,
+    double? paidAmount,
+    String? paymentMethod,
+  }) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      return {
+        'status': 'failed',
+        'message': 'API key not found. Please restart the app.',
+      };
+    }
+
+    final payload = <String, dynamic>{
+      'purchase_voucher_id': purchaseVoucherId,
+      'return_date': returnDate,
+      'items': items,
+      'has_payment': hasPayment,
+    };
+    if (hasPayment && paidAmount != null) {
+      payload['paid_amount'] = paidAmount;
+    }
+    if (hasPayment && paymentMethod != null) {
+      payload['payment_method'] = paymentMethod;
+    }
+
+    final body = json.encode(payload);
+
+    try {
+      final url = Uri.parse(APPUrl.createPurchaseReturn);
+      final response = await http
+          .post(url,
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer $accessToken',
+                'X-Tenant': apiKey,
+              },
+              body: body)
+          .timeout(const Duration(seconds: 30));
+
+      dynamic decoded;
+      try {
+        decoded = json.decode(response.body);
+      } catch (_) {
+        return {
+          'status': 'failed',
+          'http_status_code': response.statusCode,
+          'message': 'Server error (${response.statusCode}). Please try again.',
+        };
+      }
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (decoded['status'] == 'success') {
+          return {'status': 'success', 'message': decoded['message'] ?? ''};
+        }
+      }
+      String errorMessage = decoded['message'] ?? 'Failed to create purchase return.';
+      final errors = decoded['errors'] ?? decoded['data'];
+      if (errors is Map) {
+        final firstError = errors.values.firstWhere(
+          (v) => v is List && v.isNotEmpty,
+          orElse: () => null,
+        );
+        if (firstError != null) {
+          errorMessage = firstError[0].toString();
+        }
+      }
+      return {
+        'status': 'failed',
+        'http_status_code': response.statusCode,
+        'message': errorMessage,
+      };
+    } on TimeoutException {
+      return {
+        'status': 'failed',
+        'message': 'Request timed out. Please try again.',
       };
     } catch (e) {
       return {
