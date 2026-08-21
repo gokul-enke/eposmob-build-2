@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/pos_security_key_dialog.dart';
 import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
 import 'package:pos_machine/helpers/quantity_input_helper.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -60,6 +61,7 @@ class _CompactQuantityControlLocalState
   Timer? _debounceTimer;
   bool _isUpdating = false;
   bool _isEditingQuantityText = false;
+  bool _isAuthorizingRemoval = false;
 
   // Queue to store pending quantity updates
   num? _pendingQuantity;
@@ -253,6 +255,47 @@ class _CompactQuantityControlLocalState
   }) {
     if (newQuantity < 0) return;
 
+    if (newQuantity == 0) {
+      unawaited(_authorizeAndHandleRemoval(
+        updateControllerText: updateControllerText,
+      ));
+      return;
+    }
+
+    _applyQuantityChange(
+      newQuantity,
+      updateControllerText: updateControllerText,
+    );
+  }
+
+  Future<void> _authorizeAndHandleRemoval({
+    required bool updateControllerText,
+  }) async {
+    if (_isAuthorizingRemoval) return;
+    _isAuthorizingRemoval = true;
+
+    try {
+      if (!await PosSecurityKeyDialog.verify(
+        context,
+        action: 'remove this cart item',
+      )) {
+        _applyQuantityValue(_currentQuantity, forceControllerText: true);
+        return;
+      }
+
+      _applyQuantityChange(
+        0,
+        updateControllerText: updateControllerText,
+      );
+    } finally {
+      _isAuthorizingRemoval = false;
+    }
+  }
+
+  void _applyQuantityChange(
+    num newQuantity, {
+    required bool updateControllerText,
+  }) {
     // Update UI immediately
     setState(() {
       _currentQuantity = newQuantity;

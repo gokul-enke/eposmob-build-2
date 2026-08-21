@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/daily_sales_close.dart';
+import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/services/standard_pdf_direct_print_service.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
@@ -66,6 +68,7 @@ class DailyCloseStandardPrinter {
 
   /// Generate and print/open Daily Close PDF
   Future<void> generateAndPrintDailyClosePDF({
+    required BluetoothPrinter selectedPrinter,
     required DailySalesCloseData data,
     required String selectedPaperSize,
     required bool includeTransactions,
@@ -371,6 +374,22 @@ class DailyCloseStandardPrinter {
       await file.writeAsBytes(await pdf.save());
 
       debugPrint("Daily Close PDF saved to: ${file.path}");
+
+      final printed = await StandardPdfDirectPrintService.printBytes(
+        pdfBytes: await file.readAsBytes(),
+        selectedPrinter: selectedPrinter,
+        paperSize: selectedPaperSize,
+        jobName: 'Daily Close $dateStr',
+      );
+      if (printed) {
+        if (context.mounted) {
+          showScaffold(
+            context: context,
+            message: 'Daily Close sent to ${selectedPrinter.deviceName}',
+          );
+        }
+        return;
+      }
 
       // Open the PDF
       final bool isWindows = Platform.isWindows;

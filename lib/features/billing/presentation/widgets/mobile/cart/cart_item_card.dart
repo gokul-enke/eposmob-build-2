@@ -4,6 +4,7 @@ import 'package:pos_machine/features/billing/domain/billing_crash_guards.dart';
 import 'package:pos_machine/features/billing/domain/billing_debug_log.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/cart/mobile_cart_price_fields.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/pos_security_key_dialog.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
 import 'package:pos_machine/helpers/quantity_input_helper.dart';
@@ -111,15 +112,15 @@ class CartItemCard extends StatelessWidget {
         color: isOutOfStock
             ? ColorManager.kRed.withValues(alpha: 0.06)
             : isLowStock
-            ? ColorManager.kOrange.withValues(alpha: 0.06)
-            : Colors.white,
+                ? ColorManager.kOrange.withValues(alpha: 0.06)
+                : Colors.white,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isOutOfStock
               ? ColorManager.kRed.withValues(alpha: 0.35)
               : isLowStock
-              ? ColorManager.kOrange.withValues(alpha: 0.35)
-              : Colors.grey.shade200,
+                  ? ColorManager.kOrange.withValues(alpha: 0.35)
+                  : Colors.grey.shade200,
         ),
       ),
       child: Column(
@@ -285,6 +286,10 @@ class CartItemCard extends StatelessWidget {
                   'qty-field-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
                 ),
                 item: item,
+                onBeforeRemove: () => PosSecurityKeyDialog.verify(
+                  context,
+                  action: 'remove this cart item',
+                ),
               ),
               _QuantityButton(
                 icon: Icons.add,
@@ -643,9 +648,11 @@ class _MobileCartQuantityField extends StatefulWidget {
   const _MobileCartQuantityField({
     super.key,
     required this.item,
+    this.onBeforeRemove,
   });
 
   final LocalCartItem item;
+  final Future<bool> Function()? onBeforeRemove;
 
   @override
   State<_MobileCartQuantityField> createState() =>
@@ -739,6 +746,16 @@ class _MobileCartQuantityFieldState extends State<_MobileCartQuantityField> {
       final baseQty = widget.item.hasSaleUnit
           ? widget.item.toBaseQuantity(normalized)
           : normalized;
+
+      if (baseQty <= 0 && widget.onBeforeRemove != null) {
+        final authorized = await widget.onBeforeRemove!();
+        if (!authorized || !mounted) {
+          if (mounted) {
+            _controller.text = _formatDisplay(widget.item.displayQuantity);
+          }
+          return;
+        }
+      }
 
       await CartQuantityStockHelper.syncCartItemQuantity(
         context: context,

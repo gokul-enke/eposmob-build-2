@@ -2,6 +2,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 
 export '../print_unit_helper.dart';
+export '../../../services/standard_pdf_direct_print_service.dart';
 
 /// Abstract base class for standard (A4/A5) PDF receipt layouts.
 ///

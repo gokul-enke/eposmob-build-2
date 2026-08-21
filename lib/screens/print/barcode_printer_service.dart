@@ -988,6 +988,8 @@ class BarcodePrinterService {
           onLayout: (_) async => pdfBytes,
           name: 'Barcodes',
           format: pageFormat,
+          dynamicLayout: false,
+          usePrinterSettings: true,
         );
         debugPrint('[BarcodePrint:Windows]   directPrintPdf result: $success');
         if (success) {

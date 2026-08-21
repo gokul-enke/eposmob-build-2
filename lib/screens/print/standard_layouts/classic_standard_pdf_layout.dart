@@ -4,7 +4,8 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 import 'package:pos_machine/screens/print/print_standard.dart';
 import 'standard_pdf_layout.dart';
-import 'new_classic_standad_pdf_layout.dart';
+import 'standard_pdf_contract_delegate.dart';
+import 'contract_standard_pdf_layout.dart';
 
 /// Classic standard PDF layout - the default A4/A5 PDF design.
 ///
@@ -20,6 +21,13 @@ class ClassicStandardPdfLayout implements StandardPdfLayout {
 
   @override
   Future<void> generateAndPrintPdf(ReceiptLayoutParams params) async {
+    if (StandardPdfContractDelegate.enabled) {
+      return StandardPdfContractDelegate.generateAndPrintPdf(
+        params,
+        layoutId: layoutId,
+        displayName: displayName,
+      );
+    }
     debugPrint('[ClassicStandardPdfLayout] Generating PDF via StandardPrinter');
 
     final standardPrinter = StandardPrinter(params.context);
@@ -65,9 +73,18 @@ class ClassicStandardPdfLayout implements StandardPdfLayout {
 
   @override
   Future<pw.Document> buildPdfDocument(ReceiptLayoutParams params) async {
+    if (StandardPdfContractDelegate.enabled) {
+      return StandardPdfContractDelegate.buildPdfDocument(
+        params,
+        layoutId: layoutId,
+        displayName: displayName,
+      );
+    }
     debugPrint(
-        '[ClassicStandardPdfLayout] buildPdfDocument - delegating to NewClassicStandardPdfLayout');
-    final newClassic = NewClassicStandardPdfLayout();
-    return newClassic.buildPdfDocument(params);
+        '[ClassicStandardPdfLayout] buildPdfDocument - using the shared Classic contract');
+    return const ContractStandardPdfLayout(
+      layoutId: 'classic',
+      displayName: 'Classic',
+    ).buildPdfDocument(params);
   }
 }

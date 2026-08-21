@@ -105,6 +105,51 @@ void main() {
       expect(json['product_variant_id'], 7);
       expect(json['variant_attributes'], {'COLOR': 'Blue'});
     });
+
+    test('parses and round-trips remote warranty flags', () {
+      for (final value in [true, 1, '1', 'true', 'yes']) {
+        final item = OrderDetailsModelDataCartItem.fromJson({
+          'product_name': 'Warranty Product',
+          'quantity': '1',
+          'unit_price': 100,
+          'mrp': 100,
+          'total_price': 100,
+          'warranty_enabled': value,
+        });
+
+        expect(item.warrantyEnabled, isTrue, reason: 'value=$value');
+        expect(item.toJson()['warranty_enabled'], isTrue);
+      }
+    });
+  });
+
+  group('Order delivery phone parsing', () {
+    test('prefers a first-class delivery phone', () {
+      final order = OrderDetailsModelData.fromJson({
+        'delivery_phone': '+966500000001',
+        'order_props': [
+          {
+            'props_code': 'DELIVERY_PHONE',
+            'props_value': '+966500000002',
+          },
+        ],
+      });
+
+      expect(order.getDeliveryPhoneForDisplay(), '+966500000001');
+    });
+
+    test('falls back to a supported order property', () {
+      final order = OrderDetailsModelData.fromJson({
+        'order_props': [
+          {
+            'props_code': 'SHIPPING_PHONE',
+            'props_value': '+966500000003',
+          },
+        ],
+      });
+
+      expect(order.getDeliveryPhoneForDisplay(), '+966500000003');
+    });
   });
 
   group('OrderReturnItem variant parsing', () {

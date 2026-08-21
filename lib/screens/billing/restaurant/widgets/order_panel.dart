@@ -43,6 +43,7 @@ import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/screens/billing/restaurant/utils/restaurant_helpers.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/pos_security_key_dialog.dart';
 
 part 'order_panel_current_cart.dart';
 part 'order_panel_saved_order_item.dart';
@@ -6487,6 +6488,14 @@ class OrderPanelState extends State<OrderPanel> {
       return;
     }
 
+    if (newQuantity == 0 &&
+        !await PosSecurityKeyDialog.verify(
+          context,
+          action: 'remove this cart item',
+        )) {
+      return;
+    }
+
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
@@ -6683,6 +6692,13 @@ class OrderPanelState extends State<OrderPanel> {
 
   Future<void> _removeCartItem(dynamic cartItem) async {
     try {
+      if (!await PosSecurityKeyDialog.verify(
+        context,
+        action: 'remove this cart item',
+      )) {
+        return;
+      }
+
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
 

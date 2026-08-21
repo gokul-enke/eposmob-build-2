@@ -11,6 +11,8 @@ library;
 
 export 'receipt_layout.dart';
 export 'receipt_layout_params.dart';
+export 'receipt_configuration_contract.dart';
+export 'contract_receipt_layout.dart';
 export 'receipt_layout_factory.dart';
 export 'classic_receipt_layout.dart';
 export 'premium_receipt_layout.dart';

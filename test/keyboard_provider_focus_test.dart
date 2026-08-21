@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pos_machine/helpers/keyboard_dispatcher.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
+import 'package:provider/provider.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -72,7 +75,82 @@ void main() {
   });
 
   group('KeyboardProvider focus auto-show', () {
-    testWidgets('binds the field that actually has focus, not the first '
+    testWidgets('covers TextField and TextFormField without per-field wiring',
+        (tester) async {
+      final keyboardProvider = KeyboardProvider(enablePersistence: false)
+        ..featureOn();
+      final plainController = TextEditingController();
+      final formController = TextEditingController();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                TextField(controller: plainController),
+                TextFormField(
+                  controller: formController,
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(TextField).first);
+      await tester.pump();
+      await tester.pump();
+      expect(identical(keyboardProvider.controller, plainController), isTrue);
+      expect(keyboardProvider.keyboardType, 'text');
+
+      await tester.tap(find.byType(TextFormField));
+      await tester.pump();
+      await tester.pump();
+      expect(identical(keyboardProvider.controller, formController), isTrue);
+      expect(keyboardProvider.keyboardType, 'number');
+
+      keyboardProvider.dispose();
+      plainController.dispose();
+      formController.dispose();
+    });
+
+    testWidgets(
+        'physical key input edits a field while visual IME is suppressed',
+        (tester) async {
+      final keyboardProvider = KeyboardProvider(enablePersistence: false)
+        ..featureOn();
+      final controller = TextEditingController();
+      String? changedText;
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<KeyboardProvider>.value(
+          value: keyboardProvider,
+          child: KeyboardDispatcher(
+            child: MaterialApp(
+              home: Scaffold(
+                body: TextField(
+                  controller: controller,
+                  onChanged: (value) => changedText = value,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.byType(TextField));
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+
+      expect(controller.text, 'a');
+      expect(changedText, 'a');
+
+      keyboardProvider.dispose();
+      controller.dispose();
+    });
+
+    testWidgets(
+        'binds the field that actually has focus, not the first '
         'field in tree order', (tester) async {
       final keyboardProvider = KeyboardProvider(enablePersistence: false)
         ..featureOn();

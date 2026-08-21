@@ -116,6 +116,7 @@ class ProductEntryHeader extends StatelessWidget {
                                             controller: barcodeController,
                                             focusNode:
                                                 billingProvider.barcodeNode,
+                                            keyboardType: TextInputType.number,
                                             readOnly: billingProvider
                                                 .selectedProductNameController
                                                 .text
@@ -400,6 +401,7 @@ class ProductEntryHeader extends StatelessWidget {
                                         .appSettings!.barcodeSales,
                                     controller: barcodeController,
                                     focusNode: billingProvider.barcodeNode,
+                                    keyboardType: TextInputType.number,
                                     readOnly: billingProvider
                                         .selectedProductNameController
                                         .text

@@ -3,6 +3,7 @@ package com.enke.cloudposai
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
@@ -16,11 +17,13 @@ import io.flutter.plugin.common.MethodCall
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "PLUTUS-API"
+    private val KEYBOARD_CHANNEL = "com.enke.cloudposai/keyboard"
     private val PLUTUS_SMART_ACTION = "com.pinelabs.masterapp.SERVER"
     private val PLUTUS_SMART_PACKAGE = "com.pinelabs.masterapp"
     private var isServiceBound = false
     private var mService: IBinder? = null
     private var pendingResult: Result? = null
+    private var keyboardChannel: MethodChannel? = null
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -38,6 +41,19 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        keyboardChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            KEYBOARD_CHANNEL
+        ).also { channel ->
+            channel.setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "isPhysicalKeyboardConnected" ->
+                        result.success(isPhysicalKeyboardConnected())
+                    else -> result.notImplemented()
+                }
+            }
+        }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
@@ -61,6 +77,21 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        keyboardChannel?.invokeMethod(
+            "physicalKeyboardChanged",
+            isPhysicalKeyboardConnected(newConfig)
+        )
+    }
+
+    private fun isPhysicalKeyboardConnected(
+        config: Configuration = resources.configuration
+    ): Boolean {
+        return config.keyboard != Configuration.KEYBOARD_NOKEYS &&
+            config.hardKeyboardHidden == Configuration.HARDKEYBOARDHIDDEN_NO
     }
 
     private fun bindToService(result: MethodChannel.Result) {
@@ -148,6 +179,8 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        keyboardChannel?.setMethodCallHandler(null)
+        keyboardChannel = null
         super.onDestroy()
         if (isServiceBound) {
             unbindService(serviceConnection)

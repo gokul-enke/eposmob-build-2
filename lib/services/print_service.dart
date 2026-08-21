@@ -443,6 +443,7 @@ class PrintService {
     }
 
     final deliveryMethod = orderDetails.data?.deliveryMethodName;
+    final deliveryPhone = orderDetails.data?.getDeliveryPhoneForDisplay();
     final netExcTax = isSalesOnly
         ? _calculateNetExcTaxFromCartItems(cartItems)
         : orderDetails.data?.cart?.priceSummary?.netExcTax?.toString();
@@ -485,6 +486,7 @@ class PrintService {
       paymentBreakdown: paymentBreakdown,
       orderComment: orderComment,
       deliveryMethod: deliveryMethod,
+      deliveryPhone: deliveryPhone,
       orderReturns: effectiveOrderReturns,
       paidAmount: paidAmount,
       customerOldBalance: customerOldBalance,
@@ -521,6 +523,7 @@ class PrintService {
             paymentBreakdown: paymentBreakdown,
             orderComment: orderComment,
             deliveryMethod: deliveryMethod,
+            deliveryPhone: deliveryPhone,
             orderReturns: effectiveOrderReturns,
             paidAmount: paidAmount,
             customerOldBalance: customerOldBalance,

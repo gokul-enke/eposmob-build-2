@@ -24,7 +24,6 @@ import 'package:pos_machine/features/subscription/presentation/subscription_acti
 import 'package:pos_machine/features/billing/domain/payment_validation.dart';
 import 'package:pos_machine/features/billing/domain/product_details_helpers.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
-import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/customer_purchase_history.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -90,6 +89,7 @@ import 'package:pos_machine/features/billing/presentation/widgets/price_fields.d
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/screens/customers/add_customer_modal.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/keyboard_shortcuts_help_dialog.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/pos_security_key_dialog.dart';
 
 enum CheckoutActionMode { confirm, save, quotation }
 
@@ -304,13 +304,6 @@ class BillingPageState extends State<BillingPage>
 
   void _endOrderAction() {
     _isOrderActionInProgress = false;
-  }
-
-  bool _shouldSuppressSystemKeyboard() {
-    return SystemKeyboardPolicy.shouldSuppressForContext(
-      context: context,
-      fieldWantsVirtualKeyboardOnly: true,
-    );
   }
 
   VoidCallback? _appSettingsDebugListener;
@@ -2830,6 +2823,7 @@ class BillingPageState extends State<BillingPage>
                                     .appSettings!.barcodeSales,
                                 controller: barcodeController,
                                 focusNode: _barcodeNode,
+                                keyboardType: TextInputType.number,
                                 readOnly: selectedProductNameController
                                     .text.isNotEmpty,
                                 onSubmitted: (query) {
@@ -2897,7 +2891,6 @@ class BillingPageState extends State<BillingPage>
                           size: size,
                           hintText: 'billing.quantity_hint'.tr,
                           focusNode: _quantityFocusNode,
-                          useSystemKeyboard: !_shouldSuppressSystemKeyboard(),
                           keyboardType: TextInputType.number,
                           onTap: () {
                             Provider.of<KeyboardProvider>(context,
@@ -2923,7 +2916,6 @@ class BillingPageState extends State<BillingPage>
                           size: size,
                           focusNode: _unitPriceFocusNode,
                           hintText: 'billing.unit_price_hint'.tr,
-                          useSystemKeyboard: !_shouldSuppressSystemKeyboard(),
                           keyboardType: TextInputType.number,
                           onTap: () {
                             Provider.of<KeyboardProvider>(context,
@@ -4017,14 +4009,12 @@ class BillingPageState extends State<BillingPage>
                                                 visualDensity:
                                                     VisualDensity.compact,
                                                 onPressed: () {
-                                                  localProductProvider
-                                                      .removeFromCart(
-                                                    item.product.productId!,
-                                                    item.selectedStock,
-                                                    stockGroupIds:
-                                                        item.stockGroupIds,
-                                                    saleUnitId: item.saleUnitId,
-                                                    variantId: item.variantId,
+                                                  unawaited(
+                                                    _removeCartItemFromKeyboard(
+                                                      item,
+                                                      localProductProvider,
+                                                      cartItems.length,
+                                                    ),
                                                   );
                                                 },
                                               ),
@@ -4233,14 +4223,15 @@ class BillingPageState extends State<BillingPage>
           _cartPriceEditRequestId++;
         });
       } else if (_cartTableFocusedCellIndex == 4) {
-        _removeCartItemFromKeyboard(
-            item, localProductProvider, cartItems.length);
+        unawaited(_removeCartItemFromKeyboard(
+            item, localProductProvider, cartItems.length));
       }
       return KeyEventResult.handled;
     }
 
     if (key == LogicalKeyboardKey.delete) {
-      _removeCartItemFromKeyboard(item, localProductProvider, cartItems.length);
+      unawaited(_removeCartItemFromKeyboard(
+          item, localProductProvider, cartItems.length));
       return KeyEventResult.handled;
     }
 
@@ -4324,8 +4315,28 @@ class BillingPageState extends State<BillingPage>
     return KeyEventResult.ignored;
   }
 
-  void _removeCartItemFromKeyboard(LocalCartItem item,
+  Future<void> _removeCartItemFromKeyboard(LocalCartItem item,
       LocalProductProvider localProductProvider, int previousCartLength) {
+    return _removeCartItemFromKeyboardAfterAuthorization(
+      item,
+      localProductProvider,
+      previousCartLength,
+    );
+  }
+
+  Future<void> _removeCartItemFromKeyboardAfterAuthorization(
+    LocalCartItem item,
+    LocalProductProvider localProductProvider,
+    int previousCartLength,
+  ) async {
+    if (!await PosSecurityKeyDialog.verify(
+      context,
+      action: 'remove this cart item',
+    )) {
+      return;
+    }
+    if (!mounted) return;
+
     localProductProvider.removeFromCart(
       item.product.productId!,
       item.selectedStock,
@@ -4350,6 +4361,14 @@ class BillingPageState extends State<BillingPage>
     if (productId == null) return;
 
     final nextQuantity = item.quantity + delta;
+    if (nextQuantity <= 0 &&
+        !await PosSecurityKeyDialog.verify(
+          context,
+          action: 'remove this cart item',
+        )) {
+      return;
+    }
+
     debugPrint(
       '🧮 [BillingPage] keyboard quantity adjust '
       'productId=$productId, current=${item.quantity}, '
@@ -5377,7 +5396,6 @@ class BillingPageState extends State<BillingPage>
                               }
                             },
                             child: TextField(
-                              readOnly: _shouldSuppressSystemKeyboard(),
                               showCursor: true,
                               onTap: () {
                                 // Select all text for quick replacement
@@ -6166,6 +6184,13 @@ class BillingPageState extends State<BillingPage>
   }
 
   Future<void> _clearCart() async {
+    if (!await PosSecurityKeyDialog.verify(
+      context,
+      action: 'clear the cart',
+    )) {
+      return;
+    }
+
     if (!_beginOrderAction()) {
       return;
     }

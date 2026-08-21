@@ -22,6 +22,7 @@ import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/resources/localization_service.dart';
 import '../logo_loader.dart';
 import 'standard_pdf_layout.dart';
+import 'standard_pdf_contract_delegate.dart';
 
 /// Boxed bilingual tax-invoice PDF with a reference-style full-width logo,
 /// metadata strip, seller/buyer boxes, fixed six-column items table, and a
@@ -125,6 +126,13 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   // ── Public interface ────────────────────────────────────────────────
   @override
   Future<void> generateAndPrintPdf(ReceiptLayoutParams params) async {
+    if (StandardPdfContractDelegate.enabled) {
+      return StandardPdfContractDelegate.generateAndPrintPdf(
+        params,
+        layoutId: layoutId,
+        displayName: displayName,
+      );
+    }
     final pdf = await buildPdfDocument(params);
     if (params.selectedPrinter.isDevelopment) {
       final savedFile = await DevelopmentPrinterService.savePdf(
@@ -138,6 +146,15 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           message: 'Development PDF saved to ${savedFile.path}',
         );
       }
+      return;
+    }
+
+    if (await StandardPdfDirectPrintService.printDocument(
+      document: pdf,
+      selectedPrinter: params.selectedPrinter,
+      paperSize: params.selectedPaperSize,
+      jobName: 'Boxed Tax Invoice ${params.orderNumber}',
+    )) {
       return;
     }
 
@@ -159,6 +176,13 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
 
   @override
   Future<pw.Document> buildPdfDocument(ReceiptLayoutParams params) async {
+    if (StandardPdfContractDelegate.enabled) {
+      return StandardPdfContractDelegate.buildPdfDocument(
+        params,
+        layoutId: layoutId,
+        displayName: displayName,
+      );
+    }
     final pdf = pw.Document(version: PdfVersion.pdf_1_5, compress: true);
 
     // ── Providers & Config ──────────────────────────────────────────
@@ -3710,8 +3734,8 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     }
     if (params.customerPhone != null &&
         params.customerPhone!.trim().isNotEmpty) {
-      custRows.add(
-          _kvRow('Phone:', params.customerPhone!, labelStyle, valueStyle));
+      custRows
+          .add(_kvRow('Phone:', params.customerPhone!, labelStyle, valueStyle));
     }
     if (params.customerAddress != null &&
         params.customerAddress!.trim().isNotEmpty) {
@@ -3719,14 +3743,16 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           'Billing Address:', params.customerAddress!, labelStyle, valueStyle));
     }
     if (custRows.isNotEmpty) {
-      widgets.add(pw.Text(retLabels?.customerHeading ?? 'CUSTOMER DETAILS', style: sectionHeadingStyle));
+      widgets.add(pw.Text(retLabels?.customerHeading ?? 'CUSTOMER DETAILS',
+          style: sectionHeadingStyle));
       widgets.add(pw.SizedBox(height: 2));
       widgets.addAll(custRows);
       widgets.add(pw.SizedBox(height: 4));
     }
 
-if (retLabels?.itemsHeading != null) {
-      widgets.add(pw.Text(retLabels!.itemsHeading!, style: sectionHeadingStyle));
+    if (retLabels?.itemsHeading != null) {
+      widgets
+          .add(pw.Text(retLabels!.itemsHeading!, style: sectionHeadingStyle));
       widgets.add(pw.SizedBox(height: 2));
     }
 
@@ -3739,7 +3765,8 @@ if (retLabels?.itemsHeading != null) {
       widgets.add(pw.SizedBox(height: 4));
     }
 
-    if (col('showReturnItemsCount') || (retLabels?.creditNoteItemsCount != null)) {
+    if (col('showReturnItemsCount') ||
+        (retLabels?.creditNoteItemsCount != null)) {
       final countLabel = (retLabels?.creditNoteItemsCount != null)
           ? retLbl('showCreditNoteItemsCount', retLabels?.creditNoteItemsCount,
               'Total Items:')
@@ -3749,7 +3776,8 @@ if (retLabels?.itemsHeading != null) {
       widgets.add(pw.SizedBox(height: 2));
     }
 
-    if (col('showReturnTotalAmount') || (retLabels?.creditNoteTotalAmount != null)) {
+    if (col('showReturnTotalAmount') ||
+        (retLabels?.creditNoteTotalAmount != null)) {
       final label = (retLabels?.creditNoteTotalAmount != null)
           ? retLbl('showCreditNoteTotalAmount',
               retLabels?.creditNoteTotalAmount, 'Total Amount:')
@@ -3779,8 +3807,8 @@ if (retLabels?.itemsHeading != null) {
 
     if (hasCreditNoteConfig) {
       widgets.add(pw.SizedBox(height: 4));
-      widgets.addAll(_amountInWords(
-          returnRateTotal, currency, false, null, labelStyle));
+      widgets.addAll(
+          _amountInWords(returnRateTotal, currency, false, null, labelStyle));
     }
 
     return widgets;

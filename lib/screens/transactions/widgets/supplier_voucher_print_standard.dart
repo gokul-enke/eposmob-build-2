@@ -7,6 +7,7 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/supplier_voucher.dart';
+import 'package:pos_machine/services/standard_pdf_direct_print_service.dart';
 import 'package:open_file/open_file.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -57,7 +58,12 @@ class SupplierVoucherStandardPrinter {
       final pdf = await _generatePDF(voucher, voucherDocumentConfig, selectedPaperSize);
 
       // Save and print
-      await _printPDF(pdf, voucher.voucherNumber);
+      await _printPDF(
+        pdf,
+        voucher.voucherNumber,
+        selectedPrinter: selectedPrinter,
+        selectedPaperSize: selectedPaperSize,
+      );
 
       if (context.mounted) {
         showScaffold(
@@ -299,7 +305,12 @@ class SupplierVoucherStandardPrinter {
     return pdf;
   }
 
-  Future<void> _printPDF(pw.Document pdf, String voucherNumber) async {
+  Future<void> _printPDF(
+    pw.Document pdf,
+    String voucherNumber, {
+    required BluetoothPrinter? selectedPrinter,
+    required String selectedPaperSize,
+  }) async {
     try {
       debugPrint("Generating PDF for voucher: $voucherNumber");
 
@@ -317,6 +328,24 @@ class SupplierVoucherStandardPrinter {
 
       debugPrint("PDF saved to: ${file.path}");
       debugPrint("PDF file size: ${bytes.length} bytes");
+
+      if (selectedPrinter != null) {
+        final printed = await StandardPdfDirectPrintService.printBytes(
+          pdfBytes: bytes,
+          selectedPrinter: selectedPrinter,
+          paperSize: selectedPaperSize,
+          jobName: 'Supplier Voucher $sanitizedVoucherNumber',
+        );
+        if (printed) {
+          if (context.mounted) {
+            showScaffold(
+              context: context,
+              message: 'Voucher sent to ${selectedPrinter.deviceName}',
+            );
+          }
+          return;
+        }
+      }
 
       // Determine if running on Windows
       final bool isWindows = Platform.isWindows;

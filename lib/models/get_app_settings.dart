@@ -65,6 +65,8 @@ class AppSettings {
   final bool multiSaleUnitEnabled;
   final bool allowOverselling;
   final bool compulsoryShiftOpen;
+  final bool posAuthenticateClearCart;
+  final String posAuthenticateClearCartKey;
   final bool companySubscriptionFallbackEnabled;
   final String companySubscriptionStatus;
   final String companySubscriptionMessage;
@@ -112,6 +114,8 @@ class AppSettings {
     this.multiSaleUnitEnabled = false,
     this.allowOverselling = true,
     this.compulsoryShiftOpen = false,
+    this.posAuthenticateClearCart = false,
+    this.posAuthenticateClearCartKey = '',
     this.companySubscriptionFallbackEnabled = false,
     this.companySubscriptionStatus = '',
     this.companySubscriptionMessage = '',
@@ -254,6 +258,15 @@ class AppSettings {
         settingsMap,
         'COMPULSORY_SHIFT_OPEN_',
         defaultValue: false,
+      ),
+      posAuthenticateClearCart: _readSettingStatus(
+        settingsMap,
+        'POS_AUTHENTICATE_CLEARCART',
+        defaultValue: false,
+      ),
+      posAuthenticateClearCartKey: _readEnabledSettingValue(
+        settingsMap,
+        'POS_AUTHENTICATE_CLEARCART',
       ),
       // The row status enables this temporary compatibility source. The
       // subscription state itself is stored in the row value.
@@ -511,6 +524,12 @@ class AppSettings {
           "code": "COMPULSORY_SHIFT_OPEN_",
           "value": "",
           "status": compulsoryShiftOpen.toString(),
+        },
+        {
+          "name": "POS Authenticate Clear Cart",
+          "code": "POS_AUTHENTICATE_CLEARCART",
+          "value": posAuthenticateClearCartKey,
+          "status": posAuthenticateClearCart.toString(),
         },
         {
           "name": "Company Subscription Status",

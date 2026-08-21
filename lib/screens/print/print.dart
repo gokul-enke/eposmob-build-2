@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:printing/printing.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -48,6 +49,7 @@ class PrintPage extends StatefulWidget {
   final double? paidAmount;
   final String? orderComment;
   final String? deliveryMethod;
+  final String? deliveryPhone;
   final String? customerAlternatePhone;
   final String? paymentMethod;
   final String? customerVatNumber;
@@ -82,6 +84,7 @@ class PrintPage extends StatefulWidget {
     this.paidAmount,
     this.orderComment,
     this.deliveryMethod,
+    this.deliveryPhone,
     this.customerAlternatePhone,
     this.paymentMethod,
     this.customerVatNumber,
@@ -121,6 +124,7 @@ class PrintPage extends StatefulWidget {
     double? paidAmount,
     String? orderComment,
     String? deliveryMethod,
+    String? deliveryPhone,
     String? customerAlternatePhone,
     String? paymentMethod,
     String? customerVatNumber,
@@ -279,6 +283,7 @@ class PrintPage extends StatefulWidget {
         paidAmount: paidAmount,
         orderComment: orderComment,
         deliveryMethod: deliveryMethod,
+        deliveryPhone: deliveryPhone ?? customerAlternatePhone,
         customerAlternatePhone: customerAlternatePhone,
         paymentMethod: paymentMethod,
         customerVatNumber: customerVatNumber,
@@ -645,8 +650,21 @@ class _PrintPageState extends State<PrintPage> {
     });
 
     try {
-      // Bluetooth discovery only on mobile platforms
-      if (Platform.isAndroid || Platform.isIOS) {
+      if (Platform.isWindows) {
+        debugPrint('[PrintPage] Discovering Windows spooler printers');
+        final printers = await Printing.listPrinters();
+        for (final printer in printers) {
+          if (!mounted) return;
+          setState(() {
+            devices.add(BluetoothPrinter(
+              deviceName: printer.name,
+              address: printer.url,
+              typePrinter: PrinterType.usb,
+            ));
+          });
+        }
+      } else if (Platform.isAndroid || Platform.isIOS) {
+        // Bluetooth discovery only on mobile platforms.
         debugPrint('[PrintPage] Beginning Bluetooth discovery (isBle=false)');
         _subscription = printerManager
             .discovery(type: PrinterType.bluetooth, isBle: false)
@@ -675,20 +693,22 @@ class _PrintPageState extends State<PrintPage> {
             '[PrintPage] Skipping Bluetooth discovery on desktop platform (${Platform.operatingSystem}).');
       }
 
-      debugPrint('[PrintPage] Beginning USB discovery');
-      await printerManager.discovery(type: PrinterType.usb).forEach((device) {
-        debugPrint(
-            '[PrintPage] USB device found: name=${device.name}, vendorId=${device.vendorId}, productId=${device.productId}');
-        final printer = BluetoothPrinter(
-          deviceName: device.name,
-          vendorId: device.vendorId,
-          productId: device.productId,
-          typePrinter: PrinterType.usb,
-        );
-        setState(() {
-          devices.add(printer);
+      if (!Platform.isWindows) {
+        debugPrint('[PrintPage] Beginning USB discovery');
+        await printerManager.discovery(type: PrinterType.usb).forEach((device) {
+          debugPrint(
+              '[PrintPage] USB device found: name=${device.name}, vendorId=${device.vendorId}, productId=${device.productId}');
+          final printer = BluetoothPrinter(
+            deviceName: device.name,
+            vendorId: device.vendorId,
+            productId: device.productId,
+            typePrinter: PrinterType.usb,
+          );
+          setState(() {
+            devices.add(printer);
+          });
         });
-      });
+      }
       debugPrint(
           '[PrintPage] USB discovery completed. Total devices now: ${devices.length}');
     } catch (e, st) {
@@ -1016,6 +1036,7 @@ class _PrintPageState extends State<PrintPage> {
       paidAmount: widget.paidAmount,
       orderComment: widget.orderComment,
       deliveryMethod: widget.deliveryMethod,
+      deliveryPhone: widget.deliveryPhone ?? widget.customerAlternatePhone,
       customerAlternatePhone: widget.customerAlternatePhone,
       paymentMethod: widget.paymentMethod,
       customerVatNumber: widget.customerVatNumber,
@@ -1129,6 +1150,7 @@ class _PrintPageState extends State<PrintPage> {
       paidAmount: widget.paidAmount,
       orderComment: widget.orderComment,
       deliveryMethod: widget.deliveryMethod,
+      deliveryPhone: widget.deliveryPhone ?? widget.customerAlternatePhone,
       customerAlternatePhone: widget.customerAlternatePhone,
       paymentMethod: widget.paymentMethod,
       customerVatNumber: widget.customerVatNumber,

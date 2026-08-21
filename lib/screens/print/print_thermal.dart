@@ -20,6 +20,7 @@ import 'package:pos_machine/utils/arabic_printer_helper.dart';
 import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:image/image.dart' as img;
 import 'package:pos_machine/screens/print/thermal/printer_utils.dart';
+import 'package:pos_machine/screens/print/thermal/thermal_paper_profile.dart';
 
 class ThermalPrinter {
   final BuildContext context;
@@ -133,6 +134,37 @@ class ThermalPrinter {
       return;
     }
 
+    // There is no custom 112 mm PaperSize in esc_pos_utils_plus. Route this
+    // legacy entry point to its bitmap path instead of silently using mm80.
+    final paperProfile = ThermalPaperProfile.fromSelection(selectedPaperSize);
+    if (paperProfile.is112mm) {
+      debugPrint(
+          '[Legacy ThermalPrinter] 112mm is raster-only; routing to image print path.');
+      await printReceiptAsImage(
+        selectedPrinter: selectedPrinter,
+        cartItems: cartItems,
+        formattedTotal: formattedTotal,
+        savedTotal: savedTotal,
+        discountAmount: discountAmount,
+        orderDate: orderDate,
+        orderNumber: orderNumber,
+        isFromLocalStorage: isFromLocalStorage,
+        selectedPaperSize: selectedPaperSize,
+        billDocumentConfig: billDocumentConfig,
+        customerCareNumber: customerCareNumber,
+        customerCareEmail: customerCareEmail,
+        customerName: customerName,
+        customerPhone: customerPhone,
+        customerEmail: customerEmail,
+        customerAddress: customerAddress,
+        orderReturns: orderReturns,
+        customerOldBalance: customerOldBalance,
+        customerCurrentBalance: customerCurrentBalance,
+        paidAmount: paidAmount,
+      );
+      return;
+    }
+
     debugPrint("Printing receipt with thermal printer:");
     debugPrint(
         "Printer: ${selectedPrinter.deviceName} (${selectedPrinter.typePrinter})");
@@ -159,20 +191,8 @@ class ThermalPrinter {
       final profile = await CapabilityProfile.load();
 
       // Select appropriate paper size based on selection
-      PaperSize paperSize;
-      if (selectedPaperSize == '80mm') {
-        paperSize = PaperSize.mm80;
-        debugPrint("Using 80mm paper size configuration");
-      } else if (selectedPaperSize == '58mm') {
-        paperSize = PaperSize.mm58;
-        debugPrint("Using 58mm paper size configuration");
-      } else {
-        // Default to 80mm for any other value
-        paperSize = PaperSize.mm80;
-        debugPrint("Using default 80mm paper size configuration");
-      }
-
-      final generator = Generator(paperSize, profile);
+      final generator = paperProfile.createGenerator(profile);
+      final paperSize = paperProfile.escPosPaperSize;
       List<int> bytes = [];
 
       debugPrint("Starting to build receipt sections...");
@@ -436,7 +456,9 @@ class ThermalPrinter {
           "Language: ${isEnglish ? 'English' : 'Arabic'} ($textDirection)");
 
       // Setup print parameters
-      final double printWidth = selectedPaperSize == '58mm' ? 384.0 : 576.0;
+      final imagePaperProfile =
+          ThermalPaperProfile.fromSelection(selectedPaperSize);
+      final double printWidth = imagePaperProfile.rasterWidthPx.toDouble();
       final double baseFontSize = 20.0;
 
       // Build receipt rows
@@ -1108,9 +1130,11 @@ class ThermalPrinter {
       // ========== GENERATE ESC/POS BYTES ==========
       debugPrint("Generating ESC/POS bytes...");
       final profile = await CapabilityProfile.load();
-      final generator = Generator(
-          selectedPaperSize == '58mm' ? PaperSize.mm58 : PaperSize.mm80,
-          profile);
+      if (imagePaperProfile.is112mm) {
+        debugPrint(
+            '[Legacy ThermalPrinter] Image path preserving 112mm width at ${imagePaperProfile.rasterWidthPx}px.');
+      }
+      final generator = imagePaperProfile.createGenerator(profile);
       List<int> bytes = [];
 
       // Print images
@@ -1196,10 +1220,10 @@ class ThermalPrinter {
     if (!hasCreditNoteConfig) {
       final returnsHeaderValue =
           displayConfig?['showReturnsHeader']?.value?.toString().trim();
-      final returnsHeading = (returnsHeaderValue != null &&
-              returnsHeaderValue.isNotEmpty)
-          ? returnsHeaderValue
-          : 'RETURNS';
+      final returnsHeading =
+          (returnsHeaderValue != null && returnsHeaderValue.isNotEmpty)
+              ? returnsHeaderValue
+              : 'RETURNS';
       bytes += generator.text(
         returnsHeading,
         styles: PosStyles(
@@ -1213,9 +1237,8 @@ class ThermalPrinter {
       bytes += generator.emptyLines(1);
     }
     String retLbl(String key, String? resolved, String def) {
-      final v = retDc?[key]?.visible == true
-          ? (retDc?[key]?.value as String?)
-          : null;
+      final v =
+          retDc?[key]?.visible == true ? (retDc?[key]?.value as String?) : null;
       if (v != null && v.isNotEmpty) return v;
       if (resolved != null && resolved.isNotEmpty) return resolved;
       return def;
@@ -1223,8 +1246,8 @@ class ThermalPrinter {
 
     if (retLabels?.creditNoteNumber != null ||
         retLabels?.creditNoteDate != null) {
-      final detailsHeading = retLbl(
-          'showCreditNoteOrder', retLabels?.detailsHeading, 'CREDIT NOTE DETAILS');
+      final detailsHeading = retLbl('showCreditNoteOrder',
+          retLabels?.detailsHeading, 'CREDIT NOTE DETAILS');
       bytes += generator.text(detailsHeading,
           styles: PosStyles(
               fontType: fontType,
@@ -1233,8 +1256,8 @@ class ThermalPrinter {
               height: textSizeSmall,
               width: textSizeSmall));
       if (retLabels?.creditNoteNumber != null && orderNumber != null) {
-        final cnLabel = retLbl(
-            'showCreditNoteNumber', retLabels?.creditNoteNumber, 'Credit Note No:');
+        final cnLabel = retLbl('showCreditNoteNumber',
+            retLabels?.creditNoteNumber, 'Credit Note No:');
         bytes += generator.text('$cnLabel $orderNumber',
             styles: PosStyles(
                 fontType: fontType,
@@ -1242,8 +1265,8 @@ class ThermalPrinter {
                 height: textSizeSmall));
       }
       if (retLabels?.creditNoteDate != null && orderDate != null) {
-        final cdLabel = retLbl(
-            'showCreditNoteDate', retLabels?.creditNoteDate, 'Credit Note Date:');
+        final cdLabel = retLbl('showCreditNoteDate', retLabels?.creditNoteDate,
+            'Credit Note Date:');
         bytes += generator.text('$cdLabel $orderDate',
             styles: PosStyles(
                 fontType: fontType,
@@ -1274,9 +1297,7 @@ class ThermalPrinter {
       final custLabel = 'Customer Name:';
       bytes += generator.text('$custLabel $customerName',
           styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.left,
-              height: textSizeSmall));
+              fontType: fontType, align: PosAlign.left, height: textSizeSmall));
       if (customerPhone != null && customerPhone.trim().isNotEmpty) {
         bytes += generator.text('Phone: $customerPhone',
             styles: PosStyles(
@@ -1698,11 +1719,10 @@ class ThermalPrinter {
       ),
     ];
 
-    final totalAmountLabel =
-        retLabels?.creditNoteTotalAmount != null
-            ? retLbl('showCreditNoteTotalAmount',
-                retLabels?.creditNoteTotalAmount, 'Total Amount:')
-            : 'Total MRP:';
+    final totalAmountLabel = retLabels?.creditNoteTotalAmount != null
+        ? retLbl('showCreditNoteTotalAmount', retLabels?.creditNoteTotalAmount,
+            'Total Amount:')
+        : 'Total MRP:';
     List<PosColumn> returnSummaryColumns2 = [
       PosColumn(
         text: totalAmountLabel,
@@ -1760,8 +1780,8 @@ class ThermalPrinter {
     bytes += generator.row(returnNetTotalColumns);
 
     if (hasCreditNoteConfig) {
-      final amountText = AmountHelper().convertNumberToWords(
-          calculatedReturnTotal, language: 'en');
+      final amountText = AmountHelper()
+          .convertNumberToWords(calculatedReturnTotal, language: 'en');
       bytes += generator.emptyLines(1);
       bytes += generator.text(
         'Amount in Words:',

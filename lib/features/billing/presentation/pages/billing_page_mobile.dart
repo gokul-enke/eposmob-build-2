@@ -28,6 +28,7 @@ import 'package:pos_machine/features/billing/presentation/widgets/mobile/mobile_
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing_tab.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/orders_tab.dart';
 import 'package:pos_machine/features/billing/presentation/pages/billing_page.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/pos_security_key_dialog.dart';
 
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/cart_tab.dart';
 
@@ -668,6 +669,11 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
   // Action methods — UI shell only; business logic lives in the controller.
   void clearCart() {
+    unawaited(_clearCartWithSecurityKey());
+  }
+
+  Future<void> _clearCartWithSecurityKey(
+      {bool requireSecurityKey = true}) async {
     if (_isClearingCart) return;
 
     final billingProvider =
@@ -677,6 +683,15 @@ class BillingPageMobileState extends State<BillingPageMobile>
     billingProvider.setLoadingClearCart(true);
 
     try {
+      if (requireSecurityKey &&
+          !await PosSecurityKeyDialog.verify(
+            context,
+            action: 'clear the cart',
+          )) {
+        return;
+      }
+      if (!mounted) return;
+
       setState(() {
         _controller.clearCartData(context);
         _autocompleteProductKey = GlobalKey();
@@ -1020,7 +1035,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
         _quotationInlineNameController.clear();
         _quotationInlinePhoneController.clear();
       });
-      clearCart();
+      await _clearCartWithSecurityKey(requireSecurityKey: false);
     } finally {
       if (mounted) {
         setState(() {
@@ -1141,23 +1156,36 @@ class BillingPageMobileState extends State<BillingPageMobile>
   }
 
   void deleteSavedOrder(SavedOrder order) {
+    unawaited(_deleteSavedOrder(order));
+  }
+
+  Future<void> _deleteSavedOrder(SavedOrder order) async {
     final orderLabel = order.orderNumber.trim().isNotEmpty
         ? order.orderNumber.trim()
         : order.id;
 
-    DeleteConfirmationDialog.show(
+    final confirmed = await DeleteConfirmationDialog.show(
       context: context,
       title: 'Delete Order',
       itemName: orderLabel,
       message: 'This order will be permanently removed from your saved orders.',
       warningIcon: Icons.receipt_long_outlined,
-      onDelete: () {
-        _controller.deleteSavedOrder(context, order.id);
-        showScaffold(
-          context: context,
-          message: 'Order deleted successfully',
-        );
-      },
+      onDelete: () {},
+    );
+
+    if (confirmed != true || !mounted) return;
+    if (!await PosSecurityKeyDialog.verify(
+      context,
+      action: 'delete this saved order',
+    )) {
+      return;
+    }
+    if (!mounted) return;
+
+    _controller.deleteSavedOrder(context, order.id);
+    showScaffold(
+      context: context,
+      message: 'Order deleted successfully',
     );
   }
 

@@ -8,7 +8,6 @@ import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
-import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 import 'package:pos_machine/helpers/debug_login_autofill.dart';
 import 'package:pos_machine/services/tenant_domain_service.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -33,35 +32,12 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
   String? _errorMessage;
   bool _obscureText = true;
 
-  bool _shouldSuppressSystemKeyboard() {
-    return SystemKeyboardPolicy.shouldSuppressForContext(
-      context: context,
-      fieldWantsVirtualKeyboardOnly: true,
-    );
-  }
-
-  void _ensureVirtualKeyboardOffByDefault() {
-    try {
-      final keyboardProvider =
-          Provider.of<KeyboardProvider>(context, listen: false);
-      keyboardProvider.featureOff();
-      keyboardProvider.clear();
-      _apiKeyFocusNode.unfocus();
-      FocusManager.instance.primaryFocus?.unfocus();
-    } catch (_) {}
-  }
-
   @override
   void initState() {
     super.initState();
     _errorMessage = widget.initialError;
-    // Keep virtual keyboard off on first open; re-apply after Hive may finish loading.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _ensureVirtualKeyboardOffByDefault();
       _loadExistingApiKey();
-      Future<void>.delayed(const Duration(milliseconds: 100), () {
-        if (mounted) _ensureVirtualKeyboardOffByDefault();
-      });
     });
   }
 
@@ -187,7 +163,6 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
                                   cursorColor: ColorManager.kPrimaryColor,
                                   controller: _apiKeyController,
                                   obscureText: _obscureText,
-                                  readOnly: _shouldSuppressSystemKeyboard(),
                                   showCursor: true,
                                   onTap: () {
                                     final keyboardProvider =

@@ -21,6 +21,9 @@ import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/screens/print/barcode_layout_settings_panel.dart';
 import 'package:pos_machine/screens/print/thermal/printer_utils.dart';
 import 'package:pos_machine/screens/print/widgets/printer_settings_responsive.dart';
+import 'package:pos_machine/screens/print/widgets/receipt_configuration_workspace.dart';
+import 'package:pos_machine/screens/print/receipt_document_config_resolver.dart';
+import 'package:pos_machine/screens/print/pdf_share_settings.dart';
 import 'package:pos_machine/screens/settings/widgets/settings_responsive.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -39,8 +42,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   bool isLoading = true;
   String selectedPaperSize = '80mm';
   String selectedFontStyle = 'Font A (Small & Sharp)';
-  String selectedSettingsType = 'Billing'; // 'Billing' or 'Kitchen'
-  String selectedSegment = 'B2C'; // 'B2C' or 'B2B' (Billing tab only)
+  String selectedSettingsType = 'Billing';
+  String selectedSegment = 'B2C';
   String selectedReceiptTheme = 'classic'; // Receipt theme selection
 
   // Printer scanning variables
@@ -83,30 +86,18 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   ];
 
   // List of available receipt themes for standard PDF printing (A4/A5)
-  final List<Map<String, String>> standardPdfThemes = [
-    {'id': 'classic', 'name': 'Classic'},
-    {'id': 'simplified_tax_invoice', 'name': 'Simplified Tax Invoice'},
-    {
-      'id': 'centered_simplified_tax_invoice',
-      'name': 'Centered Simplified Tax Invoice'
-    },
-    {
-      'id': 'bilingual_centered_tax_invoice',
-      'name': 'Bilingual Centered Tax Invoice'
-    },
-    {
-      'id': 'boxed_bilingual_tax_invoice',
-      'name': 'Boxed Bilingual Tax Invoice'
-    },
-    {
-      'id': 'boxed_header_tax_invoice',
-      'name': 'Boxed Header Tax Invoice'
-    },
-  ];
+  final List<Map<String, String>> standardPdfThemes = PdfShareSettings.themes;
+
+  bool get _isPdfSharing => selectedSettingsType == 'PDF Sharing';
+
+  List<String> get _activePaperSizes =>
+      _isPdfSharing ? PdfShareSettings.paperSizes : paperSizes;
 
   /// Returns the appropriate theme list based on selected paper size
   List<Map<String, String>> get _activeThemes {
-    if (selectedPaperSize == 'A4' || selectedPaperSize == 'A5') {
+    if (_isPdfSharing ||
+        selectedPaperSize == 'A4' ||
+        selectedPaperSize == 'A5') {
       return standardPdfThemes;
     }
     return thermalReceiptThemes;
@@ -117,9 +108,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       selectedPaperSize == 'A4' || selectedPaperSize == 'A5';
 
   bool get _usesReceiptSettings =>
-      selectedSettingsType == 'Billing' || selectedSettingsType == 'Quotation';
+      selectedSettingsType == 'Billing' ||
+      selectedSettingsType == 'Quotation' ||
+      _isPdfSharing;
 
-  bool get _supportsDevelopmentPrinter => _usesReceiptSettings;
+  bool get _supportsDevelopmentPrinter =>
+      selectedSettingsType == 'Billing' || selectedSettingsType == 'Quotation';
 
   List<BluetoothPrinter> get _displayDevices {
     if (!_developerModeEnabled || !_supportsDevelopmentPrinter) {
@@ -131,9 +125,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     ];
   }
 
-  /// True when editing the B2B variant of the Billing settings.
+  /// True when editing a B2B Billing or PDF Sharing profile.
   bool get _isB2BSegment =>
-      selectedSettingsType == 'Billing' && selectedSegment == 'B2B';
+      (selectedSettingsType == 'Billing' || _isPdfSharing) &&
+      selectedSegment == 'B2B';
 
   String get _printerPrefsKey {
     switch (selectedSettingsType) {
@@ -143,6 +138,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         return 'quotation_printer';
       case 'Barcode':
         return 'barcode_printer';
+      case 'PDF Sharing':
+        return 'share_pdf_no_printer';
       default:
         return 'kot_printer';
     }
@@ -154,6 +151,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         return _isB2BSegment ? 'default_paper_size_b2b' : 'default_paper_size';
       case 'Quotation':
         return 'quotation_paper_size';
+      case 'PDF Sharing':
+        return PdfShareSettings.paperPreferenceKey(isB2B: _isB2BSegment);
       default:
         return 'kot_paper_size';
     }
@@ -165,6 +164,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         return 'default_font_style';
       case 'Quotation':
         return 'quotation_font_style';
+      case 'PDF Sharing':
+        return 'share_pdf_no_font_style';
       default:
         return 'kot_font_style';
     }
@@ -178,6 +179,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             : 'billing_receipt_theme';
       case 'Quotation':
         return 'quotation_receipt_theme';
+      case 'PDF Sharing':
+        return PdfShareSettings.themePreferenceKey(isB2B: _isB2BSegment);
       default:
         return 'kot_receipt_theme';
     }
@@ -189,12 +192,6 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       switch (themeId) {
         case 'classic':
           return 'Traditional A4/A5 PDF layout with standard formatting';
-        case 'tax_invoice':
-          return 'Formal ZATCA-compliant bilingual Tax Invoice layout';
-        case 'detailed_tax_invoice':
-          return 'Comprehensive Tax Invoice with detailed itemization and tax breakdown';
-        case 'standard_tax_invoice':
-          return 'Clean Tax Invoice layout with essential details and clear tax info';
         case 'simplified_tax_invoice':
           return 'ZATCA Simplified Tax Invoice with teal accent header/footer, bilingual columns and totals';
         case 'centered_simplified_tax_invoice':
@@ -205,12 +202,6 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           return 'Boxed bilingual Tax Invoice with seller, buyer, invoice, items, bank and totals sections';
         case 'boxed_header_tax_invoice':
           return 'Boxed header Tax Invoice with seller, buyer, invoice, items, bank and totals sections';
-        case 'corporate_tax_invoice':
-          return 'Formal corporate Tax Invoice with logo header, buyer block, bank details and bilingual amount in words';
-        case 'letterhead_tax_invoice':
-          return 'Bilingual Tax Invoice with tri-column letterhead (EN/logo/AR), boxed title and bordered customer/invoice boxes';
-        case 'new_classic':
-          return 'Modern A4/A5 layout with enhanced font hierarchy and breathable spacing';
         default:
           return 'Standard PDF layout';
       }
@@ -481,6 +472,17 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   Future<void> _loadSettings() async {
     final requestVersion = ++_settingsLoadVersion;
     final settingsType = selectedSettingsType;
+    final isPdfSharing = settingsType == 'PDF Sharing';
+    final isB2B = _isB2BSegment;
+    final shareDocumentTheme = isPdfSharing
+        ? resolveReceiptDocumentConfig(
+            lookup: Provider.of<DocumentConfigProvider>(context, listen: false)
+                .getCachedConfig,
+            documentConfigType: 'Bill',
+            hasReturns: false,
+            paperSize: PdfShareSettings.defaultPaperSize,
+          )?.activeTheme
+        : null;
     final printerKey = _printerPrefsKey;
     final paperSizeKey = _paperSizePrefsKey;
     final fontStyleKey = _fontStylePrefsKey;
@@ -493,30 +495,47 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       final developerModeEnabled =
           await DevelopmentPrinterService.isEnabled(preferences: prefs);
       final developmentPrinterSelected = developerModeEnabled &&
+          !isPdfSharing &&
           _supportsDevelopmentPrinter &&
           await DevelopmentPrinterService.shouldUseForTarget(
             printerKey,
             preferences: prefs,
           );
-      final defaultPrinterJson = prefs.getString(printerKey);
-      final defaultPaperSize =
-          settingsType == 'Barcode' ? null : prefs.getString(paperSizeKey);
-      final defaultFontStyle =
-          settingsType == 'Barcode' ? null : prefs.getString(fontStyleKey);
-      final savedTheme =
-          settingsType == 'Barcode' ? null : prefs.getString(themeKey);
+      final shareProfile = isPdfSharing
+          ? PdfShareSettings.resolve(
+              prefs,
+              isB2B: isB2B,
+              documentTheme: shareDocumentTheme,
+            )
+          : null;
+      final defaultPrinterJson =
+          isPdfSharing ? null : prefs.getString(printerKey);
+      final defaultPaperSize = settingsType == 'Barcode'
+          ? null
+          : shareProfile?.paperSize ?? prefs.getString(paperSizeKey);
+      final defaultFontStyle = settingsType == 'Barcode' || isPdfSharing
+          ? null
+          : prefs.getString(fontStyleKey);
+      final savedTheme = settingsType == 'Barcode'
+          ? null
+          : shareProfile?.theme ?? prefs.getString(themeKey);
 
-      var paperSize = defaultPaperSize ?? '80mm';
+      var paperSize = defaultPaperSize ??
+          (isPdfSharing ? PdfShareSettings.defaultPaperSize : '80mm');
       if (paperSize == 'Thermal') {
         paperSize = '80mm';
         await prefs.setString(paperSizeKey, paperSize);
       }
-      if (!paperSizes.contains(paperSize)) paperSize = '80mm';
+      final validPaperSizes =
+          isPdfSharing ? PdfShareSettings.paperSizes : paperSizes;
+      if (!validPaperSizes.contains(paperSize)) {
+        paperSize = isPdfSharing ? PdfShareSettings.defaultPaperSize : '80mm';
+      }
 
       final fontStyle = fontStyles.contains(defaultFontStyle)
           ? defaultFontStyle!
           : 'Font A (Small & Sharp)';
-      final themes = paperSize == 'A4' || paperSize == 'A5'
+      final themes = isPdfSharing || paperSize == 'A4' || paperSize == 'A5'
           ? standardPdfThemes
           : thermalReceiptThemes;
       final receiptTheme = themes.any((theme) => theme['id'] == savedTheme)
@@ -567,32 +586,46 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   Future<void> clearDefaultPrinter() async {
     try {
+      final isPdfSharing = _isPdfSharing;
       setState(() {
         selectedPrinter = null;
         // Reset local state variables to defaults
-        selectedPaperSize = '80mm';
+        selectedPaperSize =
+            isPdfSharing ? PdfShareSettings.defaultPaperSize : '80mm';
         selectedFontStyle = 'Font A (Small & Sharp)';
+        selectedReceiptTheme = 'classic';
       });
 
       // Also clear current context keys
       final prefs = await SharedPreferences.getInstance();
-      await DevelopmentPrinterService.clearTargetSelection(
-        _printerPrefsKey,
-        preferences: prefs,
-      );
+      if (isPdfSharing) {
+        await prefs.remove(_paperSizePrefsKey);
+        await prefs.remove(_receiptThemePrefsKey);
+      } else {
+        await DevelopmentPrinterService.clearTargetSelection(
+          _printerPrefsKey,
+          preferences: prefs,
+        );
+      }
       if (selectedSettingsType == 'Barcode') {
         await prefs.remove(_printerPrefsKey);
-      } else {
+      } else if (!isPdfSharing) {
         await prefs.remove(_printerPrefsKey);
         await prefs.remove(_paperSizePrefsKey);
         await prefs.remove(_fontStylePrefsKey);
         await prefs.remove(_receiptThemePrefsKey);
       }
 
+      if (isPdfSharing) {
+        await _loadSettings();
+      }
+
       if (mounted) {
         showScaffold(
           context: context,
-          message: "$selectedSettingsType printer settings reset to default",
+          message: isPdfSharing
+              ? 'PDF Sharing settings reset to compatible defaults'
+              : '$selectedSettingsType printer settings reset to default',
         );
       }
     } catch (e) {
@@ -1246,7 +1279,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     );
   }
 
-  /// Body for Billing / Kitchen tabs — everything scrolls
+  /// Body for printer and PDF-sharing profiles — everything scrolls.
   Widget _buildDefaultBody() {
     final gap = printerSectionGap(context);
     final isCompact = printerIsCompact(context);
@@ -1256,15 +1289,49 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         _buildHeader(),
         SizedBox(height: gap),
         _buildTabToggle(),
-        if (selectedSettingsType == 'Billing') ...[
+        if (selectedSettingsType == 'Billing' || _isPdfSharing) ...[
           SizedBox(height: isCompact ? 8 : 4),
           _buildSegmentToggle(),
         ],
         SizedBox(height: gap),
-        PrinterSettingsSplitLayout(
-          settingsColumn: _buildSettingsSection(),
-          printerColumn: _buildPrinterList(),
-        ),
+        if (_isPdfSharing)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: _buildSettingsSection(),
+            ),
+          )
+        else
+          PrinterSettingsSplitLayout(
+            settingsColumn: _buildSettingsSection(),
+            printerColumn: _buildPrinterList(),
+          ),
+        if (selectedSettingsType == 'Billing') ...[
+          SizedBox(height: gap),
+          Consumer<DocumentConfigProvider>(
+            builder: (context, provider, _) {
+              final config = resolveReceiptDocumentConfig(
+                lookup: provider.getCachedConfig,
+                documentConfigType: 'Bill',
+                hasReturns: false,
+                paperSize: selectedPaperSize,
+              );
+              final themeName = _activeThemes.firstWhere(
+                (theme) => theme['id'] == selectedReceiptTheme,
+                orElse: () => {'name': selectedReceiptTheme},
+              )['name']!;
+              return ReceiptConfigurationWorkspace(
+                config: config,
+                paperSize: selectedPaperSize,
+                themeName: themeName,
+                themeId: selectedReceiptTheme,
+                onResync: _resyncDocumentConfigurations,
+                isResyncing: _isResyncingDocConfig,
+              );
+            },
+          ),
+        ],
       ],
     );
   }
@@ -1281,18 +1348,23 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const PrinterSectionHeader(
+              PrinterSectionHeader(
                 icon: Icons.description_rounded,
-                title: 'Paper Size Settings',
-                subtitle: 'Choose the default paper width for receipts',
+                title:
+                    _isPdfSharing ? 'Shared PDF Size' : 'Paper Size Settings',
+                subtitle: _isPdfSharing
+                    ? 'Choose the page size for generated invoice files'
+                    : 'Choose the default paper width for receipts',
               ),
               SizedBox(height: fieldGap),
               PrinterDropdownField(
                 label: 'Paper Size',
-                value: paperSizes.contains(selectedPaperSize)
+                value: _activePaperSizes.contains(selectedPaperSize)
                     ? selectedPaperSize
-                    : '80mm',
-                items: paperSizes.map((String size) {
+                    : (_isPdfSharing
+                        ? PdfShareSettings.defaultPaperSize
+                        : '80mm'),
+                items: _activePaperSizes.map((String size) {
                   return DropdownMenuItem<String>(
                     value: size,
                     child: Text(size),
@@ -1336,10 +1408,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const PrinterSectionHeader(
+                PrinterSectionHeader(
                   icon: Icons.palette_outlined,
-                  title: 'Receipt Theme',
-                  subtitle: 'Select the visual layout for printed receipts',
+                  title: _isPdfSharing ? 'PDF Template' : 'Receipt Theme',
+                  subtitle: _isPdfSharing
+                      ? 'Select the visual layout used by Share PDF and WhatsApp'
+                      : 'Select the visual layout for printed receipts',
                 ),
                 SizedBox(height: fieldGap),
                 PrinterDropdownField(
@@ -1511,7 +1585,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             borderRadius: BorderRadius.circular(isCompact ? 10 : 12),
           ),
           child: Icon(
-            Icons.print_rounded,
+            _isPdfSharing ? Icons.picture_as_pdf_rounded : Icons.print_rounded,
             color: ColorManager.kPrimaryColor,
             size: isCompact ? 22 : 26,
           ),
@@ -1522,7 +1596,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Printer Settings',
+                _isPdfSharing ? 'PDF Sharing Settings' : 'Printer Settings',
                 style: buildCustomStyle(
                   FontWeightManager.semiBold,
                   isCompact ? FontSize.s18 : FontSize.s20,
@@ -1532,7 +1606,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Configure printers, paper sizes and receipt themes',
+                _isPdfSharing
+                    ? 'Configure invoice PDFs independently from physical printers'
+                    : 'Configure printers, paper sizes and receipt themes',
                 maxLines: isCompact ? 2 : 3,
                 overflow: TextOverflow.ellipsis,
                 style: buildCustomStyle(
@@ -1576,7 +1652,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         ),
         CustomRoundButton(
           fct: () => {clearDefaultPrinter()},
-          title: isCompact ? 'Clear' : 'Clear Default Printer',
+          title: _isPdfSharing
+              ? (isCompact ? 'Reset' : 'Reset PDF Settings')
+              : (isCompact ? 'Clear' : 'Clear Default Printer'),
           height: 44,
           width: isCompact ? double.infinity : 170,
           fontSize: isCompact ? 13 : 14,
@@ -1621,9 +1699,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     );
   }
 
-  /// B2C / B2B segment toggle, shown only for the Billing tab. Each segment
-  /// keeps its own printer, paper size and receipt theme. B2B falls back to the
-  /// B2C settings at print time when not separately configured.
+  /// B2C / B2B selector for Billing and PDF Sharing profiles.
   Widget _buildSegmentToggle() {
     return PrinterSegmentSelector(
       selectedSegment: selectedSegment,
@@ -1634,9 +1710,13 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         });
         _loadSettings();
       },
-      helperText: 'Configure a separate printer, paper size and theme for '
-          '${selectedSegment == 'B2B' ? 'business (B2B)' : 'retail (B2C)'} '
-          'bills. B2B uses the B2C settings when left unconfigured.',
+      helperText: _isPdfSharing
+          ? 'Choose the page size and PDF template for '
+              '${selectedSegment == 'B2B' ? 'business (B2B)' : 'retail (B2C)'} '
+              'invoice sharing. B2B uses the B2C sharing profile when left unconfigured.'
+          : 'Configure a separate printer, paper size and theme for '
+              '${selectedSegment == 'B2B' ? 'business (B2B)' : 'retail (B2C)'} '
+              'bills. B2B uses the B2C settings when left unconfigured.',
     );
   }
 

@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/features/billing/domain/product_details_helpers.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/cart/cart_action_buttons.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/cart/cart_item_card.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/payment_summary.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/pos_security_key_dialog.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:provider/provider.dart';
@@ -89,12 +92,17 @@ class _CartScreenState extends State<CartScreen> {
               item: item,
               controller: _controller,
               onDecrease: () {
-                _controller.changeQuantity(context, provider, item, -1);
+                unawaited(
+                  _changeQuantityAfterAuthorization(
+                      context, provider, item, -1),
+                );
               },
               onIncrease: () {
                 _controller.changeQuantity(context, provider, item, 1);
               },
-              onRemove: () => _controller.removeItem(provider, item),
+              onRemove: () {
+                unawaited(_removeItemAfterAuthorization(provider, item));
+              },
               onSaleUnitChanged: (_) {},
               showMrp: showMrp,
               showTaxRate: showTaxRate,
@@ -142,6 +150,38 @@ class _CartScreenState extends State<CartScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _removeItemAfterAuthorization(
+    LocalProductProvider provider,
+    LocalCartItem item,
+  ) async {
+    if (!await PosSecurityKeyDialog.verify(
+      context,
+      action: 'remove this cart item',
+    )) {
+      return;
+    }
+    if (!mounted) return;
+    _controller.removeItem(provider, item);
+  }
+
+  Future<void> _changeQuantityAfterAuthorization(
+    BuildContext context,
+    LocalProductProvider provider,
+    LocalCartItem item,
+    int step,
+  ) async {
+    final nextDisplayQuantity = item.displayQuantity + step;
+    if (nextDisplayQuantity <= 0 &&
+        !await PosSecurityKeyDialog.verify(
+          context,
+          action: 'remove this cart item',
+        )) {
+      return;
+    }
+    if (!mounted) return;
+    await _controller.changeQuantity(context, provider, item, step);
   }
 }
 

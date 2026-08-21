@@ -4,6 +4,8 @@ import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/screens/print/receipt_customer_segment.dart';
+import 'receipt_configuration_contract.dart';
+import '../thermal/thermal_paper_profile.dart';
 
 /// Data class containing all parameters needed for receipt generation.
 /// This eliminates the need to pass many individual parameters to layout methods.
@@ -32,6 +34,7 @@ class ReceiptLayoutParams {
   final double? paidAmount;
   final String? orderComment;
   final String? deliveryMethod;
+  final String? deliveryPhone;
   final String? customerAlternatePhone;
   final String? paymentMethod;
   final String? customerVatNumber;
@@ -85,6 +88,7 @@ class ReceiptLayoutParams {
     this.paidAmount,
     this.orderComment,
     this.deliveryMethod,
+    this.deliveryPhone,
     this.customerAlternatePhone,
     this.paymentMethod,
     this.customerVatNumber,
@@ -139,12 +143,9 @@ class ReceiptLayoutParams {
         : (options.containsKey('showInvoiceTitleB2b')
             ? 'showInvoiceTitleB2b'
             : 'missing');
-    final b2bTitleValue = b2bInvoiceTitle?.value?.toString().trim();
     debugPrint(
         '[ReceiptLayoutParams] B2B title check: customerType=${customerType ?? 'null'}, hasCustomerKyc=$hasKycDetails, key=$b2bTitleKey, visible=${b2bInvoiceTitle?.visible}, value=${b2bInvoiceTitle?.value}');
-    if (b2bInvoiceTitle == null ||
-        (b2bInvoiceTitle.visible != true &&
-            (b2bTitleValue == null || b2bTitleValue.isEmpty))) {
+    if (b2bInvoiceTitle == null || b2bInvoiceTitle.visible != true) {
       if (titleOverride != null && titleOverride.isNotEmpty) {
         final merged = Map<String, DisplayOption>.from(options);
         merged['showInvoiceTitle'] = DisplayOption(
@@ -188,21 +189,25 @@ class ReceiptLayoutParams {
   String get returnsSectionHeading {
     final retConfig = returnBillDocumentConfig ?? billDocumentConfig;
     final retDisplay = retConfig.displayConfiguration?.options;
-
-    final retHeaderValue =
-        retDisplay?['showReturnsHeader']?.value?.toString().trim();
-    if (retHeaderValue != null && retHeaderValue.isNotEmpty) {
-      return retHeaderValue;
-    }
-
     final parentDisplay = billDocumentConfig.displayConfiguration?.options;
-    final parentHeaderValue =
-        parentDisplay?['showReturnsHeader']?.value?.toString().trim();
-    if (parentHeaderValue != null && parentHeaderValue.isNotEmpty) {
-      return parentHeaderValue;
+    final retOption =
+        ReceiptConfigurationContract.option(retDisplay, 'showReturnsHeader');
+    if (retOption != null) {
+      return ReceiptConfigurationContract.label(
+        options: retDisplay,
+        key: 'showReturnsHeader',
+        mode: receiptLanguageMode,
+        englishFallback: 'RETURNS',
+        arabicFallback: 'المرتجعات',
+      );
     }
-
-    return 'RETURNS';
+    return ReceiptConfigurationContract.label(
+      options: parentDisplay,
+      key: 'showReturnsHeader',
+      mode: receiptLanguageMode,
+      englishFallback: 'RETURNS',
+      arabicFallback: 'المرتجعات',
+    );
   }
 
   /// Arabic fallback for bilingual returns section heading.
@@ -210,51 +215,113 @@ class ReceiptLayoutParams {
     final retConfig = returnBillDocumentConfig ?? billDocumentConfig;
     final retDisplay = retConfig.displayConfiguration?.options;
 
-    final retHeaderValue =
-        retDisplay?['showReturnsHeaderAr']?.value?.toString().trim();
-    if (retHeaderValue != null && retHeaderValue.isNotEmpty) {
-      return retHeaderValue;
-    }
-
-    return 'المرتجعات';
+    final retHeaderValue = ReceiptConfigurationContract.label(
+      options: retDisplay,
+      key: 'showReturnsHeaderAr',
+      mode: ReceiptLanguageMode.arabic,
+      englishFallback: '',
+      arabicFallback: 'المرتجعات',
+    );
+    return retHeaderValue.isNotEmpty ? retHeaderValue : 'المرتجعات';
   }
 
   /// Check if the document is configured for RTL (Arabic)
-  bool get isRtl {
-    final configLanguage = billDocumentConfig.language;
-    return (configLanguage ?? '').toLowerCase() == 'ar';
-  }
+  bool get isRtl => receiptLanguageMode.isArabic;
 
   /// Check if the document is configured for English
-  bool get isEnglish {
-    final configLanguage = billDocumentConfig.language;
-    return configLanguage == null || configLanguage.toLowerCase() == 'en';
-  }
+  bool get isEnglish => receiptLanguageMode.isEnglish;
 
   /// Check if the document is bilingual
-  bool get isBilingual {
-    final configLanguage = billDocumentConfig.language;
-    return (configLanguage ?? '').toLowerCase() == 'bilingual';
+  bool get isBilingual => receiptLanguageMode.isBilingual;
+
+  /// Normalized language mode shared by every receipt layout.
+  ReceiptLanguageMode get receiptLanguageMode =>
+      ReceiptConfigurationContract.languageMode(billDocumentConfig.language);
+
+  /// Resolve a configuration option through the shared canonical/alias map.
+  DisplayOption? option(String key) =>
+      ReceiptConfigurationContract.option(displayConfig, key);
+
+  /// Missing configuration is hidden by default. Templates should use this
+  /// instead of `visible != false`, which silently enables absent keys.
+  bool isVisible(String key) =>
+      ReceiptConfigurationContract.isVisible(displayConfig, key);
+
+  String labelFor(
+    String key, {
+    required String englishFallback,
+    required String arabicFallback,
+    String? resolvedEnglish,
+    String? resolvedArabic,
+    bool inlineBilingual = false,
+  }) {
+    return ReceiptConfigurationContract.label(
+      options: displayConfig,
+      key: key,
+      mode: receiptLanguageMode,
+      englishFallback: englishFallback,
+      arabicFallback: arabicFallback,
+      resolvedEnglish: resolvedEnglish,
+      resolvedArabic: resolvedArabic,
+      inlineBilingual: inlineBilingual,
+    );
+  }
+
+  /// Resolve renderer-owned text (for example payment method names) with the
+  /// same EN/AR/bilingual semantics as configured labels.
+  String textForMode({
+    required String english,
+    required String arabic,
+    bool inlineBilingual = false,
+  }) {
+    return ReceiptConfigurationContract.label(
+      options: null,
+      key: '__renderer_text__',
+      mode: receiptLanguageMode,
+      englishFallback: english,
+      arabicFallback: arabic,
+      inlineBilingual: inlineBilingual,
+    );
+  }
+
+  String documentText(
+    String? text, {
+    String? englishFallback,
+    String? arabicFallback,
+  }) {
+    return ReceiptConfigurationContract.documentText(
+      text,
+      receiptLanguageMode,
+      englishFallback: englishFallback,
+      arabicFallback: arabicFallback,
+    );
   }
 
   /// Get the active theme, defaulting to 'classic'
   String get activeTheme => billDocumentConfig.activeTheme ?? 'classic';
 
   /// Check if this is a thermal paper size (58mm, 80mm, or 112mm)
-  bool get isThermal =>
-      selectedPaperSize == '58mm' ||
-      selectedPaperSize == '80mm' ||
-      selectedPaperSize == '112mm';
+  bool get isThermal {
+    final normalized =
+        selectedPaperSize.trim().toLowerCase().replaceAll(' ', '');
+    return normalized == '58mm' ||
+        normalized == '80mm' ||
+        normalized == '112mm';
+  }
 
   /// Check if this is 58mm paper
-  bool get is58mm => selectedPaperSize == '58mm';
+  bool get is58mm => thermalPaperProfile.is58mm;
+
+  /// Shared thermal paper profile.  In particular, 112 mm is raster-only
+  /// because esc_pos_utils_plus does not expose a custom-width PaperSize.
+  ThermalPaperProfile get thermalPaperProfile =>
+      ThermalPaperProfile.fromSelection(selectedPaperSize);
 
   /// Get print width for image-based printing
-  double get printWidth =>
-      is58mm ? 384.0 : (selectedPaperSize == '112mm' ? 832.0 : 576.0);
+  double get printWidth => thermalPaperProfile.rasterWidthPx.toDouble();
 
   /// Get base font size for image-based printing
-  double get baseFontSize => selectedPaperSize == '80mm' ? 28.0 : 20.0;
+  double get baseFontSize => thermalPaperProfile.is80mm ? 28.0 : 20.0;
 
   /// Total tax for display. Prefers the API-provided post-discount value
   /// (price_summary.total_tax). Falls back to summing item-level taxAmount for
@@ -276,7 +343,7 @@ class ReceiptLayoutParams {
   double get totalQuantity {
     double qty = 0.0;
     for (var item in cartItems) {
-      if (isFromLocalStorage) {
+      if (isFromLocalStorage || item is Map) {
         qty += double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
       } else {
         qty += double.tryParse(item.quantity?.toString() ?? '0') ?? 0.0;
@@ -358,7 +425,8 @@ class ReceiptLayoutParams {
   /// `showSwiftCode`, matching the API's `display_configuration` keys.
   List<String> visibleBankAccountDetailLines(
       Map<String, DisplayOption>? displayConfig) {
-    bool isVisible(String key) => displayConfig?[key]?.visible == true;
+    bool isVisible(String key) =>
+        ReceiptConfigurationContract.isVisible(displayConfig, key);
 
     if (!isVisible('showBankInfo')) return const [];
 
