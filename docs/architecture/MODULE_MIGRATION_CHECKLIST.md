@@ -7,10 +7,10 @@ required, and a prompt that can be reused for the next module.
 ## Current checkpoint
 
 - Total planned modules: **28**, numbered `00` through `27`.
-- Completed and evidence-recorded: **Modules 00–16**.
-- Module 17 (Purchasing) is the next branch to start; it has not been started
-  from this checkpoint.
-- Remaining after Module 16: Modules `17–27`.
+- Completed and evidence-recorded: **Modules 00–17**.
+- Module 18 (Sales) is the next branch to start from the verified Module 17
+  evidence commit.
+- Remaining after Module 17: Modules `18–27`.
 - The canonical branch is `gokul-dev`; numbered migration branches are stacked
   work branches and can be merged/cherry-picked into `gokul-dev` later.
 - The detailed branch/SHA ledger remains
@@ -74,6 +74,7 @@ were merely moved or because a focused widget test happens to pass.
 | 14 | Promotions — discount directory, validity, dynamic transport/cache; cart application remains Billing-owned. | `codex/feature-architecture-14-promotions` / `8ebd2b15` | Full 1,298; guard 494 / 0 / 14. |
 | 15 | Fulfillment — delivery-method values, context, repository/cache/provider; Billing still owns selection/charge/checkout/order behavior. | `codex/feature-architecture-15-fulfillment` / `a20568ca` | Focused 82; full 1,305; guard 494 / 0 / 15; 2 export-only shims, 0 deletions. |
 | 16 | Payments — bank and gateway directories plus Pine Labs terminal lifecycle; Billing owns checkout/payment validation and Accounting owns persisted outcomes. | `codex/feature-architecture-16-payments` / `888df54b` | Focused 9; selected downstream 26; architecture guard 13; full 1,314; guard 494 / 0 / 16; 7 export-only shims, 0 deletions. |
+| 17 | Purchasing — purchase/order/item/voucher values, repository/controller state, app-owned complete workflow presentation, and reset/store lifecycle. | `codex/feature-architecture-17-purchasing` / `9fea3efc` | Focused 9 + composition 1; selected gate 32; architecture guard 13; full 1,324; guard 486 / 0 / 17; 2 export-only shims, 8 relocated screen implementations. |
 
 For each completed module, read its feature `README.md`, `FEATURE_SPEC.md`,
 `TODO.md`, and `CHANGELOG.md`; those files contain the exact compatibility
@@ -84,7 +85,6 @@ for navigation only; the architecture ledger contains full SHAs.
 
 | # | Module | Ownership focus | Important boundary |
 |---:|---|---|---|
-| 17 | Purchasing | Purchase screens/provider/order/item/voucher values. | Inventory owns stock; Suppliers/Payments/Accounting remain public dependencies. |
 | 18 | Sales | Sales, returns, edit-order, quotation/order/daily-close state. | Billing creates checkout inputs; Accounting/Printing/Reports consume projections. |
 | 19 | Accounting | Transactions, invoices, receipts, vouchers, expenses, company accounts. | Do not absorb Sales checkout or Printing templates. |
 | 20 | Reports | Report pages/provider/DTO projections. | Reports are read-only consumers; do not become owners of source state. |
@@ -137,6 +137,35 @@ for navigation only; the architecture ledger contains full SHAs.
 - Known debt: Pine Labs deployment identifiers, backend authorization/contract
   verification, downstream Printing/Reports consumers, Billing orchestration,
   and final shim removal remain with their scheduled owners.
+
+### Module 17 — Purchasing
+
+- Base: Module 16 evidence `888df54b`.
+- Implementation: `5cf6f86a911ab9bc2fb7eb529ebeff5a30548582`; evidence:
+  `9fea3efc`.
+- Boundary: purchase/order/item/voucher values, dynamic repository transport,
+  generation-safe controller/runtime, and public workflow page wrappers.
+  Product, Suppliers, Inventory, and Payments are public dependencies; Billing
+  checkout/cart, Accounting outcomes, Printing/Reports, and Sync scheduling
+  remain outside Purchasing.
+- Presentation: eight complete legacy purchase screens moved under
+  `lib/app/purchasing/` behind `LegacyPurchasingPresentationBridge`; registry
+  slots 19, 20, 26, 36, 81, 82, and 83 preserve historical runtime classes.
+- Verification: Purchasing feature gate 9/9; composition 1/1; selected
+  Purchasing/registry/model/widget gate 32/32; architecture guard test 13/13;
+  full Flutter suite 1,324/1,324; guard 486 legacy / 0 exceptions / 17 strict;
+  strict analyzer clean and 33 formatted files unchanged.
+- Compatibility: exactly two export-only paths remain —
+  `lib/providers/purchase_provider.dart` and
+  `lib/screens/purchase/helpers/purchase_order_totals.dart`. The eight old
+  screen implementations were relocated without old implementations left in
+  place; purchase model files remain mixed-owner compatibility surfaces.
+- Known debt: decompose mixed models/provider through typed Product, Supplier,
+  Inventory, Billing, and Accounting ports; define backend tenant/supplier/
+  store authorization, pagination, receiving/idempotency/reversal/atomicity,
+  Accounting/Printing/Reports projections, and Module 27 scheduling before
+  removing the two exports. Detailed behavior and path inventories are in
+  `docs/features/purchasing/` and the ledger evidence record.
 
 ## How to continue on a future module
 
@@ -195,6 +224,41 @@ Commit production implementation separately from docs/evidence. Before
 reporting completion, stage/audit untracked files, preserve generated plugin
 registrant changes as unrelated when applicable, update the ledger/handoff and
 feature docs with exact SHAs/counts, and create no later-module branch.
+```
+
+### Next concrete prompt (Module 18)
+
+```text
+Continue the ENKE POS feature-architecture migration in D:\Projects\ENKE\eposmob.
+
+Work on exactly Module 18 — Sales, in a new worktree/branch:
+  codex/feature-architecture-18-sales
+Base it on the verified Module 17 evidence commit:
+  9fea3efc (full SHA: resolve `git rev-parse
+  codex/feature-architecture-17-purchasing`).
+Verify that the base contains implementation 5cf6f86a and the Purchasing
+evidence docs before editing.
+
+Read the checklist, FEATURE_ARCHITECTURE_HANDOFF.md, MIGRATION_LEDGER.md,
+FEATURE_ARCHITECTURE.md, the Module 17 Purchasing docs, and the Sales source
+tree first. Audit ownership, consumers, backend routes, parser/payload shapes,
+tenant/store/customer scoping, cache/session/reset races, registry slots, and
+tests before changing code.
+
+Sales owns sales orders, returns, quotations, edit-order, and daily-close
+values/state and their workflow presentation. Consume Product, Customer,
+Supplier, Purchasing, Inventory, Payments, Promotions, and Fulfillment only
+through public roots or app-owned bridges. Do not absorb Billing cart/checkout,
+Accounting posted records/vouchers, Printing output, Communications sharing,
+Restaurant/KOT, or Sync scheduling. Preserve runtime widget names and numeric
+destination slots. Add strict domain/data/application/presentation seams only
+where an actual contract exists; do not invent a backend API.
+
+Run focused/downstream tests, strict analyzer, formatter, architecture guard
+against 9fea3efc, diff check, and the complete `flutter test --no-pub` suite.
+Create one implementation commit and one evidence/docs commit. Update the
+ledger, handoff, and docs/features/sales files with exact SHAs/counts and leave
+no migration-owned changes uncommitted. Do not start Module 19.
 ```
 
 ## Stop/merge instruction
