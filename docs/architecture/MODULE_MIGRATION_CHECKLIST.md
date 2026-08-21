@@ -7,7 +7,7 @@ required, and a prompt that can be reused for the next module.
 ## Current checkpoint
 
 - Total planned modules: **28**, numbered `00` through `27`.
-- Completed and evidence-recorded: **Modules 00–23**.
+- Completed and evidence-recorded: **Modules 00–25**.
 - Module 20 (Reports) is complete on
   `codex/feature-architecture-20-reports`: implementation
   `fd6c33003ad931c222abcc0b177e079b69b300c9`, evidence
@@ -21,9 +21,15 @@ required, and a prompt that can be reused for the next module.
 - Module 23 (Restaurant and KOT) is complete on
   `codex/feature-architecture-23-restaurant`: implementation `45c519ed`,
   evidence `895ec417`.
-- Module 24 (Billing) is the next branch to start from the verified Module 23
-  evidence commit above.
-- Remaining after Module 23: Modules `24–27` (4 modules).
+- Module 24 (Billing) is complete on
+  `codex/feature-architecture-24-billing`: implementation
+  `7e11d20e2c0b368ff0866f630c307b805fe14a5c`, evidence
+  `e99f588683464858be3804af9a8dde40be644d7e`.
+- Module 25 (Kiosk) is complete on
+  `codex/feature-architecture-25-kiosk`: implementation
+  `c0b2f2af8c7579e486228dc6f6efe0ac1b3e6740`, evidence
+  `fbf5d46fe1dfdadf989a78dc61c3670937f94f78`.
+- Remaining after Module 25: Modules `26–27` (2 modules).
 - The canonical branch is `gokul-dev`; numbered migration branches are stacked
   work branches and can be merged/cherry-picked into `gokul-dev` later.
 - The detailed branch/SHA ledger remains
@@ -94,6 +100,8 @@ were merely moved or because a focused widget test happens to pass.
 | 21 | Printing and Documents — typed device/document/output values, barcode-layout settings, PrinterSettings runtime bridge, and behavior-compatible print/PDF/thermal/barcode/document/report-printer implementations. | `codex/feature-architecture-21-printing` / `d63de987` | Base `e5293443`; implementation `12504f1e`; evidence `d63de987`; Printing/document gate 138; architecture guard test 13; full 1,350; guard 486 / 0 / 21; exactly 99 export-only shims and 9 retained demo assets. |
 | 22 | Communications — typed WhatsApp gateway/provider/runtime, app-owned local plugin adapter, settings destination, and transaction delivery seam. | `codex/feature-architecture-22-communications` / `6f602222` | Base `d63de987`; implementation `4b9f960d`; evidence `6f602222`; strict/app gate 7; registry/App Destination/PDF gate 13; full 1,357; guard 486 / 0 / 22; exactly 3 export-only shims and no deleted legacy paths. |
 | 23 | Restaurant and KOT — table/menu/order-selection values, table transport/provider state, typed Restaurant order context, and app-owned complete Restaurant/Kitchen/modifier workflows. | `codex/feature-architecture-23-restaurant` / `895ec417` | Base `6f602222`; implementation `45c519ed`; evidence `895ec417`; focused Restaurant/registry/app-smoke gate 13; full 1,362; guard 486 / 0 / 23; exactly 9 export-only shims and no deleted legacy paths. |
+| 24 | Billing — strict cart/context/totals/checkout contracts and runtime shells, with the complete 93-file Billing implementation relocated behind an app-owned compatibility bridge. | `codex/feature-architecture-24-billing` / `e99f5886` | Base `895ec417`; implementation `7e11d20e`; evidence `e99f5886`; strict contract 4; Billing compatibility 108; Product downstream 30; registry/guard 21; full 1,367; guard 486 / 0 / 24; app legacy tree and typed-port debt recorded in Billing docs. |
+| 25 | Kiosk — strict runtime-backed page wrappers for the Kiosk landing/order/checkout/legal surfaces, with the complete seven-file implementation relocated behind an app-owned bridge. | `codex/feature-architecture-25-kiosk` / `fbf5d46f` | Base `e99f5886`; implementation `c0b2f2af`; evidence `fbf5d46f`; Kiosk/composition contract 3; combined Kiosk/widget/guard gate 17; full 1,370; guard 479 / 0 / 25; zero shims, seven obsolete paths removed, no new navigation/backend contract. |
 
 For each completed module, read its feature `README.md`, `FEATURE_SPEC.md`,
 `TODO.md`, and `CHANGELOG.md`; those files contain the exact compatibility
@@ -108,9 +116,9 @@ for navigation only; the architecture ledger contains full SHAs.
 | 21 | Printing and Documents | Printer settings, document configuration, print/PDF/barcode output. | Complete; output behavior is app-owned behind the strict Printing root; source business state remains with its owning modules. |
 | 22 | Communications | WhatsApp/settings/transaction-sharing adapter. | Complete; keep messaging transport separate from Support, Printing, and Sync; no unverified backend API was invented. |
 | 23 | Restaurant and KOT | Restaurant billing UI, tables/menu/order/KOT state. | Complete; Billing consumes the typed Restaurant order-context seam; generic checkout/cart remains Billing-owned. |
-| 24 | Billing | Billing screens, cart, checkout, non-restaurant flows, cart/local compatibility. | Next; consume Restaurant, Products, Categories, Promotions, Fulfillment, Payments, Inventory, Customers, and Accounting through public roots. |
-| 25 | Kiosk | Kiosk screens and actions. | Consume public roots; keep legal/static pages and support boundaries explicit. |
-| 26 | Dashboard | Dashboard pages/provider/models. | Read projections from owning features; do not duplicate repositories. |
+| 24 | Billing | Billing screens, cart, checkout, non-restaurant flows, cart/local compatibility. | Complete; strict contracts and app-owned compatibility bridge are recorded in the Module 24 evidence. |
+| 25 | Kiosk | Kiosk screens and actions. | Complete; app-owned legacy behavior is behind strict wrappers, with no new destination or backend contract. |
+| 26 | Dashboard | Dashboard pages/provider/models. | Next; read projections from owning features and do not duplicate operational repositories. |
 | 27 | Offline and Realtime Sync | Sync/realtime providers, offline controls, scheduling/cursors. | Publish typed deltas or app adapters; never bypass strict feature cache/session authority. |
 
 ## Recent completion details
@@ -360,6 +368,63 @@ for navigation only; the architecture ledger contains full SHAs.
   Modules 24/27. Full details are in `docs/features/restaurant/` and the
   ledger evidence record.
 
+### Module 24 — Billing
+
+- Base: Module 23 Restaurant evidence `895ec417`.
+- Implementation: `7e11d20e2c0b368ff0866f630c307b805fe14a5c`; evidence:
+  `e99f588683464858be3804af9a8dde40be644d7e` (`docs: record Billing
+  migration evidence`).
+- Boundary: strict Billing owns context identity, detached cart/line/totals,
+  checkout result contracts, generation-aware controller state, runtime page
+  shells, and the public Billing composition seam.
+- Presentation: the existing 93-file desktop/mobile/quotation Billing tree is
+  app-owned under `lib/app/billing/legacy/` and is configured through
+  `LegacyBillingPresentationBridge`; runtime names and behavior are preserved.
+- Preserved elsewhere: Product catalog/cache authority, Inventory stock,
+  Restaurant table/menu/KOT, Customers directory, Payments gateway state,
+  Printing output, Communications delivery, and Sync scheduling. Cart,
+  saved/confirmed-order persistence, CheckoutService, and mixed
+  LocalProductProvider behavior remain explicit compatibility seams.
+- Verification: strict contract 4/4; Billing composition/widget/strict smoke
+  6/6; Billing compatibility/downstream 108/108; Product downstream 30/30;
+  registry/App Destination/architecture 21/21; complete Flutter suite
+  1,367/1,367; guard 486 legacy / 0 exceptions / 24 strict; scoped analyzer
+  clean and formatter/diff checks clean apart from normal Windows line-ending
+  notices.
+- Known debt: typed CartProvider/BillingProvider/CheckoutService ports,
+  saved-order provenance/reset barriers, verified backend order/payment
+  envelopes, and final app legacy-tree removal remain for later compatibility
+  work. Full details are in `docs/features/billing/` and the ledger evidence.
+
+### Module 25 — Kiosk
+
+- Base: Module 24 Billing evidence `e99f5886`.
+- Implementation: `c0b2f2af8c7579e486228dc6f6efe0ac1b3e6740`; evidence:
+  `fbf5d46fe1dfdadf989a78dc61c3670937f94f78` (`docs: record Kiosk migration
+  evidence`).
+- Boundary: strict Kiosk publishes runtime-backed `KioskScreen`,
+  `KioskOrderPage`, `KioskBillingPage`, `PrivacyPage`, and `TermsPage`
+  wrappers. The seven behavior-complete page/card files are app-owned under
+  `lib/app/kiosk/legacy/`.
+- Preserved elsewhere: Product catalog/cache, Categories, Billing cart and
+  checkout persistence, Customer directory, Identity, Subscription, Support,
+  Printing output, Inventory stock, Restaurant table/menu/KOT, and Sync
+  scheduling. No App Shell destination or production caller currently exposes
+  Kiosk.
+- Compatibility: no Kiosk shim remains; the seven old screen/widget paths were
+  relocated/deleted from the horizontal legacy baseline. No Kiosk backend/API
+  contract was invented.
+- Verification: Kiosk strict/composition contract 3/3; combined
+  Kiosk/widget/architecture gate 17/17; complete Flutter suite 1,370/1,370;
+  guard 479 legacy / 0 exceptions / 25 strict; scoped analysis has no errors
+  or warnings and formatter/diff checks are clean apart from normal Windows
+  line-ending notices.
+- Known debt: decide whether to expose or retire the currently unreachable
+  workflow; verify deployed product/category/cart/coupon/customer/order APIs;
+  publish typed Product/Billing/Customer ports; add real session/store,
+  platform/accessibility, responsive, and legal-copy coverage. Full details are
+  in `docs/features/kiosk/` and the ledger evidence.
+
 ## How to continue on a future module
 
 1. Read this checklist, the latest handoff, and the latest ledger row.
@@ -385,15 +450,15 @@ for navigation only; the architecture ledger contains full SHAs.
 
 ## Reusable future-agent prompt
 
-### Immediate next prompt — Module 24 Billing
+### Immediate next prompt — Module 26 Dashboard
 
 ```text
 Continue the ENKE POS feature-architecture migration in D:\Projects\ENKE\eposmob.
 
 Work on exactly one module:
-- Module 24 — Billing
-- Branch: codex/feature-architecture-24-billing
-- Base: 895ec417f1319a50982affb5ca444dc25c08b62a (the verified Module 23 evidence commit)
+- Module 26 — Dashboard
+- Branch: codex/feature-architecture-26-dashboard
+- Base: fbf5d46fe1dfdadf989a78dc61c3670937f94f78 (the verified Module 25 evidence commit)
 
 Before editing, verify the branch/base and read:
 - docs/architecture/MODULE_MIGRATION_CHECKLIST.md
@@ -403,38 +468,35 @@ Before editing, verify the branch/base and read:
 - tool/architecture/strict_features.txt
 - tool/architecture/legacy_paths.txt
 - tool/architecture/cross_feature_exceptions.txt
-- docs/features/restaurant/{README,FEATURE_SPEC,TODO,CHANGELOG}.md
+- docs/features/kiosk/{README,FEATURE_SPEC,TODO,CHANGELOG}.md
 
-Audit Billing/cart/checkout/saved-order ownership, payment and customer
-selection, product/category/tax/promotions references, local and confirmed
-orders, session/store scope, exact routes/payloads, persistence/cache,
-navigation, async lifecycle, all consumers, backend routes, and current tests.
-Publish narrow typed ports for upstream feature projections where a real
-contract exists. Consume the public roots for Restaurant, Products, Categories,
-Promotions, Inventory, Customers, Payments, Purchasing, Sales, Accounting,
-Printing, and Communications; do not absorb their source ownership.
+Audit every Dashboard screen/provider/model, runtime destination and caller,
+permission/session/store context, chart/query route, cache and persistence,
+responsive behavior, backend route/parser, all consumers, and current tests.
+Decide which values are Dashboard-owned read projections and which remain with
+Reports, Sales, Accounting, Customers, Suppliers, Billing, Inventory,
+Subscription, Organization, or Identity. Do not invent an analytics backend
+contract when the deployed route or envelope is unverified.
 
-Keep Restaurant table/menu/kitchen/KOT workflows, Product catalog authority,
-Inventory stock operations, Printing output/layout/device ownership, and
-Offline/Realtime Sync scheduling/cursors out of scope. Treat LocalProduct,
-cart-reservation, saved-order, and mixed local-model code as explicit seams:
-preserve behavior while assigning each writer/read path to Billing or a typed
-app adapter, and record later-module debt instead of inventing backend APIs.
+Consume public roots or narrow app-owned bridges. Keep operational source state,
+mutation/cache authority, Product/Inventory/Billing repositories, Reports
+source models, and Offline/Realtime scheduling with their owners. Do not make
+Dashboard a second repository for any source feature.
 
-Implement one public features/billing root, pure domain values/ports,
-injected data/application state where a real contract exists, and app-owned
-bridges for complete legacy UI/workflows. Preserve behavior, runtime names,
-destination slots, preference keys, parser quirks, and redaction. Delete only
-zero-consumer paths; otherwise use implementation-free export shims and list
-exact removal owners in the feature TODO.
+Implement one public `features/dashboard` root only when the audit proves a
+Dashboard-owned boundary. Keep domain pure, inject data/application state from
+app composition, preserve runtime names/destination slots/payload quirks,
+delete only zero-consumer paths, and use implementation-free shims for
+remaining consumers. Record uncertain backend/security/platform behavior as
+explicit debt rather than silently changing it.
 
 Add focused success/failure/malformed/session/store-reset/late-completion and
-owned-widget tests proportional to the audited surface. Run formatter, scoped
-analyzer, focused and downstream tests, architecture guard plus guard tests,
-git diff --check, and the full `flutter test --no-pub` suite. Stage and audit
-tracked and untracked files, commit implementation first, then a separate
-docs/evidence commit. Update the ledger/handoff/checklist with full SHAs and
-exact counts. Do not start Module 25 in the same branch.
+owned-widget/platform tests proportional to the audited surface. Run formatter,
+scoped analyzer, focused and downstream tests, architecture guard plus guard
+tests, `git diff --check`, and the full `flutter test --no-pub` suite. Stage and
+audit tracked and untracked files, commit implementation first, then a
+separate docs/evidence commit. Update the ledger/handoff/checklist with full
+SHAs and exact counts. Do not start Module 27 in the same branch.
 ```
 
 ```text
