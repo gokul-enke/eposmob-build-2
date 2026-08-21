@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/helpers/purchase_return_pricing.dart';
 import 'package:pos_machine/models/purchase_return_model.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -36,6 +37,7 @@ class _PurchaseReturnDetailModalState extends State<PurchaseReturnDetailModal> {
 
   Future<void> _loadDetails() async {
     if (widget.returnData.id == null) return;
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       final provider = Provider.of<PurchaseProvider>(context, listen: false);
@@ -377,7 +379,7 @@ class _PurchaseReturnDetailModalState extends State<PurchaseReturnDetailModal> {
               Expanded(
                 child: _buildMetric(
                   'billing.table_qty'.tr,
-                  item.quantity?.toString() ?? '0',
+                  PurchaseReturnPricing.formatQuantity(item.quantity),
                 ),
               ),
               Expanded(
@@ -488,7 +490,7 @@ class _PurchaseReturnDetailModalState extends State<PurchaseReturnDetailModal> {
                 TableRow(
                   children: [
                     _valueCell(displayName),
-                    _valueCell(item.quantity?.toString() ?? '0'),
+                    _valueCell(PurchaseReturnPricing.formatQuantity(item.quantity)),
                     _valueCellWidget(
                       Consumer<AppSettingsProvider>(
                         builder: (context, settings, _) {

@@ -1312,25 +1312,32 @@ class PurchaseProvider extends ChangeNotifier {
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
       });
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        if (jsonData["status"] == "success") {
-          final model = ListPurchaseReturnModel.fromJson(jsonData);
-          purchaseReturnCurrentPage = model.data?.currentPage ?? 1;
-          purchaseReturnTotalPages = model.data?.lastPage ?? 1;
-          purchaseReturnsList = model.data?.data ?? [];
-        } else {
-          purchaseReturnsList = [];
-        }
-        notifyListeners();
-      } else {
-        purchaseReturnsList = [];
-        notifyListeners();
+      if (response.statusCode != 200) {
+        throw HttpException(
+          'Failed to load purchase returns (HTTP ${response.statusCode}).',
+        );
       }
+
+      final decoded = json.decode(response.body);
+      if (decoded is! Map || decoded['status'] != 'success') {
+        final message = decoded is Map ? decoded['message']?.toString() : null;
+        throw HttpException(message ?? 'Failed to load purchase returns.');
+      }
+
+      final jsonData = Map<String, dynamic>.from(decoded);
+      final model = ListPurchaseReturnModel.fromJson(jsonData);
+      purchaseReturnCurrentPage = model.data?.currentPage ?? 1;
+      purchaseReturnTotalPages = model.data?.lastPage ?? 1;
+      purchaseReturnsList = model.data?.data ?? [];
+      notifyListeners();
     } catch (e) {
       debugPrint("Error fetching purchase returns: $e");
       purchaseReturnsList = [];
+      purchaseReturnCurrentPage = 1;
+      purchaseReturnTotalPages = 1;
       notifyListeners();
+      if (e is HttpException) rethrow;
+      throw const HttpException('Unable to load purchase returns. Please try again.');
     }
   }
 
@@ -1381,27 +1388,33 @@ class PurchaseProvider extends ChangeNotifier {
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
       });
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        if (jsonData["status"] == "success") {
-          final parsed = ReturnableItemsResponse.fromJson(jsonData);
-          activeReturnableItemsData = parsed.data;
-          returnableItemsList = parsed.data?.items ?? [];
-        } else {
-          returnableItemsList = [];
-          activeReturnableItemsData = null;
-        }
-        notifyListeners();
-      } else {
-        returnableItemsList = [];
-        activeReturnableItemsData = null;
-        notifyListeners();
+      if (response.statusCode != 200) {
+        throw HttpException(
+          'Failed to load returnable items (HTTP ${response.statusCode}).',
+        );
       }
+
+      final decoded = json.decode(response.body);
+      if (decoded is! Map || decoded['status'] != 'success') {
+        final message = decoded is Map ? decoded['message']?.toString() : null;
+        throw HttpException(message ?? 'Failed to load returnable items.');
+      }
+
+      final parsed = ReturnableItemsResponse.fromJson(
+        Map<String, dynamic>.from(decoded),
+      );
+      activeReturnableItemsData = parsed.data;
+      returnableItemsList = parsed.data?.items ?? [];
+      notifyListeners();
     } catch (e) {
       debugPrint("Error fetching returnable items: $e");
       returnableItemsList = [];
       activeReturnableItemsData = null;
       notifyListeners();
+      if (e is HttpException) rethrow;
+      throw const HttpException(
+        'Unable to load returnable items. Please try again.',
+      );
     }
   }
 

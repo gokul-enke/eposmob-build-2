@@ -8,10 +8,12 @@ class ListPurchaseReturnModel {
   ListPurchaseReturnModel({this.status, this.message, this.data});
 
   ListPurchaseReturnModel.fromJson(Map<String, dynamic> json) {
-    status = json['status'];
-    message = json['message'];
-    data = json['data'] != null
-        ? ListPurchaseReturnData.fromJson(json['data'])
+    status = _parseString(json['status']);
+    message = _parseString(json['message']);
+    data = json['data'] is Map
+        ? ListPurchaseReturnData.fromJson(
+            Map<String, dynamic>.from(json['data']),
+          )
         : null;
   }
 }
@@ -24,13 +26,16 @@ class ListPurchaseReturnData {
   ListPurchaseReturnData({this.currentPage, this.lastPage, this.data});
 
   ListPurchaseReturnData.fromJson(Map<String, dynamic> json) {
-    currentPage = json['current_page'];
-    lastPage = json['last_page'];
-    if (json['data'] != null) {
+    currentPage = _parseInt(json['current_page']);
+    lastPage = _parseInt(json['last_page']);
+    if (json['data'] is List) {
       data = <PurchaseReturnData>[];
-      json['data'].forEach((v) {
-        data!.add(PurchaseReturnData.fromJson(v));
-      });
+      for (final value in json['data']) {
+        if (value is Map) {
+          data!.add(
+              PurchaseReturnData.fromJson(Map<String, dynamic>.from(value)));
+        }
+      }
     }
   }
 }
@@ -65,26 +70,32 @@ class PurchaseReturnData {
   });
 
   PurchaseReturnData.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    reference = json['reference'];
-    purchaseVoucherId = json['purchase_voucher_id'];
-    voucherNumber = json['voucher_number'];
-    supplier = json['supplier'] != null
-        ? SimpleSupplier.fromJson(json['supplier'])
+    id = _parseInt(json['id']);
+    reference = _parseString(json['reference']);
+    purchaseVoucherId = _parseInt(json['purchase_voucher_id']);
+    voucherNumber = _parseString(json['voucher_number']);
+    supplier = json['supplier'] is Map
+        ? SimpleSupplier.fromJson(Map<String, dynamic>.from(json['supplier']))
         : null;
-    returnDate = json['return_date'];
+    returnDate = _parseString(json['return_date']);
     totalAmount = double.tryParse(json['total_amount']?.toString() ?? '');
     paidAmount = double.tryParse(json['paid_amount']?.toString() ?? '');
-    status = json['status'];
-    createdBy = json['created_by'] != null
-        ? SimpleCreatedBy.fromJson(json['created_by'])
+    status = _parseString(json['status']);
+    createdBy = json['created_by'] is Map
+        ? SimpleCreatedBy.fromJson(
+            Map<String, dynamic>.from(json['created_by']),
+          )
         : null;
-    createdAt = json['created_at'];
-    if (json['items'] != null && json['items'] is List) {
+    createdAt = _parseString(json['created_at']);
+    if (json['items'] is List) {
       items = <PurchaseReturnItemData>[];
-      json['items'].forEach((v) {
-        items!.add(PurchaseReturnItemData.fromJson(v));
-      });
+      for (final value in json['items']) {
+        if (value is Map) {
+          items!.add(
+            PurchaseReturnItemData.fromJson(Map<String, dynamic>.from(value)),
+          );
+        }
+      }
     }
   }
 }
@@ -113,15 +124,15 @@ class PurchaseReturnItemData {
   });
 
   PurchaseReturnItemData.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    purchaseItemId = json['purchase_item_id'];
-    productId = json['product_id'];
-    productName = json['product_name'];
-    productVariantId = json['product_variant_id'];
-    variantName = json['variant_name'];
+    id = _parseInt(json['id']);
+    purchaseItemId = _parseInt(json['purchase_item_id']);
+    productId = _parseInt(json['product_id']);
+    productName = _parseString(json['product_name']);
+    productVariantId = _parseInt(json['product_variant_id']);
+    variantName = _parseString(json['variant_name']);
     quantity = double.tryParse(json['quantity']?.toString() ?? '');
     amount = double.tryParse(json['amount']?.toString() ?? '');
-    reason = json['reason'];
+    reason = _parseString(json['reason']);
   }
 }
 
@@ -132,8 +143,8 @@ class SimpleCreatedBy {
   SimpleCreatedBy({this.id, this.name});
 
   SimpleCreatedBy.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    name = json['name'];
+    id = _parseInt(json['id']);
+    name = _parseString(json['name']);
   }
 }
 
@@ -145,10 +156,12 @@ class ReturnableItemsResponse {
   ReturnableItemsResponse({this.status, this.message, this.data});
 
   ReturnableItemsResponse.fromJson(Map<String, dynamic> json) {
-    status = json['status'];
-    message = json['message'];
-    data = json['data'] != null
-        ? ReturnableItemsData.fromJson(json['data'])
+    status = _parseString(json['status']);
+    message = _parseString(json['message']);
+    data = json['data'] is Map
+        ? ReturnableItemsData.fromJson(
+            Map<String, dynamic>.from(json['data']),
+          )
         : null;
   }
 }
@@ -169,17 +182,21 @@ class ReturnableItemsData {
   });
 
   ReturnableItemsData.fromJson(Map<String, dynamic> json) {
-    purchaseVoucherId = json['purchase_voucher_id'];
-    voucherNumber = json['voucher_number'];
-    supplier = json['supplier'] != null
-        ? SimpleSupplier.fromJson(json['supplier'])
+    purchaseVoucherId = _parseInt(json['purchase_voucher_id']);
+    voucherNumber = _parseString(json['voucher_number']);
+    supplier = json['supplier'] is Map
+        ? SimpleSupplier.fromJson(Map<String, dynamic>.from(json['supplier']))
         : null;
-    store = json['store'] != null ? SimpleStore.fromJson(json['store']) : null;
-    if (json['items'] != null) {
+    store = json['store'] is Map
+        ? SimpleStore.fromJson(Map<String, dynamic>.from(json['store']))
+        : null;
+    if (json['items'] is List) {
       items = <ReturnableItem>[];
-      json['items'].forEach((v) {
-        items!.add(ReturnableItem.fromJson(v));
-      });
+      for (final value in json['items']) {
+        if (value is Map) {
+          items!.add(ReturnableItem.fromJson(Map<String, dynamic>.from(value)));
+        }
+      }
     }
   }
 }
@@ -208,11 +225,11 @@ class ReturnableItem {
   });
 
   ReturnableItem.fromJson(Map<String, dynamic> json) {
-    purchaseItemId = json['purchase_item_id'];
-    productId = json['product_id'];
-    productName = json['product_name'];
-    productVariantId = json['product_variant_id'];
-    variantName = json['variant_name'];
+    purchaseItemId = _parseInt(json['purchase_item_id']);
+    productId = _parseInt(json['product_id']);
+    productName = _parseString(json['product_name']);
+    productVariantId = _parseInt(json['product_variant_id']);
+    variantName = _parseString(json['variant_name']);
     purchasedQuantity =
         double.tryParse(json['purchased_quantity']?.toString() ?? '');
     returnedQuantity =
@@ -222,3 +239,12 @@ class ReturnableItem {
     unitPrice = double.tryParse(json['unit_price']?.toString() ?? '');
   }
 }
+
+int? _parseInt(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse(value.toString().trim());
+}
+
+String? _parseString(dynamic value) => value?.toString();

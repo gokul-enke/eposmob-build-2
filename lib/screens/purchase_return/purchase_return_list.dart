@@ -154,14 +154,14 @@ class _PurchaseReturnListScreenState extends State<PurchaseReturnListScreen> {
     }
   }
 
-  void _resetFilters() {
+  Future<void> _resetFilters() async {
     setState(() {
       supplierController.text = "All";
       fromDateController.clear();
       toDateController.clear();
       currentPage = 1;
     });
-    _fetchReturns(page: 1);
+    await _fetchReturns(page: 1);
   }
 
   bool _hasActiveFilters() {
@@ -214,7 +214,7 @@ class _PurchaseReturnListScreenState extends State<PurchaseReturnListScreen> {
     final isPhone = purchaseOrdersIsPhone(context);
 
     return PurchaseOrdersListShell(
-      onRefresh: () async => _resetFilters(),
+      onRefresh: _resetFilters,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

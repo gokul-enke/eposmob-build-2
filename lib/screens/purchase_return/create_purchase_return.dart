@@ -6,6 +6,7 @@ import 'package:pos_machine/components/build_dialog_box.dart'
     hide showLoadingOverlay, hideLoadingOverlay;
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
+import 'package:pos_machine/helpers/purchase_return_pricing.dart';
 import 'package:pos_machine/models/master_data.dart';
 import 'package:pos_machine/models/purchase_order_model.dart';
 import 'package:pos_machine/models/purchase_return_model.dart';
@@ -21,16 +22,18 @@ import 'package:provider/provider.dart';
 
 class _ReturnLineItem {
   final ReturnableItem source;
+  final double unitPrice;
   double quantity;
   String reason;
 
   _ReturnLineItem({
     required this.source,
+    required this.unitPrice,
     required this.quantity,
     this.reason = '',
   });
 
-  double get amount => quantity * (source.unitPrice ?? 0);
+  double get amount => PurchaseReturnPricing.roundCurrency(quantity * unitPrice);
 }
 
 class CreatePurchaseReturnScreen extends StatefulWidget {
@@ -53,6 +56,7 @@ class _CreatePurchaseReturnScreenState
   bool _isLoadingVouchers = true;
   bool _isLoadingItems = false;
   bool _isSubmitting = false;
+  String? _itemsLoadError;
 
   // Return items
   final List<_ReturnLineItem> _returnItems = [];
@@ -115,6 +119,7 @@ class _CreatePurchaseReturnScreenState
       _selectedVoucher = voucher;
       _voucherSelected = true;
       _isLoadingItems = true;
+      _itemsLoadError = null;
       _returnItems.clear();
     });
     try {
@@ -124,8 +129,45 @@ class _CreatePurchaseReturnScreenState
         accessToken: token ?? '',
         purchaseVoucherId: voucher.id!,
       );
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _itemsLoadError = _errorMessage(e);
+          _isLoadingItems = false;
+        });
+      }
+      return;
+    }
     if (mounted) setState(() => _isLoadingItems = false);
+  }
+
+  String _errorMessage(Object error) {
+    final message = error.toString();
+    return message
+        .replaceFirst('HttpException: ', '')
+        .replaceFirst('Exception: ', '');
+  }
+
+  Future<void> _retryLoadReturnableItems() async {
+    final voucherId = _selectedVoucher?.id;
+    if (voucherId == null || _isLoadingItems) return;
+
+    setState(() {
+      _isLoadingItems = true;
+      _itemsLoadError = null;
+    });
+    try {
+      final provider = Provider.of<PurchaseProvider>(context, listen: false);
+      final token = Provider.of<AuthModel>(context, listen: false).token;
+      await provider.fetchReturnableItems(
+        accessToken: token ?? '',
+        purchaseVoucherId: voucherId,
+      );
+    } catch (e) {
+      if (mounted) setState(() => _itemsLoadError = _errorMessage(e));
+    } finally {
+      if (mounted) setState(() => _isLoadingItems = false);
+    }
   }
 
   void _showReturnItemDialog(ReturnableItem item) {
@@ -221,6 +263,7 @@ class _CreatePurchaseReturnScreenState
                 } else {
                   _returnItems.add(_ReturnLineItem(
                     source: item,
+                    unitPrice: _returnUnitPrice(item),
                     quantity: qty,
                     reason: reasonController.text.trim(),
                   ));
@@ -253,7 +296,7 @@ class _CreatePurchaseReturnScreenState
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() => _returnDate = picked);
     }
   }
@@ -318,10 +361,14 @@ class _CreatePurchaseReturnScreenState
   }
 
   String _formatQty(double? value) {
-    if (value == null) return '0';
-    return value == value.truncateToDouble()
-        ? value.toInt().toString()
-        : value.toStringAsFixed(2);
+    return PurchaseReturnPricing.formatQuantity(value);
+  }
+
+  double _returnUnitPrice(ReturnableItem item) {
+    return PurchaseReturnPricing.unitPrice(
+      item: item,
+      voucher: _selectedVoucher,
+    );
   }
 
   void _updatePaidAmount() {
@@ -720,7 +767,33 @@ class _CreatePurchaseReturnScreenState
             title: 'purchase_return.returnable_items'.tr,
           ),
           const SizedBox(height: 10),
-          if (provider.returnableItemsList.isEmpty)
+          if (_itemsLoadError != null)
+            PurchaseOrdersContentCard(
+              padding: const EdgeInsetsDirectional.all(20),
+              child: Column(
+                children: [
+                  Text(
+                    _itemsLoadError!,
+                    textAlign: TextAlign.center,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s13,
+                      0.20,
+                      Colors.red.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  CustomRoundButton(
+                    title: 'restaurant.retry'.tr,
+                    fct: _retryLoadReturnableItems,
+                    fontSize: 12,
+                    height: 40,
+                    width: 120,
+                  ),
+                ],
+              ),
+            )
+          else if (provider.returnableItemsList.isEmpty)
             PurchaseOrdersContentCard(
               padding: const EdgeInsetsDirectional.all(20),
               child: Center(
@@ -996,7 +1069,7 @@ class _CreatePurchaseReturnScreenState
                             ),
                           ),
                           Text(
-                            '$currency ${item.unitPrice?.toStringAsFixed(2) ?? '0.00'}/${'purchase_return.unit'.tr}',
+                            '$currency ${_returnUnitPrice(item).toStringAsFixed(2)}/${'purchase_return.unit'.tr}',
                             style: buildCustomStyle(
                               FontWeightManager.regular,
                               FontSize.s11,
