@@ -1,17 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'standard_pdf_layout.dart';
-import 'classic_standard_pdf_layout.dart';
-import 'standard_tax_invoice_standard_pdf_layout.dart';
-import 'tax_invoice_standard_pdf_layout.dart';
-import 'detailed_tax_invoice_standard_pdf_layout.dart';
-import 'new_classic_standad_pdf_layout.dart';
-import 'simplified_tax_invoice_standard_pdf_layout.dart';
-import 'centered_simplified_tax_invoice_standard_pdf_layout.dart';
-import 'bilingual_centered_tax_invoice_standard_pdf_layout.dart';
-import 'boxed_bilingual_tax_invoice_standard_pdf_layout.dart';
-import 'boxed_header_tax_invoice_standard_pdf_layout.dart';
-import 'corporate_tax_invoice_standard_pdf_layout.dart';
-import 'letterhead_tax_invoice_standard_pdf_layout.dart';
+import 'contract_standard_pdf_layout.dart';
 
 /// Factory class for creating standard PDF layouts based on theme.
 ///
@@ -28,21 +17,54 @@ class StandardPdfLayoutFactory {
 
   /// Map of registered layouts
   static final Map<String, StandardPdfLayout Function()> _layouts = {
-    'classic': () => ClassicStandardPdfLayout(),
-    'tax_invoice': () => TaxInvoiceStandardPdfLayout(),
-    'detailed_tax_invoice': () => DetailedTaxInvoiceStandardPdfLayout(),
-    'standard_tax_invoice': () => StandardTaxInvoiceStandardPdfLayout(),
-    'new_classic': () => NewClassicStandardPdfLayout(),
-    'simplified_tax_invoice': () => SimplifiedTaxInvoiceStandardPdfLayout(),
-    'centered_simplified_tax_invoice': () =>
-        CenteredSimplifiedTaxInvoiceStandardPdfLayout(),
-    'bilingual_centered_tax_invoice': () =>
-        BilingualCenteredTaxInvoiceStandardPdfLayout(),
-    'boxed_bilingual_tax_invoice': () =>
-        BoxedBilingualTaxInvoiceStandardPdfLayout(),
-    'boxed_header_tax_invoice': () => BoxedHeaderTaxInvoiceStandardPdfLayout(),
-    'corporate_tax_invoice': () => CorporateTaxInvoiceStandardPdfLayout(),
-    'letterhead_tax_invoice': () => LetterheadTaxInvoiceStandardPdfLayout(),
+    'classic': () => const ContractStandardPdfLayout(
+          layoutId: 'classic',
+          displayName: 'Classic',
+        ),
+    'tax_invoice': () => const ContractStandardPdfLayout(
+          layoutId: 'tax_invoice',
+          displayName: 'Tax Invoice',
+        ),
+    'detailed_tax_invoice': () => const ContractStandardPdfLayout(
+          layoutId: 'detailed_tax_invoice',
+          displayName: 'Detailed Tax Invoice',
+        ),
+    'standard_tax_invoice': () => const ContractStandardPdfLayout(
+          layoutId: 'standard_tax_invoice',
+          displayName: 'Standard Tax Invoice',
+        ),
+    'new_classic': () => const ContractStandardPdfLayout(
+          layoutId: 'new_classic',
+          displayName: 'New Classic (Standard)',
+        ),
+    'simplified_tax_invoice': () => const ContractStandardPdfLayout(
+          layoutId: 'simplified_tax_invoice',
+          displayName: 'Simplified Tax Invoice',
+        ),
+    'centered_simplified_tax_invoice': () => const ContractStandardPdfLayout(
+          layoutId: 'centered_simplified_tax_invoice',
+          displayName: 'Centered Simplified Tax Invoice',
+        ),
+    'bilingual_centered_tax_invoice': () => const ContractStandardPdfLayout(
+          layoutId: 'bilingual_centered_tax_invoice',
+          displayName: 'Bilingual Centered Tax Invoice',
+        ),
+    'boxed_bilingual_tax_invoice': () => const ContractStandardPdfLayout(
+          layoutId: 'boxed_bilingual_tax_invoice',
+          displayName: 'Boxed Bilingual Tax Invoice',
+        ),
+    'boxed_header_tax_invoice': () => const ContractStandardPdfLayout(
+          layoutId: 'boxed_header_tax_invoice',
+          displayName: 'Boxed Header Tax Invoice',
+        ),
+    'corporate_tax_invoice': () => const ContractStandardPdfLayout(
+          layoutId: 'corporate_tax_invoice',
+          displayName: 'Corporate Tax Invoice',
+        ),
+    'letterhead_tax_invoice': () => const ContractStandardPdfLayout(
+          layoutId: 'letterhead_tax_invoice',
+          displayName: 'Letterhead Tax Invoice',
+        ),
   };
 
   /// Get a layout instance based on the theme identifier.
@@ -62,7 +84,10 @@ class StandardPdfLayoutFactory {
     // Fallback to classic for unknown themes
     debugPrint(
         '[StandardPdfLayoutFactory] Unknown theme "$themeKey", falling back to classic');
-    return ClassicStandardPdfLayout();
+    return const ContractStandardPdfLayout(
+      layoutId: 'classic',
+      displayName: 'Classic',
+    );
   }
 
   /// Register a custom layout.

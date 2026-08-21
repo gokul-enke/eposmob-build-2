@@ -21,9 +21,12 @@ import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 
 import 'receipt_layout.dart';
+import 'receipt_configuration_contract.dart';
 import 'receipt_layout_params.dart';
+import 'receipt_pdf_builder.dart';
 import '../thermal/printer_utils.dart';
 import '../thermal/debug_image_saver.dart';
+import '../thermal/thermal_paper_profile.dart';
 import '../logo_loader.dart';
 
 /// Premium receipt layout - Modern & Clean design.
@@ -111,8 +114,12 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
       // ========== GENERATE ESC/POS BYTES ==========
       debugPrint("Generating ESC/POS bytes...");
       final profile = await CapabilityProfile.load();
-      final generator =
-          Generator(params.is58mm ? PaperSize.mm58 : PaperSize.mm80, profile);
+      final ThermalPaperProfile paperProfile = params.thermalPaperProfile;
+      if (paperProfile.is112mm) {
+        debugPrint(
+            '[PREMIUM2] 112mm selected: using ${paperProfile.rasterWidthPx}px raster images; ESC/POS package profile is used only for feed/barcode/cut commands.');
+      }
+      final generator = paperProfile.createGenerator(profile);
       List<int> bytes = [];
 
       bytes += generator.image(imagePart1);
@@ -170,7 +177,7 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
   Future<pw.Document> buildPdf(ReceiptLayoutParams params) async {
     debugPrint(
         "[PremiumReceiptLayout] buildPdf - delegating to StandardPrinter");
-    return pw.Document();
+    return buildContractReceiptPdf(params);
   }
 
   @override
@@ -3534,10 +3541,12 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
     required bool isEnglish,
     required bool isBilingual,
   }) {
-    final value = text?.trim() ?? '';
-    if (value.isEmpty || isBilingual) return value;
-    if (isEnglish) return _hasArabic(value) ? '' : value;
-    return _hasArabic(value) ? value : '';
+    final mode = isBilingual
+        ? ReceiptLanguageMode.bilingual
+        : isEnglish
+            ? ReceiptLanguageMode.english
+            : ReceiptLanguageMode.arabic;
+    return ReceiptConfigurationContract.documentText(text, mode);
   }
 
   String _getModeLabel({
@@ -3551,34 +3560,21 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
     required String arabic,
     bool inlineBilingual = false,
   }) {
-    final option = displayConfig?[key];
-    final configuredValue =
-        option?.value is String ? (option!.value as String).trim() : '';
-    final configuredDefault = option?.defaultValue?.trim() ?? '';
-
-    // Current API responses carry Arabic in `value` and English in `default`
-    // even when the preview temporarily forces one language. Older English-
-    // only responses may omit `default`, so `value` remains the fallback.
-    final configuredArabic = configuredValue;
-    final configuredEnglish =
-        configuredDefault.isNotEmpty ? configuredDefault : configuredValue;
-    final arabicText = configuredArabic.isNotEmpty
-        ? configuredArabic
-        : (resolvedArabic?.trim().isNotEmpty == true
-            ? resolvedArabic!.trim()
-            : arabic);
-    final englishText = configuredEnglish.isNotEmpty
-        ? configuredEnglish
-        : (resolvedEnglish?.trim().isNotEmpty == true
-            ? resolvedEnglish!.trim()
-            : english);
-
-    if (isEnglish) return englishText;
-    if (!isBilingual) return arabicText;
-    if (inlineBilingual) {
-      return _getInlineBilingualText(arabic: arabicText, english: englishText);
-    }
-    return _getBilingualText(arabic: arabicText, english: englishText);
+    final mode = isBilingual
+        ? ReceiptLanguageMode.bilingual
+        : isEnglish
+            ? ReceiptLanguageMode.english
+            : ReceiptLanguageMode.arabic;
+    return ReceiptConfigurationContract.label(
+      options: displayConfig,
+      key: key,
+      mode: mode,
+      resolvedArabic: resolvedArabic,
+      resolvedEnglish: resolvedEnglish,
+      englishFallback: english,
+      arabicFallback: arabic,
+      inlineBilingual: inlineBilingual,
+    );
   }
 
   String _getInlineBilingualText(
@@ -3624,16 +3620,7 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
             '')
         .trim()
         .toUpperCase());
-    if (raw == 'EN_AR' ||
-        raw == 'EN/AR' ||
-        raw == 'AR/EN' ||
-        raw == 'BILINGUAL') {
-      return 'EN_AR';
-    }
-    if (raw == 'AR' || raw == 'ARABIC') return 'AR';
-    if (raw == 'EN' || raw == 'ENGLISH') return 'EN';
-    // Preserve the existing Arabic fallback for old/missing configurations.
-    return 'AR';
+    return ReceiptConfigurationContract.languageMode(raw).code.toUpperCase();
   }
 
   bool _isEnglishContent(ReceiptLayoutParams params) {

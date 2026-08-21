@@ -26,6 +26,7 @@ import 'package:pos_machine/helpers/amount_helper.dart';
 
 import 'receipt_layout.dart';
 import 'receipt_layout_params.dart';
+import 'contract_receipt_layout.dart';
 import '../logo_loader.dart';
 import 'package:pos_machine/screens/print/thermal/debug_image_saver.dart';
 // import 'thermal/printer_utils.dart';
@@ -59,6 +60,10 @@ class BilingualReceiptLayout implements ReceiptLayout {
 
   @override
   Future<void> printThermal(ReceiptLayoutParams params) async {
+    if (ReceiptContractDelegate.enabled) {
+      await ReceiptContractDelegate.printThermal(params);
+      return;
+    }
     debugPrint("===== bilingual LAYOUT: THERMAL PRINTING ====");
 
     final context = params.context;
@@ -209,8 +214,7 @@ class BilingualReceiptLayout implements ReceiptLayout {
       // ========== GENERATE ESC/POS BYTES ==========
       debugPrint("Generating ESC/POS bytes...");
       final profile = await CapabilityProfile.load();
-      final generator =
-          Generator(params.is58mm ? PaperSize.mm58 : PaperSize.mm80, profile);
+      final generator = params.thermalPaperProfile.createGenerator(profile);
       List<int> bytes = [];
 
       bytes += generator.image(imagePart1);
@@ -266,12 +270,19 @@ class BilingualReceiptLayout implements ReceiptLayout {
 
   @override
   Future<pw.Document> buildPdf(ReceiptLayoutParams params) async {
+    if (ReceiptContractDelegate.enabled) {
+      return ReceiptContractDelegate.buildPdf(params);
+    }
     debugPrint("[Templet1Layout] buildPdf - delegating to StandardPrinter");
     return pw.Document();
   }
 
   @override
   Future<void> printThermalNative(ReceiptLayoutParams params) async {
+    if (ReceiptContractDelegate.enabled) {
+      await ReceiptContractDelegate.printThermalNative(params);
+      return;
+    }
     await printThermal(params);
   }
 
@@ -2110,8 +2121,11 @@ class BilingualReceiptLayout implements ReceiptLayout {
       rows.add(TextRow(detailsHeading, isBold: true, scale: scale));
       rows.add(SpacingRow(_itemGap));
       if (retLabels?.creditNoteNumber != null) {
-        final cnLabel = _getLabel(retDc, 'showCreditNoteNumber',
-            retLabels?.creditNoteNumber, isEnglish ? 'Credit Note No:' : 'رقم إشعار الائتمان:');
+        final cnLabel = _getLabel(
+            retDc,
+            'showCreditNoteNumber',
+            retLabels?.creditNoteNumber,
+            isEnglish ? 'Credit Note No:' : 'رقم إشعار الائتمان:');
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(cnLabel,
               weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
@@ -2120,8 +2134,11 @@ class BilingualReceiptLayout implements ReceiptLayout {
         ]));
       }
       if (retLabels?.creditNoteDate != null) {
-        final dateLabel = _getLabel(retDc, 'showCreditNoteDate',
-            retLabels?.creditNoteDate, isEnglish ? 'Credit Note Date:' : 'تاريخ إشعار الائتمان:');
+        final dateLabel = _getLabel(
+            retDc,
+            'showCreditNoteDate',
+            retLabels?.creditNoteDate,
+            isEnglish ? 'Credit Note Date:' : 'تاريخ إشعار الائتمان:');
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(dateLabel,
               weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
@@ -2144,7 +2161,8 @@ class BilingualReceiptLayout implements ReceiptLayout {
 
     // — Customer Details section —
     if (params.customerName != null && params.customerName!.trim().isNotEmpty) {
-      rows.add(TextRow(retLabels?.customerHeading ?? 'CUSTOMER DETAILS', isBold: true, scale: scale));
+      rows.add(TextRow(retLabels?.customerHeading ?? 'CUSTOMER DETAILS',
+          isBold: true, scale: scale));
       rows.add(SpacingRow(_itemGap));
       final custLabel = isEnglish ? 'Customer Name:' : 'اسم العميل:';
       rows.add(ReceiptTableRow([
@@ -2153,7 +2171,8 @@ class BilingualReceiptLayout implements ReceiptLayout {
         ReceiptTableColumn(params.customerName!,
             weight: 0.55, align: TextAlign.left, scale: scale),
       ]));
-      if (params.customerPhone != null && params.customerPhone!.trim().isNotEmpty) {
+      if (params.customerPhone != null &&
+          params.customerPhone!.trim().isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(isEnglish ? 'Phone:' : 'الهاتف:',
               weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
@@ -2161,7 +2180,8 @@ class BilingualReceiptLayout implements ReceiptLayout {
               weight: 0.55, align: TextAlign.left, scale: scale),
         ]));
       }
-      if (params.customerAddress != null && params.customerAddress!.trim().isNotEmpty) {
+      if (params.customerAddress != null &&
+          params.customerAddress!.trim().isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(isEnglish ? 'Billing Address:' : 'عنوان الفاتورة:',
               weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
@@ -2342,8 +2362,11 @@ class BilingualReceiptLayout implements ReceiptLayout {
 
     if (displayConfig?['showReturnItemsCount']?.visible == true) {
       final countLabel = (retLabels?.creditNoteItemsCount != null)
-          ? _getLabel(retDc, 'showCreditNoteItemsCount',
-              retLabels?.creditNoteItemsCount, isEnglish ? 'Total Items:' : 'إجمالي العناصر:')
+          ? _getLabel(
+              retDc,
+              'showCreditNoteItemsCount',
+              retLabels?.creditNoteItemsCount,
+              isEnglish ? 'Total Items:' : 'إجمالي العناصر:')
           : (isEnglish ? 'Return Items:' : 'عناصر المرتجع:');
       rows.add(ReceiptTableRow([
         ReceiptTableColumn(countLabel,
@@ -2367,8 +2390,11 @@ class BilingualReceiptLayout implements ReceiptLayout {
       if (showReturnTotalAmt) {
         returnSummaryItems.add(StandardBoxedLineItem(
             label: (retLabels?.creditNoteTotalAmount != null)
-                ? _getLabel(retDc, 'showCreditNoteTotalAmount',
-                    retLabels?.creditNoteTotalAmount, isEnglish ? 'Total Amount:' : 'المبلغ الإجمالي:')
+                ? _getLabel(
+                    retDc,
+                    'showCreditNoteTotalAmount',
+                    retLabels?.creditNoteTotalAmount,
+                    isEnglish ? 'Total Amount:' : 'المبلغ الإجمالي:')
                 : _getLabel(displayConfig, 'showReturnTotalAmount', null,
                     isEnglish ? 'Return Total:' : 'إجمالي المرتجع:'),
             value: returnRateTotal.toStringAsFixed(2),
@@ -2380,8 +2406,11 @@ class BilingualReceiptLayout implements ReceiptLayout {
       if (showReturnNetAmt) {
         returnSummaryItems.add(StandardBoxedLineItem(
             label: (retLabels?.creditNoteRefund != null)
-                ? _getLabel(retDc, 'showCreditNoteRefund',
-                    retLabels?.creditNoteRefund, isEnglish ? 'Credit Note Total:' : 'إجمالي إشعار الائتمان:')
+                ? _getLabel(
+                    retDc,
+                    'showCreditNoteRefund',
+                    retLabels?.creditNoteRefund,
+                    isEnglish ? 'Credit Note Total:' : 'إجمالي إشعار الائتمان:')
                 : _getLabel(displayConfig, 'showReturnNetAmount', null,
                     isEnglish ? 'Return Net Amount:' : 'صافي مبلغ الإرجاع:'),
             value: returnRateTotal.toStringAsFixed(2),

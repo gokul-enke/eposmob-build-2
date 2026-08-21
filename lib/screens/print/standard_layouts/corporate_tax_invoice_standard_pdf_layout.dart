@@ -21,6 +21,7 @@ import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/resources/localization_service.dart';
 import '../logo_loader.dart';
 import 'standard_pdf_layout.dart';
+import 'standard_pdf_contract_delegate.dart';
 import 'tax_invoice_returns_pdf_section.dart';
 
 /// Corporate Tax Invoice PDF layout — formal bilingual A4/A5 tax invoice
@@ -133,6 +134,13 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   // ── Public interface ────────────────────────────────────────────────
   @override
   Future<void> generateAndPrintPdf(ReceiptLayoutParams params) async {
+    if (StandardPdfContractDelegate.enabled) {
+      return StandardPdfContractDelegate.generateAndPrintPdf(
+        params,
+        layoutId: layoutId,
+        displayName: displayName,
+      );
+    }
     final pdf = await buildPdfDocument(params);
     if (params.selectedPrinter.isDevelopment) {
       final savedFile = await DevelopmentPrinterService.savePdf(
@@ -176,6 +184,13 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
 
   @override
   Future<pw.Document> buildPdfDocument(ReceiptLayoutParams params) async {
+    if (StandardPdfContractDelegate.enabled) {
+      return StandardPdfContractDelegate.buildPdfDocument(
+        params,
+        layoutId: layoutId,
+        displayName: displayName,
+      );
+    }
     final pdf = pw.Document(version: PdfVersion.pdf_1_5, compress: true);
 
     // ── Providers & Config ──────────────────────────────────────────

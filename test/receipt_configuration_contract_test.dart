@@ -1,0 +1,221 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:pos_machine/models/document_configurations.dart';
+import 'package:pos_machine/screens/print/layouts/receipt_configuration_contract.dart';
+import 'package:pos_machine/screens/print/layouts/receipt_layout_factory.dart';
+
+void main() {
+  group('ReceiptLanguageMode normalization', () {
+    test('accepts the documented English and Arabic aliases', () {
+      expect(ReceiptConfigurationContract.languageMode('en'),
+          ReceiptLanguageMode.english);
+      expect(ReceiptConfigurationContract.languageMode('English'),
+          ReceiptLanguageMode.english);
+      expect(ReceiptConfigurationContract.languageMode('ar'),
+          ReceiptLanguageMode.arabic);
+      expect(ReceiptConfigurationContract.languageMode('Arabic'),
+          ReceiptLanguageMode.arabic);
+    });
+
+    test('accepts all bilingual separators and orderings', () {
+      for (final value in [
+        'en_ar',
+        'ar_en',
+        'en-ar',
+        'ar/en',
+        'en+ar',
+        'english arabic',
+        'bilingual',
+      ]) {
+        expect(ReceiptConfigurationContract.languageMode(value),
+            ReceiptLanguageMode.bilingual,
+            reason: value);
+      }
+    });
+
+    test('keeps unset language compatible with existing English fallback', () {
+      expect(ReceiptConfigurationContract.languageMode(null),
+          ReceiptLanguageMode.english);
+      expect(ReceiptConfigurationContract.languageMode('unknown'),
+          ReceiptLanguageMode.english);
+    });
+  });
+
+  group('Bill configuration contract', () {
+    test('contains the complete supplied 61-key Bill contract', () {
+      expect(ReceiptConfigurationContract.canonicalBillKeys.length, 61);
+      expect(
+        ReceiptConfigurationContract.canonicalBillKeys.toSet().length,
+        61,
+      );
+    });
+
+    test('resolves aliases and requires explicit visibility', () {
+      final options = <String, DisplayOption>{
+        'showMRPTotal': DisplayOption(visible: true, value: 'الإجمالي'),
+        'showNetAmount': DisplayOption(visible: false, value: 'الصافي'),
+      };
+      expect(ReceiptConfigurationContract.isVisible(options, 'showTotalMRP'),
+          isTrue);
+      expect(ReceiptConfigurationContract.isVisible(options, 'showNetTotal'),
+          isFalse);
+      expect(
+        ReceiptConfigurationContract.isVisible(options, 'showDiscount'),
+        isFalse,
+      );
+    });
+
+    test('supports a one-key visibility toggle for every canonical key', () {
+      for (final key in ReceiptConfigurationContract.canonicalBillKeys) {
+        final enabled = <String, DisplayOption>{
+          key: DisplayOption(visible: true),
+        };
+        final disabled = <String, DisplayOption>{
+          key: DisplayOption(visible: false),
+        };
+        expect(ReceiptConfigurationContract.isVisible(enabled, key), isTrue,
+            reason: key);
+        expect(ReceiptConfigurationContract.isVisible(disabled, key), isFalse,
+            reason: key);
+      }
+    });
+
+    test('supports all-visible and all-hidden configurations', () {
+      final allVisible = <String, DisplayOption>{
+        for (final key in ReceiptConfigurationContract.canonicalBillKeys)
+          key: DisplayOption(visible: true),
+      };
+      final allHidden = <String, DisplayOption>{
+        for (final key in ReceiptConfigurationContract.canonicalBillKeys)
+          key: DisplayOption(visible: false),
+      };
+
+      for (final key in ReceiptConfigurationContract.canonicalBillKeys) {
+        expect(ReceiptConfigurationContract.isVisible(allVisible, key), isTrue,
+            reason: key);
+        expect(ReceiptConfigurationContract.isVisible(allHidden, key), isFalse,
+            reason: key);
+      }
+    });
+  });
+
+  group('configured labels', () {
+    final options = <String, DisplayOption>{
+      'showStoreName': DisplayOption(
+        visible: true,
+        value: 'متجر الاختبار',
+        defaultValue: 'Test Store',
+      ),
+    };
+
+    test('selects independent English and Arabic values', () {
+      expect(
+        ReceiptConfigurationContract.label(
+          options: options,
+          key: 'showStoreName',
+          mode: ReceiptLanguageMode.english,
+          englishFallback: 'Fallback EN',
+          arabicFallback: 'احتياطي',
+        ),
+        'Test Store',
+      );
+      expect(
+        ReceiptConfigurationContract.label(
+          options: options,
+          key: 'showStoreName',
+          mode: ReceiptLanguageMode.arabic,
+          englishFallback: 'Fallback EN',
+          arabicFallback: 'احتياطي',
+        ),
+        'متجر الاختبار',
+      );
+      expect(
+        ReceiptConfigurationContract.label(
+          options: options,
+          key: 'showStoreName',
+          mode: ReceiptLanguageMode.bilingual,
+          englishFallback: 'Fallback EN',
+          arabicFallback: 'احتياطي',
+        ),
+        'متجر الاختبار\nTest Store',
+      );
+    });
+
+    test('does not leak Arabic into English-only output', () {
+      final arabicOnly = <String, DisplayOption>{
+        'showStoreName': DisplayOption(
+          visible: true,
+          value: 'متجر الاختبار',
+          defaultValue: 'متجر الاختبار',
+        ),
+      };
+      expect(
+        ReceiptConfigurationContract.label(
+          options: arabicOnly,
+          key: 'showStoreName',
+          mode: ReceiptLanguageMode.english,
+          englishFallback: 'Fallback EN',
+          arabicFallback: 'احتياطي',
+        ),
+        'Fallback EN',
+      );
+    });
+
+    test('supports legacy English-only values stored in value', () {
+      final englishOnly = <String, DisplayOption>{
+        'showStoreName': DisplayOption(visible: true, value: 'Legacy Store'),
+      };
+      expect(
+        ReceiptConfigurationContract.label(
+          options: englishOnly,
+          key: 'showStoreName',
+          mode: ReceiptLanguageMode.english,
+          englishFallback: 'Fallback EN',
+          arabicFallback: 'متجر',
+        ),
+        'Legacy Store',
+      );
+    });
+
+    test('keeps renderer fallbacks bilingual when configuration is absent', () {
+      expect(
+        ReceiptConfigurationContract.label(
+          options: const {},
+          key: 'showTax',
+          mode: ReceiptLanguageMode.bilingual,
+          englishFallback: '',
+          arabicFallback: 'الضريبة',
+        ),
+        'الضريبة\nVAT',
+      );
+    });
+  });
+
+  test(
+      'bilingual document text keeps a configured script and adds its counterpart',
+      () {
+    final output = ReceiptConfigurationContract.documentText(
+      'عنوان عربي',
+      ReceiptLanguageMode.bilingual,
+      englishFallback: 'English heading',
+    );
+    expect(output, 'عنوان عربي\nEnglish heading');
+    expect(
+      ReceiptConfigurationContract.documentText(
+        null,
+        ReceiptLanguageMode.bilingual,
+        englishFallback: 'English heading',
+        arabicFallback: 'عنوان عربي',
+      ),
+      'عنوان عربي\nEnglish heading',
+    );
+  });
+
+  test('every registered thermal theme is routed through a contract layout',
+      () {
+    for (final theme in ReceiptLayoutFactory.availableThemes) {
+      final layout = ReceiptLayoutFactory.getLayout(theme);
+      expect(layout.layoutId, theme);
+    }
+    expect(ReceiptLayoutFactory.availableThemes.length, 17);
+  });
+}

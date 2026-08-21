@@ -35,6 +35,7 @@ import 'package:flutter/services.dart';
 import 'font_config.dart';
 import 'printer_utils.dart';
 import 'sections/sections.dart';
+import 'thermal_paper_profile.dart';
 
 // Re-export components for external use
 export 'font_config.dart';
@@ -124,6 +125,41 @@ class ThermalPrinter {
       return;
     }
 
+    // esc_pos_utils_plus has no custom 112 mm PaperSize.  Do not let the
+    // native text path silently downgrade this selection to mm80; use the
+    // raster path, which preserves the real 832-dot receipt width.
+    final paperProfile = ThermalPaperProfile.fromSelection(selectedPaperSize);
+    if (paperProfile.is112mm) {
+      debugPrint(
+          '[ThermalPrinter] 112mm is raster-only; routing away from native ESC/POS text generation.');
+      await printReceiptAsImage(
+        selectedPrinter: selectedPrinter,
+        cartItems: cartItems,
+        formattedTotal: formattedTotal,
+        savedTotal: savedTotal,
+        discountAmount: discountAmount,
+        orderDate: orderDate,
+        orderNumber: orderNumber,
+        isFromLocalStorage: isFromLocalStorage,
+        selectedPaperSize: selectedPaperSize,
+        billDocumentConfig: billDocumentConfig,
+        customerCareNumber: customerCareNumber,
+        customerCareEmail: customerCareEmail,
+        customerName: customerName,
+        customerPhone: customerPhone,
+        customerEmail: customerEmail,
+        customerAddress: customerAddress,
+        orderReturns: orderReturns,
+        customerOldBalance: customerOldBalance,
+        customerCurrentBalance: customerCurrentBalance,
+        paidAmount: paidAmount,
+        orderComment: orderComment,
+        customerAlternatePhone: customerAlternatePhone,
+        paymentMethod: paymentMethod,
+      );
+      return;
+    }
+
     debugPrint(
         "Printer: ${selectedPrinter.deviceName} (${selectedPrinter.typePrinter})");
     debugPrint("Paper size: $selectedPaperSize");
@@ -152,18 +188,8 @@ class ThermalPrinter {
 
       final profile = await CapabilityProfile.load();
 
-      PaperSize paperSize;
-      if (selectedPaperSize == '80mm') {
-        paperSize = PaperSize.mm80;
-      } else if (selectedPaperSize == '58mm') {
-        paperSize = PaperSize.mm58;
-      } else if (selectedPaperSize == '112mm') {
-        paperSize = PaperSize.mm80;
-      } else {
-        paperSize = PaperSize.mm80;
-      }
-
-      final generator = Generator(paperSize, profile);
+      final generator = paperProfile.createGenerator(profile);
+      final paperSize = paperProfile.escPosPaperSize;
       List<int> bytes = [];
 
       // Add Logo at the top if enabled/available
@@ -1473,9 +1499,13 @@ class ThermalPrinter {
       // ========== GENERATE ESC/POS BYTES ==========
       debugPrint("Generating ESC/POS bytes...");
       final profile = await CapabilityProfile.load();
-      final generator = Generator(
-          selectedPaperSize == '58mm' ? PaperSize.mm58 : PaperSize.mm80,
-          profile);
+      final imagePaperProfile =
+          ThermalPaperProfile.fromSelection(selectedPaperSize);
+      if (imagePaperProfile.is112mm) {
+        debugPrint(
+            '[ThermalPrinter] Image path preserving 112mm width at ${imagePaperProfile.rasterWidthPx}px.');
+      }
+      final generator = imagePaperProfile.createGenerator(profile);
       List<int> bytes = [];
 
       // Print images

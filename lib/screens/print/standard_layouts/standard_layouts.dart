@@ -11,6 +11,8 @@ library;
 
 export 'standard_pdf_layout.dart';
 export 'standard_pdf_layout_factory.dart';
+export 'contract_standard_pdf_layout.dart';
+export 'standard_pdf_contract_delegate.dart';
 export 'classic_standard_pdf_layout.dart';
 export 'tax_invoice_standard_pdf_layout.dart';
 export 'detailed_tax_invoice_standard_pdf_layout.dart';

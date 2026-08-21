@@ -22,6 +22,7 @@ import 'package:pos_machine/helpers/amount_helper.dart';
 
 import 'receipt_layout.dart';
 import 'receipt_layout_params.dart';
+import 'contract_receipt_layout.dart';
 import '../thermal/printer_utils.dart';
 import '../thermal/debug_image_saver.dart';
 import '../logo_loader.dart';
@@ -100,6 +101,10 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
 
   @override
   Future<void> printThermal(ReceiptLayoutParams params) async {
+    if (ReceiptContractDelegate.enabled) {
+      await ReceiptContractDelegate.printThermal(params);
+      return;
+    }
     debugPrint("===== MOBILE SHOP TAX INVOICE LAYOUT: THERMAL PRINTING ====");
 
     final context = params.context;
@@ -278,8 +283,7 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
       // ========== GENERATE ESC/POS BYTES ==========
       debugPrint("Generating ESC/POS bytes...");
       final profile = await CapabilityProfile.load();
-      final generator =
-          Generator(params.is58mm ? PaperSize.mm58 : PaperSize.mm80, profile);
+      final generator = params.thermalPaperProfile.createGenerator(profile);
       List<int> bytes = [];
 
       bytes += generator.image(imagePart1);
@@ -335,6 +339,9 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
 
   @override
   Future<pw.Document> buildPdf(ReceiptLayoutParams params) async {
+    if (ReceiptContractDelegate.enabled) {
+      return ReceiptContractDelegate.buildPdf(params);
+    }
     debugPrint(
         "[MobileShopTaxInvoiceReceiptLayout] buildPdf - delegating to StandardPrinter");
     return pw.Document();
@@ -342,6 +349,10 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
 
   @override
   Future<void> printThermalNative(ReceiptLayoutParams params) async {
+    if (ReceiptContractDelegate.enabled) {
+      await ReceiptContractDelegate.printThermalNative(params);
+      return;
+    }
     await printThermal(params);
   }
 
@@ -417,9 +428,8 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
 
       String storeName;
       if (isBilingual) {
-        final arabic = configuredArabic.isNotEmpty
-            ? configuredArabic
-            : fallbackStoreName;
+        final arabic =
+            configuredArabic.isNotEmpty ? configuredArabic : fallbackStoreName;
         final english = configuredEnglish.isNotEmpty
             ? configuredEnglish
             : fallbackStoreName;
@@ -656,8 +666,8 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
     // Customer / العميل :
     final bool showCustomerBlock =
         displayConfig?['showCustomerNameAndPhone']?.visible != false;
-    final bool showCustomerName =
-        showCustomerBlock && displayConfig?['showCustomerName']?.visible != false;
+    final bool showCustomerName = showCustomerBlock &&
+        displayConfig?['showCustomerName']?.visible != false;
     if (showCustomerName &&
         params.customerName != null &&
         params.customerName!.isNotEmpty) {
@@ -678,9 +688,8 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
         displayConfig?.containsKey('showOrderComment') == true
             ? 'showOrderComment'
             : 'showComment';
-    final bool showCustomerPhone =
-        showCustomerBlock &&
-            displayConfig?['showCustomerPhone']?.visible != false;
+    final bool showCustomerPhone = showCustomerBlock &&
+        displayConfig?['showCustomerPhone']?.visible != false;
     final bool showPayment = displayConfig?[paymentConfigKey]?.visible == true;
     final bool showCustomerAddress =
         displayConfig?['showCustomerAddress']?.visible == true;
@@ -1412,15 +1421,15 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
       priceCols.add(col(totalPrice, key: 'showTotal', align: TextAlign.right));
     }
     if (displayConfig?['showTaxHeader']?.visible == true) {
-      priceCols
-          .add(col(itemTaxAmount, key: 'showTaxHeader', align: TextAlign.right));
+      priceCols.add(
+          col(itemTaxAmount, key: 'showTaxHeader', align: TextAlign.right));
     }
     if (displayConfig?['showRate']?.visible == true) {
       priceCols.add(col(unitPrice, key: 'showRate', align: TextAlign.right));
     }
     if (displayConfig?['showRateExcTax']?.visible == true) {
-      priceCols
-          .add(col(unitPriceExTax, key: 'showRateExcTax', align: TextAlign.right));
+      priceCols.add(
+          col(unitPriceExTax, key: 'showRateExcTax', align: TextAlign.right));
     }
     if (displayConfig?['showUnit']?.visible == true) {
       priceCols.add(col(unitName, key: 'showUnit', align: TextAlign.right));
@@ -1534,8 +1543,7 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
 
     double taxableAmount;
     if (params.netExcTax != null) {
-      taxableAmount =
-          double.tryParse(params.netExcTax!) ?? (total - taxAmount);
+      taxableAmount = double.tryParse(params.netExcTax!) ?? (total - taxAmount);
     } else {
       // Prefer exclusive-of-tax base when tax is known.
       taxableAmount = taxAmount > 0 ? (total - taxAmount) : total;
@@ -1962,8 +1970,12 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
     if (!hasCreditNoteConfig)
       rows.add(TextRow(
         isBilingual
-            ? _getBilingualText(arabic: params.returnsSectionHeadingArabic, english: params.returnsSectionHeading)
-            : (isEnglish ? params.returnsSectionHeading : params.returnsSectionHeadingArabic),
+            ? _getBilingualText(
+                arabic: params.returnsSectionHeadingArabic,
+                english: params.returnsSectionHeading)
+            : (isEnglish
+                ? params.returnsSectionHeading
+                : params.returnsSectionHeadingArabic),
         isBold: true,
         scale: 1.1,
       ));
@@ -1973,22 +1985,30 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
     if (hasCreditNoteConfig) {
       final detailsHeading = isBilingual
           ? _getBilingualText(
-              arabic: (retDc?['showCreditNoteOrder']?.value as String?)?.isNotEmpty == true
+              arabic: (retDc?['showCreditNoteOrder']?.value as String?)
+                          ?.isNotEmpty ==
+                      true
                   ? retDc!['showCreditNoteOrder']!.value as String
                   : 'تفاصيل إشعار الائتمان',
-              english: (retDc?['showCreditNoteOrder']?.value as String?)?.isNotEmpty == true
+              english: (retDc?['showCreditNoteOrder']?.value as String?)
+                          ?.isNotEmpty ==
+                      true
                   ? retDc!['showCreditNoteOrder']!.value as String
                   : 'CREDIT NOTE DETAILS')
           : (isEnglish
-              ? (retLabels?.detailsHeading?.isNotEmpty == true ? retLabels!.detailsHeading! : 'CREDIT NOTE DETAILS')
+              ? (retLabels?.detailsHeading?.isNotEmpty == true
+                  ? retLabels!.detailsHeading!
+                  : 'CREDIT NOTE DETAILS')
               : 'تفاصيل إشعار الائتمان');
       rows.add(TextRow(detailsHeading, isBold: true, scale: scale));
       rows.add(SpacingRow(_itemGap));
       if (retLabels?.creditNoteNumber != null) {
         final cnLabelText = retLabels?.creditNoteNumber?.isNotEmpty == true
-            ? retLabels!.creditNoteNumber! : 'Credit Note No:';
+            ? retLabels!.creditNoteNumber!
+            : 'Credit Note No:';
         final cnLabel = isBilingual
-            ? _getBilingualText(arabic: 'رقم إشعار الائتمان:', english: cnLabelText)
+            ? _getBilingualText(
+                arabic: 'رقم إشعار الائتمان:', english: cnLabelText)
             : (isEnglish ? cnLabelText : 'رقم إشعار الائتمان:');
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(cnLabel,
@@ -1999,9 +2019,11 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
       }
       if (retLabels?.creditNoteDate != null) {
         final dateLabelText = retLabels?.creditNoteDate?.isNotEmpty == true
-            ? retLabels!.creditNoteDate! : 'Credit Note Date:';
+            ? retLabels!.creditNoteDate!
+            : 'Credit Note Date:';
         final dateLabel = isBilingual
-            ? _getBilingualText(arabic: 'تاريخ إشعار الائتمان:', english: dateLabelText)
+            ? _getBilingualText(
+                arabic: 'تاريخ إشعار الائتمان:', english: dateLabelText)
             : (isEnglish ? dateLabelText : 'تاريخ إشعار الائتمان:');
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(dateLabel,
@@ -2016,8 +2038,12 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
     // — Customer Details section —
     if (params.customerName != null && params.customerName!.trim().isNotEmpty) {
       final custHeading = isBilingual
-          ? _getBilingualText(arabic: retLabels?.customerHeading ?? 'تفاصيل العميل', english: retLabels?.customerHeading ?? 'CUSTOMER DETAILS')
-          : (isEnglish ? (retLabels?.customerHeading ?? 'CUSTOMER DETAILS') : (retLabels?.customerHeading ?? 'تفاصيل العميل'));
+          ? _getBilingualText(
+              arabic: retLabels?.customerHeading ?? 'تفاصيل العميل',
+              english: retLabels?.customerHeading ?? 'CUSTOMER DETAILS')
+          : (isEnglish
+              ? (retLabels?.customerHeading ?? 'CUSTOMER DETAILS')
+              : (retLabels?.customerHeading ?? 'تفاصيل العميل'));
       rows.add(TextRow(custHeading, isBold: true, scale: scale));
       rows.add(SpacingRow(_itemGap));
       final custNameLabel = isBilingual
@@ -2029,7 +2055,8 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
         ReceiptTableColumn(params.customerName!,
             weight: 0.55, align: TextAlign.left, scale: scale),
       ]));
-      if (params.customerPhone != null && params.customerPhone!.trim().isNotEmpty) {
+      if (params.customerPhone != null &&
+          params.customerPhone!.trim().isNotEmpty) {
         final phoneLabel = isBilingual
             ? _getBilingualText(arabic: 'الهاتف:', english: 'Phone:')
             : (isEnglish ? 'Phone:' : 'الهاتف:');
@@ -2040,9 +2067,11 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
               weight: 0.55, align: TextAlign.left, scale: scale),
         ]));
       }
-      if (params.customerAddress != null && params.customerAddress!.trim().isNotEmpty) {
+      if (params.customerAddress != null &&
+          params.customerAddress!.trim().isNotEmpty) {
         final addrLabel = isBilingual
-            ? _getBilingualText(arabic: 'عنوان الفاتورة:', english: 'Billing Address:')
+            ? _getBilingualText(
+                arabic: 'عنوان الفاتورة:', english: 'Billing Address:')
             : (isEnglish ? 'Billing Address:' : 'عنوان الفاتورة:');
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(addrLabel,
@@ -2376,11 +2405,13 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
 
     // Return items count
     if (displayConfig?['showReturnItemsCount']?.visible == true) {
-      final bool useCreditNoteItemsCount = retLabels?.creditNoteItemsCount != null;
+      final bool useCreditNoteItemsCount =
+          retLabels?.creditNoteItemsCount != null;
       final countLabel = useCreditNoteItemsCount
           ? (isBilingual
               ? _getInlineBilingualText(
-                  arabic: 'عناصر إشعار الائتمان:', english: 'Credit Note Items:')
+                  arabic: 'عناصر إشعار الائتمان:',
+                  english: 'Credit Note Items:')
               : (isEnglish ? 'Credit Note Items:' : 'عناصر إشعار الائتمان:'))
           : (isBilingual
               ? _getInlineBilingualText(
@@ -2420,7 +2451,8 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
       final List<BoxedLineItem> returnSummaryItems = [];
 
       if (showReturnTotalAmt) {
-        final bool useCreditNoteTotalAmount = retLabels?.creditNoteTotalAmount != null;
+        final bool useCreditNoteTotalAmount =
+            retLabels?.creditNoteTotalAmount != null;
         final label = useCreditNoteTotalAmount
             ? _getModeLabel(
                 displayConfig: displayConfig,
@@ -2485,10 +2517,10 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
       rows.add(BoxedTotalsRow(items: returnSummaryItems));
 
       if (hasCreditNoteConfig) {
-        final arabicText = AmountHelper()
-            .convertNumberToWords(returnRateTotal, currency: currency, language: 'ar');
-        final englishText = AmountHelper()
-            .convertNumberToWords(returnRateTotal, currency: currency, language: 'en');
+        final arabicText = AmountHelper().convertNumberToWords(returnRateTotal,
+            currency: currency, language: 'ar');
+        final englishText = AmountHelper().convertNumberToWords(returnRateTotal,
+            currency: currency, language: 'en');
         rows.add(SpacingRow(_itemGap));
         rows.add(TextRow('Amount in Words:', isBold: true, scale: 0.9));
         rows.add(TextRow(englishText, isBold: false, scale: 0.85));

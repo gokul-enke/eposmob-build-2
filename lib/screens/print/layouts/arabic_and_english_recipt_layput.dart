@@ -26,6 +26,7 @@ import 'package:pos_machine/helpers/amount_helper.dart';
 
 import 'receipt_layout.dart';
 import 'receipt_layout_params.dart';
+import 'contract_receipt_layout.dart';
 import '../logo_loader.dart';
 import 'package:pos_machine/screens/print/thermal/debug_image_saver.dart';
 // import 'thermal/printer_utils.dart';
@@ -58,6 +59,10 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
 
   @override
   Future<void> printThermal(ReceiptLayoutParams params) async {
+    if (ReceiptContractDelegate.enabled) {
+      await ReceiptContractDelegate.printThermal(params);
+      return;
+    }
     debugPrint("===== ARABIC AND ENGLISH LAYOUT: THERMAL PRINTING ====");
 
     final context = params.context;
@@ -197,8 +202,7 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
       // ========== GENERATE ESC/POS BYTES ==========
       debugPrint("Generating ESC/POS bytes...");
       final profile = await CapabilityProfile.load();
-      final generator =
-          Generator(params.is58mm ? PaperSize.mm58 : PaperSize.mm80, profile);
+      final generator = params.thermalPaperProfile.createGenerator(profile);
       List<int> bytes = [];
 
       bytes += generator.image(imagePart1);
@@ -254,6 +258,9 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
 
   @override
   Future<pw.Document> buildPdf(ReceiptLayoutParams params) async {
+    if (ReceiptContractDelegate.enabled) {
+      return ReceiptContractDelegate.buildPdf(params);
+    }
     debugPrint(
         "[ArabicAndEnglishReceiptLayout] buildPdf - delegating to StandardPrinter");
     return pw.Document();
@@ -261,6 +268,10 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
 
   @override
   Future<void> printThermalNative(ReceiptLayoutParams params) async {
+    if (ReceiptContractDelegate.enabled) {
+      await ReceiptContractDelegate.printThermalNative(params);
+      return;
+    }
     await printThermal(params);
   }
 

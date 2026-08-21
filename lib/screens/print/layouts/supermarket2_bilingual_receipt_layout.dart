@@ -22,6 +22,7 @@ import 'package:pos_machine/helpers/amount_helper.dart';
 
 import 'receipt_layout.dart';
 import 'receipt_layout_params.dart';
+import 'contract_receipt_layout.dart';
 import '../logo_loader.dart';
 import 'package:pos_machine/screens/print/thermal/debug_image_saver.dart';
 import 'supermarket2_receipt_layout.dart' hide TextRow, ReceiptTableRow;
@@ -45,7 +46,6 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
 
   @override
   String get displayName => 'Supermarket 2 Bilingual';
-
 
   String _normalizedDocumentLanguage(ReceiptLayoutParams params) {
     final raw = (((kDebugMode ? _debugLanguageOverride : null) ??
@@ -76,7 +76,6 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
     return _normalizedDocumentLanguage(params) == 'EN';
   }
 
-
   String _getModeLabel({
     required Map<String, DisplayOption>? displayConfig,
     required String key,
@@ -92,8 +91,9 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
     final configuredArabic =
         option?.value is String ? (option!.value as String).trim() : '';
     final rawEnglish = option?.defaultValue?.trim() ?? '';
-    final configuredEnglish =
-        rawEnglish.startsWith('EN ') ? rawEnglish.substring(3).trim() : rawEnglish;
+    final configuredEnglish = rawEnglish.startsWith('EN ')
+        ? rawEnglish.substring(3).trim()
+        : rawEnglish;
     final arabicText = configuredArabic.isNotEmpty
         ? configuredArabic
         : (resolvedArabic?.trim().isNotEmpty == true
@@ -137,8 +137,9 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
     final configuredArabic =
         option?.value is String ? (option!.value as String).trim() : '';
     final rawEnglish = option?.defaultValue?.trim() ?? '';
-    final configuredEnglish =
-        rawEnglish.startsWith('EN ') ? rawEnglish.substring(3).trim() : rawEnglish;
+    final configuredEnglish = rawEnglish.startsWith('EN ')
+        ? rawEnglish.substring(3).trim()
+        : rawEnglish;
     final arabicText = configuredArabic.isNotEmpty
         ? configuredArabic
         : (resolvedArabic?.trim().isNotEmpty == true
@@ -177,7 +178,6 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
         .join('\n');
   }
 
-
   String _formatInvoiceIdentifier(String prefix, String number) {
     final trimmedPrefix = prefix.trim();
     final needsTightJoin = trimmedPrefix.endsWith('-') ||
@@ -205,7 +205,8 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
       final fi = await codec.getNextFrame();
       return fi.image;
     } catch (e) {
-      debugPrint("[Supermarket2BilingualReceiptLayout] Error loading asset image: $e");
+      debugPrint(
+          "[Supermarket2BilingualReceiptLayout] Error loading asset image: $e");
     }
     return null;
   }
@@ -265,6 +266,10 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
 
   @override
   Future<void> printThermal(ReceiptLayoutParams params) async {
+    if (ReceiptContractDelegate.enabled) {
+      await ReceiptContractDelegate.printThermal(params);
+      return;
+    }
     debugPrint("===== supermarket 2 BILINGUAL LAYOUT: THERMAL PRINTING ====");
 
     final context = params.context;
@@ -333,31 +338,34 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
       }
 
       // ========== HEADER SECTION ==========
-      _buildHeaderSection(part1Rows, params, displayConfig, appSettings, isEnglish, isBilingual);
+      _buildHeaderSection(part1Rows, params, displayConfig, appSettings,
+          isEnglish, isBilingual);
 
       // ========== CUSTOMER SECTION ==========
-      _buildCustomerSection(part1Rows, params, displayConfig, isEnglish, isBilingual);
+      _buildCustomerSection(
+          part1Rows, params, displayConfig, isEnglish, isBilingual);
 
       // ========== CART ITEMS SECTION ==========
       if (!params.isReturnOnly) {
-        _buildCartItemsSection(part1Rows, params, displayConfig, isEnglish, isBilingual);
+        _buildCartItemsSection(
+            part1Rows, params, displayConfig, isEnglish, isBilingual);
       }
 
       // ========== TOTALS SECTION ==========
       if (!params.isReturnOnly) {
-        _buildTotalsSection(part1Rows, params, displayConfig, isEnglish, isBilingual,
-            sarSymbol, appSettings?.currency ?? 'INR');
+        _buildTotalsSection(part1Rows, params, displayConfig, isEnglish,
+            isBilingual, sarSymbol, appSettings?.currency ?? 'INR');
       }
 
       // ========== RETURN ITEMS SECTION ==========
       if (params.orderReturns != null &&
           params.orderReturns!.returnItems != null &&
           params.orderReturns!.returnItems!.isNotEmpty) {
-        _buildReturnSection(part1Rows, params, displayConfig, isEnglish, isBilingual,
-            sarSymbol, appSettings?.currency ?? 'INR');
+        _buildReturnSection(part1Rows, params, displayConfig, isEnglish,
+            isBilingual, sarSymbol, appSettings?.currency ?? 'INR');
         if (!params.isReturnOnly) {
-          _buildFinalSummarySection(part1Rows, params, displayConfig, isEnglish, isBilingual,
-              sarSymbol, appSettings?.currency ?? 'INR');
+          _buildFinalSummarySection(part1Rows, params, displayConfig, isEnglish,
+              isBilingual, sarSymbol, appSettings?.currency ?? 'INR');
         }
       }
 
@@ -408,8 +416,7 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
       // ========== GENERATE ESC/POS BYTES ==========
       debugPrint("Generating ESC/POS bytes...");
       final profile = await CapabilityProfile.load();
-      final generator =
-          Generator(params.is58mm ? PaperSize.mm58 : PaperSize.mm80, profile);
+      final generator = params.thermalPaperProfile.createGenerator(profile);
       List<int> bytes = [];
 
       bytes += generator.image(receiptImage);
@@ -462,12 +469,20 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
 
   @override
   Future<pw.Document> buildPdf(ReceiptLayoutParams params) async {
-    debugPrint("[Supermarket2BilingualReceiptLayout] buildPdf - delegating to StandardPrinter");
+    if (ReceiptContractDelegate.enabled) {
+      return ReceiptContractDelegate.buildPdf(params);
+    }
+    debugPrint(
+        "[Supermarket2BilingualReceiptLayout] buildPdf - delegating to StandardPrinter");
     return pw.Document();
   }
 
   @override
   Future<void> printThermalNative(ReceiptLayoutParams params) async {
+    if (ReceiptContractDelegate.enabled) {
+      await ReceiptContractDelegate.printThermalNative(params);
+      return;
+    }
     await printThermal(params);
   }
 
@@ -1330,7 +1345,8 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
         ]));
       }
       if (isBilingual || productNameArabic.isEmpty) {
-        final englishText = (displayConfig?['showSLNumber']?.visible == true && productNameArabic.isEmpty)
+        final englishText = (displayConfig?['showSLNumber']?.visible == true &&
+                productNameArabic.isEmpty)
             ? '$slNumber. $productName'
             : productName;
         rows.add(ReceiptTableRow([
@@ -1414,25 +1430,35 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
     final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;
 
     final subtotalParts = _getModeLabelParts(
-      displayConfig: displayConfig, key: 'showSubTotal',
-      english: 'NET TOTAL (Exc Tax)', arabic: 'المجموع',
+      displayConfig: displayConfig,
+      key: 'showSubTotal',
+      english: 'NET TOTAL (Exc Tax)',
+      arabic: 'المجموع',
     );
     final discountParts = _getModeLabelParts(
-      displayConfig: displayConfig, key: 'showDiscount',
-      english: 'DISCOUNTS', arabic: 'الخصم',
+      displayConfig: displayConfig,
+      key: 'showDiscount',
+      english: 'DISCOUNTS',
+      arabic: 'الخصم',
     );
     final vatParts = _getModeLabelParts(
-      displayConfig: displayConfig, key: 'showTax',
+      displayConfig: displayConfig,
+      key: 'showTax',
       resolvedArabic: resolvedLabels?.tax,
-      english: 'VAT', arabic: 'الضريبة',
+      english: 'VAT',
+      arabic: 'الضريبة',
     );
     final grandTotalParts = _getModeLabelParts(
-      displayConfig: displayConfig, key: 'showNetAmount',
-      english: 'GRAND TOTAL', arabic: 'المبلغ الاجمالي',
+      displayConfig: displayConfig,
+      key: 'showNetAmount',
+      english: 'GRAND TOTAL',
+      arabic: 'المبلغ الاجمالي',
     );
     final cashParts = _getModeLabelParts(
-      displayConfig: displayConfig, key: 'showCash',
-      english: 'Cash', arabic: 'نقدي',
+      displayConfig: displayConfig,
+      key: 'showCash',
+      english: 'Cash',
+      arabic: 'نقدي',
     );
 
     final totalsScale = 0.85;
@@ -1442,30 +1468,46 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
 
       if (showMRPTotal) {
         biItems.add(_BilingualBoxedLineItem(
-          englishLabel: subtotalParts.english, arabicLabel: subtotalParts.arabic,
-          value: subtotal.toStringAsFixed(2), isBold: true, scale: 0.75,
-          icon: currencyIcon, currencySymbol: currencySymbol,
+          englishLabel: subtotalParts.english,
+          arabicLabel: subtotalParts.arabic,
+          value: subtotal.toStringAsFixed(2),
+          isBold: true,
+          scale: 0.75,
+          icon: currencyIcon,
+          currencySymbol: currencySymbol,
         ));
       }
       if (showDiscount && discountAmountValue != 0) {
         biItems.add(_BilingualBoxedLineItem(
-          englishLabel: discountParts.english, arabicLabel: discountParts.arabic,
-          value: discountAmountValue.toStringAsFixed(2), isBold: true, scale: 0.75,
-          icon: currencyIcon, currencySymbol: currencySymbol,
+          englishLabel: discountParts.english,
+          arabicLabel: discountParts.arabic,
+          value: discountAmountValue.toStringAsFixed(2),
+          isBold: true,
+          scale: 0.75,
+          icon: currencyIcon,
+          currencySymbol: currencySymbol,
         ));
       }
       if (showTax) {
         biItems.add(_BilingualBoxedLineItem(
-          englishLabel: vatParts.english, arabicLabel: vatParts.arabic,
-          value: taxAmount.toStringAsFixed(2), isBold: true, scale: 0.75,
-          icon: currencyIcon, currencySymbol: currencySymbol,
+          englishLabel: vatParts.english,
+          arabicLabel: vatParts.arabic,
+          value: taxAmount.toStringAsFixed(2),
+          isBold: true,
+          scale: 0.75,
+          icon: currencyIcon,
+          currencySymbol: currencySymbol,
         ));
       }
       if (showNetAmount) {
         biItems.add(_BilingualBoxedLineItem(
-          englishLabel: grandTotalParts.english, arabicLabel: grandTotalParts.arabic,
-          value: total.toStringAsFixed(2), isBold: true, scale: 0.9,
-          icon: currencyIcon, currencySymbol: currencySymbol,
+          englishLabel: grandTotalParts.english,
+          arabicLabel: grandTotalParts.arabic,
+          value: total.toStringAsFixed(2),
+          isBold: true,
+          scale: 0.9,
+          icon: currencyIcon,
+          currencySymbol: currencySymbol,
         ));
       }
 
@@ -1475,24 +1517,36 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
         biItems.add(_BilingualBoxedLineItem(isSeparator: true));
 
         bool isMultiPayment = false;
-        if (params.paymentBreakdown != null && params.paymentBreakdown!.isNotEmpty) {
+        if (params.paymentBreakdown != null &&
+            params.paymentBreakdown!.isNotEmpty) {
           isMultiPayment = true;
           params.paymentBreakdown!.forEach((method, amount) {
             double amt = double.tryParse(amount.toString()) ?? 0.0;
             if (amt > 0) {
               String enLabel = method, arLabel = method;
-              if (method == 'CASH') { enLabel = 'Cash'; arLabel = 'نقدي'; }
-              else if (method == 'CARD') { enLabel = 'Card'; arLabel = 'بطاقة'; }
+              if (method == 'CASH') {
+                enLabel = 'Cash';
+                arLabel = 'نقدي';
+              } else if (method == 'CARD') {
+                enLabel = 'Card';
+                arLabel = 'بطاقة';
+              }
               biItems.add(_BilingualBoxedLineItem(
-                englishLabel: enLabel, arabicLabel: arLabel,
-                value: amt.toStringAsFixed(2), isBold: true, scale: totalsScale,
-                icon: currencyIcon, currencySymbol: currencySymbol,
+                englishLabel: enLabel,
+                arabicLabel: arLabel,
+                value: amt.toStringAsFixed(2),
+                isBold: true,
+                scale: totalsScale,
+                icon: currencyIcon,
+                currencySymbol: currencySymbol,
               ));
             }
           });
-        } else if (params.paymentMethod != null && params.paymentMethod!.startsWith('{')) {
+        } else if (params.paymentMethod != null &&
+            params.paymentMethod!.startsWith('{')) {
           try {
-            final Map<String, dynamic> paymentData = json.decode(params.paymentMethod!);
+            final Map<String, dynamic> paymentData =
+                json.decode(params.paymentMethod!);
             if (paymentData['isMultiPayment'] == true) {
               isMultiPayment = true;
               final Map<String, dynamic> amounts = paymentData['amounts'];
@@ -1500,12 +1554,21 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
                 double amt = double.tryParse(amount.toString()) ?? 0.0;
                 if (amt > 0) {
                   String enLabel = method, arLabel = method;
-                  if (method == 'CASH') { enLabel = 'Cash'; arLabel = 'نقدي'; }
-                  else if (method == 'CARD') { enLabel = 'Card'; arLabel = 'بطاقة'; }
+                  if (method == 'CASH') {
+                    enLabel = 'Cash';
+                    arLabel = 'نقدي';
+                  } else if (method == 'CARD') {
+                    enLabel = 'Card';
+                    arLabel = 'بطاقة';
+                  }
                   biItems.add(_BilingualBoxedLineItem(
-                    englishLabel: enLabel, arabicLabel: arLabel,
-                    value: amt.toStringAsFixed(2), isBold: true, scale: totalsScale,
-                    icon: currencyIcon, currencySymbol: currencySymbol,
+                    englishLabel: enLabel,
+                    arabicLabel: arLabel,
+                    value: amt.toStringAsFixed(2),
+                    isBold: true,
+                    scale: totalsScale,
+                    icon: currencyIcon,
+                    currencySymbol: currencySymbol,
                   ));
                 }
               });
@@ -1518,51 +1581,75 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
         if (!isMultiPayment) {
           String enLabel = cashParts.english;
           String arLabel = cashParts.arabic;
-          if (params.paymentMethod != null && params.paymentMethod!.isNotEmpty &&
+          if (params.paymentMethod != null &&
+              params.paymentMethod!.isNotEmpty &&
               params.paymentMethod != 'CASH') {
             enLabel = params.paymentMethod!;
             arLabel = params.paymentMethod!;
           }
           biItems.add(_BilingualBoxedLineItem(
-            englishLabel: enLabel, arabicLabel: arLabel,
-            value: params.paidAmount!.toStringAsFixed(2), isBold: true, scale: totalsScale,
-            icon: currencyIcon, currencySymbol: currencySymbol,
+            englishLabel: enLabel,
+            arabicLabel: arLabel,
+            value: params.paidAmount!.toStringAsFixed(2),
+            isBold: true,
+            scale: totalsScale,
+            icon: currencyIcon,
+            currencySymbol: currencySymbol,
           ));
         }
       }
 
       rows.add(_BilingualBoxedTotalsRow(items: biItems));
     } else {
-      final subtotalLabel = isEnglish ? subtotalParts.english : subtotalParts.arabic;
-      final discountLabel = isEnglish ? discountParts.english : discountParts.arabic;
+      final subtotalLabel =
+          isEnglish ? subtotalParts.english : subtotalParts.arabic;
+      final discountLabel =
+          isEnglish ? discountParts.english : discountParts.arabic;
       final vatLabel = isEnglish ? vatParts.english : vatParts.arabic;
-      final grandTotalLabel = isEnglish ? grandTotalParts.english : grandTotalParts.arabic;
+      final grandTotalLabel =
+          isEnglish ? grandTotalParts.english : grandTotalParts.arabic;
       final cashLabel = isEnglish ? cashParts.english : cashParts.arabic;
 
       List<StandardBoxedLineItem> boxedItems = [];
 
       if (showMRPTotal) {
         boxedItems.add(StandardBoxedLineItem(
-          label: subtotalLabel, value: subtotal.toStringAsFixed(2),
-          isBold: true, scale: 0.75, icon: currencyIcon, currencySymbol: currencySymbol,
+          label: subtotalLabel,
+          value: subtotal.toStringAsFixed(2),
+          isBold: true,
+          scale: 0.75,
+          icon: currencyIcon,
+          currencySymbol: currencySymbol,
         ));
       }
       if (showDiscount && discountAmountValue != 0) {
         boxedItems.add(StandardBoxedLineItem(
-          label: discountLabel, value: discountAmountValue.toStringAsFixed(2),
-          isBold: true, scale: 0.75, icon: currencyIcon, currencySymbol: currencySymbol,
+          label: discountLabel,
+          value: discountAmountValue.toStringAsFixed(2),
+          isBold: true,
+          scale: 0.75,
+          icon: currencyIcon,
+          currencySymbol: currencySymbol,
         ));
       }
       if (showTax) {
         boxedItems.add(StandardBoxedLineItem(
-          label: vatLabel, value: taxAmount.toStringAsFixed(2),
-          isBold: true, scale: 0.75, icon: currencyIcon, currencySymbol: currencySymbol,
+          label: vatLabel,
+          value: taxAmount.toStringAsFixed(2),
+          isBold: true,
+          scale: 0.75,
+          icon: currencyIcon,
+          currencySymbol: currencySymbol,
         ));
       }
       if (showNetAmount) {
         boxedItems.add(StandardBoxedLineItem(
-          label: grandTotalLabel, value: total.toStringAsFixed(2),
-          isBold: true, scale: 0.9, icon: currencyIcon, currencySymbol: currencySymbol,
+          label: grandTotalLabel,
+          value: total.toStringAsFixed(2),
+          isBold: true,
+          scale: 0.9,
+          icon: currencyIcon,
+          currencySymbol: currencySymbol,
         ));
       }
 
@@ -1572,28 +1659,40 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
         boxedItems.add(StandardBoxedLineItem(isSeparator: true));
         bool isMultiPayment = false;
 
-        if (params.paymentBreakdown != null && params.paymentBreakdown!.isNotEmpty) {
+        if (params.paymentBreakdown != null &&
+            params.paymentBreakdown!.isNotEmpty) {
           isMultiPayment = true;
           params.paymentBreakdown!.forEach((method, amount) {
             double amt = double.tryParse(amount.toString()) ?? 0.0;
             if (amt > 0) {
               boxedItems.add(StandardBoxedLineItem(
-                label: method, value: amt.toStringAsFixed(2),
-                isBold: true, scale: totalsScale, icon: currencyIcon, currencySymbol: currencySymbol,
+                label: method,
+                value: amt.toStringAsFixed(2),
+                isBold: true,
+                scale: totalsScale,
+                icon: currencyIcon,
+                currencySymbol: currencySymbol,
               ));
             }
           });
-        } else if (params.paymentMethod != null && params.paymentMethod!.startsWith('{')) {
+        } else if (params.paymentMethod != null &&
+            params.paymentMethod!.startsWith('{')) {
           try {
-            final Map<String, dynamic> paymentData = json.decode(params.paymentMethod!);
+            final Map<String, dynamic> paymentData =
+                json.decode(params.paymentMethod!);
             if (paymentData['isMultiPayment'] == true) {
               isMultiPayment = true;
-              (paymentData['amounts'] as Map<String, dynamic>).forEach((method, amount) {
+              (paymentData['amounts'] as Map<String, dynamic>)
+                  .forEach((method, amount) {
                 double amt = double.tryParse(amount.toString()) ?? 0.0;
                 if (amt > 0) {
                   boxedItems.add(StandardBoxedLineItem(
-                    label: method, value: amt.toStringAsFixed(2),
-                    isBold: true, scale: totalsScale, icon: currencyIcon, currencySymbol: currencySymbol,
+                    label: method,
+                    value: amt.toStringAsFixed(2),
+                    isBold: true,
+                    scale: totalsScale,
+                    icon: currencyIcon,
+                    currencySymbol: currencySymbol,
                   ));
                 }
               });
@@ -1605,13 +1704,18 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
 
         if (!isMultiPayment) {
           String label = cashLabel;
-          if (params.paymentMethod != null && params.paymentMethod!.isNotEmpty &&
+          if (params.paymentMethod != null &&
+              params.paymentMethod!.isNotEmpty &&
               params.paymentMethod != 'CASH') {
             label = params.paymentMethod!;
           }
           boxedItems.add(StandardBoxedLineItem(
-            label: label, value: params.paidAmount!.toStringAsFixed(2),
-            isBold: true, scale: totalsScale, icon: currencyIcon, currencySymbol: currencySymbol,
+            label: label,
+            value: params.paidAmount!.toStringAsFixed(2),
+            isBold: true,
+            scale: totalsScale,
+            icon: currencyIcon,
+            currencySymbol: currencySymbol,
           ));
         }
       }
@@ -1970,7 +2074,8 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
       final invoicePrefix = _getModeLabel(
         displayConfig: displayConfig,
         key: prefixKey,
-        resolvedEnglish: displayConfig?['showInvoicePrefix']?.value ?? params.billDocumentConfig.numberPrefix,
+        resolvedEnglish: displayConfig?['showInvoicePrefix']?.value ??
+            params.billDocumentConfig.numberPrefix,
         isEnglish: isEnglish,
         isBilingual: isBilingual,
         english: 'INV NO:',
@@ -2046,7 +2151,8 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
           try {
             deliveryIcon = await _fetchNetworkUiImage(iconUrl);
           } catch (e) {
-            debugPrint('[Supermarket2BilingualLayout] Error loading delivery icon: $e');
+            debugPrint(
+                '[Supermarket2BilingualLayout] Error loading delivery icon: $e');
           }
         }
       }
@@ -2109,7 +2215,11 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
     rows.add(SpacingRow(_itemGap));
 
     if (!hasCreditNoteConfig) {
-      final returnTitle = isEnglish ? params.returnsSectionHeading : (isBilingual ? '${params.returnsSectionHeadingArabic}\n${params.returnsSectionHeading}' : params.returnsSectionHeadingArabic);
+      final returnTitle = isEnglish
+          ? params.returnsSectionHeading
+          : (isBilingual
+              ? '${params.returnsSectionHeadingArabic}\n${params.returnsSectionHeading}'
+              : params.returnsSectionHeadingArabic);
       rows.add(TextRow(returnTitle, isBold: true, scale: 1.1));
     }
     rows.add(SpacingRow(_itemGap));
@@ -2118,22 +2228,30 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
     if (hasCreditNoteConfig) {
       final detailsHeading = isBilingual
           ? _getBilingualText(
-              arabic: (retDc?['showCreditNoteOrder']?.value as String?)?.isNotEmpty == true
+              arabic: (retDc?['showCreditNoteOrder']?.value as String?)
+                          ?.isNotEmpty ==
+                      true
                   ? retDc!['showCreditNoteOrder']!.value as String
                   : 'تفاصيل إشعار الائتمان',
-              english: (retDc?['showCreditNoteOrder']?.value as String?)?.isNotEmpty == true
+              english: (retDc?['showCreditNoteOrder']?.value as String?)
+                          ?.isNotEmpty ==
+                      true
                   ? retDc!['showCreditNoteOrder']!.value as String
                   : 'CREDIT NOTE DETAILS')
           : (isEnglish
-              ? (retLabels?.detailsHeading?.isNotEmpty == true ? retLabels!.detailsHeading! : 'CREDIT NOTE DETAILS')
+              ? (retLabels?.detailsHeading?.isNotEmpty == true
+                  ? retLabels!.detailsHeading!
+                  : 'CREDIT NOTE DETAILS')
               : 'تفاصيل إشعار الائتمان');
       rows.add(TextRow(detailsHeading, isBold: true, scale: scale));
       rows.add(SpacingRow(_itemGap));
       if (retLabels?.creditNoteNumber != null) {
         final cnLabelText = retLabels?.creditNoteNumber?.isNotEmpty == true
-            ? retLabels!.creditNoteNumber! : 'Credit Note No:';
+            ? retLabels!.creditNoteNumber!
+            : 'Credit Note No:';
         final cnLabel = isBilingual
-            ? _getBilingualText(arabic: 'رقم إشعار الائتمان:', english: cnLabelText)
+            ? _getBilingualText(
+                arabic: 'رقم إشعار الائتمان:', english: cnLabelText)
             : (isEnglish ? cnLabelText : 'رقم إشعار الائتمان:');
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(cnLabel,
@@ -2144,9 +2262,11 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
       }
       if (retLabels?.creditNoteDate != null) {
         final dateLabelText = retLabels?.creditNoteDate?.isNotEmpty == true
-            ? retLabels!.creditNoteDate! : 'Credit Note Date:';
+            ? retLabels!.creditNoteDate!
+            : 'Credit Note Date:';
         final dateLabel = isBilingual
-            ? _getBilingualText(arabic: 'تاريخ إشعار الائتمان:', english: dateLabelText)
+            ? _getBilingualText(
+                arabic: 'تاريخ إشعار الائتمان:', english: dateLabelText)
             : (isEnglish ? dateLabelText : 'تاريخ إشعار الائتمان:');
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(dateLabel,
@@ -2161,8 +2281,12 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
     // — Customer Details section —
     if (params.customerName != null && params.customerName!.trim().isNotEmpty) {
       final custHeading = isBilingual
-          ? _getBilingualText(arabic: retLabels?.customerHeading ?? 'تفاصيل العميل', english: retLabels?.customerHeading ?? 'CUSTOMER DETAILS')
-          : (isEnglish ? (retLabels?.customerHeading ?? 'CUSTOMER DETAILS') : (retLabels?.customerHeading ?? 'تفاصيل العميل'));
+          ? _getBilingualText(
+              arabic: retLabels?.customerHeading ?? 'تفاصيل العميل',
+              english: retLabels?.customerHeading ?? 'CUSTOMER DETAILS')
+          : (isEnglish
+              ? (retLabels?.customerHeading ?? 'CUSTOMER DETAILS')
+              : (retLabels?.customerHeading ?? 'تفاصيل العميل'));
       rows.add(TextRow(custHeading, isBold: true, scale: scale));
       rows.add(SpacingRow(_itemGap));
       final custNameLabel = isBilingual
@@ -2174,7 +2298,8 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
         ReceiptTableColumn(params.customerName!,
             weight: 0.55, align: TextAlign.left, scale: scale),
       ]));
-      if (params.customerPhone != null && params.customerPhone!.trim().isNotEmpty) {
+      if (params.customerPhone != null &&
+          params.customerPhone!.trim().isNotEmpty) {
         final phoneLabel = isBilingual
             ? _getBilingualText(arabic: 'الهاتف:', english: 'Phone:')
             : (isEnglish ? 'Phone:' : 'الهاتف:');
@@ -2185,9 +2310,11 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
               weight: 0.55, align: TextAlign.left, scale: scale),
         ]));
       }
-      if (params.customerAddress != null && params.customerAddress!.trim().isNotEmpty) {
+      if (params.customerAddress != null &&
+          params.customerAddress!.trim().isNotEmpty) {
         final addrLabel = isBilingual
-            ? _getBilingualText(arabic: 'عنوان الفاتورة:', english: 'Billing Address:')
+            ? _getBilingualText(
+                arabic: 'عنوان الفاتورة:', english: 'Billing Address:')
             : (isEnglish ? 'Billing Address:' : 'عنوان الفاتورة:');
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(addrLabel,
@@ -2371,8 +2498,11 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
       final double itemTotal = itemQty * itemRate;
       if (showParticulars || showSl) {
         rows.add(ReceiptTableRow([
-          ReceiptTableColumn(showSl ? '${i + 1}. $returnItemName' : returnItemName,
-              weight: 1.0, align: TextAlign.left, scale: scale)
+          ReceiptTableColumn(
+              showSl ? '${i + 1}. $returnItemName' : returnItemName,
+              weight: 1.0,
+              align: TextAlign.left,
+              scale: scale)
         ]));
       }
       final double dw = (weights['sl'] ?? 0) + (weights['particulars'] ?? 0);
@@ -2407,7 +2537,8 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
     rows.add(SpacingRow(_itemGap));
 
     if (displayConfig?['showReturnItemsCount']?.visible == true) {
-      final bool useCreditNoteItemsCount = retLabels?.creditNoteItemsCount != null;
+      final bool useCreditNoteItemsCount =
+          retLabels?.creditNoteItemsCount != null;
       final countLabel = useCreditNoteItemsCount
           ? _getModeLabel(
               displayConfig: displayConfig,
@@ -2447,7 +2578,8 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
           double.tryParse(orderReturns.returnTotalAmount ?? '0') ?? 0.0;
       final List<StandardBoxedLineItem> returnSummaryItems = [];
       if (showReturnTotalAmt) {
-        final bool useCreditNoteTotalAmount = retLabels?.creditNoteTotalAmount != null;
+        final bool useCreditNoteTotalAmount =
+            retLabels?.creditNoteTotalAmount != null;
         returnSummaryItems.add(StandardBoxedLineItem(
             label: useCreditNoteTotalAmount
                 ? _getModeLabel(
@@ -2498,10 +2630,10 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
       rows.add(StandardBoxedTotalsRow(items: returnSummaryItems));
 
       if (hasCreditNoteConfig) {
-        final arabicText = AmountHelper()
-            .convertNumberToWords(returnRateTotal, currency: currency, language: 'ar');
-        final englishText = AmountHelper()
-            .convertNumberToWords(returnRateTotal, currency: currency, language: 'en');
+        final arabicText = AmountHelper().convertNumberToWords(returnRateTotal,
+            currency: currency, language: 'ar');
+        final englishText = AmountHelper().convertNumberToWords(returnRateTotal,
+            currency: currency, language: 'en');
         rows.add(SpacingRow(_itemGap));
         rows.add(TextRow('Amount in Words:', isBold: true, scale: 0.9));
         rows.add(TextRow(englishText, isBold: false, scale: 0.85));
@@ -2714,7 +2846,8 @@ class _BilingualBoxedTotalsRow extends ReceiptRow {
     // Top dotted line
     double currentX = 0;
     while (currentX < width) {
-      canvas.drawLine(Offset(currentX, y), Offset(currentX + dashWidth, y), paint);
+      canvas.drawLine(
+          Offset(currentX, y), Offset(currentX + dashWidth, y), paint);
       currentX += dashWidth + dashSpace;
     }
 
@@ -2722,7 +2855,8 @@ class _BilingualBoxedTotalsRow extends ReceiptRow {
     currentX = 0;
     double bottomY = y + calculateHeight(width, fontSize, textDirection);
     while (currentX < width) {
-      canvas.drawLine(Offset(currentX, bottomY), Offset(currentX + dashWidth, bottomY), paint);
+      canvas.drawLine(Offset(currentX, bottomY),
+          Offset(currentX + dashWidth, bottomY), paint);
       currentX += dashWidth + dashSpace;
     }
 
@@ -2730,11 +2864,14 @@ class _BilingualBoxedTotalsRow extends ReceiptRow {
 
     for (var item in items) {
       if (item.isSeparator) {
-        final sepPaint = Paint()..color = Colors.black..strokeWidth = 1.5;
+        final sepPaint = Paint()
+          ..color = Colors.black
+          ..strokeWidth = 1.5;
         double sx = padding;
         double endX = width - padding;
         while (sx < endX) {
-          canvas.drawLine(Offset(sx, currentY + 6), Offset(sx + dashWidth, currentY + 6), sepPaint);
+          canvas.drawLine(Offset(sx, currentY + 6),
+              Offset(sx + dashWidth, currentY + 6), sepPaint);
           sx += dashWidth + dashSpace;
         }
         currentY += 12;
@@ -2742,8 +2879,15 @@ class _BilingualBoxedTotalsRow extends ReceiptRow {
         final itemFontSize = fontSize * item.scale;
 
         // English label on the left (LTR)
-        _drawScaledText(canvas, item.englishLabel, Offset(padding, currentY),
-            width * 0.35 - padding, itemFontSize, item.isBold, TextAlign.left, TextDirection.ltr);
+        _drawScaledText(
+            canvas,
+            item.englishLabel,
+            Offset(padding, currentY),
+            width * 0.35 - padding,
+            itemFontSize,
+            item.isBold,
+            TextAlign.left,
+            TextDirection.ltr);
 
         // Value + currency in the center
         double centerX = width * 0.35;
@@ -2754,52 +2898,93 @@ class _BilingualBoxedTotalsRow extends ReceiptRow {
           final valuePainter = TextPainter(
             text: TextSpan(
               text: item.value,
-              style: TextStyle(color: Colors.black, fontSize: itemFontSize, fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal, fontFamily: ArabicPrinterHelper.fontFamily),
+              style: TextStyle(
+                  color: Colors.black,
+                  fontSize: itemFontSize,
+                  fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal,
+                  fontFamily: ArabicPrinterHelper.fontFamily),
             ),
             textDirection: TextDirection.ltr,
           )..layout();
           final totalValueWidth = iconSize + 4 + valuePainter.width;
           final valueStartX = centerX + (centerWidth - totalValueWidth) / 2;
 
-          final src = Rect.fromLTWH(0, 0, item.icon!.width.toDouble(), item.icon!.height.toDouble());
-          final dst = Rect.fromLTWH(valueStartX, currentY + (itemFontSize - iconSize) / 2 + (itemFontSize * 0.08), iconSize, iconSize);
+          final src = Rect.fromLTWH(
+              0, 0, item.icon!.width.toDouble(), item.icon!.height.toDouble());
+          final dst = Rect.fromLTWH(
+              valueStartX,
+              currentY + (itemFontSize - iconSize) / 2 + (itemFontSize * 0.08),
+              iconSize,
+              iconSize);
           canvas.drawImageRect(item.icon!, src, dst, Paint());
-          valuePainter.paint(canvas, Offset(valueStartX + iconSize + 4, currentY));
-        } else if (item.currencySymbol != null && item.currencySymbol!.isNotEmpty) {
+          valuePainter.paint(
+              canvas, Offset(valueStartX + iconSize + 4, currentY));
+        } else if (item.currencySymbol != null &&
+            item.currencySymbol!.isNotEmpty) {
           final symbolPainter = TextPainter(
             text: TextSpan(
               text: item.currencySymbol!,
-              style: TextStyle(color: Colors.black, fontSize: itemFontSize, fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal, fontFamily: ArabicPrinterHelper.fontFamily),
+              style: TextStyle(
+                  color: Colors.black,
+                  fontSize: itemFontSize,
+                  fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal,
+                  fontFamily: ArabicPrinterHelper.fontFamily),
             ),
             textDirection: TextDirection.ltr,
           )..layout();
           final valuePainter = TextPainter(
             text: TextSpan(
               text: item.value,
-              style: TextStyle(color: Colors.black, fontSize: itemFontSize, fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal, fontFamily: ArabicPrinterHelper.fontFamily),
+              style: TextStyle(
+                  color: Colors.black,
+                  fontSize: itemFontSize,
+                  fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal,
+                  fontFamily: ArabicPrinterHelper.fontFamily),
             ),
             textDirection: TextDirection.ltr,
           )..layout();
           final totalValueWidth = symbolPainter.width + 4 + valuePainter.width;
           final valueStartX = centerX + (centerWidth - totalValueWidth) / 2;
           symbolPainter.paint(canvas, Offset(valueStartX, currentY));
-          valuePainter.paint(canvas, Offset(valueStartX + symbolPainter.width + 4, currentY));
+          valuePainter.paint(
+              canvas, Offset(valueStartX + symbolPainter.width + 4, currentY));
         } else {
-          _drawScaledText(canvas, item.value, Offset(centerX + centerWidth / 2, currentY),
-              centerWidth, itemFontSize, item.isBold, TextAlign.center, TextDirection.ltr);
+          _drawScaledText(
+              canvas,
+              item.value,
+              Offset(centerX + centerWidth / 2, currentY),
+              centerWidth,
+              itemFontSize,
+              item.isBold,
+              TextAlign.center,
+              TextDirection.ltr);
         }
 
         // Arabic label on the right (RTL)
-        _drawScaledText(canvas, item.arabicLabel, Offset(width - padding, currentY),
-            width * 0.35 - padding, itemFontSize, item.isBold, TextAlign.right, TextDirection.rtl);
+        _drawScaledText(
+            canvas,
+            item.arabicLabel,
+            Offset(width - padding, currentY),
+            width * 0.35 - padding,
+            itemFontSize,
+            item.isBold,
+            TextAlign.right,
+            TextDirection.rtl);
 
         currentY += itemFontSize + 2;
       }
     }
   }
 
-  void _drawScaledText(Canvas canvas, String text, Offset offset, double maxWidth,
-      double fontSize, bool isBold, TextAlign align, TextDirection textDirection) {
+  void _drawScaledText(
+      Canvas canvas,
+      String text,
+      Offset offset,
+      double maxWidth,
+      double fontSize,
+      bool isBold,
+      TextAlign align,
+      TextDirection textDirection) {
     double currentFontSize = fontSize;
     const double minFontSize = 8.0;
 
@@ -2835,16 +3020,21 @@ class _BilingualBoxedTotalsRow extends ReceiptRow {
       text: TextSpan(
         text: text,
         style: TextStyle(
-          color: Colors.black, fontSize: minFontSize,
+          color: Colors.black,
+          fontSize: minFontSize,
           fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
           fontFamily: ArabicPrinterHelper.fontFamily,
         ),
       ),
-      textDirection: textDirection, textAlign: align, maxLines: 1, ellipsis: '...',
+      textDirection: textDirection,
+      textAlign: align,
+      maxLines: 1,
+      ellipsis: '...',
     )..layout(maxWidth: maxWidth);
 
     double x = offset.dx;
-    if (align == TextAlign.right) x -= painter.width;
+    if (align == TextAlign.right)
+      x -= painter.width;
     else if (align == TextAlign.center) x -= painter.width / 2;
     painter.paint(canvas, Offset(x, offset.dy));
   }

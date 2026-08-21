@@ -19,6 +19,7 @@ import 'package:pos_machine/resources/localization_service.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 import 'package:pos_machine/screens/print/logo_loader.dart';
 import 'package:pos_machine/screens/print/standard_layouts/standard_pdf_layout.dart';
+import 'package:pos_machine/screens/print/standard_layouts/standard_pdf_contract_delegate.dart';
 import 'package:pos_machine/services/development_printer_service.dart';
 import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:provider/provider.dart';
@@ -39,6 +40,13 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
 
   @override
   Future<void> generateAndPrintPdf(ReceiptLayoutParams params) async {
+    if (StandardPdfContractDelegate.enabled) {
+      return StandardPdfContractDelegate.generateAndPrintPdf(
+        params,
+        layoutId: layoutId,
+        displayName: displayName,
+      );
+    }
     try {
       final doc = await buildPdfDocument(params);
       final pdfBytes = await doc.save();
@@ -112,6 +120,13 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
 
   @override
   Future<pw.Document> buildPdfDocument(ReceiptLayoutParams params) async {
+    if (StandardPdfContractDelegate.enabled) {
+      return StandardPdfContractDelegate.buildPdfDocument(
+        params,
+        layoutId: layoutId,
+        displayName: displayName,
+      );
+    }
     final pdf = pw.Document();
 
     // Load fonts
