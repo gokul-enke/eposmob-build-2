@@ -7,10 +7,10 @@ required, and a prompt that can be reused for the next module.
 ## Current checkpoint
 
 - Total planned modules: **28**, numbered `00` through `27`.
-- Completed and evidence-recorded: **Modules 00–17**.
-- Module 18 (Sales) is the next branch to start from the verified Module 17
-  evidence commit.
-- Remaining after Module 17: Modules `18–27`.
+- Completed and evidence-recorded: **Modules 00–18**.
+- Module 19 (Accounting) is the next branch to start from the verified Module
+  18 evidence commit.
+- Remaining after Module 18: Modules `19–27`.
 - The canonical branch is `gokul-dev`; numbered migration branches are stacked
   work branches and can be merged/cherry-picked into `gokul-dev` later.
 - The detailed branch/SHA ledger remains
@@ -75,6 +75,7 @@ were merely moved or because a focused widget test happens to pass.
 | 15 | Fulfillment — delivery-method values, context, repository/cache/provider; Billing still owns selection/charge/checkout/order behavior. | `codex/feature-architecture-15-fulfillment` / `a20568ca` | Focused 82; full 1,305; guard 494 / 0 / 15; 2 export-only shims, 0 deletions. |
 | 16 | Payments — bank and gateway directories plus Pine Labs terminal lifecycle; Billing owns checkout/payment validation and Accounting owns persisted outcomes. | `codex/feature-architecture-16-payments` / `888df54b` | Focused 9; selected downstream 26; architecture guard 13; full 1,314; guard 494 / 0 / 16; 7 export-only shims, 0 deletions. |
 | 17 | Purchasing — purchase/order/item/voucher values, repository/controller state, app-owned complete workflow presentation, and reset/store lifecycle. | `codex/feature-architecture-17-purchasing` / `9fea3efc` | Focused 9 + composition 1; selected gate 32; architecture guard 13; full 1,324; guard 486 / 0 / 17; 2 export-only shims, 8 relocated screen implementations. |
+| 18 | Sales — sales orders, returns, quotations, edit-order, confirmed orders, daily close, typed resources, and lifecycle-safe controller; complete screens/providers remain app-owned behind a bridge. | `codex/feature-architecture-18-sales` / `628d3e14` | Implementation `cf75f742`; combined Sales/composition/registry/App Destination gate 15; architecture guard 13; full 1,331; guard 486 / 0 / 18; 29 export-only shims. |
 
 For each completed module, read its feature `README.md`, `FEATURE_SPEC.md`,
 `TODO.md`, and `CHANGELOG.md`; those files contain the exact compatibility
@@ -85,7 +86,6 @@ for navigation only; the architecture ledger contains full SHAs.
 
 | # | Module | Ownership focus | Important boundary |
 |---:|---|---|---|
-| 18 | Sales | Sales, returns, edit-order, quotation/order/daily-close state. | Billing creates checkout inputs; Accounting/Printing/Reports consume projections. |
 | 19 | Accounting | Transactions, invoices, receipts, vouchers, expenses, company accounts. | Do not absorb Sales checkout or Printing templates. |
 | 20 | Reports | Report pages/provider/DTO projections. | Reports are read-only consumers; do not become owners of source state. |
 | 21 | Printing and Documents | Printer settings, document configuration, print/PDF/barcode output. | Keep source business state in owning modules; preserve user-owned printer changes. |
@@ -167,6 +167,34 @@ for navigation only; the architecture ledger contains full SHAs.
   removing the two exports. Detailed behavior and path inventories are in
   `docs/features/purchasing/` and the ledger evidence record.
 
+### Module 18 — Sales
+
+- Base: Module 17 evidence `9fea3efc`.
+- Implementation: `cf75f7428edde0f4c1529d342828eb6f7137801a`; evidence:
+  `628d3e14` (`docs: record sales migration evidence`).
+- Boundary: strict `features/sales` owns typed Sales context/query/resource
+  values, dynamic endpoint resolution, injected repository transport,
+  per-resource controller state, and typed destination wrappers. Billing owns
+  checkout/cart policy; Accounting owns posted financial outcomes; Printing,
+  Reports, Communications, and Sync remain later consumers/coordinators.
+- Presentation: complete Sales, Sales Return, Edit Order, quotation, and
+  daily-close implementations moved under `lib/app/` behind
+  `LegacySalesPresentationBridge`; runtime classes and slots 2, 11, 49, 50,
+  51, 54, 78, 79, 84, 87, 88, and 92 remain unchanged.
+- Verification: combined Sales/controller/composition/registry/App
+  Destination gate 15/15; architecture guard test 13/13; full Flutter suite
+  1,331/1,331; guard 486 legacy / 0 exceptions / 18 strict; scoped strict/app
+  analyzer clean; formatter and diff checks clean except expected line-ending
+  notices.
+- Compatibility: exactly 29 old Sales/Sales Return/Edit Order screen/widget
+  and provider locations remain export-only shims. Behavior-complete sources
+  live under `lib/app/`; mixed Sales models remain transitional.
+- Known debt: backend authorization and tenant/store relationship scoping,
+  order/return idempotency and reversal, quotation conversion atomicity,
+  daily-close accounting outcomes, Billing cart ports, Accounting persistence,
+  Printing/Reports projections, and Module 27 scheduling. Details and exact
+  paths are in `docs/features/sales/` and the ledger evidence record.
+
 ## How to continue on a future module
 
 1. Read this checklist, the latest handoff, and the latest ledger row.
@@ -226,39 +254,39 @@ registrant changes as unrelated when applicable, update the ledger/handoff and
 feature docs with exact SHAs/counts, and create no later-module branch.
 ```
 
-### Next concrete prompt (Module 18)
+### Next concrete prompt (Module 19)
 
 ```text
 Continue the ENKE POS feature-architecture migration in D:\Projects\ENKE\eposmob.
 
-Work on exactly Module 18 — Sales, in a new worktree/branch:
-  codex/feature-architecture-18-sales
-Base it on the verified Module 17 evidence commit:
-  9fea3efc (full SHA: resolve `git rev-parse
-  codex/feature-architecture-17-purchasing`).
-Verify that the base contains implementation 5cf6f86a and the Purchasing
-evidence docs before editing.
+Work on exactly Module 19 — Accounting, in a new worktree/branch:
+  codex/feature-architecture-19-accounting
+Base it on the verified Module 18 evidence commit:
+  628d3e14 (full SHA: resolve `git rev-parse
+  codex/feature-architecture-18-sales`).
+Verify that the base contains implementation cf75f742 and the Sales evidence
+docs before editing.
 
 Read the checklist, FEATURE_ARCHITECTURE_HANDOFF.md, MIGRATION_LEDGER.md,
-FEATURE_ARCHITECTURE.md, the Module 17 Purchasing docs, and the Sales source
+FEATURE_ARCHITECTURE.md, the Module 18 Sales docs, and the Accounting source
 tree first. Audit ownership, consumers, backend routes, parser/payload shapes,
-tenant/store/customer scoping, cache/session/reset races, registry slots, and
-tests before changing code.
+tenant/company/store scoping, financial mutation/idempotency behavior,
+cache/session/reset races, registry slots, and tests before changing code.
 
-Sales owns sales orders, returns, quotations, edit-order, and daily-close
-values/state and their workflow presentation. Consume Product, Customer,
-Supplier, Purchasing, Inventory, Payments, Promotions, and Fulfillment only
-through public roots or app-owned bridges. Do not absorb Billing cart/checkout,
-Accounting posted records/vouchers, Printing output, Communications sharing,
-Restaurant/KOT, or Sync scheduling. Preserve runtime widget names and numeric
-destination slots. Add strict domain/data/application/presentation seams only
-where an actual contract exists; do not invent a backend API.
+Accounting owns transactions, invoices, receipts, vouchers, expenses, and
+company-account state. Consume Sales, Purchasing, Customers, Suppliers,
+Payments, Promotions, Fulfillment, and Organization only through public roots
+or app-owned bridges. Do not absorb Billing cart/checkout policy, Printing
+output, Reports projections, Communications sharing, Restaurant/KOT workflow,
+or Sync scheduling. Preserve runtime widget names and numeric destination
+slots. Add strict seams only where an actual contract exists; do not invent a
+backend API.
 
 Run focused/downstream tests, strict analyzer, formatter, architecture guard
-against 9fea3efc, diff check, and the complete `flutter test --no-pub` suite.
+against 628d3e14, diff check, and the complete `flutter test --no-pub` suite.
 Create one implementation commit and one evidence/docs commit. Update the
-ledger, handoff, and docs/features/sales files with exact SHAs/counts and leave
-no migration-owned changes uncommitted. Do not start Module 19.
+ledger, handoff, and docs/features/accounting files with exact SHAs/counts and
+leave no migration-owned changes uncommitted. Do not start Module 20.
 ```
 
 ## Stop/merge instruction
