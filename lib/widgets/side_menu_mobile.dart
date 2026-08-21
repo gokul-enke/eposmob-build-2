@@ -436,12 +436,21 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               ),
             if (hasPurchase)
               Obx(
-                () => _MobileDrawerTile(
+                () => _MobileDrawerExpandableTile(
                   icon: Icons.shopping_bag_rounded,
                   title: 'nav.purchase'.tr,
-                  onTap: () => navigate(81),
                   selected:
-                      [81, 82, 36].contains(sideBarController.index.value),
+                      [81, 82, 36, 99, 100].contains(sideBarController.index.value),
+                  subItems: [
+                    _MobileDrawerSubItem(
+                      title: 'nav.purchase_orders'.tr,
+                      onTap: () => navigate(81),
+                    ),
+                    _MobileDrawerSubItem(
+                      title: 'nav.purchase_returns'.tr,
+                      onTap: () => navigate(99),
+                    ),
+                  ],
                 ),
               ),
           ],

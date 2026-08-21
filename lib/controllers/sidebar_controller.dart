@@ -35,6 +35,8 @@ import 'package:pos_machine/screens/purchase/purchase_voucher.dart';
 import 'package:pos_machine/screens/purchase/widgets/add_purchase.dart';
 import 'package:pos_machine/screens/profile/open_profile.dart';
 import 'package:pos_machine/screens/purchase/widgets/view_purchase.dart';
+import 'package:pos_machine/screens/purchase_return/purchase_return_list.dart';
+import 'package:pos_machine/screens/purchase_return/create_purchase_return.dart';
 import 'package:pos_machine/screens/purchase/widgets/view_voucher.dart';
 import 'package:pos_machine/screens/reports/account_book/account_book.dart';
 import 'package:pos_machine/screens/reports/customer_transactions_reports/customer_tranctions_reports .dart';
@@ -228,5 +230,7 @@ class SideBarController extends GetxController {
       storeMode: true,
     ), // 97 Store Billing Page (restaurant UI, summary-only order panel)
     StockReportScreen(), // 98 Stock Report Screen
+    PurchaseReturnListScreen(), // 99 Purchase Return List
+    CreatePurchaseReturnScreen(), // 100 Create Purchase Return
   ];
 }

@@ -33,7 +33,6 @@ class _MoveStockModalState extends State<MoveStockModal> {
   final TextEditingController qtyController = TextEditingController();
 
   GetStoreModelData? selectedDestinationStore;
-  String selectedUser = 'Super Admin';
 
   @override
   void initState() {
@@ -221,47 +220,6 @@ class _MoveStockModalState extends State<MoveStockModal> {
                       decoration: const InputDecoration(
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Row 5: Created by
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'stock.move_created_by_label'.tr,
-                    style: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s14,
-                      0.27,
-                      Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  BuildBoxShadowContainer(
-                    circleRadius: 7,
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(horizontal: 15),
-                    height: 45,
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        isExpanded: true,
-                        value: selectedUser,
-                        items: [
-                          DropdownMenuItem<String>(
-                            value: 'Super Admin',
-                            child: Text('stock.move_super_admin'.tr),
-                          ),
-                        ],
-                        onChanged: (newValue) {
-                          setState(() {
-                            selectedUser = newValue!;
-                          });
-                        },
                       ),
                     ),
                   ),
