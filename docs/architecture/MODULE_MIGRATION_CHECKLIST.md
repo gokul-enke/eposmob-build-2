@@ -7,7 +7,7 @@ required, and a prompt that can be reused for the next module.
 ## Current checkpoint
 
 - Total planned modules: **28**, numbered `00` through `27`.
-- Completed and evidence-recorded: **Modules 00–25**.
+- Completed and evidence-recorded: **Modules 00–26**.
 - Module 20 (Reports) is complete on
   `codex/feature-architecture-20-reports`: implementation
   `fd6c33003ad931c222abcc0b177e079b69b300c9`, evidence
@@ -29,7 +29,11 @@ required, and a prompt that can be reused for the next module.
   `codex/feature-architecture-25-kiosk`: implementation
   `c0b2f2af8c7579e486228dc6f6efe0ac1b3e6740`, evidence
   `fbf5d46fe1dfdadf989a78dc61c3670937f94f78`.
-- Remaining after Module 25: Modules `26–27` (2 modules).
+- Module 26 (Dashboard) is complete on
+  `codex/feature-architecture-26-dashboard`: implementation
+  `6a4b514ce8653da5649ed3b96ce8f93c395edabc`, evidence
+  `f35fc5c6f4f34301e3712f60c880d19ad572cc15`.
+- Remaining after Module 26: Module `27` (1 module).
 - The canonical branch is `gokul-dev`; numbered migration branches are stacked
   work branches and can be merged/cherry-picked into `gokul-dev` later.
 - The detailed branch/SHA ledger remains
@@ -102,6 +106,7 @@ were merely moved or because a focused widget test happens to pass.
 | 23 | Restaurant and KOT — table/menu/order-selection values, table transport/provider state, typed Restaurant order context, and app-owned complete Restaurant/Kitchen/modifier workflows. | `codex/feature-architecture-23-restaurant` / `895ec417` | Base `6f602222`; implementation `45c519ed`; evidence `895ec417`; focused Restaurant/registry/app-smoke gate 13; full 1,362; guard 486 / 0 / 23; exactly 9 export-only shims and no deleted legacy paths. |
 | 24 | Billing — strict cart/context/totals/checkout contracts and runtime shells, with the complete 93-file Billing implementation relocated behind an app-owned compatibility bridge. | `codex/feature-architecture-24-billing` / `e99f5886` | Base `895ec417`; implementation `7e11d20e`; evidence `e99f5886`; strict contract 4; Billing compatibility 108; Product downstream 30; registry/guard 21; full 1,367; guard 486 / 0 / 24; app legacy tree and typed-port debt recorded in Billing docs. |
 | 25 | Kiosk — strict runtime-backed page wrappers for the Kiosk landing/order/checkout/legal surfaces, with the complete seven-file implementation relocated behind an app-owned bridge. | `codex/feature-architecture-25-kiosk` / `fbf5d46f` | Base `e99f5886`; implementation `c0b2f2af`; evidence `fbf5d46f`; Kiosk/composition contract 3; combined Kiosk/widget/guard gate 17; full 1,370; guard 479 / 0 / 25; zero shims, seven obsolete paths removed, no new navigation/backend contract. |
+| 26 | Dashboard — strict public destination/DTO/runtime boundary with app-owned role-specific screens and provider bridge; source analytics and Sync remain outside. | `codex/feature-architecture-26-dashboard` / `f35fc5c6` | Base `fbf5d46f`; implementation `6a4b514c`; evidence `f35fc5c6`; Dashboard strict/composition 4; registry/App Destination 8; full 1,374; guard 471 / 0 / 26; 3 export-only shims, 8 legacy screen/widget relocations, slot 1 preserved. |
 
 For each completed module, read its feature `README.md`, `FEATURE_SPEC.md`,
 `TODO.md`, and `CHANGELOG.md`; those files contain the exact compatibility
@@ -118,8 +123,8 @@ for navigation only; the architecture ledger contains full SHAs.
 | 23 | Restaurant and KOT | Restaurant billing UI, tables/menu/order/KOT state. | Complete; Billing consumes the typed Restaurant order-context seam; generic checkout/cart remains Billing-owned. |
 | 24 | Billing | Billing screens, cart, checkout, non-restaurant flows, cart/local compatibility. | Complete; strict contracts and app-owned compatibility bridge are recorded in the Module 24 evidence. |
 | 25 | Kiosk | Kiosk screens and actions. | Complete; app-owned legacy behavior is behind strict wrappers, with no new destination or backend contract. |
-| 26 | Dashboard | Dashboard pages/provider/models. | Next; read projections from owning features and do not duplicate operational repositories. |
-| 27 | Offline and Realtime Sync | Sync/realtime providers, offline controls, scheduling/cursors. | Publish typed deltas or app adapters; never bypass strict feature cache/session authority. |
+| 26 | Dashboard | Dashboard pages/provider/models. | Complete; read projections remain app-owned until source features publish typed contracts. |
+| 27 | Offline and Realtime Sync | Sync/realtime providers, offline controls, scheduling/cursors. | Next; publish typed deltas or app adapters; never bypass strict feature cache/session authority. |
 
 ## Recent completion details
 
@@ -425,6 +430,36 @@ for navigation only; the architecture ledger contains full SHAs.
   platform/accessibility, responsive, and legal-copy coverage. Full details are
   in `docs/features/kiosk/` and the ledger evidence.
 
+### Module 26 — Dashboard
+
+- Base: Module 25 Kiosk evidence `fbf5d46fe1dfdadf989a78dc61c3670937f94f78`.
+- Implementation: `6a4b514ce8653da5649ed3b96ce8f93c395edabc`; evidence:
+  `f35fc5c6f4f34301e3712f60c880d19ad572cc15` (`docs: record dashboard
+  migration evidence`).
+- Boundary: strict Dashboard publishes the public destination, DTO/parser
+  models, runtime bridge, and `DashboardScreen` wrapper. Role-specific screens,
+  responsive helpers, and the current provider are app-owned under
+  `lib/app/dashboard/legacy/`.
+- Preserved elsewhere: Product, Inventory, Customers, Suppliers, Sales,
+  Accounting, Reports, Billing, Subscription, Organization, Identity, and Sync
+  remain the owners of their records, operational repositories, caches, and
+  schedulers. Dashboard does not invent a backend analytics contract.
+- Compatibility: exactly three implementation-free shims remain at
+  `lib/models/dashboard.dart`, `lib/models/dashboard_api.dart`, and
+  `lib/providers/dashboard_provider.dart`; eight old Dashboard screen/widget
+  paths were relocated to the app-owned tree and removed from the legacy
+  baseline. Registry slot `1` and the `DashboardScreen` runtime type are
+  unchanged.
+- Verification: Dashboard strict/composition contract 4/4; registry/App
+  Destination gate 8/8; complete Flutter suite 1,374/1,374; guard 471 legacy /
+  0 exceptions / 26 strict; strict Dashboard analyzer clean; app-owned
+  relocated UI retains inherited info/warning lint debt.
+- Known debt: verify deployed endpoint/envelope/auth/tenant/store/permission
+  semantics; replace dynamic maps with typed source projections; remove
+  inherited response logging; add role/session/store lifecycle and responsive/
+  accessibility coverage; then remove the three shims. Full details are in
+  `docs/features/dashboard/` and the ledger evidence.
+
 ## How to continue on a future module
 
 1. Read this checklist, the latest handoff, and the latest ledger row.
@@ -450,15 +485,15 @@ for navigation only; the architecture ledger contains full SHAs.
 
 ## Reusable future-agent prompt
 
-### Immediate next prompt — Module 26 Dashboard
+### Immediate next prompt — Module 27 Offline and Realtime Sync
 
 ```text
 Continue the ENKE POS feature-architecture migration in D:\Projects\ENKE\eposmob.
 
 Work on exactly one module:
-- Module 26 — Dashboard
-- Branch: codex/feature-architecture-26-dashboard
-- Base: fbf5d46fe1dfdadf989a78dc61c3670937f94f78 (the verified Module 25 evidence commit)
+- Module 27 — Offline and Realtime Sync
+- Branch: codex/feature-architecture-27-sync
+- Base: f35fc5c6f4f34301e3712f60c880d19ad572cc15 (the verified Module 26 evidence commit)
 
 Before editing, verify the branch/base and read:
 - docs/architecture/MODULE_MIGRATION_CHECKLIST.md
@@ -468,35 +503,38 @@ Before editing, verify the branch/base and read:
 - tool/architecture/strict_features.txt
 - tool/architecture/legacy_paths.txt
 - tool/architecture/cross_feature_exceptions.txt
-- docs/features/kiosk/{README,FEATURE_SPEC,TODO,CHANGELOG}.md
+- docs/features/dashboard/{README,FEATURE_SPEC,TODO,CHANGELOG}.md
 
-Audit every Dashboard screen/provider/model, runtime destination and caller,
-permission/session/store context, chart/query route, cache and persistence,
-responsive behavior, backend route/parser, all consumers, and current tests.
-Decide which values are Dashboard-owned read projections and which remain with
-Reports, Sales, Accounting, Customers, Suppliers, Billing, Inventory,
-Subscription, Organization, or Identity. Do not invent an analytics backend
-contract when the deployed route or envelope is unverified.
+Audit every offline/realtime provider, sync endpoint, preference/Hive key,
+bootstrap/store-switch/logout path, scheduler, timer, queue, subscription,
+retry/conflict rule, cache cursor, auth/tenant/store boundary, and current
+consumer/test. Identify which state is a Sync-owned transport concern and
+which remains with Product, Categories, Inventory, Customers, Suppliers,
+Sales, Purchasing, Accounting, Restaurant, Billing, Communications, Dashboard,
+Organization, or Identity. Do not invent a sync/backend contract when the
+deployed route or envelope is unverified.
 
 Consume public roots or narrow app-owned bridges. Keep operational source state,
-mutation/cache authority, Product/Inventory/Billing repositories, Reports
-source models, and Offline/Realtime scheduling with their owners. Do not make
-Dashboard a second repository for any source feature.
+mutation/cache authority, Product/Inventory/Billing repositories, source
+models, and Dashboard projections with their owners. Sync may coordinate
+transport and invalidation, but must not become a second repository or cache
+writer for another feature.
 
-Implement one public `features/dashboard` root only when the audit proves a
-Dashboard-owned boundary. Keep domain pure, inject data/application state from
-app composition, preserve runtime names/destination slots/payload quirks,
-delete only zero-consumer paths, and use implementation-free shims for
-remaining consumers. Record uncertain backend/security/platform behavior as
-explicit debt rather than silently changing it.
+Implement one public `features/realtime_sync` (or the audited feature name)
+root only when the audit proves a Sync-owned boundary. Keep domain pure, inject
+transport/scheduler state from app composition, preserve preference/Hive keys
+and reset ordering, delete only zero-consumer paths, and use implementation-
+free shims for remaining consumers. Record uncertain backend/security/platform
+behavior as explicit debt rather than silently changing it.
 
-Add focused success/failure/malformed/session/store-reset/late-completion and
-owned-widget/platform tests proportional to the audited surface. Run formatter,
-scoped analyzer, focused and downstream tests, architecture guard plus guard
-tests, `git diff --check`, and the full `flutter test --no-pub` suite. Stage and
-audit tracked and untracked files, commit implementation first, then a
-separate docs/evidence commit. Update the ledger/handoff/checklist with full
-SHAs and exact counts. Do not start Module 27 in the same branch.
+Add focused success/failure/malformed/session/store-reset/store-switch,
+late-completion, queue/retry/conflict, and scheduler tests proportional to the
+audited surface. Run formatter, scoped analyzer, focused and downstream tests,
+architecture guard plus guard tests, `git diff --check`, and the full
+`flutter test --no-pub` suite. Stage and audit tracked and untracked files,
+commit implementation first, then a separate docs/evidence commit. Update the
+ledger/handoff/checklist with full SHAs and exact counts. Module 27 is the final
+numbered module; do not broaden scope into post-migration cleanup.
 ```
 
 ```text
