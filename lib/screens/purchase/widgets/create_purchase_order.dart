@@ -31,6 +31,8 @@ import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/screens/purchase/helpers/purchase_order_totals.dart';
+import 'package:pos_machine/screens/purchase/helpers/purchase_order_error_helpers.dart';
+import 'package:pos_machine/screens/purchase/helpers/purchase_order_item_helpers.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:provider/provider.dart';
@@ -947,14 +949,29 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
           final item = orderItems[i];
           if (item.productData?.productId == newProductId &&
               item.productVariantId == newVariantId &&
-              item.barcode == newBarcode) {
+              item.barcode == newBarcode &&
+              purchaseOrderPurchaseUnitsMatch(
+                currentItem.selectedPurchaseUnit,
+                currentItem.purchaseConversionRate,
+                item.selectedPurchaseUnit,
+                item.purchaseConversionRate,
+              )) {
             return i;
           }
         }
         return null;
       }
 
-      if (_editingItemIndex != null && _editingItemIndex! < orderItems.length) {
+      if (_isReceiveMode) {
+        // Receive rows carry server-side purchase_item_ids. Editing must
+        // replace the selected row in place so that its ID remains attached,
+        // while adding a new row must never merge with another receive row.
+        if (_editingItemIndex != null && _editingItemIndex! < orderItems.length) {
+          orderItems[_editingItemIndex!] = currentItem;
+        } else {
+          orderItems.add(currentItem);
+        }
+      } else if (_editingItemIndex != null && _editingItemIndex! < orderItems.length) {
         // Edit Flow: check if the edited item now matches another row
         final matchIdx = findMatchingItemIndex(skipIndex: _editingItemIndex);
         if (matchIdx != null) {
@@ -991,10 +1008,6 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
           // No match, just update the edited item at index
           orderItems[_editingItemIndex!] = currentItem;
         }
-      } else if (_isReceiveMode) {
-        // Receive mode: rows carry server-side purchase_item_ids and must
-        // remain separate — never merge duplicates.
-        orderItems.add(currentItem);
       } else {
         // Add Flow: check if the new item matches an existing row
         final matchIdx = findMatchingItemIndex();
@@ -1872,11 +1885,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         // Only disable payment if the 422 specifically indicates the PO is
         // already fully paid. Other 422 errors (validation, etc.) should show
         // the error but leave payment inputs functional.
-        final errorsMap = result?['errors'];
-        final bool isFullyPaidError = (errorMessage != null &&
-                (errorMessage.toLowerCase().contains('already fully paid') ||
-                    errorMessage.toLowerCase().contains('fully paid'))) ||
-            (errorsMap is Map && errorsMap.containsKey('paid_amounts'));
+        final bool isFullyPaidError =
+            isAlreadyFullyPaidPurchaseOrderError(result, errorMessage);
 
         if (mounted && isFullyPaidError) {
           setState(() {
