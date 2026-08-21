@@ -7,10 +7,10 @@ required, and a prompt that can be reused for the next module.
 ## Current checkpoint
 
 - Total planned modules: **28**, numbered `00` through `27`.
-- Completed and evidence-recorded: **Modules 00–18**.
-- Module 19 (Accounting) is the next branch to start from the verified Module
-  18 evidence commit.
-- Remaining after Module 18: Modules `19–27`.
+- Completed and evidence-recorded: **Modules 00–19**.
+- Module 20 (Reports) is the next branch to start from the verified Module 19
+  evidence commit `fdd2a3821abb1897d99d98e6adb25f76cc590ea5`.
+- Remaining after Module 19: Modules `20–27` (8 modules).
 - The canonical branch is `gokul-dev`; numbered migration branches are stacked
   work branches and can be merged/cherry-picked into `gokul-dev` later.
 - The detailed branch/SHA ledger remains
@@ -76,6 +76,7 @@ were merely moved or because a focused widget test happens to pass.
 | 16 | Payments — bank and gateway directories plus Pine Labs terminal lifecycle; Billing owns checkout/payment validation and Accounting owns persisted outcomes. | `codex/feature-architecture-16-payments` / `888df54b` | Focused 9; selected downstream 26; architecture guard 13; full 1,314; guard 494 / 0 / 16; 7 export-only shims, 0 deletions. |
 | 17 | Purchasing — purchase/order/item/voucher values, repository/controller state, app-owned complete workflow presentation, and reset/store lifecycle. | `codex/feature-architecture-17-purchasing` / `9fea3efc` | Focused 9 + composition 1; selected gate 32; architecture guard 13; full 1,324; guard 486 / 0 / 17; 2 export-only shims, 8 relocated screen implementations. |
 | 18 | Sales — sales orders, returns, quotations, edit-order, confirmed orders, daily close, typed resources, and lifecycle-safe controller; complete screens/providers remain app-owned behind a bridge. | `codex/feature-architecture-18-sales` / `628d3e14` | Implementation `cf75f742`; combined Sales/composition/registry/App Destination gate 15; architecture guard 13; full 1,331; guard 486 / 0 / 18; 29 export-only shims. |
+| 19 | Accounting — transaction/document values, invoices, receipts, vouchers, expenses, company accounts, dynamic context, controller lifecycle, and app-owned complete presentation. | `codex/feature-architecture-19-accounting` / `fdd2a382` | Base `628d3e14`; implementation `09c77dca`; evidence `fdd2a382`; Accounting/composition/registry gate 15; widget smoke 1; architecture guard 14; full 1,338; guard 486 / 0 / 19; 51 export-only shims. |
 
 For each completed module, read its feature `README.md`, `FEATURE_SPEC.md`,
 `TODO.md`, and `CHANGELOG.md`; those files contain the exact compatibility
@@ -86,7 +87,6 @@ for navigation only; the architecture ledger contains full SHAs.
 
 | # | Module | Ownership focus | Important boundary |
 |---:|---|---|---|
-| 19 | Accounting | Transactions, invoices, receipts, vouchers, expenses, company accounts. | Do not absorb Sales checkout or Printing templates. |
 | 20 | Reports | Report pages/provider/DTO projections. | Reports are read-only consumers; do not become owners of source state. |
 | 21 | Printing and Documents | Printer settings, document configuration, print/PDF/barcode output. | Keep source business state in owning modules; preserve user-owned printer changes. |
 | 22 | Communications | WhatsApp/settings/transaction-sharing adapter. | Keep messaging transport separate from Support and Sync. |
@@ -195,6 +195,33 @@ for navigation only; the architecture ledger contains full SHAs.
   Printing/Reports projections, and Module 27 scheduling. Details and exact
   paths are in `docs/features/sales/` and the ledger evidence record.
 
+### Module 19 — Accounting
+
+- Base: Module 18 evidence `628d3e14`.
+- Implementation: `09c77dca1e1141e0b4f1ce0d3a4b399362e4f9c2`; evidence:
+  `fdd2a3821abb1897d99d98e6adb25f76cc590ea5` (`docs: record accounting
+  migration evidence`).
+- Boundary: strict Accounting owns typed transaction/document/account-book
+  values, dynamic saved-`app_url` transport, tenant/company/store context,
+  generation-safe controller state, and stable destination wrappers. Billing,
+  Sales, Purchasing, Customers, Suppliers, Reports, Printing,
+  Communications, Restaurant, and Sync behavior stays outside the boundary.
+- Presentation: complete transaction/invoice/receipt/expense/voucher/company-
+  account/location-management implementations live under
+  `lib/app/accounting/` behind the Accounting bridge. Six providers and 45
+  screen/widget paths remain export-only shims; the invoice PDF remains
+  Printing-owned.
+- Verification: Accounting/controller/HTTP/composition/registry/App
+  Destination gate 15/15; widget smoke 1/1; architecture guard test 14/14;
+  full Flutter suite 1,338/1,338; guard 486 legacy / 0 exceptions / 19
+  strict; strict analyzer clean; formatter and diff checks clean except
+  expected line-ending notices.
+- Known debt: backend authorization/tenant relationship/store scoping,
+  posting atomicity, idempotency/reversal, deployed endpoint verification,
+  Reports/Printing projections, Communications delivery, Sync scheduling, and
+  final removal of the 51 compatibility exports. Full details are in
+  `docs/features/accounting/` and the ledger evidence record.
+
 ## How to continue on a future module
 
 1. Read this checklist, the latest handoff, and the latest ledger row.
@@ -254,39 +281,39 @@ registrant changes as unrelated when applicable, update the ledger/handoff and
 feature docs with exact SHAs/counts, and create no later-module branch.
 ```
 
-### Next concrete prompt (Module 19)
+### Next concrete prompt (Module 20)
 
 ```text
 Continue the ENKE POS feature-architecture migration in D:\Projects\ENKE\eposmob.
 
-Work on exactly Module 19 — Accounting, in a new worktree/branch:
-  codex/feature-architecture-19-accounting
-Base it on the verified Module 18 evidence commit:
-  628d3e14 (full SHA: resolve `git rev-parse
-  codex/feature-architecture-18-sales`).
-Verify that the base contains implementation cf75f742 and the Sales evidence
-docs before editing.
+Work on exactly Module 20 — Reports, in a new worktree/branch:
+  codex/feature-architecture-20-reports
+Base it on the verified Module 19 evidence commit:
+  fdd2a382 (full SHA: resolve `git rev-parse
+  codex/feature-architecture-19-accounting`).
+Verify that the base contains implementation 09c77dca and the Accounting
+evidence docs before editing.
 
 Read the checklist, FEATURE_ARCHITECTURE_HANDOFF.md, MIGRATION_LEDGER.md,
-FEATURE_ARCHITECTURE.md, the Module 18 Sales docs, and the Accounting source
+FEATURE_ARCHITECTURE.md, the Module 19 Accounting docs, and the Reports source
 tree first. Audit ownership, consumers, backend routes, parser/payload shapes,
-tenant/company/store scoping, financial mutation/idempotency behavior,
-cache/session/reset races, registry slots, and tests before changing code.
+tenant/company/store scoping, report query/cache behavior, reset races, registry
+slots, exports, and tests before changing code.
 
-Accounting owns transactions, invoices, receipts, vouchers, expenses, and
-company-account state. Consume Sales, Purchasing, Customers, Suppliers,
-Payments, Promotions, Fulfillment, and Organization only through public roots
-or app-owned bridges. Do not absorb Billing cart/checkout policy, Printing
-output, Reports projections, Communications sharing, Restaurant/KOT workflow,
-or Sync scheduling. Preserve runtime widget names and numeric destination
-slots. Add strict seams only where an actual contract exists; do not invent a
-backend API.
+Reports owns read-only report screens, report queries, and report DTO/projection
+values. Consume Sales, Accounting, Customers, Suppliers, Purchasing, Inventory,
+Payments, Promotions, Fulfillment, Organization, and Product only through
+public roots or app-owned bridges. Do not absorb source-feature operational
+state, Billing cart/checkout policy, Printing output, Communications delivery,
+Restaurant/KOT workflow, or Sync scheduling. Preserve runtime widget names and
+numeric destination slots. Add strict seams only where an actual report
+contract exists; do not invent a backend API.
 
 Run focused/downstream tests, strict analyzer, formatter, architecture guard
-against 628d3e14, diff check, and the complete `flutter test --no-pub` suite.
+against fdd2a382, diff check, and the complete `flutter test --no-pub` suite.
 Create one implementation commit and one evidence/docs commit. Update the
-ledger, handoff, and docs/features/accounting files with exact SHAs/counts and
-leave no migration-owned changes uncommitted. Do not start Module 20.
+ledger, handoff, and docs/features/reports files with exact SHAs/counts and
+leave no migration-owned changes uncommitted. Do not start Module 21.
 ```
 
 ## Stop/merge instruction
