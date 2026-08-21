@@ -7,7 +7,7 @@ required, and a prompt that can be reused for the next module.
 ## Current checkpoint
 
 - Total planned modules: **28**, numbered `00` through `27`.
-- Completed and evidence-recorded: **Modules 00–22**.
+- Completed and evidence-recorded: **Modules 00–23**.
 - Module 20 (Reports) is complete on
   `codex/feature-architecture-20-reports`: implementation
   `fd6c33003ad931c222abcc0b177e079b69b300c9`, evidence
@@ -18,9 +18,12 @@ required, and a prompt that can be reused for the next module.
 - Module 22 (Communications) is complete on
   `codex/feature-architecture-22-communications`: implementation `4b9f960d`,
   evidence `6f6022220cb25fd3e40c7b7784d7bf9d2706a1b4`.
-- Module 23 (Restaurant and KOT) is the next branch to start from the verified
-  Module 22 evidence commit above.
-- Remaining after Module 22: Modules `23–27` (5 modules).
+- Module 23 (Restaurant and KOT) is complete on
+  `codex/feature-architecture-23-restaurant`: implementation `45c519ed`,
+  evidence `895ec417`.
+- Module 24 (Billing) is the next branch to start from the verified Module 23
+  evidence commit above.
+- Remaining after Module 23: Modules `24–27` (4 modules).
 - The canonical branch is `gokul-dev`; numbered migration branches are stacked
   work branches and can be merged/cherry-picked into `gokul-dev` later.
 - The detailed branch/SHA ledger remains
@@ -90,6 +93,7 @@ were merely moved or because a focused widget test happens to pass.
 | 20 | Reports — read-only report context/query/pagination, DTO projections, per-kind controller/runtime, and thirteen destination wrappers; source-feature state and Printing output remain excluded. | `codex/feature-architecture-20-reports` / `e5293443` | Base `fdd2a382`; implementation `fd6c3300`; evidence `e5293443`; Reports strict gate 8; composition 1; architecture guard 13; full 1,346; guard 486 / 0 / 20; 22 export-only shims and 6 Printing-owned printer exclusions. |
 | 21 | Printing and Documents — typed device/document/output values, barcode-layout settings, PrinterSettings runtime bridge, and behavior-compatible print/PDF/thermal/barcode/document/report-printer implementations. | `codex/feature-architecture-21-printing` / `d63de987` | Base `e5293443`; implementation `12504f1e`; evidence `d63de987`; Printing/document gate 138; architecture guard test 13; full 1,350; guard 486 / 0 / 21; exactly 99 export-only shims and 9 retained demo assets. |
 | 22 | Communications — typed WhatsApp gateway/provider/runtime, app-owned local plugin adapter, settings destination, and transaction delivery seam. | `codex/feature-architecture-22-communications` / `6f602222` | Base `d63de987`; implementation `4b9f960d`; evidence `6f602222`; strict/app gate 7; registry/App Destination/PDF gate 13; full 1,357; guard 486 / 0 / 22; exactly 3 export-only shims and no deleted legacy paths. |
+| 23 | Restaurant and KOT — table/menu/order-selection values, table transport/provider state, typed Restaurant order context, and app-owned complete Restaurant/Kitchen/modifier workflows. | `codex/feature-architecture-23-restaurant` / `895ec417` | Base `6f602222`; implementation `45c519ed`; evidence `895ec417`; focused Restaurant/registry/app-smoke gate 13; full 1,362; guard 486 / 0 / 23; exactly 9 export-only shims and no deleted legacy paths. |
 
 For each completed module, read its feature `README.md`, `FEATURE_SPEC.md`,
 `TODO.md`, and `CHANGELOG.md`; those files contain the exact compatibility
@@ -103,8 +107,8 @@ for navigation only; the architecture ledger contains full SHAs.
 | 20 | Reports | Report pages/provider/DTO projections. | Complete; Reports are read-only consumers and do not own source state. |
 | 21 | Printing and Documents | Printer settings, document configuration, print/PDF/barcode output. | Complete; output behavior is app-owned behind the strict Printing root; source business state remains with its owning modules. |
 | 22 | Communications | WhatsApp/settings/transaction-sharing adapter. | Complete; keep messaging transport separate from Support, Printing, and Sync; no unverified backend API was invented. |
-| 23 | Restaurant and KOT | Restaurant billing UI, tables/menu/order/KOT state. | Next; do not absorb generic Billing checkout or Fulfillment directory state. |
-| 24 | Billing | Billing screens, cart, checkout, non-restaurant flows, cart/local compatibility. | Consume Products/Categories/Promotions/Fulfillment/Payments through roots; own checkout policy. |
+| 23 | Restaurant and KOT | Restaurant billing UI, tables/menu/order/KOT state. | Complete; Billing consumes the typed Restaurant order-context seam; generic checkout/cart remains Billing-owned. |
+| 24 | Billing | Billing screens, cart, checkout, non-restaurant flows, cart/local compatibility. | Next; consume Restaurant, Products, Categories, Promotions, Fulfillment, Payments, Inventory, Customers, and Accounting through public roots. |
 | 25 | Kiosk | Kiosk screens and actions. | Consume public roots; keep legal/static pages and support boundaries explicit. |
 | 26 | Dashboard | Dashboard pages/provider/models. | Read projections from owning features; do not duplicate repositories. |
 | 27 | Offline and Realtime Sync | Sync/realtime providers, offline controls, scheduling/cursors. | Publish typed deltas or app adapters; never bypass strict feature cache/session authority. |
@@ -328,6 +332,34 @@ for navigation only; the architecture ledger contains full SHAs.
   tests, typed transaction source projections, and final shim removal. Details
   are in `docs/features/communications/` and the ledger evidence record.
 
+### Module 23 — Restaurant and KOT
+
+- Base: Module 22 Communications evidence `6f602222`.
+- Implementation: `45c519ed`; evidence: `895ec417` (`docs: record Restaurant
+  migration evidence`).
+- Boundary: strict Restaurant owns pure menu/table/order-selection values,
+  context-safe table transport/provider state, local menu/order state, runtime
+  wrappers, and a typed Restaurant order-context seam for Billing.
+- Presentation: complete Restaurant page, Kitchen Master, and modifier modal
+  implementations live under `lib/app/restaurant/legacy/`; registry slots 55,
+  56, 89, and 97 retain their runtime names and constructor flags.
+- Preserved elsewhere: Billing/cart/checkout policy, Product catalog/cache,
+  Inventory stock, Customer directory, CartProvider order/KOT operations,
+  Printing output, and Sync scheduling/realtime transport. No menu backend or
+  separate KOT endpoint was invented.
+- Compatibility: exactly nine old Restaurant model/provider/screen paths remain
+  export-only shims; no old Restaurant path was deleted. The complete app
+  copies are not shims and are listed in the feature README/TODO.
+- Verification: focused Restaurant/registry/app-smoke gate 13/13; complete
+  Flutter suite 1,362/1,362; guard 486 legacy / 0 exceptions / 23 strict;
+  strict analysis clean; formatter and diff check clean apart from normal
+  Windows line-ending notices.
+- Known debt: menu remains a local fixture pending a verified backend contract;
+  table master-data pagination/mutation/permission semantics need backend
+  verification; Billing decomposition and typed Cart/KOT status ports belong to
+  Modules 24/27. Full details are in `docs/features/restaurant/` and the
+  ledger evidence record.
+
 ## How to continue on a future module
 
 1. Read this checklist, the latest handoff, and the latest ledger row.
@@ -353,15 +385,15 @@ for navigation only; the architecture ledger contains full SHAs.
 
 ## Reusable future-agent prompt
 
-### Immediate next prompt — Module 23 Restaurant and KOT
+### Immediate next prompt — Module 24 Billing
 
 ```text
 Continue the ENKE POS feature-architecture migration in D:\Projects\ENKE\eposmob.
 
 Work on exactly one module:
-- Module 23 — Restaurant and KOT
-- Branch: codex/feature-architecture-23-restaurant
-- Base: 6f602222 (the verified Module 22 evidence commit)
+- Module 24 — Billing
+- Branch: codex/feature-architecture-24-billing
+- Base: 895ec417f1319a50982affb5ca444dc25c08b62a (the verified Module 23 evidence commit)
 
 Before editing, verify the branch/base and read:
 - docs/architecture/MODULE_MIGRATION_CHECKLIST.md
@@ -371,17 +403,25 @@ Before editing, verify the branch/base and read:
 - tool/architecture/strict_features.txt
 - tool/architecture/legacy_paths.txt
 - tool/architecture/cross_feature_exceptions.txt
-- docs/features/communications/{README,FEATURE_SPEC,TODO,CHANGELOG}.md
+- docs/features/restaurant/{README,FEATURE_SPEC,TODO,CHANGELOG}.md
 
-Audit restaurant/KOT/table/menu ownership, order context, kitchen status,
-session/store scope, exact routes/payloads, persistence/cache, navigation,
-async lifecycle, all consumers, backend routes, and current tests. Publish a
-small typed restaurant order-context contract for Billing. Keep generic Billing
-checkout/cart, Product catalog/cache, Inventory stock, Sales source records,
-Printing output, Communications delivery, and Offline/Realtime Sync scheduling
-out of scope.
+Audit Billing/cart/checkout/saved-order ownership, payment and customer
+selection, product/category/tax/promotions references, local and confirmed
+orders, session/store scope, exact routes/payloads, persistence/cache,
+navigation, async lifecycle, all consumers, backend routes, and current tests.
+Publish narrow typed ports for upstream feature projections where a real
+contract exists. Consume the public roots for Restaurant, Products, Categories,
+Promotions, Inventory, Customers, Payments, Purchasing, Sales, Accounting,
+Printing, and Communications; do not absorb their source ownership.
 
-Implement one public features/restaurant root, pure domain values/ports,
+Keep Restaurant table/menu/kitchen/KOT workflows, Product catalog authority,
+Inventory stock operations, Printing output/layout/device ownership, and
+Offline/Realtime Sync scheduling/cursors out of scope. Treat LocalProduct,
+cart-reservation, saved-order, and mixed local-model code as explicit seams:
+preserve behavior while assigning each writer/read path to Billing or a typed
+app adapter, and record later-module debt instead of inventing backend APIs.
+
+Implement one public features/billing root, pure domain values/ports,
 injected data/application state where a real contract exists, and app-owned
 bridges for complete legacy UI/workflows. Preserve behavior, runtime names,
 destination slots, preference keys, parser quirks, and redaction. Delete only
@@ -394,7 +434,7 @@ analyzer, focused and downstream tests, architecture guard plus guard tests,
 git diff --check, and the full `flutter test --no-pub` suite. Stage and audit
 tracked and untracked files, commit implementation first, then a separate
 docs/evidence commit. Update the ledger/handoff/checklist with full SHAs and
-exact counts. Do not start Module 24 in the same branch.
+exact counts. Do not start Module 25 in the same branch.
 ```
 
 ```text
