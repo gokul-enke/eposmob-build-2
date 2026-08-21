@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:http/http.dart' as http;
@@ -944,16 +946,24 @@ class PurchaseProvider extends ChangeNotifier {
           'Finish Purchase Order API response status: ${response.statusCode}');
       debugPrint('Finish Purchase Order API response body: ${response.body}');
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final result = json.decode(response.body);
         debugPrint('Finish Purchase Order API success: $result');
         return result;
       } else {
         debugPrint(
             'Finish Purchase Order API failed with status: ${response.statusCode}');
+        Map<String, dynamic> decoded = {};
+        try {
+          decoded = Map<String, dynamic>.from(json.decode(response.body));
+        } catch (_) {}
         return {
           'status': 'failed',
-          'message': 'API request failed with status: ${response.statusCode}',
+          'http_status_code': response.statusCode,
+          'message':
+              decoded['message'] ??
+              'API request failed with status: ${response.statusCode}',
+          ...decoded,
         };
       }
     } catch (e) {
@@ -1154,9 +1164,19 @@ class PurchaseProvider extends ChangeNotifier {
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body);
       } else {
+        // Surface the raw decoded body AND the HTTP status so the screen can
+        // detect 422 and parse structured error envelopes (A, B, top-level).
+        Map<String, dynamic> decoded = {};
+        try {
+          decoded = Map<String, dynamic>.from(json.decode(response.body));
+        } catch (_) {}
         return {
           'status': 'failed',
-          'message': 'API request failed with status: ${response.statusCode}',
+          'http_status_code': response.statusCode,
+          'message':
+              decoded['message'] ??
+              'API request failed with status: ${response.statusCode}',
+          ...decoded,
         };
       }
     } catch (e) {
@@ -1199,15 +1219,17 @@ class PurchaseProvider extends ChangeNotifier {
       debugPrint('📤 [Purchase API] receivePurchaseOrder URL: $url');
       debugPrint(
           '📤 [Purchase API] receivePurchaseOrder Body: ${json.encode(apiBodyData)}');
-      final response = await http.post(
-        url,
-        body: json.encode(apiBodyData),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $accessToken',
-          'X-Tenant': apiKey,
-        },
-      );
+      final response = await http
+          .post(
+            url,
+            body: json.encode(apiBodyData),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $accessToken',
+              'X-Tenant': apiKey,
+            },
+          )
+          .timeout(const Duration(seconds: 30));
       debugPrint(
           '📥 [Purchase API] receivePurchaseOrder Status: ${response.statusCode}');
       debugPrint(
@@ -1216,11 +1238,27 @@ class PurchaseProvider extends ChangeNotifier {
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body);
       } else {
+        // Surface the raw decoded body AND the HTTP status so the screen can
+        // detect 422 and parse structured error envelopes (A, B, top-level).
+        Map<String, dynamic> decoded = {};
+        try {
+          decoded = Map<String, dynamic>.from(json.decode(response.body));
+        } catch (_) {}
         return {
           'status': 'failed',
-          'message': 'API request failed with status: ${response.statusCode}',
+          'http_status_code': response.statusCode,
+          'message':
+              decoded['message'] ??
+              'API request failed with status: ${response.statusCode}',
+          ...decoded,
         };
       }
+    } on TimeoutException {
+      debugPrint('⏱️ [Purchase API] receivePurchaseOrder timed out after 30s');
+      return {
+        'status': 'failed',
+        'message': 'purchase_order.receive_timeout'.tr,
+      };
     } catch (e) {
       return {
         'status': 'failed',

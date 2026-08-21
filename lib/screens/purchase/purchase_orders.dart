@@ -203,6 +203,11 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
         'supplier': item.supplier != null
             ? {'id': item.supplier?.id, 'name': item.supplier?.name}
             : null,
+        // Payment state fields (new)
+        if (item.paidTotal != null) 'paid_total': item.paidTotal,
+        if (item.outstandingAmount != null)
+          'outstanding_amount': item.outstandingAmount,
+        if (item.paymentStatus != null) 'payment_status': item.paymentStatus,
       };
 
       // 2. Prepare data for ViewPurchaseWidget (index 36)

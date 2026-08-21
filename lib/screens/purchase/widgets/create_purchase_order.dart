@@ -31,6 +31,8 @@ import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/screens/purchase/helpers/purchase_order_totals.dart';
+import 'package:pos_machine/screens/purchase/helpers/purchase_order_error_helpers.dart';
+import 'package:pos_machine/screens/purchase/helpers/purchase_order_item_helpers.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:provider/provider.dart';
@@ -186,6 +188,9 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
   bool _isLoadingPaymentMethods = false;
   bool _isSubmitting = false;
   double? _lastKnownNetPayable;
+  // Payment disabled flag: true when the PO is already fully paid.
+  // When true, payment inputs are hidden and omitted from the payload.
+  bool _isPaymentDisabled = false;
 
   GetStoreModelData? selectedStore;
   GetSuppliersModelData? selectedSupplier;
@@ -646,6 +651,9 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         setState(() {
           // Header
           purchaseOrderId = _toInt(data['id']); // NEW! Capture the ID
+          // Read payment state and disable payment inputs if fully paid.
+          final paymentStatus = data['payment_status']?.toString();
+          _isPaymentDisabled = (paymentStatus == 'paid');
           voucherNumberController.text =
               data['voucher_number']?.toString() ?? "";
           invoiceRefController.text = data['invoice_ref']?.toString() ?? "";
@@ -929,10 +937,104 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       currentItem.taxIncludePurchase = includeTaxPurchase;
       currentItem.syncControllers();
 
-      if (_editingItemIndex != null && _editingItemIndex! < orderItems.length) {
-        orderItems[_editingItemIndex!] = currentItem;
+      final newProductId = currentItem.productData?.productId;
+      final newVariantId = currentItem.productVariantId;
+      final newBarcode = currentItem.barcode;
+
+      // Find match helper function
+      int? findMatchingItemIndex({int? skipIndex}) {
+        if (newProductId == null) return null;
+        for (int i = 0; i < orderItems.length; i++) {
+          if (skipIndex != null && i == skipIndex) continue;
+          final item = orderItems[i];
+          if (item.productData?.productId == newProductId &&
+              item.productVariantId == newVariantId &&
+              item.barcode == newBarcode &&
+              purchaseOrderPurchaseUnitsMatch(
+                currentItem.selectedPurchaseUnit,
+                currentItem.purchaseConversionRate,
+                item.selectedPurchaseUnit,
+                item.purchaseConversionRate,
+              )) {
+            return i;
+          }
+        }
+        return null;
+      }
+
+      if (_isReceiveMode) {
+        // Receive rows carry server-side purchase_item_ids. Editing must
+        // replace the selected row in place so that its ID remains attached,
+        // while adding a new row must never merge with another receive row.
+        if (_editingItemIndex != null && _editingItemIndex! < orderItems.length) {
+          orderItems[_editingItemIndex!] = currentItem;
+        } else {
+          orderItems.add(currentItem);
+        }
+      } else if (_editingItemIndex != null && _editingItemIndex! < orderItems.length) {
+        // Edit Flow: check if the edited item now matches another row
+        final matchIdx = findMatchingItemIndex(skipIndex: _editingItemIndex);
+        if (matchIdx != null) {
+          // Merge currentItem into the existing row at matchIdx
+          final existing = orderItems[matchIdx];
+          final currentQty = double.tryParse(currentItem.quantity) ?? 0.0;
+          final existingQty = double.tryParse(existing.quantity) ?? 0.0;
+
+          existing.quantity = (existingQty + currentQty).toString();
+          // Update other fields to edited values (prices, units, rack, etc.)
+          existing.purchaseRate = currentItem.purchaseRate;
+          existing.retailPrice = currentItem.retailPrice;
+          existing.wholesalePrice = currentItem.wholesalePrice;
+          existing.mrp = currentItem.mrp;
+          existing.rack = currentItem.rack;
+          existing.selectedRack = currentItem.selectedRack;
+          existing.unit = currentItem.unit;
+          existing.selectedUnit = currentItem.selectedUnit;
+          existing.selectedPurchaseUnit = currentItem.selectedPurchaseUnit;
+          existing.purchaseQty = currentItem.purchaseQty;
+          existing.purchaseConversionRate = currentItem.purchaseConversionRate;
+          existing.pkgMfg = currentItem.pkgMfg;
+          existing.expDate = currentItem.expDate;
+          existing.taxInclude = currentItem.taxInclude;
+          existing.taxIncludePurchase = currentItem.taxIncludePurchase;
+          existing.calculatedTaxData = currentItem.calculatedTaxData != null
+              ? Map<String, dynamic>.from(currentItem.calculatedTaxData!)
+              : null;
+
+          existing.syncControllers();
+          // Remove the edited row from the list
+          orderItems.removeAt(_editingItemIndex!);
+        } else {
+          // No match, just update the edited item at index
+          orderItems[_editingItemIndex!] = currentItem;
+        }
       } else {
-        orderItems.add(currentItem);
+        // Add Flow: check if the new item matches an existing row
+        final matchIdx = findMatchingItemIndex();
+        if (matchIdx != null) {
+          // Duplicate found — sum quantity and purchaseQty. Do NOT overwrite
+          // prices or any other fields; if the user wants to change the price
+          // they must use the edit icon on the existing row.
+          final existing = orderItems[matchIdx];
+          final currentQty = double.tryParse(currentItem.quantity) ?? 0.0;
+          final existingQty = double.tryParse(existing.quantity) ?? 0.0;
+          existing.quantity = (existingQty + currentQty).toString();
+
+          // Also sum purchaseQty so the API receives consistent values.
+          final currentPurchaseQty =
+              double.tryParse(currentItem.purchaseQty ?? '') ?? 0.0;
+          final existingPurchaseQty =
+              double.tryParse(existing.purchaseQty ?? '') ?? 0.0;
+          if (currentPurchaseQty > 0 || existingPurchaseQty > 0) {
+            existing.purchaseQty =
+                (existingPurchaseQty + currentPurchaseQty).toString();
+          }
+
+          existing.syncControllers();
+        } else {
+          // No match, add new item
+          orderItems.add(currentItem);
+        }
       }
 
       _clearCurrentItemForm();
@@ -1546,13 +1648,18 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
 
     final purchaseTotals = _purchaseTotals;
 
-    final apiPaymentData = _convertPaymentDataToPurchaseApiFormat(paymentData);
+    // When payment is disabled (PO already fully paid), skip payment entirely.
+    final bool effectivePaymentDisabled = _isPaymentDisabled;
+    final apiPaymentData = effectivePaymentDisabled
+        ? {'payment_methods': <String>[], 'paid_amounts': <String, double>{}}
+        : _convertPaymentDataToPurchaseApiFormat(paymentData);
     final List<String> paymentMethods =
         (apiPaymentData['payment_methods'] as List<String>);
     final Map<String, double> paidAmountsMap =
         (apiPaymentData['paid_amounts'] as Map<String, double>);
 
-    final bool hasPayment = paymentMethods.isNotEmpty;
+    final bool hasPayment =
+        !effectivePaymentDisabled && paymentMethods.isNotEmpty;
     final paidAmount = paidAmountsMap.values.fold<double>(
       0,
       (sum, amount) => sum + amount,
@@ -1720,6 +1827,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                   ? null
                   : invoiceRefController.text.trim(),
               discount: purchaseTotals.discountAmount,
+              // Omit payment fields entirely when disabled (fully paid PO).
               paymentMethods: hasPayment ? paymentMethods : null,
               paidAmounts: hasPayment ? paidAmountsMap : null,
               items: apiItems,
@@ -1736,6 +1844,60 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
               paidAmounts: hasPayment ? paidAmountsMap : null,
               items: apiItems,
             );
+
+      // ── Point 5: 422 fallback safety net ─────────────────────────────────
+      // The provider surfaces http_status_code for non-200/201 responses.
+      final httpStatus = result?['http_status_code'];
+      final is422 = httpStatus == 422;
+
+      if (is422) {
+        // Parse structured error envelope — support Envelope A, B, top-level.
+        String? errorMessage;
+
+        // Envelope A: { "success": false, "errors": { "field": ["msg"] } }
+        final errorsA = result?['errors'];
+        if (errorsA is Map && errorsA.isNotEmpty) {
+          final firstEntry = errorsA.values.first;
+          if (firstEntry is List && firstEntry.isNotEmpty) {
+            errorMessage = firstEntry.first?.toString();
+          } else {
+            errorMessage = firstEntry?.toString();
+          }
+        }
+
+        // Envelope B: { "data": { "field": ["msg"] } }
+        if (errorMessage == null) {
+          final dataB = result?['data'];
+          if (dataB is Map && dataB.isNotEmpty) {
+            final firstEntry = dataB.values.first;
+            if (firstEntry is List && firstEntry.isNotEmpty) {
+              errorMessage = firstEntry.first?.toString();
+            } else {
+              errorMessage = firstEntry?.toString();
+            }
+          }
+        }
+
+        // Top-level message fallback
+        errorMessage ??= result?['message']?.toString() ??
+            'purchase_order.payment_error_422'.tr;
+
+        // Only disable payment if the 422 specifically indicates the PO is
+        // already fully paid. Other 422 errors (validation, etc.) should show
+        // the error but leave payment inputs functional.
+        final bool isFullyPaidError =
+            isAlreadyFullyPaidPurchaseOrderError(result, errorMessage);
+
+        if (mounted && isFullyPaidError) {
+          setState(() {
+            paymentData = DynamicPaymentData();
+            _isPaymentDisabled = true;
+          });
+        }
+        _showErrorMessage(errorMessage);
+        return;
+      }
+      // ─────────────────────────────────────────────────────────────────────
 
       if (result != null &&
           (result['status'] == 'success' ||
@@ -2729,10 +2891,10 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
 
   /// Calculate tax for the current item using the server API (same as stock page)
   Future<void> _calculateTaxForCurrentItem({
+    required PurchaseOrderItem item,
     bool isRetail = true,
     bool isPurchase = false,
   }) async {
-    final item = currentItem;
     final String calculationType = isPurchase
         ? 'Purchase'
         : (isRetail ? 'Retail' : 'Wholesale');
@@ -2773,7 +2935,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         : (isRetail
               ? (double.tryParse(item.retailPrice) ?? 0.0)
               : (double.tryParse(item.wholesalePrice) ?? 0.0));
-    final bool taxInclude = isPurchase ? includeTaxPurchase : includeTax;
+    final bool taxInclude = isPurchase ? item.taxIncludePurchase : item.taxInclude;
 
     debugPrint(
       '🧮 [PurchaseTax] Payload | type=$calculationType | productId=${item.productData!.productId} | categoryId=${item.categoryData!.categoryId} | price=$priceToCalculate | taxInclude=$taxInclude',
@@ -2896,10 +3058,11 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
   /// Trigger all three tax calculations for the current item (debounced)
   void _triggerTaxRecalculation() {
     _taxCalcDebounceTimer?.cancel();
+    final itemToCalc = currentItem;
     _taxCalcDebounceTimer = Timer(const Duration(milliseconds: 500), () {
-      _calculateTaxForCurrentItem(isRetail: true);
-      _calculateTaxForCurrentItem(isRetail: false);
-      _calculateTaxForCurrentItem(isPurchase: true);
+      _calculateTaxForCurrentItem(item: itemToCalc, isRetail: true);
+      _calculateTaxForCurrentItem(item: itemToCalc, isRetail: false);
+      _calculateTaxForCurrentItem(item: itemToCalc, isPurchase: true);
     });
   }
 
@@ -2908,8 +3071,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       includeTax = value;
       currentItem.taxInclude = value;
     });
-    _calculateTaxForCurrentItem(isRetail: true);
-    _calculateTaxForCurrentItem(isRetail: false);
+    _calculateTaxForCurrentItem(item: currentItem, isRetail: true);
+    _calculateTaxForCurrentItem(item: currentItem, isRetail: false);
     _saveDraftToHive();
   }
 
@@ -2918,7 +3081,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       includeTaxPurchase = value;
       currentItem.taxIncludePurchase = value;
     });
-    _calculateTaxForCurrentItem(isPurchase: true);
+    _calculateTaxForCurrentItem(item: currentItem, isPurchase: true);
     _saveDraftToHive();
   }
 
@@ -3571,9 +3734,9 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
   Widget _buildPurchaseListRow(int index, PurchaseOrderItem item) {
     final qty = double.tryParse(item.quantity) ?? 0;
     final purchaseRate = _effectivePurchaseRate(item);
-    final retailPrice = double.tryParse(item.retailPrice) ?? 0;
+    final retailPrice = _getEffectiveRetailPrice(item);
     final mrp = double.tryParse(item.mrp) ?? 0;
-    final wholesalePrice = double.tryParse(item.wholesalePrice) ?? 0;
+    final wholesalePrice = _getEffectiveWholesalePrice(item);
     final total = _purchaseLineTotal(item);
     final canEdit = !_isReceiveMode || !item.alreadyReceived;
     final canDelete = !_isReceiveMode && !item.alreadyReceived;
@@ -3882,6 +4045,44 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
     );
   }
 
+  double _getEffectiveRetailPrice(PurchaseOrderItem item) {
+    final basePrice = double.tryParse(item.retailPrice) ?? 0.0;
+    if (!item.taxInclude) {
+      final calculated =
+          item.calculatedTaxData?['price_including_tax_retail'] as num?;
+      if (calculated != null && calculated > 0) {
+        return calculated.toDouble();
+      }
+      final taxRate = item.productData?.totalTaxRate ?? 0.0;
+      if (taxRate > 0) {
+        return basePrice * (1 + taxRate / 100);
+      }
+      debugPrint(
+        '⚠️ [PurchaseTax] Fallback used for retail price of ${item.productData?.productName ?? "unknown product"} (ID: ${item.productData?.productId}). basePrice=$basePrice, calculatedTaxData=${item.calculatedTaxData}',
+      );
+    }
+    return basePrice;
+  }
+
+  double _getEffectiveWholesalePrice(PurchaseOrderItem item) {
+    final basePrice = double.tryParse(item.wholesalePrice) ?? 0.0;
+    if (!item.taxInclude) {
+      final calculated =
+          item.calculatedTaxData?['price_including_tax_wholesale'] as num?;
+      if (calculated != null && calculated > 0) {
+        return calculated.toDouble();
+      }
+      final taxRate = item.productData?.totalTaxRate ?? 0.0;
+      if (taxRate > 0) {
+        return basePrice * (1 + taxRate / 100);
+      }
+      debugPrint(
+        '⚠️ [PurchaseTax] Fallback used for wholesale price of ${item.productData?.productName ?? "unknown product"} (ID: ${item.productData?.productId}). basePrice=$basePrice, calculatedTaxData=${item.calculatedTaxData}',
+      );
+    }
+    return basePrice;
+  }
+
   double _getSupplierBalance() {
     return selectedSupplier?.currentBalance ?? 0.0;
   }
@@ -4053,11 +4254,9 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                           final item = entry.value;
                           final qty = double.tryParse(item.quantity) ?? 0;
                           final purchaseRate = _effectivePurchaseRate(item);
-                          final retailPrice =
-                              double.tryParse(item.retailPrice) ?? 0;
+                          final retailPrice = _getEffectiveRetailPrice(item);
                           final mrp = double.tryParse(item.mrp) ?? 0;
-                          final wholesalePrice =
-                              double.tryParse(item.wholesalePrice) ?? 0;
+                          final wholesalePrice = _getEffectiveWholesalePrice(item);
                           final rowTotal = _purchaseLineTotal(item);
 
                           totalQty += qty;
@@ -4320,6 +4519,34 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
   }
 
   Widget _buildPaymentSection() {
+    if (_isPaymentDisabled) {
+      // PO is already fully paid — show a read-only info banner, hide selector.
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.green.shade50,
+          border: Border.all(color: Colors.green.shade300),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'purchase_order.already_fully_paid'.tr,
+                style: TextStyle(
+                  color: Colors.green.shade800,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return BuildDynamicPaymentSelector(
       title: 'purchase_order.select_payment_method'.tr,
       paymentMethods: _paymentMethods,

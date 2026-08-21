@@ -121,13 +121,19 @@ void main() {
       final keyboardProvider = KeyboardProvider(enablePersistence: false)
         ..featureOn();
       final controller = TextEditingController();
+      String? changedText;
 
       await tester.pumpWidget(
         ChangeNotifierProvider<KeyboardProvider>.value(
           value: keyboardProvider,
           child: KeyboardDispatcher(
             child: MaterialApp(
-              home: Scaffold(body: TextField(controller: controller)),
+              home: Scaffold(
+                body: TextField(
+                  controller: controller,
+                  onChanged: (value) => changedText = value,
+                ),
+              ),
             ),
           ),
         ),
@@ -137,6 +143,7 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
 
       expect(controller.text, 'a');
+      expect(changedText, 'a');
 
       keyboardProvider.dispose();
       controller.dispose();

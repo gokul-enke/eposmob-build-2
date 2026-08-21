@@ -1,7 +1,19 @@
+import 'package:flutter/foundation.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 
 bool isKotDocumentConfigEnabled(DocumentConfig? config) {
   return config == null || config.isEnabled;
+}
+
+Future<void> invokeKotPrintSuccessCallback(
+  Future<void> Function()? callback,
+) async {
+  if (callback == null) return;
+  try {
+    await callback();
+  } catch (error) {
+    debugPrint('[KotPrintPage] Post-print callback failed: $error');
+  }
 }
 
 double calculateKotTotal(List<Map<String, dynamic>> items) {

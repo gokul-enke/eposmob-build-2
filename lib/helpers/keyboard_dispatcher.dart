@@ -136,7 +136,14 @@ class _KeyboardDispatcherState extends State<KeyboardDispatcher> {
     for (final formatter in editable.inputFormatters ?? const []) {
       newValue = formatter.formatEditUpdate(oldValue, newValue);
     }
-    editable.controller.value = newValue;
+    if (newValue != oldValue) {
+      editable.controller.value = newValue;
+      // Updating the controller directly bypasses EditableText's normal
+      // user-editing pipeline, so preserve the field callback explicitly.
+      if (newValue.text != oldValue.text) {
+        editable.onChanged?.call(newValue.text);
+      }
+    }
   }
 
   @override

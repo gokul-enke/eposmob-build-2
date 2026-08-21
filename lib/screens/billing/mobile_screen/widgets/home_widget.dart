@@ -325,7 +325,7 @@ class _HomeWidgetState extends State<HomeWidget> {
               child: TextField(
                 controller: billingProvider.barcodeController,
                 focusNode: billingProvider.barcodeNode,
-                keyboardType: TextInputType.number,
+                keyboardType: TextInputType.text,
                 decoration: InputDecoration(
                   labelText: 'mobile_billing.label_barcode'.tr,
                   border: OutlineInputBorder(

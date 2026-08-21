@@ -113,6 +113,7 @@ class KotPrintPage extends StatefulWidget {
             message: 'KOT printing is disabled in document configuration.',
           );
         }
+        await invokeKotPrintSuccessCallback(onPrintSuccess);
         return true;
       }
 
@@ -162,13 +163,7 @@ class KotPrintPage extends StatefulWidget {
         );
       }
 
-      if (onPrintSuccess != null) {
-        try {
-          await onPrintSuccess();
-        } catch (e) {
-          debugPrint('[KotPrintPage] Post-print callback failed: $e');
-        }
-      }
+      await invokeKotPrintSuccessCallback(onPrintSuccess);
 
       if (context.mounted) {
         final normalizedKotType = kotType.trim().toLowerCase();
@@ -542,13 +537,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
         kotDocumentConfig: _kotDocumentConfig,
       );
 
-      if (widget.onPrintSuccess != null) {
-        try {
-          await widget.onPrintSuccess!();
-        } catch (e) {
-          debugPrint('[KotPrintPage] Post-print callback failed: $e');
-        }
-      }
+      await invokeKotPrintSuccessCallback(widget.onPrintSuccess);
 
       if (mounted) {
         showScaffold(
@@ -590,13 +579,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
         kotDocumentConfig: _kotDocumentConfig,
       );
 
-      if (widget.onPrintSuccess != null) {
-        try {
-          await widget.onPrintSuccess!();
-        } catch (e) {
-          debugPrint('[KotPrintPage] Post-print callback failed: $e');
-        }
-      }
+      await invokeKotPrintSuccessCallback(widget.onPrintSuccess);
 
       if (mounted) {
         showScaffold(

@@ -20,6 +20,27 @@ void main() {
     });
   });
 
+  group('KOT print success callback', () {
+    test('runs the callback', () async {
+      var callbackCount = 0;
+
+      await invokeKotPrintSuccessCallback(() async {
+        callbackCount++;
+      });
+
+      expect(callbackCount, 1);
+    });
+
+    test('does not turn callback failures into print failures', () async {
+      await expectLater(
+        invokeKotPrintSuccessCallback(() async {
+          throw StateError('callback failed');
+        }),
+        completes,
+      );
+    });
+  });
+
   group('calculateKotTotal', () {
     test('uses explicit line totals when available', () {
       final total = calculateKotTotal([
