@@ -7,10 +7,10 @@ required, and a prompt that can be reused for the next module.
 ## Current checkpoint
 
 - Total planned modules: **28**, numbered `00` through `27`.
-- Completed and evidence-recorded: **Modules 00–14**.
-- Module 15 (Fulfillment) is the active branch in progress at the time this
-  checklist was written.
-- Remaining after Module 15: Modules `16–27`.
+- Completed and evidence-recorded: **Modules 00–16**.
+- Module 17 (Purchasing) is the next branch to start; it has not been started
+  from this checkpoint.
+- Remaining after Module 16: Modules `17–27`.
 - The canonical branch is `gokul-dev`; numbered migration branches are stacked
   work branches and can be merged/cherry-picked into `gokul-dev` later.
 - The detailed branch/SHA ledger remains
@@ -72,6 +72,8 @@ were merely moved or because a focused widget test happens to pass.
 | 12 | Suppliers — supplier directory/value/profile/cache/provider; Purchasing workflows, accounting, reports, printing, and sync excluded. | `codex/feature-architecture-12-suppliers` / `16566045` | Full 1,278; guard 494 / 0 / 12. |
 | 13 | Sales Workforce — sales-executive directory/provider; Reports/Sales/Billing behavior remains with consumers. | `codex/feature-architecture-13-sales-workforce` / `13500223` | Full 1,288; guard 494 / 0 / 13. |
 | 14 | Promotions — discount directory, validity, dynamic transport/cache; cart application remains Billing-owned. | `codex/feature-architecture-14-promotions` / `8ebd2b15` | Full 1,298; guard 494 / 0 / 14. |
+| 15 | Fulfillment — delivery-method values, context, repository/cache/provider; Billing still owns selection/charge/checkout/order behavior. | `codex/feature-architecture-15-fulfillment` / `a20568ca` | Focused 82; full 1,305; guard 494 / 0 / 15; 2 export-only shims, 0 deletions. |
+| 16 | Payments — bank and gateway directories plus Pine Labs terminal lifecycle; Billing owns checkout/payment validation and Accounting owns persisted outcomes. | `codex/feature-architecture-16-payments` / `888df54b` | Focused 9; selected downstream 26; architecture guard 13; full 1,314; guard 494 / 0 / 16; 7 export-only shims, 0 deletions. |
 
 For each completed module, read its feature `README.md`, `FEATURE_SPEC.md`,
 `TODO.md`, and `CHANGELOG.md`; those files contain the exact compatibility
@@ -82,8 +84,6 @@ for navigation only; the architecture ledger contains full SHAs.
 
 | # | Module | Ownership focus | Important boundary |
 |---:|---|---|---|
-| 15 | Fulfillment | Delivery-method values, context, repository/cache/provider. | Billing owns selection/charge/checkout/order behavior; Sync owns later scheduling. |
-| 16 | Payments | Bank, payment-gateway, Pine Labs state/services. | Billing owns payment validation/totals; Printing owns output; backend credentials stay behind ports. |
 | 17 | Purchasing | Purchase screens/provider/order/item/voucher values. | Inventory owns stock; Suppliers/Payments/Accounting remain public dependencies. |
 | 18 | Sales | Sales, returns, edit-order, quotation/order/daily-close state. | Billing creates checkout inputs; Accounting/Printing/Reports consume projections. |
 | 19 | Accounting | Transactions, invoices, receipts, vouchers, expenses, company accounts. | Do not absorb Sales checkout or Printing templates. |
@@ -95,6 +95,48 @@ for navigation only; the architecture ledger contains full SHAs.
 | 25 | Kiosk | Kiosk screens and actions. | Consume public roots; keep legal/static pages and support boundaries explicit. |
 | 26 | Dashboard | Dashboard pages/provider/models. | Read projections from owning features; do not duplicate repositories. |
 | 27 | Offline and Realtime Sync | Sync/realtime providers, offline controls, scheduling/cursors. | Publish typed deltas or app adapters; never bypass strict feature cache/session authority. |
+
+## Recent completion details
+
+### Module 15 — Fulfillment
+
+- Base: Module 14 evidence `8ebd2b15`.
+- Implementation: `b9b5f9f7`; evidence: `a20568ca`.
+- Boundary: delivery-method directory values, dynamic context-bound transport,
+  Preferences cache, provider state, reset/store/session lifecycle.
+- Preserved elsewhere: Billing selection/fees/checkout/cart/order mutation,
+  Sales/Printing projections, and Module 27 scheduling.
+- Verification: focused Fulfillment/Billing gate 82/82; full Flutter suite
+  1,305/1,305; guard 494 legacy / 0 exceptions / 15 strict; strict analyzer
+  clean; architecture guard tests 13/13.
+- Compatibility: `lib/models/delivery_method.dart` and
+  `lib/providers/delivery_methods_provider.dart` remain export-only shims;
+  no old path was deleted.
+
+### Module 16 — Payments
+
+- Base: Module 15 evidence `a20568ca`.
+- Implementation: `34bcd1638fe2a85238f24732c0cce45146a9c806`; evidence:
+  `888df54b44488bf8bb24439013e073f93e92afae`.
+- Boundary: bank/payment-gateway directories, context-safe repository/cache
+  state, Pine Labs MethodChannel lifecycle, and app-owned composition.
+- Preserved elsewhere: Billing payment-method selection, validation, totals,
+  checkout orchestration and terminal-result interpretation; Accounting
+  persisted financial outcomes; Printing/Reports output projections.
+- Verification: Payments focused suite 9/9; selected downstream Billing,
+  session-reset, and widget gate 26/26; architecture guard test 13/13; full
+  Flutter suite 1,314/1,314; guard 494 legacy / 0 exceptions / 16 strict;
+  strict Payments analyzer clean; formatter and diff checks clean except
+  expected line-ending notices.
+- Compatibility: seven old payment paths remain implementation-free shims:
+  `lib/config/pine_labs_config.dart`, `lib/models/bank.dart`,
+  `lib/models/payment_gateway.dart`, `lib/providers/bank_provider.dart`,
+  `lib/providers/payment_gateways_provider.dart`,
+  `lib/providers/pine_labs_terminal_provider.dart`, and
+  `lib/services/pine_labs_terminal_service.dart`. No payment path was deleted.
+- Known debt: Pine Labs deployment identifiers, backend authorization/contract
+  verification, downstream Printing/Reports consumers, Billing orchestration,
+  and final shim removal remain with their scheduled owners.
 
 ## How to continue on a future module
 
