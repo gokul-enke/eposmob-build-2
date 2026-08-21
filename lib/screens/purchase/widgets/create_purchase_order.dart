@@ -991,18 +991,32 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
           // No match, just update the edited item at index
           orderItems[_editingItemIndex!] = currentItem;
         }
+      } else if (_isReceiveMode) {
+        // Receive mode: rows carry server-side purchase_item_ids and must
+        // remain separate — never merge duplicates.
+        orderItems.add(currentItem);
       } else {
         // Add Flow: check if the new item matches an existing row
         final matchIdx = findMatchingItemIndex();
         if (matchIdx != null) {
-          // Duplicate found — sum quantity only. Do NOT overwrite prices or any
-          // other fields; if the user wants to change the price they must use
-          // the edit icon on the existing row.
+          // Duplicate found — sum quantity and purchaseQty. Do NOT overwrite
+          // prices or any other fields; if the user wants to change the price
+          // they must use the edit icon on the existing row.
           final existing = orderItems[matchIdx];
           final currentQty = double.tryParse(currentItem.quantity) ?? 0.0;
           final existingQty = double.tryParse(existing.quantity) ?? 0.0;
-
           existing.quantity = (existingQty + currentQty).toString();
+
+          // Also sum purchaseQty so the API receives consistent values.
+          final currentPurchaseQty =
+              double.tryParse(currentItem.purchaseQty ?? '') ?? 0.0;
+          final existingPurchaseQty =
+              double.tryParse(existing.purchaseQty ?? '') ?? 0.0;
+          if (currentPurchaseQty > 0 || existingPurchaseQty > 0) {
+            existing.purchaseQty =
+                (existingPurchaseQty + currentPurchaseQty).toString();
+          }
+
           existing.syncControllers();
         } else {
           // No match, add new item
@@ -1855,8 +1869,16 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         errorMessage ??= result?['message']?.toString() ??
             'purchase_order.payment_error_422'.tr;
 
-        // Show error, clear payment inputs, disable payment section.
-        if (mounted) {
+        // Only disable payment if the 422 specifically indicates the PO is
+        // already fully paid. Other 422 errors (validation, etc.) should show
+        // the error but leave payment inputs functional.
+        final errorsMap = result?['errors'];
+        final bool isFullyPaidError = (errorMessage != null &&
+                (errorMessage.toLowerCase().contains('already fully paid') ||
+                    errorMessage.toLowerCase().contains('fully paid'))) ||
+            (errorsMap is Map && errorsMap.containsKey('paid_amounts'));
+
+        if (mounted && isFullyPaidError) {
           setState(() {
             paymentData = DynamicPaymentData();
             _isPaymentDisabled = true;
