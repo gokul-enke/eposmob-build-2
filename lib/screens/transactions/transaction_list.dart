@@ -19,6 +19,7 @@ import '../../helpers/date_helper.dart';
 import '../../models/list_transaction.dart';
 import '../../providers/auth_model.dart';
 import '../../providers/invoice_provider.dart';
+import '../../providers/master_data_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
@@ -255,6 +256,14 @@ class _CustomerTransactionListScreenState
   }
 
   void _showTransactionDetails(ListTransaction transaction) {
+    final masterData = context.read<MasterDataProvider>();
+    final paymentId = int.tryParse(transaction.paymentMethod ?? '');
+    final paymentLabel = (paymentId != null
+            ? masterData.getPaymentMethodValue(paymentId)
+            : null) ??
+        transaction.paymentMethod ??
+        'party_accounts.na'.tr;
+
     showDialog(
       context: context,
       builder: (context) => CommonDetailsDialog(
@@ -265,7 +274,10 @@ class _CustomerTransactionListScreenState
             CommonDetailsDialog.buildKeyValueRow('party_accounts.date'.tr, transaction.date ?? 'party_accounts.na'.tr),
             CommonDetailsDialog.buildKeyValueRow('party_accounts.type'.tr, transaction.type ?? 'party_accounts.na'.tr),
             CommonDetailsDialog.buildKeyValueRow('party_accounts.transaction_type'.tr, transaction.transactionType ?? 'party_accounts.na'.tr),
-            CommonDetailsDialog.buildKeyValueRow('party_accounts.payment_method'.tr, transaction.paymentMethod ?? 'party_accounts.na'.tr),
+            CommonDetailsDialog.buildKeyValueRow(
+              'party_accounts.payment_method'.tr,
+              paymentLabel,
+            ),
           ],
           [
             CommonDetailsDialog.buildKeyValueRow('party_accounts.amount'.tr, '${transaction.currency ?? ''} ${transaction.amount ?? ''}'),

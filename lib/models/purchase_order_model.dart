@@ -45,6 +45,10 @@ class PurchaseOrderData {
   String? status;
   String? createdAt;
   List<PurchaseOrderItemData>? items;
+  // Payment state fields (new — from list-purchase-order API)
+  double? paidTotal;
+  double? outstandingAmount;
+  String? paymentStatus; // "unpaid" | "partially_paid" | "paid"
 
   PurchaseOrderData({
     this.id,
@@ -58,6 +62,9 @@ class PurchaseOrderData {
     this.status,
     this.createdAt,
     this.items,
+    this.paidTotal,
+    this.outstandingAmount,
+    this.paymentStatus,
   });
 
   PurchaseOrderData.fromJson(Map<String, dynamic> json) {
@@ -73,6 +80,10 @@ class PurchaseOrderData {
     itemsReceived = json['items_received'];
     status = json['status'];
     createdAt = json['created_at'];
+    paidTotal = double.tryParse(json['paid_total']?.toString() ?? '');
+    outstandingAmount =
+        double.tryParse(json['outstanding_amount']?.toString() ?? '');
+    paymentStatus = json['payment_status']?.toString();
     if (json['items'] != null) {
       items = <PurchaseOrderItemData>[];
       json['items'].forEach((v) {
