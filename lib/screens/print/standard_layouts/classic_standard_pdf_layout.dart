@@ -5,7 +5,7 @@ import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 import 'package:pos_machine/screens/print/print_standard.dart';
 import 'standard_pdf_layout.dart';
 import 'standard_pdf_contract_delegate.dart';
-import 'new_classic_standad_pdf_layout.dart';
+import 'contract_standard_pdf_layout.dart';
 
 /// Classic standard PDF layout - the default A4/A5 PDF design.
 ///
@@ -81,8 +81,10 @@ class ClassicStandardPdfLayout implements StandardPdfLayout {
       );
     }
     debugPrint(
-        '[ClassicStandardPdfLayout] buildPdfDocument - delegating to NewClassicStandardPdfLayout');
-    final newClassic = NewClassicStandardPdfLayout();
-    return newClassic.buildPdfDocument(params);
+        '[ClassicStandardPdfLayout] buildPdfDocument - using the shared Classic contract');
+    return const ContractStandardPdfLayout(
+      layoutId: 'classic',
+      displayName: 'Classic',
+    ).buildPdfDocument(params);
   }
 }

@@ -10,6 +10,7 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart'; // Added import
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/features/billing/presentation/pages/billing_page.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/pos_security_key_dialog.dart';
 import 'package:pos_machine/services/print_service.dart';
 import 'package:provider/provider.dart';
 import 'package:get/get.dart';
@@ -57,8 +58,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
   @override
   void didUpdateWidget(covariant HorizontalSavedOrdersView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.autofocus &&
-        widget.focusRequestId != oldWidget.focusRequestId) {
+    if (widget.autofocus && widget.focusRequestId != oldWidget.focusRequestId) {
       _requestGridFocusIfNeeded();
     }
   }
@@ -318,16 +318,15 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
     );
   }
 
-  Widget _buildSavedOrderCard(BuildContext context,
-      LocalProductProvider provider, SavedOrder order,
+  Widget _buildSavedOrderCard(
+      BuildContext context, LocalProductProvider provider, SavedOrder order,
       {bool isKeyboardFocused = false}) {
     String time = DateHelper.formatToISOTimeOnlyFromISO(order.createdAt);
     bool isSelected = provider.currentOrder?.id == order.id;
 
     debugPrint(
         "SavedOrder ${order.orderNumber} raw createdAt: ${order.createdAt}");
-    debugPrint(
-        "SavedOrder ${order.orderNumber} formatted time: $time");
+    debugPrint("SavedOrder ${order.orderNumber} formatted time: $time");
 
     return ConstrainedBox(
       constraints: const BoxConstraints(
@@ -340,8 +339,8 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
         border: isKeyboardFocused
             ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
             : isSelected
-            ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
-            : Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
+                ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
+                : Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
         child: InkWell(
           onTap: widget.isBusy ? null : () => widget.onOrderSelected(order.id),
           borderRadius: BorderRadius.circular(8),
@@ -435,6 +434,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                       constraints: const BoxConstraints(),
                     ),
                     IconButton(
+                      key: ValueKey('delete_saved_order_${order.id}'),
                       onPressed: () {
                         _showDeleteConfirmationDialog(context, provider, order);
                       },
@@ -485,24 +485,42 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
     );
   }
 
-  void _showDeleteConfirmationDialog(
+  Future<void> _showDeleteConfirmationDialog(
       BuildContext context, LocalProductProvider provider, SavedOrder order) {
-    DeleteConfirmationDialog.show(
+    return _confirmAndDeleteSavedOrder(
+      context,
+      provider,
+      order,
+    );
+  }
+
+  Future<void> _confirmAndDeleteSavedOrder(
+    BuildContext context,
+    LocalProductProvider provider,
+    SavedOrder order,
+  ) async {
+    final confirmed = await DeleteConfirmationDialog.show(
       context: context,
       title: "Delete Order",
       itemName: order.orderNumber,
       message: "This order will be permanently removed from your saved orders.",
       warningIcon: Icons.receipt_long_outlined,
-      onDelete: () {
-        // Delete the order
-        provider.deleteSavedOrder(order.id);
+      onDelete: () {},
+    );
 
-        // Show success message
-        showScaffold(
-          context: context,
-          message: "Order deleted successfully",
-        );
-      },
+    if (confirmed != true || !mounted || !context.mounted) return;
+    if (!await PosSecurityKeyDialog.verify(
+      context,
+      action: 'delete this saved order',
+    )) {
+      return;
+    }
+    if (!mounted || !context.mounted) return;
+
+    provider.deleteSavedOrder(order.id);
+    showScaffold(
+      context: context,
+      message: "Order deleted successfully",
     );
   }
 }

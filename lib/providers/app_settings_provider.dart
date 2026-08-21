@@ -18,6 +18,10 @@ class AppSettingsProvider extends ChangeNotifier {
   bool get isReady => !_loading && _lastFetchSucceeded && _appSettings != null;
   bool get allowOverselling => appSettings?.allowOverselling ?? true;
   bool get multiSaleUnitEnabled => appSettings?.multiSaleUnitEnabled ?? false;
+  bool get posAuthenticateClearCart =>
+      appSettings?.posAuthenticateClearCart ?? false;
+  String get posAuthenticateClearCartKey =>
+      appSettings?.posAuthenticateClearCartKey ?? '';
 
   CompanySubscription? get companySubscriptionFallback {
     final settings = _appSettings;

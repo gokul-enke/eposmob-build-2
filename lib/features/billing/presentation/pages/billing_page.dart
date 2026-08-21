@@ -89,6 +89,7 @@ import 'package:pos_machine/features/billing/presentation/widgets/price_fields.d
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/screens/customers/add_customer_modal.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/keyboard_shortcuts_help_dialog.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/pos_security_key_dialog.dart';
 
 enum CheckoutActionMode { confirm, save, quotation }
 
@@ -4008,14 +4009,12 @@ class BillingPageState extends State<BillingPage>
                                                 visualDensity:
                                                     VisualDensity.compact,
                                                 onPressed: () {
-                                                  localProductProvider
-                                                      .removeFromCart(
-                                                    item.product.productId!,
-                                                    item.selectedStock,
-                                                    stockGroupIds:
-                                                        item.stockGroupIds,
-                                                    saleUnitId: item.saleUnitId,
-                                                    variantId: item.variantId,
+                                                  unawaited(
+                                                    _removeCartItemFromKeyboard(
+                                                      item,
+                                                      localProductProvider,
+                                                      cartItems.length,
+                                                    ),
                                                   );
                                                 },
                                               ),
@@ -4224,14 +4223,15 @@ class BillingPageState extends State<BillingPage>
           _cartPriceEditRequestId++;
         });
       } else if (_cartTableFocusedCellIndex == 4) {
-        _removeCartItemFromKeyboard(
-            item, localProductProvider, cartItems.length);
+        unawaited(_removeCartItemFromKeyboard(
+            item, localProductProvider, cartItems.length));
       }
       return KeyEventResult.handled;
     }
 
     if (key == LogicalKeyboardKey.delete) {
-      _removeCartItemFromKeyboard(item, localProductProvider, cartItems.length);
+      unawaited(_removeCartItemFromKeyboard(
+          item, localProductProvider, cartItems.length));
       return KeyEventResult.handled;
     }
 
@@ -4315,8 +4315,28 @@ class BillingPageState extends State<BillingPage>
     return KeyEventResult.ignored;
   }
 
-  void _removeCartItemFromKeyboard(LocalCartItem item,
+  Future<void> _removeCartItemFromKeyboard(LocalCartItem item,
       LocalProductProvider localProductProvider, int previousCartLength) {
+    return _removeCartItemFromKeyboardAfterAuthorization(
+      item,
+      localProductProvider,
+      previousCartLength,
+    );
+  }
+
+  Future<void> _removeCartItemFromKeyboardAfterAuthorization(
+    LocalCartItem item,
+    LocalProductProvider localProductProvider,
+    int previousCartLength,
+  ) async {
+    if (!await PosSecurityKeyDialog.verify(
+      context,
+      action: 'remove this cart item',
+    )) {
+      return;
+    }
+    if (!mounted) return;
+
     localProductProvider.removeFromCart(
       item.product.productId!,
       item.selectedStock,
@@ -4341,6 +4361,14 @@ class BillingPageState extends State<BillingPage>
     if (productId == null) return;
 
     final nextQuantity = item.quantity + delta;
+    if (nextQuantity <= 0 &&
+        !await PosSecurityKeyDialog.verify(
+          context,
+          action: 'remove this cart item',
+        )) {
+      return;
+    }
+
     debugPrint(
       '🧮 [BillingPage] keyboard quantity adjust '
       'productId=$productId, current=${item.quantity}, '
@@ -6156,6 +6184,13 @@ class BillingPageState extends State<BillingPage>
   }
 
   Future<void> _clearCart() async {
+    if (!await PosSecurityKeyDialog.verify(
+      context,
+      action: 'clear the cart',
+    )) {
+      return;
+    }
+
     if (!_beginOrderAction()) {
       return;
     }

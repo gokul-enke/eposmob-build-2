@@ -66,7 +66,24 @@ void main() {
     );
 
     expect(profile.paperSize, 'A4');
-    expect(profile.theme, 'corporate_tax_invoice');
+    expect(profile.theme, 'classic');
+  });
+
+  test('PDF sharing exposes only the six supported A4/A5 templates', () {
+    expect(
+      PdfShareSettings.themes.map((theme) => theme['id']),
+      orderedEquals(const [
+        'classic',
+        'simplified_tax_invoice',
+        'centered_simplified_tax_invoice',
+        'bilingual_centered_tax_invoice',
+        'boxed_bilingual_tax_invoice',
+        'boxed_header_tax_invoice',
+      ]),
+    );
+    expect(PdfShareSettings.isSupportedTheme('corporate_tax_invoice'), isFalse);
+    expect(
+        PdfShareSettings.isSupportedTheme('letterhead_tax_invoice'), isFalse);
   });
 
   testWidgets('printer settings exposes a dedicated PDF Sharing tab',

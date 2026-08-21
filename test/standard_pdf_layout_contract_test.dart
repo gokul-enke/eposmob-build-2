@@ -14,17 +14,11 @@ import 'package:provider/single_child_widget.dart';
 
 const _themes = <String>[
   'classic',
-  'tax_invoice',
-  'detailed_tax_invoice',
-  'standard_tax_invoice',
-  'new_classic',
   'simplified_tax_invoice',
   'centered_simplified_tax_invoice',
   'bilingual_centered_tax_invoice',
   'boxed_bilingual_tax_invoice',
   'boxed_header_tax_invoice',
-  'corporate_tax_invoice',
-  'letterhead_tax_invoice',
 ];
 
 const _languageModes = <String, ReceiptLanguageMode>{
@@ -178,10 +172,6 @@ Widget _providerHarness({required void Function(BuildContext) onContext}) {
 String _standardLayoutSource(String theme) {
   const files = <String, String>{
     'classic': 'classic_standard_pdf_layout.dart',
-    'tax_invoice': 'tax_invoice_standard_pdf_layout.dart',
-    'detailed_tax_invoice': 'detailed_tax_invoice_standard_pdf_layout.dart',
-    'standard_tax_invoice': 'standard_tax_invoice_standard_pdf_layout.dart',
-    'new_classic': 'new_classic_standad_pdf_layout.dart',
     'simplified_tax_invoice': 'simplified_tax_invoice_standard_pdf_layout.dart',
     'centered_simplified_tax_invoice':
         'centered_simplified_tax_invoice_standard_pdf_layout.dart',
@@ -191,8 +181,6 @@ String _standardLayoutSource(String theme) {
         'boxed_bilingual_tax_invoice_standard_pdf_layout.dart',
     'boxed_header_tax_invoice':
         'boxed_header_tax_invoice_standard_pdf_layout.dart',
-    'corporate_tax_invoice': 'corporate_tax_invoice_standard_pdf_layout.dart',
-    'letterhead_tax_invoice': 'letterhead_tax_invoice_standard_pdf_layout.dart',
   };
   return File(
     'lib/screens/print/standard_layouts/${files[theme]}',
@@ -200,9 +188,9 @@ String _standardLayoutSource(String theme) {
 }
 
 void main() {
-  test('factory exposes exactly the twelve standard PDF themes', () {
+  test('factory exposes exactly the six standard PDF themes', () {
     expect(StandardPdfLayoutFactory.availableThemes, orderedEquals(_themes));
-    expect(StandardPdfLayoutFactory.availableThemes.toSet(), hasLength(12));
+    expect(StandardPdfLayoutFactory.availableThemes.toSet(), hasLength(6));
     for (final theme in _themes) {
       final layout = StandardPdfLayoutFactory.getLayout(theme);
       expect(layout.layoutId, theme);

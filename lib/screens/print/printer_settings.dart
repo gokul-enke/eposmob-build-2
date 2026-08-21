@@ -192,12 +192,6 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       switch (themeId) {
         case 'classic':
           return 'Traditional A4/A5 PDF layout with standard formatting';
-        case 'tax_invoice':
-          return 'Formal ZATCA-compliant bilingual Tax Invoice layout';
-        case 'detailed_tax_invoice':
-          return 'Comprehensive Tax Invoice with detailed itemization and tax breakdown';
-        case 'standard_tax_invoice':
-          return 'Clean Tax Invoice layout with essential details and clear tax info';
         case 'simplified_tax_invoice':
           return 'ZATCA Simplified Tax Invoice with teal accent header/footer, bilingual columns and totals';
         case 'centered_simplified_tax_invoice':
@@ -208,12 +202,6 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           return 'Boxed bilingual Tax Invoice with seller, buyer, invoice, items, bank and totals sections';
         case 'boxed_header_tax_invoice':
           return 'Boxed header Tax Invoice with seller, buyer, invoice, items, bank and totals sections';
-        case 'corporate_tax_invoice':
-          return 'Formal corporate Tax Invoice with logo header, buyer block, bank details and bilingual amount in words';
-        case 'letterhead_tax_invoice':
-          return 'Bilingual Tax Invoice with tri-column letterhead (EN/logo/AR), boxed title and bordered customer/invoice boxes';
-        case 'new_classic':
-          return 'Modern A4/A5 layout with enhanced font hierarchy and breathable spacing';
         default:
           return 'Standard PDF layout';
       }

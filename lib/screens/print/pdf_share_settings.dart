@@ -27,10 +27,6 @@ class PdfShareSettings {
 
   static const List<Map<String, String>> themes = [
     {'id': 'classic', 'name': 'Classic'},
-    {'id': 'new_classic', 'name': 'New Classic'},
-    {'id': 'tax_invoice', 'name': 'Tax Invoice'},
-    {'id': 'detailed_tax_invoice', 'name': 'Detailed Tax Invoice'},
-    {'id': 'standard_tax_invoice', 'name': 'Standard Tax Invoice'},
     {'id': 'simplified_tax_invoice', 'name': 'Simplified Tax Invoice'},
     {
       'id': 'centered_simplified_tax_invoice',
@@ -45,8 +41,6 @@ class PdfShareSettings {
       'name': 'Boxed Bilingual Tax Invoice',
     },
     {'id': 'boxed_header_tax_invoice', 'name': 'Boxed Header Tax Invoice'},
-    {'id': 'corporate_tax_invoice', 'name': 'Corporate Tax Invoice'},
-    {'id': 'letterhead_tax_invoice', 'name': 'Letterhead Tax Invoice'},
   ];
 
   static String paperPreferenceKey({required bool isB2B}) =>

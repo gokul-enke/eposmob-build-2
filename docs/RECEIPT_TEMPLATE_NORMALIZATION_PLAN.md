@@ -248,9 +248,9 @@ are not treated as migrated skins until they pass the same checks.
 - [ ] Test long Arabic/English product names and row wrapping at each width.
 - [ ] Test large orders and part-one/part-two image splitting.
 - [ ] Test logo, QR, barcode, drawer, feed, and cut behavior.
-- [x] Keep A4/A5 in the standard PDF output path.  All twelve registered
+- [x] Keep A4/A5 in the standard PDF output path.  The six supported
   standard-PDF IDs now route through `ContractStandardPdfLayout`, with the
-  historical direct classes guarded by the same delegate.
+  remaining historical direct classes guarded by the same delegate.
 - [x] Remove empty `buildPdf()` success paths for production thermal layouts;
   thermal output uses the shared adapter and A4/A5 output uses the maintained
   contract PDF renderer.
@@ -316,13 +316,13 @@ readiness matrix is updated.
 
 ## A4/A5 PDF Follow-up (separate migration track)
 
-The standard PDF factory has 12 registered themes.  They now share the same
+The standard PDF factory has six registered themes.  They now share the same
 language, visibility, dynamic-data, bank, warranty, QR, VAT-footer, and section
 ordering contract as thermal output.  The factory and every historical direct
 class entry point delegate to `ContractStandardPdfLayout`; no caller can obtain
 the old empty-document path accidentally.
 
-The contract test matrix covers 12 themes × 3 language modes × A4/A5 (72
+The contract test matrix covers six themes × 3 language modes × A4/A5 (36
 non-empty PDF documents), strict all-61-key visibility, aliases, and direct
 legacy delegation.  This is functional coverage, not pixel-equivalent
 reproduction of each historical skin: the active IDs intentionally share a

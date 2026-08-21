@@ -239,7 +239,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                   Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: () => _removeCurrentCartItem(cartItem),
+                      onTap: () => unawaited(_removeCurrentCartItem(cartItem)),
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
                         padding: const EdgeInsets.all(8),
@@ -786,6 +786,13 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
 
   Future<void> _removeCurrentCartItem(LocalCartItem cartItem) async {
     try {
+      if (!await PosSecurityKeyDialog.verify(
+        context,
+        action: 'remove this cart item',
+      )) {
+        return;
+      }
+
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
 
@@ -819,6 +826,13 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
           Provider.of<LocalProductProvider>(context, listen: false);
 
       if (localProductProvider.cartItems.isNotEmpty) {
+        if (!await PosSecurityKeyDialog.verify(
+          context,
+          action: 'clear the cart',
+        )) {
+          return;
+        }
+
         debugPrint('🗑️ _clearCurrentCart: Clearing local cart');
 
         // Use LocalProductProvider to clear the cart
@@ -1003,7 +1017,15 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
   }
 
   // Delete local draft
-  void _deleteLocalDraft(SavedOrder order) {
+  Future<void> _deleteLocalDraft(SavedOrder order) async {
+    if (!await PosSecurityKeyDialog.verify(
+      context,
+      action: 'delete this saved order',
+    )) {
+      return;
+    }
+
+    if (!mounted) return;
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
     localProductProvider.deleteSavedOrder(order.id);
@@ -1103,7 +1125,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                       Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          onTap: () => _deleteLocalDraft(order),
+                          onTap: () => unawaited(_deleteLocalDraft(order)),
                           borderRadius: BorderRadius.circular(8),
                           child: Container(
                             padding: const EdgeInsets.all(6),

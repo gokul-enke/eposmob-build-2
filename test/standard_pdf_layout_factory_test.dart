@@ -3,17 +3,11 @@ import 'package:pos_machine/screens/print/standard_layouts/standard_pdf_layout_f
 
 const _standardPdfThemes = <String>[
   'classic',
-  'tax_invoice',
-  'detailed_tax_invoice',
-  'standard_tax_invoice',
-  'new_classic',
   'simplified_tax_invoice',
   'centered_simplified_tax_invoice',
   'bilingual_centered_tax_invoice',
   'boxed_bilingual_tax_invoice',
   'boxed_header_tax_invoice',
-  'corporate_tax_invoice',
-  'letterhead_tax_invoice',
 ];
 
 void main() {
@@ -38,6 +32,6 @@ void main() {
     expect(StandardPdfLayoutFactory.getLayout(null).layoutId, 'classic');
     expect(StandardPdfLayoutFactory.getLayout('does_not_exist').layoutId,
         'classic');
-    expect(StandardPdfLayoutFactory.hasTheme('TAX_INVOICE'), isTrue);
+    expect(StandardPdfLayoutFactory.hasTheme('TAX_INVOICE'), isFalse);
   });
 }

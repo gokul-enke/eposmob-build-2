@@ -186,7 +186,7 @@ Already handles:
 
 **PDF** (`StandardPdfLayoutFactory`):
 
-`classic`, `tax_invoice`, `detailed_tax_invoice`, `standard_tax_invoice`, `new_classic`, `simplified_tax_invoice`, `corporate_tax_invoice`, `letterhead_tax_invoice`
+`classic`, `simplified_tax_invoice`, `centered_simplified_tax_invoice`, `bilingual_centered_tax_invoice`, `boxed_bilingual_tax_invoice`, `boxed_header_tax_invoice`
 
 ---
 

@@ -21,22 +21,6 @@ class StandardPdfLayoutFactory {
           layoutId: 'classic',
           displayName: 'Classic',
         ),
-    'tax_invoice': () => const ContractStandardPdfLayout(
-          layoutId: 'tax_invoice',
-          displayName: 'Tax Invoice',
-        ),
-    'detailed_tax_invoice': () => const ContractStandardPdfLayout(
-          layoutId: 'detailed_tax_invoice',
-          displayName: 'Detailed Tax Invoice',
-        ),
-    'standard_tax_invoice': () => const ContractStandardPdfLayout(
-          layoutId: 'standard_tax_invoice',
-          displayName: 'Standard Tax Invoice',
-        ),
-    'new_classic': () => const ContractStandardPdfLayout(
-          layoutId: 'new_classic',
-          displayName: 'New Classic (Standard)',
-        ),
     'simplified_tax_invoice': () => const ContractStandardPdfLayout(
           layoutId: 'simplified_tax_invoice',
           displayName: 'Simplified Tax Invoice',
@@ -57,21 +41,13 @@ class StandardPdfLayoutFactory {
           layoutId: 'boxed_header_tax_invoice',
           displayName: 'Boxed Header Tax Invoice',
         ),
-    'corporate_tax_invoice': () => const ContractStandardPdfLayout(
-          layoutId: 'corporate_tax_invoice',
-          displayName: 'Corporate Tax Invoice',
-        ),
-    'letterhead_tax_invoice': () => const ContractStandardPdfLayout(
-          layoutId: 'letterhead_tax_invoice',
-          displayName: 'Letterhead Tax Invoice',
-        ),
   };
 
   /// Get a layout instance based on the theme identifier.
   ///
   /// [activeTheme] - The theme identifier (e.g., "classic", "modern", "minimal")
   ///
-  /// Returns the corresponding layout, or [ClassicStandardPdfLayout] if the theme
+  /// Returns the corresponding layout, or the shared Classic contract if the theme
   /// is not found or is null.
   static StandardPdfLayout getLayout(String? activeTheme) {
     final themeKey = activeTheme?.toLowerCase().trim() ?? 'classic';
