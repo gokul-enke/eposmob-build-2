@@ -7,7 +7,7 @@ required, and a prompt that can be reused for the next module.
 ## Current checkpoint
 
 - Total planned modules: **28**, numbered `00` through `27`.
-- Completed and evidence-recorded: **Modules 00–26**.
+- Completed and evidence-recorded: **Modules 00–27**.
 - Module 20 (Reports) is complete on
   `codex/feature-architecture-20-reports`: implementation
   `fd6c33003ad931c222abcc0b177e079b69b300c9`, evidence
@@ -33,7 +33,13 @@ required, and a prompt that can be reused for the next module.
   `codex/feature-architecture-26-dashboard`: implementation
   `6a4b514ce8653da5649ed3b96ce8f93c395edabc`, evidence
   `f35fc5c6f4f34301e3712f60c880d19ad572cc15`.
-- Remaining after Module 26: Module `27` (1 module).
+- Module 27 (Offline and realtime sync) is complete on
+  `codex/feature-architecture-27-sync`: implementation
+  `fe3fb38fa522125c1df152a3ca8e3bb558040ebf`, evidence
+  `3ff4257dc3232134a23949672e8a374c31fdcea9`.
+- Remaining numbered modules: **none**. The migration contains exactly 28
+  modules, `00` through `27`; future work must use the owner TODO/debt paths,
+  not a new Module 28.
 - The canonical branch is `gokul-dev`; numbered migration branches are stacked
   work branches and can be merged/cherry-picked into `gokul-dev` later.
 - The detailed branch/SHA ledger remains
@@ -107,6 +113,7 @@ were merely moved or because a focused widget test happens to pass.
 | 24 | Billing — strict cart/context/totals/checkout contracts and runtime shells, with the complete 93-file Billing implementation relocated behind an app-owned compatibility bridge. | `codex/feature-architecture-24-billing` / `e99f5886` | Base `895ec417`; implementation `7e11d20e`; evidence `e99f5886`; strict contract 4; Billing compatibility 108; Product downstream 30; registry/guard 21; full 1,367; guard 486 / 0 / 24; app legacy tree and typed-port debt recorded in Billing docs. |
 | 25 | Kiosk — strict runtime-backed page wrappers for the Kiosk landing/order/checkout/legal surfaces, with the complete seven-file implementation relocated behind an app-owned bridge. | `codex/feature-architecture-25-kiosk` / `fbf5d46f` | Base `e99f5886`; implementation `c0b2f2af`; evidence `fbf5d46f`; Kiosk/composition contract 3; combined Kiosk/widget/guard gate 17; full 1,370; guard 479 / 0 / 25; zero shims, seven obsolete paths removed, no new navigation/backend contract. |
 | 26 | Dashboard — strict public destination/DTO/runtime boundary with app-owned role-specific screens and provider bridge; source analytics and Sync remain outside. | `codex/feature-architecture-26-dashboard` / `f35fc5c6` | Base `fbf5d46f`; implementation `6a4b514c`; evidence `f35fc5c6`; Dashboard strict/composition 4; registry/App Destination 8; full 1,374; guard 471 / 0 / 26; 3 export-only shims, 8 legacy screen/widget relocations, slot 1 preserved. |
+| 27 | Offline and Realtime Sync — strict session/change/status, transport, cursor, socket, lifecycle, manual-sync, and app projection boundary; source-feature caches and CRUD remain with their owners. | `codex/feature-architecture-27-sync` / `3ff4257d` | Base `f35fc5c6`; implementation `fe3fb38f`; evidence `3ff4257d`; focused Sync 17; registry/widget 9; Product source-compatibility 22; full 1,379; guard 471 / 0 / 27; six export-only shims, no deleted paths. |
 
 For each completed module, read its feature `README.md`, `FEATURE_SPEC.md`,
 `TODO.md`, and `CHANGELOG.md`; those files contain the exact compatibility
@@ -124,7 +131,7 @@ for navigation only; the architecture ledger contains full SHAs.
 | 24 | Billing | Billing screens, cart, checkout, non-restaurant flows, cart/local compatibility. | Complete; strict contracts and app-owned compatibility bridge are recorded in the Module 24 evidence. |
 | 25 | Kiosk | Kiosk screens and actions. | Complete; app-owned legacy behavior is behind strict wrappers, with no new destination or backend contract. |
 | 26 | Dashboard | Dashboard pages/provider/models. | Complete; read projections remain app-owned until source features publish typed contracts. |
-| 27 | Offline and Realtime Sync | Sync/realtime providers, offline controls, scheduling/cursors. | Next; publish typed deltas or app adapters; never bypass strict feature cache/session authority. |
+| 27 | Offline and Realtime Sync | Sync/realtime providers, offline controls, scheduling/cursors. | Complete; strict Sync owns scheduling/transport/cursors, while app adapters project into Product/Customers/Inventory/Sales and six compatibility shims remain until typed source commands replace them. |
 
 ## Recent completion details
 
@@ -460,32 +467,105 @@ for navigation only; the architecture ledger contains full SHAs.
   accessibility coverage; then remove the three shims. Full details are in
   `docs/features/dashboard/` and the ledger evidence.
 
-## How to continue on a future module
+### Module 27 — Offline and Realtime Sync
 
-1. Read this checklist, the latest handoff, and the latest ledger row.
-2. Verify the exact evidence commit with `git show <sha>` and create a new
-   worktree/branch from that commit. Do not branch from an implementation-only
-   commit or from an uncommitted `gokul-dev` tree.
-3. Inventory all legacy paths, imports, registrations, consumers, tests, URL
-   getters, preferences/Hive keys, and backend routes before moving anything.
-4. Write the ownership/exclusion decision down in the feature docs before
-   implementing. If a contract is uncertain, preserve the current behavior and
-   record the uncertainty as debt instead of inventing a backend/API.
-5. Implement strict domain ports first, then data adapters, application state,
-   app composition, and consumer rewrites. Keep compatibility shims thin.
+- Base: Module 26 Dashboard evidence
+  `f35fc5c6f4f34301e3712f60c880d19ad572cc15`.
+- Implementation: `fe3fb38fa522125c1df152a3ca8e3bb558040ebf`; evidence:
+  `3ff4257dc3232134a23949672e8a374c31fdcea9`.
+- Boundary: strict Sync owns session/change/status values, pull/auth/entity
+  transport, provenance-scoped cursors, socket lifecycle, manual-sync gating,
+  reconnect policy, and app/runtime lifecycle. Product, Customers, Inventory,
+  Sales, Billing/cart, Organization, Identity, and Dashboard remain the
+  source-feature authorities; an app-owned entity sink is the projection seam.
+- App compatibility: six complete legacy implementations now live under
+  `lib/app/realtime_sync/`; the six original provider/settings/button paths are
+  implementation-free export shims. No source-feature repository, cache, CRUD,
+  stock reservation, cart, or presentation implementation moved into Sync.
+- Verification: strict realtime-sync tests 17/17; registry/App Destination/
+  widget smoke 9/9; Product source-compatibility regression 22/22; complete
+  `flutter test --no-pub --reporter compact` 1,379/1,379; guard 471 legacy /
+  0 exceptions / 27 strict; strict analyzer and formatter clean; diff check
+  clean apart from normal Windows line-ending notices.
+- Known debt: verify deployed sync and Reverb contracts, move opaque sink rows
+  to typed source-feature commands, move full offline orchestration to source
+  owners, configure deployment-owned Reverb credentials, add cancellation/
+  backoff/observability/idempotency, and remove the six shims after consumers
+  migrate. Full details are in `docs/features/realtime_sync/` and the ledger.
+
+## How to continue after the numbered migration
+
+1. Read this checklist, the latest handoff, the ledger, and the owning feature's
+   `README.md`, `FEATURE_SPEC.md`, `TODO.md`, and `CHANGELOG.md`.
+2. Select one explicit open debt and its owning module. Do not create Module 28
+   or reopen a completed boundary without a written evidence amendment.
+3. Confirm the current branch and clean/dirty state. Preserve unrelated user
+   files; do not reset, discard, overwrite, or stage them.
+4. Audit current consumers, backend/API assumptions, cache/session/store
+   behavior, and cross-feature ownership before implementing. If a contract is
+   uncertain, preserve behavior and record the uncertainty as debt.
+5. Keep changes inside the owner feature or an app adapter. Use public roots,
+   typed ports, context-safe state, generation invalidation, and thin shims;
+   never create a second repository/cache authority.
 6. Add characterization tests for success, malformed/non-200/network failure,
-   cache hits/fallbacks, context changes, logout/store reset, and late async
-   completions. Add widget/route tests only for UI the module actually owns.
-7. Run the gates, inspect the staged diff including untracked files, commit the
-   implementation, then update the ledger/handoff/docs in a separate evidence
-   commit.
-8. Report exact branch, base/evidence/implementation SHAs, changed/deleted/
-   shim paths, focused/full counts, analyzer result, guard counts, known infos,
-   and remaining debt. Only then start the next module.
+   cache provenance, context changes, logout/store reset, and late completions
+   proportional to the debt. Add widget/route tests only for owned UI.
+7. Run formatter, scoped analyzer, focused/downstream tests, architecture guard
+   from the current verified tip, `git diff --check`, and the full Flutter suite.
+8. Stage/audit tracked and untracked files, commit implementation separately
+   from docs/evidence, and report exact branch/SHA/counts/guard/analyzer/debt.
 
-## Reusable future-agent prompt
+## Reusable post-migration prompt
 
-### Immediate next prompt — Module 27 Offline and Realtime Sync
+The following prompt is for future debt work after all numbered modules are
+complete. Copy it, replace the owner/debt placeholders, and keep the work on a
+descriptive branch. Do not create Module 28.
+
+### Copy-paste prompt for remaining debt
+
+```text
+Continue ENKE POS architecture follow-up work in D:\Projects\ENKE\eposmob.
+
+The numbered migration is complete (Modules 00–27). Do not create Module 28.
+Work on one explicit debt only:
+- Owner feature/module: [OWNER FEATURE / MODULE]
+- Debt: [ONE TODO ITEM OR CONTRACT GAP]
+- Branch: [DESCRIPTIVE fix/refactor BRANCH]
+- Base: [CURRENT VERIFIED TIP]
+
+Read first:
+- docs/architecture/MODULE_MIGRATION_CHECKLIST.md
+- docs/architecture/MIGRATION_LEDGER.md
+- docs/architecture/FEATURE_ARCHITECTURE_HANDOFF.md
+- docs/features/[owner]/README.md
+- docs/features/[owner]/FEATURE_SPEC.md
+- docs/features/[owner]/TODO.md
+- docs/features/[owner]/CHANGELOG.md
+
+Before editing, audit consumers, backend/API assumptions, auth/tenant/store/
+session boundaries, preferences/Hive/cache provenance, async reset races,
+navigation, and existing tests. Preserve behavior when the contract is
+uncertain; record uncertainty as debt rather than inventing an endpoint.
+
+Keep the change in the owning feature or a narrow lib/app adapter. Import
+features only through public roots, keep domain code framework-free, preserve
+runtime names/payload/parser quirks, and do not create a second repository or
+cache writer. Do not move Product, Inventory, Billing/cart, Purchasing, Sales,
+Accounting, Printing, Reports, Restaurant, Kiosk, Communications, Dashboard,
+Organization, Identity, or Sync behavior across ownership boundaries.
+
+Add focused tests for success/failure/malformed responses, cache provenance,
+context changes, logout/store reset, and late async completion proportional to
+the debt. Run formatter, scoped analyzer, focused/downstream tests, the
+architecture guard from the base tip, git diff --check, and the full
+flutter test --no-pub suite. Stage and audit tracked plus untracked files;
+commit implementation separately from docs/evidence. Report exact branch,
+base/implementation/evidence SHAs, changed/deleted/shim paths, test counts,
+analyzer/guard results, and remaining debt. Do not start another numbered
+module.
+```
+
+### Historical prompt (Module 27 — completed)
 
 ```text
 Continue the ENKE POS feature-architecture migration in D:\Projects\ENKE\eposmob.
@@ -536,6 +616,8 @@ commit implementation first, then a separate docs/evidence commit. Update the
 ledger/handoff/checklist with full SHAs and exact counts. Module 27 is the final
 numbered module; do not broaden scope into post-migration cleanup.
 ```
+
+### Generic owner-module template (historical)
 
 ```text
 Continue the ENKE POS feature-architecture migration with Module <NN> — <NAME>.
