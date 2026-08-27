@@ -22,7 +22,6 @@ import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/resources/localization_service.dart';
 import '../logo_loader.dart';
 import 'standard_pdf_layout.dart';
-import 'standard_pdf_contract_delegate.dart';
 
 /// Simplified Tax Invoice PDF layout — Saudi ZATCA "Simplified Tax Invoice"
 /// design matching the Abyat Al Manarah reference template.
@@ -134,13 +133,6 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   // ── Public interface ────────────────────────────────────────────────
   @override
   Future<void> generateAndPrintPdf(ReceiptLayoutParams params) async {
-    if (StandardPdfContractDelegate.enabled) {
-      return StandardPdfContractDelegate.generateAndPrintPdf(
-        params,
-        layoutId: layoutId,
-        displayName: displayName,
-      );
-    }
     final pdf = await buildPdfDocument(params);
     if (params.selectedPrinter.isDevelopment) {
       final savedFile = await DevelopmentPrinterService.savePdf(
@@ -184,13 +176,6 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
 
   @override
   Future<pw.Document> buildPdfDocument(ReceiptLayoutParams params) async {
-    if (StandardPdfContractDelegate.enabled) {
-      return StandardPdfContractDelegate.buildPdfDocument(
-        params,
-        layoutId: layoutId,
-        displayName: displayName,
-      );
-    }
     final pdf = pw.Document(version: PdfVersion.pdf_1_5, compress: true);
 
     // ── Providers & Config ──────────────────────────────────────────

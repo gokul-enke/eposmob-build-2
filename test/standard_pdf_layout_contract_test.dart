@@ -325,7 +325,7 @@ void main() {
     }
   });
 
-  test('PDF themes expose a real document builder and no printer invocation',
+  test('PDF themes expose concrete document builders without forced delegation',
       () {
     for (final theme in _themes) {
       final layout = StandardPdfLayoutFactory.getLayout(theme);
@@ -334,24 +334,11 @@ void main() {
       expect(source.contains('buildPdfDocument'), isTrue, reason: theme);
       expect(source.contains('generateAndPrintPdf'), isTrue, reason: theme);
 
-      // Factory coverage alone is not sufficient: callers in older screens
-      // can still instantiate a historical class directly.  Each legacy
-      // entry point must therefore delegate exactly once to the shared
-      // contract implementation.
-      expect(
-        RegExp(r'StandardPdfContractDelegate\.generateAndPrintPdf\(')
-            .allMatches(source)
-            .length,
-        1,
-        reason: '$theme direct generate guard',
-      );
-      expect(
-        RegExp(r'StandardPdfContractDelegate\.buildPdfDocument\(')
-            .allMatches(source)
-            .length,
-        1,
-        reason: '$theme direct build guard',
-      );
+      // The concrete class must be the active renderer. A shared contract
+      // renderer may still be used by Classic as its baseline, but the
+      // selected non-classic template must not be short-circuited here.
+      expect(source.contains('StandardPdfContractDelegate'), isFalse,
+          reason: '$theme forced delegation');
     }
   });
 }
