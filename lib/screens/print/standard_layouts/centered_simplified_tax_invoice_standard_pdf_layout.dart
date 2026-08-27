@@ -18,6 +18,7 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 import 'package:pos_machine/services/development_printer_service.dart';
+import 'package:pos_machine/services/common_print_settings.dart';
 import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/resources/localization_service.dart';
 import '../logo_loader.dart';
@@ -567,11 +568,14 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
       pw.MultiPage(
         pageFormat: pageFormat,
         textDirection: pw.TextDirection.ltr,
-        margin: pw.EdgeInsets.only(
+        margin: await CommonPrintSettings.resolvePdfMargins(
+          pw.EdgeInsets.only(
             left: isA5 ? 14 : 22,
             right: isA5 ? 14 : 22,
             top: isA5 ? 12 : 18,
-            bottom: isA5 ? 12 : 18),
+            bottom: isA5 ? 12 : 18,
+          ),
+        ),
         footer: (ctx) => pw.Center(
           child: pw.Text('Page ${ctx.pageNumber} of ${ctx.pagesCount}',
               style: pw.TextStyle(font: font, fontSize: fs(6))),

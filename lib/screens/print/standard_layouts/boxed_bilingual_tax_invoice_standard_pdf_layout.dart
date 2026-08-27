@@ -18,6 +18,7 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 import 'package:pos_machine/services/development_printer_service.dart';
+import 'package:pos_machine/services/common_print_settings.dart';
 import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/resources/localization_service.dart';
 import '../logo_loader.dart';
@@ -700,7 +701,9 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       pw.MultiPage(
         pageFormat: pageFormat,
         textDirection: pw.TextDirection.ltr,
-        margin: pw.EdgeInsets.all(isA5 ? 8 : 10),
+        margin: await CommonPrintSettings.resolvePdfMargins(
+          pw.EdgeInsets.all(isA5 ? 8 : 10),
+        ),
         build: (pw.Context ctx) {
           if (layoutId == 'boxed_bilingual_tax_invoice') {
             final referenceValueStyle = pw.TextStyle(
