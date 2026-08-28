@@ -111,28 +111,15 @@ class ReceiptConfigurationContract {
   };
 
   static ReceiptLanguageMode languageMode(String? raw) {
-    final normalized =
-        (raw ?? '').trim().toLowerCase().replaceAll(RegExp(r'[\s\-/+]+'), '_');
-    switch (normalized) {
-      case 'en':
-      case 'english':
-      case 'eng':
-        return ReceiptLanguageMode.english;
+    if (raw == null) return ReceiptLanguageMode.english;
+    switch (raw.trim().toLowerCase()) {
       case 'ar':
-      case 'arabic':
-      case 'ara':
         return ReceiptLanguageMode.arabic;
       case 'en_ar':
-      case 'ar_en':
-      case 'english_arabic':
-      case 'arabic_english':
-      case 'bilingual':
-      case 'dual':
-      case 'dual_language':
         return ReceiptLanguageMode.bilingual;
+      case 'en':
+        return ReceiptLanguageMode.english;
       default:
-        // Existing ReceiptLayoutParams behavior treats an unset language as
-        // English. Keeping that fallback avoids surprising old documents.
         return ReceiptLanguageMode.english;
     }
   }

@@ -5,31 +5,13 @@ import 'package:pos_machine/screens/print/layouts/receipt_layout_factory.dart';
 
 void main() {
   group('ReceiptLanguageMode normalization', () {
-    test('accepts the documented English and Arabic aliases', () {
+    test('accepts the mapped English and Arabic settings', () {
       expect(ReceiptConfigurationContract.languageMode('en'),
-          ReceiptLanguageMode.english);
-      expect(ReceiptConfigurationContract.languageMode('English'),
           ReceiptLanguageMode.english);
       expect(ReceiptConfigurationContract.languageMode('ar'),
           ReceiptLanguageMode.arabic);
-      expect(ReceiptConfigurationContract.languageMode('Arabic'),
-          ReceiptLanguageMode.arabic);
-    });
-
-    test('accepts all bilingual separators and orderings', () {
-      for (final value in [
-        'en_ar',
-        'ar_en',
-        'en-ar',
-        'ar/en',
-        'en+ar',
-        'english arabic',
-        'bilingual',
-      ]) {
-        expect(ReceiptConfigurationContract.languageMode(value),
-            ReceiptLanguageMode.bilingual,
-            reason: value);
-      }
+      expect(ReceiptConfigurationContract.languageMode('en_ar'),
+          ReceiptLanguageMode.bilingual);
     });
 
     test('keeps unset language compatible with existing English fallback', () {

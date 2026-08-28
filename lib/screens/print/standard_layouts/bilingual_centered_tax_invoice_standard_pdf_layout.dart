@@ -17,6 +17,7 @@ import 'package:pos_machine/models/payment_gateway.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
+import 'package:pos_machine/screens/print/layouts/receipt_configuration_contract.dart';
 import 'package:pos_machine/services/development_printer_service.dart';
 import 'package:pos_machine/services/common_print_settings.dart';
 import 'package:pos_machine/utils/zatca_qr_helper.dart';
@@ -218,11 +219,12 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     final font = await _loadArabicFont();
     final fontBold = await _loadArabicFontBold();
     final configLang = config.language;
-    final isRtl = configLang != null
-        ? configLang.toLowerCase() == 'ar'
-        : LocalizationService.locale.languageCode == 'ar';
-    final isEnglish = !isRtl;
-    final isDualLanguage = (configLang ?? '').toLowerCase() == 'ar';
+    final mode = params.receiptLanguageMode;
+    final isDualLanguage = mode == ReceiptLanguageMode.bilingual;
+    final isRtl = mode == ReceiptLanguageMode.arabic;
+    final isEnglish = mode == ReceiptLanguageMode.english;
+    final isAr = mode == ReceiptLanguageMode.bilingual ||
+        mode == ReceiptLanguageMode.arabic;
     // This template is laid out left-to-right by design (English primary with
     // Arabic sub-labels), so the page direction is always LTR. Arabic runs
     // carry their own per-widget RTL direction.
@@ -564,7 +566,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                     dc, 'showCustomerName', null, 'Customer', isDualLanguage),
                 _labelAr(
                     dc, 'showCustomerName', null, 'العميل', isDualLanguage),
-                isDualLanguage),
+                isDualLanguage, isAr: isAr),
             custName,
             infoLabel,
             infoValue));
@@ -576,7 +578,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                     dc, 'showCustomerAddress', null, 'Address', isDualLanguage),
                 _labelAr(
                     dc, 'showCustomerAddress', null, 'العنوان', isDualLanguage),
-                isDualLanguage),
+                isDualLanguage, isAr: isAr),
             displayOrBlank(custAddress),
             infoLabel,
             infoValue));
@@ -588,7 +590,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                     isDualLanguage),
                 _labelAr(dc, 'showCustomerVatNumber', null,
                     'الرقم الضريبي للعميل', isDualLanguage),
-                isDualLanguage),
+                isDualLanguage, isAr: isAr),
             displayOrBlank(params.customerVatNumber),
             infoLabel,
             infoValue));
@@ -600,7 +602,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                     isDualLanguage),
                 _labelAr(dc, 'showCustomerCrNumber', null,
                     'رقم السجل التجاري للعميل', isDualLanguage),
-                isDualLanguage),
+                isDualLanguage, isAr: isAr),
             displayOrBlank(params.customerCrNumber),
             infoLabel,
             infoValue));
@@ -612,7 +614,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                     dc, 'showCustomerPhone', null, 'Phone', isDualLanguage),
                 _labelAr(
                     dc, 'showCustomerPhone', null, 'الهاتف', isDualLanguage),
-                isDualLanguage),
+                isDualLanguage, isAr: isAr),
             custPhone,
             infoLabel,
             infoValue));
@@ -634,7 +636,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                     null,
                     isQuotation ? 'رقم عرض السعر' : 'رقم الفاتورة',
                     isDualLanguage),
-                isDualLanguage),
+                isDualLanguage, isAr: isAr),
             invoiceNumber,
             infoLabel,
             infoValue),
@@ -643,7 +645,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
             _infoLabel(
                 _labelEn(dc, 'showDate', null, 'Date', isDualLanguage),
                 _labelAr(dc, 'showDate', null, 'التاريخ', isDualLanguage),
-                isDualLanguage),
+                isDualLanguage, isAr: isAr),
             '$displayDate${displayTime.isNotEmpty ? ' $displayTime' : ''}',
             infoLabel,
             infoValue),
@@ -654,7 +656,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                     isDualLanguage),
                 _labelAr(
                     dc, paymentConfigKey, null, 'طريقة الدفع', isDualLanguage),
-                isDualLanguage),
+                isDualLanguage, isAr: isAr),
             paymentMethodSummary,
             infoLabel,
             infoValue),
@@ -667,7 +669,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                     dc, 'showDeliveryMethod', null, 'Delivery', isDualLanguage),
                 _labelAr(dc, 'showDeliveryMethod', null, 'طريقة التسليم',
                     isDualLanguage),
-                isDualLanguage),
+                isDualLanguage, isAr: isAr),
             params.deliveryMethod!,
             infoLabel,
             infoValue),
@@ -925,7 +927,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                               _totalsRow(
                                   _labelEn(dc, 'showDiscount', null, 'DISCOUNT',
                                       isDualLanguage),
-                                  _labelAr(dc, 'showDiscount', null, 'خصم',
+                                  _labelAr(dc, 'showDiscount', null, 'الخصم',
                                       isDualLanguage),
                                   _formatMoney(currency, discountAmountValue),
                                   totalsLabelEn,
@@ -1081,7 +1083,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                                     _labelEn(dc, 'showSubTotal', null,
                                         'SUB TOTAL', isDualLanguage),
                                     _labelAr(dc, 'showSubTotal', null,
-                                        'SUB TOTAL', isDualLanguage),
+                                        'المجموع الفرعي', isDualLanguage),
                                     _formatMoney(currency, netExcTaxValue),
                                     totalsLabelEn,
                                     totalsLabelAr,
@@ -1091,7 +1093,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                                     _labelEn(dc, 'showDiscount', null,
                                         'DISCOUNT', isDualLanguage),
                                     _labelAr(dc, 'showDiscount', null,
-                                        'DISCOUNT', isDualLanguage),
+                                        'الخصم', isDualLanguage),
                                     _formatMoney(currency, discountAmountValue),
                                     totalsLabelEn,
                                     totalsLabelAr,
@@ -1105,7 +1107,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                                         'TOTAL VAT 15%',
                                         isDualLanguage),
                                     _labelAr(dc, 'showTax', resolvedLabels?.tax,
-                                        'TOTAL VAT 15%', isDualLanguage),
+                                        'ضريبة القيمة المضافة', isDualLanguage),
                                     _formatMoney(currency, totalTax),
                                     totalsLabelEn,
                                     totalsLabelAr,
@@ -1115,7 +1117,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                                     _labelEn(dc, 'showNetAmount', null,
                                         'NET AMOUNT', isDualLanguage),
                                     _labelAr(dc, 'showNetAmount', null,
-                                        'NET AMOUNT', isDualLanguage),
+                                        'المبلغ الصافي', isDualLanguage),
                                     _formatMoney(currency, totalAmount),
                                     totalsLabelEn,
                                     totalsLabelAr,
@@ -1268,9 +1270,11 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
   /// Bilingual label used in the compact customer/invoice information boxes.
   /// The Arabic fallback remains available even when the API only supplies an
   /// English configuration value.
-  String _infoLabel(String en, String ar, bool isDual) {
-    if (!isDual || ar.trim().isEmpty) return en;
-    return '$en\n$ar';
+  String _infoLabel(String en, String ar, bool isDual, {bool isAr = false}) {
+    if (ar.trim().isEmpty) return en;
+    if (isDual) return '$en\n$ar';
+    if (isAr) return ar;
+    return en;
   }
 
   /// Get a label with priority: displayConfig value > resolvedLabel > default.
@@ -1348,8 +1352,17 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     final language = (configLang ?? 'en').toLowerCase();
     final words = AmountHelper()
         .convertNumberToWords(total, currency: currency, language: language);
-    final suffix = language == 'ar' ? ' فقط.' : ' only.';
-    return [pw.Text('$words$suffix', style: style)];
+    final mode = ReceiptConfigurationContract.languageMode(configLang);
+    final suffix = mode == ReceiptLanguageMode.arabic ? ' فقط.' : ' only.';
+    final needsRtl = mode == ReceiptLanguageMode.arabic ||
+        mode == ReceiptLanguageMode.bilingual;
+    return [
+      pw.Text(
+        '$words$suffix',
+        style: style,
+        textDirection: needsRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
+      ),
+    ];
   }
 
   /// Friendly label for a raw payment-method code.
@@ -1732,8 +1745,9 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     final showTax = col('showTaxHeader');
     final showTotal = col('showTotal');
 
-    final bool isAr =
-        (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
+    final mode = params.receiptLanguageMode;
+    final bool isAr = mode == ReceiptLanguageMode.bilingual ||
+        mode == ReceiptLanguageMode.arabic;
 
     // Column widths matching the reference proportions.
     final Map<int, pw.TableColumnWidth> colWidths = {};
