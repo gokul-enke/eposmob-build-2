@@ -191,6 +191,9 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     // The QR column is narrower after the summary row becomes a
     // bank-details | QR | totals layout. Keep the A5 QR inside that column.
     final summaryQrSize = isA5 ? 68.0 : 100.0;
+    // Minimum room needed for the summary, optional words/balance content,
+    // and the signature/footer tail when it is anchored to a page bottom.
+    final bottomFooterReserve = isA5 ? 190.0 : 250.0;
 
     // Resolve B2B/B2C invoice title — params.displayConfig is B2B-aware
     final resolvedTitleOpt = params.displayConfig?['showInvoiceTitle'];
@@ -716,693 +719,890 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     // ══════════════════════════════════════════════════════════════════
     // BUILD PDF
     // ══════════════════════════════════════════════════════════════════
-    pdf.addPage(
-      pw.MultiPage(
-        pageFormat: pageFormat,
-        textDirection: pw.TextDirection.ltr,
-        margin: await CommonPrintSettings.resolvePdfMargins(
-          pw.EdgeInsets.all(isA5 ? 8 : 10),
-        ),
-        build: (pw.Context ctx) {
-          if (layoutId == 'boxed_bilingual_tax_invoice') {
-            final referenceValueStyle = pw.TextStyle(
-              font: font,
-              fontBold: fontBold,
-              fontSize: fs(8),
-            );
-            final referenceTitleStyle = pw.TextStyle(
-              font: fontBold,
-              fontSize: fs(9),
-              fontWeight: pw.FontWeight.bold,
-            );
-            final referenceFooterBold = pw.TextStyle(
-              font: fontBold,
-              fontSize: fs(7.5),
-              fontWeight: pw.FontWeight.bold,
-            );
-            final referenceSignatureStyle = pw.TextStyle(
-              font: fontBold,
-              fontSize: fs(8),
-              fontWeight: pw.FontWeight.bold,
-            );
-            final referenceSignatureArStyle = pw.TextStyle(
-              font: font,
-              fontBold: fontBold,
-              fontSize: fs(8),
+    final pdfMargins = await CommonPrintSettings.resolvePdfMargins(
+      pw.EdgeInsets.all(isA5 ? 8 : 10),
+    );
+
+    List<pw.Widget> buildContent(
+      pw.Context ctx, {
+      required bool fillSinglePageItemsBox,
+    }) {
+      if (layoutId == 'boxed_bilingual_tax_invoice') {
+        final referenceValueStyle = pw.TextStyle(
+          font: font,
+          fontBold: fontBold,
+          fontSize: fs(8),
+        );
+        final referenceTitleStyle = pw.TextStyle(
+          font: fontBold,
+          fontSize: fs(9),
+          fontWeight: pw.FontWeight.bold,
+        );
+        final referenceFooterBold = pw.TextStyle(
+          font: fontBold,
+          fontSize: fs(7.5),
+          fontWeight: pw.FontWeight.bold,
+        );
+        final referenceSignatureStyle = pw.TextStyle(
+          font: fontBold,
+          fontSize: fs(8),
+          fontWeight: pw.FontWeight.bold,
+        );
+        final referenceSignatureArStyle = pw.TextStyle(
+          font: font,
+          fontBold: fontBold,
+          fontSize: fs(8),
+        );
+
+        pw.Widget metadataValue(String value) => pw.Padding(
+              padding:
+                  const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+              child: _autoText(value, referenceValueStyle,
+                  textAlign: pw.TextAlign.left),
             );
 
-            pw.Widget metadataValue(String value) => pw.Padding(
-                  padding:
-                      const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-                  child: _autoText(value, referenceValueStyle,
-                      textAlign: pw.TextAlign.left),
-                );
-
-            final referenceMetadata =
-                <({String english, String arabic, String value})>[
-              if (cfgVisibleDefault('showDate'))
-                (
-                  english: _labelEn(
-                    dc,
-                    'showDate',
-                    isDualLanguage ? null : resolvedLabels?.date,
-                    'Invoice Date',
-                    isDualLanguage,
-                  ),
-                  arabic: _labelAr(
-                    dc,
-                    'showDate',
-                    resolvedLabels?.date,
-                    'تاريخ الفاتورة',
-                    isDualLanguage,
-                  ),
-                  value: displayDate,
-                ),
-              // The current print contract has no due-date key or value. Keep
-              // the reference field with its documented invoice-date fallback.
-              (
-                english: 'Invoice Due Date',
-                arabic: 'تاريخ استحقاق الفاتورة',
-                value: referenceDueDate,
+        final referenceMetadata =
+            <({String english, String arabic, String value})>[
+          if (cfgVisibleDefault('showDate'))
+            (
+              english: _labelEn(
+                dc,
+                'showDate',
+                isDualLanguage ? null : resolvedLabels?.date,
+                'Invoice Date',
+                isDualLanguage,
               ),
-              if (cfgVisibleDefault('showInvoiceNumber'))
-                (
-                  english: _labelEn(
-                    dc,
-                    'showInvoiceNumber',
-                    isDualLanguage ? null : resolvedLabels?.orderNumber,
-                    'Invoice No',
-                    isDualLanguage,
-                  ),
-                  arabic: _labelAr(
-                    dc,
-                    'showInvoiceNumber',
-                    resolvedLabels?.orderNumber,
-                    'رقم الفاتورة',
-                    isDualLanguage,
-                  ),
-                  value: invoiceNumber,
-                ),
-            ];
+              arabic: _labelAr(
+                dc,
+                'showDate',
+                resolvedLabels?.date,
+                'تاريخ الفاتورة',
+                isDualLanguage,
+              ),
+              value: displayDate,
+            ),
+          // The current print contract has no due-date key or value. Keep
+          // the reference field with its documented invoice-date fallback.
+          (
+            english: 'Invoice Due Date',
+            arabic: 'تاريخ استحقاق الفاتورة',
+            value: referenceDueDate,
+          ),
+          if (cfgVisibleDefault('showInvoiceNumber'))
+            (
+              english: _labelEn(
+                dc,
+                'showInvoiceNumber',
+                isDualLanguage ? null : resolvedLabels?.orderNumber,
+                'Invoice No',
+                isDualLanguage,
+              ),
+              arabic: _labelAr(
+                dc,
+                'showInvoiceNumber',
+                resolvedLabels?.orderNumber,
+                'رقم الفاتورة',
+                isDualLanguage,
+              ),
+              value: invoiceNumber,
+            ),
+        ];
 
-            pw.Widget referenceMetadataTable() {
-              final widths = <int, pw.TableColumnWidth>{};
-              final cells = <pw.Widget>[];
-              for (final entry in referenceMetadata) {
-                widths[cells.length] = const pw.FlexColumnWidth(1.5);
-                cells.add(_referenceMetadataLabel(
-                  entry.english,
-                  entry.arabic,
-                  font,
-                  fontBold,
-                  isA5,
-                ));
-                widths[cells.length] = const pw.FlexColumnWidth(1.1);
-                cells.add(metadataValue(entry.value));
-              }
-              return pw.Table(
-                border: pw.TableBorder.all(width: 0.75),
-                columnWidths: widths,
-                children: [
-                  pw.TableRow(
-                    verticalAlignment: pw.TableCellVerticalAlignment.full,
-                    children: cells,
-                  ),
-                ],
-              );
+        pw.Widget referenceMetadataTable() {
+          final widths = <int, pw.TableColumnWidth>{};
+          final cells = <pw.Widget>[];
+          for (final entry in referenceMetadata) {
+            widths[cells.length] = const pw.FlexColumnWidth(1.5);
+            cells.add(_referenceMetadataLabel(
+              entry.english,
+              entry.arabic,
+              font,
+              fontBold,
+              isA5,
+            ));
+            widths[cells.length] = const pw.FlexColumnWidth(1.1);
+            cells.add(metadataValue(entry.value));
+          }
+          return pw.Table(
+            border: pw.TableBorder.all(width: 0.75),
+            columnWidths: widths,
+            children: [
+              pw.TableRow(
+                verticalAlignment: pw.TableCellVerticalAlignment.full,
+                children: cells,
+              ),
+            ],
+          );
+        }
+
+        final referenceTitleEnglish = _labelEn(
+          dc,
+          'showInvoiceTitle',
+          null,
+          'Tax Invoice',
+          isDualLanguage,
+        );
+        final referenceTitleArabic = _labelAr(
+          dc,
+          'showInvoiceTitle',
+          null,
+          'فاتورة ضريبية',
+          isDualLanguage,
+        );
+        final showReferenceTitle = resolvedTitleOpt?.visible != false;
+
+        final showReferenceGross =
+            dc?['showMRPTotal']?.visible ?? showSubTotalFlag;
+        final showReferenceGrossBeforeVat =
+            dc?['showSubTotal']?.visible ?? showSubTotalFlag;
+        final showReferenceAmountWords = cfgVisible('showAmountInWords');
+
+        pw.Widget referenceSummaryRow() {
+          final cells = <pw.Widget>[];
+          final widths = <int, pw.TableColumnWidth>{};
+
+          void addSection(pw.Widget widget, double flex) {
+            if (cells.isNotEmpty) {
+              widths[cells.length] = const pw.FixedColumnWidth(10);
+              cells.add(pw.SizedBox());
             }
+            widths[cells.length] = pw.FlexColumnWidth(flex);
+            cells.add(widget);
+          }
 
-            final referenceTitleEnglish = _labelEn(
-              dc,
-              'showInvoiceTitle',
-              null,
-              'Tax Invoice',
-              isDualLanguage,
+          if (cfgVisible('showBankInfo')) {
+            addSection(
+              _referenceBankBox(
+                params,
+                dc,
+                font,
+                fontBold,
+                isA5,
+                isDualLanguage,
+              ),
+              4.2,
             );
-            final referenceTitleArabic = _labelAr(
-              dc,
-              'showInvoiceTitle',
-              null,
-              'فاتورة ضريبية',
-              isDualLanguage,
+          }
+          if (cfgVisible('showQRCode') && qrData.isNotEmpty) {
+            addSection(
+              pw.Container(
+                alignment: pw.Alignment.center,
+                padding: const pw.EdgeInsets.all(3),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(width: 0.75),
+                ),
+                child: pw.BarcodeWidget(
+                  barcode: pw.Barcode.qrCode(),
+                  data: qrData,
+                  width: isA5 ? 54 : 76,
+                  height: isA5 ? 54 : 76,
+                ),
+              ),
+              1.9,
             );
-            final showReferenceTitle = resolvedTitleOpt?.visible != false;
+          }
 
-            final showReferenceGross =
-                dc?['showMRPTotal']?.visible ?? showSubTotalFlag;
-            final showReferenceGrossBeforeVat =
-                dc?['showSubTotal']?.visible ?? showSubTotalFlag;
-            final showReferenceAmountWords = cfgVisible('showAmountInWords');
+          final hasTotals = showReferenceGross ||
+              showDiscountFlag ||
+              showReferenceGrossBeforeVat ||
+              showTaxTotalFlag ||
+              showNetFlag ||
+              showReferenceAmountWords;
+          if (hasTotals) {
+            addSection(
+              _referenceTotalsBox(
+                gross: referenceGross,
+                discount: discountAmountValue,
+                grossBeforeVat: netExcTaxValue,
+                vat: totalTax,
+                net: totalAmount,
+                currency: currency,
+                dc: dc,
+                resolvedLabels: resolvedLabels,
+                isDualLanguage: isDualLanguage,
+                configLanguage: configLang,
+                showGross: showReferenceGross,
+                showDiscount: showDiscountFlag,
+                showGrossBeforeVat: showReferenceGrossBeforeVat,
+                showVat: showTaxTotalFlag,
+                showNet: showNetFlag,
+                showAmountInWords: showReferenceAmountWords,
+                font: font,
+                fontBold: fontBold,
+                isA5: isA5,
+              ),
+              5.1,
+            );
+          }
 
-            pw.Widget referenceSummaryRow() {
-              final cells = <pw.Widget>[];
-              final widths = <int, pw.TableColumnWidth>{};
+          if (cells.isEmpty) return pw.SizedBox();
+          return pw.Table(
+            columnWidths: widths,
+            children: [
+              pw.TableRow(
+                verticalAlignment: pw.TableCellVerticalAlignment.full,
+                children: cells,
+              ),
+            ],
+          );
+        }
 
-              void addSection(pw.Widget widget, double flex) {
-                if (cells.isNotEmpty) {
-                  widths[cells.length] = const pw.FixedColumnWidth(10);
-                  cells.add(pw.SizedBox());
-                }
-                widths[cells.length] = pw.FlexColumnWidth(flex);
-                cells.add(widget);
-              }
+        final referenceTerms = _referenceConfiguredTextLines(
+          dc,
+          'showTermsConditions',
+          config.terms,
+          isDualLanguage,
+        );
+        final referenceThankYou = _referenceConfiguredTextLines(
+          dc,
+          'showThankYouMessage',
+          config.footer ??
+              (isEnglish
+                  ? 'Thank you for your business'
+                  : 'شكراً لتسوقكم معنا'),
+          isDualLanguage,
+        );
 
-              if (cfgVisible('showBankInfo')) {
-                addSection(
-                  _referenceBankBox(
-                    params,
-                    dc,
-                    font,
-                    fontBold,
-                    isA5,
-                    isDualLanguage,
-                  ),
-                  4.2,
-                );
-              }
-              if (cfgVisible('showQRCode') && qrData.isNotEmpty) {
-                addSection(
-                  pw.Container(
+        return [
+          pw.Container(
+            height: isA5 ? 58 : 90,
+            width: double.infinity,
+            alignment: pw.Alignment.center,
+            child: logoImage != null
+                ? pw.Container(
+                    width: double.infinity,
+                    height: isA5 ? 52 : 82,
                     alignment: pw.Alignment.center,
-                    padding: const pw.EdgeInsets.all(3),
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(width: 0.75),
+                    child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+                  )
+                : pw.SizedBox(),
+          ),
+          referenceMetadataTable(),
+          if (showReferenceTitle) ...[
+            pw.SizedBox(height: 6),
+            pw.Container(
+              width: double.infinity,
+              padding: const pw.EdgeInsets.symmetric(vertical: 5),
+              decoration: pw.BoxDecoration(border: pw.Border.all(width: 0.75)),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.center,
+                children: [
+                  pw.Text(referenceTitleEnglish, style: referenceTitleStyle),
+                  if (isDualLanguage &&
+                      referenceTitleArabic.trim().isNotEmpty) ...[
+                    pw.Text(' / ', style: referenceTitleStyle),
+                    pw.Text(
+                      referenceTitleArabic,
+                      style: referenceTitleStyle,
+                      textDirection: pw.TextDirection.rtl,
                     ),
-                    child: pw.BarcodeWidget(
-                      barcode: pw.Barcode.qrCode(),
-                      data: qrData,
-                      width: isA5 ? 54 : 76,
-                      height: isA5 ? 54 : 76,
-                    ),
-                  ),
-                  1.9,
-                );
-              }
-
-              final hasTotals = showReferenceGross ||
-                  showDiscountFlag ||
-                  showReferenceGrossBeforeVat ||
-                  showTaxTotalFlag ||
-                  showNetFlag ||
-                  showReferenceAmountWords;
-              if (hasTotals) {
-                addSection(
-                  _referenceTotalsBox(
-                    gross: referenceGross,
-                    discount: discountAmountValue,
-                    grossBeforeVat: netExcTaxValue,
-                    vat: totalTax,
-                    net: totalAmount,
-                    currency: currency,
-                    dc: dc,
-                    resolvedLabels: resolvedLabels,
-                    isDualLanguage: isDualLanguage,
-                    configLanguage: configLang,
-                    showGross: showReferenceGross,
-                    showDiscount: showDiscountFlag,
-                    showGrossBeforeVat: showReferenceGrossBeforeVat,
-                    showVat: showTaxTotalFlag,
-                    showNet: showNetFlag,
-                    showAmountInWords: showReferenceAmountWords,
+                  ],
+                ],
+              ),
+            ),
+          ],
+          pw.SizedBox(height: 10),
+          pw.Table(
+            columnWidths: showCustomerSection
+                ? const {
+                    0: pw.FlexColumnWidth(1),
+                    1: pw.FixedColumnWidth(10),
+                    2: pw.FlexColumnWidth(1),
+                  }
+                : const {0: pw.FlexColumnWidth(1)},
+            children: [
+              pw.TableRow(
+                verticalAlignment: pw.TableCellVerticalAlignment.full,
+                children: [
+                  _referencePartyBox(
+                    titleEnglish: 'Seller Details',
+                    titleArabic: 'تفاصيل البائع',
+                    nameLabelEnglish: 'Name',
+                    nameLabelArabic: 'الاسم',
+                    vatLabelEnglish: 'VAT No',
+                    vatLabelArabic: 'الرقم الضريبي',
+                    addressLabelEnglish: 'Street',
+                    addressLabelArabic: 'الشارع',
+                    name: referenceSellerName,
+                    vatNumber: params.zatcaVatNumber?.trim() ?? '',
+                    address: referenceSellerAddress,
+                    secondaryAddress: referenceSellerAddressSecondary,
+                    showName: cfgVisibleDefault('showStoreName'),
+                    showVat: true,
+                    showAddress: cfgVisibleDefault('showStoreAddress'),
                     font: font,
                     fontBold: fontBold,
                     isA5: isA5,
+                    isDualLanguage: isDualLanguage,
                   ),
-                  5.1,
-                );
-              }
-
-              if (cells.isEmpty) return pw.SizedBox();
-              return pw.Table(
-                columnWidths: widths,
+                  if (showCustomerSection) ...[
+                    pw.SizedBox(),
+                    _referencePartyBox(
+                      titleEnglish: _labelEn(
+                        dc,
+                        'showCustomerNameAndPhone',
+                        null,
+                        'Buyer Details',
+                        isDualLanguage,
+                      ),
+                      titleArabic: _labelAr(
+                        dc,
+                        'showCustomerNameAndPhone',
+                        null,
+                        'تفاصيل المشتري',
+                        isDualLanguage,
+                      ),
+                      nameLabelEnglish: _labelEn(
+                        dc,
+                        'showCustomerName',
+                        null,
+                        'Customer Name',
+                        isDualLanguage,
+                      ),
+                      nameLabelArabic: _labelAr(
+                        dc,
+                        'showCustomerName',
+                        null,
+                        'اسم العميل',
+                        isDualLanguage,
+                      ),
+                      vatLabelEnglish: _labelEn(
+                        dc,
+                        'showCustomerVatNumber',
+                        null,
+                        'VAT No',
+                        isDualLanguage,
+                      ),
+                      vatLabelArabic: _labelAr(
+                        dc,
+                        'showCustomerVatNumber',
+                        null,
+                        'الرقم الضريبي',
+                        isDualLanguage,
+                      ),
+                      addressLabelEnglish: _labelEn(
+                        dc,
+                        'showCustomerAddress',
+                        null,
+                        'Street',
+                        isDualLanguage,
+                      ),
+                      addressLabelArabic: _labelAr(
+                        dc,
+                        'showCustomerAddress',
+                        null,
+                        'الشارع',
+                        isDualLanguage,
+                      ),
+                      name: custName,
+                      vatNumber: params.customerVatNumber?.trim() ?? '',
+                      address: referenceBuyerAddress,
+                      secondaryAddress: null,
+                      showName: cfgVisibleDefault('showCustomerName'),
+                      showVat: cfgVisible('showCustomerVatNumber'),
+                      showAddress: cfgVisibleDefault('showCustomerAddress'),
+                      font: font,
+                      fontBold: fontBold,
+                      isA5: isA5,
+                      isDualLanguage: isDualLanguage,
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 5),
+          if (!params.isReturnOnly)
+            _buildReferenceItemsTable(
+              params,
+              dc,
+              resolvedLabels,
+              font,
+              fontBold,
+              isA5,
+              isDualLanguage,
+            ),
+          pw.SizedBox(height: 5),
+          referenceSummaryRow(),
+          if (params.orderReturns != null &&
+              params.orderReturns!.returnItems != null &&
+              params.orderReturns!.returnItems!.isNotEmpty) ...[
+            ..._buildReturnsPdfSection(
+                params, dc, currency, font, fontBold, isA5),
+            if (!params.isReturnOnly)
+              ..._buildFinalSummaryPdfSection(params, dc, currency, font,
+                  fontBold, isA5, isDualLanguage, configLang),
+          ],
+          pw.SizedBox(height: 4),
+          if (cfgVisible('showTermsConditions') &&
+              referenceTerms.isNotEmpty) ...[
+            pw.Wrap(
+              spacing: 4,
+              runSpacing: 1,
+              children: referenceTerms
+                  .map((text) => _autoText(text, smallStyle))
+                  .toList(),
+            ),
+            pw.SizedBox(height: 2),
+          ],
+          if (cfgVisible('showThankYouMessage') && referenceThankYou.isNotEmpty)
+            pw.Center(
+              child: pw.Wrap(
+                alignment: pw.WrapAlignment.center,
+                spacing: 4,
+                runSpacing: 1,
+                children: referenceThankYou
+                    .map(
+                      (text) => _autoText(
+                        text,
+                        referenceFooterBold,
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          pw.SizedBox(height: 5),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Row(
                 children: [
-                  pw.TableRow(
-                    verticalAlignment: pw.TableCellVerticalAlignment.full,
-                    children: cells,
+                  pw.Text(
+                    'Customer Signature: ____________________',
+                    style: referenceSignatureStyle,
+                  ),
+                  pw.SizedBox(width: 4),
+                  pw.Text(
+                    'التوقيع',
+                    style: referenceSignatureArStyle,
+                    textDirection: pw.TextDirection.rtl,
                   ),
                 ],
-              );
-            }
+              ),
+              pw.Row(
+                children: [
+                  pw.Text(
+                    'Salesman Signature: ____________________',
+                    style: referenceSignatureStyle,
+                  ),
+                  pw.SizedBox(width: 4),
+                  pw.Text(
+                    'توقيع البائع',
+                    style: referenceSignatureArStyle,
+                    textDirection: pw.TextDirection.rtl,
+                  ),
+                ],
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 3),
+          pw.Container(height: 2, color: _accent),
+          pw.SizedBox(height: 2),
+        ];
+      }
 
-            final referenceTerms = _referenceConfiguredTextLines(
-              dc,
-              'showTermsConditions',
-              config.terms,
-              isDualLanguage,
-            );
-            final referenceThankYou = _referenceConfiguredTextLines(
-              dc,
-              'showThankYouMessage',
-              config.footer ??
-                  (isEnglish
-                      ? 'Thank you for your business'
-                      : 'شكراً لتسوقكم معنا'),
-              isDualLanguage,
-            );
-
-            return [
-              pw.Container(
-                height: isA5 ? 58 : 90,
-                width: double.infinity,
+      return [
+        // ═══════════════════════════════════════════════════════
+        // SECTION 1: HEADER — English | centered logo | Arabic
+        // ═══════════════════════════════════════════════════════
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            pw.Expanded(
+              flex: 4,
+              child: _configuredHeaderBlock(
+                englishHeaderLines,
+                headingStyle: englishHeaderCompanyStyle,
+                detailStyle: headerDetailStyle,
+                alignment: pw.CrossAxisAlignment.start,
+                textAlign: pw.TextAlign.left,
+                textDirection: pw.TextDirection.ltr,
+                singleLineHeading: true,
+              ),
+            ),
+            pw.Expanded(
+              flex: 2,
+              child: pw.Align(
                 alignment: pw.Alignment.center,
-                child: logoImage != null
-                    ? pw.Container(
-                        width: double.infinity,
-                        height: isA5 ? 52 : 82,
-                        alignment: pw.Alignment.center,
+                child: logoImage == null
+                    ? pw.SizedBox()
+                    : pw.Container(
+                        height: isA5 ? 52 : 72,
+                        width: isA5 ? 72 : 100,
                         child: pw.Image(logoImage, fit: pw.BoxFit.contain),
-                      )
+                      ),
+              ),
+            ),
+            pw.Expanded(
+              flex: 4,
+              child: _configuredHeaderBlock(
+                arabicHeaderLines,
+                headingStyle: headerCompanyStyle,
+                detailStyle: headerDetailStyle,
+                alignment: pw.CrossAxisAlignment.end,
+                textAlign: pw.TextAlign.right,
+                textDirection: pw.TextDirection.rtl,
+                singleLineHeading: true,
+              ),
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 6),
+        pw.Container(height: 3, color: _accent),
+        pw.SizedBox(height: 4),
+
+        // ═══════════════════════════════════════════════════════
+        // SECTION 2: TITLE BAND — CR No | Title | VAT No
+        // ═══════════════════════════════════════════════════════
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            pw.Expanded(
+              child: pw.Align(
+                alignment: pw.Alignment.centerLeft,
+                child: (cfgVisible('showExtraHeading2') &&
+                        extraHeading2.isNotEmpty)
+                    ? _autoText(extraHeading2, crVatStyle)
+                    : (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
+                        ? _autoText(storeFssai, crVatStyle)
+                        : pw.SizedBox(),
+              ),
+            ),
+            _autoText(invoiceTitleText.toUpperCase(), titleStyle),
+            pw.Expanded(
+              child: pw.Align(
+                alignment: pw.Alignment.centerRight,
+                child: (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
+                    ? _autoText(storeFssai, crVatStyle)
                     : pw.SizedBox(),
               ),
-              referenceMetadataTable(),
-              if (showReferenceTitle) ...[
-                pw.SizedBox(height: 6),
-                pw.Container(
-                  width: double.infinity,
-                  padding: const pw.EdgeInsets.symmetric(vertical: 5),
-                  decoration:
-                      pw.BoxDecoration(border: pw.Border.all(width: 0.75)),
-                  child: pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.center,
-                    children: [
-                      pw.Text(referenceTitleEnglish,
-                          style: referenceTitleStyle),
-                      if (isDualLanguage &&
-                          referenceTitleArabic.trim().isNotEmpty) ...[
-                        pw.Text(' / ', style: referenceTitleStyle),
-                        pw.Text(
-                          referenceTitleArabic,
-                          style: referenceTitleStyle,
-                          textDirection: pw.TextDirection.rtl,
-                        ),
-                      ],
-                    ],
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 4),
+        pw.Divider(height: 0, thickness: 0.8),
+        pw.SizedBox(height: 6),
+
+        // ═══════════════════════════════════════════════════════
+        // SECTION 3: INFO BAND — customer | invoice | QR
+        // ═══════════════════════════════════════════════════════
+        pw.Container(
+          decoration: pw.BoxDecoration(border: pw.Border.all(width: 0.5)),
+          padding: const pw.EdgeInsets.all(2.5),
+          child: pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Expanded(
+                flex: 5,
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children:
+                      customerRows.isEmpty ? [pw.SizedBox()] : customerRows,
+                ),
+              ),
+              pw.SizedBox(width: 8),
+              pw.Expanded(
+                flex: 5,
+                child: pw.Container(
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border(
+                      left: pw.BorderSide(
+                        width: 0.5,
+                        color: PdfColors.grey600,
+                      ),
+                    ),
+                  ),
+                  padding: const pw.EdgeInsets.only(left: 8),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: invoiceRows,
                   ),
                 ),
-              ],
-              pw.SizedBox(height: 10),
-              pw.Table(
-                columnWidths: showCustomerSection
-                    ? const {
-                        0: pw.FlexColumnWidth(1),
-                        1: pw.FixedColumnWidth(10),
-                        2: pw.FlexColumnWidth(1),
-                      }
-                    : const {0: pw.FlexColumnWidth(1)},
-                children: [
-                  pw.TableRow(
-                    verticalAlignment: pw.TableCellVerticalAlignment.full,
-                    children: [
-                      _referencePartyBox(
-                        titleEnglish: 'Seller Details',
-                        titleArabic: 'تفاصيل البائع',
-                        nameLabelEnglish: 'Name',
-                        nameLabelArabic: 'الاسم',
-                        vatLabelEnglish: 'VAT No',
-                        vatLabelArabic: 'الرقم الضريبي',
-                        addressLabelEnglish: 'Street',
-                        addressLabelArabic: 'الشارع',
-                        name: referenceSellerName,
-                        vatNumber: params.zatcaVatNumber?.trim() ?? '',
-                        address: referenceSellerAddress,
-                        secondaryAddress: referenceSellerAddressSecondary,
-                        showName: cfgVisibleDefault('showStoreName'),
-                        showVat: true,
-                        showAddress: cfgVisibleDefault('showStoreAddress'),
-                        font: font,
-                        fontBold: fontBold,
-                        isA5: isA5,
-                        isDualLanguage: isDualLanguage,
-                      ),
-                      if (showCustomerSection) ...[
-                        pw.SizedBox(),
-                        _referencePartyBox(
-                          titleEnglish: _labelEn(
-                            dc,
-                            'showCustomerNameAndPhone',
-                            null,
-                            'Buyer Details',
-                            isDualLanguage,
-                          ),
-                          titleArabic: _labelAr(
-                            dc,
-                            'showCustomerNameAndPhone',
-                            null,
-                            'تفاصيل المشتري',
-                            isDualLanguage,
-                          ),
-                          nameLabelEnglish: _labelEn(
-                            dc,
-                            'showCustomerName',
-                            null,
-                            'Customer Name',
-                            isDualLanguage,
-                          ),
-                          nameLabelArabic: _labelAr(
-                            dc,
-                            'showCustomerName',
-                            null,
-                            'اسم العميل',
-                            isDualLanguage,
-                          ),
-                          vatLabelEnglish: _labelEn(
-                            dc,
-                            'showCustomerVatNumber',
-                            null,
-                            'VAT No',
-                            isDualLanguage,
-                          ),
-                          vatLabelArabic: _labelAr(
-                            dc,
-                            'showCustomerVatNumber',
-                            null,
-                            'الرقم الضريبي',
-                            isDualLanguage,
-                          ),
-                          addressLabelEnglish: _labelEn(
-                            dc,
-                            'showCustomerAddress',
-                            null,
-                            'Street',
-                            isDualLanguage,
-                          ),
-                          addressLabelArabic: _labelAr(
-                            dc,
-                            'showCustomerAddress',
-                            null,
-                            'الشارع',
-                            isDualLanguage,
-                          ),
-                          name: custName,
-                          vatNumber: params.customerVatNumber?.trim() ?? '',
-                          address: referenceBuyerAddress,
-                          secondaryAddress: null,
-                          showName: cfgVisibleDefault('showCustomerName'),
-                          showVat: cfgVisible('showCustomerVatNumber'),
-                          showAddress: cfgVisibleDefault('showCustomerAddress'),
-                          font: font,
-                          fontBold: fontBold,
-                          isA5: isA5,
-                          isDualLanguage: isDualLanguage,
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
               ),
-              pw.SizedBox(height: 5),
-              if (!params.isReturnOnly)
-                _buildReferenceItemsTable(
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 6),
+
+        // ═══════════════════════════════════════════════════════
+        // SECTION 4: ITEMS TABLE (fully config-driven columns)
+        // ═══════════════════════════════════════════════════════
+        if (!params.isReturnOnly) ...[
+          if (fillSinglePageItemsBox)
+            pw.Expanded(
+              child: pw.Container(
+                width: double.infinity,
+                alignment: pw.Alignment.topLeft,
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(width: 0.75),
+                ),
+                child: _buildItemsTable(
                   params,
                   dc,
                   resolvedLabels,
-                  font,
-                  fontBold,
-                  isA5,
-                  isDualLanguage,
+                  isEnglish,
+                  itemsHeaderEn,
+                  itemsHeaderAr,
+                  itemsBodyStyle,
                 ),
-              pw.SizedBox(height: 5),
-              referenceSummaryRow(),
-              if (params.orderReturns != null &&
-                  params.orderReturns!.returnItems != null &&
-                  params.orderReturns!.returnItems!.isNotEmpty) ...[
-                ..._buildReturnsPdfSection(
-                    params, dc, currency, font, fontBold, isA5),
-                if (!params.isReturnOnly)
-                  ..._buildFinalSummaryPdfSection(params, dc, currency, font,
-                      fontBold, isA5, isDualLanguage, configLang),
-              ],
-              pw.SizedBox(height: 4),
-              if (cfgVisible('showTermsConditions') &&
-                  referenceTerms.isNotEmpty) ...[
-                pw.Wrap(
-                  spacing: 4,
-                  runSpacing: 1,
-                  children: referenceTerms
-                      .map((text) => _autoText(text, smallStyle))
-                      .toList(),
-                ),
-                pw.SizedBox(height: 2),
-              ],
-              if (cfgVisible('showThankYouMessage') &&
-                  referenceThankYou.isNotEmpty)
-                pw.Center(
-                  child: pw.Wrap(
-                    alignment: pw.WrapAlignment.center,
-                    spacing: 4,
-                    runSpacing: 1,
-                    children: referenceThankYou
-                        .map(
-                          (text) => _autoText(
-                            text,
-                            referenceFooterBold,
-                            textAlign: pw.TextAlign.center,
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ),
-              pw.SizedBox(height: 5),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Row(
-                    children: [
-                      pw.Text(
-                        'Customer Signature: ____________________',
-                        style: referenceSignatureStyle,
-                      ),
-                      pw.SizedBox(width: 4),
-                      pw.Text(
-                        'التوقيع',
-                        style: referenceSignatureArStyle,
-                        textDirection: pw.TextDirection.rtl,
-                      ),
-                    ],
-                  ),
-                  pw.Row(
-                    children: [
-                      pw.Text(
-                        'Salesman Signature: ____________________',
-                        style: referenceSignatureStyle,
-                      ),
-                      pw.SizedBox(width: 4),
-                      pw.Text(
-                        'توقيع البائع',
-                        style: referenceSignatureArStyle,
-                        textDirection: pw.TextDirection.rtl,
-                      ),
-                    ],
-                  ),
-                ],
               ),
-              pw.SizedBox(height: 3),
-              pw.Container(height: 2, color: _accent),
-              pw.SizedBox(height: 2),
-            ];
-          }
+            )
+          else
+            _buildItemsTable(params, dc, resolvedLabels, isEnglish,
+                itemsHeaderEn, itemsHeaderAr, itemsBodyStyle),
+          pw.SizedBox(height: 6),
+          // Keep the summary and invoice footer together near the bottom
+          // of the final page. If the remaining space is too small for
+          // the footer block, start a fresh page before the flexible
+          // spacer so it cannot be left behind after the item table.
+          if (!fillSinglePageItemsBox) ...[
+            pw.NewPage(freeSpace: bottomFooterReserve),
+            pw.Spacer(),
+          ],
+        ],
 
-          return [
-            // ═══════════════════════════════════════════════════════
-            // SECTION 1: HEADER — English | centered logo | Arabic
-            // ═══════════════════════════════════════════════════════
-            pw.Row(
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
-              children: [
-                pw.Expanded(
-                  flex: 4,
-                  child: _configuredHeaderBlock(
-                    englishHeaderLines,
-                    headingStyle: englishHeaderCompanyStyle,
-                    detailStyle: headerDetailStyle,
-                    alignment: pw.CrossAxisAlignment.start,
-                    textAlign: pw.TextAlign.left,
-                    textDirection: pw.TextDirection.ltr,
-                    singleLineHeading: true,
-                  ),
-                ),
-                pw.Expanded(
-                  flex: 2,
-                  child: pw.Align(
-                    alignment: pw.Alignment.center,
-                    child: logoImage == null
-                        ? pw.SizedBox()
-                        : pw.Container(
-                            height: isA5 ? 52 : 72,
-                            width: isA5 ? 72 : 100,
-                            child: pw.Image(logoImage, fit: pw.BoxFit.contain),
-                          ),
-                  ),
-                ),
-                pw.Expanded(
-                  flex: 4,
-                  child: _configuredHeaderBlock(
-                    arabicHeaderLines,
-                    headingStyle: headerCompanyStyle,
-                    detailStyle: headerDetailStyle,
-                    alignment: pw.CrossAxisAlignment.end,
-                    textAlign: pw.TextAlign.right,
-                    textDirection: pw.TextDirection.rtl,
-                    singleLineHeading: true,
-                  ),
-                ),
-              ],
-            ),
-            pw.SizedBox(height: 6),
-            pw.Container(height: 3, color: _accent),
-            pw.SizedBox(height: 4),
-
-            // ═══════════════════════════════════════════════════════
-            // SECTION 2: TITLE BAND — CR No | Title | VAT No
-            // ═══════════════════════════════════════════════════════
-            pw.Row(
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
-              children: [
-                pw.Expanded(
-                  child: pw.Align(
-                    alignment: pw.Alignment.centerLeft,
-                    child: (cfgVisible('showExtraHeading2') &&
-                            extraHeading2.isNotEmpty)
-                        ? _autoText(extraHeading2, crVatStyle)
-                        : (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
-                            ? _autoText(storeFssai, crVatStyle)
-                            : pw.SizedBox(),
-                  ),
-                ),
-                _autoText(invoiceTitleText.toUpperCase(), titleStyle),
-                pw.Expanded(
-                  child: pw.Align(
-                    alignment: pw.Alignment.centerRight,
-                    child:
-                        (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
-                            ? _autoText(storeFssai, crVatStyle)
-                            : pw.SizedBox(),
-                  ),
-                ),
-              ],
-            ),
-            pw.SizedBox(height: 4),
-            pw.Divider(height: 0, thickness: 0.8),
-            pw.SizedBox(height: 6),
-
-            // ═══════════════════════════════════════════════════════
-            // SECTION 3: INFO BAND — customer | invoice | QR
-            // ═══════════════════════════════════════════════════════
-            pw.Container(
-              decoration: pw.BoxDecoration(border: pw.Border.all(width: 0.5)),
-              padding: const pw.EdgeInsets.all(2.5),
-              child: pw.Row(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Expanded(
-                    flex: 5,
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children:
-                          customerRows.isEmpty ? [pw.SizedBox()] : customerRows,
-                    ),
-                  ),
-                  pw.SizedBox(width: 8),
-                  pw.Expanded(
-                    flex: 5,
-                    child: pw.Container(
-                      decoration: pw.BoxDecoration(
-                        border: pw.Border(
-                          left: pw.BorderSide(
-                            width: 0.5,
-                            color: PdfColors.grey600,
+        // ═══════════════════════════════════════════════════════
+        // SECTION 5: BANK DETAILS | QR CODE | TOTALS
+        // ═══════════════════════════════════════════════════════
+        // Retained only as unreachable legacy markup while the new
+        // three-column summary is used below.
+        if (params.isReturnOnly &&
+            params.cartItems.isEmpty &&
+            params.cartItems.isNotEmpty) ...[
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Expanded(
+                flex: 5,
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    if (cfgVisible('showQRCode') && qrData.isNotEmpty)
+                      pw.Align(
+                        alignment: pw.Alignment.center,
+                        child: pw.Container(
+                          height: isA5 ? 92 : 116,
+                          alignment: pw.Alignment.center,
+                          padding: const pw.EdgeInsets.only(top: 4),
+                          child: pw.Container(
+                            width: summaryQrSize,
+                            height: summaryQrSize,
+                            child: pw.BarcodeWidget(
+                              barcode: pw.Barcode.qrCode(),
+                              data: qrData,
+                              width: summaryQrSize,
+                              height: summaryQrSize,
+                            ),
                           ),
                         ),
                       ),
-                      padding: const pw.EdgeInsets.only(left: 8),
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: invoiceRows,
+                    pw.SizedBox(height: 4),
+                    if (showComment &&
+                        params.orderComment != null &&
+                        params.orderComment!.isNotEmpty)
+                      _autoText(
+                          '${_getLabel(dc, commentConfigKey, null, 'Comment')}: ${params.orderComment}',
+                          wordsStyle),
+                    ..._customerBalanceLines(
+                        params, dc, currency, wordsStyle, wordsBold),
+                    if (cfgVisible('showSaved') && saved > 0)
+                      pw.Text(
+                        '${_getLabel(dc, 'showSaved', null, 'You Saved:')} ${_formatMoney(currency, saved)}',
+                        style: wordsBold,
                       ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            pw.SizedBox(height: 6),
-
-            // ═══════════════════════════════════════════════════════
-            // SECTION 4: ITEMS TABLE (fully config-driven columns)
-            // ═══════════════════════════════════════════════════════
-            if (!params.isReturnOnly) ...[
-              _buildItemsTable(params, dc, resolvedLabels, isEnglish,
-                  itemsHeaderEn, itemsHeaderAr, itemsBodyStyle),
-              pw.SizedBox(height: 6),
-            ],
-
-            // ═══════════════════════════════════════════════════════
-            // SECTION 5: BANK DETAILS | QR CODE | TOTALS
-            // ═══════════════════════════════════════════════════════
-            // Retained only as unreachable legacy markup while the new
-            // three-column summary is used below.
-            if (params.isReturnOnly &&
-                params.cartItems.isEmpty &&
-                params.cartItems.isNotEmpty) ...[
-              pw.Row(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Expanded(
-                    flex: 5,
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+              pw.SizedBox(width: 8),
+              pw.Expanded(
+                flex: 4,
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Table(
+                      border: pw.TableBorder.all(width: 0.5),
+                      columnWidths: const {
+                        0: pw.FlexColumnWidth(2.2),
+                        1: pw.FlexColumnWidth(2.0),
+                        2: pw.FlexColumnWidth(1.8),
+                      },
                       children: [
-                        if (cfgVisible('showQRCode') && qrData.isNotEmpty)
-                          pw.Align(
-                            alignment: pw.Alignment.center,
-                            child: pw.Container(
-                              height: isA5 ? 92 : 116,
-                              alignment: pw.Alignment.center,
-                              padding: const pw.EdgeInsets.only(top: 4),
-                              child: pw.Container(
-                                width: summaryQrSize,
-                                height: summaryQrSize,
-                                child: pw.BarcodeWidget(
-                                  barcode: pw.Barcode.qrCode(),
-                                  data: qrData,
-                                  width: summaryQrSize,
-                                  height: summaryQrSize,
-                                ),
-                              ),
-                            ),
-                          ),
-                        pw.SizedBox(height: 4),
-                        if (showComment &&
-                            params.orderComment != null &&
-                            params.orderComment!.isNotEmpty)
-                          _autoText(
-                              '${_getLabel(dc, commentConfigKey, null, 'Comment')}: ${params.orderComment}',
-                              wordsStyle),
-                        ..._customerBalanceLines(
-                            params, dc, currency, wordsStyle, wordsBold),
-                        if (cfgVisible('showSaved') && saved > 0)
-                          pw.Text(
-                            '${_getLabel(dc, 'showSaved', null, 'You Saved:')} ${_formatMoney(currency, saved)}',
-                            style: wordsBold,
-                          ),
+                        if (!params.isReturnOnly &&
+                            cfgVisible('showItemsCount'))
+                          _totalsRow(
+                              _withColon(_getLabel(
+                                  dc, 'showItemsCount', null, 'Items')),
+                              '',
+                              params.cartItems.length.toString(),
+                              totalsLabelEn,
+                              totalsLabelAr,
+                              totalsValueStyle),
+                        if (!params.isReturnOnly &&
+                            cfgVisible('showQuantityCount'))
+                          _totalsRow(
+                              _withColon(_getLabel(
+                                  dc, 'showQuantityCount', null, 'Total Qty')),
+                              '',
+                              params.totalQuantity % 1 == 0
+                                  ? params.totalQuantity.toInt().toString()
+                                  : params.totalQuantity.toStringAsFixed(2),
+                              totalsLabelEn,
+                              totalsLabelAr,
+                              totalsValueStyle),
+                        if (showSubTotalFlag)
+                          _totalsRow(
+                              _labelEn(dc, 'showSubTotal', null, 'SUB TOTAL',
+                                  isDualLanguage),
+                              _labelAr(dc, 'showSubTotal', null,
+                                  'المجموع الفرعي', isDualLanguage),
+                              _formatMoney(currency, netExcTaxValue),
+                              totalsLabelEn,
+                              totalsLabelAr,
+                              totalsValueStyle),
+                        if (showDiscountFlag && discountAmountValue != 0)
+                          _totalsRow(
+                              _labelEn(dc, 'showDiscount', null, 'DISCOUNT',
+                                  isDualLanguage),
+                              _labelAr(dc, 'showDiscount', null, 'خصم',
+                                  isDualLanguage),
+                              _formatMoney(currency, discountAmountValue),
+                              totalsLabelEn,
+                              totalsLabelAr,
+                              totalsValueStyle),
+                        if (showTaxTotalFlag)
+                          _totalsRow(
+                              _labelEn(
+                                  dc,
+                                  'showTax',
+                                  resolvedLabels?.taxDefault,
+                                  'TOTAL VAT 15%',
+                                  isDualLanguage),
+                              _labelAr(dc, 'showTax', resolvedLabels?.tax,
+                                  'ضريبة القيمة المضافة', isDualLanguage),
+                              _formatMoney(currency, totalTax),
+                              totalsLabelEn,
+                              totalsLabelAr,
+                              totalsValueStyle),
+                        if (showNetFlag)
+                          _totalsRow(
+                              _labelEn(dc, 'showNetAmount', null, 'NET AMOUNT',
+                                  isDualLanguage),
+                              _labelAr(dc, 'showNetAmount', null,
+                                  'المبلغ الصافي', isDualLanguage),
+                              _formatMoney(currency, totalAmount),
+                              totalsLabelEn,
+                              totalsLabelAr,
+                              totalsValueBold),
                       ],
                     ),
+                    if (cfgVisible('showAmountInWords')) ...[
+                      pw.SizedBox(height: 4),
+                      ..._amountInWords(totalAmount, currency, isDualLanguage,
+                          configLang, wordsBold),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 6),
+        ],
+
+        // ═══════════════════════════════════════════════════════
+        // Replacement summary row: bank details | QR code | totals.
+        if (!params.isReturnOnly) ...[
+          pw.Table(
+            columnWidths: hasLeftSummaryContent
+                ? const {
+                    0: pw.FlexColumnWidth(5),
+                    1: pw.FixedColumnWidth(8),
+                    2: pw.FlexColumnWidth(3),
+                    3: pw.FixedColumnWidth(8),
+                    4: pw.FlexColumnWidth(6),
+                  }
+                : const {
+                    0: pw.FlexColumnWidth(3),
+                    1: pw.FixedColumnWidth(8),
+                    2: pw.FlexColumnWidth(6),
+                  },
+            children: [
+              pw.TableRow(
+                verticalAlignment: pw.TableCellVerticalAlignment.full,
+                children: [
+                  if (hasLeftSummaryContent) ...[
+                    pw.Container(
+                      decoration: pw.BoxDecoration(
+                        border: pw.Border.all(width: 0.5),
+                      ),
+                      padding: const pw.EdgeInsets.all(6),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          if (bankLines.isNotEmpty) ...[
+                            pw.Center(
+                              child: _autoText('BANK DETAILS', footerBold,
+                                  textAlign: pw.TextAlign.center),
+                            ),
+                            pw.SizedBox(height: 3),
+                            ...bankLines
+                                .map((line) => _autoText(line, footerStyle)),
+                          ],
+                          if (hasSummaryComment) ...[
+                            if (bankLines.isNotEmpty) pw.SizedBox(height: 4),
+                            _autoText(
+                                '${_getLabel(dc, commentConfigKey, null, 'Comment')}: ${params.orderComment}',
+                                wordsStyle),
+                          ],
+                          if (showSavedSummary)
+                            pw.Text(
+                              '${_getLabel(dc, 'showSaved', null, 'You Saved:')} ${_formatMoney(currency, saved)}',
+                              style: wordsBold,
+                            ),
+                        ],
+                      ),
+                    ),
+                    pw.SizedBox(),
+                  ],
+                  pw.Container(
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(width: 0.5),
+                    ),
+                    padding: const pw.EdgeInsets.all(4),
+                    alignment: pw.Alignment.center,
+                    child: (cfgVisible('showQRCode') && qrData.isNotEmpty)
+                        ? pw.BarcodeWidget(
+                            barcode: pw.Barcode.qrCode(),
+                            data: qrData,
+                            width: summaryQrSize,
+                            height: summaryQrSize,
+                          )
+                        : pw.SizedBox(),
                   ),
-                  pw.SizedBox(width: 8),
-                  pw.Expanded(
-                    flex: 4,
+                  pw.SizedBox(),
+                  pw.Container(
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(width: 0.5),
+                    ),
                     child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
                       children: [
                         pw.Table(
-                          border: pw.TableBorder.all(width: 0.5),
+                          // Keep the original complete payment-summary
+                          // grid inside its own payment-summary table. The
+                          // outer container owns the full-height border so
+                          // all visible summary boxes remain equal height.
+                          border: const pw.TableBorder(
+                            horizontalInside: pw.BorderSide(width: 0.5),
+                            verticalInside: pw.BorderSide(width: 0.5),
+                          ),
                           columnWidths: const {
                             0: pw.FlexColumnWidth(2.2),
                             1: pw.FlexColumnWidth(2.0),
                             2: pw.FlexColumnWidth(1.8),
                           },
                           children: [
-                            if (!params.isReturnOnly &&
-                                cfgVisible('showItemsCount'))
+                            if (cfgVisible('showItemsCount'))
                               _totalsRow(
                                   _withColon(_getLabel(
                                       dc, 'showItemsCount', null, 'Items')),
@@ -1411,8 +1611,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                                   totalsLabelEn,
                                   totalsLabelAr,
                                   totalsValueStyle),
-                            if (!params.isReturnOnly &&
-                                cfgVisible('showQuantityCount'))
+                            if (cfgVisible('showQuantityCount'))
                               _totalsRow(
                                   _withColon(_getLabel(dc, 'showQuantityCount',
                                       null, 'Total Qty')),
@@ -1428,7 +1627,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                                   _labelEn(dc, 'showSubTotal', null,
                                       'SUB TOTAL', isDualLanguage),
                                   _labelAr(dc, 'showSubTotal', null,
-                                      'المجموع الفرعي', isDualLanguage),
+                                      'SUB TOTAL', isDualLanguage),
                                   _formatMoney(currency, netExcTaxValue),
                                   totalsLabelEn,
                                   totalsLabelAr,
@@ -1437,7 +1636,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                               _totalsRow(
                                   _labelEn(dc, 'showDiscount', null, 'DISCOUNT',
                                       isDualLanguage),
-                                  _labelAr(dc, 'showDiscount', null, 'خصم',
+                                  _labelAr(dc, 'showDiscount', null, 'DISCOUNT',
                                       isDualLanguage),
                                   _formatMoney(currency, discountAmountValue),
                                   totalsLabelEn,
@@ -1452,7 +1651,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                                       'TOTAL VAT 15%',
                                       isDualLanguage),
                                   _labelAr(dc, 'showTax', resolvedLabels?.tax,
-                                      'ضريبة القيمة المضافة', isDualLanguage),
+                                      'TOTAL VAT 15%', isDualLanguage),
                                   _formatMoney(currency, totalTax),
                                   totalsLabelEn,
                                   totalsLabelAr,
@@ -1462,314 +1661,167 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                                   _labelEn(dc, 'showNetAmount', null,
                                       'NET AMOUNT', isDualLanguage),
                                   _labelAr(dc, 'showNetAmount', null,
-                                      'المبلغ الصافي', isDualLanguage),
+                                      'NET AMOUNT', isDualLanguage),
                                   _formatMoney(currency, totalAmount),
                                   totalsLabelEn,
                                   totalsLabelAr,
                                   totalsValueBold),
                           ],
                         ),
-                        if (cfgVisible('showAmountInWords')) ...[
-                          pw.SizedBox(height: 4),
-                          ..._amountInWords(totalAmount, currency,
-                              isDualLanguage, configLang, wordsBold),
-                        ],
                       ],
                     ),
                   ),
                 ],
               ),
-              pw.SizedBox(height: 6),
             ],
-
-            // ═══════════════════════════════════════════════════════
-            // Replacement summary row: bank details | QR code | totals.
-            if (!params.isReturnOnly) ...[
-              pw.Table(
-                columnWidths: hasLeftSummaryContent
-                    ? const {
-                        0: pw.FlexColumnWidth(5),
-                        1: pw.FixedColumnWidth(8),
-                        2: pw.FlexColumnWidth(3),
-                        3: pw.FixedColumnWidth(8),
-                        4: pw.FlexColumnWidth(6),
-                      }
-                    : const {
-                        0: pw.FlexColumnWidth(3),
-                        1: pw.FixedColumnWidth(8),
-                        2: pw.FlexColumnWidth(6),
-                      },
-                children: [
-                  pw.TableRow(
-                    verticalAlignment: pw.TableCellVerticalAlignment.full,
-                    children: [
-                      if (hasLeftSummaryContent) ...[
-                        pw.Container(
-                          decoration: pw.BoxDecoration(
-                            border: pw.Border.all(width: 0.5),
-                          ),
-                          padding: const pw.EdgeInsets.all(6),
-                          child: pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              if (bankLines.isNotEmpty) ...[
-                                pw.Center(
-                                  child: _autoText('BANK DETAILS', footerBold,
-                                      textAlign: pw.TextAlign.center),
-                                ),
-                                pw.SizedBox(height: 3),
-                                ...bankLines.map(
-                                    (line) => _autoText(line, footerStyle)),
-                              ],
-                              if (hasSummaryComment) ...[
-                                if (bankLines.isNotEmpty)
-                                  pw.SizedBox(height: 4),
-                                _autoText(
-                                    '${_getLabel(dc, commentConfigKey, null, 'Comment')}: ${params.orderComment}',
-                                    wordsStyle),
-                              ],
-                              if (showSavedSummary)
-                                pw.Text(
-                                  '${_getLabel(dc, 'showSaved', null, 'You Saved:')} ${_formatMoney(currency, saved)}',
-                                  style: wordsBold,
-                                ),
-                            ],
-                          ),
-                        ),
-                        pw.SizedBox(),
-                      ],
-                      pw.Container(
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(width: 0.5),
-                        ),
-                        padding: const pw.EdgeInsets.all(4),
-                        alignment: pw.Alignment.center,
-                        child: (cfgVisible('showQRCode') && qrData.isNotEmpty)
-                            ? pw.BarcodeWidget(
-                                barcode: pw.Barcode.qrCode(),
-                                data: qrData,
-                                width: summaryQrSize,
-                                height: summaryQrSize,
-                              )
-                            : pw.SizedBox(),
-                      ),
-                      pw.SizedBox(),
-                      pw.Container(
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(width: 0.5),
-                        ),
-                        child: pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-                          children: [
-                            pw.Table(
-                              // Keep the original complete payment-summary
-                              // grid inside its own payment-summary table. The
-                              // outer container owns the full-height border so
-                              // all visible summary boxes remain equal height.
-                              border: const pw.TableBorder(
-                                horizontalInside: pw.BorderSide(width: 0.5),
-                                verticalInside: pw.BorderSide(width: 0.5),
-                              ),
-                              columnWidths: const {
-                                0: pw.FlexColumnWidth(2.2),
-                                1: pw.FlexColumnWidth(2.0),
-                                2: pw.FlexColumnWidth(1.8),
-                              },
-                              children: [
-                                if (cfgVisible('showItemsCount'))
-                                  _totalsRow(
-                                      _withColon(_getLabel(
-                                          dc, 'showItemsCount', null, 'Items')),
-                                      '',
-                                      params.cartItems.length.toString(),
-                                      totalsLabelEn,
-                                      totalsLabelAr,
-                                      totalsValueStyle),
-                                if (cfgVisible('showQuantityCount'))
-                                  _totalsRow(
-                                      _withColon(_getLabel(
-                                          dc,
-                                          'showQuantityCount',
-                                          null,
-                                          'Total Qty')),
-                                      '',
-                                      params.totalQuantity % 1 == 0
-                                          ? params.totalQuantity
-                                              .toInt()
-                                              .toString()
-                                          : params.totalQuantity
-                                              .toStringAsFixed(2),
-                                      totalsLabelEn,
-                                      totalsLabelAr,
-                                      totalsValueStyle),
-                                if (showSubTotalFlag)
-                                  _totalsRow(
-                                      _labelEn(dc, 'showSubTotal', null,
-                                          'SUB TOTAL', isDualLanguage),
-                                      _labelAr(dc, 'showSubTotal', null,
-                                          'SUB TOTAL', isDualLanguage),
-                                      _formatMoney(currency, netExcTaxValue),
-                                      totalsLabelEn,
-                                      totalsLabelAr,
-                                      totalsValueStyle),
-                                if (showDiscountFlag &&
-                                    discountAmountValue != 0)
-                                  _totalsRow(
-                                      _labelEn(dc, 'showDiscount', null,
-                                          'DISCOUNT', isDualLanguage),
-                                      _labelAr(dc, 'showDiscount', null,
-                                          'DISCOUNT', isDualLanguage),
-                                      _formatMoney(
-                                          currency, discountAmountValue),
-                                      totalsLabelEn,
-                                      totalsLabelAr,
-                                      totalsValueStyle),
-                                if (showTaxTotalFlag)
-                                  _totalsRow(
-                                      _labelEn(
-                                          dc,
-                                          'showTax',
-                                          resolvedLabels?.taxDefault,
-                                          'TOTAL VAT 15%',
-                                          isDualLanguage),
-                                      _labelAr(
-                                          dc,
-                                          'showTax',
-                                          resolvedLabels?.tax,
-                                          'TOTAL VAT 15%',
-                                          isDualLanguage),
-                                      _formatMoney(currency, totalTax),
-                                      totalsLabelEn,
-                                      totalsLabelAr,
-                                      totalsValueStyle),
-                                if (showNetFlag)
-                                  _totalsRow(
-                                      _labelEn(dc, 'showNetAmount', null,
-                                          'NET AMOUNT', isDualLanguage),
-                                      _labelAr(dc, 'showNetAmount', null,
-                                          'NET AMOUNT', isDualLanguage),
-                                      _formatMoney(currency, totalAmount),
-                                      totalsLabelEn,
-                                      totalsLabelAr,
-                                      totalsValueBold),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              if (customerBalanceSummaryLines.isNotEmpty ||
-                  cfgVisible('showAmountInWords')) ...[
-                pw.SizedBox(height: 4),
-                pw.Row(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Expanded(
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: customerBalanceSummaryLines,
-                      ),
-                    ),
-                    pw.SizedBox(width: 8),
-                    pw.Expanded(
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.end,
-                        children: cfgVisible('showAmountInWords')
-                            ? _amountInWords(
-                                totalAmount,
-                                currency,
-                                isDualLanguage,
-                                configLang,
-                                wordsBold,
-                              )
-                            : const <pw.Widget>[],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-              pw.SizedBox(height: 6),
-            ],
-
-            // SECTION 5b: RETURNS TABLE + FINAL SUMMARY
-            // ═══════════════════════════════════════════════════════
-            if (params.orderReturns != null &&
-                params.orderReturns!.returnItems != null &&
-                params.orderReturns!.returnItems!.isNotEmpty) ...[
-              ..._buildReturnsPdfSection(
-                  params, dc, currency, font, fontBold, isA5),
-              if (!params.isReturnOnly)
-                ..._buildFinalSummaryPdfSection(params, dc, currency, font,
-                    fontBold, isA5, isDualLanguage, configLang),
-            ],
-
-            // ═══════════════════════════════════════════════════════
-            // TERMS & CONDITIONS (config value → billDocumentConfig.terms)
-            // ═══════════════════════════════════════════════════════
-            if (cfgVisible('showTermsConditions')) ...[
-              _autoText(_termsText(dc, config), smallStyle),
-              pw.SizedBox(height: 4),
-            ],
-
-            // ═══════════════════════════════════════════════════════
-            // THANK YOU (config value → footer → default)
-            // ═══════════════════════════════════════════════════════
-            if (cfgVisible('showThankYouMessage'))
-              pw.Center(
-                child: _autoText(
-                  _thankYouText(dc, config, isEnglish),
-                  footerBold,
-                  textAlign: pw.TextAlign.center,
-                ),
-              ),
-            pw.SizedBox(height: 10),
-
-            // ═══════════════════════════════════════════════════════
-            // SECTION 6: SIGNATURES
-            // ═══════════════════════════════════════════════════════
+          ),
+          if (customerBalanceSummaryLines.isNotEmpty ||
+              cfgVisible('showAmountInWords')) ...[
+            pw.SizedBox(height: 4),
             pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Row(
-                  children: [
-                    pw.Text('Customer Signature: ____________________',
-                        style: signatureStyle),
-                    pw.SizedBox(width: 6),
-                    pw.Text('التوقيع',
-                        style: signatureArStyle,
-                        textDirection: pw.TextDirection.rtl),
-                  ],
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: customerBalanceSummaryLines,
+                  ),
                 ),
-                pw.Row(
-                  children: [
-                    pw.Text('Salesman Signature: ____________________',
-                        style: signatureStyle),
-                    pw.SizedBox(width: 6),
-                    pw.Text('توقيع البائع',
-                        style: signatureArStyle,
-                        textDirection: pw.TextDirection.rtl),
-                  ],
+                pw.SizedBox(width: 8),
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: cfgVisible('showAmountInWords')
+                        ? _amountInWords(
+                            totalAmount,
+                            currency,
+                            isDualLanguage,
+                            configLang,
+                            wordsBold,
+                          )
+                        : const <pw.Widget>[],
+                  ),
                 ),
               ],
             ),
-            pw.SizedBox(height: 6),
-            pw.Container(height: 3, color: _accent),
-            pw.SizedBox(height: 4),
+          ],
+          pw.SizedBox(height: 6),
+        ],
 
-            // ═══════════════════════════════════════════════════════
-            // SECTION 7: FOOTER BAND
-            // Store name / address / tax info / extra headings are rendered
-            // in the top header band instead of here.
-            // ═══════════════════════════════════════════════════════
-          ];
-        },
+        // SECTION 5b: RETURNS TABLE + FINAL SUMMARY
+        // ═══════════════════════════════════════════════════════
+        if (params.orderReturns != null &&
+            params.orderReturns!.returnItems != null &&
+            params.orderReturns!.returnItems!.isNotEmpty) ...[
+          ..._buildReturnsPdfSection(
+              params, dc, currency, font, fontBold, isA5),
+          if (!params.isReturnOnly)
+            ..._buildFinalSummaryPdfSection(params, dc, currency, font,
+                fontBold, isA5, isDualLanguage, configLang),
+        ],
+
+        // ═══════════════════════════════════════════════════════
+        // TERMS & CONDITIONS (config value → billDocumentConfig.terms)
+        // ═══════════════════════════════════════════════════════
+        if (cfgVisible('showTermsConditions')) ...[
+          _autoText(_termsText(dc, config), smallStyle),
+          pw.SizedBox(height: 4),
+        ],
+
+        // ═══════════════════════════════════════════════════════
+        // THANK YOU (config value → footer → default)
+        // ═══════════════════════════════════════════════════════
+        if (cfgVisible('showThankYouMessage'))
+          pw.Center(
+            child: _autoText(
+              _thankYouText(dc, config, isEnglish),
+              footerBold,
+              textAlign: pw.TextAlign.center,
+            ),
+          ),
+        pw.SizedBox(height: 10),
+
+        // ═══════════════════════════════════════════════════════
+        // SECTION 6: SIGNATURES
+        // ═══════════════════════════════════════════════════════
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Row(
+              children: [
+                pw.Text('Customer Signature: ____________________',
+                    style: signatureStyle),
+                pw.SizedBox(width: 6),
+                pw.Text('التوقيع',
+                    style: signatureArStyle,
+                    textDirection: pw.TextDirection.rtl),
+              ],
+            ),
+            pw.Row(
+              children: [
+                pw.Text('Salesman Signature: ____________________',
+                    style: signatureStyle),
+                pw.SizedBox(width: 6),
+                pw.Text('توقيع البائع',
+                    style: signatureArStyle,
+                    textDirection: pw.TextDirection.rtl),
+              ],
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 6),
+        pw.Container(height: 3, color: _accent),
+        pw.SizedBox(height: 4),
+
+        // ═══════════════════════════════════════════════════════
+        // SECTION 7: FOOTER BAND
+        // Store name / address / tax info / extra headings are rendered
+        // in the top header band instead of here.
+        // ═══════════════════════════════════════════════════════
+      ];
+    }
+
+    final multiPagePdf = pdf;
+    multiPagePdf.addPage(
+      pw.MultiPage(
+        pageFormat: pageFormat,
+        textDirection: pw.TextDirection.ltr,
+        margin: pdfMargins,
+        build: (ctx) => buildContent(
+          ctx,
+          fillSinglePageItemsBox: false,
+        ),
       ),
     );
 
-    return pdf;
+    // The normal MultiPage pass determines whether every section fits on one
+    // page. Only then can the item table safely receive a full-height box;
+    // applying that constraint during pagination would interfere with row
+    // splitting on multi-page invoices.
+    if (params.isReturnOnly ||
+        multiPagePdf.document.pdfPageList.pages.length != 1) {
+      return multiPagePdf;
+    }
+
+    final singlePagePdf =
+        pw.Document(version: PdfVersion.pdf_1_5, compress: true);
+    singlePagePdf.addPage(
+      pw.Page(
+        pageFormat: pageFormat,
+        textDirection: pw.TextDirection.ltr,
+        margin: pdfMargins,
+        build: (ctx) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+          mainAxisSize: pw.MainAxisSize.max,
+          children: buildContent(
+            ctx,
+            fillSinglePageItemsBox: true,
+          ),
+        ),
+      ),
+    );
+
+    return singlePagePdf;
   }
 
   List<String> _referenceConfiguredTextLines(
@@ -2369,8 +2421,9 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   style: bodyStyle,
                   textDirection: pw.TextDirection.ltr,
                   textAlign: pw.TextAlign.left,
-                  maxLines: 1,
-                  overflow: pw.TextOverflow.clip,
+                  // Let the table cell grow for long names instead of
+                  // clipping the product text at the right edge.
+                  softWrap: true,
                 ),
               if (arabicName.trim().isNotEmpty)
                 pw.Text(
@@ -2378,8 +2431,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   style: bodyStyle,
                   textDirection: pw.TextDirection.rtl,
                   textAlign: pw.TextAlign.right,
-                  maxLines: 1,
-                  overflow: pw.TextOverflow.clip,
+                  softWrap: true,
                 ),
             ],
           ),
@@ -3338,23 +3390,23 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             child: pw.Text(
               text,
               style: bodyStyle,
-              maxLines: 1,
-              softWrap: false,
-              overflow: pw.TextOverflow.clip,
+              // Product names must wrap instead of being clipped when they
+              // exceed the particulars column width.
+              softWrap: true,
               textAlign: pw.TextAlign.left,
               textDirection: direction,
             ),
           );
 
       return pw.Padding(
-        padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+        padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 1.5),
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             if (arabicName.isNotEmpty)
               nameLine(arabicName, pw.TextDirection.rtl),
             if (arabicName.isNotEmpty && englishName.isNotEmpty)
-              pw.SizedBox(height: 2),
+              pw.SizedBox(height: 1),
             if (englishName.isNotEmpty)
               nameLine(englishName, _dirOf(englishName)),
           ],
@@ -3543,7 +3595,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       {pw.Alignment align = pw.Alignment.center,
       pw.TextDirection? textDirection}) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 1.5),
       child: pw.Align(
         alignment: align,
         child: pw.Text(
