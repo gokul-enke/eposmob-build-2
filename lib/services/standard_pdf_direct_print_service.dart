@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pos_machine/models/bluetooth_printer.dart';
+import 'package:pos_machine/services/common_print_settings.dart';
 import 'package:printing/printing.dart';
 
 /// Sends an A4/A5 PDF to the operating-system printer selected in EPOS.
@@ -40,7 +41,7 @@ class StandardPdfDirectPrintService {
     required BluetoothPrinter selectedPrinter,
     required String paperSize,
     required String jobName,
-    bool usePrinterSettings = false,
+    bool? usePrinterSettings,
   }) async {
     return printBytes(
       pdfBytes: await document.save(),
@@ -60,11 +61,14 @@ class StandardPdfDirectPrintService {
     /// Use the installed printer driver's saved media configuration instead
     /// of the requested PDF paper size. This is useful for barcode/label
     /// printers, but standard A4/A5 documents should keep the default false.
-    bool usePrinterSettings = false,
+    /// When omitted, the value selected in Printer Settings is used.
+    bool? usePrinterSettings,
   }) async {
     if (selectedPrinter.isDevelopment) return false;
 
     try {
+      final resolvedUsePrinterSettings = usePrinterSettings ??
+          await CommonPrintSettings.loadUsePrinterSettings();
       final info = await Printing.info();
       if (!info.canPrint || !info.canListPrinters) {
         debugPrint(
@@ -95,7 +99,7 @@ class StandardPdfDirectPrintService {
         // Standard PDF jobs use the requested A4/A5 format by default. Label
         // callers can opt into the installed queue's settings when their
         // custom media is defined by the printer driver.
-        usePrinterSettings: usePrinterSettings,
+        usePrinterSettings: resolvedUsePrinterSettings,
         onLayout: (_) async => pdfBytes,
       );
       debugPrint(

@@ -14,6 +14,30 @@ class CommonPrintSettings {
   static const double minMarginMm = 0.0;
   static const double maxMarginMm = 10.0;
 
+  /// Controls whether standard PDF jobs use the printer driver's saved
+  /// media configuration instead of the A4/A5 format requested by the PDF.
+  ///
+  /// This is intentionally separate from barcode printing. Barcode printing
+  /// has its own driver-specific setting and continues to pass `true`
+  /// directly to the native print path.
+  static const String usePrinterSettingsPreferenceKey =
+      'common_use_printer_settings';
+  static const bool defaultUsePrinterSettings = false;
+
+  static Future<bool> loadUsePrinterSettings() async {
+    final preferences = await SharedPreferences.getInstance();
+    return preferences.getBool(usePrinterSettingsPreferenceKey) ??
+        defaultUsePrinterSettings;
+  }
+
+  static Future<bool> saveUsePrinterSettings(bool value) async {
+    final preferences = await SharedPreferences.getInstance();
+    return preferences.setBool(usePrinterSettingsPreferenceKey, value);
+  }
+
+  static Future<bool> resetUsePrinterSettings() =>
+      saveUsePrinterSettings(defaultUsePrinterSettings);
+
   /// Loads the one margin profile shared by Billing, Quotation, Kitchen,
   /// Barcode and PDF Sharing settings.
   static Future<double> loadMarginMm() async {

@@ -22,6 +22,7 @@ import 'package:pos_machine/screens/print/barcode_layout_settings_panel.dart';
 import 'package:pos_machine/screens/print/thermal/printer_utils.dart';
 import 'package:pos_machine/screens/print/widgets/printer_settings_responsive.dart';
 import 'package:pos_machine/screens/print/widgets/common_print_margins_card.dart';
+import 'package:pos_machine/screens/print/widgets/common_printer_settings_card.dart';
 import 'package:pos_machine/screens/print/widgets/receipt_configuration_workspace.dart';
 import 'package:pos_machine/screens/print/receipt_document_config_resolver.dart';
 import 'package:pos_machine/screens/print/pdf_share_settings.dart';
@@ -1348,6 +1349,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       children: [
         const CommonPrintMarginsCard(),
         SizedBox(height: cardGap),
+        if (_isStandardPdf && !_isPdfSharing) ...[
+          const CommonPrinterSettingsCard(),
+          SizedBox(height: cardGap),
+        ],
         PrinterSettingsCard(
           padding: cardPadding,
           child: Column(
