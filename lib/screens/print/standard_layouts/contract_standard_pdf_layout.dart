@@ -17,6 +17,7 @@ import 'package:pos_machine/screens/print/layouts/receipt_configuration_contract
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 import 'package:pos_machine/screens/print/logo_loader.dart';
 import 'package:pos_machine/services/development_printer_service.dart';
+import 'package:pos_machine/services/common_print_settings.dart';
 import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:provider/provider.dart';
 
@@ -307,7 +308,9 @@ class ContractStandardPdfRenderer {
         pageFormat: pageFormat,
         textDirection:
             mode.isArabic ? pw.TextDirection.rtl : pw.TextDirection.ltr,
-        margin: pw.EdgeInsets.all(22 * scale),
+        margin: await CommonPrintSettings.resolvePdfMargins(
+          pw.EdgeInsets.all(22 * scale),
+        ),
         footer: (context) => pw.Align(
           alignment: pw.Alignment.center,
           child: pw.Text(

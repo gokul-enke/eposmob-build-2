@@ -18,11 +18,11 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 import 'package:pos_machine/services/development_printer_service.dart';
+import 'package:pos_machine/services/common_print_settings.dart';
 import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/resources/localization_service.dart';
 import '../logo_loader.dart';
 import 'standard_pdf_layout.dart';
-import 'standard_pdf_contract_delegate.dart';
 
 /// Boxed bilingual tax-invoice PDF with a reference-style full-width logo,
 /// metadata strip, seller/buyer boxes, fixed six-column items table, and a
@@ -126,13 +126,6 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   // ── Public interface ────────────────────────────────────────────────
   @override
   Future<void> generateAndPrintPdf(ReceiptLayoutParams params) async {
-    if (StandardPdfContractDelegate.enabled) {
-      return StandardPdfContractDelegate.generateAndPrintPdf(
-        params,
-        layoutId: layoutId,
-        displayName: displayName,
-      );
-    }
     final pdf = await buildPdfDocument(params);
     if (params.selectedPrinter.isDevelopment) {
       final savedFile = await DevelopmentPrinterService.savePdf(
@@ -176,13 +169,6 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
 
   @override
   Future<pw.Document> buildPdfDocument(ReceiptLayoutParams params) async {
-    if (StandardPdfContractDelegate.enabled) {
-      return StandardPdfContractDelegate.buildPdfDocument(
-        params,
-        layoutId: layoutId,
-        displayName: displayName,
-      );
-    }
     final pdf = pw.Document(version: PdfVersion.pdf_1_5, compress: true);
 
     // ── Providers & Config ──────────────────────────────────────────
@@ -715,7 +701,9 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       pw.MultiPage(
         pageFormat: pageFormat,
         textDirection: pw.TextDirection.ltr,
-        margin: pw.EdgeInsets.all(isA5 ? 8 : 10),
+        margin: await CommonPrintSettings.resolvePdfMargins(
+          pw.EdgeInsets.all(isA5 ? 8 : 10),
+        ),
         build: (pw.Context ctx) {
           if (layoutId == 'boxed_bilingual_tax_invoice') {
             final referenceValueStyle = pw.TextStyle(

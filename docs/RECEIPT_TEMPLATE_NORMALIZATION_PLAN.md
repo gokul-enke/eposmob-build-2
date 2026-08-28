@@ -248,9 +248,10 @@ are not treated as migrated skins until they pass the same checks.
 - [ ] Test long Arabic/English product names and row wrapping at each width.
 - [ ] Test large orders and part-one/part-two image splitting.
 - [ ] Test logo, QR, barcode, drawer, feed, and cut behavior.
-- [x] Keep A4/A5 in the standard PDF output path.  The six supported
-  standard-PDF IDs now route through `ContractStandardPdfLayout`, with the
-  remaining historical direct classes guarded by the same delegate.
+- [x] Keep A4/A5 in the standard PDF output path. The six supported
+  standard-PDF IDs now route through their concrete layout classes. Classic
+  remains the normalized contract baseline, while the five invoice themes run
+  their own PDF builders.
 - [x] Remove empty `buildPdf()` success paths for production thermal layouts;
   thermal output uses the shared adapter and A4/A5 output uses the maintained
   contract PDF renderer.
@@ -316,18 +317,16 @@ readiness matrix is updated.
 
 ## A4/A5 PDF Follow-up (separate migration track)
 
-The standard PDF factory has six registered themes.  They now share the same
-language, visibility, dynamic-data, bank, warranty, QR, VAT-footer, and section
-ordering contract as thermal output.  The factory and every historical direct
-class entry point delegate to `ContractStandardPdfLayout`; no caller can obtain
-the old empty-document path accidentally.
+The standard PDF factory has six registered themes. The factory now returns the
+concrete class for each registered ID: Classic remains on
+`ContractStandardPdfLayout`, while the five invoice themes execute their own
+PDF builders. This makes the selected template affect the generated document
+instead of silently normalizing every selection to one renderer.
 
 The contract test matrix covers six themes × 3 language modes × A4/A5 (36
-non-empty PDF documents), strict all-61-key visibility, aliases, and direct
-legacy delegation.  This is functional coverage, not pixel-equivalent
-reproduction of each historical skin: the active IDs intentionally share a
-maintainable reference renderer until a visual skin is reintroduced behind the
-same contract.
+non-empty PDF documents), strict all-61-key visibility, aliases, and concrete
+factory routing. This is functional coverage, not pixel-equivalent approval;
+the remaining work is to inspect and approve the visual output of each skin.
 
 Remaining A4/A5 work is visual and device QA: render/golden review, long
 Arabic/English wrapping, representative printer output, and any requested

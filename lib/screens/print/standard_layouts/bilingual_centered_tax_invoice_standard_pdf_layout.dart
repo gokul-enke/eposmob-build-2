@@ -18,11 +18,11 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 import 'package:pos_machine/services/development_printer_service.dart';
+import 'package:pos_machine/services/common_print_settings.dart';
 import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/resources/localization_service.dart';
 import '../logo_loader.dart';
 import 'standard_pdf_layout.dart';
-import 'standard_pdf_contract_delegate.dart';
 
 /// Centered Simplified Tax Invoice PDF layout — Saudi ZATCA "Simplified Tax
 /// Invoice" design with a three-column bilingual letterhead.
@@ -138,13 +138,6 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
   // ── Public interface ────────────────────────────────────────────────
   @override
   Future<void> generateAndPrintPdf(ReceiptLayoutParams params) async {
-    if (StandardPdfContractDelegate.enabled) {
-      return StandardPdfContractDelegate.generateAndPrintPdf(
-        params,
-        layoutId: layoutId,
-        displayName: displayName,
-      );
-    }
     final pdf = await buildPdfDocument(params);
     if (params.selectedPrinter.isDevelopment) {
       final savedFile = await DevelopmentPrinterService.savePdf(
@@ -189,13 +182,6 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
 
   @override
   Future<pw.Document> buildPdfDocument(ReceiptLayoutParams params) async {
-    if (StandardPdfContractDelegate.enabled) {
-      return StandardPdfContractDelegate.buildPdfDocument(
-        params,
-        layoutId: layoutId,
-        displayName: displayName,
-      );
-    }
     final pdf = pw.Document(version: PdfVersion.pdf_1_5, compress: true);
 
     // ── Providers & Config ──────────────────────────────────────────
@@ -695,11 +681,14 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
       pw.MultiPage(
         pageFormat: pageFormat,
         textDirection: pw.TextDirection.ltr,
-        margin: pw.EdgeInsets.only(
+        margin: await CommonPrintSettings.resolvePdfMargins(
+          pw.EdgeInsets.only(
             left: isA5 ? 14 : 22,
             right: isA5 ? 14 : 22,
             top: isA5 ? 12 : 18,
-            bottom: isA5 ? 12 : 18),
+            bottom: isA5 ? 12 : 18,
+          ),
+        ),
         footer: (ctx) => pw.Center(
           child: pw.Text('Page ${ctx.pageNumber} of ${ctx.pagesCount}',
               style: pw.TextStyle(font: font, fontSize: fs(6))),

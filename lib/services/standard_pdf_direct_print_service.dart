@@ -40,12 +40,14 @@ class StandardPdfDirectPrintService {
     required BluetoothPrinter selectedPrinter,
     required String paperSize,
     required String jobName,
+    bool usePrinterSettings = false,
   }) async {
     return printBytes(
       pdfBytes: await document.save(),
       selectedPrinter: selectedPrinter,
       paperSize: paperSize,
       jobName: jobName,
+      usePrinterSettings: usePrinterSettings,
     );
   }
 
@@ -54,6 +56,11 @@ class StandardPdfDirectPrintService {
     required BluetoothPrinter selectedPrinter,
     required String paperSize,
     required String jobName,
+
+    /// Use the installed printer driver's saved media configuration instead
+    /// of the requested PDF paper size. This is useful for barcode/label
+    /// printers, but standard A4/A5 documents should keep the default false.
+    bool usePrinterSettings = false,
   }) async {
     if (selectedPrinter.isDevelopment) return false;
 
@@ -85,11 +92,10 @@ class StandardPdfDirectPrintService {
         name: jobName,
         format: pageFormatFor(paperSize),
         dynamicLayout: false,
-        // On Windows, leaving this false makes the printing plugin construct a
-        // minimal DEVMODE without loading the vendor driver's private data.
-        // Some drivers accept the job but then leave it at 0 KB in the spooler.
-        // Using the installed queue's validated settings avoids that failure.
-        usePrinterSettings: true,
+        // Standard PDF jobs use the requested A4/A5 format by default. Label
+        // callers can opt into the installed queue's settings when their
+        // custom media is defined by the printer driver.
+        usePrinterSettings: usePrinterSettings,
         onLayout: (_) async => pdfBytes,
       );
       debugPrint(

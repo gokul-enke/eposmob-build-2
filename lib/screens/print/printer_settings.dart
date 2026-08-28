@@ -21,6 +21,7 @@ import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/screens/print/barcode_layout_settings_panel.dart';
 import 'package:pos_machine/screens/print/thermal/printer_utils.dart';
 import 'package:pos_machine/screens/print/widgets/printer_settings_responsive.dart';
+import 'package:pos_machine/screens/print/widgets/common_print_margins_card.dart';
 import 'package:pos_machine/screens/print/widgets/receipt_configuration_workspace.dart';
 import 'package:pos_machine/screens/print/receipt_document_config_resolver.dart';
 import 'package:pos_machine/screens/print/pdf_share_settings.dart';
@@ -1270,6 +1271,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         SizedBox(height: gap),
         _buildTabToggle(),
         SizedBox(height: gap),
+        const CommonPrintMarginsCard(),
+        SizedBox(height: gap),
         Expanded(
           child: BarcodeLayoutSettingsPanel(
             printerListWidget: _buildPrinterList(),
@@ -1343,6 +1346,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
     return Column(
       children: [
+        const CommonPrintMarginsCard(),
+        SizedBox(height: cardGap),
         PrinterSettingsCard(
           padding: cardPadding,
           child: Column(

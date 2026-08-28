@@ -11,6 +11,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:open_file/open_file.dart';
 import 'package:pos_machine/screens/print/kot_print_helpers.dart';
 import 'package:pos_machine/services/standard_pdf_direct_print_service.dart';
+import 'package:pos_machine/services/common_print_settings.dart';
 
 /// Kitchen Order Ticket (KOT) Standard Printer
 /// Generates A4/A5 PDF for KOT printing using Document Configuration
@@ -288,7 +289,9 @@ class KotStandardPrinter {
       pdf.addPage(
         pw.Page(
           pageFormat: pageFormat,
-          margin: pw.EdgeInsets.all(isA5 ? 15 : 20),
+          margin: await CommonPrintSettings.resolvePdfMargins(
+            pw.EdgeInsets.all(isA5 ? 15 : 20),
+          ),
           build: (pw.Context context) {
             return pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,

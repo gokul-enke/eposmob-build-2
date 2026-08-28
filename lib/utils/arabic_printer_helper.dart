@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:qr/qr.dart';
+import 'package:pos_machine/services/common_print_settings.dart';
 
 class ArabicPrinterHelper {
   static const String fontFamily = 'NotoSansArabic';
@@ -16,25 +17,42 @@ class ArabicPrinterHelper {
     double fontSize = 24,
     TextDirection textDirection = TextDirection.rtl, // Default to RTL
   }) async {
+    // Render onto the full paper width, but calculate/draw content inside a
+    // shared safe area. Because every thermal theme uses this helper, the
+    // margin setting is applied once here instead of being duplicated in
+    // every layout implementation.
+    final marginMm = await CommonPrintSettings.loadMarginMm();
+    final marginPx = CommonPrintSettings.thermalMarginPixels(
+      width: width,
+      marginMm: marginMm,
+    );
+    final contentWidth = (width - (marginPx * 2)).clamp(1.0, width).toDouble();
+    final verticalMarginPx = marginPx.toDouble();
+
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final paint = Paint()..color = Colors.white;
 
     // First pass: calculate total height
-    double currentY = 0;
+    double contentHeight = 0;
     for (var row in rows) {
-      currentY += row.calculateHeight(width, fontSize, textDirection);
+      contentHeight +=
+          row.calculateHeight(contentWidth, fontSize, textDirection);
     }
+    final currentY = verticalMarginPx + contentHeight + verticalMarginPx;
 
     // Draw background
     canvas.drawRect(Rect.fromLTWH(0, 0, width, currentY), paint);
 
     // Second pass: render rows
-    double drawY = 0;
+    double drawY = verticalMarginPx;
+    canvas.save();
+    canvas.translate(marginPx.toDouble(), 0);
     for (var row in rows) {
-      row.render(canvas, drawY, width, fontSize, textDirection);
-      drawY += row.calculateHeight(width, fontSize, textDirection);
+      row.render(canvas, drawY, contentWidth, fontSize, textDirection);
+      drawY += row.calculateHeight(contentWidth, fontSize, textDirection);
     }
+    canvas.restore();
 
     final picture = recorder.endRecording();
     final uiImage = await picture.toImage(width.toInt(), currentY.toInt());
@@ -318,9 +336,8 @@ class QrRow extends ReceiptRow {
     final paint = Paint()..color = Colors.black;
 
     // Shrink factor to prevent thermal ink bleed (0.85 = 15% gap between modules).
-  final double safeShrink =
-      shrinkFactor.clamp(0.5, 1.0).toDouble();
-  final double drawnModuleSize = moduleSize * safeShrink;
+    final double safeShrink = shrinkFactor.clamp(0.5, 1.0).toDouble();
+    final double drawnModuleSize = moduleSize * safeShrink;
     final double moduleOffset = (moduleSize - drawnModuleSize) / 2;
 
     for (int ix = 0; ix < qrImage.moduleCount; ix++) {
