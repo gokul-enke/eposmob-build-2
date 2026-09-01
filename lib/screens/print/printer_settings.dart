@@ -1474,13 +1474,22 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     final showDriverSetting =
         !_isPdfSharing && selectedSettingsType != 'Barcode';
 
+    // Print Margins only affects standard PDF (A4/A5) output. Barcode
+    // stickers use their own Page Margin setting instead of this one.
+    final isBarcodeTab = selectedSettingsType == 'Barcode';
+    final marginsEnabled = !isBarcodeTab && _isStandardPdf;
+    final String marginsDisabledNote = isBarcodeTab
+        ? 'Barcode stickers use their own Page Margin setting instead.'
+        : 'Only affects A4 and A5 print jobs. '
+            'Switch the paper size to A4 or A5 to change it.';
+
     final String subtitle;
-    if (selectedSettingsType == 'Barcode') {
-      subtitle = 'Shared margins — barcode stickers keep their own Page Margin';
+    if (isBarcodeTab) {
+      subtitle = 'Barcode stickers keep their own Page Margin';
     } else if (showDriverSetting) {
-      subtitle = 'Margins and printer driver behaviour';
+      subtitle = 'PDF margins and printer driver behaviour';
     } else {
-      subtitle = 'Shared page margins';
+      subtitle = 'Shared PDF page margins';
     }
 
     return PrinterDisclosureCard(
@@ -1491,7 +1500,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const CommonPrintMarginsCard(embedded: true),
+          CommonPrintMarginsCard(
+            embedded: true,
+            enabled: marginsEnabled,
+            disabledNote: marginsDisabledNote,
+          ),
           if (showDriverSetting) ...[
             SizedBox(height: gap),
             Divider(height: 1, color: Colors.grey.shade200),

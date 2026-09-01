@@ -321,13 +321,20 @@ class ThermalPrinter {
         }
 
         // Customer balance
-        if (customerOldBalance != null ||
-            customerCurrentBalance != null ||
-            paidAmount != null) {
+        final showCustomerBalanceSection =
+            displayConfig?['showCustomerBalance']?.visible ?? true;
+        if (showCustomerBalanceSection &&
+            (customerOldBalance != null ||
+                customerCurrentBalance != null ||
+                paidAmount != null)) {
+          final showOldBalance =
+              displayConfig?['showCustomerPrevBalance']?.visible ?? true;
+          final showCurrentBalance =
+              displayConfig?['showCustomerCurrentBalance']?.visible ?? true;
           bytes += _balanceBuilder.buildCustomerBalance(
             generator,
-            customerOldBalance,
-            customerCurrentBalance,
+            showOldBalance ? customerOldBalance : null,
+            showCurrentBalance ? customerCurrentBalance : null,
             paidAmount,
             selectedFontType,
           );
@@ -1238,8 +1245,18 @@ class ThermalPrinter {
       }
 
       // Customer Balance
-      if (customerOldBalance != null ||
-          customerCurrentBalance != null ||
+      final showCustomerBalanceSection =
+          displayConfig?['showCustomerBalance']?.visible ?? true;
+      final effectiveOldBalance = showCustomerBalanceSection &&
+              (displayConfig?['showCustomerPrevBalance']?.visible ?? true)
+          ? customerOldBalance
+          : null;
+      final effectiveCurrentBalance = showCustomerBalanceSection &&
+              (displayConfig?['showCustomerCurrentBalance']?.visible ?? true)
+          ? customerCurrentBalance
+          : null;
+      if (effectiveOldBalance != null ||
+          effectiveCurrentBalance != null ||
           paidAmount != null) {
         // Get dynamic labels from displayConfig with fallbacks
         final prevBalanceLabel =
@@ -1262,11 +1279,11 @@ class ThermalPrinter {
                 : (isEnglish ? "Current Balance:" : "الرصيد الحالي:");
 
         if (isEnglish) {
-          if (customerOldBalance != null) {
+          if (effectiveOldBalance != null) {
             part1Rows.add(ReceiptTableRow([
               ReceiptTableColumn(prevBalanceLabel,
                   weight: 0.5, align: TextAlign.left),
-              ReceiptTableColumn(customerOldBalance.toStringAsFixed(2),
+              ReceiptTableColumn(effectiveOldBalance.toStringAsFixed(2),
                   weight: 0.5, align: TextAlign.right),
             ]));
           }
@@ -1278,19 +1295,19 @@ class ThermalPrinter {
                   weight: 0.5, align: TextAlign.right),
             ]));
           }
-          if (customerCurrentBalance != null) {
+          if (effectiveCurrentBalance != null) {
             part1Rows.add(ReceiptTableRow([
               ReceiptTableColumn(currentBalanceLabel,
                   weight: 0.5, align: TextAlign.left, isBold: true),
-              ReceiptTableColumn(customerCurrentBalance.toStringAsFixed(2),
+              ReceiptTableColumn(effectiveCurrentBalance.toStringAsFixed(2),
                   weight: 0.5, align: TextAlign.right, isBold: true),
             ]));
           }
         } else {
           // Arabic balance display - Label on right, Value on left (RTL reading flow)
-          if (customerOldBalance != null) {
+          if (effectiveOldBalance != null) {
             part1Rows.add(ReceiptTableRow([
-              ReceiptTableColumn(customerOldBalance.toStringAsFixed(2),
+              ReceiptTableColumn(effectiveOldBalance.toStringAsFixed(2),
                   weight: 0.5, align: TextAlign.left),
               ReceiptTableColumn(prevBalanceLabel,
                   weight: 0.5, align: TextAlign.right),
@@ -1304,9 +1321,9 @@ class ThermalPrinter {
                   weight: 0.5, align: TextAlign.right),
             ]));
           }
-          if (customerCurrentBalance != null) {
+          if (effectiveCurrentBalance != null) {
             part1Rows.add(ReceiptTableRow([
-              ReceiptTableColumn(customerCurrentBalance.toStringAsFixed(2),
+              ReceiptTableColumn(effectiveCurrentBalance.toStringAsFixed(2),
                   weight: 0.5, align: TextAlign.left, isBold: true),
               ReceiptTableColumn(currentBalanceLabel,
                   weight: 0.5, align: TextAlign.right, isBold: true),

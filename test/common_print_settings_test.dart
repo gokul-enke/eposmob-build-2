@@ -36,19 +36,4 @@ void main() {
     expect(margins.top, closeTo(12 + extra, 0.0001));
     expect(margins.bottom, closeTo(13 + extra, 0.0001));
   });
-
-  test('converts the shared value for each thermal paper width', () {
-    expect(
-      CommonPrintSettings.thermalMarginPixels(width: 576, marginMm: 4),
-      29,
-    );
-    expect(
-      CommonPrintSettings.thermalMarginPixels(width: 384, marginMm: 4),
-      26,
-    );
-    expect(
-      CommonPrintSettings.thermalMarginPixels(width: 832, marginMm: 4),
-      30,
-    );
-  });
 }

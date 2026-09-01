@@ -2,7 +2,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:qr/qr.dart';
-import 'package:pos_machine/services/common_print_settings.dart';
 
 class ArabicPrinterHelper {
   static const String fontFamily = 'NotoSansArabic';
@@ -17,18 +16,9 @@ class ArabicPrinterHelper {
     double fontSize = 24,
     TextDirection textDirection = TextDirection.rtl, // Default to RTL
   }) async {
-    // Render onto the full paper width, but calculate/draw content inside a
-    // shared safe area. Because every thermal theme uses this helper, the
-    // margin setting is applied once here instead of being duplicated in
-    // every layout implementation.
-    final marginMm = await CommonPrintSettings.loadMarginMm();
-    final marginPx = CommonPrintSettings.thermalMarginPixels(
-      width: width,
-      marginMm: marginMm,
-    );
-    final contentWidth = (width - (marginPx * 2)).clamp(1.0, width).toDouble();
-    final verticalMarginPx = marginPx.toDouble();
-
+    // The shared Print Margins setting only applies to standard PDF output
+    // (A4/A5) — thermal paper is fixed-width and printers already reserve
+    // their own non-printable edge, so no extra margin is added here.
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final paint = Paint()..color = Colors.white;
@@ -36,23 +26,19 @@ class ArabicPrinterHelper {
     // First pass: calculate total height
     double contentHeight = 0;
     for (var row in rows) {
-      contentHeight +=
-          row.calculateHeight(contentWidth, fontSize, textDirection);
+      contentHeight += row.calculateHeight(width, fontSize, textDirection);
     }
-    final currentY = verticalMarginPx + contentHeight + verticalMarginPx;
+    final currentY = contentHeight;
 
     // Draw background
     canvas.drawRect(Rect.fromLTWH(0, 0, width, currentY), paint);
 
     // Second pass: render rows
-    double drawY = verticalMarginPx;
-    canvas.save();
-    canvas.translate(marginPx.toDouble(), 0);
+    double drawY = 0;
     for (var row in rows) {
-      row.render(canvas, drawY, contentWidth, fontSize, textDirection);
-      drawY += row.calculateHeight(contentWidth, fontSize, textDirection);
+      row.render(canvas, drawY, width, fontSize, textDirection);
+      drawY += row.calculateHeight(width, fontSize, textDirection);
     }
-    canvas.restore();
 
     final picture = recorder.endRecording();
     final uiImage = await picture.toImage(width.toInt(), currentY.toInt());

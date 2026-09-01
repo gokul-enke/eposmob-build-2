@@ -9,13 +9,26 @@ import 'printer_settings_responsive.dart';
 /// One reusable margin control shared by every Printer Settings tab.
 ///
 /// The setting is intentionally one all-sides value. It is persisted once,
-/// then consumed by the common PDF and thermal renderers at print time.
+/// then consumed by the common PDF renderer at print time. It only affects
+/// standard PDF (A4/A5) output — thermal paper is fixed-width and printers
+/// already reserve their own non-printable edge.
 class CommonPrintMarginsCard extends StatefulWidget {
   /// When true the control renders without its own card chrome, so it can sit
   /// inside a parent card such as the advanced/shared options disclosure.
   final bool embedded;
 
-  const CommonPrintMarginsCard({super.key, this.embedded = false});
+  /// When false the slider is shown but not editable. The control stays on the
+  /// page so the layout does not change shape between paper sizes; [disabledNote]
+  /// explains why it is inactive.
+  final bool enabled;
+  final String? disabledNote;
+
+  const CommonPrintMarginsCard({
+    super.key,
+    this.embedded = false,
+    this.enabled = true,
+    this.disabledNote,
+  });
 
   @override
   State<CommonPrintMarginsCard> createState() => _CommonPrintMarginsCardState();
@@ -73,6 +86,7 @@ class _CommonPrintMarginsCardState extends State<CommonPrintMarginsCard> {
       CommonPrintSettings.minMarginMm,
       CommonPrintSettings.maxMarginMm,
     );
+    final isInteractive = widget.enabled && !_isLoading;
 
     final body = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,9 +94,9 @@ class _CommonPrintMarginsCardState extends State<CommonPrintMarginsCard> {
         PrinterSectionHeader(
           icon: Icons.border_all_rounded,
           title: 'Print Margins',
-          subtitle: 'Safe area added to every edge of the page',
+          subtitle: 'Safe area added to every edge of standard PDF pages',
           trailing: TextButton.icon(
-            onPressed: _isLoading ? null : _resetMargin,
+            onPressed: isInteractive ? _resetMargin : null,
             icon: const Icon(Icons.restore, size: 18),
             label: const Text('Reset'),
             style: TextButton.styleFrom(
@@ -103,8 +117,8 @@ class _CommonPrintMarginsCardState extends State<CommonPrintMarginsCard> {
                 max: CommonPrintSettings.maxMarginMm,
                 divisions: 20,
                 label: '${value.toStringAsFixed(1)} mm',
-                onChanged: _isLoading ? null : _updateMargin,
-                onChangeEnd: _isLoading ? null : _saveMargin,
+                onChanged: isInteractive ? _updateMargin : null,
+                onChangeEnd: isInteractive ? _saveMargin : null,
               ),
             ),
             SizedBox(width: isCompact ? 8 : 16),
@@ -123,6 +137,17 @@ class _CommonPrintMarginsCardState extends State<CommonPrintMarginsCard> {
             ),
           ],
         ),
+        if (!widget.enabled && widget.disabledNote != null)
+          Text(
+            widget.disabledNote!,
+            maxLines: 3,
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s11,
+              0.10,
+              Colors.grey.shade600,
+            ),
+          ),
       ],
     );
 

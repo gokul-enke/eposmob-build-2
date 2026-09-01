@@ -6878,18 +6878,20 @@ class BillingPageState extends State<BillingPage>
               debugPrint(
                   '[BillingPrint] Derived total paid from payment breakdown: $totalPaid');
             }
-            double? currentBalance;
-            final apiBalance =
-                _orderBalanceFromProps(orderDetails.data?.orderProps);
-            if (apiBalance != null) {
-              currentBalance = apiBalance;
-            } else if (oldBalance != null) {
+            double? currentBalance =
+                orderDetails.data?.customerDetails?.customerBalance;
+            if (currentBalance == null && oldBalance != null) {
               double cartTotal = double.tryParse(formattedTotal!) ?? 0.0;
               // Current balance = Old balance - (Cart Total - Amount Paid)
               // If customer paid less than cart total, their balance decreases (they owe more)
               // If customer paid more than cart total, their balance increases (they have credit)
               currentBalance = oldBalance - (cartTotal - totalPaid);
             }
+            // No order_props.BALANCE fallback: that field has been observed
+            // stale/incorrect (e.g. "0.0" right after a credit sale), so if
+            // we can't determine the balance from customer_details or a
+            // local computation, leave it null rather than print a value we
+            // can't trust.
 
             debugPrint(
                 "🖨️ Attempting auto-print for order #${orderDetails.data!.orderNumber}");
@@ -9470,16 +9472,6 @@ class BillingPageState extends State<BillingPage>
     }
 
     return autoPrintSuccess;
-  }
-
-  double? _orderBalanceFromProps(List<OrderDetailsModelDataOrderProp>? props) {
-    if (props == null) return null;
-    for (final prop in props) {
-      if (prop.propsCode?.toUpperCase() == 'BALANCE') {
-        return double.tryParse(prop.propsValue ?? '');
-      }
-    }
-    return null;
   }
 
   Future<void> printFromSavedOrder(SavedOrder savedOrder) async {
