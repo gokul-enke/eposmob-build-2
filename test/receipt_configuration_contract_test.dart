@@ -12,6 +12,8 @@ void main() {
           ReceiptLanguageMode.arabic);
       expect(ReceiptConfigurationContract.languageMode('en_ar'),
           ReceiptLanguageMode.bilingual);
+      expect(ReceiptConfigurationContract.languageMode('ar_en'),
+          ReceiptLanguageMode.bilingual);
     });
 
     test('keeps unset language compatible with existing English fallback', () {

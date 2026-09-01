@@ -116,6 +116,7 @@ class ReceiptConfigurationContract {
       case 'ar':
         return ReceiptLanguageMode.arabic;
       case 'en_ar':
+      case 'ar_en':
         return ReceiptLanguageMode.bilingual;
       case 'en':
         return ReceiptLanguageMode.english;

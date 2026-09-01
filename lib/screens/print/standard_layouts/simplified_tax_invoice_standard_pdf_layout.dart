@@ -21,7 +21,6 @@ import 'package:pos_machine/screens/print/layouts/receipt_configuration_contract
 import 'package:pos_machine/services/development_printer_service.dart';
 import 'package:pos_machine/services/common_print_settings.dart';
 import 'package:pos_machine/utils/zatca_qr_helper.dart';
-import 'package:pos_machine/resources/localization_service.dart';
 import '../logo_loader.dart';
 import 'standard_pdf_layout.dart';
 
