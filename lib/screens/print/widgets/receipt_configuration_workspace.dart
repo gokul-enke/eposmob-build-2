@@ -241,32 +241,48 @@ class _ReceiptConfigurationWorkspaceState
           SizedBox(height: compact ? 14 : 16),
           if (config == null)
             _buildEmptyState()
-          else ...[
-            PrinterDisclosureCard(
-              embedded: true,
-              icon: Icons.list_alt_rounded,
-              title: 'Field reference',
-              subtitle: 'Every synced label and what supplies its value',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionSelector(),
-                  const SizedBox(height: 14),
-                  _buildFieldsPanel(),
-                ],
-              ),
-            ),
+          else if (compact) ...[
+            _buildFieldReferenceCard(),
             const SizedBox(height: 12),
-            PrinterDisclosureCard(
-              embedded: true,
-              icon: Icons.preview_outlined,
-              title: 'Live preview',
-              subtitle: 'Render a sample receipt using the current settings',
-              child: _buildPreviewPanel(),
+            _buildLivePreviewCard(),
+          ] else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _buildFieldReferenceCard()),
+                const SizedBox(width: 16),
+                Expanded(child: _buildLivePreviewCard()),
+              ],
             ),
-          ],
         ],
       ),
+    );
+  }
+
+  Widget _buildFieldReferenceCard() {
+    return PrinterDisclosureCard(
+      embedded: true,
+      icon: Icons.list_alt_rounded,
+      title: 'Field reference',
+      subtitle: 'Every synced label and what supplies its value',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionSelector(),
+          const SizedBox(height: 14),
+          _buildFieldsPanel(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLivePreviewCard() {
+    return PrinterDisclosureCard(
+      embedded: true,
+      icon: Icons.preview_outlined,
+      title: 'Live preview',
+      subtitle: 'Render a sample receipt using the current settings',
+      child: _buildPreviewPanel(),
     );
   }
 
