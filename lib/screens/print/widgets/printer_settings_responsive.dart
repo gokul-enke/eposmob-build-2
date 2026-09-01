@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -359,6 +362,9 @@ class PrinterSegmentSelector extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           helperText,
+          // buildCustomStyle bakes in TextOverflow.ellipsis, which clips to a
+          // single line unless maxLines is given explicitly.
+          maxLines: 3,
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s11,
@@ -469,6 +475,7 @@ class PrinterInfoStrip extends StatelessWidget {
           Expanded(
             child: Text(
               text,
+              maxLines: 2,
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s12,
@@ -558,6 +565,7 @@ class PrinterEmptyState extends StatelessWidget {
           Text(
             subtitle,
             textAlign: TextAlign.center,
+            maxLines: 3,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s12,
@@ -572,7 +580,7 @@ class PrinterEmptyState extends StatelessWidget {
 }
 
 /// Two-column layout that stacks on phones.
-class PrinterSettingsSplitLayout extends StatelessWidget {
+class PrinterSettingsSplitLayout extends StatefulWidget {
   final Widget settingsColumn;
   final Widget printerColumn;
   final double breakpoint;
@@ -585,31 +593,385 @@ class PrinterSettingsSplitLayout extends StatelessWidget {
   });
 
   @override
+  State<PrinterSettingsSplitLayout> createState() =>
+      _PrinterSettingsSplitLayoutState();
+}
+
+class _PrinterSettingsSplitLayoutState
+    extends State<PrinterSettingsSplitLayout> {
+  // IntrinsicHeight was tried first and rejected: it queries children for
+  // intrinsic dimensions, and PrinterDropdownField's LayoutBuilder cannot
+  // answer that query — it throws ("RenderBox was not laid out") the moment a
+  // LayoutBuilder ends up inside an IntrinsicHeight subtree. Measuring each
+  // column's real layout size and feeding the larger one back in as a minimum
+  // height avoids intrinsics entirely, so it works with LayoutBuilder,
+  // scrollables, and everything else a column might contain.
+  double? _settingsHeight;
+  double? _printerHeight;
+
+  void _reportSettingsHeight(double height) => _reportHeight(
+        height,
+        current: _settingsHeight,
+        apply: (value) => _settingsHeight = value,
+      );
+
+  void _reportPrinterHeight(double height) => _reportHeight(
+        height,
+        current: _printerHeight,
+        apply: (value) => _printerHeight = value,
+      );
+
+  void _reportHeight(
+    double height, {
+    required double? current,
+    required void Function(double value) apply,
+  }) {
+    if (current != null && (current - height).abs() < 0.5) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() => apply(height));
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isStacked = constraints.maxWidth < breakpoint;
+        final isStacked = constraints.maxWidth < widget.breakpoint;
 
         if (isStacked) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              settingsColumn,
+              widget.settingsColumn,
               SizedBox(height: printerSectionGap(context)),
-              printerColumn,
+              widget.printerColumn,
             ],
           );
         }
 
+        final equalHeight = _settingsHeight == null || _printerHeight == null
+            ? null
+            : math.max(_settingsHeight!, _printerHeight!);
+
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(flex: 5, child: settingsColumn),
+            Expanded(
+              flex: 5,
+              child: _EqualHeightColumn(
+                minHeight: equalHeight,
+                onNaturalHeight: _reportSettingsHeight,
+                child: widget.settingsColumn,
+              ),
+            ),
             const SizedBox(width: 20),
-            Expanded(flex: 6, child: printerColumn),
+            Expanded(
+              flex: 6,
+              child: _EqualHeightColumn(
+                minHeight: equalHeight,
+                onNaturalHeight: _reportPrinterHeight,
+                child: widget.printerColumn,
+              ),
+            ),
           ],
         );
       },
+    );
+  }
+}
+
+/// Stretches [child] (the card itself, background and border included) up to
+/// [minHeight], while still reporting the child's true unstretched height
+/// back through [onNaturalHeight] — so the reported value never includes
+/// space this widget itself added, otherwise two columns fed off each
+/// other's height would only ever ratchet upward and never shrink back down
+/// when content does.
+///
+/// The natural height is measured off an offstage copy of [child] — offstage
+/// so it never paints or receives hits — while the visible copy is stretched
+/// directly via [ConstrainedBox], so the two cards' white boxes actually end
+/// at the same height instead of one ending early with blank page background
+/// underneath it.
+class _EqualHeightColumn extends StatelessWidget {
+  final double? minHeight;
+  final ValueChanged<double> onNaturalHeight;
+  final Widget child;
+
+  const _EqualHeightColumn({
+    required this.minHeight,
+    required this.onNaturalHeight,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Stack's default loose fit only bounds width from above, it doesn't
+    // force it — SizedBox(width: infinity) is what keeps both copies at the
+    // column's full width, matching how they rendered before this widget
+    // stretched height at all.
+    return Stack(
+      alignment: Alignment.topLeft,
+      children: [
+        Offstage(
+          child: SizedBox(
+            width: double.infinity,
+            child: _MeasureSize(onChange: onNaturalHeight, child: child),
+          ),
+        ),
+        ConstrainedBox(
+          constraints: BoxConstraints(minHeight: minHeight ?? 0),
+          child: SizedBox(width: double.infinity, child: child),
+        ),
+      ],
+    );
+  }
+}
+
+/// Reports its child's laid-out height after every layout pass, without
+/// altering the child's size or the constraints it receives.
+class _MeasureSize extends SingleChildRenderObjectWidget {
+  final ValueChanged<double> onChange;
+
+  const _MeasureSize({required this.onChange, required Widget super.child});
+
+  @override
+  _RenderMeasureSize createRenderObject(BuildContext context) =>
+      _RenderMeasureSize(onChange);
+
+  @override
+  void updateRenderObject(
+      BuildContext context, _RenderMeasureSize renderObject) {
+    renderObject.onChange = onChange;
+  }
+}
+
+class _RenderMeasureSize extends RenderProxyBox {
+  ValueChanged<double> onChange;
+  double? _reportedHeight;
+
+  _RenderMeasureSize(this.onChange);
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    final height = size.height;
+    if (_reportedHeight != height) {
+      _reportedHeight = height;
+      onChange(height);
+    }
+  }
+}
+
+/// Small muted chip that states the scope of a settings group.
+///
+/// Used to make it explicit whether a control is per-profile or app-wide,
+/// so a shared setting can never be mistaken for a tab-local one.
+class PrinterScopeChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+
+  const PrinterScopeChip({
+    super.key,
+    required this.label,
+    this.icon = Icons.public_rounded,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: Colors.grey.shade600),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s11,
+              0.10,
+              Colors.grey.shade700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Card whose body is hidden behind a tappable header.
+///
+/// Keeps rarely-used groups (advanced/shared options) off the default view
+/// without removing them from the page, so the layout stays stable.
+class PrinterDisclosureCard extends StatefulWidget {
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final String? scopeLabel;
+  final bool initiallyExpanded;
+
+  /// Renders as a flat bordered panel instead of an elevated card, so one
+  /// disclosure can nest inside another without doubling the card chrome.
+  final bool embedded;
+
+  /// Optional action shown next to the chevron. Kept out of the tap target so
+  /// pressing it does not toggle the section.
+  final Widget? trailing;
+  final Widget child;
+
+  const PrinterDisclosureCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.child,
+    this.subtitle,
+    this.scopeLabel,
+    this.initiallyExpanded = false,
+    this.embedded = false,
+    this.trailing,
+  });
+
+  @override
+  State<PrinterDisclosureCard> createState() => _PrinterDisclosureCardState();
+}
+
+class _PrinterDisclosureCardState extends State<PrinterDisclosureCard> {
+  late bool _isExpanded = widget.initiallyExpanded;
+
+  @override
+  Widget build(BuildContext context) {
+    final isCompact = printerIsCompact(context);
+    final iconSize =
+        widget.embedded ? (isCompact ? 30.0 : 34.0) : (isCompact ? 36.0 : 42.0);
+
+    final header = Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          height: iconSize,
+          width: iconSize,
+          decoration: BoxDecoration(
+            color: widget.embedded ? Colors.white : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(isCompact ? 10 : 12),
+            border: widget.embedded
+                ? Border.all(color: Colors.grey.shade200)
+                : null,
+          ),
+          child: Icon(
+            widget.icon,
+            color: Colors.grey.shade700,
+            size: widget.embedded ? 18 : (isCompact ? 20 : 22),
+          ),
+        ),
+        SizedBox(width: isCompact ? 10 : 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: buildCustomStyle(
+                  FontWeightManager.semiBold,
+                  widget.embedded
+                      ? FontSize.s14
+                      : (isCompact ? FontSize.s15 : FontSize.s16),
+                  0.20,
+                  ColorManager.textColor,
+                ),
+              ),
+              if (widget.subtitle != null) ...[
+                SizedBox(height: isCompact ? 2 : 4),
+                Text(
+                  widget.subtitle!,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    isCompact ? FontSize.s11 : FontSize.s12,
+                    0.10,
+                    Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (widget.scopeLabel != null && !isCompact) ...[
+          const SizedBox(width: 12),
+          PrinterScopeChip(label: widget.scopeLabel!),
+        ],
+        const SizedBox(width: 8),
+        AnimatedRotation(
+          turns: _isExpanded ? 0.5 : 0,
+          duration: const Duration(milliseconds: 180),
+          child: Icon(
+            Icons.expand_more_rounded,
+            color: Colors.grey.shade600,
+          ),
+        ),
+      ],
+    );
+
+    final gap = printerSectionGap(context);
+
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: InkWell(
+                onTap: () => setState(() => _isExpanded = !_isExpanded),
+                borderRadius: BorderRadius.circular(10),
+                child: header,
+              ),
+            ),
+            if (widget.trailing != null) ...[
+              const SizedBox(width: 12),
+              widget.trailing!,
+            ],
+          ],
+        ),
+        if (widget.scopeLabel != null && isCompact) ...[
+          const SizedBox(height: 10),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: PrinterScopeChip(label: widget.scopeLabel!),
+          ),
+        ],
+        if (_isExpanded) ...[
+          SizedBox(height: gap),
+          Divider(height: 1, color: Colors.grey.shade200),
+          SizedBox(height: gap),
+          widget.child,
+        ],
+      ],
+    );
+
+    if (widget.embedded) {
+      return Container(
+        padding: EdgeInsets.all(isCompact ? 12 : 14),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: content,
+      );
+    }
+
+    return PrinterSettingsCard(
+      padding: printerCardPadding(context),
+      child: content,
     );
   }
 }

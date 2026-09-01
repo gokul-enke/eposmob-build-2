@@ -2309,8 +2309,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   style: bodyStyle,
                   textDirection: pw.TextDirection.ltr,
                   textAlign: pw.TextAlign.left,
-                  maxLines: 1,
-                  overflow: pw.TextOverflow.clip,
+                  softWrap: true,
                 ),
               if (arabicName.trim().isNotEmpty)
                 pw.Text(
@@ -2318,8 +2317,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   style: bodyStyle,
                   textDirection: pw.TextDirection.rtl,
                   textAlign: pw.TextAlign.right,
-                  maxLines: 1,
-                  overflow: pw.TextOverflow.clip,
+                  softWrap: true,
                 ),
             ],
           ),
