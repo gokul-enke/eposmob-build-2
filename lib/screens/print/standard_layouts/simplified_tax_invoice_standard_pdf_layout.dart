@@ -17,10 +17,10 @@ import 'package:pos_machine/models/payment_gateway.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
+import 'package:pos_machine/screens/print/layouts/receipt_configuration_contract.dart';
 import 'package:pos_machine/services/development_printer_service.dart';
 import 'package:pos_machine/services/common_print_settings.dart';
 import 'package:pos_machine/utils/zatca_qr_helper.dart';
-import 'package:pos_machine/resources/localization_service.dart';
 import '../logo_loader.dart';
 import 'standard_pdf_layout.dart';
 
@@ -210,11 +210,10 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final font = await _loadArabicFont();
     final fontBold = await _loadArabicFontBold();
     final configLang = config.language;
-    final isRtl = configLang != null
-        ? configLang.toLowerCase() == 'ar'
-        : LocalizationService.locale.languageCode == 'ar';
-    final isEnglish = !isRtl;
-    final isDualLanguage = (configLang ?? '').toLowerCase() == 'ar';
+    final mode = params.receiptLanguageMode;
+    final isDualLanguage = mode == ReceiptLanguageMode.bilingual;
+    final isRtl = mode == ReceiptLanguageMode.arabic;
+    final isEnglish = mode == ReceiptLanguageMode.english;
     // This template is laid out left-to-right by design (English primary with
     // Arabic sub-labels), so the page direction is always LTR. Arabic runs
     // carry their own per-widget RTL direction.
@@ -1052,8 +1051,17 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final language = (configLang ?? 'en').toLowerCase();
     final words = AmountHelper()
         .convertNumberToWords(total, currency: currency, language: language);
-    final suffix = language == 'ar' ? ' فقط.' : ' only.';
-    return [pw.Text('$words$suffix', style: style)];
+    final mode = ReceiptConfigurationContract.languageMode(configLang);
+    final suffix = mode == ReceiptLanguageMode.arabic ? ' فقط.' : ' only.';
+    final needsRtl = mode == ReceiptLanguageMode.arabic ||
+        mode == ReceiptLanguageMode.bilingual;
+    return [
+      pw.Text(
+        '$words$suffix',
+        style: style,
+        textDirection: needsRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
+      ),
+    ];
   }
 
   /// Friendly label for a raw payment-method code.
@@ -1388,8 +1396,9 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final showTax = col('showTaxHeader');
     final showTotal = col('showTotal');
 
-    final bool isAr =
-        (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
+    final mode = params.receiptLanguageMode;
+    final bool isAr = mode == ReceiptLanguageMode.bilingual ||
+        mode == ReceiptLanguageMode.arabic;
 
     // Column widths matching the reference proportions.
     final Map<int, pw.TableColumnWidth> colWidths = {};
