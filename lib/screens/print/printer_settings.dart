@@ -1286,7 +1286,6 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   /// Body for printer and PDF-sharing profiles — everything scrolls.
   Widget _buildDefaultBody() {
     final gap = printerSectionGap(context);
-    final isCompact = printerIsCompact(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1294,7 +1293,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         SizedBox(height: gap),
         _buildTabToggle(),
         if (selectedSettingsType == 'Billing' || _isPdfSharing) ...[
-          SizedBox(height: isCompact ? 8 : 4),
+          // Previously 4px on desktop — visually welded to the tab pills above
+          // it. Match the page's normal section gap instead.
+          SizedBox(height: gap),
           _buildSegmentToggle(),
         ],
         SizedBox(height: gap),
@@ -1416,21 +1417,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     Widget fields;
     if (themeField == null) {
       fields = paperField;
-    } else if (isCompact) {
+    } else {
       fields = Column(
         children: [
           paperField,
           SizedBox(height: fieldGap),
           themeField,
-        ],
-      );
-    } else {
-      fields = Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: paperField),
-          const SizedBox(width: 16),
-          Expanded(child: themeField),
         ],
       );
     }
@@ -1785,24 +1777,31 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                   subtitle:
                       'Tap the scan button above to search for nearby printers',
                 )
-              : ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: displayDevices.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    final printer = displayDevices[index];
-                    final isSelected = selectedPrinter != null &&
-                        _printerIdentity(selectedPrinter!) ==
-                            _printerIdentity(printer);
-
-                    return _buildPrinterDeviceTile(
-                      printer: printer,
-                      isSelected: isSelected,
-                      isCompact: isCompact,
-                    );
-                  },
+              // A plain Column instead of a shrink-wrapped, non-scrolling
+              // ListView: same layout, but Column supports intrinsic-height
+              // measurement so this card can match the Receipt Output card's
+              // height in PrinterSettingsSplitLayout. It never scrolled on its
+              // own (NeverScrollableScrollPhysics) so nothing else changes.
+              : Column(
+                  // ListView stretched every item to the full cross-axis
+                  // width; Column defaults to centering instead, so that has
+                  // to be requested explicitly or every tile shrinks to its
+                  // own content width.
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (int index = 0;
+                        index < displayDevices.length;
+                        index++) ...[
+                      if (index > 0) const SizedBox(height: 10),
+                      _buildPrinterDeviceTile(
+                        printer: displayDevices[index],
+                        isSelected: selectedPrinter != null &&
+                            _printerIdentity(selectedPrinter!) ==
+                                _printerIdentity(displayDevices[index]),
+                        isCompact: isCompact,
+                      ),
+                    ],
+                  ],
                 ),
         ],
       ),

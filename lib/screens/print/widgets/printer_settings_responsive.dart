@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -577,7 +580,7 @@ class PrinterEmptyState extends StatelessWidget {
 }
 
 /// Two-column layout that stacks on phones.
-class PrinterSettingsSplitLayout extends StatelessWidget {
+class PrinterSettingsSplitLayout extends StatefulWidget {
   final Widget settingsColumn;
   final Widget printerColumn;
   final double breakpoint;
@@ -590,32 +593,173 @@ class PrinterSettingsSplitLayout extends StatelessWidget {
   });
 
   @override
+  State<PrinterSettingsSplitLayout> createState() =>
+      _PrinterSettingsSplitLayoutState();
+}
+
+class _PrinterSettingsSplitLayoutState
+    extends State<PrinterSettingsSplitLayout> {
+  // IntrinsicHeight was tried first and rejected: it queries children for
+  // intrinsic dimensions, and PrinterDropdownField's LayoutBuilder cannot
+  // answer that query — it throws ("RenderBox was not laid out") the moment a
+  // LayoutBuilder ends up inside an IntrinsicHeight subtree. Measuring each
+  // column's real layout size and feeding the larger one back in as a minimum
+  // height avoids intrinsics entirely, so it works with LayoutBuilder,
+  // scrollables, and everything else a column might contain.
+  double? _settingsHeight;
+  double? _printerHeight;
+
+  void _reportSettingsHeight(double height) => _reportHeight(
+        height,
+        current: _settingsHeight,
+        apply: (value) => _settingsHeight = value,
+      );
+
+  void _reportPrinterHeight(double height) => _reportHeight(
+        height,
+        current: _printerHeight,
+        apply: (value) => _printerHeight = value,
+      );
+
+  void _reportHeight(
+    double height, {
+    required double? current,
+    required void Function(double value) apply,
+  }) {
+    if (current != null && (current - height).abs() < 0.5) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() => apply(height));
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isStacked = constraints.maxWidth < breakpoint;
+        final isStacked = constraints.maxWidth < widget.breakpoint;
 
         if (isStacked) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              settingsColumn,
+              widget.settingsColumn,
               SizedBox(height: printerSectionGap(context)),
-              printerColumn,
+              widget.printerColumn,
             ],
           );
         }
 
+        final equalHeight = _settingsHeight == null || _printerHeight == null
+            ? null
+            : math.max(_settingsHeight!, _printerHeight!);
+
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(flex: 5, child: settingsColumn),
+            Expanded(
+              flex: 5,
+              child: _EqualHeightColumn(
+                minHeight: equalHeight,
+                onNaturalHeight: _reportSettingsHeight,
+                child: widget.settingsColumn,
+              ),
+            ),
             const SizedBox(width: 20),
-            Expanded(flex: 6, child: printerColumn),
+            Expanded(
+              flex: 6,
+              child: _EqualHeightColumn(
+                minHeight: equalHeight,
+                onNaturalHeight: _reportPrinterHeight,
+                child: widget.printerColumn,
+              ),
+            ),
           ],
         );
       },
     );
+  }
+}
+
+/// Stretches [child] (the card itself, background and border included) up to
+/// [minHeight], while still reporting the child's true unstretched height
+/// back through [onNaturalHeight] — so the reported value never includes
+/// space this widget itself added, otherwise two columns fed off each
+/// other's height would only ever ratchet upward and never shrink back down
+/// when content does.
+///
+/// The natural height is measured off an offstage copy of [child] — offstage
+/// so it never paints or receives hits — while the visible copy is stretched
+/// directly via [ConstrainedBox], so the two cards' white boxes actually end
+/// at the same height instead of one ending early with blank page background
+/// underneath it.
+class _EqualHeightColumn extends StatelessWidget {
+  final double? minHeight;
+  final ValueChanged<double> onNaturalHeight;
+  final Widget child;
+
+  const _EqualHeightColumn({
+    required this.minHeight,
+    required this.onNaturalHeight,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Stack's default loose fit only bounds width from above, it doesn't
+    // force it — SizedBox(width: infinity) is what keeps both copies at the
+    // column's full width, matching how they rendered before this widget
+    // stretched height at all.
+    return Stack(
+      alignment: Alignment.topLeft,
+      children: [
+        Offstage(
+          child: SizedBox(
+            width: double.infinity,
+            child: _MeasureSize(onChange: onNaturalHeight, child: child),
+          ),
+        ),
+        ConstrainedBox(
+          constraints: BoxConstraints(minHeight: minHeight ?? 0),
+          child: SizedBox(width: double.infinity, child: child),
+        ),
+      ],
+    );
+  }
+}
+
+/// Reports its child's laid-out height after every layout pass, without
+/// altering the child's size or the constraints it receives.
+class _MeasureSize extends SingleChildRenderObjectWidget {
+  final ValueChanged<double> onChange;
+
+  const _MeasureSize({required this.onChange, required Widget super.child});
+
+  @override
+  _RenderMeasureSize createRenderObject(BuildContext context) =>
+      _RenderMeasureSize(onChange);
+
+  @override
+  void updateRenderObject(
+      BuildContext context, _RenderMeasureSize renderObject) {
+    renderObject.onChange = onChange;
+  }
+}
+
+class _RenderMeasureSize extends RenderProxyBox {
+  ValueChanged<double> onChange;
+  double? _reportedHeight;
+
+  _RenderMeasureSize(this.onChange);
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    final height = size.height;
+    if (_reportedHeight != height) {
+      _reportedHeight = height;
+      onChange(height);
+    }
   }
 }
 
