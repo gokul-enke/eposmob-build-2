@@ -117,7 +117,7 @@ class AppSettings {
     this.posAuthenticateClearCart = false,
     this.posAuthenticateClearCartKey = '',
     this.companySubscriptionFallbackEnabled = false,
-    this.companySubscriptionStatus = '',
+    this.companySubscriptionStatus = 'active',
     this.companySubscriptionMessage = '',
     this.companySubscriptionValidUntil = '',
     this.companySubscriptionManageUrl = '',
@@ -256,7 +256,7 @@ class AppSettings {
       ),
       compulsoryShiftOpen: _readSettingStatus(
         settingsMap,
-        'COMPULSORY_SHIFT_OPEN_',
+        'COMPULSORY_SHIFT_OPEN',
         defaultValue: false,
       ),
       posAuthenticateClearCart: _readSettingStatus(
@@ -521,7 +521,7 @@ class AppSettings {
         },
         {
           "name": "Compulsory Shift Open",
-          "code": "COMPULSORY_SHIFT_OPEN_",
+          "code": "COMPULSORY_SHIFT_OPEN",
           "value": "",
           "status": compulsoryShiftOpen.toString(),
         },
