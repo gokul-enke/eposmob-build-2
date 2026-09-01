@@ -11,7 +11,22 @@ import 'printer_settings_responsive.dart';
 /// This setting is shared by the standard PDF printer tabs. Barcode printing
 /// is not changed by this control because it has its own driver-specific path.
 class CommonPrinterSettingsCard extends StatefulWidget {
-  const CommonPrinterSettingsCard({super.key});
+  /// When true the control renders without its own card chrome, so it can sit
+  /// inside a parent card such as the advanced/shared options disclosure.
+  final bool embedded;
+
+  /// When false the switch is shown but not editable. The control stays on the
+  /// page so the layout does not change shape between paper sizes; [disabledNote]
+  /// explains why it is inactive.
+  final bool enabled;
+  final String? disabledNote;
+
+  const CommonPrinterSettingsCard({
+    super.key,
+    this.embedded = false,
+    this.enabled = true,
+    this.disabledNote,
+  });
 
   @override
   State<CommonPrinterSettingsCard> createState() =>
@@ -75,60 +90,52 @@ class _CommonPrinterSettingsCardState extends State<CommonPrinterSettingsCard> {
     final isCompact = printerIsCompact(context);
     final cardPadding = printerCardPadding(context);
 
-    return PrinterSettingsCard(
-      padding: cardPadding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          PrinterSectionHeader(
-            icon: Icons.settings_input_component_rounded,
-            title: 'Use Printer Driver Settings',
-            subtitle: 'Choose how standard A4/A5 PDFs are sent to Windows',
-            trailing: TextButton.icon(
-              onPressed: _isLoading || _isSaving ? null : _resetSetting,
-              icon: const Icon(Icons.restore, size: 18),
-              label: const Text('Reset'),
-              style: TextButton.styleFrom(
-                foregroundColor: ColorManager.kPrimaryColor,
-                padding: EdgeInsets.symmetric(
-                  horizontal: isCompact ? 4 : 8,
-                ),
+    final isInteractive = widget.enabled && !_isLoading && !_isSaving;
+
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        PrinterSectionHeader(
+          icon: Icons.settings_input_component_rounded,
+          title: 'Printer Driver Settings',
+          subtitle: 'How standard A4/A5 PDFs are sent to Windows',
+          trailing: TextButton.icon(
+            onPressed: isInteractive ? _resetSetting : null,
+            icon: const Icon(Icons.restore, size: 18),
+            label: const Text('Reset'),
+            style: TextButton.styleFrom(
+              foregroundColor: ColorManager.kPrimaryColor,
+              padding: EdgeInsets.symmetric(
+                horizontal: isCompact ? 4 : 8,
               ),
             ),
           ),
-          SizedBox(height: isCompact ? 8 : 12),
-          SwitchListTile.adaptive(
-            contentPadding: EdgeInsets.zero,
-            dense: isCompact,
-            value: _usePrinterSettings,
-            onChanged: _isLoading || _isSaving ? null : _updateSetting,
-            title: Text(
-              _usePrinterSettings
-                  ? 'Use the selected printer’s saved media settings'
-                  : 'Use the PDF’s selected A4/A5 page size',
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s13,
-                0.10,
-                ColorManager.textColor,
-              ),
-            ),
-            subtitle: Text(
-              _usePrinterSettings
-                  ? 'Enable only when the printer driver is configured for the exact document size.'
-                  : 'Recommended for normal invoices because it preserves the PDF page size and helps prevent cropping.',
-              style: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s11,
-                0.10,
-                Colors.grey.shade600,
-              ),
+        ),
+        SizedBox(height: isCompact ? 8 : 12),
+        SwitchListTile.adaptive(
+          contentPadding: EdgeInsets.zero,
+          dense: isCompact,
+          value: _usePrinterSettings,
+          onChanged: isInteractive ? _updateSetting : null,
+          title: Text(
+            _usePrinterSettings
+                ? 'Use the selected printer’s saved media settings'
+                : 'Use the PDF’s selected A4/A5 page size',
+            // buildCustomStyle bakes in TextOverflow.ellipsis, which clips to a
+            // single line unless maxLines is given explicitly.
+            maxLines: 2,
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s13,
+              0.10,
+              ColorManager.textColor,
             ),
           ),
-          Text(
-            _isLoading
-                ? 'Loading printer setting…'
-                : 'This shared setting applies to standard PDF print jobs. Barcode printing keeps its dedicated driver setting.',
+          subtitle: Text(
+            _usePrinterSettings
+                ? 'Enable only when the printer driver is configured for the exact document size.'
+                : 'Recommended for normal invoices because it preserves the PDF page size and helps prevent cropping.',
+            maxLines: 3,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s11,
@@ -136,8 +143,23 @@ class _CommonPrinterSettingsCardState extends State<CommonPrinterSettingsCard> {
               Colors.grey.shade600,
             ),
           ),
-        ],
-      ),
+        ),
+        if (!widget.enabled && widget.disabledNote != null)
+          Text(
+            widget.disabledNote!,
+            maxLines: 3,
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s11,
+              0.10,
+              Colors.grey.shade600,
+            ),
+          ),
+      ],
     );
+
+    if (widget.embedded) return body;
+
+    return PrinterSettingsCard(padding: cardPadding, child: body);
   }
 }

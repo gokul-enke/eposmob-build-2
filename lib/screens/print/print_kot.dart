@@ -749,7 +749,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
                     Text(
                       _isScanning
                           ? 'Scanning...'
-                          : '${devices.length} devices found',
+                          : '${devices.length} device${devices.length == 1 ? '' : 's'} found',
                       style: const TextStyle(
                         color: textSecondaryColor,
                         fontSize: 14,

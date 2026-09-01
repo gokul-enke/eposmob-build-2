@@ -1272,7 +1272,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         SizedBox(height: gap),
         _buildTabToggle(),
         SizedBox(height: gap),
-        const CommonPrintMarginsCard(),
+        _buildAdvancedSection(),
         SizedBox(height: gap),
         Expanded(
           child: BarcodeLayoutSettingsPanel(
@@ -1336,247 +1336,183 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             },
           ),
         ],
+        SizedBox(height: gap),
+        _buildAdvancedSection(),
       ],
     );
   }
 
+  /// Output settings for the profile currently selected in the tab/segment
+  /// toggles. Paper size and theme share one card because they are one
+  /// decision — what the printed document looks like.
+  ///
+  /// App-wide options live in [_buildAdvancedSection] instead, so nothing in
+  /// this card can silently change another tab.
   Widget _buildSettingsSection() {
     final cardPadding = printerCardPadding(context);
-    final fieldGap = printerIsCompact(context) ? 12.0 : 20.0;
-    final cardGap = printerSectionGap(context);
+    final isCompact = printerIsCompact(context);
+    final fieldGap = isCompact ? 12.0 : 20.0;
 
-    return Column(
-      children: [
-        const CommonPrintMarginsCard(),
-        SizedBox(height: cardGap),
-        if (_isStandardPdf && !_isPdfSharing) ...[
-          const CommonPrinterSettingsCard(),
-          SizedBox(height: cardGap),
+    final paperField = PrinterDropdownField(
+      label: 'Paper Size',
+      value: _activePaperSizes.contains(selectedPaperSize)
+          ? selectedPaperSize
+          : (_isPdfSharing ? PdfShareSettings.defaultPaperSize : '80mm'),
+      items: _activePaperSizes.map((String size) {
+        return DropdownMenuItem<String>(
+          value: size,
+          child: Text(size),
+        );
+      }).toList(),
+      onChanged: (String? newValue) {
+        if (newValue != null) {
+          final wasThermal = selectedPaperSize == '112mm' ||
+              selectedPaperSize == '80mm' ||
+              selectedPaperSize == '58mm';
+          final willBeThermal =
+              newValue == '112mm' || newValue == '80mm' || newValue == '58mm';
+
+          setState(() {
+            selectedPaperSize = newValue;
+
+            // Reset theme if crossing thermal↔standard boundary
+            // and current theme doesn't exist in the new list
+            if (wasThermal != willBeThermal) {
+              final newThemes = _activeThemes;
+              final themeExists =
+                  newThemes.any((t) => t['id'] == selectedReceiptTheme);
+              if (!themeExists) {
+                selectedReceiptTheme = 'classic';
+                _saveReceiptTheme('classic');
+              }
+            }
+          });
+          _saveDefaultPaperSize(newValue);
+        }
+      },
+    );
+
+    final themeField = !_usesReceiptSettings
+        ? null
+        : PrinterDropdownField(
+            label: _isPdfSharing ? 'Template' : 'Theme',
+            value: selectedReceiptTheme,
+            items: _activeThemes.map((Map<String, String> theme) {
+              return DropdownMenuItem<String>(
+                value: theme['id'],
+                child: Text(theme['name']!),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              if (newValue != null) {
+                setState(() {
+                  selectedReceiptTheme = newValue;
+                });
+                _saveReceiptTheme(newValue);
+              }
+            },
+          );
+
+    Widget fields;
+    if (themeField == null) {
+      fields = paperField;
+    } else if (isCompact) {
+      fields = Column(
+        children: [
+          paperField,
+          SizedBox(height: fieldGap),
+          themeField,
         ],
-        PrinterSettingsCard(
-          padding: cardPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              PrinterSectionHeader(
-                icon: Icons.description_rounded,
-                title:
-                    _isPdfSharing ? 'Shared PDF Size' : 'Paper Size Settings',
-                subtitle: _isPdfSharing
-                    ? 'Choose the page size for generated invoice files'
-                    : 'Choose the default paper width for receipts',
-              ),
-              SizedBox(height: fieldGap),
-              PrinterDropdownField(
-                label: 'Paper Size',
-                value: _activePaperSizes.contains(selectedPaperSize)
-                    ? selectedPaperSize
-                    : (_isPdfSharing
-                        ? PdfShareSettings.defaultPaperSize
-                        : '80mm'),
-                items: _activePaperSizes.map((String size) {
-                  return DropdownMenuItem<String>(
-                    value: size,
-                    child: Text(size),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    final wasThermal = selectedPaperSize == '112mm' ||
-                        selectedPaperSize == '80mm' ||
-                        selectedPaperSize == '58mm';
-                    final willBeThermal = newValue == '112mm' ||
-                        newValue == '80mm' ||
-                        newValue == '58mm';
+      );
+    } else {
+      fields = Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: paperField),
+          const SizedBox(width: 16),
+          Expanded(child: themeField),
+        ],
+      );
+    }
 
-                    setState(() {
-                      selectedPaperSize = newValue;
-
-                      // Reset theme if crossing thermal↔standard boundary
-                      // and current theme doesn't exist in the new list
-                      if (wasThermal != willBeThermal) {
-                        final newThemes = _activeThemes;
-                        final themeExists = newThemes
-                            .any((t) => t['id'] == selectedReceiptTheme);
-                        if (!themeExists) {
-                          selectedReceiptTheme = 'classic';
-                          _saveReceiptTheme('classic');
-                        }
-                      }
-                    });
-                    _saveDefaultPaperSize(newValue);
-                  }
-                },
-              ),
-            ],
+    return PrinterSettingsCard(
+      padding: cardPadding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          PrinterSectionHeader(
+            icon: Icons.description_rounded,
+            title: _isPdfSharing ? 'PDF Output' : 'Receipt Output',
+            subtitle: _isPdfSharing
+                ? 'Page size and template used for generated invoice files'
+                : 'Paper size and visual layout for printed receipts',
           ),
-        ),
-        SizedBox(height: cardGap),
-        if (_usesReceiptSettings)
-          PrinterSettingsCard(
-            padding: cardPadding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                PrinterSectionHeader(
-                  icon: Icons.palette_outlined,
-                  title: _isPdfSharing ? 'PDF Template' : 'Receipt Theme',
-                  subtitle: _isPdfSharing
-                      ? 'Select the visual layout used by Share PDF and WhatsApp'
-                      : 'Select the visual layout for printed receipts',
-                ),
-                SizedBox(height: fieldGap),
-                PrinterDropdownField(
-                  label: 'Theme',
-                  value: selectedReceiptTheme,
-                  items: _activeThemes.map((Map<String, String> theme) {
-                    return DropdownMenuItem<String>(
-                      value: theme['id'],
-                      child: Text(theme['name']!),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    if (newValue != null) {
-                      setState(() {
-                        selectedReceiptTheme = newValue;
-                      });
-                      _saveReceiptTheme(newValue);
-                    }
-                  },
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  _getThemeDescription(selectedReceiptTheme),
-                  style: buildCustomStyle(
-                    FontWeightManager.regular,
-                    FontSize.s11,
-                    0.10,
-                    Colors.grey.shade600,
-                  ),
-                ),
-              ],
+          SizedBox(height: fieldGap),
+          fields,
+          if (themeField != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              _getThemeDescription(selectedReceiptTheme),
+              // buildCustomStyle bakes in TextOverflow.ellipsis, which clips to
+              // a single line unless maxLines is given explicitly.
+              maxLines: 3,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s11,
+                0.10,
+                Colors.grey.shade600,
+              ),
             ),
-          ),
+          ],
+        ],
+      ),
+    );
+  }
 
-        // Font Style Selection
-        // Container(
-        //   padding: const EdgeInsets.all(24),
-        //   decoration: BoxDecoration(
-        //     color: Colors.white,
-        //     borderRadius: BorderRadius.circular(12),
-        //     boxShadow: [
-        //       BoxShadow(
-        //         color: Colors.black.withOpacity(0.03),
-        //         blurRadius: 8,
-        //         offset: const Offset(0, 2),
-        //       ),
-        //     ],
-        //   ),
-        //   child: Column(
-        //     crossAxisAlignment: CrossAxisAlignment.start,
-        //     children: [
-        //       Row(
-        //         children: [
-        //           Container(
-        //             padding: const EdgeInsets.all(8),
-        //             decoration: BoxDecoration(
-        //               color: ColorManager.kPrimaryColor.withOpacity(0.1),
-        //               borderRadius: BorderRadius.circular(8),
-        //             ),
-        //             child: const Icon(
-        //               Icons.font_download_rounded,
-        //               color: ColorManager.kPrimaryColor,
-        //               size: 20,
-        //             ),
-        //           ),
-        //           const SizedBox(width: 12),
-        //           const Text(
-        //             'Font Style Settings',
-        //             style: TextStyle(
-        //               color: ColorManager.kPrimaryColor,
-        //               fontSize: 18,
-        //               fontWeight: FontWeight.bold,
-        //             ),
-        //           ),
-        //         ],
-        //       ),
-        //       const SizedBox(height: 24),
-        //       Container(
-        //         padding: const EdgeInsets.all(16),
-        //         decoration: BoxDecoration(
-        //           color: Colors.grey[50],
-        //           borderRadius: BorderRadius.circular(12),
-        //         ),
-        //         child: Row(
-        //           children: [
-        //             const Text(
-        //               'Font Style:',
-        //               style: TextStyle(
-        //                 color: ColorManager.kTitleTextColor,
-        //                 fontSize: 16,
-        //                 fontWeight: FontWeight.w500,
-        //               ),
-        //             ),
-        //             const SizedBox(width: 16),
-        //             Expanded(
-        //               child: Container(
-        //                 padding: const EdgeInsets.symmetric(horizontal: 16),
-        //                 decoration: BoxDecoration(
-        //                   color: Colors.white,
-        //                   borderRadius: BorderRadius.circular(8),
-        //                 ),
-        //                 child: DropdownButton<String>(
-        //                   value: selectedFontStyle,
-        //                   isExpanded: true,
-        //                   underline: const SizedBox(),
-        //                   items: fontStyles.map((String style) {
-        //                     return DropdownMenuItem<String>(
-        //                       value: style,
-        //                       child: Text(style),
-        //                     );
-        //                   }).toList(),
-        //                   onChanged: (String? newValue) {
-        //                     if (newValue != null) {
-        //                       setState(() {
-        //                         selectedFontStyle = newValue;
-        //                       });
-        //                       _saveDefaultFontStyle(newValue);
-        //                     }
-        //                   },
-        //                 ),
-        //               ),
-        //             ),
-        //           ],
-        //         ),
-        //       ),
-        //       const SizedBox(height: 16),
-        //       Container(
-        //         padding: const EdgeInsets.all(12),
-        //         decoration: BoxDecoration(
-        //           color: Colors.blue[50],
-        //           borderRadius: BorderRadius.circular(8),
-        //         ),
-        //         child: Row(
-        //           children: [
-        //             Icon(
-        //               Icons.info_outline_rounded,
-        //               color: Colors.blue[700],
-        //               size: 20,
-        //             ),
-        //             const SizedBox(width: 12),
-        //             Expanded(
-        //               child: Text(
-        //                 'Select a font style and print a sample receipt to test how it looks.',
-        //                 style: TextStyle(
-        //                   color: Colors.blue[700],
-        //                   fontSize: 14,
-        //                 ),
-        //               ),
-        //             ),
-        //           ],
-        //         ),
-        //       ),
-      ],
+  /// App-wide print options, collapsed by default.
+  ///
+  /// These are deliberately kept out of [_buildSettingsSection] and labelled
+  /// with their scope: they are stored once and affect every tab, so showing
+  /// them as peers of the per-profile settings made them read as tab-local.
+  Widget _buildAdvancedSection() {
+    final gap = printerSectionGap(context);
+
+    // Barcode has its own driver setting and PDF sharing never reaches a
+    // Windows print job, so the driver control is irrelevant on those tabs.
+    final showDriverSetting =
+        !_isPdfSharing && selectedSettingsType != 'Barcode';
+
+    final String subtitle;
+    if (selectedSettingsType == 'Barcode') {
+      subtitle = 'Shared margins — barcode stickers keep their own Page Margin';
+    } else if (showDriverSetting) {
+      subtitle = 'Margins and printer driver behaviour';
+    } else {
+      subtitle = 'Shared page margins';
+    }
+
+    return PrinterDisclosureCard(
+      icon: Icons.tune_rounded,
+      title: 'Advanced print options',
+      subtitle: subtitle,
+      scopeLabel: 'Applies to all tabs',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const CommonPrintMarginsCard(embedded: true),
+          if (showDriverSetting) ...[
+            SizedBox(height: gap),
+            Divider(height: 1, color: Colors.grey.shade200),
+            SizedBox(height: gap),
+            CommonPrinterSettingsCard(
+              embedded: true,
+              enabled: _isStandardPdf,
+              disabledNote: 'Only affects A4 and A5 print jobs. '
+                  'Switch the paper size to A4 or A5 to change it.',
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -1634,56 +1570,36 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       ],
     );
 
-    final actionRow = SettingsActionRow(
-      children: [
-        if (selectedSettingsType != 'Barcode' && !_isStandardPdf)
-          CustomRoundButton(
-            fct: _printSample,
-            title: 'Test Print',
-            height: 44,
-            width: isCompact ? double.infinity : 120,
-            fontSize: 14,
-            borderColor: ColorManager.kPrimaryColor,
-            boxColor: Colors.white,
-            textColor: ColorManager.kPrimaryColor,
-          ),
-        CustomRoundButton(
-          fct: _isResyncingDocConfig ? () {} : _resyncDocumentConfigurations,
-          title: _isResyncingDocConfig
-              ? 'Resyncing...'
-              : (isCompact ? 'Resync Doc' : 'Resync Doc Config'),
-          height: 44,
-          width: isCompact ? double.infinity : 180,
-          fontSize: isCompact ? 13 : 14,
-          borderColor: ColorManager.kPrimaryColor,
-          boxColor: ColorManager.kPrimaryColor,
-          textColor: Colors.white,
-          isLoading: _isResyncingDocConfig,
-        ),
-        CustomRoundButton(
-          fct: () => {clearDefaultPrinter()},
-          title: _isPdfSharing
-              ? (isCompact ? 'Reset' : 'Reset PDF Settings')
-              : (isCompact ? 'Clear' : 'Clear Default Printer'),
-          height: 44,
-          width: isCompact ? double.infinity : 170,
-          fontSize: isCompact ? 13 : 14,
-          borderColor: ColorManager.kButtonRed,
-          boxColor: ColorManager.kButtonRed,
-          textColor: Colors.white,
-        ),
-      ],
+    final showTestPrint = selectedSettingsType != 'Barcode' && !_isStandardPdf;
+
+    final testPrintButton = CustomRoundButton(
+      fct: _printSample,
+      title: 'Test Print',
+      height: 44,
+      width: isCompact ? double.infinity : 130,
+      fontSize: 14,
+      borderColor: ColorManager.kPrimaryColor,
+      boxColor: ColorManager.kPrimaryColor,
+      textColor: Colors.white,
     );
 
     return PrinterSettingsCard(
       padding: cardPadding,
       child: isCompact
           ? Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                titleBlock,
-                const SizedBox(height: 12),
-                actionRow,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: titleBlock),
+                    _buildHeaderMenu(),
+                  ],
+                ),
+                if (showTestPrint) ...[
+                  const SizedBox(height: 12),
+                  testPrintButton,
+                ],
               ],
             )
           : Row(
@@ -1691,9 +1607,79 @@ class _PrinterSettingsState extends State<PrinterSettings> {
               children: [
                 Expanded(child: titleBlock),
                 const SizedBox(width: 16),
-                actionRow,
+                if (showTestPrint) ...[
+                  testPrintButton,
+                  const SizedBox(width: 4),
+                ],
+                _buildHeaderMenu(),
               ],
             ),
+    );
+  }
+
+  /// Overflow menu for the rare, page-wide actions.
+  ///
+  /// Resync and Clear are recovery actions used occasionally; as solid buttons
+  /// they were the loudest elements on a settings page, and the destructive one
+  /// sat directly under the cursor.
+  Widget _buildHeaderMenu() {
+    Widget item(IconData icon, String label, {Color? color, Widget? leading}) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          leading ?? Icon(icon, size: 20, color: color),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s13,
+              0.15,
+              color ?? ColorManager.textColor,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return PopupMenuButton<String>(
+      tooltip: 'More actions',
+      position: PopupMenuPosition.under,
+      icon: const Icon(Icons.more_vert_rounded, color: ColorManager.kGreyColor),
+      onSelected: (value) {
+        switch (value) {
+          case 'resync':
+            _resyncDocumentConfigurations();
+            break;
+          case 'clear':
+            clearDefaultPrinter();
+            break;
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem<String>(
+          value: 'resync',
+          enabled: !_isResyncingDocConfig,
+          child: item(
+            Icons.sync_rounded,
+            _isResyncingDocConfig ? 'Resyncing…' : 'Resync doc config',
+            leading: _isResyncingDocConfig
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : null,
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'clear',
+          child: item(
+            Icons.restart_alt_rounded,
+            _isPdfSharing ? 'Reset PDF settings' : 'Clear default printer',
+            color: ColorManager.kButtonRed,
+          ),
+        ),
+      ],
     );
   }
 
@@ -1767,7 +1753,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           PrinterInfoStrip(
             text: _isScanning
                 ? 'Scanning for printers...'
-                : '${displayDevices.length} devices found',
+                : '${displayDevices.length} device${displayDevices.length == 1 ? '' : 's'} found',
             icon: _isScanning
                 ? Icons.bluetooth_searching_rounded
                 : Icons.devices_other_rounded,

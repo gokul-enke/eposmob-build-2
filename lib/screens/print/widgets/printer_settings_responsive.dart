@@ -359,6 +359,9 @@ class PrinterSegmentSelector extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           helperText,
+          // buildCustomStyle bakes in TextOverflow.ellipsis, which clips to a
+          // single line unless maxLines is given explicitly.
+          maxLines: 3,
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s11,
@@ -469,6 +472,7 @@ class PrinterInfoStrip extends StatelessWidget {
           Expanded(
             child: Text(
               text,
+              maxLines: 2,
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s12,
@@ -558,6 +562,7 @@ class PrinterEmptyState extends StatelessWidget {
           Text(
             subtitle,
             textAlign: TextAlign.center,
+            maxLines: 3,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s12,
@@ -610,6 +615,219 @@ class PrinterSettingsSplitLayout extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// Small muted chip that states the scope of a settings group.
+///
+/// Used to make it explicit whether a control is per-profile or app-wide,
+/// so a shared setting can never be mistaken for a tab-local one.
+class PrinterScopeChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+
+  const PrinterScopeChip({
+    super.key,
+    required this.label,
+    this.icon = Icons.public_rounded,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: Colors.grey.shade600),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s11,
+              0.10,
+              Colors.grey.shade700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Card whose body is hidden behind a tappable header.
+///
+/// Keeps rarely-used groups (advanced/shared options) off the default view
+/// without removing them from the page, so the layout stays stable.
+class PrinterDisclosureCard extends StatefulWidget {
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final String? scopeLabel;
+  final bool initiallyExpanded;
+
+  /// Renders as a flat bordered panel instead of an elevated card, so one
+  /// disclosure can nest inside another without doubling the card chrome.
+  final bool embedded;
+
+  /// Optional action shown next to the chevron. Kept out of the tap target so
+  /// pressing it does not toggle the section.
+  final Widget? trailing;
+  final Widget child;
+
+  const PrinterDisclosureCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.child,
+    this.subtitle,
+    this.scopeLabel,
+    this.initiallyExpanded = false,
+    this.embedded = false,
+    this.trailing,
+  });
+
+  @override
+  State<PrinterDisclosureCard> createState() => _PrinterDisclosureCardState();
+}
+
+class _PrinterDisclosureCardState extends State<PrinterDisclosureCard> {
+  late bool _isExpanded = widget.initiallyExpanded;
+
+  @override
+  Widget build(BuildContext context) {
+    final isCompact = printerIsCompact(context);
+    final iconSize =
+        widget.embedded ? (isCompact ? 30.0 : 34.0) : (isCompact ? 36.0 : 42.0);
+
+    final header = Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          height: iconSize,
+          width: iconSize,
+          decoration: BoxDecoration(
+            color: widget.embedded ? Colors.white : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(isCompact ? 10 : 12),
+            border: widget.embedded
+                ? Border.all(color: Colors.grey.shade200)
+                : null,
+          ),
+          child: Icon(
+            widget.icon,
+            color: Colors.grey.shade700,
+            size: widget.embedded ? 18 : (isCompact ? 20 : 22),
+          ),
+        ),
+        SizedBox(width: isCompact ? 10 : 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: buildCustomStyle(
+                  FontWeightManager.semiBold,
+                  widget.embedded
+                      ? FontSize.s14
+                      : (isCompact ? FontSize.s15 : FontSize.s16),
+                  0.20,
+                  ColorManager.textColor,
+                ),
+              ),
+              if (widget.subtitle != null) ...[
+                SizedBox(height: isCompact ? 2 : 4),
+                Text(
+                  widget.subtitle!,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    isCompact ? FontSize.s11 : FontSize.s12,
+                    0.10,
+                    Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (widget.scopeLabel != null && !isCompact) ...[
+          const SizedBox(width: 12),
+          PrinterScopeChip(label: widget.scopeLabel!),
+        ],
+        const SizedBox(width: 8),
+        AnimatedRotation(
+          turns: _isExpanded ? 0.5 : 0,
+          duration: const Duration(milliseconds: 180),
+          child: Icon(
+            Icons.expand_more_rounded,
+            color: Colors.grey.shade600,
+          ),
+        ),
+      ],
+    );
+
+    final gap = printerSectionGap(context);
+
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: InkWell(
+                onTap: () => setState(() => _isExpanded = !_isExpanded),
+                borderRadius: BorderRadius.circular(10),
+                child: header,
+              ),
+            ),
+            if (widget.trailing != null) ...[
+              const SizedBox(width: 12),
+              widget.trailing!,
+            ],
+          ],
+        ),
+        if (widget.scopeLabel != null && isCompact) ...[
+          const SizedBox(height: 10),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: PrinterScopeChip(label: widget.scopeLabel!),
+          ),
+        ],
+        if (_isExpanded) ...[
+          SizedBox(height: gap),
+          Divider(height: 1, color: Colors.grey.shade200),
+          SizedBox(height: gap),
+          widget.child,
+        ],
+      ],
+    );
+
+    if (widget.embedded) {
+      return Container(
+        padding: EdgeInsets.all(isCompact ? 12 : 14),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: content,
+      );
+    }
+
+    return PrinterSettingsCard(
+      padding: printerCardPadding(context),
+      child: content,
     );
   }
 }

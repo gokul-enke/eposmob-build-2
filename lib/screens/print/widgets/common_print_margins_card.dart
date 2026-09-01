@@ -11,7 +11,11 @@ import 'printer_settings_responsive.dart';
 /// The setting is intentionally one all-sides value. It is persisted once,
 /// then consumed by the common PDF and thermal renderers at print time.
 class CommonPrintMarginsCard extends StatefulWidget {
-  const CommonPrintMarginsCard({super.key});
+  /// When true the control renders without its own card chrome, so it can sit
+  /// inside a parent card such as the advanced/shared options disclosure.
+  final bool embedded;
+
+  const CommonPrintMarginsCard({super.key, this.embedded = false});
 
   @override
   State<CommonPrintMarginsCard> createState() => _CommonPrintMarginsCardState();
@@ -70,70 +74,60 @@ class _CommonPrintMarginsCardState extends State<CommonPrintMarginsCard> {
       CommonPrintSettings.maxMarginMm,
     );
 
-    return PrinterSettingsCard(
-      padding: cardPadding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          PrinterSectionHeader(
-            icon: Icons.border_all_rounded,
-            title: 'Common Print Margins',
-            subtitle:
-                'One safe-area setting shared by every printer and PDF tab',
-            trailing: TextButton.icon(
-              onPressed: _isLoading ? null : _resetMargin,
-              icon: const Icon(Icons.restore, size: 18),
-              label: const Text('Reset'),
-              style: TextButton.styleFrom(
-                foregroundColor: ColorManager.kPrimaryColor,
-                padding: EdgeInsets.symmetric(
-                  horizontal: isCompact ? 4 : 8,
-                ),
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        PrinterSectionHeader(
+          icon: Icons.border_all_rounded,
+          title: 'Print Margins',
+          subtitle: 'Safe area added to every edge of the page',
+          trailing: TextButton.icon(
+            onPressed: _isLoading ? null : _resetMargin,
+            icon: const Icon(Icons.restore, size: 18),
+            label: const Text('Reset'),
+            style: TextButton.styleFrom(
+              foregroundColor: ColorManager.kPrimaryColor,
+              padding: EdgeInsets.symmetric(
+                horizontal: isCompact ? 4 : 8,
               ),
             ),
           ),
-          SizedBox(height: isCompact ? 12 : 16),
-          Row(
-            children: [
-              Expanded(
-                child: Slider(
-                  value: value.toDouble(),
-                  min: CommonPrintSettings.minMarginMm,
-                  max: CommonPrintSettings.maxMarginMm,
-                  divisions: 20,
-                  label: '${value.toStringAsFixed(1)} mm',
-                  onChanged: _isLoading ? null : _updateMargin,
-                  onChangeEnd: _isLoading ? null : _saveMargin,
-                ),
+        ),
+        SizedBox(height: isCompact ? 12 : 16),
+        Row(
+          children: [
+            Expanded(
+              child: Slider(
+                value: value.toDouble(),
+                min: CommonPrintSettings.minMarginMm,
+                max: CommonPrintSettings.maxMarginMm,
+                divisions: 20,
+                label: '${value.toStringAsFixed(1)} mm',
+                onChanged: _isLoading ? null : _updateMargin,
+                onChangeEnd: _isLoading ? null : _saveMargin,
               ),
-              SizedBox(width: isCompact ? 8 : 16),
-              SizedBox(
-                width: isCompact ? 58 : 72,
-                child: Text(
-                  _isLoading ? 'Loading…' : '${value.toStringAsFixed(1)} mm',
-                  textAlign: TextAlign.end,
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s13,
-                    0.10,
-                    ColorManager.kPrimaryColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          Text(
-            'Adds the same margin to the left, right, top and bottom. '
-            'Barcode stickers keep their dedicated Page Margin control.',
-            style: buildCustomStyle(
-              FontWeightManager.regular,
-              FontSize.s11,
-              0.10,
-              Colors.grey.shade600,
             ),
-          ),
-        ],
-      ),
+            SizedBox(width: isCompact ? 8 : 16),
+            SizedBox(
+              width: isCompact ? 58 : 72,
+              child: Text(
+                _isLoading ? 'Loading…' : '${value.toStringAsFixed(1)} mm',
+                textAlign: TextAlign.end,
+                style: buildCustomStyle(
+                  FontWeightManager.semiBold,
+                  FontSize.s13,
+                  0.10,
+                  ColorManager.kPrimaryColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
+
+    if (widget.embedded) return body;
+
+    return PrinterSettingsCard(padding: cardPadding, child: body);
   }
 }
