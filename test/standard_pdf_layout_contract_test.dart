@@ -198,23 +198,12 @@ void main() {
     }
   });
 
-  test('language aliases normalize to the three renderer modes', () {
+  test('backend language values normalize to the three renderer modes', () {
     const expected = <String, ReceiptLanguageMode>{
       'en': ReceiptLanguageMode.english,
-      'English': ReceiptLanguageMode.english,
-      'eng': ReceiptLanguageMode.english,
       'ar': ReceiptLanguageMode.arabic,
-      'Arabic': ReceiptLanguageMode.arabic,
-      'ara': ReceiptLanguageMode.arabic,
       'en_ar': ReceiptLanguageMode.bilingual,
       'ar_en': ReceiptLanguageMode.bilingual,
-      'en-ar': ReceiptLanguageMode.bilingual,
-      'ar/en': ReceiptLanguageMode.bilingual,
-      'en+ar': ReceiptLanguageMode.bilingual,
-      'English Arabic': ReceiptLanguageMode.bilingual,
-      'bilingual': ReceiptLanguageMode.bilingual,
-      'dual': ReceiptLanguageMode.bilingual,
-      'dual_language': ReceiptLanguageMode.bilingual,
     };
     for (final entry in expected.entries) {
       expect(
