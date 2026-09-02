@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/string_helper.dart';
 import '../../../components/build_container_box.dart';
@@ -11,6 +12,7 @@ import '../../../resources/color_manager.dart';
 import '../../../resources/font_manager.dart';
 import '../../../resources/style_manager.dart';
 import '../../../responsive.dart';
+import 'order_documents_section.dart';
 
 class OrderDetailWidget extends StatelessWidget {
   final OrderDetailsModelData? orderDetailsModelData;
@@ -520,18 +522,34 @@ class OrderDetailWidget extends StatelessWidget {
                       ),
                     ),
 
+                  // Packing Section — hidden when the order has no packing
+                  // record, matching every other section on this screen.
+                  if (orderDetailsModelData?.packing?.hasDetails ?? false)
+                    _buildPackingSection(
+                        context, orderDetailsModelData!.packing!),
+
+                  // Shipping Details Section — hidden when there is no
+                  // shipping address. Delivery Method alone doesn't justify
+                  // the card; it is already shown under Store & Delivery.
+                  if (orderDetailsModelData?.deliveryAddress?.hasDetails ??
+                      false)
+                    _buildShippingSection(
+                        context, orderDetailsModelData!.deliveryAddress!),
+
+                  // Order Documents Section
+                  if ((orderDetailsModelData?.orderNumber ?? '').isNotEmpty)
+                    OrderDocumentsSection(
+                      orderNumber: orderDetailsModelData!.orderNumber!,
+                    ),
+
                   if (orderDetailsModelData?.tokenNumber != null ||
                       orderDetailsModelData?.invoiceHash != null)
-                    _buildSectionCard(
-                      context: context,
+                    _ExpandableSection(
+                      title: 'Order Metadata',
+                      titleStyle: _sectionTitleStyle(context),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Order Metadata',
-                            style: _sectionTitleStyle(context),
-                          ),
-                          const SizedBox(height: 8),
                           if (orderDetailsModelData?.tokenNumber != null)
                             _buildInfoRow(
                                 context,
@@ -549,16 +567,12 @@ class OrderDetailWidget extends StatelessWidget {
                   // Order Properties Section (Custom Fields)
                   if (orderDetailsModelData?.orderProps != null &&
                       (orderDetailsModelData?.orderProps?.isNotEmpty ?? false))
-                    _buildSectionCard(
-                      context: context,
+                    _ExpandableSection(
+                      title: 'Order Properties',
+                      titleStyle: _sectionTitleStyle(context),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Order Properties',
-                            style: _sectionTitleStyle(context),
-                          ),
-                          const SizedBox(height: 8),
                           ...(orderDetailsModelData?.orderProps
                                   ?.map((prop) => _buildInfoRow(
                                       context,
@@ -830,6 +844,195 @@ class OrderDetailWidget extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Placeholder shown for empty packing fields, matching the web Order View.
+  static const String _emptyValue = '—';
+
+  Widget _buildPackingSection(
+      BuildContext context, OrderDetailsModelDataPacking? packing) {
+    final photos = packing?.packingPhotos ?? const <String>[];
+    final video = packing?.packingVideo ?? '';
+    final packedAt = packing?.packedAt ?? '';
+    // The web view keeps these two apart: `packed_by` is the resolved staff
+    // user, `packed_by_name` is the free-text name typed by whoever packed.
+    final packedByStaff = packing?.packedByUserName ?? '';
+    final packedByOther = packing?.packedByName ?? '';
+
+    return _buildSectionCard(
+      context: context,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Packing',
+            style: _sectionTitleStyle(context),
+          ),
+          const SizedBox(height: 8),
+          _buildInfoRow(
+            context,
+            'Status',
+            (packing?.isPackedResolved ?? false) ? 'Packed' : 'Not Packed',
+          ),
+          _buildInfoRow(
+            context,
+            'Packed At',
+            // packed_at arrives as UTC ("...Z"), so it must go through the
+            // timezone-aware formatter, not formatInputToDisplay.
+            packedAt.isEmpty
+                ? _emptyValue
+                : DateHelper.formatISODateToIST(packedAt),
+          ),
+          _buildInfoRow(
+            context,
+            'Packed By (staff)',
+            packedByStaff.isEmpty ? _emptyValue : packedByStaff,
+          ),
+          _buildInfoRow(
+            context,
+            'Packed By (other)',
+            packedByOther.isEmpty ? _emptyValue : packedByOther,
+          ),
+          if (photos.isEmpty)
+            _buildInfoRow(context, 'Packing Photos', _emptyValue)
+          else
+            _buildTappableRow(
+              context,
+              'Packing Photos',
+              photos.length == 1 ? '1 photo' : '${photos.length} photos',
+              () => _showPhotoViewer(context, photos),
+            ),
+          if (video.isEmpty)
+            _buildInfoRow(context, 'Packing Video', _emptyValue)
+          else
+            _buildTappableRow(
+              context,
+              'Packing Video',
+              'Play video',
+              () => _openExternal(context, video),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Mirrors the Shipping Details tab of the web Order View. Every row is
+  /// always rendered, with [_emptyValue] where the backend sent nothing.
+  Widget _buildShippingSection(BuildContext context,
+      OrderDetailsModelDataDeliveryAddress deliveryAddress) {
+    String orEmpty(String? value) =>
+        (value == null || value.isEmpty) ? _emptyValue : value;
+
+    return _buildSectionCard(
+      context: context,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Shipping Details',
+            style: _sectionTitleStyle(context),
+          ),
+          const SizedBox(height: 8),
+          _buildInfoRow(context, 'Delivery Method',
+              orEmpty(orderDetailsModelData?.deliveryMethodName)),
+          _buildInfoRow(
+              context, 'Address Type', orEmpty(deliveryAddress.addressType)),
+          _buildInfoRow(context, 'Shipping Address',
+              orEmpty(deliveryAddress.address)),
+          _buildInfoRow(context, 'Pincode', orEmpty(deliveryAddress.pincode)),
+          _buildInfoRow(
+              context, 'District', orEmpty(deliveryAddress.district)),
+          _buildInfoRow(context, 'State', orEmpty(deliveryAddress.state)),
+          _buildInfoRow(context, 'City', orEmpty(deliveryAddress.city)),
+          _buildInfoRow(
+              context, 'Landmark', orEmpty(deliveryAddress.landmark)),
+        ],
+      ),
+    );
+  }
+
+  /// Same shape as [_buildInfoRow] but the value is a tappable link.
+  Widget _buildTappableRow(
+    BuildContext context,
+    String label,
+    String value,
+    VoidCallback onTap,
+  ) {
+    final isMobile = ResponsiveWidget.isMobile(context);
+    final labelStyle = buildCustomStyle(
+      FontWeightManager.medium,
+      isMobile ? FontSize.s12 : FontSize.s13,
+      isMobile ? 0.18 : 0.20,
+      ColorManager.blackWithOpacity50,
+    );
+    final linkStyle = buildCustomStyle(
+      FontWeightManager.medium,
+      isMobile ? FontSize.s12 : FontSize.s13,
+      isMobile ? 0.18 : 0.20,
+      ColorManager.kPrimaryColor,
+    );
+
+    final link = InkWell(
+      onTap: onTap,
+      child: Text(
+        value,
+        style: linkStyle.copyWith(decoration: TextDecoration.underline),
+      ),
+    );
+
+    if (isMobile) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('$label:', style: labelStyle),
+            const SizedBox(height: 2),
+            link,
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 150,
+            child: Text('$label:', style: labelStyle),
+          ),
+          Expanded(child: Align(alignment: Alignment.centerLeft, child: link)),
+        ],
+      ),
+    );
+  }
+
+  void _showPhotoViewer(BuildContext context, List<String> photos) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => _PackingPhotoViewer(photos: photos),
+    );
+  }
+
+  Future<void> _openExternal(BuildContext context, String url) async {
+    final uri = Uri.tryParse(url);
+    bool launched = false;
+    if (uri != null) {
+      // launchUrl throws (not just returns false) when no handler is
+      // registered for the scheme, so both paths must be covered.
+      try {
+        launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } catch (e) {
+        debugPrint('Error opening packing video: $e');
+      }
+    }
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the packing video.')),
+      );
+    }
   }
 
   String _formatOrderPropertyValue(
@@ -1172,6 +1375,158 @@ class OrderDetailWidget extends StatelessWidget {
           0.18,
           isHeader ? ColorManager.textColor : Colors.black87,
         ),
+      ),
+    );
+  }
+}
+
+/// Full-screen-ish viewer for the packing photos, with swipe between
+/// images and a counter. Uses the URLs returned by the API directly.
+class _PackingPhotoViewer extends StatefulWidget {
+  final List<String> photos;
+
+  const _PackingPhotoViewer({required this.photos});
+
+  @override
+  State<_PackingPhotoViewer> createState() => _PackingPhotoViewerState();
+}
+
+class _PackingPhotoViewerState extends State<_PackingPhotoViewer> {
+  late final PageController _controller = PageController();
+  int _index = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
+    return Dialog(
+      backgroundColor: Colors.black87,
+      insetPadding: const EdgeInsets.all(16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: SizedBox(
+        width: size.width * 0.9,
+        height: size.height * 0.8,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Packing Photos  ${_index + 1}/${widget.photos.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: PageView.builder(
+                controller: _controller,
+                itemCount: widget.photos.length,
+                onPageChanged: (i) => setState(() => _index = i),
+                itemBuilder: (context, i) => InteractiveViewer(
+                  minScale: 1,
+                  maxScale: 4,
+                  child: Image.network(
+                    widget.photos[i],
+                    fit: BoxFit.contain,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return const Center(
+                        child: CircularProgressIndicator.adaptive(),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) => const Center(
+                      child: Text(
+                        'Could not load this photo.',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Collapsible section card used for low-frequency sections
+/// (Order Metadata, Order Properties). Keeps the same look as
+/// [_buildSectionCard] with a tappable header and a chevron.
+class _ExpandableSection extends StatefulWidget {
+  final String title;
+  final TextStyle titleStyle;
+  final Widget child;
+
+  const _ExpandableSection({
+    required this.title,
+    required this.titleStyle,
+    required this.child,
+  });
+
+  @override
+  State<_ExpandableSection> createState() => _ExpandableSectionState();
+}
+
+class _ExpandableSectionState extends State<_ExpandableSection> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isMobile = ResponsiveWidget.isMobile(context);
+    return BuildBoxShadowContainer(
+      circleRadius: 7,
+      padding: EdgeInsets.all(isMobile ? 12 : 16),
+      margin: EdgeInsets.only(
+        top: 8.0,
+        left: isMobile ? 0 : 8,
+        right: isMobile ? 0 : 8,
+      ),
+      offsetValue: const Offset(1, 1),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(widget.title, style: widget.titleStyle),
+                ),
+                Icon(
+                  _expanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  color: ColorManager.kPrimaryColor,
+                ),
+              ],
+            ),
+          ),
+          if (_expanded) ...[
+            const SizedBox(height: 8),
+            widget.child,
+          ],
+        ],
       ),
     );
   }

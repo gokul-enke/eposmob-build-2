@@ -56,6 +56,8 @@ class OrderDetailsModelData {
   final dynamic points;
   final Map<String, dynamic>? payments;
   final String? invoiceHash;
+  final OrderDetailsModelDataPacking? packing;
+  final OrderDetailsModelDataDeliveryAddress? deliveryAddress;
 
   OrderDetailsModelData({
     this.ordersId,
@@ -83,6 +85,8 @@ class OrderDetailsModelData {
     this.points,
     this.payments,
     this.invoiceHash,
+    this.packing,
+    this.deliveryAddress,
   });
 
   factory OrderDetailsModelData.fromJson(Map<String, dynamic> json) =>
@@ -136,6 +140,12 @@ class OrderDetailsModelData {
             ? Map<String, dynamic>.from(json["payments"])
             : null,
         invoiceHash: json["invoice_hash"]?.toString(),
+        packing: json["packing"] == null
+            ? null
+            : OrderDetailsModelDataPacking.fromJson(
+                Map<String, dynamic>.from(json["packing"])),
+        deliveryAddress:
+            OrderDetailsModelDataDeliveryAddress.fromOrderJson(json),
       );
 
   // Helper method to handle order_returns which can be null, empty List, or Map
@@ -412,6 +422,8 @@ class OrderDetailsModelData {
         "points": points,
         "payments": payments,
         "invoice_hash": invoiceHash,
+        "packing": packing?.toJson(),
+        "delivery_address": deliveryAddress?.toJson(),
       };
 }
 
@@ -847,6 +859,208 @@ class OrderDetailsModelDataKycInfo {
   Map<String, dynamic> toJson() => {
         "cr_number": crNumber,
         "vat_number": vatNumber,
+      };
+}
+
+/// Packing record attached to an order. Delivered inline on the
+/// order-details payload; `null` when the order was never packed.
+class OrderDetailsModelDataPacking {
+  final int? id;
+  final int? packedByUserId;
+  final String? packedByName;
+  final String? packedByUserName;
+  final String? packedAt;
+  final List<String>? packingPhotoPaths;
+  final List<String>? packingPhotos;
+  final String? packingVideo;
+  final bool? isPacked;
+
+  OrderDetailsModelDataPacking({
+    this.id,
+    this.packedByUserId,
+    this.packedByName,
+    this.packedByUserName,
+    this.packedAt,
+    this.packingPhotoPaths,
+    this.packingPhotos,
+    this.packingVideo,
+    this.isPacked,
+  });
+
+  /// Prefers the free-text packer name, falling back to the linked user.
+  String? get packerName {
+    if (packedByName != null && packedByName!.isNotEmpty) return packedByName;
+    if (packedByUserName != null && packedByUserName!.isNotEmpty) {
+      return packedByUserName;
+    }
+    return null;
+  }
+
+  /// True when there is at least one real packing detail to render.
+  /// Guards against the backend returning an empty `packing: {}` object,
+  /// which would otherwise draw an empty section card.
+  bool get hasDetails =>
+      (packedAt != null && packedAt!.isNotEmpty) ||
+      packerName != null ||
+      (packingPhotos?.isNotEmpty ?? false) ||
+      (packingVideo != null && packingVideo!.isNotEmpty) ||
+      isPacked == true;
+
+  /// Backend rule: packed when `packed_at` plus a packer is present.
+  bool get isPackedResolved {
+    if (isPacked != null) return isPacked!;
+    return (packedAt != null && packedAt!.isNotEmpty) && packerName != null;
+  }
+
+  static int? _parseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    return int.tryParse(value.toString());
+  }
+
+  static List<String>? _parseStringList(dynamic value) {
+    if (value is! List || value.isEmpty) return null;
+    return value
+        .map((e) => e?.toString() ?? '')
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+
+  factory OrderDetailsModelDataPacking.fromJson(Map<String, dynamic> json) {
+    final packedBy = json["packed_by"];
+    return OrderDetailsModelDataPacking(
+      id: _parseInt(json["id"]),
+      packedByUserId: _parseInt(json["packed_by_user_id"]),
+      packedByName: json["packed_by_name"]?.toString(),
+      packedByUserName:
+          packedBy is Map ? packedBy["name"]?.toString() : null,
+      packedAt: json["packed_at"]?.toString(),
+      packingPhotoPaths: _parseStringList(json["packing_photo_paths"]),
+      packingPhotos: _parseStringList(json["packing_photos"]),
+      packingVideo: json["packing_video"]?.toString(),
+      isPacked: json["is_packed"] is bool ? json["is_packed"] as bool : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "packed_by_user_id": packedByUserId,
+        "packed_by_name": packedByName,
+        "packed_by": packedByUserName == null
+            ? null
+            : {"id": packedByUserId, "name": packedByUserName},
+        "packed_at": packedAt,
+        "packing_photo_paths": packingPhotoPaths,
+        "packing_photos": packingPhotos,
+        "packing_video": packingVideo,
+        "is_packed": isPacked,
+      };
+}
+
+/// Shipping/delivery address broken into the individual fields the web
+/// Order View shows. Sourced from the DELIVERY_ADDRESS order prop (which
+/// arrives as a nested object) and falls back to the customer's saved
+/// address.
+///
+/// Note: the backend currently returns some of these as raw lookup IDs
+/// (e.g. city "897") rather than names. [_resolve] handles both the flat
+/// value and the nested `{"id": .., "name": ..}` shape.
+class OrderDetailsModelDataDeliveryAddress {
+  final String? addressType;
+  final String? address;
+  final String? pincode;
+  final String? district;
+  final String? state;
+  final String? city;
+  final String? landmark;
+
+  OrderDetailsModelDataDeliveryAddress({
+    this.addressType,
+    this.address,
+    this.pincode,
+    this.district,
+    this.state,
+    this.city,
+    this.landmark,
+  });
+
+  bool get hasDetails =>
+      addressType != null ||
+      address != null ||
+      pincode != null ||
+      district != null ||
+      state != null ||
+      city != null ||
+      landmark != null;
+
+  static String? _str(dynamic value) {
+    if (value == null) return null;
+    final text = value.toString().trim();
+    if (text.isEmpty || text == 'null') return null;
+    return text;
+  }
+
+  /// Lookup fields may arrive flat ("897") or nested
+  /// ({"id": 10, "name": "Kerala"} / {"pin_code": "673572"}).
+  static String? _resolve(dynamic value) {
+    if (value is Map) {
+      return _str(value["name"] ?? value["pin_code"] ?? value["value"]);
+    }
+    return _str(value);
+  }
+
+  /// Builds from the whole order-details `data` object, since the pieces
+  /// live in two different places in the payload.
+  static OrderDetailsModelDataDeliveryAddress? fromOrderJson(
+      Map<String, dynamic> json) {
+    Map? deliveryProp;
+    final props = json["order_props"];
+    if (props is List) {
+      for (final prop in props) {
+        if (prop is Map &&
+            prop["props_code"]?.toString().toUpperCase() ==
+                'DELIVERY_ADDRESS' &&
+            prop["props_value"] is Map) {
+          deliveryProp = prop["props_value"] as Map;
+          break;
+        }
+      }
+    }
+
+    Map? savedAddress;
+    final details = json["customer_details"];
+    if (details is Map &&
+        details["address"] is List &&
+        (details["address"] as List).isNotEmpty) {
+      final first = (details["address"] as List).first;
+      if (first is Map) savedAddress = first;
+    }
+
+    if (deliveryProp == null && savedAddress == null) return null;
+
+    final result = OrderDetailsModelDataDeliveryAddress(
+      addressType: _str(savedAddress?["type"]),
+      address: _str(deliveryProp?["address"] ?? savedAddress?["address"]),
+      pincode:
+          _resolve(deliveryProp?["pincode"] ?? savedAddress?["pincode_id"]),
+      district:
+          _resolve(deliveryProp?["district"] ?? savedAddress?["district_id"]),
+      state: _resolve(deliveryProp?["state"] ?? savedAddress?["state_id"]),
+      city: _resolve(deliveryProp?["city"] ?? savedAddress?["city"]),
+      landmark: _resolve(deliveryProp?["landmark"] ?? savedAddress?["landmark"]),
+    );
+
+    return result.hasDetails ? result : null;
+  }
+
+  Map<String, dynamic> toJson() => {
+        "address_type": addressType,
+        "address": address,
+        "pincode": pincode,
+        "district": district,
+        "state": state,
+        "city": city,
+        "landmark": landmark,
       };
 }
 

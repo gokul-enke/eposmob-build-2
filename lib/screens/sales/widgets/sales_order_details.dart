@@ -283,11 +283,16 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                             ),
                           ],
                           const SizedBox(height: 10),
+                          BuildBoxShadowContainer(
+                            circleRadius: 12,
+                            padding: EdgeInsets.all(isMobile ? 12 : 16),
+                            offsetValue: const Offset(1, 1),
+                            child: _buildActionButtons(),
+                          ),
+                          const SizedBox(height: 10),
                           _buildOrderDetails(),
                           const SizedBox(height: 10),
                           _buildOrderReturns(),
-                          const SizedBox(height: 10),
-                          _buildActionButtons(size),
                         ],
                       ),
               ),
@@ -358,27 +363,27 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
     );
   }
 
-  Widget _buildActionButtons(Size size) {
+  Widget _buildActionButtons() {
     final isMobile = ResponsiveWidget.isMobile(context);
 
-    return Padding(
-      padding: EdgeInsets.only(top: isMobile ? 8 : 10),
-      child: LayoutBuilder(
+    return LayoutBuilder(
         builder: (context, constraints) {
-          final buttonWidth = isMobile
-              ? (constraints.maxWidth - 12) / 2
-              : size.width * 0.19;
-          final buttonHeight = isMobile ? 44.0 : 50.0;
+          final buttonWidth =
+              isMobile ? (constraints.maxWidth - 10) / 2 : 168.0;
+          final buttonHeight = isMobile ? 40.0 : 40.0;
           final buttonFontSize = isMobile ? FontSize.s11 : FontSize.s12;
 
           return Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            alignment: isMobile ? WrapAlignment.center : WrapAlignment.start,
+            spacing: 10,
+            runSpacing: 10,
+            alignment: WrapAlignment.start,
             children: [
               CustomRoundButton(
                 title: 'sales_order_details.btn_print'.tr,
+            icon: const Icon(Icons.print_outlined,
+                size: 16, color: ColorManager.kPrimaryColor),
             boxColor: Colors.white,
+            borderColor: ColorManager.kPrimaryColor,
             textColor: ColorManager.kPrimaryColor,
             fct: () async {
               if (orderDetailsModelData?.cart == null ||
@@ -554,7 +559,9 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
               ),
               CustomRoundButton(
                 title: 'sales_order_details.btn_share'.tr,
+            icon: const Icon(Icons.share_outlined, size: 16, color: Colors.blue),
             boxColor: Colors.white,
+            borderColor: Colors.blue,
             textColor: Colors.blue,
             fct: () async {
               await _showShareOptions();
@@ -565,7 +572,10 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
               ),
               CustomRoundButton(
                 title: 'sales_order_details.btn_return'.tr,
+            icon: const Icon(Icons.assignment_return_outlined,
+                size: 16, color: Color(0xFFE53E3E)),
             boxColor: Colors.white,
+            borderColor: const Color(0xFFE53E3E),
             textColor: const Color(0xFFE53E3E),
             fct: () async {
               final orderNo = orderDetailsModelData?.orderNumber;
@@ -617,7 +627,10 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
               ),
               CustomRoundButton(
                 title: 'sales_order_details.btn_order_status'.tr,
+            icon: const Icon(Icons.local_shipping_outlined,
+                size: 16, color: Color(0xFF6A1B9A)),
             boxColor: Colors.white,
+            borderColor: const Color(0xFF6A1B9A),
             textColor: const Color(0xFF6A1B9A),
             fct: () {
               showDialog(
@@ -673,7 +686,10 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
               ),
               CustomRoundButton(
                 title: 'sales_order_details.btn_payment_status'.tr,
+            icon: const Icon(Icons.payments_outlined,
+                size: 16, color: Color(0xFF1E88E5)),
             boxColor: Colors.white,
+            borderColor: const Color(0xFF1E88E5),
             textColor: const Color(0xFF1E88E5),
             fct: () {
               showDialog(
@@ -721,7 +737,6 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
             ],
           );
         },
-      ),
     );
   }
 

@@ -62,6 +62,13 @@ class APPUrl {
   static String get searchListOrder => '$baseURL/api/v1/order-searchbar';
   static String get getListOrderDetails =>
       '$baseURL/api/v1/order/executive/order-details';
+
+  // Order documents — stream raw PDF bytes and require the auth headers,
+  // so they must be downloaded programmatically rather than opened as URLs.
+  static String orderDeliveryNote(String orderNumber) =>
+      '$baseURL/api/v1/order/documents/delivery-note/$orderNumber';
+  static String orderDeliveryInvoice(String orderNumber) =>
+      '$baseURL/api/v1/order/documents/delivery-invoice/$orderNumber';
   static String get salesReturn => '$baseURL/api/v1/order/sales-return';
   static String get listSalesReturn =>
       '$baseURL/api/v1/order/list-return-orders';

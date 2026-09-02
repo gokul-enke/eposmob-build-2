@@ -183,6 +183,11 @@ class CustomRoundButton extends StatefulWidget {
   final Color? textColor;
   final double? radius;
   final bool isLoading;
+
+  /// Optional leading icon rendered before [title]. When null the button
+  /// looks exactly as before, so existing call sites are unaffected.
+  final Widget? icon;
+
   const CustomRoundButton({
     super.key,
     required this.title,
@@ -195,6 +200,7 @@ class CustomRoundButton extends StatefulWidget {
     this.radius,
     this.borderColor,
     this.isLoading = false,
+    this.icon,
   });
 
   @override
@@ -274,14 +280,34 @@ class _CustomRoundButtonState extends State<CustomRoundButton> {
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               )
-            : Text(
-                widget.title,
-                style: TextStyle(
-                    fontFamily: FontConstants.fontFamily,
-                    fontSize: widget.fontSize,
-                    fontWeight: FontWeightManager.semiBold,
-                    color: widget.textColor ?? Colors.white),
-              ),
+            : (widget.icon == null
+                ? Text(
+                    widget.title,
+                    style: TextStyle(
+                        fontFamily: FontConstants.fontFamily,
+                        fontSize: widget.fontSize,
+                        fontWeight: FontWeightManager.semiBold,
+                        color: widget.textColor ?? Colors.white),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      widget.icon!,
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          widget.title,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontFamily: FontConstants.fontFamily,
+                              fontSize: widget.fontSize,
+                              fontWeight: FontWeightManager.semiBold,
+                              color: widget.textColor ?? Colors.white),
+                        ),
+                      ),
+                    ],
+                  )),
       ),
     );
   }
