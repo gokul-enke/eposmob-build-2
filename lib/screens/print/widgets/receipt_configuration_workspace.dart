@@ -262,6 +262,7 @@ class _ReceiptConfigurationWorkspaceState
   Widget _buildFieldReferenceCard() {
     return PrinterDisclosureCard(
       embedded: true,
+      collapsible: false,
       icon: Icons.list_alt_rounded,
       title: 'Field reference',
       subtitle: 'Every synced label and what supplies its value',
@@ -279,6 +280,7 @@ class _ReceiptConfigurationWorkspaceState
   Widget _buildLivePreviewCard() {
     return PrinterDisclosureCard(
       embedded: true,
+      collapsible: false,
       icon: Icons.preview_outlined,
       title: 'Live preview',
       subtitle: 'Render a sample receipt using the current settings',

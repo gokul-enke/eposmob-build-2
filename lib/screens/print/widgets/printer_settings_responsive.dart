@@ -821,6 +821,11 @@ class PrinterDisclosureCard extends StatefulWidget {
   /// disclosure can nest inside another without doubling the card chrome.
   final bool embedded;
 
+  /// When false the body is always visible and the header loses its chevron
+  /// and tap target. Used for panels nested inside another disclosure, where a
+  /// second level of hiding is just an extra click.
+  final bool collapsible;
+
   /// Optional action shown next to the chevron. Kept out of the tap target so
   /// pressing it does not toggle the section.
   final Widget? trailing;
@@ -835,6 +840,7 @@ class PrinterDisclosureCard extends StatefulWidget {
     this.scopeLabel,
     this.initiallyExpanded = false,
     this.embedded = false,
+    this.collapsible = true,
     this.trailing,
   });
 
@@ -843,7 +849,7 @@ class PrinterDisclosureCard extends StatefulWidget {
 }
 
 class _PrinterDisclosureCardState extends State<PrinterDisclosureCard> {
-  late bool _isExpanded = widget.initiallyExpanded;
+  late bool _isExpanded = widget.initiallyExpanded || !widget.collapsible;
 
   @override
   Widget build(BuildContext context) {
@@ -909,15 +915,17 @@ class _PrinterDisclosureCardState extends State<PrinterDisclosureCard> {
           const SizedBox(width: 12),
           PrinterScopeChip(label: widget.scopeLabel!),
         ],
-        const SizedBox(width: 8),
-        AnimatedRotation(
-          turns: _isExpanded ? 0.5 : 0,
-          duration: const Duration(milliseconds: 180),
-          child: Icon(
-            Icons.expand_more_rounded,
-            color: Colors.grey.shade600,
+        if (widget.collapsible) ...[
+          const SizedBox(width: 8),
+          AnimatedRotation(
+            turns: _isExpanded ? 0.5 : 0,
+            duration: const Duration(milliseconds: 180),
+            child: Icon(
+              Icons.expand_more_rounded,
+              color: Colors.grey.shade600,
+            ),
           ),
-        ),
+        ],
       ],
     );
 
@@ -929,11 +937,13 @@ class _PrinterDisclosureCardState extends State<PrinterDisclosureCard> {
         Row(
           children: [
             Expanded(
-              child: InkWell(
-                onTap: () => setState(() => _isExpanded = !_isExpanded),
-                borderRadius: BorderRadius.circular(10),
-                child: header,
-              ),
+              child: widget.collapsible
+                  ? InkWell(
+                      onTap: () => setState(() => _isExpanded = !_isExpanded),
+                      borderRadius: BorderRadius.circular(10),
+                      child: header,
+                    )
+                  : header,
             ),
             if (widget.trailing != null) ...[
               const SizedBox(width: 12),
