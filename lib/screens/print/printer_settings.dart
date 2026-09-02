@@ -3,7 +3,6 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
-import 'package:pos_machine/helpers/date_helper.dart';
 import 'dart:convert';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -15,11 +14,9 @@ import 'dart:async';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:printing/printing.dart';
-import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/screens/print/barcode_layout_settings_panel.dart';
-import 'package:pos_machine/screens/print/thermal/printer_utils.dart';
 import 'package:pos_machine/screens/print/widgets/printer_settings_responsive.dart';
 import 'package:pos_machine/screens/print/widgets/common_print_margins_card.dart';
 import 'package:pos_machine/screens/print/widgets/common_printer_settings_card.dart';
@@ -707,499 +704,6 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     }
   }
 
-  Future<void> _printSample() async {
-    if (selectedPrinter == null) {
-      showScaffoldError(
-        context: context,
-        message: "Please select a printer first",
-      );
-      return;
-    }
-    if (selectedPrinter!.isDevelopment) {
-      showScaffoldError(
-        context: context,
-        message:
-            'Development Printer previews are created from actual receipts. '
-            'Print a bill or quotation to save its image.',
-      );
-      return;
-    }
-
-    try {
-      // Convert selected font style to PosFontType
-      PosFontType fontType = selectedFontStyle.contains('Font A')
-          ? PosFontType.fontA
-          : PosFontType.fontB;
-
-      // Create dummy cart items
-      List<Map<String, dynamic>> dummyCartItems = [
-        {
-          'productName': 'Premium Coffee Beans (Arabica)',
-          'mrp': '450.00',
-          'quantity': '2',
-          'unitPrice': '400.00',
-          'totalPrice': '800.00'
-        },
-        {
-          'productName': 'Organic Green Tea Leaves',
-          'mrp': '250.00',
-          'quantity': '1',
-          'unitPrice': '225.00',
-          'totalPrice': '225.00'
-        },
-        {
-          'productName': 'Fresh Milk (Full Cream) 1L',
-          'mrp': '65.00',
-          'quantity': '3',
-          'unitPrice': '60.00',
-          'totalPrice': '180.00'
-        },
-        {
-          'productName': 'Whole Wheat Bread',
-          'mrp': '45.00',
-          'quantity': '2',
-          'unitPrice': '40.00',
-          'totalPrice': '80.00'
-        },
-        {
-          'productName': 'Premium Dark Chocolate Bar',
-          'mrp': '120.00',
-          'quantity': '1',
-          'unitPrice': '110.00',
-          'totalPrice': '110.00'
-        },
-      ];
-
-      // Print sample with the selected font style
-      await _printSampleReceipt(
-        selectedPrinter!,
-        dummyCartItems,
-        fontType,
-        '1395.00', // Total amount
-        '55.00', // Saved amount
-        DateTime.now().toIso8601String(),
-        'SAMPLE-${DateTime.now().millisecondsSinceEpoch}',
-      );
-
-      if (mounted) {
-        showScaffold(
-          context: context,
-          message: "Sample receipt sent to printer",
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        showScaffoldError(
-          context: context,
-          message: "Error printing sample: ${e.toString()}",
-        );
-      }
-    }
-  }
-
-  Future<void> _printSampleReceipt(
-    BluetoothPrinter printer,
-    List<Map<String, dynamic>> cartItems,
-    PosFontType fontType,
-    String formattedTotal,
-    String savedTotal,
-    String orderDate,
-    String orderNumber,
-  ) async {
-    final printerUtils = ThermalPrinterUtils();
-
-    try {
-      // Connect to printer
-      await printerUtils.connectToPrinter(printer);
-
-      // Generate receipt with all fields enabled (dummy document config)
-      final profile = await CapabilityProfile.load();
-      PaperSize paperSize =
-          selectedPaperSize == '58mm' ? PaperSize.mm58 : PaperSize.mm80;
-      final generator = Generator(paperSize, profile);
-      List<int> bytes = [];
-
-      // Text sizes based on font type
-      PosTextSize textSizeTitle = PosTextSize.size4;
-      PosTextSize textSizeBig = PosTextSize.size3;
-      PosTextSize textSizeMedium = PosTextSize.size2;
-      PosTextSize textSizeSmall = PosTextSize.size1;
-
-      // Header
-      bytes += generator.text('SAMPLE STORE',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeTitle));
-
-      bytes += generator.text('Sample Receipt Test',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeMedium));
-
-      bytes += generator.text('123 Sample Street, Demo City',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeSmall));
-
-      bytes += generator.text('TEL: +1-234-567-8900',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeSmall));
-
-      bytes += generator.text('Email: sample@store.com',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeSmall));
-
-      bytes += generator.text('INVOICE',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeMedium));
-
-      bytes += generator.text('INV No: $orderNumber',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeMedium));
-
-      // Table header
-      bytes += generator.row([
-        PosColumn(
-            text: 'SL#',
-            width: 1,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: true,
-                height: textSizeMedium)),
-        PosColumn(
-            text: 'PARTICULARS',
-            width: 3,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: true,
-                height: textSizeMedium)),
-        PosColumn(
-            text: 'MRP',
-            width: 2,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSizeMedium)),
-        PosColumn(
-            text: 'QTY',
-            width: 2,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSizeMedium)),
-        PosColumn(
-            text: 'RATE',
-            width: 2,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSizeMedium)),
-        PosColumn(
-            text: 'TOTAL',
-            width: 2,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSizeMedium)),
-      ]);
-      bytes += generator.hr();
-
-      // Cart items
-      for (var i = 0; i < cartItems.length; i++) {
-        var item = cartItems[i];
-
-        // Product name row
-        bytes += generator.row([
-          PosColumn(
-              text: '${i + 1}',
-              width: 1,
-              styles: PosStyles(
-                  fontType: fontType,
-                  align: PosAlign.left,
-                  bold: true,
-                  height: textSizeMedium)),
-          PosColumn(
-              text: item['productName'],
-              width: 11,
-              styles: PosStyles(
-                  fontType: fontType,
-                  align: PosAlign.left,
-                  bold: true,
-                  height: textSizeMedium)),
-        ]);
-
-        // Price details row
-        bytes += generator.row([
-          PosColumn(
-              text: '',
-              width: 1,
-              styles: PosStyles(fontType: fontType, align: PosAlign.left)),
-          PosColumn(
-              text: '',
-              width: 3,
-              styles: PosStyles(fontType: fontType, align: PosAlign.left)),
-          PosColumn(
-              text: item['mrp'],
-              width: 2,
-              styles: PosStyles(
-                  fontType: fontType,
-                  align: PosAlign.right,
-                  bold: false,
-                  height: textSizeMedium)),
-          PosColumn(
-              text: item['quantity'],
-              width: 2,
-              styles: PosStyles(
-                  fontType: fontType,
-                  align: PosAlign.right,
-                  bold: false,
-                  height: textSizeMedium)),
-          PosColumn(
-              text: item['unitPrice'],
-              width: 2,
-              styles: PosStyles(
-                  fontType: fontType,
-                  align: PosAlign.right,
-                  bold: false,
-                  height: textSizeMedium)),
-          PosColumn(
-              text: item['totalPrice'],
-              width: 2,
-              styles: PosStyles(
-                  fontType: fontType,
-                  align: PosAlign.right,
-                  bold: false,
-                  height: textSizeMedium)),
-        ]);
-      }
-
-      bytes += generator.hr();
-
-      // Totals
-      bytes += generator.row([
-        PosColumn(
-            text: 'Items',
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: false,
-                height: textSizeSmall)),
-        PosColumn(
-            text: '${cartItems.length}',
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSizeSmall)),
-      ]);
-
-      bytes += generator.row([
-        PosColumn(
-            text: 'Total Quantity',
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: false,
-                height: textSizeSmall)),
-        PosColumn(
-            text: '9',
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSizeSmall)),
-      ]);
-
-      bytes += generator.row([
-        PosColumn(
-            text: 'Total MRP',
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: false,
-                height: textSizeSmall)),
-        PosColumn(
-            text: '1450.00',
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSizeSmall)),
-      ]);
-
-      bytes += generator.row([
-        PosColumn(
-            text: 'You Saved',
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: false,
-                height: textSizeMedium)),
-        PosColumn(
-            text: savedTotal,
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSizeMedium)),
-      ]);
-
-      bytes += generator.row([
-        PosColumn(
-            text: 'Net Total',
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: true,
-                height: textSizeBig)),
-        PosColumn(
-            text: formattedTotal,
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSizeBig)),
-      ]);
-
-      bytes += generator.hr();
-
-      // Amount in words
-      bytes += generator.text(
-          'One Thousand Three Hundred Ninety Five Rupees Only.',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeSmall));
-
-      // Date and time
-      final now = DateHelper.now();
-      bytes += generator.row([
-        PosColumn(
-            text: '${now.day}/${now.month}/${now.year}',
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: true,
-                height: textSizeSmall)),
-        PosColumn(
-            text: '${now.hour}:${now.minute.toString().padLeft(2, '0')}',
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSizeSmall)),
-      ]);
-
-      bytes += generator.hr();
-
-      // Barcode
-      try {
-        List<String> code39Data =
-            orderNumber.replaceAll(RegExp(r'[^A-Z0-9\-]'), '').split("");
-        bytes += generator.barcode(
-          Barcode.code39(code39Data),
-          height: selectedPaperSize == '58mm' ? 20 : 30,
-          width: 1,
-          textPos: BarcodeText.none,
-          align: PosAlign.center,
-        );
-      } catch (e) {
-        bytes += generator.text(orderNumber,
-            styles: PosStyles(
-                fontType: fontType, align: PosAlign.center, bold: true));
-      }
-
-      // Terms and conditions
-      bytes += generator.hr();
-      bytes += generator.text('TERMS & CONDITIONS:',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.left,
-              bold: true,
-              height: textSizeSmall));
-      bytes += generator.text('1. All sales are final unless defective.',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.left,
-              bold: false,
-              height: textSizeSmall));
-      bytes += generator.text('2. Returns accepted within 7 days with receipt.',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.left,
-              bold: false,
-              height: textSizeSmall));
-      bytes += generator.text(
-          '3. Store credit issued for returns without receipt.',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.left,
-              bold: false,
-              height: textSizeSmall));
-
-      // Thank you message
-      bytes += generator.hr();
-      bytes += generator.text('Thank You for Shopping with Us!',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeMedium));
-
-      bytes += generator.text('Visit Again Soon!',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeSmall));
-
-      // Cut
-      bytes += generator.cut();
-
-      // Print
-      await printerUtils.sendPrintJob(printer, bytes);
-    } finally {
-      await printerUtils.disconnectPrinter(printer);
-    }
-  }
-
   Future<void> clearAllHiveData() async {
     try {
       // Close all open boxes
@@ -1575,36 +1079,21 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       ],
     );
 
-    final showTestPrint = selectedSettingsType != 'Barcode' && !_isStandardPdf;
-
-    final testPrintButton = CustomRoundButton(
-      fct: _printSample,
-      title: 'Test Print',
-      height: 44,
-      width: isCompact ? double.infinity : 130,
-      fontSize: 14,
-      borderColor: ColorManager.kPrimaryColor,
-      boxColor: ColorManager.kPrimaryColor,
-      textColor: Colors.white,
-    );
-
     return PrinterSettingsCard(
       padding: cardPadding,
       child: isCompact
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                titleBlock,
+                const SizedBox(height: 12),
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(child: titleBlock),
-                    _buildHeaderMenu(),
+                    Expanded(child: _buildResyncButton(isCompact)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _buildClearButton(isCompact)),
                   ],
                 ),
-                if (showTestPrint) ...[
-                  const SizedBox(height: 12),
-                  testPrintButton,
-                ],
               ],
             )
           : Row(
@@ -1612,79 +1101,43 @@ class _PrinterSettingsState extends State<PrinterSettings> {
               children: [
                 Expanded(child: titleBlock),
                 const SizedBox(width: 16),
-                if (showTestPrint) ...[
-                  testPrintButton,
-                  const SizedBox(width: 4),
-                ],
-                _buildHeaderMenu(),
+                _buildResyncButton(isCompact),
+                const SizedBox(width: 8),
+                _buildClearButton(isCompact),
               ],
             ),
     );
   }
 
-  /// Overflow menu for the rare, page-wide actions.
-  ///
-  /// Resync and Clear are recovery actions used occasionally; as solid buttons
-  /// they were the loudest elements on a settings page, and the destructive one
-  /// sat directly under the cursor.
-  Widget _buildHeaderMenu() {
-    Widget item(IconData icon, String label, {Color? color, Widget? leading}) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          leading ?? Icon(icon, size: 20, color: color),
-          const SizedBox(width: 12),
-          Text(
-            label,
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s13,
-              0.15,
-              color ?? ColorManager.textColor,
-            ),
-          ),
-        ],
-      );
-    }
+  Widget _buildResyncButton(bool isCompact) {
+    return CustomRoundButtonWithIcon(
+      fct: _isResyncingDocConfig ? () {} : _resyncDocumentConfigurations,
+      title: _isResyncingDocConfig ? 'Resyncing…' : 'Resync',
+      size: Size.zero,
+      height: isCompact ? 36 : 40,
+      width: isCompact ? double.infinity : 120,
+      fontSize: isCompact ? 12 : 13,
+      icon: const Icon(Icons.sync_rounded,
+          size: 16, color: ColorManager.kPrimaryColor),
+      boxColor: Colors.white,
+      borderColor: ColorManager.kPrimaryColor,
+      textColor: ColorManager.kPrimaryColor,
+    );
+  }
 
-    return PopupMenuButton<String>(
-      tooltip: 'More actions',
-      position: PopupMenuPosition.under,
-      icon: const Icon(Icons.more_vert_rounded, color: ColorManager.kGreyColor),
-      onSelected: (value) {
-        switch (value) {
-          case 'resync':
-            _resyncDocumentConfigurations();
-            break;
-          case 'clear':
-            clearDefaultPrinter();
-            break;
-        }
-      },
-      itemBuilder: (context) => [
-        PopupMenuItem<String>(
-          value: 'resync',
-          enabled: !_isResyncingDocConfig,
-          child: item(
-            Icons.sync_rounded,
-            _isResyncingDocConfig ? 'Resyncing…' : 'Resync doc config',
-            leading: _isResyncingDocConfig
-                ? const SizedBox.square(
-                    dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : null,
-          ),
-        ),
-        PopupMenuItem<String>(
-          value: 'clear',
-          child: item(
-            Icons.restart_alt_rounded,
-            _isPdfSharing ? 'Reset PDF settings' : 'Clear default printer',
-            color: ColorManager.kButtonRed,
-          ),
-        ),
-      ],
+  Widget _buildClearButton(bool isCompact) {
+    return CustomRoundButtonWithIcon(
+      fct: clearDefaultPrinter,
+      title: _isPdfSharing ? 'Reset' : 'Clear',
+      size: Size.zero,
+      height: isCompact ? 36 : 40,
+      width: isCompact ? double.infinity : 100,
+      fontSize: isCompact ? 12 : 13,
+      icon: const Icon(Icons.restart_alt_rounded,
+          size: 16, color: ColorManager.kButtonRed),
+      boxColor: Colors.white,
+      borderColor: ColorManager.kButtonRed,
+      textColor: ColorManager.kButtonRed,
     );
   }
 
