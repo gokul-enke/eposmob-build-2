@@ -82,6 +82,7 @@ class _OrderDocumentsSectionState extends State<OrderDocumentsSection> {
     final orderNumber = widget.orderNumber;
 
     return BuildBoxShadowContainer(
+      width: double.infinity,
       circleRadius: 7,
       padding: EdgeInsets.all(isMobile ? 12 : 16),
       margin: EdgeInsets.only(
