@@ -2226,9 +2226,12 @@ class InvoiceProvider extends ChangeNotifier {
       final requestScope = _scopeKey(apiKey, activeStoreId);
       if (requestScope != _failedZatcaCountScope) {
         // Different account or store than the count we are holding. Drop it
-        // now rather than showing another scope's number while this loads.
+        // and publish that immediately — the request below can take up to the
+        // timeout, and the alert would otherwise keep showing the previous
+        // scope's number for that whole time.
         _failedZatcaCount = 0;
         _failedZatcaCountScope = requestScope;
+        notifyListeners();
       }
 
       final queryParams = <String, String>{

@@ -3979,6 +3979,7 @@
     "msg_no_internet": "No internet connection. Please try again.",
     "msg_api_key_missing": "API key not found. Please restart the app.",
     "msg_document_download_error": "Could not download the document. Please try again.",
+    "msg_document_timed_out": "The document took too long to download. Please try again.",
     "label_net_total_inc_tax": "Net Total (Inc Tax)",
     "label_net_total_exc_tax": "Net Total (Without Tax)",
     "label_discount": "Discount",

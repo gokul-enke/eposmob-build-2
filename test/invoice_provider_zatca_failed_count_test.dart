@@ -191,6 +191,34 @@ void main() {
           reason: 'a count from another account must never be displayed');
     });
 
+    test('publishes the cleared count before the request completes', () async {
+      final provider = InvoiceProvider();
+
+      await provider.fetchFailedZatcaCount(
+        accessToken: 'token-a',
+        client: jsonClient(200, '{"data":{"total":14}}'),
+      );
+
+      SharedPreferences.setMockInitialValues({
+        'api_key': 'other-tenant',
+        'active_store_id': 7,
+      });
+
+      int? countWhenNotified;
+      void listener() => countWhenNotified ??= provider.failedZatcaCount;
+      provider.addListener(listener);
+
+      await provider.fetchFailedZatcaCount(
+        accessToken: 'token-b',
+        client: jsonClient(200, '{"data":{"total":2}}'),
+      );
+      provider.removeListener(listener);
+
+      expect(countWhenNotified, 0,
+          reason: 'the first notification after a scope change must already '
+              'show the cleared count, not the one from the previous account');
+    });
+
     test('drops a count belonging to another store', () async {
       final provider = InvoiceProvider();
 

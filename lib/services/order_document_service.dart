@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -29,6 +30,8 @@ class OrderDocumentResult {
 class OrderDocumentService {
   const OrderDocumentService();
 
+  static const Duration _downloadTimeout = Duration(seconds: 60);
+
   /// Downloads the PDF at [url] and writes it to the temp directory.
   ///
   /// [fallbackFileName] is used when the response carries no
@@ -47,13 +50,16 @@ class OrderDocumentService {
             'sales_order_details.msg_api_key_missing'.tr);
       }
 
+      // Generous, because a delivery note runs to roughly 800 KB — but finite,
+      // so a server that accepts the connection and then stalls cannot leave
+      // the download buttons spinning forever.
       final response = await http.get(
         Uri.parse(url),
         headers: {
           'Authorization': 'Bearer $accessToken',
           'X-Tenant': apiKey,
         },
-      );
+      ).timeout(_downloadTimeout);
 
       if (response.statusCode == 401) {
         return OrderDocumentResult.failure(
@@ -88,6 +94,10 @@ class OrderDocumentService {
       await file.writeAsBytes(bytes, flush: true);
 
       return OrderDocumentResult.success(file);
+    } on TimeoutException {
+      debugPrint('Order document download timed out after $_downloadTimeout');
+      return OrderDocumentResult.failure(
+          'sales_order_details.msg_document_timed_out'.tr);
     } on SocketException {
       return OrderDocumentResult.failure(
           'sales_order_details.msg_no_internet'.tr);
