@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/models/barcode_layout_settings.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -61,7 +62,7 @@ class _BarcodeLayoutSettingsPanelState
       debugPrint('[BarcodeSettings] Save failed: $error');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not save barcode settings.')),
+          SnackBar(content: Text('barcode_layout.toast_save_error'.tr)),
         );
       }
     });
@@ -81,9 +82,9 @@ class _BarcodeLayoutSettingsPanelState
     await _saveQueue;
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Barcode layout reset to defaults'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text('barcode_layout.toast_reset_success'.tr),
+          duration: const Duration(seconds: 2),
         ),
       );
     }
@@ -153,14 +154,14 @@ class _BarcodeLayoutSettingsPanelState
         children: [
           PrinterSectionHeader(
             icon: Icons.tune_rounded,
-            title: 'Barcode Sticker Layout',
-            subtitle: 'Adjust sticker size, spacing and font sizes',
+            title: 'barcode_layout.title'.tr,
+            subtitle: 'barcode_layout.subtitle'.tr,
             trailing: SizedBox(
               height: 44,
               child: TextButton.icon(
                 onPressed: _resetDefaults,
                 icon: const Icon(Icons.restore, size: 18),
-                label: const Text('Reset'),
+                label: Text('barcode_layout.btn_reset'.tr),
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.red[600],
                 ),
@@ -170,7 +171,7 @@ class _BarcodeLayoutSettingsPanelState
           const SizedBox(height: 20),
 
           // ---- Sticker Size ----
-          _sectionLabel('Sticker Size'),
+          _sectionLabel('barcode_layout.label_sticker_size'.tr),
           const SizedBox(height: 8),
           _dropdownRow(
             value: _settings.stickerSize,
@@ -180,7 +181,7 @@ class _BarcodeLayoutSettingsPanelState
           const SizedBox(height: 16),
 
           // ---- Stickers Per Row ----
-          _sectionLabel('Stickers Per Row'),
+          _sectionLabel('barcode_layout.label_stickers_per_row'.tr),
           const SizedBox(height: 8),
           _sliderRow(
             value: _settings.stickersPerRow.toDouble(),
@@ -194,7 +195,7 @@ class _BarcodeLayoutSettingsPanelState
           const SizedBox(height: 16),
 
           // ---- Page Margin ----
-          _sectionLabel('Page Margin (mm)'),
+          _sectionLabel('barcode_layout.label_page_margin'.tr),
           const SizedBox(height: 8),
           _sliderRow(
             value: _settings.pageMargin,
@@ -208,7 +209,7 @@ class _BarcodeLayoutSettingsPanelState
           const SizedBox(height: 16),
 
           // ---- Gap Between Stickers ----
-          _sectionLabel('Gap Between Stickers (mm)'),
+          _sectionLabel('barcode_layout.label_gap_between'.tr),
           const SizedBox(height: 8),
           _sliderRow(
             value: _settings.stickerGap,
@@ -222,7 +223,7 @@ class _BarcodeLayoutSettingsPanelState
           const SizedBox(height: 16),
 
           // ---- Barcode Height ----
-          _sectionLabel('Barcode Height (pt)'),
+          _sectionLabel('barcode_layout.label_barcode_height'.tr),
           const SizedBox(height: 8),
           _sliderRow(
             value: _settings.barcodeHeight,
@@ -236,7 +237,7 @@ class _BarcodeLayoutSettingsPanelState
           const SizedBox(height: 16),
 
           // ---- Barcode Width ----
-          _sectionLabel('Barcode Width (% of sticker)'),
+          _sectionLabel('barcode_layout.label_barcode_width'.tr),
           const SizedBox(height: 8),
           _sliderRow(
             value: _settings.barcodeWidthPercent,
@@ -251,7 +252,7 @@ class _BarcodeLayoutSettingsPanelState
           const SizedBox(height: 16),
 
           // ---- Raster DPI ----
-          _sectionLabel('Printer Resolution'),
+          _sectionLabel('barcode_layout.label_printer_resolution'.tr),
           const SizedBox(height: 8),
           _dropdownRow(
             value: _settings.rasterDpi.toString(),
@@ -263,21 +264,20 @@ class _BarcodeLayoutSettingsPanelState
           const SizedBox(height: 16),
 
           // ---- PDF print rotation correction ----
-          _sectionLabel('Print Rotation Correction'),
+          _sectionLabel('barcode_layout.label_rotation'.tr),
           const SizedBox(height: 8),
           _dropdownRow(
             value: _settings.printRotationDegrees?.toString() ?? 'default',
             items: const ['default', '90', '180', '270'],
             itemLabel: (value) =>
-                value == 'default' ? 'Printer default' : '$value°',
+                value == 'default' ? 'barcode_layout.rotation_default'.tr : '$value°',
             onChanged: (v) => _update((s) => v == 'default'
                 ? s.copyWith(usePrinterDefaultRotation: true)
                 : s.copyWith(printRotationDegrees: int.parse(v))),
           ),
           const SizedBox(height: 6),
           Text(
-            'Optional correction for label drivers that rotate silent PDF '
-            'prints. Leave at Printer default for normal printers.',
+            'barcode_layout.rotation_hint'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s10,
@@ -292,10 +292,8 @@ class _BarcodeLayoutSettingsPanelState
             child: CheckboxListTile(
               contentPadding: EdgeInsets.zero,
               controlAffinity: ListTileControlAffinity.leading,
-              title: const Text('Invert Print Colors'),
-              subtitle: const Text(
-                'Use only when the printer outputs white content on black.',
-              ),
+              title: Text('barcode_layout.label_invert_colors'.tr),
+              subtitle: Text('barcode_layout.invert_colors_hint'.tr),
               value: _settings.invertPrintColors,
               onChanged: (value) => _update(
                 (s) => s.copyWith(invertPrintColors: value ?? false),
@@ -305,7 +303,7 @@ class _BarcodeLayoutSettingsPanelState
           const SizedBox(height: 8),
 
           // ---- Element Spacing ----
-          _sectionLabel('Element Spacing (pt)'),
+          _sectionLabel('barcode_layout.label_element_spacing'.tr),
           const SizedBox(height: 8),
           _sliderRow(
             value: _settings.elementSpacing,
@@ -322,7 +320,7 @@ class _BarcodeLayoutSettingsPanelState
           const SizedBox(height: 12),
 
           Text(
-            'Font Sizes',
+            'barcode_layout.font_sizes_title'.tr,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s14,
@@ -333,32 +331,32 @@ class _BarcodeLayoutSettingsPanelState
           const SizedBox(height: 16),
 
           _fontSizeRow(
-            label: 'Store Name',
+            label: 'barcode_layout.font_store_name'.tr,
             value: _settings.storeNameFontSize,
             onChanged: (v) => _update((s) => s.copyWith(storeNameFontSize: v)),
           ),
           const SizedBox(height: 12),
           _fontSizeRow(
-            label: 'Product Name',
+            label: 'barcode_layout.font_product_name'.tr,
             value: _settings.productNameFontSize,
             onChanged: (v) =>
                 _update((s) => s.copyWith(productNameFontSize: v)),
           ),
           const SizedBox(height: 12),
           _fontSizeRow(
-            label: 'Price',
+            label: 'barcode_layout.font_price'.tr,
             value: _settings.priceFontSize,
             onChanged: (v) => _update((s) => s.copyWith(priceFontSize: v)),
           ),
           const SizedBox(height: 12),
           _fontSizeRow(
-            label: 'Date',
+            label: 'barcode_layout.font_date'.tr,
             value: _settings.dateFontSize,
             onChanged: (v) => _update((s) => s.copyWith(dateFontSize: v)),
           ),
           const SizedBox(height: 12),
           _fontSizeRow(
-            label: 'Barcode Number',
+            label: 'barcode_layout.font_barcode_number'.tr,
             value: _settings.barcodeNumberFontSize,
             onChanged: (v) =>
                 _update((s) => s.copyWith(barcodeNumberFontSize: v)),
@@ -377,15 +375,26 @@ class _BarcodeLayoutSettingsPanelState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const PrinterSectionHeader(
+          PrinterSectionHeader(
             icon: Icons.preview_rounded,
-            title: 'Sticker Preview',
-            subtitle: 'Approximate layout based on current settings',
+            title: 'barcode_layout.preview_title'.tr,
+            subtitle: 'barcode_layout.preview_subtitle'.tr,
           ),
           const SizedBox(height: 10),
           PrinterInfoStrip(
-            text:
-                'Size: ${_settings.stickerSize}  ·  ${_settings.stickersPerRow} per row  ·  Barcode: ${_settings.barcodeWidthPercent.round()}% × ${_settings.barcodeHeight.round()}pt  ·  ${_settings.rasterDpi} DPI  ·  Rotation: ${_settings.printRotationDegrees == null ? 'Default' : '${_settings.printRotationDegrees}°'}${_settings.invertPrintColors ? '  ·  Inverted' : ''}',
+            text: 'barcode_layout.preview_strip'.trParams({
+              'size': _settings.stickerSize,
+              'count': '${_settings.stickersPerRow}',
+              'barcode':
+                  '${_settings.barcodeWidthPercent.round()}% × ${_settings.barcodeHeight.round()}pt',
+              'dpi': '${_settings.rasterDpi}',
+              'rotation': _settings.printRotationDegrees == null
+                  ? 'barcode_layout.rotation_default'.tr
+                  : '${_settings.printRotationDegrees}°',
+              'inverted': _settings.invertPrintColors
+                  ? 'barcode_layout.preview_inverted'.tr
+                  : '',
+            }),
             icon: Icons.straighten_rounded,
           ),
           const SizedBox(height: 20),
@@ -420,7 +429,7 @@ class _BarcodeLayoutSettingsPanelState
           const SizedBox(height: 16),
           Center(
             child: Text(
-              'This is an approximate preview. Actual PDF output may vary.',
+              'barcode_layout.preview_disclaimer'.tr,
               textAlign: TextAlign.center,
               style: buildCustomStyle(
                 FontWeightManager.regular,
@@ -471,7 +480,7 @@ class _BarcodeLayoutSettingsPanelState
             children: [
               // Store Name
               Text(
-                'STORE NAME',
+                'barcode_layout.sample_store'.tr,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: fs(_settings.storeNameFontSize),
@@ -513,7 +522,7 @@ class _BarcodeLayoutSettingsPanelState
 
               // Product Name
               Text(
-                'Sample Product',
+                'barcode_layout.sample_product'.tr,
                 style: TextStyle(
                   fontSize: fs(_settings.productNameFontSize),
                 ),

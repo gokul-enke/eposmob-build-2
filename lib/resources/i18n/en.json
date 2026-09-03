@@ -3942,6 +3942,10 @@
     "preview_title": "Sticker Preview",
     "preview_subtitle": "Approximate layout based on current settings",
     "preview_disclaimer": "This is an approximate preview. Actual PDF output may vary.",
+    "preview_strip": "Size: @size  ·  @count per row  ·  Barcode: @barcode  ·  @dpi DPI  ·  Rotation: @rotation@inverted",
+    "preview_inverted": "  ·  Inverted",
+    "sample_store": "STORE NAME",
+    "sample_product": "Sample Product",
     "toast_save_error": "Could not save barcode settings.",
     "toast_reset_success": "Barcode layout reset to defaults"
   },

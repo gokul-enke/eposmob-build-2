@@ -3942,6 +3942,10 @@
     "preview_title": "معاينة الملصق",
     "preview_subtitle": "تخطيط تقريبي بناءً على الإعدادات الحالية",
     "preview_disclaimer": "هذه معاينة تقريبية. قد تختلف مخرجات PDF الفعلية.",
+    "preview_strip": "الحجم: @size  ·  @count في الصف  ·  الباركود: @barcode  ·  @dpi نقطة/بوصة  ·  الدوران: @rotation@inverted",
+    "preview_inverted": "  ·  معكوس",
+    "sample_store": "اسم المتجر",
+    "sample_product": "منتج تجريبي",
     "toast_save_error": "تعذر حفظ إعدادات الباركود.",
     "toast_reset_success": "تمت إعادة تعيين تخطيط الباركود إلى الإعدادات الافتراضية"
   },
