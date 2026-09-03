@@ -91,7 +91,7 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading data: $error'),
+            content: Text('company_accounts.error_loading'.trParams({'error': error.toString()})),
             backgroundColor: Colors.red,
           ),
         );
@@ -602,7 +602,7 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
                                             : Colors.grey.withOpacity(0.1),
                                       ),
                                       children: [
-                                        _buildTableCell(account.name ?? "N/A"),
+                                        _buildTableCell(account.name ?? 'company_accounts.na'.tr),
                                         _buildTableCell(
                                             account.paymentMethodsString),
                                         TableCell(
@@ -610,7 +610,7 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
                                               TableCellVerticalAlignment.middle,
                                           child: Center(
                                             child: _buildTypeChip(
-                                                account.type ?? "Unknown"),
+                                                account.type ?? 'company_accounts.unknown'.tr),
                                           ),
                                         ),
                                         _buildTableCell(
@@ -878,7 +878,7 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
         const SizedBox(width: 16),
         Expanded(
           child: Text(
-            value.isNotEmpty ? value : 'N/A',
+            value.isNotEmpty ? value : 'company_accounts.na'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,

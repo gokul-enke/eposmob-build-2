@@ -599,7 +599,7 @@ class _CustomerTransactionListScreenState
           ),
           const SizedBox(height: 15),
           Text(
-            'No transactions found',
+            'party_accounts.no_transactions'.tr,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s18,
@@ -609,7 +609,7 @@ class _CustomerTransactionListScreenState
           ),
           const SizedBox(height: 8),
           Text(
-            'Try adjusting your search criteria',
+            'party_accounts.no_transactions_hint'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,
@@ -713,7 +713,7 @@ class _CustomerTransactionListScreenState
                                   size: 12, color: Colors.grey.shade400),
                               const SizedBox(width: 4),
                               Text(
-                                tx.date ?? 'N/A',
+                                tx.date ?? 'party_accounts.na'.tr,
                                 style: buildCustomStyle(FontWeightManager.regular,
                                     FontSize.s11, 0.16, Colors.grey),
                               ),
@@ -1293,7 +1293,7 @@ class _CustomerTransactionListScreenState
                                                                           .center,
                                                                   children: [
                                                                     Text(
-                                                                      transaction.referenceId ?? 'N/A',
+                                                                      transaction.referenceId ?? 'party_accounts.na'.tr,
                                                                       textAlign:
                                                                           TextAlign
                                                                               .center,
@@ -1322,7 +1322,7 @@ class _CustomerTransactionListScreenState
                                                                             context:
                                                                                 context,
                                                                             message:
-                                                                                'Reference ID copied to clipboard',
+                                                                                'party_accounts.ref_copied'.tr,
                                                                           );
                                                                         },
                                                                         child:

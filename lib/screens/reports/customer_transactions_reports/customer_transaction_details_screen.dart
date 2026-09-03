@@ -75,6 +75,21 @@ class _SimpleTransactionDetailsScreenState
   ];
   List<String> types = ['Credit', 'Debit'];
 
+  /// Helper function to get translated label for dropdown values
+  String _getTranslatedLabel(String value) {
+    final labelMap = {
+      'Receipt': 'transaction_status_labels.receipt'.tr,
+      'Invoice': 'transaction_status_labels.invoice'.tr,
+      'Voucher': 'transaction_status_labels.voucher'.tr,
+      'SUCC': 'transaction_status_labels.succ'.tr,
+      'FAIL': 'transaction_status_labels.fail'.tr,
+      'INIT': 'transaction_status_labels.init'.tr,
+      'Credit': 'transaction_status_labels.credit'.tr,
+      'Debit': 'transaction_status_labels.debit'.tr,
+    };
+    return labelMap[value] ?? value;
+  }
+
   List<String> getCustomerSuggestions() {
     if (allTransactions == null) return [];
     final suggestions = allTransactions!
@@ -434,7 +449,7 @@ class _SimpleTransactionDetailsScreenState
                   return DropdownMenuItem<String>(
                     value: option,
                     child: Text(
-                      option,
+                      _getTranslatedLabel(option),
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s10,

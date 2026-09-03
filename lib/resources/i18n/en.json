@@ -94,7 +94,16 @@
     "msg_unknown_discount": "Unknown discount type",
     "payment_cash": "Cash",
     "payment_card": "Card",
-    "payment_upi": "UPI"
+    "payment_upi": "UPI",
+    "btn_apply": "Apply",
+    "label_net_amount": "Net amount",
+    "label_shipping": "Shipping",
+    "label_discount": "Discount",
+    "label_gst": "GST",
+    "label_total_payable": "Total Payable",
+    "label_chose_payment_method": "Chose Payment Method",
+    "btn_print": "Print",
+    "btn_pay": "Pay INR @amount"
   },
   "supplier_details": {
     "no_supplier": "No supplier selected",
@@ -135,14 +144,33 @@
   "customer_address": {
     "tooltip_add": "Add New Address",
     "title_address": "Address (@type)",
+    "type_home": "Home",
+    "type_office": "Office",
     "type_other": "Other",
     "btn_add_new": "Add New",
     "label_address": "Address",
     "label_city": "City",
     "label_pincode": "Pincode ID",
+    "label_state": "States / Provinces",
+    "label_district": "District / City",
+    "label_landmark": "Landmark",
+    "label_address_type": "Address Type",
     "not_provided": "Not provided",
     "no_address_found": "No address records found",
-    "no_address_info": "No address information available"
+    "no_address_info": "No address information available",
+    "hint_state": "Select States / Provinces",
+    "hint_district": "Select District / City",
+    "hint_pincode": "Select Pincode",
+    "hint_city": "Enter city",
+    "hint_address": "House/Flat No, Apartment, Street",
+    "hint_landmark": "Nearby landmark",
+    "title_add": "Add New Address",
+    "title_edit": "Edit Address",
+    "btn_cancel": "Cancel",
+    "btn_saving": "Saving...",
+    "btn_save_address": "Save Address",
+    "btn_update_address": "Update Address",
+    "required": "Required"
   },
   "notifications": {
     "page_title": "Notifications"
@@ -248,6 +276,18 @@
     "col_unit": "Unit",
     "col_unit_price": "Unit Price",
     "col_action": "Action",
+    "btn_back": "Back"
+  },
+  "view_voucher_details": {
+    "btn_voucher_list": "Voucher List",
+    "page_title": "Voucher Details",
+    "section_details": "Details",
+    "label_customer_name": "Customer Name",
+    "label_amount": "Amount",
+    "label_transaction_type": "Transaction Type",
+    "label_payment_method": "Payment Method",
+    "label_reference": "Reference",
+    "label_comment": "Comment",
     "btn_back": "Back"
   },
   "account_book": {
@@ -515,6 +555,19 @@
     "col_amount": "Amount",
     "col_action": "Action"
   },
+  "voucher_list": {
+    "error_data_not_found": "Data Not Found",
+    "title": "Voucher List",
+    "btn_create_voucher": "Create New Voucher",
+    "label_name": "Name",
+    "hint_name": "Name",
+    "btn_search": "Search",
+    "col_account_type": "Account Type",
+    "col_amount": "Amount",
+    "col_sender": "Sender",
+    "col_beneficiary": "Beneficiary",
+    "col_action": "Action"
+  },
   "mobile_filters": {
     "field_status": "Status",
     "hint_select_status": "Select Status",
@@ -623,7 +676,8 @@
     "payment_suggested": "Suggested refund (after pro-rata discount): @amount",
     "payment_pro_rata": "Pro-rata discount (optional): −@amount",
     "payment_max_refund": "Maximum cash refund: @max",
-    "payment_refund_note": "You may refund up to the returned items total without applying the discount."
+    "payment_refund_note": "You may refund up to the returned items total without applying the discount.",
+    "error_missing_cart_item_id": "This item cannot be returned because its cart item ID is missing. Please refresh the order and try again."
   },
   "account_details": {
     "error_could_not_load": "Could not load detailed account information",
@@ -795,8 +849,15 @@
     "unknown": "Unknown",
     "close": "Close",
     "reset": "Reset",
+    "status": "Status",
+    "field_required": "This field is required",
     "hint_search_customer": "Search Customer",
-    "hint_search_supplier": "Search Supplier"
+    "hint_search_supplier": "Search Supplier",
+    "datetime_format_hint": "YYYY-MM-DD HH:MM:SS",
+    "default_unit": "PCS",
+    "dash_placeholder": "-",
+    "zero_placeholder": "0",
+    "na": "N/A"
   },
   "settings": {
     "title": "Settings",
@@ -804,6 +865,44 @@
     "company_info": "Company Info",
     "language": "Language",
     "language_select": "Select Language"
+  },
+  "billing_mobile_errors": {
+    "empty_cart": "Please add items to cart",
+    "clear_cart_failed": "Failed to clear cart. Please try again.",
+    "save_order_failed": "Failed to save order. Please try again.",
+    "confirm_order_failed": "Failed to confirm order. Check connection and try again.",
+    "create_order_failed": "Failed to create order. Check connection and try again.",
+    "load_order_failed": "Failed to load order. Please try again.",
+    "invalid_pricing_before_confirm": "Please ensure all items have valid prices and MRP before confirming order",
+    "invalid_pricing_before_save": "Please ensure all items have valid prices before saving",
+    "no_internet_confirm": "No internet connection. Cannot confirm order online.",
+    "no_internet_create_order": "No internet connection. Cannot create order online.",
+    "quotation_create_failed": "Failed to create quotation",
+    "quotation_print_missing_id": "Quotation created, but print failed because the API response did not include quotation id.",
+    "quotation_print_details_failed": "Quotation created, but details could not be loaded for printing.",
+    "print_order_failed": "Failed to print order. Check printer and try again.",
+    "print_retry_prompt": "Order confirmed. Print failed — tap Retry to print again.",
+    "print_retry_failed_again": "Print failed again. Check printer connection and tap Retry.",
+    "print_retry_success": "Print completed successfully",
+    "invalid_barcode": "Invalid barcode. Please try again.",
+    "add_to_cart_failed": "Could not add product to cart. Please try again.",
+    "stock_not_selected": "No batch selected — item was not added to cart",
+    "zero_price_entry_cancelled": "Price not entered — item was not added to cart",
+    "empty_cart_discount": "Cannot apply discount to empty cart",
+    "discount_negative": "Discount cannot be negative",
+    "discount_percent_max": "Percentage discount cannot exceed 100%",
+    "discount_flat_exceeds_total": "Flat discount cannot exceed cart total",
+    "apply_coupon_failed": "Failed to apply coupon. Please try again.",
+    "load_discounts_failed": "Could not load coupons. Check connection and try again.",
+    "load_customers_failed": "Could not load customers. Check connection and tap Retry.",
+    "add_customer_failed": "Could not add customer. Please try again.",
+    "customers_unavailable": "Customer list is unavailable. Tap Retry or add a new customer.",
+    "pine_labs_invalid_amount": "Invalid amount for Pine Labs payment",
+    "offline_confirm_message": "No internet connection. Save the order locally and confirm when you are back online.",
+    "offline_confirm_print_message": "No internet connection. Save the order locally and confirm when you are back online.",
+    "all_products": "All products",
+    "previous_balance": "Previous balance",
+    "previous_balance_debt": "Previous balance (debt)"
   },
   "billing": {
     "title": "Billing",
@@ -934,7 +1033,62 @@
     "shift_not_opened": "Shift Not Opened",
     "msg_shift_required": "You must open a shift before starting sales.",
     "btn_open_shift": "Open Shift",
-    "btn_go_back": "Go Back"
+    "btn_go_back": "Go Back",
+    "order_summary": "ORDER SUMMARY",
+    "payment": "PAYMENT",
+    "complete_order": "COMPLETE ORDER",
+    "coupon_applied": "Coupon Applied",
+    "add_coupon": "Add Coupon",
+    "order_completed": "Order Completed",
+    "coupon": "Coupon",
+    "delivery": "Delivery",
+    "paid": "Paid",
+    "done": "DONE",
+    "tax_details": "Tax Details",
+    "close": "Close",
+    "resyncing_products": "Resyncing products...",
+    "phone_required": "Phone number is required",
+    "phone_min_length": "Phone number must be at least 10 digits",
+    "product_name_required": "Product name is required",
+    "insufficient_stock": "Insufficient stock available",
+    "payment_online": "Online",
+    "coupon_code_required": "Coupon code is required",
+    "msg_coupon_applied": "Coupon Applied Successfully",
+    "msg_coupon_failed": "Failed to Apply Coupon",
+    "network_error": "Network error occurred",
+    "invalid_price_item": "Invalid price for item @name",
+    "invalid_mrp_item": "Invalid MRP for item @name",
+    "payment_method_labels": {
+      "credit": "Credit",
+      "return": "Return",
+      "refund": "Refund",
+      "online": "Online",
+      "upi": "UPI",
+      "card": "Card",
+      "cash": "Cash",
+      "bank": "Bank",
+      "cod": "COD",
+      "cheque": "Cheque"
+    }
+  },
+  "add_company_account": {
+    "title": "Add Company Account",
+    "is_active": "Is Active",
+    "name_label": "Name *",
+    "name_hint": "Enter name",
+    "name_required": "Name is required",
+    "type_label": "Type *",
+    "select_type": "Select type",
+    "type_required": "Type is required",
+    "store_label": "Store",
+    "select_store": "Select store",
+    "bank_account_label": "Bank Account ID",
+    "select_bank_account": "Select bank account",
+    "payment_method_label": "Payment Method *",
+    "select_payment_method": "Select payment method",
+    "payment_required": "Payment method is required",
+    "btn_create_another": "Create & Create Another",
+    "btn_create": "Create"
   },
   "customers": {
     "title": "Customers",
@@ -977,9 +1131,28 @@
     "action": "Action",
     "reset": "Reset"
   },
+  "supplier_list": {
+    "error_fetching": "Error fetching suppliers",
+    "error_searching": "Error searching suppliers",
+    "no_suppliers_desktop": "No suppliers found",
+    "try_adjusting_search": "Try adjusting your search criteria"
+  },
   "delivery": {
     "select_delivery_method": "Select Delivery Method",
     "delivery_methods": "Delivery Methods"
+  },
+  "delivery_form": {
+    "loading": "Loading delivery methods...",
+    "empty": "No delivery methods available",
+    "label_car_number": "Car Number:",
+    "hint_car_number": "Enter car number...",
+    "label_choose_address": "Choose an address:",
+    "label_address": "Address:",
+    "hint_address": "Enter delivery address...",
+    "label_delivery_date": "Delivery Date:",
+    "label_delivery_time": "Delivery Time:",
+    "label_comment": "Comment:",
+    "hint_comment": "Add special instructions or comments..."
   },
   "common": {
     "all": "All",
@@ -1219,7 +1392,25 @@
     "select_table_short": "Select table",
     "select_customer_placeholder": "Select customer",
     "select_payment": "Select payment",
-    "select_delivery": "Select delivery"
+    "select_delivery": "Select delivery",
+    "selected_table": "Selected table",
+    "choose_dining_or_delivery": "Choose Dining or Delivery",
+    "select_table_or_delivery": "Select table or delivery",
+    "hide_tables_panel": "Hide Tables Panel",
+    "show_tables_panel": "Show Tables Panel",
+    "keyboard_shortcuts": "Keyboard Shortcuts (Ctrl+H)",
+    "font_prefix": "Font: ",
+    "disable_quick_counter": "Disable quick counter billing",
+    "enable_quick_counter": "Enable quick counter billing",
+    "restaurant_order_item": {
+      "invalid_price": "Invalid price",
+      "item_id_not_found": "Item ID not found",
+      "price_updated": "Price updated successfully",
+      "error_updating_price": "Error updating price: @error",
+      "current_price": "Current Price: @price",
+      "invalid_quantity": "Invalid quantity",
+      "current_quantity": "Current Quantity: @quantity"
+    }
   },
   "sales": {
     "orders_list": "Orders List",
@@ -1380,7 +1571,9 @@
     "order_items_served_prefix": "Order ",
     "order_items_served_suffix": " items marked as SERVED",
     "failed_update_items_prefix": "Failed to update items for ",
-    "error_update_items_prefix": "Error updating items for "
+    "error_update_items_prefix": "Error updating items for ",
+    "status_fallback": "new status",
+    "minutes_suffix": "m"
   },
   "confirmed_orders": {
     "title": "Confirmed Orders",
@@ -1605,7 +1798,18 @@
     "credit_collected": "Credit Collected",
     "order_number": "Order Number",
     "previous_balance_collected": "Previous Balance Collected",
-    "total_returns_sales_return": "Total Returns (Sales Return)"
+    "total_returns_sales_return": "Total Returns (Sales Return)",
+    "admin_title": "Admin: Daily Sales Records",
+    "col_id": "ID",
+    "col_phone": "Phone",
+    "col_store": "Store",
+    "col_closing_period": "Closing Period",
+    "no_records_admin": "No Admin Daily Sales Closes Found",
+    "no_records_subtitle": "Try adjusting your date range",
+    "search_hint_name": "Search Name...",
+    "card_user_id": "User ID",
+    "card_unknown": "Unknown",
+    "filter_date": "Date"
   },
   "quotations": {
     "title": "Quotation List",
@@ -1643,7 +1847,11 @@
     "quotation_hash": "Quotation # @number",
     "items": "Items",
     "sub_total": "Sub Total",
-    "grand_total": "Grand Total"
+    "grand_total": "Grand Total",
+    "status_all": "All",
+    "status_pending": "Pending",
+    "status_confirmed": "Confirmed",
+    "status_cancelled": "Cancelled"
   },
   "category": {
     "title": "Category List",
@@ -1959,7 +2167,12 @@
     "details_purchase_rate": "Purchase Rate",
     "details_wholesale_price": "Wholesale Price",
     "details_properties_title": "Product Properties",
-    "details_no_properties": "No properties available"
+    "details_no_properties": "No properties available",
+    "error_loading_stocks": "Error loading stocks: @error",
+    "edit_stock_title": "Edit Stock: @productName",
+    "status_out_of_stock": "Out of Stock",
+    "status_low_stock": "Low Stock",
+    "status_at_reorder_level": "At Reorder Level"
   },
   "add_stock": {
     "title": "Add Product Stock",
@@ -2134,7 +2347,18 @@
     "table_mfg_date": "MFG DATE",
     "table_exp_date": "EXP DATE",
     "select_date": "Select Date",
-    "confirm_btn": "Confirm"
+    "confirm_btn": "Confirm",
+    "all_categories": "All Categories"
+  },
+  "product_tabs": {
+    "back_all_products": "All Products",
+    "tab_primary_details": "Primary Details",
+    "tab_product_names": "Product Names",
+    "tab_product_properties": "Product Properties",
+    "tab_image_video": "Image/Video",
+    "heading_add_new_product": "Add New Product",
+    "heading_edit_product": "Edit Product",
+    "heading_show_product": "Show Product"
   },
   "purchase_order": {
     "supplier": "Supplier",
@@ -2281,7 +2505,22 @@
     "show_filters": "Show Filters",
     "already_fully_paid": "This purchase order is already fully paid.",
     "payment_error_422": "Payment error. Please check your payment details and try again.",
-    "receive_timeout": "Request timed out. Please refresh and try again."
+    "receive_timeout": "Request timed out. Please refresh and try again.",
+    "error_retail_price_required": "retail price is required",
+    "error_wholesale_price_required": "wholesale price is required",
+    "error_mrp_required": "MRP is required",
+    "error_quantity_zero": "quantity must be greater than zero",
+    "error_purchase_rate_negative": "purchase rate cannot be negative",
+    "error_purchase_quantity_zero": "purchase quantity must be greater than zero",
+    "error_expiry_before_purchase": "expiry date cannot be before purchase date",
+    "error_manufacturing_after_expiry": "manufacturing date cannot be after expiry date",
+    "permission_required_create": "Purchase permission is required to create orders.",
+    "label_sale_unit_overrides": "Sale-unit price overrides (optional)",
+    "hint_use_default_price": "Use default price",
+    "error_invalid_price": "Enter a valid price",
+    "permission_required_view": "Purchase permission is required to view purchase orders.",
+    "items_received_default": "0 / 0",
+    "date_format_hint": "yyyy-mm-dd"
   },
   "sales_executive_report": {
     "title": "My Sales Report",
@@ -2957,7 +3196,12 @@
     "details_not_found": "Details not found",
     "failed_load_details": "Failed to load details",
     "page_of": "Page @current of @last",
-    "hint_all": "All"
+    "hint_all": "All",
+    "status_all": "All",
+    "status_pending": "Pending",
+    "status_paid": "Paid",
+    "status_overdue": "Overdue",
+    "status_order_created": "Order Created"
   },
   "nav": {
     "home": "Home",
@@ -3059,7 +3303,8 @@
     "msg_dev_mode_enabled": "Developer Mode enabled. Select Development Printer in Printer settings.",
     "msg_dev_mode_disabled": "Developer Mode disabled. Physical printer settings restored.",
     "msg_dev_mode_error": "Could not update Developer Mode: @error",
-    "lang_english": "English"
+    "lang_english": "English",
+    "lang_arabic": "Arabic"
   },
   "company_info": {
     "title": "Company Information",
@@ -3068,6 +3313,7 @@
     "loading": "Loading...",
     "not_available": "Not available",
     "name_not_available": "Company Name Not Available",
+    "fallback_email": "admin@company.com",
     "label_admin_user": "Admin User Info",
     "label_company_name": "Company Name",
     "label_username": "Logged In Username",
@@ -3154,7 +3400,9 @@
     "field_message": "Message",
     "validator_phone": "Enter phone number",
     "validator_message": "Enter message",
-    "btn_send_test": "Send Test Message"
+    "btn_send_test": "Send Test Message",
+    "default_message": "Hello from CloudPOS",
+    "hint_phone_format": "+91xxxxxxxxxx"
   },
   "location_management": {
     "title": "Location Management",
@@ -3276,7 +3524,26 @@
     "view_msg_not_provided": "Not provided",
     "view_msg_not_available": "Not available",
     "view_msg_not_set": "Not set",
-    "view_msg_no_loyalty_info": "No loyalty card information available"
+    "view_msg_no_loyalty_info": "No loyalty card information available",
+    "msg_no_customer_selected": "No customer selected.",
+    "page_title": "Customer Profile",
+    "btn_all_customers": "All Customers",
+    "tab_info": "Info",
+    "tab_edit": "Edit",
+    "tab_transactions": "Transactions",
+    "tab_orders": "Orders",
+    "tab_address": "Address",
+    "tab_loyalty": "Loyalty",
+    "tab_chat": "Chat",
+    "sidebar_information": "Information",
+    "sidebar_edit_details": "Edit Details",
+    "sidebar_transactions": "Transactions",
+    "sidebar_all_orders": "All Orders",
+    "sidebar_customer_address": "Customer Address",
+    "sidebar_loyalty_card": "Loyalty Card",
+    "sidebar_chat": "Chat",
+    "placeholder_customer_name": "Customer Name",
+    "label_id": "ID:"
   },
   "login": {
     "title": "Login",
@@ -3301,6 +3568,8 @@
     "validator_password_invalid": "Enter valid password",
     "validator_password_mismatch": "Password doesnot match",
     "hint_repeat_password": "Repeat Password",
+    "hint_email": "Enter email address",
+    "hint_password": "Enter password",
     "api_key_title": "API Key Required",
     "api_key_subtitle": "Please enter your API key to continue",
     "api_key_hint": "Enter your API key",
@@ -3321,7 +3590,9 @@
     "day_close_default": "You did not close your last day sales for",
     "btn_yes": "Yes",
     "btn_no": "No",
-    "error_saving_store": "Error saving store"
+    "error_saving_store": "Error saving store",
+    "loading_data": "Loading data...",
+    "validator_password_required": "Password is required"
   },
   "free": "Free",
   "expense": {
@@ -3389,7 +3660,23 @@
     "error_create_failed": "Failed to create expense",
     "btn_create": "Create",
     "btn_create_another": "Create & create another",
-    "btn_cancel": "Cancel"
+    "btn_cancel": "Cancel",
+    "label_debit_prefix": "Dr. ",
+    "label_credit_prefix": "Cr. ",
+    "months": [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec"
+    ]
   },
   "party_accounts": {
     "title": "Customer Transaction",
@@ -3441,7 +3728,7 @@
     "btn_scanning": "Scanning...",
     "btn_scan": "Scan for Printers",
     "info_scanning": "Scanning for printers...",
-    "info_devices_found": "devices found",
+    "info_devices_found": "@count devices found",
     "status_printer_selected": "Printer selected",
     "info_preparing_folder": "Preparing development output folder...",
     "empty_title": "No printers found",
@@ -3450,7 +3737,7 @@
     "btn_selected": "Selected",
     "btn_select": "Select",
     "toast_dev_printer_selected": "Development Printer selected. Prints will be saved to a folder.",
-    "toast_printer_selected": "Printer Selected",
+    "toast_printer_selected": "@device Printer Selected",
     "toast_paper_size_saved": "Default paper size saved",
     "toast_theme_saved": "Receipt theme saved",
     "toast_resync_success": "Document configuration resynced successfully",
@@ -3469,7 +3756,30 @@
     "loading": "Loading printer settings…",
     "dialog_perm_title": "Permissions Required",
     "dialog_perm_content": "This app needs Bluetooth and Location permissions to scan for printers.",
-    "dialog_ok": "OK"
+    "dialog_ok": "OK",
+    "label_template": "Template",
+    "section_output_pdf": "PDF Output",
+    "subtitle_output_pdf": "Page size and template used for generated invoice files",
+    "section_output_receipt": "Receipt Output",
+    "subtitle_output_receipt": "Paper size and visual layout for printed receipts",
+    "margin_barcode_note": "Barcode stickers use their own Page Margin setting instead.",
+    "margin_std_note": "Only affects A4 and A5 print jobs. Switch the paper size to A4 or A5 to change it.",
+    "margin_barcode_subtitle": "Barcode stickers keep their own Page Margin",
+    "margin_pdf_subtitle": "PDF margins and printer driver behaviour",
+    "margin_shared_subtitle": "Shared PDF page margins",
+    "section_advanced_title": "Advanced print options",
+    "section_advanced_scope": "Applies to all tabs",
+    "title_pdf_sharing": "PDF Sharing Settings",
+    "subtitle_pdf_sharing": "Configure invoice PDFs independently from physical printers",
+    "output_folder_prefix": "Output folder: ",
+    "toast_reset_pdf_sharing": "PDF Sharing settings reset to compatible defaults",
+    "toast_reset_settings": "@type printer settings reset to default",
+    "error_scan_reason": "Could not scan for printers: @error",
+    "error_save_selection_reason": "Could not save printer selection: @error",
+    "error_load_settings_reason": "Could not load printer settings: @error",
+    "error_reset_reason": "Error resetting printer settings: @error",
+    "error_resync_reason": "Failed to resync document configurations: @error",
+    "error_clear_hive_reason": "Error clearing Hive data: @error"
   },
   "barcode_layout": {
     "title": "Barcode Sticker Layout",
@@ -3592,6 +3902,8 @@
     "success_sync_all": "Offline data synced successfully",
     "error_sync": "Sync failed",
     "error_clear": "Clear failed",
+    "msg_cleared_suffix": "cleared from this device",
+    "store_id_fallback": "Store #@id",
     "dialog_cancel": "Cancel",
     "dialog_clear": "Clear"
   },
@@ -3919,7 +4231,15 @@
     "msg_no_phone": "Customer phone number not available.",
     "msg_invoice_sent_wa": "Invoice sent via WhatsApp to",
     "msg_wa_send_failed": "Failed to send WhatsApp message:",
-    "msg_wa_error": "Error sending WhatsApp message. Please try again."
+    "msg_wa_error": "Error sending WhatsApp message. Please try again.",
+    "err_order_data_null": "Order data is null",
+    "err_parsing_order_data": "Error parsing order data",
+    "err_order_not_found": "Order Details Not found",
+    "label_store": "Store",
+    "msg_share_pdf_text": "Please find attached the invoice for order #@orderNumber",
+    "msg_email_body": "Here is the link for your invoice: @invoiceUrl",
+    "msg_email_subject": "Invoice #@orderNumber",
+    "label_default_customer": "Valued Customer"
   },
   "customer_loyalty": {
     "err_load": "Failed to load loyalty information",
@@ -4068,7 +4388,8 @@
     "trans_detail_type": "Transaction Type",
     "trans_detail_payment_method": "Payment Method",
     "trans_detail_date": "Date",
-    "trans_label_no_reference": "No Reference"
+    "trans_label_no_reference": "No Reference",
+    "id_prefix": "ID: "
   },
   "customer_transactions": {
     "msg_preparing_report": "Preparing transaction report...",
@@ -4099,6 +4420,7 @@
   },
   "add_customer": {
     "title": "Add New Customer",
+    "back_to_customers": "All Customers",
     "label_first_name": "First Name",
     "label_last_name": "Last Name",
     "label_email": "Email Address",
@@ -4147,6 +4469,7 @@
   "company_accounts": {
     "title": "Company Accounts",
     "auth_token_missing": "Authentication token missing. Please login again.",
+    "error_loading": "Error loading data: @error",
     "payment_method_filter": "Payment Method",
     "all_methods": "All Methods",
     "type_filter": "Type",
@@ -4162,26 +4485,9 @@
     "col_action": "Action",
     "no_accounts": "No company accounts found",
     "no_data": "No company account data available at this time",
-    "btn_refresh": "Refresh"
-  },
-  "add_company_account": {
-    "title": "Add Company Account",
-    "is_active": "Is Active",
-    "name_label": "Name *",
-    "name_hint": "Enter name",
-    "name_required": "Name is required",
-    "type_label": "Type *",
-    "select_type": "Select type",
-    "type_required": "Type is required",
-    "store_label": "Store",
-    "select_store": "Select store",
-    "bank_account_label": "Bank Account ID",
-    "select_bank_account": "Select bank account",
-    "payment_method_label": "Payment Method *",
-    "select_payment_method": "Select payment method",
-    "payment_required": "Payment method is required",
-    "btn_create_another": "Create & Create Another",
-    "btn_create": "Create"
+    "btn_refresh": "Refresh",
+    "na": "N/A",
+    "unknown": "Unknown"
   },
   "add_purchase": {
     "all_purchases": "All Purchases",
@@ -4280,6 +4586,106 @@
     "payment_method": "Payment Method",
     "return_amount": "Return Amount",
     "max_return_amount": "Maximum returnable amount",
-    "copy_success": "Reference copied to clipboard"
+    "copy_success": "Reference copied to clipboard",
+    "date_hint": "yyyy-mm-dd"
+  },
+  "view_transaction_details": {
+    "btn_all_transactions": "All Transactions",
+    "page_title": "Transaction Details",
+    "section_details": "Details",
+    "label_order_number": "Order Number",
+    "label_transaction_type": "Transaction Type",
+    "label_customer_name": "Customer Name",
+    "label_amount": "Amount",
+    "label_type": "Type",
+    "label_status": "Status",
+    "label_date": "Date",
+    "label_invoice_number": "Invoice Number",
+    "label_reference": "Reference",
+    "label_payment_method": "Payment Method",
+    "btn_back": "Back"
+  },
+  "checkout_modal": {
+    "tooltip_close": "Close",
+    "search_by_name_or_phone_number": "Search by name or phone number...",
+    "hint_customer_name": "Customer name",
+    "hint_customer_phone": "Customer phone",
+    "label_customer_name": "Customer Name",
+    "label_customer_phone": "Customer Phone",
+    "label_quotation_date": "Quotation Date",
+    "label_expiry_date": "Expiry Date",
+    "label_selected_customer": "Selected Customer",
+    "label_not_selected": "Not selected",
+    "label_selected_delivery": "Selected Delivery",
+    "label_selected_payment": "Selected Payment",
+    "hint_car_number": "Car Number:",
+    "hint_comment": "Comment:",
+    "hint_address": "Address:",
+    "hint_choose_an_address": "Choose an address:",
+    "btn_create": "Create",
+    "btn_creating": "Creating...",
+    "btn_add_new_customer": "Add New Customer",
+    "btn_adding": "Adding...",
+    "btn_done": "Done",
+    "btn_next": "Next",
+    "btn_back": "Back",
+    "label_delivery_charges": "Delivery charges",
+    "label_configured": "Configured",
+    "label_not_configured": "Not Configured",
+    "label_order_summary": "Order Summary",
+    "label_create_customer": "Create customer",
+    "label_not_applied": "Not Applied",
+    "label_delivery": "Delivery",
+    "label_payment": "Payment",
+    "msg_no_customers_found": "No customers found",
+    "msg_quotation_customer_not_saved": "Quotation customer is not saved",
+    "msg_configure_payment_before_confirm": "Please configure payment before confirm",
+    "msg_unable_to_proceed": "Unable to proceed"
+  },
+  "transaction_status_labels": {
+    "receipt": "Receipt",
+    "invoice": "Invoice",
+    "voucher": "Voucher",
+    "succ": "Success",
+    "fail": "Failed",
+    "init": "Initiated",
+    "credit": "Credit",
+    "debit": "Debit",
+    "cash": "Cash",
+    "card": "Card",
+    "bank_transfer": "Bank Transfer",
+    "cheque": "Cheque",
+    "upi": "UPI"
+  },
+  "legal": {
+    "privacy_policy": {
+      "page_title": "Privacy Policy",
+      "heading": "Privacy Policy",
+      "label_last_updated": "Last updated:",
+      "section_introduction": "Introduction",
+      "section_info_collect": "Information We Collect",
+      "section_how_use": "How We Use Your Information",
+      "section_disclosure": "Disclosure of Your Information",
+      "section_security": "Security of Your Information",
+      "section_rights": "Your Rights",
+      "section_changes": "Changes to This Privacy Policy",
+      "section_contact": "Contact Us"
+    },
+    "terms_and_condition": {
+      "page_title": "Terms and Conditions",
+      "heading": "Terms and Conditions",
+      "label_last_updated": "Last updated:",
+      "section_introduction": "Introduction",
+      "section_info_collect": "Information We Collect",
+      "section_how_use": "How We Use Your Information",
+      "section_disclosure": "Disclosure of Your Information",
+      "section_security": "Security of Your Information",
+      "section_rights": "Your Rights",
+      "section_changes": "Changes to This Privacy Policy",
+      "section_contact": "Contact Us"
+    }
+  },
+  "base_url_wrapper": {
+    "error_load_config": "Unable to load the saved login configuration."
   }
 }

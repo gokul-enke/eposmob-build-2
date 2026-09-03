@@ -96,7 +96,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                     color: ColorManager.kPrimaryColor
                                         .withOpacity(0.5),
                                   ),
-                                  hintText: '*****@domain.com',
+                                  hintText: 'login.hint_email'.tr,
                                   hintStyle: buildTextFieldStyle,
                                 ),
                               ),

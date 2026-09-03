@@ -1058,7 +1058,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
           const SizedBox(width: 16),
           Expanded(
             child: Text(
-              value.isNotEmpty ? value : 'N/A',
+              value.isNotEmpty ? value : 'general.na'.tr,
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s14,

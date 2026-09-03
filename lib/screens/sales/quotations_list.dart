@@ -67,6 +67,21 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
     'Cancelled',
   ];
 
+  String _getStatusLabel(String value) {
+    switch (value) {
+      case 'All':
+        return 'quotations.status_all'.tr;
+      case 'Pending':
+        return 'quotations.status_pending'.tr;
+      case 'Confirmed':
+        return 'quotations.status_confirmed'.tr;
+      case 'Cancelled':
+        return 'quotations.status_cancelled'.tr;
+      default:
+        return value;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -198,8 +213,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         final productId = quotationItem.productId;
         if (productId == null) continue;
 
-        final product =
-            localProductProvider.getProductById(productId) ??
+        final product = localProductProvider.getProductById(productId) ??
             GetProduct(
               productId: productId,
               productName: quotationItem.productName,
@@ -213,24 +227,21 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         final saleUnitId = quotationItem.productSaleUnitId;
         final saleUnit = _findQuotationSaleUnit(product, saleUnitId);
         final saleUnitName = quotationItem.saleUnitName ?? saleUnit?.unitName;
-        final saleUnitConversionRate =
-            _parseQuotationNumber(
+        final saleUnitConversionRate = _parseQuotationNumber(
               quotationItem.saleUnitConversionRate,
             )?.toDouble() ??
             double.tryParse(saleUnit?.conversionRate ?? '');
-        final effectiveSaleUnitRate =
-            saleUnitId != null &&
+        final effectiveSaleUnitRate = saleUnitId != null &&
                 saleUnitConversionRate != null &&
                 saleUnitConversionRate > 0
             ? saleUnitConversionRate
             : null;
         final hasSaleUnit = effectiveSaleUnitRate != null;
-        final baseQuantity = hasSaleUnit
-            ? quantity * effectiveSaleUnitRate
-            : quantity;
+        final baseQuantity =
+            hasSaleUnit ? quantity * effectiveSaleUnitRate : quantity;
 
-        final selectedStock =
-            _findQuotationStock(product, quotationItem.productStockId) ??
+        final selectedStock = _findQuotationStock(
+                product, quotationItem.productStockId) ??
             localProductProvider.selectStockForQuantity(product, baseQuantity);
         final quotationUnitPrice = _parseQuotationNumber(
           quotationItem.unitPrice,
@@ -238,8 +249,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         final price = quotationUnitPrice != null && hasSaleUnit
             ? quotationUnitPrice / effectiveSaleUnitRate
             : quotationUnitPrice ??
-                  (double.tryParse(product.price?.price?.toString() ?? '') ??
-                      0.0);
+                (double.tryParse(product.price?.price?.toString() ?? '') ??
+                    0.0);
         final productMrp = double.tryParse(product.mrp?.toString() ?? '');
         final mrp = productMrp != null && hasSaleUnit
             ? productMrp / effectiveSaleUnitRate
@@ -250,8 +261,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
             product: product,
             price: price.toDouble(),
             mrp: mrp.toDouble(),
-            taxRate:
-                _parseQuotationNumber(quotationItem.taxRate)?.toDouble() ??
+            taxRate: _parseQuotationNumber(quotationItem.taxRate)?.toDouble() ??
                 product.totalTaxRate,
             taxAmount: _parseQuotationNumber(
               quotationItem.taxAmount,
@@ -284,16 +294,15 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
       final customer = details.customer;
       final quotationCustomerPhone =
           (customer?.phone?.trim().isNotEmpty ?? false)
-          ? customer!.phone
-          : quotation.customerPhone;
+              ? customer!.phone
+              : quotation.customerPhone;
       final deliveryCharge = _parseQuotationNumber(
         details.deliveryCharge,
       )?.toDouble();
       localProductProvider.loadQuotationDraftForEditing(
         SavedOrder(
           id: 'quotation-$quotationId',
-          orderNumber:
-              details.quotationNumber ??
+          orderNumber: details.quotationNumber ??
               quotation.quotationNumber ??
               'QT-$quotationId',
           items: draftItems,
@@ -301,8 +310,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
           customerName: customer?.name ?? quotation.customer,
           customerPhone: quotationCustomerPhone,
           createdAt: DateTime.now().toIso8601String(),
-          total:
-              _parseQuotationNumber(details.grandTotal)?.toDouble() ??
+          total: _parseQuotationNumber(details.grandTotal)?.toDouble() ??
               _parseQuotationNumber(quotation.grandTotal)?.toDouble() ??
               0.0,
           deliveryMethod: details.deliveryMethod,
@@ -525,8 +533,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                           ),
                         )
                       : provider.quotations.isEmpty
-                      ? _buildEmptyState(provider)
-                      : _buildQuotationsContent(provider),
+                          ? _buildEmptyState(provider)
+                          : _buildQuotationsContent(provider),
                 ),
               ),
             ],
@@ -599,16 +607,63 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
             const SizedBox(height: 10),
             _buildStoreDropdown(),
             const SizedBox(height: 10),
-            BuildDropDownStatic(
-              title: 'quotations.quotation_status'.tr,
-              size: size,
-              items: _statusOptions,
-              selectedItem: _selectedStatus,
-              hintText: 'common.all'.tr,
-              onChanged: (v) {
-                setState(() => _selectedStatus = v ?? 'All');
-                _fetchQuotations();
-              },
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                BuildTextTile(
+                  title: 'quotations.quotation_status'.tr,
+                  textStyle: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s14,
+                    0.27,
+                    Colors.black.withOpacity(0.6),
+                  ),
+                ),
+                BuildBoxShadowContainer(
+                  circleRadius: 7,
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.only(left: 15),
+                  margin: const EdgeInsets.symmetric(horizontal: 0),
+                  height: size.height * .07,
+                  width: double.infinity,
+                  child: DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                    ),
+                    initialValue: _selectedStatus,
+                    hint: Text(
+                      'common.all'.tr,
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s12,
+                        0.27,
+                        ColorManager.textColor.withOpacity(.5),
+                      ),
+                    ),
+                    icon: const Icon(Icons.arrow_drop_down),
+                    iconSize: 24,
+                    elevation: 16,
+                    onChanged: (v) {
+                      setState(() => _selectedStatus = v ?? 'All');
+                      _fetchQuotations();
+                    },
+                    items: _statusOptions.map((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(
+                          _getStatusLabel(value),
+                          style: buildCustomStyle(
+                            FontWeightManager.medium,
+                            FontSize.s12,
+                            0.27,
+                            ColorManager.textColor.withOpacity(.5),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 10),
             Column(
@@ -702,16 +757,63 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                 Expanded(child: _buildStoreDropdown()),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: BuildDropDownStatic(
-                    title: 'quotations.quotation_status'.tr,
-                    size: size,
-                    items: _statusOptions,
-                    selectedItem: _selectedStatus,
-                    hintText: 'common.all'.tr,
-                    onChanged: (v) {
-                      setState(() => _selectedStatus = v ?? 'All');
-                      _fetchQuotations();
-                    },
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      BuildTextTile(
+                        title: 'quotations.quotation_status'.tr,
+                        textStyle: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s12,
+                          0.27,
+                          Colors.black.withOpacity(0.6),
+                        ),
+                      ),
+                      BuildBoxShadowContainer(
+                        circleRadius: 7,
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.only(left: 15),
+                        margin: const EdgeInsets.symmetric(horizontal: 0),
+                        height: size.height * .07,
+                        width: double.infinity,
+                        child: DropdownButtonFormField<String>(
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                          ),
+                          initialValue: _selectedStatus,
+                          hint: Text(
+                            'common.all'.tr,
+                            style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s12,
+                              0.27,
+                              ColorManager.textColor.withOpacity(.5),
+                            ),
+                          ),
+                          icon: const Icon(Icons.arrow_drop_down),
+                          iconSize: 24,
+                          elevation: 16,
+                          onChanged: (v) {
+                            setState(() => _selectedStatus = v ?? 'All');
+                            _fetchQuotations();
+                          },
+                          items: _statusOptions.map((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(
+                                _getStatusLabel(value),
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s12,
+                                  0.27,
+                                  ColorManager.textColor.withOpacity(.5),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -820,8 +922,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
   }
 
   Widget _buildEmptyState(QuotationsProvider provider) {
-    final hasFilters =
-        _quotationNumberController.text.isNotEmpty ||
+    final hasFilters = _quotationNumberController.text.isNotEmpty ||
         _selectedCustomerId != null ||
         _selectedStoreId != null ||
         _selectedStatus != 'All' ||
@@ -888,12 +989,10 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
 
   Widget _buildMobileQuotationCard(Quotation q) {
     final status = q.status ?? '';
-    final quotationDate = q.quotationDate != null
-        ? q.quotationDate!.split(' ').first
-        : '—';
-    final expiryDate = q.expiryDate != null
-        ? q.expiryDate!.split(' ').first
-        : '—';
+    final quotationDate =
+        q.quotationDate != null ? q.quotationDate!.split(' ').first : '—';
+    final expiryDate =
+        q.expiryDate != null ? q.expiryDate!.split(' ').first : '—';
 
     return Container(
       padding: const EdgeInsetsDirectional.all(14),
@@ -994,8 +1093,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                 onPressed: () {
                   Get.find<SideBarController>().index.value = 88;
                   context.read<QuotationsProvider>().setSelectedQuotationId(
-                    q.id,
-                  );
+                        q.id,
+                      );
                 },
               ),
               const SizedBox(width: 8),
@@ -1014,9 +1113,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                 backgroundColor: Colors.green.withOpacity(0.9),
                 iconColor: Colors.white,
                 tooltip: 'quotations.print_tooltip'.tr,
-                onPressed: _isPrintingQuotation
-                    ? null
-                    : () => _printQuotation(q),
+                onPressed:
+                    _isPrintingQuotation ? null : () => _printQuotation(q),
               ),
             ],
           ),
@@ -1083,35 +1181,34 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
 
   TableRow _buildTableHeader() {
     return TableRow(
-      children:
-          [
-                'quotations.quotation_number_label'.tr,
-                'quotations.customer_col'.tr,
-                'quotations.store_col'.tr,
-                'quotations.quotation_date'.tr,
-                'quotations.expiry_date'.tr,
-                'sales.status'.tr,
-                'quotations.actions_col'.tr,
-              ]
-              .map(
-                (title) => Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 16.0,
-                    horizontal: 8.0,
-                  ),
-                  child: Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s12,
-                      0.18,
-                      ColorManager.kPrimaryColor,
-                    ),
-                  ),
+      children: [
+        'quotations.quotation_number_label'.tr,
+        'quotations.customer_col'.tr,
+        'quotations.store_col'.tr,
+        'quotations.quotation_date'.tr,
+        'quotations.expiry_date'.tr,
+        'sales.status'.tr,
+        'quotations.actions_col'.tr,
+      ]
+          .map(
+            (title) => Padding(
+              padding: const EdgeInsets.symmetric(
+                vertical: 16.0,
+                horizontal: 8.0,
+              ),
+              child: Text(
+                title,
+                textAlign: TextAlign.center,
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s12,
+                  0.18,
+                  ColorManager.kPrimaryColor,
                 ),
-              )
-              .toList(),
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 
@@ -1229,8 +1326,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                     onPressed: () {
                       Get.find<SideBarController>().index.value = 88;
                       context.read<QuotationsProvider>().setSelectedQuotationId(
-                        q.id,
-                      );
+                            q.id,
+                          );
                     },
                   ),
                   const SizedBox(width: 6),
@@ -1249,9 +1346,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                     backgroundColor: Colors.green.withOpacity(0.9),
                     iconColor: Colors.white,
                     tooltip: 'quotations.print_tooltip'.tr,
-                    onPressed: _isPrintingQuotation
-                        ? null
-                        : () => _printQuotation(q),
+                    onPressed:
+                        _isPrintingQuotation ? null : () => _printQuotation(q),
                   ),
                 ],
               ),

@@ -629,7 +629,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onChanged: (v) => setState(() => selected = v!),
                   ),
                   RadioListTile<String>(
-                    title: const Text('العربية'),
+                    title: Text('settings_ui.lang_arabic'.tr),
                     value: 'ar',
                     groupValue: selected,
                     onChanged: (v) => setState(() => selected = v!),

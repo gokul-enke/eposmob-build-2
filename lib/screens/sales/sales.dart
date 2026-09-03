@@ -1190,7 +1190,7 @@ Powered by CloudPOS''',
             style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
                 0.18, ColorManager.textColor),
             decoration: InputDecoration(
-              hintText: "YYYY-MM-DD HH:MM:SS",
+              hintText: 'general.datetime_format_hint'.tr,
               hintStyle: buildCustomStyle(FontWeightManager.medium,
                   FontSize.s10, 0.18, ColorManager.textColor.withOpacity(.5)),
               prefixIcon: Container(
@@ -1379,7 +1379,7 @@ Powered by CloudPOS''',
                     style: buildCustomStyle(FontWeightManager.medium,
                         FontSize.s10, 0.18, ColorManager.textColor),
                     decoration: InputDecoration(
-                      hintText: "YYYY-MM-DD HH:MM:SS",
+                      hintText: 'general.datetime_format_hint'.tr,
                       hintStyle: buildCustomStyle(
                           FontWeightManager.medium,
                           FontSize.s10,
@@ -1407,7 +1407,7 @@ Powered by CloudPOS''',
                     style: buildCustomStyle(FontWeightManager.medium,
                         FontSize.s10, 0.18, ColorManager.textColor),
                     decoration: InputDecoration(
-                      hintText: "YYYY-MM-DD HH:MM:SS",
+                      hintText: 'general.datetime_format_hint'.tr,
                       hintStyle: buildCustomStyle(
                           FontWeightManager.medium,
                           FontSize.s10,
@@ -1517,7 +1517,7 @@ Powered by CloudPOS''',
                               style: buildCustomStyle(FontWeightManager.medium,
                                   FontSize.s10, 0.18, ColorManager.textColor),
                               decoration: InputDecoration(
-                                hintText: "YYYY-MM-DD HH:MM:SS",
+                                hintText: 'general.datetime_format_hint'.tr,
                                 hintStyle: buildCustomStyle(
                                     FontWeightManager.medium,
                                     FontSize.s10,
@@ -1551,7 +1551,7 @@ Powered by CloudPOS''',
                               style: buildCustomStyle(FontWeightManager.medium,
                                   FontSize.s10, 0.18, ColorManager.textColor),
                               decoration: InputDecoration(
-                                hintText: "YYYY-MM-DD HH:MM:SS",
+                                hintText: 'general.datetime_format_hint'.tr,
                                 hintStyle: buildCustomStyle(
                                     FontWeightManager.medium,
                                     FontSize.s10,

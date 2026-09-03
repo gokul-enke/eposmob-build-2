@@ -135,7 +135,7 @@ class _OfflineDataList extends StatelessWidget {
       showScaffold(
         context: context,
         message:
-            '${OfflineCacheClearService.labelFor(target)} cleared from this device',
+            '${OfflineCacheClearService.labelFor(target)} ${'offline_data.msg_cleared_suffix'.tr}',
       );
       onRefresh();
     } catch (e) {
@@ -571,7 +571,7 @@ class _OfflineDataList extends StatelessWidget {
             final id = store?['store_id']?.toString();
             final value = name != null && name.isNotEmpty
                 ? name
-                : (id != null ? 'Store #$id' : 'offline_data.not_selected'.tr);
+                : (id != null ? 'offline_data.store_id_fallback'.trParams({'id': id}) : 'offline_data.not_selected'.tr);
             return _OfflineDataTile(
               faIcon: FontAwesomeIcons.locationDot,
               iconColor: const Color(0xFFC62828),

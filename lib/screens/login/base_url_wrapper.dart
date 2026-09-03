@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:pos_machine/screens/login/api_key_screen.dart';
 import 'package:pos_machine/services/tenant_domain_service.dart';
@@ -60,8 +61,8 @@ class _BaseUrlWrapperState extends State<BaseUrlWrapper> {
       if (mounted) setState(() => _destination = const SignInScreen());
     } catch (_) {
       if (mounted) {
-        setState(() => _destination = const ApiKeyScreen(
-              initialError: 'Unable to load the saved login configuration.',
+        setState(() => _destination = ApiKeyScreen(
+              initialError: 'base_url_wrapper.error_load_config'.tr,
             ));
       }
     }

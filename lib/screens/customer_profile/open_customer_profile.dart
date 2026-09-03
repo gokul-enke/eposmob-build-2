@@ -67,7 +67,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
     final isMobile = size.width < 700;
 
     if (selectedCustomer == null) {
-      return const Center(child: Text("No customer selected."));
+      return Center(child: Text("customer_profile.msg_no_customer_selected".tr));
     }
 
     if (isMobile) {
@@ -81,11 +81,11 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
               children: [
                 CustomBackButton(
                   onPressed: () => sideBarController.index.value = 5,
-                  text: 'All Customers',
+                  text: "customer_profile.btn_all_customers".tr,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Customer Profile',
+                  "customer_profile.page_title".tr,
                   style: buildCustomStyle(FontWeightManager.bold, FontSize.s20,
                       0, ColorManager.kTitleTextColor),
                 ),
@@ -97,13 +97,13 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _mobileTab(0, 'Info', Icons.person_outline, 0),
-                      _mobileTab(1, 'Edit', Icons.edit_outlined, 1),
-                      _mobileTab(2, 'Transactions', Icons.receipt_long_outlined, 2),
-                      _mobileTab(3, 'Orders', Icons.shopping_bag_outlined, 3),
-                      _mobileTab(6, 'Address', Icons.location_on_outlined, 4),
-                      _mobileTab(4, 'Loyalty', Icons.card_membership_outlined, 5),
-                      _mobileTab(5, 'Chat', Icons.chat_outlined, 6),
+                      _mobileTab(0, "customer_profile.tab_info".tr, Icons.person_outline, 0),
+                      _mobileTab(1, "customer_profile.tab_edit".tr, Icons.edit_outlined, 1),
+                      _mobileTab(2, "customer_profile.tab_transactions".tr, Icons.receipt_long_outlined, 2),
+                      _mobileTab(3, "customer_profile.tab_orders".tr, Icons.shopping_bag_outlined, 3),
+                      _mobileTab(6, "customer_profile.tab_address".tr, Icons.location_on_outlined, 4),
+                      _mobileTab(4, "customer_profile.tab_loyalty".tr, Icons.card_membership_outlined, 5),
+                      _mobileTab(5, "customer_profile.tab_chat".tr, Icons.chat_outlined, 6),
                     ],
                   ),
                 ),
@@ -132,11 +132,11 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                 children: [
                   CustomBackButton(
                     onPressed: () => sideBarController.index.value = 5,
-                    text: 'All Customers',
+                    text: "customer_profile.btn_all_customers".tr,
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Customer Profile',
+                    "customer_profile.page_title".tr,
                     style: buildCustomStyle(
                         FontWeightManager.bold,
                         FontSize.s24,
@@ -192,7 +192,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            customer.name ?? 'Customer Name',
+            customer.name ?? "customer_profile.placeholder_customer_name".tr,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
@@ -201,7 +201,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
           ),
           const SizedBox(height: 2),
           Text(
-            'ID: ${customer.id}',
+            "${"customer_profile.label_id".tr} ${customer.id}",
             style: buildCustomStyle(FontWeightManager.regular,
                 FontSize.s12, 0, ColorManager.kGreyColor),
           ),
@@ -259,13 +259,13 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
         children: [
           _buildProfileHeader(customer),
           const SizedBox(height: 24),
-          _buildSidebarButton(0, 'Information', ImageAssets.userProfile),
-          _buildSidebarButton(1, 'Edit Details', ImageAssets.lock),
-          _buildSidebarButton(2, 'Transactions', ImageAssets.transactionIcon),
-          _buildSidebarButton(3, 'All Orders', ImageAssets.saleIcon),
-          _buildSidebarButton(6, 'Customer Address', ImageAssets.userIcon),
-          _buildSidebarButton(4, 'Loyalty Card', ImageAssets.cardIcon),
-          _buildSidebarButton(5, 'Chat', ImageAssets.supportIcon),
+          _buildSidebarButton(0, "customer_profile.sidebar_information".tr, ImageAssets.userProfile),
+          _buildSidebarButton(1, "customer_profile.sidebar_edit_details".tr, ImageAssets.lock),
+          _buildSidebarButton(2, "customer_profile.sidebar_transactions".tr, ImageAssets.transactionIcon),
+          _buildSidebarButton(3, "customer_profile.sidebar_all_orders".tr, ImageAssets.saleIcon),
+          _buildSidebarButton(6, "customer_profile.sidebar_customer_address".tr, ImageAssets.userIcon),
+          _buildSidebarButton(4, "customer_profile.sidebar_loyalty_card".tr, ImageAssets.cardIcon),
+          _buildSidebarButton(5, "customer_profile.sidebar_chat".tr, ImageAssets.supportIcon),
         ],
       ),
     );
@@ -277,14 +277,14 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
         const BuildProfilePicture(),
         const SizedBox(height: 12),
         Text(
-          customer.name ?? 'Customer Name',
+          customer.name ?? "customer_profile.placeholder_customer_name".tr,
           style: buildCustomStyle(FontWeightManager.bold, FontSize.s18, 0,
               ColorManager.kTitleTextColor),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 4),
         Text(
-          'ID: ${customer.id}',
+          "${"customer_profile.label_id".tr} ${customer.id}",
           style: buildCustomStyle(
               FontWeightManager.regular, FontSize.s14, 0, ColorManager.kGreyColor),
         ),

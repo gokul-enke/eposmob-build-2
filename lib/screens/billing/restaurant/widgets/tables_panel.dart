@@ -266,7 +266,7 @@ class TablesPanel extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Walk-in / Delivery',
+                  'restaurant.walk_in_delivery'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.semiBold,
                     isCompact ? FontSize.s12 : FontSize.s13,
@@ -380,7 +380,7 @@ class TablesPanel extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Walk-in / Delivery',
+                    'restaurant.walk_in_delivery'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       isCompact ? FontSize.s12 : FontSize.s13,

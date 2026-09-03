@@ -8,7 +8,9 @@ import 'package:pos_machine/helpers/delivery_charge_helper.dart';
 import 'package:pos_machine/helpers/payment_auto_fill_helper.dart';
 import 'package:pos_machine/models/discount_list_model.dart';
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/helpers/delivery_method_display.dart';
 import 'package:pos_machine/models/delivery_method.dart';
+import 'package:pos_machine/models/delivery_method_registry.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/master_data.dart';
 import 'package:pos_machine/models/payment_method.dart';
@@ -30,44 +32,44 @@ class BillingMobileErrorMessages {
   static String get selectPaymentMethod => 'billing.select_payment_method'.tr;
   static String get configurePaymentBeforeConfirm =>
       'billing.configure_payment_before_confirm'.tr;
-  static const emptyCart = 'Please add items to cart';
-  static const clearCartFailed = 'Failed to clear cart. Please try again.';
-  static const saveOrderFailed = 'Failed to save order. Please try again.';
-  static const confirmOrderFailed =
-      'Failed to confirm order. Check connection and try again.';
-  static const createOrderFailed =
-      'Failed to create order. Check connection and try again.';
-  static const loadOrderFailed = 'Failed to load order. Please try again.';
-  static const invalidPricingBeforeConfirm =
-      'Please ensure all items have valid prices and MRP before confirming order';
-  static const invalidPricingBeforeSave =
-      'Please ensure all items have valid prices before saving';
+  static String get emptyCart => 'billing_mobile_errors.empty_cart'.tr;
+  static String get clearCartFailed => 'billing_mobile_errors.clear_cart_failed'.tr;
+  static String get saveOrderFailed => 'billing_mobile_errors.save_order_failed'.tr;
+  static String get confirmOrderFailed =>
+      'billing_mobile_errors.confirm_order_failed'.tr;
+  static String get createOrderFailed =>
+      'billing_mobile_errors.create_order_failed'.tr;
+  static String get loadOrderFailed => 'billing_mobile_errors.load_order_failed'.tr;
+  static String get invalidPricingBeforeConfirm =>
+      'billing_mobile_errors.invalid_pricing_before_confirm'.tr;
+  static String get invalidPricingBeforeSave =>
+      'billing_mobile_errors.invalid_pricing_before_save'.tr;
   static String get enterCarNumber => 'billing.enter_car_number'.tr;
-  static const noInternetConfirm =
-      'No internet connection. Cannot confirm order online.';
-  static const noInternetCreateOrder =
-      'No internet connection. Cannot create order online.';
+  static String get noInternetConfirm =>
+      'billing_mobile_errors.no_internet_confirm'.tr;
+  static String get noInternetCreateOrder =>
+      'billing_mobile_errors.no_internet_create_order'.tr;
 
   // Quotation
-  static const quotationCreateFailed = 'Failed to create quotation';
-  static const quotationPrintMissingId =
-      'Quotation created, but print failed because the API response did not include quotation id.';
-  static const quotationPrintDetailsFailed =
-      'Quotation created, but details could not be loaded for printing.';
+  static String get quotationCreateFailed => 'billing_mobile_errors.quotation_create_failed'.tr;
+  static String get quotationPrintMissingId =>
+      'billing_mobile_errors.quotation_print_missing_id'.tr;
+  static String get quotationPrintDetailsFailed =>
+      'billing_mobile_errors.quotation_print_details_failed'.tr;
 
   // Print
-  static const printOrderFailed =
-      'Failed to print order. Check printer and try again.';
-  static const printRetryPrompt =
-      'Order confirmed. Print failed — tap Retry to print again.';
-  static const printRetryFailedAgain =
-      'Print failed again. Check printer connection and tap Retry.';
-  static const printRetrySuccess = 'Print completed successfully';
+  static String get printOrderFailed =>
+      'billing_mobile_errors.print_order_failed'.tr;
+  static String get printRetryPrompt =>
+      'billing_mobile_errors.print_retry_prompt'.tr;
+  static String get printRetryFailedAgain =>
+      'billing_mobile_errors.print_retry_failed_again'.tr;
+  static String get printRetrySuccess => 'billing_mobile_errors.print_retry_success'.tr;
 
   // Barcode / product add
-  static const invalidBarcode = 'Invalid barcode. Please try again.';
-  static const addToCartFailed =
-      'Could not add product to cart. Please try again.';
+  static String get invalidBarcode => 'billing_mobile_errors.invalid_barcode'.tr;
+  static String get addToCartFailed =>
+      'billing_mobile_errors.add_to_cart_failed'.tr;
 
   static String insufficientStock(String unitLabel) =>
       'Insufficient stock for $unitLabel';
@@ -91,36 +93,36 @@ class BillingMobileErrorMessages {
           String unitLabel, num available, num requested) =>
       'Only $available in stock for $unitLabel (needs $requested). Sell anyway?';
 
-  static const stockNotSelected =
-      'No batch selected — item was not added to cart';
-  static const zeroPriceEntryCancelled =
-      'Price not entered — item was not added to cart';
+  static String get stockNotSelected =>
+      'billing_mobile_errors.stock_not_selected'.tr;
+  static String get zeroPriceEntryCancelled =>
+      'billing_mobile_errors.zero_price_entry_cancelled'.tr;
 
   static String productNotSellable(String productName) =>
       '$productName is marked as not sellable';
 
   // Coupon / discount
-  static const emptyCartDiscount = 'Cannot apply discount to empty cart';
-  static const discountNegative = 'Discount cannot be negative';
-  static const discountPercentMax = 'Percentage discount cannot exceed 100%';
-  static const discountFlatExceedsTotal =
-      'Flat discount cannot exceed cart total';
-  static const applyCouponFailed = 'Failed to apply coupon. Please try again.';
-  static const loadDiscountsFailed =
-      'Could not load coupons. Check connection and try again.';
+  static String get emptyCartDiscount => 'billing_mobile_errors.empty_cart_discount'.tr;
+  static String get discountNegative => 'billing_mobile_errors.discount_negative'.tr;
+  static String get discountPercentMax => 'billing_mobile_errors.discount_percent_max'.tr;
+  static String get discountFlatExceedsTotal =>
+      'billing_mobile_errors.discount_flat_exceeds_total'.tr;
+  static String get applyCouponFailed => 'billing_mobile_errors.apply_coupon_failed'.tr;
+  static String get loadDiscountsFailed =>
+      'billing_mobile_errors.load_discounts_failed'.tr;
 
   static String couponInvalid(String couponName) =>
       'Cannot apply $couponName: coupon is not valid';
 
   // Customer
-  static const loadCustomersFailed =
-      'Could not load customers. Check connection and tap Retry.';
-  static const addCustomerFailed = 'Could not add customer. Please try again.';
-  static const customersUnavailable =
-      'Customer list is unavailable. Tap Retry or add a new customer.';
+  static String get loadCustomersFailed =>
+      'billing_mobile_errors.load_customers_failed'.tr;
+  static String get addCustomerFailed => 'billing_mobile_errors.add_customer_failed'.tr;
+  static String get customersUnavailable =>
+      'billing_mobile_errors.customers_unavailable'.tr;
 
   // Pine Labs
-  static const pineLabsInvalidAmount = 'Invalid amount for Pine Labs payment';
+  static String get pineLabsInvalidAmount => 'billing_mobile_errors.pine_labs_invalid_amount'.tr;
 
   static String pineLabsPaymentFailed([String? terminalMessage]) {
     final detail = terminalMessage?.trim().isNotEmpty == true
@@ -147,13 +149,13 @@ class BillingMobileErrorMessages {
   /// Prefer API `message` when confirm/create-order calls return no order id.
   static String orderApiFailure(
     Map<dynamic, dynamic> response, {
-    String fallback = confirmOrderFailed,
+    String? fallback,
   }) {
     final message = response['message'];
     if (message is String && message.trim().isNotEmpty) {
-      return userFacingException(message, fallback: fallback);
+      return userFacingException(message, fallback: fallback ?? confirmOrderFailed);
     }
-    return fallback;
+    return fallback ?? confirmOrderFailed;
   }
 
   /// Network/timeout failures during checkout — cart is left intact.
@@ -167,11 +169,11 @@ class BillingMobileErrorMessages {
 class BillingMobileConnectivityController {
   const BillingMobileConnectivityController();
 
-  static const offlineConfirmMessage =
-      'No internet connection. Save the order locally and confirm when you are back online.';
+  static String get offlineConfirmMessage =>
+      'billing_mobile_errors.offline_confirm_message'.tr;
 
-  static const offlineConfirmPrintMessage =
-      'No internet connection. Save the order locally and confirm when you are back online.';
+  static String get offlineConfirmPrintMessage =>
+      'billing_mobile_errors.offline_confirm_print_message'.tr;
 
   /// Online confirm / confirm-print require live connectivity.
   bool canConfirmOnline(BillingProvider billingProvider) {
@@ -327,7 +329,7 @@ class BillingMobileSettingsController {
 class BillingMobileMarketController {
   const BillingMobileMarketController();
 
-  static const String allProductsCategory = 'All products';
+  static String get allProductsCategory => 'billing_mobile_errors.all_products'.tr;
 
   List<GetProduct> visibleProducts({
     required List<GetProduct> products,
@@ -948,7 +950,7 @@ class MobileApplyDiscountResult {
       : success = false,
         couponApiFailed = false;
 
-  const MobileApplyDiscountResult.couponApiFailed()
+  MobileApplyDiscountResult.couponApiFailed()
       : success = false,
         errorMessage = BillingMobileErrorMessages.applyCouponFailed,
         couponApiFailed = true;
@@ -1006,7 +1008,7 @@ class BillingMobileCouponController {
     required double originalSubTotal,
   }) {
     if (cartIsEmpty || originalSubTotal <= 0) {
-      return const MobileDiscountValidationResult.invalid(
+      return MobileDiscountValidationResult.invalid(
         BillingMobileErrorMessages.emptyCartDiscount,
       );
     }
@@ -1022,17 +1024,17 @@ class BillingMobileCouponController {
     final percentageDiscount = double.tryParse(percentageDiscountText) ?? 0.0;
 
     if (flatDiscount < 0 || percentageDiscount < 0) {
-      return const MobileDiscountValidationResult.invalid(
+      return MobileDiscountValidationResult.invalid(
         BillingMobileErrorMessages.discountNegative,
       );
     }
     if (percentageDiscount > 100) {
-      return const MobileDiscountValidationResult.invalid(
+      return MobileDiscountValidationResult.invalid(
         BillingMobileErrorMessages.discountPercentMax,
       );
     }
     if (flatDiscount > originalSubTotal && originalSubTotal > 0) {
-      return const MobileDiscountValidationResult.invalid(
+      return MobileDiscountValidationResult.invalid(
         BillingMobileErrorMessages.discountFlatExceedsTotal,
       );
     }
@@ -1148,13 +1150,13 @@ class BillingMobileCouponController {
       try {
         final couponApplied = await applyCouponApi();
         if (!couponApplied) {
-          return const MobileApplyDiscountResult.couponApiFailed();
+          return MobileApplyDiscountResult.couponApiFailed();
         }
       } catch (_) {
-        return const MobileApplyDiscountResult.couponApiFailed();
+        return MobileApplyDiscountResult.couponApiFailed();
       }
       if (!billingProvider.isCouponApplied) {
-        return const MobileApplyDiscountResult.couponApiFailed();
+        return MobileApplyDiscountResult.couponApiFailed();
       }
       billingProvider.setCouponApplied(
         true,
@@ -2165,7 +2167,16 @@ class BillingMobileDeliveryController {
   }
 
   IconData iconForMethod(String name) {
-    final lower = name.toLowerCase();
+    // Resolve through the registry first so a localized name still maps to the
+    // right icon. The keyword heuristics below only run for tenant-specific
+    // methods we have no kind for (brand names like "ToYou" or "HungerStation",
+    // which are not translated anyway).
+    final method = DeliveryMethodRegistry.find(name);
+    if (method != null && method.kind != DeliveryKind.other) {
+      return DeliveryMethodDisplay.iconForMethod(method);
+    }
+
+    final lower = (method?.translations['en'] ?? name).toLowerCase();
     if (lower.contains('dine')) return Icons.restaurant;
     if (lower.contains('toyou')) return Icons.local_shipping;
     if (lower.contains('door')) return Icons.doorbell_outlined;
@@ -2181,8 +2192,14 @@ class BillingMobileDeliveryController {
   }
 
   bool isSelected(DeliveryMethod method, BillingProvider bp) {
-    return bp.deliveryMethod == method.name ||
-        (bp.deliveryMethod.isEmpty && method.name == 'Store Takeaway');
+    if (bp.deliveryMethod.isEmpty) {
+      return method.kind == DeliveryKind.storeTakeaway;
+    }
+    // Compare by identity, not display text: the stored value may have been
+    // captured in a different language than the one currently rendering.
+    final selected = DeliveryMethodRegistry.find(bp.deliveryMethod);
+    if (selected != null) return selected.id == method.id;
+    return bp.deliveryMethod == method.name;
   }
 
   String feeLabel(DeliveryMethod method, String currency) {
@@ -2317,20 +2334,20 @@ class BillingMobileCustomerController {
   }) {
     if (balance > 0) {
       return MobileCustomerBalanceDisplay(
-        label: 'Previous balance',
+        label: 'billing_mobile_errors.previous_balance'.tr,
         amountText: '+$currency ${balance.toStringAsFixed(2)}',
         color: const Color(0xFF059669),
       );
     }
     if (balance < 0) {
       return MobileCustomerBalanceDisplay(
-        label: 'Previous balance (debt)',
+        label: 'billing_mobile_errors.previous_balance_debt'.tr,
         amountText: '$currency ${balance.toStringAsFixed(2)}',
         color: const Color(0xFFDC2626),
       );
     }
     return MobileCustomerBalanceDisplay(
-      label: 'Previous balance',
+      label: 'billing_mobile_errors.previous_balance'.tr,
       amountText: '$currency ${balance.toStringAsFixed(2)}',
       color: Colors.black87,
     );

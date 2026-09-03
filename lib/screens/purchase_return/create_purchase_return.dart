@@ -628,7 +628,7 @@ class _CreatePurchaseReturnScreenState
                 if (currentPg > 1)
                   TextButton(
                     onPressed: () => _loadVouchers(page: currentPg - 1),
-                    child: const Text('Previous'),
+                    child: Text('pagination.previous'.tr),
                   ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -637,7 +637,7 @@ class _CreatePurchaseReturnScreenState
                 if (currentPg < totalPgs)
                   TextButton(
                     onPressed: () => _loadVouchers(page: currentPg + 1),
-                    child: const Text('Next'),
+                    child: Text('pagination.next'.tr),
                   ),
               ],
             ),

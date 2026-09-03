@@ -44,7 +44,7 @@ class _SignInScreenState extends State<SignInScreen> {
   bool isLoading = false;
   // Add new state variables for data loading
   bool _isLoadingData = false;
-  String _loadingMessage = 'Loading data...';
+  String _loadingMessage = 'login.loading_data'.tr;
 
   @override
   void initState() {
@@ -785,12 +785,12 @@ class _SignInScreenState extends State<SignInScreen> {
 
   String? validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Password is required';
+      return 'login.validator_password_required'.tr;
     }
     RegExp regex =
         RegExp(r'^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[!@#\$&*~]).{8,}$');
     if (!regex.hasMatch(value)) {
-      return 'Enter a valid password';
+      return 'login.validator_password_invalid'.tr;
     }
     return null;
   }

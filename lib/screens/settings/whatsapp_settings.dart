@@ -383,9 +383,16 @@ class _PhoneAndMessageForm extends StatefulWidget {
 }
 
 class _PhoneAndMessageFormState extends State<_PhoneAndMessageForm> {
-  final _phone = TextEditingController();
-  final _msg = TextEditingController(text: 'Hello from CloudPOS');
+  late TextEditingController _phone;
+  late TextEditingController _msg;
   final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _phone = TextEditingController();
+    _msg = TextEditingController(text: 'whatsapp_settings.default_message'.tr);
+  }
 
   @override
   void dispose() {
@@ -405,7 +412,7 @@ class _PhoneAndMessageFormState extends State<_PhoneAndMessageForm> {
             controller: _phone,
             decoration: InputDecoration(
               labelText: 'whatsapp_settings.field_phone'.tr,
-              hintText: '+91xxxxxxxxxx',
+              hintText: 'whatsapp_settings.hint_phone_format'.tr,
               prefixIcon: const Icon(Icons.phone),
             ),
             validator: (v) =>

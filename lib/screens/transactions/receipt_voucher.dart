@@ -51,7 +51,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
               ListTransactionModel.fromJson(value);
           listTransaction = listTransactionModel.data?.transactions ?? [];
         } else {
-          showScaffold(context: context, message: "Data Not Found");
+          showScaffold(context: context, message: "voucher_list.error_data_not_found".tr);
         }
       });
     } catch (error) {
@@ -92,12 +92,12 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "Voucher List",
+                    "voucher_list.title".tr,
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s20, 0.30, ColorManager.textColor),
                   ),
                   CustomRoundButton(
-                    title: "Create New Voucher",
+                    title: "voucher_list.btn_create_voucher".tr,
                     fct: () {
                       sideBarController.index.value = 25;
                     },
@@ -124,7 +124,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Text(
-                              "Name",
+                              "voucher_list.label_name".tr,
                               style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s14,
@@ -151,7 +151,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                                 ColorManager.textColor,
                               ),
                               decoration: decoration.copyWith(
-                                hintText: "Name",
+                                hintText: "voucher_list.hint_name".tr,
                                 hintStyle: buildCustomStyle(
                                   FontWeightManager.medium,
                                   FontSize.s10,
@@ -168,7 +168,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                     Padding(
                       padding: const EdgeInsets.only(left: 10.0, top: 30),
                       child: CustomRoundButton(
-                        title: "Search",
+                        title: "voucher_list.btn_search".tr,
                         fct: (searchAccountBook) {},
                         height: 45,
                         width: size.width * 0.09,
@@ -178,7 +178,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                     Padding(
                       padding: const EdgeInsets.only(left: 10.0, top: 30),
                       child: CustomRoundButton(
-                        title: "Reset",
+                        title: "general.reset".tr,
                         boxColor: Colors.white,
                         textColor: ColorManager.kPrimaryColor,
                         fct: (resetSearch) {},
@@ -276,7 +276,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                                   padding: const EdgeInsets.all(15.0),
                                   child: Center(
                                       child: Text(
-                                    "Account Type",
+                                    "voucher_list.col_account_type".tr,
                                     style: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,
@@ -292,7 +292,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                                   padding: const EdgeInsets.all(15.0),
                                   child: Center(
                                       child: Text(
-                                    "Amount",
+                                    "voucher_list.col_amount".tr,
                                     style: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,
@@ -308,7 +308,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                                   padding: const EdgeInsets.all(15.0),
                                   child: Center(
                                       child: Text(
-                                    "Sender",
+                                    "voucher_list.col_sender".tr,
                                     style: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,
@@ -324,7 +324,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                                   padding: const EdgeInsets.all(15.0),
                                   child: Center(
                                       child: Text(
-                                    "Beneficiary",
+                                    "voucher_list.col_beneficiary".tr,
                                     style: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,
@@ -340,7 +340,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                                   padding: const EdgeInsets.all(15.0),
                                   child: Center(
                                       child: Text(
-                                    "Action",
+                                    "voucher_list.col_action".tr,
                                     style: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,

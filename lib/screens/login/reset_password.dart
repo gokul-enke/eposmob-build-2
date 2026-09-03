@@ -159,7 +159,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                   }
                                 },
                                 decoration: decoration.copyWith(
-                                  hintText: '*******',
+                                  hintText: 'login.hint_password'.tr,
                                   iconColor: ColorManager.kPrimaryWithOpacity10,
                                   prefixIcon: Icon(
                                     Icons.lock_clock_rounded,
@@ -349,7 +349,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     final regex = RegExp(pattern);
 
     return value!.isNotEmpty && !regex.hasMatch(value)
-        ? 'Enter a valid email address'
+        ? 'login.validator_email_invalid'.tr
         : null;
   }
 }

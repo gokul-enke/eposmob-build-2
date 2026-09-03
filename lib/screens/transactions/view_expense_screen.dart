@@ -372,7 +372,7 @@ class ViewExpenseScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        "Dr. $displayDebitAccount",
+                        '${'expense.label_debit_prefix'.tr}$displayDebitAccount',
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s13,
@@ -398,7 +398,7 @@ class ViewExpenseScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        "Cr. $displayCreditAccount",
+                        '${'expense.label_credit_prefix'.tr}$displayCreditAccount',
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s13,
@@ -504,12 +504,17 @@ class ViewExpenseScreen extends StatelessWidget {
   }
 
   String _getMonthName(int monthNum) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
+    const fallbackMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     if (monthNum >= 1 && monthNum <= 12) {
-      return months[monthNum - 1];
+      try {
+        final months = 'expense.months'.tr;
+        if (months is List && months.isNotEmpty) {
+          return months[monthNum - 1].toString();
+        }
+        return fallbackMonths[monthNum - 1];
+      } catch (_) {
+        return fallbackMonths[monthNum - 1];
+      }
     }
     return '';
   }

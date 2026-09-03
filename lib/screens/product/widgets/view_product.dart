@@ -75,13 +75,13 @@ class _ViewProductWidgetState extends State<ViewProductWidget>
                 onPressed: () {
                   sideBarController.index.value = 14;
                 },
-                text: 'All Products',
+                text: 'product_tabs.back_all_products'.tr,
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    " Show Product  ",
+                    " ${'product_tabs.heading_show_product'.tr}  ",
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s20, 0.30, ColorManager.textColor),
                   ),
@@ -104,7 +104,7 @@ class _ViewProductWidgetState extends State<ViewProductWidget>
                 margin: const EdgeInsets.only(
                     top: 20, bottom: 0, left: 10, right: 10),
                 child: Text(
-                  " Show Product  ",
+                  " ${'product_tabs.heading_show_product'.tr}  ",
                   style: buildCustomStyle(FontWeightManager.semiBold,
                       FontSize.s15, 0.30, Colors.white),
                 ),
@@ -112,13 +112,13 @@ class _ViewProductWidgetState extends State<ViewProductWidget>
               TabBar(
                 controller: tabController,
                 key: UniqueKey(),
-                tabs: const [
+                tabs: [
                   Tab(
-                    text: 'Primary Details',
+                    text: 'product_tabs.tab_primary_details'.tr,
                   ),
-                  Tab(text: 'Product Names'),
-                  Tab(text: 'Product Properties'),
-                  Tab(text: 'Image/Video'),
+                  Tab(text: 'product_tabs.tab_product_names'.tr),
+                  Tab(text: 'product_tabs.tab_product_properties'.tr),
+                  Tab(text: 'product_tabs.tab_image_video'.tr),
                 ],
                 labelColor: ColorManager.kPrimaryColor,
                 indicatorColor: ColorManager.kPrimaryColor.withOpacity(0.6),

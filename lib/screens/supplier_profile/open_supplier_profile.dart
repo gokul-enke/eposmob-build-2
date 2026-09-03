@@ -121,7 +121,7 @@ class _OpenSupplierProfileScreenState extends State<OpenSupplierProfileScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      'ID: ${supplier.id}',
+                      '${'supplier_profile.id_prefix'.tr}${supplier.id}',
                       style: buildCustomStyle(FontWeightManager.regular,
                           FontSize.s12, 0, ColorManager.kGreyColor),
                     ),
@@ -208,7 +208,7 @@ class _OpenSupplierProfileScreenState extends State<OpenSupplierProfileScreen> {
         ),
         const SizedBox(height: 4),
         Text(
-          'ID: ${supplier.id}',
+          '${'supplier_profile.id_prefix'.tr}${supplier.id}',
           style: buildCustomStyle(
               FontWeightManager.regular, FontSize.s14, 0, ColorManager.kGreyColor),
         ),

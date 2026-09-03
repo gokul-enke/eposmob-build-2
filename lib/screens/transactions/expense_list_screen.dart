@@ -277,14 +277,14 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
 
   Widget _buildMobileFilterFields(ExpenseProvider provider) {
     final List<String> categoriesList = [
-      'All',
+      'common.all'.tr,
       ...provider.categoryOptions
           .map((e) => e['name']?.toString() ?? '')
           .where((e) => e.isNotEmpty),
     ];
 
     final List<String> debitAccountsList = [
-      'All',
+      'common.all'.tr,
       ...provider.debitAccountOptions
           .map((e) => e['name']?.toString() ?? '')
           .where((e) => e.isNotEmpty),
@@ -304,14 +304,14 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
     final provider = Provider.of<ExpenseProvider>(context);
 
     final List<String> categoriesList = [
-      'All',
+      'common.all'.tr,
       ...provider.categoryOptions
           .map((e) => e['name']?.toString() ?? '')
           .where((e) => e.isNotEmpty),
     ];
 
     final List<String> debitAccountsList = [
-      'All',
+      'common.all'.tr,
       ...provider.debitAccountOptions
           .map((e) => e['name']?.toString() ?? '')
           .where((e) => e.isNotEmpty),
@@ -811,7 +811,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                                   showScaffold(
                                     context: context,
                                     message:
-                                        'Reference number copied to clipboard',
+                                        'expense.copied_to_clipboard'.tr,
                                   );
                                 },
                                 child: const Icon(

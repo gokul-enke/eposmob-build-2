@@ -16,6 +16,8 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_tax_modal.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:pos_machine/helpers/delivery_method_display.dart';
+import 'package:pos_machine/models/delivery_method_registry.dart';
 import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/features/billing/domain/billing_totals.dart';
@@ -946,8 +948,13 @@ class BillingPageState extends State<BillingPage>
 
         // 4. Restore Transaction, Delivery, and Other Details
         _transactionNumberController.text = currentOrder.transactionId ?? "";
-        deliveryMethod =
-            currentOrder.deliveryMethod ?? "billing.store_takeaway".tr;
+        // Never store a *translated* string here: `deliveryMethod` is an
+        // identity that gets persisted with the order and compared later, so a
+        // value captured in Arabic would stop matching in English (and vice
+        // versa). Fall back to the default method's canonical name instead.
+        deliveryMethod = currentOrder.deliveryMethod ??
+            DeliveryMethodRegistry.defaultMethod?.name ??
+            "Store Takeaway";
         deliveryMethodId =
             currentOrder.deliveryMethodId ?? _getDefaultDeliveryMethodId();
         _selectedDeliveryCharge = currentOrder.deliveryCharge;
@@ -2193,7 +2200,7 @@ class BillingPageState extends State<BillingPage>
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Resyncing products...',
+                    'billing.resyncing_products'.tr,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -4926,7 +4933,7 @@ class BillingPageState extends State<BillingPage>
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Tax Details'),
+            title: Text('billing.tax_details'.tr),
             content: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -4948,7 +4955,7 @@ class BillingPageState extends State<BillingPage>
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Close'),
+                child: Text('billing.close'.tr),
               ),
             ],
           ),
@@ -5004,7 +5011,7 @@ class BillingPageState extends State<BillingPage>
             showDialog(
               context: context,
               builder: (context) => AlertDialog(
-                title: const Text('Tax Details'),
+                title: Text('billing.tax_details'.tr),
                 content: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -5026,7 +5033,7 @@ class BillingPageState extends State<BillingPage>
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Close'),
+                    child: Text('billing.close'.tr),
                   ),
                 ],
               ),
@@ -6678,7 +6685,8 @@ class BillingPageState extends State<BillingPage>
       // Get selected payment methods for multi-payment API payload
       List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
 
-      if (deliveryMethod == "Car Delivery" && _carNumberController.text == "") {
+      if (DeliveryMethodRegistry.requiresCarNumber(deliveryMethod) &&
+          _carNumberController.text == "") {
         showScaffoldError(
           context: context,
           message: "billing.enter_car_number".tr,
@@ -7073,7 +7081,8 @@ class BillingPageState extends State<BillingPage>
       // Get selected payment methods for multi-payment API payload
       List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
 
-      if (deliveryMethod == "Car Delivery" && _carNumberController.text == "") {
+      if (DeliveryMethodRegistry.requiresCarNumber(deliveryMethod) &&
+          _carNumberController.text == "") {
         showScaffoldError(
           context: context,
           message: "billing.enter_car_number".tr,
@@ -8826,13 +8835,7 @@ class BillingPageState extends State<BillingPage>
                 const SizedBox(width: 12),
                 // Delivery Method Icon
                 _buildQuickAccessIcon(
-                  icon: deliveryMethod == "Store Takeaway"
-                      ? Icons.store
-                      : deliveryMethod == "Car Delivery"
-                          ? Icons.car_rental
-                          : deliveryMethod == "Door Delivery"
-                              ? Icons.doorbell_outlined
-                              : Icons.local_shipping,
+                  icon: DeliveryMethodDisplay.iconFor(deliveryMethod),
                   label: _getDeliveryMethodLabel(),
                   color: ColorManager.kButtonBlue,
                   onTap: () => _showDeliveryMethodModal(),
@@ -8929,21 +8932,8 @@ class BillingPageState extends State<BillingPage>
     return 'billing.payment_tab'.tr; // Default
   }
 
-  String _getDeliveryMethodLabel() {
-    // Map delivery method names to translation keys
-    switch (deliveryMethod) {
-      case "Store Takeaway":
-        return 'common.store_takeaway'.tr;
-      case "Car Delivery":
-        return 'common.car_delivery'.tr;
-      case "Door Delivery":
-        return 'common.door_delivery'.tr;
-      case "Third Party Logistics":
-        return 'common.third_party_logistics'.tr;
-      default:
-        return deliveryMethod.tr;
-    }
-  }
+  String _getDeliveryMethodLabel() =>
+      DeliveryMethodDisplay.labelFor(deliveryMethod);
 
   Widget _buildQuickAccessIcon({
     required IconData icon,

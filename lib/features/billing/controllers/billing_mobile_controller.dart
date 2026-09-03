@@ -1411,7 +1411,7 @@ class BillingMobileController {
             BillingMobileErrorMessages.quotationCreateFailed,
       );
     } catch (_) {
-      return const CreateQuotationResult.failure(
+      return CreateQuotationResult.failure(
         BillingMobileErrorMessages.quotationCreateFailed,
       );
     }

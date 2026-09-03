@@ -450,26 +450,26 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                _buildMobileCardStat('non_stock_report.category_stat'.tr, item.categoryName ?? '-',
+                _buildMobileCardStat('non_stock_report.category_stat'.tr, item.categoryName ?? 'general.dash_placeholder'.tr,
                     selectable: true),
-                _buildMobileCardStat('non_stock_report.store_stat'.tr, item.store ?? '-'),
+                _buildMobileCardStat('non_stock_report.store_stat'.tr, item.store ?? 'general.dash_placeholder'.tr),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                _buildMobileCardStat('non_stock_report.barcode_stat'.tr, item.barcode ?? '-',
+                _buildMobileCardStat('non_stock_report.barcode_stat'.tr, item.barcode ?? 'general.dash_placeholder'.tr,
                     copyable: true),
-                _buildMobileCardStat('non_stock_report.unit_stat'.tr, item.unit ?? '-'),
+                _buildMobileCardStat('non_stock_report.unit_stat'.tr, item.unit ?? 'general.dash_placeholder'.tr),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: [
                 _buildMobileCardStat(
-                    'non_stock_report.stock_stat'.tr, item.totalQuantity?.toString() ?? '0'),
+                    'non_stock_report.stock_stat'.tr, item.totalQuantity?.toString() ?? 'general.zero_placeholder'.tr),
                 _buildMobileCardStat(
-                    'non_stock_report.reorder_stat'.tr, item.reorderLevel?.toString() ?? '0'),
+                    'non_stock_report.reorder_stat'.tr, item.reorderLevel?.toString() ?? 'general.zero_placeholder'.tr),
               ],
             ),
           ],
@@ -691,7 +691,7 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
             padding: const EdgeInsets.all(8.0),
             child: Center(
               child: SelectableText(
-                item.categoryName ?? "-",
+                item.categoryName ?? 'general.dash_placeholder'.tr,
                 textAlign: TextAlign.center,
                 style: buildCustomStyle(
                   FontWeightManager.medium,
@@ -703,7 +703,7 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
             ),
           ),
         ),
-        _buildTableCell(item.store ?? "-"),
+        _buildTableCell(item.store ?? 'general.dash_placeholder'.tr),
         TableCell(
           verticalAlignment: TableCellVerticalAlignment.middle,
           child: Padding(
@@ -715,7 +715,7 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
                 children: [
                   Flexible(
                     child: Text(
-                      item.barcode ?? "-",
+                      item.barcode ?? 'general.dash_placeholder'.tr,
                       textAlign: TextAlign.center,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -729,7 +729,7 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
                   ),
                   if (item.barcode != null &&
                       item.barcode!.isNotEmpty &&
-                      item.barcode != '-') ...[
+                      item.barcode != 'general.dash_placeholder'.tr) ...[
                     const SizedBox(width: 6),
                     GestureDetector(
                       onTap: () {
@@ -751,9 +751,9 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
             ),
           ),
         ),
-        _buildTableCell(item.totalQuantity?.toString() ?? "0"),
-        _buildTableCell(item.reorderLevel?.toString() ?? "0"),
-        _buildTableCell(item.unit ?? "-"),
+        _buildTableCell(item.totalQuantity?.toString() ?? 'general.zero_placeholder'.tr),
+        _buildTableCell(item.reorderLevel?.toString() ?? 'general.zero_placeholder'.tr),
+        _buildTableCell(item.unit ?? 'general.dash_placeholder'.tr),
         _buildStatusTag(item.status ?? ""),
       ],
     );

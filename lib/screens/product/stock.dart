@@ -135,7 +135,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
       debugPrint("Error loading stocks: $error");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error loading stocks: $error")),
+          SnackBar(content: Text('stock.error_loading_stocks'.trParams({'error': '$error'}))),
         );
         setState(() {
           initLoading = false;
@@ -334,7 +334,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
     showEditStockDialog(
       context: context,
       stockId: stock.stockId!,
-      title: 'Edit Stock: ${stock.productName ?? ''}',
+      title: 'stock.edit_stock_title'.trParams({'productName': stock.productName ?? ''}),
       initialRetailPrice: stock.retailPrice ?? '',
       initialMrp: stock.mrp ?? '',
       initialPurchasePrice: stock.purchaseRate ?? '',
@@ -929,6 +929,11 @@ class _AddStockScreenState extends State<AddStockScreen> {
   }
 
   Widget _buildStockStatusDropdown() {
+    final statusOptions = [
+      'stock.status_out_of_stock'.tr,
+      'stock.status_low_stock'.tr,
+      'stock.status_at_reorder_level'.tr,
+    ];
     return BuildDropDownWithSearch<String>(
       title: null,
       showName: false,
@@ -936,7 +941,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
       value: stockStatusController.text == "All Statuses"
           ? null
           : stockStatusController.text,
-      items: const ["Out of Stock", "Low Stock", "At Reorder Level"],
+      items: statusOptions,
       onChanged: (String? newValue) {
         setState(() {
           stockStatusController.text = newValue ?? "All Statuses";

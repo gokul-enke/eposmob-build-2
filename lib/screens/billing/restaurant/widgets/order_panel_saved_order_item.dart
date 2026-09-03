@@ -29,14 +29,14 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
       dynamic cartItem, String newPriceStr) async {
     final newPrice = double.tryParse(newPriceStr);
     if (newPrice == null || newPrice < 0) {
-      showScaffoldError(context: context, message: 'Invalid price');
+      showScaffoldError(context: context, message: 'restaurant.restaurant_order_item.invalid_price'.tr);
       return;
     }
 
     // Determine cartItemId
     final cartItemId = cartItem['id'];
     if (cartItemId == null) {
-      showScaffoldError(context: context, message: 'Item ID not found');
+      showScaffoldError(context: context, message: 'restaurant.restaurant_order_item.item_id_not_found'.tr);
       return;
     }
 
@@ -64,7 +64,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
 
       if (isApiSuccess(response)) {
         debugPrint('✅ Price updated successfully');
-        showScaffold(context: context, message: 'Price updated successfully');
+        showScaffold(context: context, message: 'restaurant.restaurant_order_item.price_updated'.tr);
 
         // Refresh the order to show new price
         await _refreshSelectedOrderAfterCartUpdate();
@@ -76,7 +76,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
       }
     } catch (e) {
       debugPrint('❌ Exception updating price: $e');
-      showScaffoldError(context: context, message: 'Error updating price: $e');
+      showScaffoldError(context: context, message: 'restaurant.restaurant_order_item.error_updating_price'.trParams({'error': '$e'}));
     } finally {
       if (mounted) {
         setState(() {
@@ -133,7 +133,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
           _updateSavedItemPrice(cartItem, newPriceStr);
         }
       } else {
-        showScaffoldError(context: context, message: 'Invalid price');
+        showScaffoldError(context: context, message: 'restaurant.restaurant_order_item.invalid_price'.tr);
       }
     }
 
@@ -176,7 +176,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
               ),
               const SizedBox(height: 8),
               Text(
-                'Current Price: ${price.toStringAsFixed(2)}',
+                'restaurant.restaurant_order_item.current_price'.trParams({'price': price.toStringAsFixed(2)}),
                 style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,
                     0.21, const Color(0xFF64748B)),
               ),
@@ -304,7 +304,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
           _updateCartItemQuantityWithLoading(cartItem, newQty, 'increase');
         }
       } else {
-        showScaffoldError(context: context, message: 'Invalid quantity');
+        showScaffoldError(context: context, message: 'restaurant.restaurant_order_item.invalid_quantity'.tr);
       }
     }
 
@@ -347,7 +347,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
               ),
               const SizedBox(height: 8),
               Text(
-                'Current Quantity: ${quantity.toStringAsFixed(0)}',
+                'restaurant.restaurant_order_item.current_quantity'.trParams({'quantity': quantity.toStringAsFixed(0)}),
                 style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,
                     0.21, const Color(0xFF64748B)),
               ),

@@ -121,7 +121,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
 
         String userRole = await sharedPrefsProvider.getUserRole();
         _loggedInUserEmail =
-            userRole.contains('@') ? userRole : 'admin@company.com';
+            userRole.contains('@') ? userRole : 'company_info.fallback_email'.tr;
         _loggedInUserName = _userName; // Use admin user name as fallback
       }
     } catch (e) {
@@ -136,11 +136,11 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
 
         String userRole = await sharedPrefsProvider.getUserRole();
         _loggedInUserEmail =
-            userRole.contains('@') ? userRole : 'admin@company.com';
+            userRole.contains('@') ? userRole : 'company_info.fallback_email'.tr;
         _loggedInUserName = _userName; // Use admin user name as fallback
       } catch (settingsError) {
         debugPrint('Error fetching from shared preferences: $settingsError');
-        _loggedInUserEmail = 'admin@company.com';
+        _loggedInUserEmail = 'company_info.fallback_email'.tr;
         _loggedInUserName = _userName; // Use admin user name as fallback
       }
     }
@@ -213,7 +213,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
 
       // If still no company name, use a default
       if (_companyName == null || _companyName!.isEmpty) {
-        _companyName = 'Company Name Not Available';
+        _companyName = 'company_info.name_not_available'.tr;
       }
     }
   }

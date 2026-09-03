@@ -4,10 +4,16 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 import '../../components/build_container_box.dart';
-import '../../components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
+import '../../components/build_dialog_box.dart'
+    hide
+        showScaffold,
+        showScaffoldError,
+        showLoadingOverlay,
+        hideLoadingOverlay;
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import '../../components/build_round_button.dart';
 import '../../components/build_text_fields.dart';
+import '../../components/build_title.dart';
 import '../../providers/auth_model.dart';
 import '../../providers/quotations_provider.dart';
 import '../../resources/color_manager.dart';
@@ -43,6 +49,23 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
     'overdue',
     'order created',
   ];
+
+  String _getStatusLabel(String value) {
+    switch (value) {
+      case 'All':
+        return 'proforma_invoice.status_all'.tr;
+      case 'pending':
+        return 'proforma_invoice.status_pending'.tr;
+      case 'paid':
+        return 'proforma_invoice.status_paid'.tr;
+      case 'overdue':
+        return 'proforma_invoice.status_overdue'.tr;
+      case 'order created':
+        return 'proforma_invoice.status_order_created'.tr;
+      default:
+        return value;
+    }
+  }
 
   @override
   void initState() {
@@ -130,7 +153,9 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
   Future<void> _showDetails(Map<String, dynamic> invoice) async {
     final invoiceId = invoice['id'];
     if (invoiceId == null) {
-      showScaffoldError(context: context, message: 'proforma_invoice.invoice_id_not_found'.tr);
+      showScaffoldError(
+          context: context,
+          message: 'proforma_invoice.invoice_id_not_found'.tr);
       return;
     }
 
@@ -150,11 +175,14 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
       } else if (data is Map) {
         _openDetailsDialog(Map<String, dynamic>.from(data));
       } else {
-        showScaffoldError(context: context, message: 'proforma_invoice.details_not_found'.tr);
+        showScaffoldError(
+            context: context, message: 'proforma_invoice.details_not_found'.tr);
       }
     } catch (e) {
       if (mounted) {
-        showScaffoldError(context: context, message: 'proforma_invoice.failed_load_details'.tr);
+        showScaffoldError(
+            context: context,
+            message: 'proforma_invoice.failed_load_details'.tr);
       }
     }
   }
@@ -170,16 +198,29 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
         title: 'proforma_invoice.details_title'.tr,
         gridColumns: [
           [
-            CommonDetailsDialog.buildKeyValueRow('proforma_invoice.invoice_number_label'.tr, _text(data['invoice_number']), copyable: true),
-            CommonDetailsDialog.buildKeyValueRow('proforma_invoice.status_label'.tr, _text(data['status'])),
-            CommonDetailsDialog.buildKeyValueRow('proforma_invoice.field_amount'.tr, _text(data['amount'])),
-            CommonDetailsDialog.buildKeyValueRow('proforma_invoice.field_invoice_date'.tr, _text(data['invoice_date'])),
+            CommonDetailsDialog.buildKeyValueRow(
+                'proforma_invoice.invoice_number_label'.tr,
+                _text(data['invoice_number']),
+                copyable: true),
+            CommonDetailsDialog.buildKeyValueRow(
+                'proforma_invoice.status_label'.tr, _text(data['status'])),
+            CommonDetailsDialog.buildKeyValueRow(
+                'proforma_invoice.field_amount'.tr, _text(data['amount'])),
+            CommonDetailsDialog.buildKeyValueRow(
+                'proforma_invoice.field_invoice_date'.tr,
+                _text(data['invoice_date'])),
           ],
           [
-            CommonDetailsDialog.buildKeyValueRow('proforma_invoice.field_due_date'.tr, _text(data['due_date'])),
-            CommonDetailsDialog.buildKeyValueRow('proforma_invoice.customer_label'.tr, _text(customer['name'])),
-            CommonDetailsDialog.buildKeyValueRow('proforma_invoice.field_phone'.tr, _text(customer['phone']), copyable: true),
-            CommonDetailsDialog.buildKeyValueRow('proforma_invoice.field_quotation_number'.tr, _text(quotation['quotation_number'])),
+            CommonDetailsDialog.buildKeyValueRow(
+                'proforma_invoice.field_due_date'.tr, _text(data['due_date'])),
+            CommonDetailsDialog.buildKeyValueRow(
+                'proforma_invoice.customer_label'.tr, _text(customer['name'])),
+            CommonDetailsDialog.buildKeyValueRow(
+                'proforma_invoice.field_phone'.tr, _text(customer['phone']),
+                copyable: true),
+            CommonDetailsDialog.buildKeyValueRow(
+                'proforma_invoice.field_quotation_number'.tr,
+                _text(quotation['quotation_number'])),
           ],
         ],
         sectionTitle: 'proforma_invoice.items_title'.tr,
@@ -210,7 +251,6 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
       ),
     );
   }
-
 
   TableRow _detailsHeaderRow() {
     return TableRow(
@@ -268,19 +308,63 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
             onchanged: (_) => _fetchInvoices(),
           ),
           const SizedBox(height: 10),
-          BuildDropDownStatic(
-            title: 'proforma_invoice.status_label'.tr,
-            size: size,
-            items: _statusOptions,
-            selectedItem: _selectedStatus,
-            hintText: 'proforma_invoice.hint_all'.tr,
-            height: 45,
-            width: double.infinity,
-            margin: const EdgeInsets.symmetric(horizontal: 0),
-            onChanged: (value) {
-              setState(() => _selectedStatus = value ?? 'All');
-              _fetchInvoices();
-            },
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              BuildTextTile(
+                title: 'proforma_invoice.status_label'.tr,
+                textStyle: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s14,
+                  0.27,
+                  Colors.black.withOpacity(0.6),
+                ),
+              ),
+              BuildBoxShadowContainer(
+                circleRadius: 7,
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.only(left: 15),
+                margin: const EdgeInsets.symmetric(horizontal: 0),
+                height: 45,
+                width: double.infinity,
+                child: DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                  ),
+                  initialValue: _selectedStatus,
+                  hint: Text(
+                    'proforma_invoice.hint_all'.tr,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s12,
+                      0.27,
+                      ColorManager.textColor.withOpacity(.5),
+                    ),
+                  ),
+                  icon: const Icon(Icons.arrow_drop_down),
+                  iconSize: 24,
+                  elevation: 16,
+                  onChanged: (value) {
+                    setState(() => _selectedStatus = value ?? 'All');
+                    _fetchInvoices();
+                  },
+                  items: _statusOptions.map((String val) {
+                    return DropdownMenuItem<String>(
+                      value: val,
+                      child: Text(
+                        _getStatusLabel(val),
+                        style: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s12,
+                          0.27,
+                          ColorManager.textColor.withOpacity(.5),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           CustomRoundButton(
@@ -401,7 +485,8 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
                                 text: _text(invoice['invoice_number'])));
                             showScaffold(
                               context: context,
-                              message: 'proforma_invoice.invoice_number_copied'.tr,
+                              message:
+                                  'proforma_invoice.invoice_number_copied'.tr,
                             );
                           },
                           child: const Icon(
@@ -450,7 +535,9 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
                                   text: _text(quotation['quotation_number'])));
                               showScaffold(
                                 context: context,
-                                message: 'proforma_invoice.quotation_number_copied'.tr,
+                                message:
+                                    'proforma_invoice.quotation_number_copied'
+                                        .tr,
                               );
                             },
                             child: const Icon(
@@ -541,10 +628,12 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: BuildBoxShadowContainer(
                   circleRadius: 7,
-                  margin: const EdgeInsets.only(left: 8, top: 10, bottom: 8, right: 8),
+                  margin: const EdgeInsets.only(
+                      left: 8, top: 10, bottom: 8, right: 8),
                   padding: const EdgeInsets.all(8),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 12.0),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 12.0, horizontal: 12.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -580,7 +669,9 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
                                     ? Center(
                                         child: Padding(
                                           padding: const EdgeInsets.all(24),
-                                          child: Text('proforma_invoice.no_invoices_found'.tr),
+                                          child: Text(
+                                              'proforma_invoice.no_invoices_found'
+                                                  .tr),
                                         ),
                                       )
                                     : _buildMobileList(),
@@ -593,12 +684,12 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
               )
             : BuildBoxShadowContainer(
                 circleRadius: 7,
-                margin:
-                    const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
+                margin: const EdgeInsets.only(
+                    left: 10, top: 20, bottom: 0, right: 10),
                 padding: const EdgeInsets.all(8),
                 child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 20.0, horizontal: 20.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -656,7 +747,9 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
                 _showFilters = !_showFilters;
               });
             },
-            tooltip: _showFilters ? 'proforma_invoice.hide_filters'.tr : 'proforma_invoice.show_filters'.tr,
+            tooltip: _showFilters
+                ? 'proforma_invoice.hide_filters'.tr
+                : 'proforma_invoice.show_filters'.tr,
           ),
         ],
       );
@@ -860,8 +953,8 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
                 const SizedBox(width: 6),
                 GestureDetector(
                   onTap: () {
-                    Clipboard.setData(ClipboardData(
-                        text: _text(invoice['invoice_number'])));
+                    Clipboard.setData(
+                        ClipboardData(text: _text(invoice['invoice_number'])));
                     showScaffold(
                       context: context,
                       message: 'proforma_invoice.invoice_number_copied'.tr,
@@ -880,7 +973,8 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
         TableCell(
           verticalAlignment: TableCellVerticalAlignment.middle,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 22.0, horizontal: 10.0),
+            padding:
+                const EdgeInsets.symmetric(vertical: 22.0, horizontal: 10.0),
             child: Center(
               child: SelectableText(
                 _text(customer['name']),
@@ -1030,7 +1124,10 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
               : null,
           icon: const Icon(Icons.chevron_left),
         ),
-        Text('proforma_invoice.page_of'.tr.replaceAll('@current', _currentPage.toString()).replaceAll('@last', _lastPage.toString())),
+        Text('proforma_invoice.page_of'
+            .tr
+            .replaceAll('@current', _currentPage.toString())
+            .replaceAll('@last', _lastPage.toString())),
         IconButton(
           onPressed: _currentPage < _lastPage
               ? () => _fetchInvoices(page: _currentPage + 1)
