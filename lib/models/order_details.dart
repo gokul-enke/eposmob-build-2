@@ -1002,9 +1002,14 @@ class OrderDetailsModelDataDeliveryAddress {
 
   /// Lookup fields may arrive flat ("897") or nested
   /// ({"id": 10, "name": "Kerala"} / {"pin_code": "673572"}).
+  ///
+  /// Routed through [_asMap] so a nested object is understood whether it comes
+  /// as a real map, JSON, or the stringified form — otherwise the raw
+  /// "{id: 10, name: Kerala}" would be shown to the user.
   static String? _resolve(dynamic value) {
-    if (value is Map) {
-      return _str(value["name"] ?? value["pin_code"] ?? value["value"]);
+    final nested = _asMap(value);
+    if (nested != null) {
+      return _str(nested["name"] ?? nested["pin_code"] ?? nested["value"]);
     }
     return _str(value);
   }
@@ -1032,21 +1037,45 @@ class OrderDetailsModelDataDeliveryAddress {
   }
 
   /// Recovers the address fields from `Map.toString()` output, which is not
-  /// valid JSON. Each value runs until the next `key:` pair or the closing
-  /// brace, so values containing commas (street addresses) stay intact.
+  /// valid JSON.
+  ///
+  /// Splits at a comma only when it is outside any nested `{...}` and is
+  /// followed by another `key:` pair. Both conditions are needed: street
+  /// addresses contain commas that are not separators, and lookup fields can
+  /// arrive as nested objects (`state: {id: 10, name: Kerala}`) whose inner
+  /// commas must not split the field either.
   static Map<String, String>? _parseLooseMap(String raw) {
-    final matches = RegExp(
-      r'([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*?)(?=,\s*[A-Za-z_][A-Za-z0-9_]*\s*:|\}\s*$)',
-      dotAll: true,
-    ).allMatches(raw);
+    final body = raw.trim();
+    if (!body.startsWith('{') || !body.endsWith('}')) return null;
+    final inner = body.substring(1, body.length - 1);
+    final fieldStart = RegExp(r'^\s*[A-Za-z_][A-Za-z0-9_]*\s*:');
+
+    final segments = <String>[];
+    var depth = 0;
+    var start = 0;
+    for (var i = 0; i < inner.length; i++) {
+      final char = inner[i];
+      if (char == '{' || char == '[') {
+        depth++;
+      } else if (char == '}' || char == ']') {
+        if (depth > 0) depth--;
+      } else if (char == ',' &&
+          depth == 0 &&
+          fieldStart.hasMatch(inner.substring(i + 1))) {
+        segments.add(inner.substring(start, i));
+        start = i + 1;
+      }
+    }
+    segments.add(inner.substring(start));
 
     final result = <String, String>{};
-    for (final match in matches) {
-      final key = match.group(1);
-      final value = match.group(2)?.trim();
-      if (key != null && value != null && value.isNotEmpty) {
-        result[key] = value;
-      }
+    for (final segment in segments) {
+      final separator = segment.indexOf(':');
+      if (separator <= 0) continue;
+      final key = segment.substring(0, separator).trim();
+      final value = segment.substring(separator + 1).trim();
+      if (key.isEmpty || value.isEmpty) continue;
+      result[key] = value;
     }
     return result.isEmpty ? null : result;
   }
