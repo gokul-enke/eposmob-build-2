@@ -1110,18 +1110,24 @@ class OrderDetailsModelDataDeliveryAddress {
       if (first is Map) savedAddress = first;
     }
 
-    if (deliveryProp == null && savedAddress == null) return null;
+    // One source or the other, never a mix. Filling gaps in the order's
+    // delivery address from the customer's saved address would pair an office
+    // street with a home pincode and label it "Home" — a plausible-looking
+    // destination that is not where anything was sent.
+    final source = deliveryProp ?? savedAddress;
+    if (source == null) return null;
 
     final result = OrderDetailsModelDataDeliveryAddress(
-      addressType: _str(savedAddress?["type"]),
-      address: _str(deliveryProp?["address"] ?? savedAddress?["address"]),
-      pincode:
-          _resolve(deliveryProp?["pincode"] ?? savedAddress?["pincode_id"]),
-      district:
-          _resolve(deliveryProp?["district"] ?? savedAddress?["district_id"]),
-      state: _resolve(deliveryProp?["state"] ?? savedAddress?["state_id"]),
-      city: _resolve(deliveryProp?["city"] ?? savedAddress?["city"]),
-      landmark: _resolve(deliveryProp?["landmark"] ?? savedAddress?["landmark"]),
+      // Only saved addresses carry a type. A delivery prop has none, and
+      // borrowing one would mislabel the destination.
+      addressType: _resolve(source["type"]),
+      address: _str(source["address"]),
+      // Saved addresses name these fields with an _id suffix.
+      pincode: _resolve(source["pincode"] ?? source["pincode_id"]),
+      district: _resolve(source["district"] ?? source["district_id"]),
+      state: _resolve(source["state"] ?? source["state_id"]),
+      city: _resolve(source["city"]),
+      landmark: _resolve(source["landmark"]),
     );
 
     return result.hasDetails ? result : null;

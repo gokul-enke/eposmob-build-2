@@ -163,6 +163,93 @@ void main() {
     });
   });
 
+  group('session scoping', () {
+    test('drops a count belonging to another tenant', () async {
+      final provider = InvoiceProvider();
+
+      await provider.fetchFailedZatcaCount(
+        accessToken: 'token-a',
+        client: jsonClient(200, '{"data":{"total":14}}'),
+      );
+      expect(provider.failedZatcaCount, 14);
+
+      // Signing into a different tenant. The provider is app-scoped and
+      // survives logout, so the previous count must not carry over — even
+      // though a failed refresh normally keeps the last value.
+      SharedPreferences.setMockInitialValues({
+        'api_key': 'other-tenant',
+        'active_store_id': 7,
+      });
+
+      final ok = await provider.fetchFailedZatcaCount(
+        accessToken: 'token-b',
+        client: MockClient((_) async => throw const _NetworkFailure()),
+      );
+
+      expect(ok, isFalse);
+      expect(provider.failedZatcaCount, 0,
+          reason: 'a count from another account must never be displayed');
+    });
+
+    test('drops a count belonging to another store', () async {
+      final provider = InvoiceProvider();
+
+      await provider.fetchFailedZatcaCount(
+        accessToken: 'token',
+        client: jsonClient(200, '{"data":{"total":14}}'),
+      );
+
+      SharedPreferences.setMockInitialValues({
+        'api_key': 'test-tenant',
+        'active_store_id': 99,
+      });
+
+      await provider.fetchFailedZatcaCount(
+        accessToken: 'token',
+        client: MockClient((_) async => throw const _NetworkFailure()),
+      );
+
+      expect(provider.failedZatcaCount, 0);
+    });
+
+    test('discards a response whose scope changed mid-flight', () async {
+      final provider = InvoiceProvider();
+
+      final ok = await provider.fetchFailedZatcaCount(
+        accessToken: 'token',
+        client: MockClient((_) async {
+          // The user switches store while the request is in flight.
+          SharedPreferences.setMockInitialValues({
+            'api_key': 'test-tenant',
+            'active_store_id': 99,
+          });
+          return http.Response('{"data":{"total":14}}', 200);
+        }),
+      );
+
+      expect(ok, isFalse);
+      expect(provider.failedZatcaCount, 0,
+          reason: 'a stale response must not overwrite the new scope');
+    });
+
+    test('keeps the count across repeated fetches in the same scope', () async {
+      final provider = InvoiceProvider();
+
+      await provider.fetchFailedZatcaCount(
+        accessToken: 'token',
+        client: jsonClient(200, '{"data":{"total":14}}'),
+      );
+
+      await provider.fetchFailedZatcaCount(
+        accessToken: 'token',
+        client: MockClient((_) async => throw const _NetworkFailure()),
+      );
+
+      expect(provider.failedZatcaCount, 14,
+          reason: 'same tenant and store, so a blip keeps the known count');
+    });
+  });
+
   group('pending ZATCA status filter', () {
     test('is handed over once and then cleared', () {
       final provider = InvoiceProvider();

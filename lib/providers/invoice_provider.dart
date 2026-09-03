@@ -2165,6 +2165,12 @@ class InvoiceProvider extends ChangeNotifier {
 
   int _failedZatcaCount = 0;
 
+  /// Tenant and store the current [_failedZatcaCount] belongs to. This provider
+  /// is app-scoped and survives logout, so without it a count fetched for one
+  /// account could still be on screen after signing into another — and a failed
+  /// refresh deliberately keeps the last count, so it would persist.
+  String? _failedZatcaCountScope;
+
   /// Filter the invoice list should apply on its next build, set when the user
   /// arrives from the dashboard alert. Consumed once, then cleared.
   String? _pendingZatcaStatusFilter;
@@ -2182,6 +2188,9 @@ class InvoiceProvider extends ChangeNotifier {
     _pendingZatcaStatusFilter = null;
     return pending;
   }
+
+  static String _scopeKey(String? apiKey, int? storeId) =>
+      '${apiKey ?? ''}|${storeId ?? ''}';
 
   /// Counts invoices that failed to send to ZATCA, for the dashboard alert.
   ///
@@ -2214,6 +2223,14 @@ class InvoiceProvider extends ChangeNotifier {
         return false;
       }
 
+      final requestScope = _scopeKey(apiKey, activeStoreId);
+      if (requestScope != _failedZatcaCountScope) {
+        // Different account or store than the count we are holding. Drop it
+        // now rather than showing another scope's number while this loads.
+        _failedZatcaCount = 0;
+        _failedZatcaCountScope = requestScope;
+      }
+
       final queryParams = <String, String>{
         'page': '1',
         'per_page': '1',
@@ -2235,6 +2252,19 @@ class InvoiceProvider extends ChangeNotifier {
           .timeout(const Duration(seconds: 20));
 
       if (response.statusCode == 200) {
+        // The store or account can change while this is in flight, and an
+        // older response must not overwrite a newer scope's count.
+        final latest = await SharedPreferences.getInstance();
+        final currentScope = _scopeKey(
+          latest.getString('api_key'),
+          latest.getInt('active_store_id'),
+        );
+        if (currentScope != requestScope) {
+          debugPrint('[ZATCA][FailedCount] Scope changed while loading, '
+              'discarding response for $requestScope.');
+          return false;
+        }
+
         final jsonData = json.decode(response.body);
         final data = jsonData['data'];
         final total = data is Map ? data['total'] : null;

@@ -95,8 +95,45 @@ void main() {
 
       expect(address?.address, 'Office, Building 4',
           reason: 'the order must show where it was actually delivered');
-      expect(address?.addressType, 'Home',
-          reason: 'address type is only carried on the saved address');
+    });
+
+    test('reads the address type when the saved address is the source', () {
+      final address = OrderDetailsModelDataDeliveryAddress.fromOrderJson({
+        'customer_details': {
+          'address': [
+            {'address': 'Home, 12 Elm Street', 'type': 'Home'}
+          ]
+        }
+      });
+
+      expect(address?.addressType, 'Home');
+    });
+
+    test('never mixes the order address with the saved one', () {
+      final address = OrderDetailsModelDataDeliveryAddress.fromOrderJson(
+        orderWith(
+          {'address': 'Office, Building 4', 'city': 'Riyadh'},
+          savedAddress: [
+            {
+              'address': 'Home, 12 Elm Street',
+              'city': 'Jeddah',
+              'pincode_id': '23442',
+              'state_id': 'Makkah',
+              'landmark': 'Near the mosque',
+              'type': 'Home',
+            }
+          ],
+        ),
+      );
+
+      expect(address?.address, 'Office, Building 4');
+      expect(address?.city, 'Riyadh');
+      expect(address?.pincode, isNull,
+          reason: 'a home pincode on an office delivery would be misleading');
+      expect(address?.state, isNull);
+      expect(address?.landmark, isNull);
+      expect(address?.addressType, isNull,
+          reason: 'a delivery prop carries no type; "Home" would mislabel it');
     });
 
     test('falls back to the saved address when the order carries none', () {
