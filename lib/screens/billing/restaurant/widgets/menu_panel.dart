@@ -966,7 +966,7 @@ class MenuPanelState extends State<MenuPanel> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          '${items.length} items',
+                          '${items.length} ${'common.items'.tr}',
                           style: buildCustomStyle(FontWeightManager.semiBold,
                               FontSize.s11, 0.21, const Color(0xFF059669)),
                         ),

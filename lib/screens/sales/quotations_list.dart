@@ -67,6 +67,22 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
     'Cancelled',
   ];
 
+  String _displayStatus(String status) {
+    switch (status.toLowerCase().replaceAll('_', ' ').trim()) {
+      case 'pending':
+        return 'quotations.status_pending'.tr;
+      case 'confirmed':
+        return 'quotations.status_confirmed'.tr;
+      case 'cancelled':
+      case 'canceled':
+        return 'quotations.status_cancelled'.tr;
+      case 'order created':
+        return 'quotations.status_order_created'.tr;
+      default:
+        return status;
+    }
+  }
+
   String _getStatusLabel(String value) {
     switch (value) {
       case 'All':
@@ -1062,7 +1078,10 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                   ],
                 ),
               ),
-              QuotationsStatusBadge(label: status, color: _statusColor(status)),
+              QuotationsStatusBadge(
+                label: _displayStatus(status),
+                color: _statusColor(status),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -1301,7 +1320,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
             padding: const EdgeInsets.all(12.0),
             child: Center(
               child: QuotationsStatusBadge(
-                label: status,
+                label: _displayStatus(status),
                 color: _statusColor(status),
               ),
             ),

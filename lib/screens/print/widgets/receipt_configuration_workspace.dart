@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -211,10 +212,10 @@ class _ReceiptConfigurationWorkspaceState
     // the user asks for it.
     return PrinterDisclosureCard(
       icon: Icons.receipt_long_outlined,
-      title: 'Receipt layout & preview',
+      title: 'printer_settings.preview_title'.tr,
       subtitle: config == null
-          ? 'No Bill document configuration is currently synced'
-          : 'Check synced labels and preview the printed receipt',
+          ? 'printer_settings.preview_empty'.tr
+          : 'printer_settings.preview_subtitle'.tr,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -233,7 +234,10 @@ class _ReceiptConfigurationWorkspaceState
                 ),
                 _SummaryChip(
                   icon: Icons.visibility_outlined,
-                  text: '$visibleCount/${_options.length} visible',
+                  text: 'printer_settings.visible_count'.trParams({
+                    'visible': '$visibleCount',
+                    'total': '${_options.length}',
+                  }),
                 ),
               ],
             ),
@@ -788,17 +792,17 @@ class _ReceiptConfigurationWorkspaceState
   static String _languageName(String? language) {
     switch (language?.toLowerCase().replaceAll('-', '_')) {
       case 'en':
-        return 'English config';
+        return 'printer_settings.lang_english_config'.tr;
       case 'ar':
-        return 'Arabic config';
+        return 'printer_settings.lang_arabic_config'.tr;
       case 'en_ar':
       case 'ar_en':
       case 'bilingual':
-        return 'Bilingual config';
+        return 'printer_settings.lang_bilingual_config'.tr;
       default:
         return language?.trim().isNotEmpty == true
             ? language!
-            : 'Language not set';
+            : 'printer_settings.lang_not_set'.tr;
     }
   }
 

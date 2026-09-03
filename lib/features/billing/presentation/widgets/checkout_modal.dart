@@ -1189,20 +1189,20 @@ class _CheckoutModalState extends State<CheckoutModal> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildStepIndicator(0, 'Customer', Icons.person,
+                _buildStepIndicator(0, 'billing.customer'.tr, Icons.person,
                     isActive: _currentStep == 0, isCompleted: hasCustomer),
                 if (widget.enableDelivery) ...[
                   _buildStepConnector(isActive: _currentStep > 0),
-                  _buildStepIndicator(1, 'Delivery', Icons.local_shipping,
+                  _buildStepIndicator(1, 'delivery.delivery_methods'.tr, Icons.local_shipping,
                       isActive: _currentStep == 1, isCompleted: hasDelivery),
                 ],
                 _buildStepConnector(
                     isActive: _currentStep > (widget.enableDelivery ? 1 : 0)),
-                _buildStepIndicator(2, 'Discount', Icons.discount,
+                _buildStepIndicator(2, 'billing.discount'.tr, Icons.discount,
                     isActive: _currentStep == 2, isCompleted: hasDiscount),
                 if (!widget.isQuotationMode) ...[
                   _buildStepConnector(isActive: _currentStep > 2),
-                  _buildStepIndicator(3, 'Payment', Icons.payment,
+                  _buildStepIndicator(3, 'billing.payment_tab'.tr, Icons.payment,
                       isActive: _currentStep == 3, isCompleted: hasPayment),
                 ],
               ],

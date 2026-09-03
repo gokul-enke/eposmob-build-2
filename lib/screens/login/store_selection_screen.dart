@@ -464,18 +464,13 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    (pendingStatus?.message.isNotEmpty ?? false)
-                        ? pendingStatus!.message
-                        : '${'login.day_close_default'.tr} ${pendingStatus?.businessDate ?? ''}.',
+                    '${'login.day_close_default'.tr} ${pendingStatus?.businessDate ?? ''}.',
                   ),
-                  if (pendingStatus?.confirmationMessage.isNotEmpty ??
-                      false) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      pendingStatus!.confirmationMessage,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ],
+                  const SizedBox(height: 8),
+                  Text(
+                    'login.day_close_confirm'.tr,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ],
               ),
               actions: [

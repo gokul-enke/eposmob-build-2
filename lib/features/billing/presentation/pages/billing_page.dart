@@ -2494,25 +2494,25 @@ class BillingPageState extends State<BillingPage>
                 icon: Icons.person_rounded,
                 label: hasHeaderCustomer
                     ? fallbackCustomerName!.trim()
-                    : 'Customer',
+                    : 'billing.customer'.tr,
                 color: const Color(0xFF7C3AED),
                 isSelected: hasHeaderCustomer,
-                tooltip: 'Select customer',
+                tooltip: 'billing.customer'.tr,
                 onTap: () => _showHeaderSelectionModal(
                   initialStep: 0,
-                  title: 'Select Customer',
+                  title: 'billing.customer'.tr,
                 ),
               ),
               if (!_isQuotationPage)
                 _buildHeaderContextChip(
                   icon: _getHeaderPaymentIcon(),
-                  label: _getHeaderPaymentLabel(),
+                  label: _localizedHeaderPaymentLabel(),
                   color: const Color(0xFFEA580C),
                   isSelected: _hasHeaderPaymentSelection,
-                  tooltip: 'Select payment method',
+                  tooltip: 'billing.select_payment_method'.tr,
                   onTap: () => _showHeaderSelectionModal(
                     initialStep: 3,
-                    title: 'Select Payment Method',
+                    title: 'billing.select_payment_method'.tr,
                   ),
                 ),
               if (deliveryMethodsProvider.deliveryMethods.isNotEmpty)
@@ -2520,14 +2520,14 @@ class BillingPageState extends State<BillingPage>
                   icon: Icons.local_shipping_rounded,
                   label: deliveryMethod.trim().isNotEmpty
                       ? _getDeliveryMethodLabel()
-                      : 'Delivery',
+                      : 'delivery.select_delivery_method'.tr,
                   color: const Color(0xFF059669),
                   isSelected: deliveryMethodId.trim().isNotEmpty ||
                       deliveryMethod.trim().isNotEmpty,
-                  tooltip: 'Select delivery method',
+                  tooltip: 'delivery.select_delivery_method'.tr,
                   onTap: () => _showHeaderSelectionModal(
                     initialStep: 1,
-                    title: 'Select Delivery Method',
+                    title: 'delivery.select_delivery_method'.tr,
                   ),
                 ),
             ],
@@ -2687,6 +2687,26 @@ class BillingPageState extends State<BillingPage>
     if (methods.length > 1) return 'MULTI';
     if (methods.length == 1) return methods.first;
     return _headerDefaultPaymentLabel();
+  }
+
+  String _localizedHeaderPaymentLabel() {
+    final code = _getHeaderPaymentLabel();
+    switch (code) {
+      case 'CASH':
+        return 'billing.cash'.tr;
+      case 'CARD':
+        return 'billing.card'.tr;
+      case 'UPI':
+        return 'billing.upi'.tr;
+      case 'COD':
+        return 'billing.cod'.tr;
+      case 'CREDIT':
+        return 'transaction_status_labels.credit'.tr;
+      case 'MULTI':
+        return 'billing.multi'.tr;
+      default:
+        return code;
+    }
   }
 
   IconData _getHeaderPaymentIcon() {
@@ -5892,7 +5912,7 @@ class BillingPageState extends State<BillingPage>
               FocusTraversalOrder(
                 order: const NumericFocusOrder(155.0),
                 child: _buildActionButton(
-                  text: 'Create Quotation',
+                  text: 'billing.create_quotation'.tr,
                   color: Colors.teal.shade500,
                   onPressed: () => _showCheckoutModal(
                       actionMode: CheckoutActionMode.quotation),
@@ -5903,7 +5923,7 @@ class BillingPageState extends State<BillingPage>
               FocusTraversalOrder(
                 order: const NumericFocusOrder(156.0),
                 child: _buildActionButton(
-                  text: 'Quotation List',
+                  text: 'billing.quotation_list'.tr,
                   color: ColorManager.kPrimaryColor,
                   onPressed: () {
                     Get.find<SideBarController>().index.value = 87;
@@ -7858,11 +7878,15 @@ class BillingPageState extends State<BillingPage>
                   0.0,
           isCouponApplied: isCouponApplied,
           confirmButtonTitle: isQuotationMode
-              ? 'Create Quotation'
-              : (isSaveMode ? 'billing.save_order'.tr : 'Confirm'),
+              ? 'billing.create_quotation'.tr
+              : (isSaveMode
+                  ? 'billing.save_order'.tr
+                  : 'billing.confirm_order'.tr),
           printButtonTitle: isQuotationMode
-              ? 'Create & Print Quote'
-              : (isSaveMode ? 'billing.save_and_print'.tr : 'Confirm & Print'),
+              ? 'billing.create_and_print_quote'.tr
+              : (isSaveMode
+                  ? 'billing.save_and_print'.tr
+                  : 'billing.confirm_and_print'.tr),
           requireCheckoutCompletion: !(isSaveMode || isQuotationMode),
           isQuotationMode: isQuotationMode,
           requireSavedCustomer: requiresSavedQuotationCustomer,

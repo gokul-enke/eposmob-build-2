@@ -395,7 +395,7 @@ class _CustomerTransactionListScreenState
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        status.toUpperCase(),
+        _statusLabel(status),
         style: TextStyle(
           color: textColor,
           fontSize: 10,
@@ -415,7 +415,7 @@ class _CustomerTransactionListScreenState
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        type,
+        _typeLabel(type),
         style: TextStyle(
           color: color,
           fontWeight: FontWeight.bold,
@@ -423,6 +423,35 @@ class _CustomerTransactionListScreenState
         ),
       ),
     );
+  }
+
+  String _typeLabel(String type) {
+    switch (type.toLowerCase()) {
+      case 'credit':
+        return 'transaction_status_labels.credit'.tr;
+      case 'debit':
+        return 'transaction_status_labels.debit'.tr;
+      case 'all':
+        return 'common.all'.tr;
+      default:
+        return type;
+    }
+  }
+
+  String _statusLabel(String status) {
+    switch (status.toUpperCase()) {
+      case 'SUCC':
+      case 'SUCCESS':
+        return 'transaction_status_labels.succ'.tr;
+      case 'INIT':
+      case 'INITIATED':
+        return 'transaction_status_labels.init'.tr;
+      case 'FAIL':
+      case 'FAILED':
+        return 'transaction_status_labels.fail'.tr;
+      default:
+        return status;
+    }
   }
 
   InputDecoration _mobileInputDecoration(String hint) {
@@ -455,7 +484,8 @@ class _CustomerTransactionListScreenState
       value: value,
       items: items
           .map((s) => DropdownMenuItem(
-              value: s, child: Text(s, style: const TextStyle(fontSize: 12))))
+              value: s,
+              child: Text(_typeLabel(s), style: const TextStyle(fontSize: 12))))
           .toList(),
       onChanged: onChanged,
       decoration: _mobileInputDecoration(hint),
@@ -946,7 +976,7 @@ class _CustomerTransactionListScreenState
                                     return DropdownMenuItem<String>(
                                       value: type,
                                       child: Text(
-                                        type,
+                                        _typeLabel(type),
                                         style: buildCustomStyle(
                                           FontWeightManager.medium,
                                           FontSize.s11,

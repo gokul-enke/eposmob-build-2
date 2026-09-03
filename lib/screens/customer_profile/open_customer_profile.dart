@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:pos_machine/components/build_back_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/presentation/widgets/customer_ui.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/screens/customer_profile/widgets/customer_address_view_widget.dart';
 import 'package:pos_machine/screens/customer_profile/widgets/customer_chat_widget.dart';
@@ -192,7 +193,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            customer.name ?? "customer_profile.placeholder_customer_name".tr,
+            CustomerDisplay.name(customer.name),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
@@ -277,7 +278,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
         const BuildProfilePicture(),
         const SizedBox(height: 12),
         Text(
-          customer.name ?? "customer_profile.placeholder_customer_name".tr,
+          CustomerDisplay.name(customer.name),
           style: buildCustomStyle(FontWeightManager.bold, FontSize.s18, 0,
               ColorManager.kTitleTextColor),
           textAlign: TextAlign.center,

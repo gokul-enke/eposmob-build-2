@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_detail_row.dart';
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/presentation/widgets/customer_ui.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/app_settings_provider.dart';
 import '../../../components/build_container_box.dart';
@@ -86,7 +87,7 @@ class _CustomerInformationViewWidgetState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.customer?.name ?? "Customer Name",
+                          CustomerDisplay.name(widget.customer?.name),
                           overflow: TextOverflow.ellipsis,
                           style: buildCustomStyle(
                             FontWeightManager.bold,
@@ -119,7 +120,11 @@ class _CustomerInformationViewWidgetState
                               : Colors.blue.shade300),
                     ),
                     child: Text(
-                      (widget.customer?.customerType ?? 'B2C').toUpperCase(),
+                      ((widget.customer?.customerType ?? 'B2C')
+                                  .toUpperCase() ==
+                              'B2B')
+                          ? 'customers.type_b2b'.tr
+                          : 'customers.type_b2c'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         size.width < 600 ? FontSize.s10 : FontSize.s11,

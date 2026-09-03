@@ -3132,11 +3132,13 @@ class BillingProvider extends ChangeNotifier {
     // DEBIT is not shown in label for collected payments
 
     if (activeMethods.isEmpty) {
-      return "Select Payment Method";
+      return 'billing.select_payment_method'.tr;
     } else if (activeMethods.length == 1) {
       return activeMethods.first;
     } else {
-      return "Multi-Payment (${activeMethods.length})";
+      return 'billing.multi_payment'.trParams({
+        'count': '${activeMethods.length}',
+      });
     }
   }
 

@@ -90,6 +90,13 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   bool get _isPdfSharing => selectedSettingsType == 'PDF Sharing';
 
+  String _localizedThemeName(Map<String, String> theme) {
+    final id = theme['id'] ?? '';
+    final key = 'printer_settings.theme_$id';
+    final translated = key.tr;
+    return translated == key ? (theme['name'] ?? id) : translated;
+  }
+
   List<String> get _activePaperSizes =>
       _isPdfSharing ? PdfShareSettings.paperSizes : paperSizes;
 
@@ -188,56 +195,14 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   /// Returns a description for the selected theme
   String _getThemeDescription(String themeId) {
-    if (_isStandardPdf) {
-      switch (themeId) {
-        case 'classic':
-          return 'Traditional A4/A5 PDF layout with standard formatting';
-        case 'simplified_tax_invoice':
-          return 'ZATCA Simplified Tax Invoice with teal accent header/footer, bilingual columns and totals';
-        case 'centered_simplified_tax_invoice':
-          return 'Simplified Tax Invoice with Arabic details on the left, a centered logo and English details on the right';
-        case 'bilingual_centered_tax_invoice':
-          return 'Bilingual centered Tax Invoice with Arabic details on the left, a centered logo and English details on the right';
-        case 'boxed_bilingual_tax_invoice':
-          return 'Boxed bilingual Tax Invoice with seller, buyer, invoice, items, bank and totals sections';
-        case 'boxed_header_tax_invoice':
-          return 'Boxed header Tax Invoice with seller, buyer, invoice, items, bank and totals sections';
-        default:
-          return 'Standard PDF layout';
-      }
-    }
-    switch (themeId) {
-      case 'classic':
-        return 'Traditional receipt layout with standard formatting';
-      case 'arabic_and_english':
-        return 'Bilingual layout optimized for Arabic and English';
-      case 'arabic_english_table_headers':
-        return 'Arabic and English layout with bilingual table headers only';
-      case 'arabic_and_english_3':
-        return 'Bilingual layout with English name only.';
-      case 'premium':
-        return 'Premium design with enhanced visual styling and layout';
-      case 'premium1':
-        return 'Premium design with enhanced visual styling';
-      case 'premium2':
-        return 'Premium design with enhanced visual styling and invoice number in box';
-      case 'premium2_bilingual':
-        return 'Pilot clone of Premium 2 for language-driven bilingual and direction testing';
-      case 'standard':
-        return 'Clean and minimal receipt layout';
-      case 'supermarket':
-        return 'Modern & clean design with enhanced spacing';
-      case 'supermarket2':
-        return 'Modern with Delivery Icon';
-      case 'supermarkerrecpt3':
-        return 'Supermarket-style receipt layout (version 3)';
-      case 'bilingual':
-        return 'Bilingual layout with English and Arabic support';
-      case 'mobile_shop_tax_invoice':
-        return 'Bilingual ZATCA tax invoice for mobile shops with SN, VAT, QTY, PRICE and AMOUNT columns';
-      default:
-        return 'Modern & clean design with enhanced spacing';
-    }
+    final prefix =
+        _isStandardPdf ? 'printer_settings.desc_pdf_' : 'printer_settings.desc_';
+    final key = '$prefix$themeId';
+    final translated = key.tr;
+    if (translated != key) return translated;
+    return _isStandardPdf
+        ? 'printer_settings.desc_pdf_default'.tr
+        : 'printer_settings.desc_thermal_default'.tr;
   }
 
   @override
@@ -915,7 +880,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             items: _activeThemes.map((Map<String, String> theme) {
               return DropdownMenuItem<String>(
                 value: theme['id'],
-                child: Text(theme['name']!),
+                child: Text(_localizedThemeName(theme)),
               );
             }).toList(),
             onChanged: (String? newValue) {
@@ -1182,12 +1147,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         _loadSettings();
       },
       helperText: _isPdfSharing
-          ? 'Choose the page size and PDF template for '
-              '${selectedSegment == 'B2B' ? 'business (B2B)' : 'retail (B2C)'} '
-              'invoice sharing. B2B uses the B2C sharing profile when left unconfigured.'
-          : 'Configure a separate printer, paper size and theme for '
-              '${selectedSegment == 'B2B' ? 'business (B2B)' : 'retail (B2C)'} '
-              'bills. B2B uses the B2C settings when left unconfigured.',
+          ? (selectedSegment == 'B2B'
+              ? 'printer_settings.helper_pdf_b2b'.tr
+              : 'printer_settings.helper_pdf_b2c'.tr)
+          : (selectedSegment == 'B2B'
+              ? 'printer_settings.helper_receipt_b2b'.tr
+              : 'printer_settings.helper_receipt_b2c'.tr),
     );
   }
 
@@ -1300,7 +1265,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     required bool isSelected,
     required bool isCompact,
   }) {
-    final deviceName = printer.deviceName ?? 'Unknown device';
+    final deviceName =
+        printer.deviceName ?? 'printer_settings.unknown_device'.tr;
     final subtitle = printer.isDevelopment
         ? 'Saves PDFs and thermal receipt images to a local folder'
         : printer.address ?? printer.typePrinter.name;

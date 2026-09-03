@@ -10,6 +10,7 @@ import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
+import 'package:pos_machine/helpers/delivery_method_display.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -1984,11 +1985,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   String _counterDeliveryLabel({required String fallback}) {
-    if (_selectedOrderFromOrderPanel != null &&
-        (_editingOrderDeliveryMethodName?.isNotEmpty ?? false)) {
-      return _editingOrderDeliveryMethodName!;
-    }
-    return _selectedDeliveryMethodName ?? fallback;
+    final raw = (_selectedOrderFromOrderPanel != null &&
+            (_editingOrderDeliveryMethodName?.isNotEmpty ?? false))
+        ? _editingOrderDeliveryMethodName
+        : _selectedDeliveryMethodName;
+    if (raw == null || raw.trim().isEmpty) return fallback;
+    final localized = DeliveryMethodDisplay.labelFor(raw);
+    return localized.isNotEmpty ? localized : raw;
   }
 
   bool get _hasCounterDeliverySelection {
@@ -1996,6 +1999,33 @@ class _RestaurantPageState extends State<RestaurantPage> {
         (_selectedOrderFromOrderPanel != null &&
             ((_editingOrderDeliveryMethodId?.isNotEmpty ?? false) ||
                 (_editingOrderDeliveryMethodName?.isNotEmpty ?? false)));
+  }
+
+  String _localizedPaymentCodes(String raw) {
+    return raw
+        .split(',')
+        .map((part) {
+          switch (part.trim().toUpperCase()) {
+            case 'CASH':
+              return 'billing.cash'.tr;
+            case 'CARD':
+              return 'billing.card'.tr;
+            case 'UPI':
+              return 'billing.upi'.tr;
+            case 'COD':
+              return 'billing.cod'.tr;
+            case 'CREDIT':
+              return 'transaction_status_labels.credit'.tr;
+            case 'DEBIT':
+              return 'transaction_status_labels.debit'.tr;
+            case 'ONLINE':
+              return 'billing.payment_online'.tr;
+            default:
+              return part.trim();
+          }
+        })
+        .where((part) => part.isNotEmpty)
+        .join(', ');
   }
 
   String _appDefaultPaymentMethodLabel() {
@@ -2009,8 +2039,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   String _counterPaymentLabel({required String fallback}) {
-    return _orderPanelKey.currentState?.selectedPaymentMethodLabelForDraft ??
-        _appDefaultPaymentMethodLabel();
+    final raw =
+        _orderPanelKey.currentState?.selectedPaymentMethodLabelForDraft ??
+            _appDefaultPaymentMethodLabel();
+    if (raw.trim().isEmpty) return fallback;
+    return _localizedPaymentCodes(raw);
   }
 
   bool get _hasCounterPaymentSelection {

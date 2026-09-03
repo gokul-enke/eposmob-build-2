@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -31,7 +32,7 @@ class StoreSwitcher extends StatelessWidget {
 
         if (stores.isEmpty) {
           return Text(
-            'No stores assigned',
+            'common.no_stores_assigned'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s12,
@@ -49,7 +50,7 @@ class StoreSwitcher extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Active Store',
+                  'common.active_store'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.semiBold,
                     FontSize.s12,

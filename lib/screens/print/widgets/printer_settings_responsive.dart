@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -183,6 +184,33 @@ class PrinterTabSelector extends StatelessWidget {
     ('PDF Sharing', 'PDF Sharing'),
   ];
 
+  static String _tabLabel(String id, {required bool compact}) {
+    switch (id) {
+      case 'Billing':
+        return compact
+            ? 'printer_settings.tab_billing_short'.tr
+            : 'printer_settings.tab_billing'.tr;
+      case 'Quotation':
+        return compact
+            ? 'printer_settings.tab_quotation_short'.tr
+            : 'printer_settings.tab_quotation'.tr;
+      case 'Kitchen':
+        return compact
+            ? 'printer_settings.tab_kitchen_short'.tr
+            : 'printer_settings.tab_kitchen'.tr;
+      case 'Barcode':
+        return compact
+            ? 'printer_settings.tab_barcode_short'.tr
+            : 'printer_settings.tab_barcode'.tr;
+      case 'PDF Sharing':
+        return compact
+            ? 'printer_settings.tab_pdf_short'.tr
+            : 'printer_settings.tab_pdf'.tr;
+      default:
+        return id;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
@@ -191,7 +219,7 @@ class PrinterTabSelector extends StatelessWidget {
     final tabs = _tabs
         .map(
           (tab) => _PrinterTabChip(
-            label: isCompact ? tab.$1 : tab.$2,
+            label: _tabLabel(tab.$1, compact: isCompact),
             isSelected: selectedType == tab.$1,
             onTap: () => onSelected(tab.$1),
             minWidth: isCompact ? 88.0 : 120.0,
@@ -335,8 +363,18 @@ class PrinterSegmentSelector extends StatelessWidget {
     }
 
     final pills = [
-      segmentPill('B2C', isCompact ? 'B2C' : 'B2C (Retail)'),
-      segmentPill('B2B', isCompact ? 'B2B' : 'B2B (Business)'),
+      segmentPill(
+        'B2C',
+        isCompact
+            ? 'printer_settings.segment_b2c'.tr
+            : 'printer_settings.segment_b2c_full'.tr,
+      ),
+      segmentPill(
+        'B2B',
+        isCompact
+            ? 'printer_settings.segment_b2b'.tr
+            : 'printer_settings.segment_b2b_full'.tr,
+      ),
     ];
 
     final selectorRow = Row(

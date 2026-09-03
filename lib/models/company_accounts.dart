@@ -115,7 +115,7 @@ class CompanyAccountsData {
     }
 
     final account = CompanyAccountsData(
-      name: json["name"] ?? "No Name",
+      name: json["name"],
       paymentMethod: json["payment_method"] == null
           ? []
           : List<String>.from(json["payment_method"]),
