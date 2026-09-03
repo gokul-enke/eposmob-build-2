@@ -86,10 +86,12 @@ class OrderDocumentService {
       }
 
       final directory = await getTemporaryDirectory();
-      final fileName = _fileNameFrom(
-            response.headers['content-disposition'],
-          ) ??
-          fallbackFileName;
+      // Sanitised whichever source it came from: the header is written by the
+      // server, and the fallback embeds the order number.
+      final fileName = _safeFileName(
+        _fileNameFrom(response.headers['content-disposition']) ??
+            fallbackFileName,
+      );
       final file = File('${directory.path}${Platform.pathSeparator}$fileName');
       await file.writeAsBytes(bytes, flush: true);
 
@@ -116,8 +118,19 @@ class OrderDocumentService {
         .firstMatch(contentDisposition);
     final name = match?.group(1)?.trim();
     if (name == null || name.isEmpty) return null;
-    // Strip any path segments a header might smuggle in.
-    return name.split(RegExp(r'[\\/]')).last;
+    return name;
+  }
+
+  /// Keeps a name to a single, writable file. A separator would otherwise
+  /// point at a directory that does not exist and fail the write; the other
+  /// characters are simply illegal in filenames on Windows.
+  static String _safeFileName(String name) {
+    final cleaned = name
+        .split(RegExp(r'[\\/]'))
+        .last
+        .replaceAll(RegExp(r'[<>:"|?*\x00-\x1F]'), '_')
+        .trim();
+    return cleaned.isEmpty ? 'document.pdf' : cleaned;
   }
 
   /// Error responses are JSON like {"status":"failed","message":"..."}.

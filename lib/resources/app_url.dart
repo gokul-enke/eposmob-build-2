@@ -65,10 +65,15 @@ class APPUrl {
 
   // Order documents — stream raw PDF bytes and require the auth headers,
   // so they must be downloaded programmatically rather than opened as URLs.
+  // The order number is encoded rather than interpolated raw: today's values
+  // are all ORD-000000, but a separator in the identifier would silently
+  // rewrite the request path.
   static String orderDeliveryNote(String orderNumber) =>
-      '$baseURL/api/v1/order/documents/delivery-note/$orderNumber';
+      '$baseURL/api/v1/order/documents/delivery-note/'
+      '${Uri.encodeComponent(orderNumber)}';
   static String orderDeliveryInvoice(String orderNumber) =>
-      '$baseURL/api/v1/order/documents/delivery-invoice/$orderNumber';
+      '$baseURL/api/v1/order/documents/delivery-invoice/'
+      '${Uri.encodeComponent(orderNumber)}';
   static String get salesReturn => '$baseURL/api/v1/order/sales-return';
   static String get listSalesReturn =>
       '$baseURL/api/v1/order/list-return-orders';
