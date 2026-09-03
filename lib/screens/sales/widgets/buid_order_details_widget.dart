@@ -301,8 +301,14 @@ class OrderDetailWidget extends StatelessWidget {
                               orderDetailsModelData!.deliveryDate!.isNotEmpty)
                             _buildInfoRow(
                                 context,
-                                'sales_order_details.label_delivery_date_value'.tr,
-                                orderDetailsModelData?.deliveryDate ?? ''),
+                                'sales_order_details.label_delivery_date_value'
+                                    .tr,
+                                // Formatted here rather than left to
+                                // _formatOrderPropertyValue, which dispatches on
+                                // the English label and so would pass the raw
+                                // ISO date straight through in Arabic.
+                                DateHelper.formatISODate(
+                                    orderDetailsModelData?.deliveryDate ?? '')),
                           if (orderDetailsModelData?.deliveryTime != null &&
                               orderDetailsModelData!.deliveryTime!.isNotEmpty)
                             _buildInfoRow(
