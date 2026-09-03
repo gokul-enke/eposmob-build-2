@@ -1012,6 +1012,8 @@
     "sync_all_data": "مزامنة جميع البيانات"
   },
   "dashboard": {
+    "zatca_failed_title": "فاتورة زاتكا فاشلة",
+    "zatca_failed_subtitle": "اضغط للمراجعة وإعادة الإرسال.",
     "title": {
       "sales_executive": "لوحة تحكم مسؤول المبيعات",
       "welcome_back": "مرحباً بك مجدداً!",

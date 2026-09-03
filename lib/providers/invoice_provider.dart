@@ -2157,6 +2157,106 @@ class InvoiceProvider extends ChangeNotifier {
     return ["All ZATCA Status", "SENT", "NOT SENT", "FAILED"];
   }
 
+  // ZATCA FAILED COUNT
+
+  /// Dropdown value the invoice list uses for failed ZATCA sends. Kept here so
+  /// the dashboard alert and the list screen cannot drift apart.
+  static const String zatcaFailedFilterValue = "FAILED";
+
+  int _failedZatcaCount = 0;
+
+  /// Filter the invoice list should apply on its next build, set when the user
+  /// arrives from the dashboard alert. Consumed once, then cleared.
+  String? _pendingZatcaStatusFilter;
+
+  int get failedZatcaCount => _failedZatcaCount;
+
+  void requestZatcaStatusFilter(String status) {
+    _pendingZatcaStatusFilter = status;
+  }
+
+  /// Returns the pending filter and clears it, so a later rebuild of the
+  /// invoice list does not silently re-apply it.
+  String? consumePendingZatcaStatusFilter() {
+    final pending = _pendingZatcaStatusFilter;
+    _pendingZatcaStatusFilter = null;
+    return pending;
+  }
+
+  /// Counts invoices that failed to send to ZATCA, for the dashboard alert.
+  ///
+  /// Deliberately does not go through [listAllInvoices]: that method writes the
+  /// shared `_filter*` fields and replaces `_allInvoices`, which would wipe out
+  /// whatever the invoice list screen is showing. This issues its own request
+  /// and touches nothing but the count.
+  ///
+  /// Asks for a single row and reads `data.total`, so the response stays small
+  /// no matter how many invoices have failed. Scoped to the active store,
+  /// matching the rest of the dashboard.
+  /// Notifies only once the count is known — the alert stays hidden while the
+  /// request is in flight, so there is no loading state worth publishing.
+  ///
+  /// Returns whether the count was successfully refreshed, so the caller can
+  /// distinguish "no failed invoices" from "we could not find out" and retry.
+  Future<bool> fetchFailedZatcaCount({
+    required String accessToken,
+    http.Client? client,
+  }) async {
+    bool succeeded = false;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final apiKey = prefs.getString('api_key');
+      final activeStoreId = prefs.getInt('active_store_id');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        debugPrint('[ZATCA][FailedCount] Missing API key, skipping.');
+        return false;
+      }
+
+      final queryParams = <String, String>{
+        'page': '1',
+        'per_page': '1',
+        'zatca_status': 'failed',
+        if (activeStoreId != null) 'store_id': activeStoreId.toString(),
+      };
+
+      final uri = Uri.parse(APPUrl.listAllInvoices)
+          .replace(queryParameters: queryParams);
+      debugPrint('[ZATCA][FailedCount] GET $uri');
+
+      final headers = {
+        'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
+      };
+      final response = await (client == null
+              ? http.get(uri, headers: headers)
+              : client.get(uri, headers: headers))
+          .timeout(const Duration(seconds: 20));
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        final data = jsonData['data'];
+        final total = data is Map ? data['total'] : null;
+        _failedZatcaCount =
+            total is int ? total : int.tryParse('${total ?? ''}') ?? 0;
+        succeeded = true;
+        debugPrint('[ZATCA][FailedCount] total = $_failedZatcaCount');
+      } else {
+        debugPrint(
+            '[ZATCA][FailedCount] HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      // The alert is supplementary — a failure here must not break the
+      // dashboard, so the last known count is kept.
+      debugPrint('[ZATCA][FailedCount] EXCEPTION: $e');
+    } finally {
+      notifyListeners();
+    }
+
+    return succeeded;
+  }
+
   bool _matchesZatcaStatus(Invoice invoice, String selectedStatus) {
     return _getNormalizedZatcaLabel(invoice).toLowerCase() ==
         selectedStatus.toLowerCase();

@@ -1012,6 +1012,8 @@
     "sync_all_data": "Sync all data"
   },
   "dashboard": {
+    "zatca_failed_title": "Failed Zatca Invoice",
+    "zatca_failed_subtitle": "Tap to review and resend.",
     "title": {
       "sales_executive": "Sales Executive Dashboard",
       "welcome_back": "Welcome back!",
