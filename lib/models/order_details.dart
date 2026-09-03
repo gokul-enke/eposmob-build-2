@@ -1009,6 +1009,48 @@ class OrderDetailsModelDataDeliveryAddress {
     return _str(value);
   }
 
+  /// `props_value` reaches us in three shapes depending on the endpoint and
+  /// backend version: a real object, a JSON string, or Dart's own
+  /// `Map.toString()` output (`{city: 897, name: Test, ...}`) after the
+  /// order-prop model stringifies it. All three must be understood, because
+  /// falling through to the customer's first saved address would show the
+  /// wrong destination for an order delivered to a secondary address.
+  static Map? _asMap(dynamic value) {
+    if (value is Map) return value;
+    if (value is! String) return null;
+
+    final raw = value.trim();
+    if (!raw.startsWith('{')) return null;
+
+    try {
+      final decoded = json.decode(raw);
+      if (decoded is Map) return decoded;
+      return null;
+    } catch (_) {
+      return _parseLooseMap(raw);
+    }
+  }
+
+  /// Recovers the address fields from `Map.toString()` output, which is not
+  /// valid JSON. Each value runs until the next `key:` pair or the closing
+  /// brace, so values containing commas (street addresses) stay intact.
+  static Map<String, String>? _parseLooseMap(String raw) {
+    final matches = RegExp(
+      r'([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*?)(?=,\s*[A-Za-z_][A-Za-z0-9_]*\s*:|\}\s*$)',
+      dotAll: true,
+    ).allMatches(raw);
+
+    final result = <String, String>{};
+    for (final match in matches) {
+      final key = match.group(1);
+      final value = match.group(2)?.trim();
+      if (key != null && value != null && value.isNotEmpty) {
+        result[key] = value;
+      }
+    }
+    return result.isEmpty ? null : result;
+  }
+
   /// Builds from the whole order-details `data` object, since the pieces
   /// live in two different places in the payload.
   static OrderDetailsModelDataDeliveryAddress? fromOrderJson(
@@ -1017,11 +1059,14 @@ class OrderDetailsModelDataDeliveryAddress {
     final props = json["order_props"];
     if (props is List) {
       for (final prop in props) {
-        if (prop is Map &&
-            prop["props_code"]?.toString().toUpperCase() ==
-                'DELIVERY_ADDRESS' &&
-            prop["props_value"] is Map) {
-          deliveryProp = prop["props_value"] as Map;
+        if (prop is! Map) continue;
+        if (prop["props_code"]?.toString().toUpperCase() !=
+            'DELIVERY_ADDRESS') {
+          continue;
+        }
+        final parsed = _asMap(prop["props_value"]);
+        if (parsed != null) {
+          deliveryProp = parsed;
           break;
         }
       }
