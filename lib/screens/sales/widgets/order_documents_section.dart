@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:open_file/open_file.dart';
 import 'package:provider/provider.dart';
 
@@ -39,7 +40,7 @@ class _OrderDocumentsSectionState extends State<OrderDocumentsSection> {
     final accessToken =
         Provider.of<AuthModel>(context, listen: false).token ?? '';
     if (accessToken.isEmpty) {
-      _showMessage('Session expired. Please log in again.', isError: true);
+      _showMessage('sales_order_details.msg_session_expired'.tr, isError: true);
       return;
     }
 
@@ -55,7 +56,7 @@ class _OrderDocumentsSectionState extends State<OrderDocumentsSection> {
     setState(() => _downloading = null);
 
     if (!result.isSuccess) {
-      _showMessage(result.errorMessage ?? 'Could not download the document.',
+      _showMessage(result.errorMessage ?? 'sales_order_details.msg_document_download_failed'.tr,
           isError: true);
       return;
     }
@@ -63,7 +64,7 @@ class _OrderDocumentsSectionState extends State<OrderDocumentsSection> {
     final opened = await OpenFile.open(result.file!.path);
     if (!mounted) return;
     if (opened.type != ResultType.done) {
-      _showMessage('Saved to ${result.file!.path}');
+      _showMessage("${'sales_order_details.msg_document_saved_to'.tr} ${result.file!.path}");
     }
   }
 
@@ -95,7 +96,7 @@ class _OrderDocumentsSectionState extends State<OrderDocumentsSection> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Order Documents',
+            'sales_order_details.title_order_documents'.tr,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               isMobile ? FontSize.s14 : FontSize.s16,
@@ -110,18 +111,18 @@ class _OrderDocumentsSectionState extends State<OrderDocumentsSection> {
             children: [
               _buildDocumentButton(
                 context,
-                label: 'Delivery Note',
+                label: 'sales_order_details.btn_delivery_note'.tr,
                 onTap: () => _open(
-                  label: 'Delivery Note',
+                  label: 'sales_order_details.btn_delivery_note'.tr,
                   url: APPUrl.orderDeliveryNote(orderNumber),
                   fallbackFileName: 'delivery-note-$orderNumber.pdf',
                 ),
               ),
               _buildDocumentButton(
                 context,
-                label: 'Delivery Invoice',
+                label: 'sales_order_details.btn_delivery_invoice'.tr,
                 onTap: () => _open(
-                  label: 'Delivery Invoice',
+                  label: 'sales_order_details.btn_delivery_invoice'.tr,
                   url: APPUrl.orderDeliveryInvoice(orderNumber),
                   fallbackFileName: 'delivery-invoice-$orderNumber.pdf',
                 ),

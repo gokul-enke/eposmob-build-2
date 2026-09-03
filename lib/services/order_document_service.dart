@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -43,7 +44,7 @@ class OrderDocumentService {
 
       if (apiKey == null || apiKey.isEmpty) {
         return OrderDocumentResult.failure(
-            'API key not found. Please restart the app.');
+            'sales_order_details.msg_api_key_missing'.tr);
       }
 
       final response = await http.get(
@@ -56,7 +57,7 @@ class OrderDocumentService {
 
       if (response.statusCode == 401) {
         return OrderDocumentResult.failure(
-            'Session expired. Please log in again.');
+            'sales_order_details.msg_session_expired'.tr);
       }
 
       // The backend uses 422 with its own message for "this document does not
@@ -64,18 +65,18 @@ class OrderDocumentService {
       if (response.statusCode == 422) {
         return OrderDocumentResult.failure(
             _messageFromJson(response.body) ??
-                'This document is not available for this order.');
+                'sales_order_details.msg_document_not_available'.tr);
       }
 
       if (response.statusCode != 200) {
         return OrderDocumentResult.failure(
             _messageFromJson(response.body) ??
-                'Could not download the document (${response.statusCode}).');
+                "${'sales_order_details.msg_document_download_failed'.tr} (${response.statusCode})");
       }
 
       final bytes = response.bodyBytes;
       if (bytes.isEmpty) {
-        return OrderDocumentResult.failure('The document came back empty.');
+        return OrderDocumentResult.failure('sales_order_details.msg_document_empty'.tr);
       }
 
       final directory = await getTemporaryDirectory();
@@ -89,11 +90,11 @@ class OrderDocumentService {
       return OrderDocumentResult.success(file);
     } on SocketException {
       return OrderDocumentResult.failure(
-          'No internet connection. Please try again.');
+          'sales_order_details.msg_no_internet'.tr);
     } catch (error) {
       debugPrint('Error downloading order document: $error');
       return OrderDocumentResult.failure(
-          'Could not download the document. Please try again.');
+          'sales_order_details.msg_document_download_error'.tr);
     }
   }
 
