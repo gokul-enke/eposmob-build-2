@@ -9218,7 +9218,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           child: Padding(
             padding: const EdgeInsets.all(6),
             child: Text(
-              "${product.productName} / ${product.unit}",
+           "${product.localizedName} / ${product.unit}",
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(

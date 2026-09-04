@@ -770,8 +770,8 @@ class ProductCartHelper {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '${product.productName ?? 'This product'} includes a $warrantyMonths-month warranty option.',
+               Text(
+                  '${product.localizedName ?? 'This product'} includes a $warrantyMonths-month warranty option.',
                 ),
                 if (warrantyCondition?.isNotEmpty == true) ...[
                   const SizedBox(height: 8),

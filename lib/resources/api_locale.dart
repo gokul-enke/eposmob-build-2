@@ -44,8 +44,18 @@ class ApiLocale {
   /// and without `?locale=`, with machine keys/values frozen — so sending the
   /// locale is a no-op today and starts working the moment the backend
   /// resolves labels, with no client change.
+  ///
+  /// `product/executive/list-products` 500s on every page whenever `?locale=`
+  /// is present (verified 2026-09-04 against the sellable, raw, and paginated
+  /// forms of this endpoint) even though the identical request without the
+  /// param succeeds and returns thousands of products. Localized product
+  /// names must come from the `names` map already embedded in each product
+  /// payload (`product.names?.ml`, `.ar`, `.en`, ...) instead of relying on
+  /// `?locale=` here. Unblocking is deleting the line below once the backend
+  /// stops 500ing with a locale on this endpoint.
   static const Set<String> notYetLocalized = {
     'product/list-units',
+    'product/executive/list-products',
   };
 
   /// Whether [uri] will actually carry the language. Callers that build their

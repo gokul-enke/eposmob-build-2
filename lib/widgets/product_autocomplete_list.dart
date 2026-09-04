@@ -163,7 +163,7 @@ class ProductAutocompleteState extends State<ProductAutocomplete> {
           return searchResults;
         },
         displayStringForOption: (GetProduct product) =>
-            product.productName ?? '',
+            product.localizedName ?? '',
         onSelected: (GetProduct selectedProduct) async {
           await _handleProductSelection(selectedProduct);
           if (!context.mounted) return;
@@ -295,7 +295,7 @@ class ProductAutocompleteState extends State<ProductAutocomplete> {
                             vertical: 4,
                           ),
                           title: Text(
-                            option.productName ?? '',
+                            option.localizedName ?? '',
                             maxLines: 2,
                             style: TextStyle(
                               fontSize: 11,

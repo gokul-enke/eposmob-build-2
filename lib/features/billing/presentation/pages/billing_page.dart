@@ -3662,9 +3662,9 @@ class BillingPageState extends State<BillingPage>
                                                             CrossAxisAlignment
                                                                 .start,
                                                         children: [
-                                                          Text(
-                                                            item.product
-                                                                    .productName ??
+                                                         Text(
+                                                           item.product
+                                                                    .localizedName ??
                                                                 'general.unknown'
                                                                     .tr,
                                                             style:

@@ -226,7 +226,7 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Product: ${widget.product.productName}',
+              'Product: ${widget.product.localizedName}',
               style: buildCustomStyle(
                 FontWeightManager.bold,
                 FontSize.s16,

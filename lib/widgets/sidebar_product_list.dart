@@ -965,8 +965,8 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                           ),
                                           Padding(
                                             padding: const EdgeInsets.all(4.0),
-                                            child: Text(
-                                              "${product.productName} / ${product.unit}",
+                                           child: Text(
+                                              "${product.localizedName} / ${product.unit}",
                                               maxLines: 3,
                                               overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
