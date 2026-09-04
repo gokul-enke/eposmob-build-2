@@ -1903,7 +1903,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
     String subtitle = _getCardSubtitle(title);
 
     return DashboardStatCard(
-      title: title,
+      title: "dashboard.cards.${title.toLowerCase()}".tr,
       subtitle: subtitle,
       value: valueText,
       color: color,

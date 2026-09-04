@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class NewOrderButton extends StatelessWidget {
   const NewOrderButton({
@@ -34,9 +35,9 @@ class NewOrderButton extends StatelessWidget {
                 const Icon(Icons.add, color: Colors.white, size: 22),
                 if (!compact) ...[
                   const SizedBox(width: 6),
-                  const Text(
-                    'Add Product',
-                    style: TextStyle(
+                  Text(
+                    'billing.add_product'.tr,
+                    style: const TextStyle(
                       fontFamily: 'Poppins',
                       color: Colors.white,
                       fontWeight: FontWeight.w600,

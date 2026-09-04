@@ -258,15 +258,15 @@ class _SideBarProductListState extends State<SideBarProductList> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Categories',
+                        'billing.categories'.tr,
                         style: buildCustomStyle(FontWeightManager.semiBold,
                             _sectionTitleSize, 0.20, ColorManager.textColor),
                       ),
                     ),
                     Tooltip(
                       message: _isCategorySectionExpanded
-                          ? 'Collapse categories'
-                          : 'Expand categories',
+                          ? 'billing.collapse_categories'.tr
+                          : 'billing.expand_categories'.tr,
                       child: IconButton(
                         visualDensity: VisualDensity.compact,
                         icon: Icon(
@@ -579,7 +579,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Products',
+                            'billing.products'.tr,
                             style: buildCustomStyle(
                                 FontWeightManager.semiBold,
                                 _sectionTitleSize,
@@ -621,7 +621,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    'Add Product',
+                                    'billing.add_product'.tr,
                                     style: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s11,
@@ -711,7 +711,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
                               size: 48, color: Colors.grey.shade300),
                           const SizedBox(height: 16),
                           Text(
-                            "No products available",
+                            'billing.no_products_available'.tr,
                             style: TextStyle(
                               color: Colors.grey.shade500,
                               fontSize: 16,

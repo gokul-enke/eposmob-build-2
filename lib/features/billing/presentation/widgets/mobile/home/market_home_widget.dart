@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
@@ -82,20 +83,23 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
       if (localProductProvider.sellableProducts.isEmpty) {
         showScaffoldError(
           context: context,
-          message:
-              'Resync finished but no products were returned. Check tenant/API key or internet.',
+          message: 'settings_ui.msg_resync_empty'.tr,
         );
       } else {
         showScaffold(
           context: context,
-          message: 'Products resynced successfully',
+          message: 'settings_ui.msg_resync_success'.trParams({
+            'count': '${localProductProvider.sellableProducts.length}',
+          }),
         );
       }
     } catch (e) {
       if (!mounted) return;
       showScaffoldError(
         context: context,
-        message: 'Failed to resync products: ${e.toString()}',
+        message: 'settings_ui.msg_resync_failed'.trParams({
+          'error': e.toString(),
+        }),
       );
     } finally {
       if (mounted) {
@@ -233,11 +237,11 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Products',
+                              Text(
+                                'billing.products'.tr,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontFamily: 'Poppins',
                                   fontSize: 19,
                                   fontWeight: FontWeight.w600,
@@ -246,7 +250,11 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
                               ),
                               if (products.isNotEmpty)
                                 Text(
-                                  '${products.length} item${products.length == 1 ? '' : 's'}',
+                                  products.length == 1
+                                      ? 'billing.item_count_one'.tr
+                                      : 'billing.item_count'.trParams({
+                                          'count': '${products.length}',
+                                        }),
                                   style: TextStyle(
                                     fontFamily: 'Poppins',
                                     fontSize: 13,
@@ -367,7 +375,9 @@ class _EmptyCatalogLoading extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              resyncing ? 'Resyncing products...' : 'Loading products...',
+              resyncing
+                  ? 'billing.resyncing_products'.tr
+                  : 'billing.loading_products'.tr,
               style: TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 12,
@@ -418,7 +428,7 @@ class _EmptyCatalogResync extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              'No products loaded',
+              'billing.no_products_loaded'.tr,
               style: TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 13,
@@ -428,7 +438,7 @@ class _EmptyCatalogResync extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Try resyncing products. Check internet and tenant if this continues.',
+              'billing.try_resync_products'.tr,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Poppins',
@@ -438,7 +448,9 @@ class _EmptyCatalogResync extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             CustomRoundButton(
-              title: isResyncing ? 'Resyncing...' : 'Resync Products',
+              title: isResyncing
+                  ? 'restaurant.resyncing'.tr
+                  : 'restaurant.resync_products'.tr,
               fct: isResyncing ? () {} : onResync,
               width: 170,
               height: 36,
@@ -509,7 +521,9 @@ class _ProductEntryHeader extends StatelessWidget {
                   child: TextField(
                     readOnly: true,
                     controller: billingProvider.selectedProductNameController,
-                    decoration: _entryDecoration(hintText: 'Product Name'),
+                    decoration: _entryDecoration(
+                      hintText: 'billing.product_name_hint'.tr,
+                    ),
                   ),
                 ),
               ],

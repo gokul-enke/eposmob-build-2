@@ -8819,7 +8819,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                'Loading products...',
+                                'billing.loading_products'.tr,
                                 style: TextStyle(
                                   color: Colors.grey.shade600,
                                   fontSize: 13,
@@ -8838,7 +8838,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                                       size: 64, color: Colors.grey.shade300),
                                   const SizedBox(height: 16),
                                   Text(
-                                    "No products available",
+                                    'billing.no_products_available'.tr,
                                     style: TextStyle(
                                       color: Colors.grey.shade500,
                                       fontSize: 16,
@@ -8847,8 +8847,8 @@ class BillingPageState extends State<BillingPageRestaurant>
                                   const SizedBox(height: 12),
                                   CustomRoundButton(
                                     title: _isResyncingProducts
-                                        ? 'Resyncing...'
-                                        : 'Resync Products',
+                                        ? 'restaurant.resyncing'.tr
+                                        : 'restaurant.resync_products'.tr,
                                     fct: _isResyncingProducts
                                         ? () {}
                                         : _resyncProductsFromMainGrid,
@@ -9078,20 +9078,23 @@ class BillingPageState extends State<BillingPageRestaurant>
       if (localProductProvider.sellableProducts.isEmpty) {
         showScaffoldError(
           context: context,
-          message:
-              'Resync finished but no products were returned. Check tenant/API key or internet.',
+          message: 'settings_ui.msg_resync_empty'.tr,
         );
       } else {
         showScaffold(
           context: context,
-          message: 'Products resynced successfully',
+          message: 'settings_ui.msg_resync_success'.trParams({
+            'count': '${localProductProvider.sellableProducts.length}',
+          }),
         );
       }
     } catch (e) {
       if (!mounted) return;
       showScaffoldError(
         context: context,
-        message: 'Failed to resync products: ${e.toString()}',
+        message: 'settings_ui.msg_resync_failed'.trParams({
+          'error': e.toString(),
+        }),
       );
     } finally {
       if (mounted) {
