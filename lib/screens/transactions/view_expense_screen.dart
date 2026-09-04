@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 import 'package:provider/provider.dart';
 
 import '../../newcomponents/custom_round_button.dart';
@@ -83,9 +85,7 @@ class ViewExpenseScreen extends StatelessWidget {
     );
 
     // Formatted date string
-    final dateStr = "${expense.paymentDate.day.toString().padLeft(2, '0')} "
-        "${_getMonthName(expense.paymentDate.month)} "
-        "${expense.paymentDate.year}";
+    final dateStr = DateHelper.formatDate(expense.paymentDate);
 
     return SafeArea(
       child: CustomBoxShadowContainer(
@@ -297,7 +297,7 @@ class ViewExpenseScreen extends StatelessWidget {
                     Expanded(
                       child: _buildDetailItemWithBadge(
                         'expense.status'.tr,
-                        expense.status,
+                        UiCodeLabels.status(expense.status),
                         Colors.green.shade50,
                         Colors.green
                       ),
@@ -501,22 +501,6 @@ class ViewExpenseScreen extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  String _getMonthName(int monthNum) {
-    const fallbackMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    if (monthNum >= 1 && monthNum <= 12) {
-      try {
-        final months = 'expense.months'.tr;
-        if (months is List && months.isNotEmpty) {
-          return months[monthNum - 1].toString();
-        }
-        return fallbackMonths[monthNum - 1];
-      } catch (_) {
-        return fallbackMonths[monthNum - 1];
-      }
-    }
-    return '';
   }
 }
 

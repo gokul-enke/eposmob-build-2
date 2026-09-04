@@ -35,6 +35,7 @@ import '../../resources/style_manager.dart';
 import 'widgets/common_details_dialog.dart';
 import 'widgets/share_helper.dart';
 import 'invoice_list_mobile.dart';
+import '../../helpers/ui_code_labels.dart';
 
 class InvoiceListScreen extends StatefulWidget {
   const InvoiceListScreen({super.key});
@@ -1609,7 +1610,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 });
                 searchInvoices();
               },
-              displayText: (status) => status.toUpperCase(),
+              displayText: (status) => UiCodeLabels.status(status),
               height: 45,
               margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
               focusNode: statusFocusNode,
@@ -1641,7 +1642,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               });
               searchInvoices();
             },
-            displayText: (status) => status.toUpperCase(),
+            displayText: (status) => UiCodeLabels.zatca(status),
             height: 45,
             margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
             focusNode: zatcaFocusNode,

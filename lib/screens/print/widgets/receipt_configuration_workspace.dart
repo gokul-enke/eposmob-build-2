@@ -1055,8 +1055,7 @@ class _CommonReceiptPreviewState extends State<_CommonReceiptPreview> {
                     color: Colors.amber.shade700, size: 26),
                 const SizedBox(height: 9),
                 Text(
-                  'Rendered preview is unavailable. Showing the configuration '
-                  'visibility guide instead.',
+                  'printer_settings.preview_unavailable'.tr,
                   textAlign: TextAlign.center,
                   style:
                       TextStyle(fontSize: 10.5, color: Colors.amber.shade900),
@@ -1067,7 +1066,7 @@ class _CommonReceiptPreviewState extends State<_CommonReceiptPreview> {
                     _previewFuture = _render();
                   }),
                   icon: const Icon(Icons.refresh_rounded, size: 16),
-                  label: const Text('Retry rendered preview'),
+                  label: Text('printer_settings.retry_preview'.tr),
                 ),
                 const SizedBox(height: 10),
                 _ReceiptSample(

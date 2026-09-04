@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/models/supplier_voucher.dart';
 import 'package:provider/provider.dart';
@@ -258,7 +259,7 @@ class _SupplierVoucherMobileViewState
             child: Text(hint, style: const TextStyle(fontSize: 12))),
         ...items.map((s) => DropdownMenuItem<String>(
             value: s,
-            child: Text(s.toUpperCase(),
+            child: Text(UiCodeLabels.status(s),
                 style: const TextStyle(fontSize: 12)))),
       ],
       onChanged: onChanged,
@@ -426,7 +427,7 @@ class _SupplierVoucherCard extends StatelessWidget {
             ),
             if (voucher.paymentMethod.isNotEmpty)
               Text(
-                'supplier_voucher.payment_prefix'.tr.replaceAll('@method', voucher.paymentMethod),
+                'supplier_voucher.payment_prefix'.tr.replaceAll('@method', UiCodeLabels.payment(voucher.paymentMethod)),
                 style: buildCustomStyle(FontWeightManager.regular,
                     FontSize.s11, 0.16, Colors.grey),
               ),
@@ -503,7 +504,7 @@ class _SupplierVoucherCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
           color: bg, borderRadius: BorderRadius.circular(10)),
-      child: Text(status.toUpperCase(),
+      child: Text(UiCodeLabels.status(status),
           style: TextStyle(
               color: fg,
               fontSize: 10,
@@ -517,7 +518,7 @@ class _SupplierVoucherCard extends StatelessWidget {
       decoration: BoxDecoration(
           color: Colors.blue.withOpacity(0.1),
           borderRadius: BorderRadius.circular(10)),
-      child: Text(type.toUpperCase(),
+      child: Text(UiCodeLabels.voucherType(type),
           style: const TextStyle(
               color: Colors.blue,
               fontSize: 10,

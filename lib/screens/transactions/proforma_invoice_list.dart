@@ -20,6 +20,7 @@ import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import 'widgets/common_details_dialog.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 
 class ProformaInvoiceListScreen extends StatefulWidget {
   const ProformaInvoiceListScreen({super.key});
@@ -63,7 +64,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
       case 'order created':
         return 'proforma_invoice.status_order_created'.tr;
       default:
-        return value;
+        return UiCodeLabels.status(value);
     }
   }
 
@@ -203,7 +204,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
                 _text(data['invoice_number']),
                 copyable: true),
             CommonDetailsDialog.buildKeyValueRow(
-                'proforma_invoice.status_label'.tr, _text(data['status'])),
+                'proforma_invoice.status_label'.tr, UiCodeLabels.status(_text(data['status']))),
             CommonDetailsDialog.buildKeyValueRow(
                 'proforma_invoice.field_amount'.tr, _text(data['amount'])),
             CommonDetailsDialog.buildKeyValueRow(
@@ -601,7 +602,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                status == '-' ? status : status.toUpperCase(),
+                status == '-' ? status : UiCodeLabels.status(status),
                 style: TextStyle(
                   color: statusColor,
                   fontSize: 10,
@@ -805,6 +806,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
             title: 'proforma_invoice.status_label'.tr,
             size: size,
             items: _statusOptions,
+            itemLabel: _getStatusLabel,
             selectedItem: _selectedStatus,
             hintText: 'proforma_invoice.hint_all'.tr,
             height: 45,
@@ -1070,7 +1072,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            status == '-' ? status : status.toUpperCase(),
+            status == '-' ? status : UiCodeLabels.status(status),
             style: TextStyle(
               color: color,
               fontSize: 10,

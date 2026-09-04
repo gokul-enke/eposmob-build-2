@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
@@ -789,7 +790,7 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
           color: backgroundColor, borderRadius: BorderRadius.circular(12)),
-      child: Text(status.toUpperCase(),
+      child: Text(UiCodeLabels.status(status),
           style: TextStyle(
               color: textColor, fontSize: 10, fontWeight: FontWeight.bold)),
     );

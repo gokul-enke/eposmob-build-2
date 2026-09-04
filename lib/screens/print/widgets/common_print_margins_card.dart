@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -93,12 +94,12 @@ class _CommonPrintMarginsCardState extends State<CommonPrintMarginsCard> {
       children: [
         PrinterSectionHeader(
           icon: Icons.border_all_rounded,
-          title: 'Print Margins',
-          subtitle: 'Safe area added to every edge of standard PDF pages',
+          title: 'printer_settings.print_margins'.tr,
+          subtitle: 'printer_settings.print_margins_sub'.tr,
           trailing: TextButton.icon(
             onPressed: isInteractive ? _resetMargin : null,
             icon: const Icon(Icons.restore, size: 18),
-            label: const Text('Reset'),
+            label: Text('general.reset'.tr),
             style: TextButton.styleFrom(
               foregroundColor: ColorManager.kPrimaryColor,
               padding: EdgeInsets.symmetric(
@@ -125,7 +126,7 @@ class _CommonPrintMarginsCardState extends State<CommonPrintMarginsCard> {
             SizedBox(
               width: isCompact ? 58 : 72,
               child: Text(
-                _isLoading ? 'Loading…' : '${value.toStringAsFixed(1)} mm',
+                _isLoading ? 'general.loading'.tr : '${value.toStringAsFixed(1)} mm',
                 textAlign: TextAlign.end,
                 style: buildCustomStyle(
                   FontWeightManager.semiBold,

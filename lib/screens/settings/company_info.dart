@@ -13,6 +13,7 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/screens/settings/widgets/settings_responsive.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 
 class CompanyInfoScreen extends StatefulWidget {
   const CompanyInfoScreen({super.key});
@@ -256,7 +257,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                           'company_info.label_email'.tr,
                           _loggedInUserEmail ?? 'company_info.loading'.tr,
                         ),
-                        MapEntry('company_info.label_user_role'.tr, _userRole ?? 'company_info.loading'.tr),
+                        MapEntry('company_info.label_user_role'.tr, UiCodeLabels.userRole(_userRole)),
                         MapEntry(
                           'company_info.label_customer_id'.tr,
                           _customerId?.toString() ?? 'company_info.loading'.tr,

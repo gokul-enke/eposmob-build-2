@@ -2,6 +2,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -379,7 +380,7 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                                           .originalStocks, // Include original stocks for reference
                                     });
                                   },
-                                  child: const Text('Choose'),
+                                  child: Text('general.choose'.tr),
                                 ),
                               ),
                               // Show expanded stock details inside the same card
@@ -645,7 +646,7 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                                                         ], // Single stock in array
                                                       });
                                                     },
-                                                    child: const Text('Choose'),
+                                                    child: Text('general.choose'.tr),
                                                   ),
                                                 ],
                                               ),

@@ -13,6 +13,7 @@ import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
@@ -930,9 +931,9 @@ class _AddStockScreenState extends State<AddStockScreen> {
 
   Widget _buildStockStatusDropdown() {
     final statusOptions = [
-      'stock.status_out_of_stock'.tr,
-      'stock.status_low_stock'.tr,
-      'stock.status_at_reorder_level'.tr,
+      'Out of Stock',
+      'Low Stock',
+      'At Reorder Level',
     ];
     return BuildDropDownWithSearch<String>(
       title: null,
@@ -948,7 +949,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
         });
         searchStocks();
       },
-      displayText: (status) => status,
+      displayText: UiCodeLabels.stockStatus,
       searchController: TextEditingController(),
       height: 45,
       margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),

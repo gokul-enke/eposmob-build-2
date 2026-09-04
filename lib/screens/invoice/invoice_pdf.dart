@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
@@ -290,7 +291,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Order Details PDF')),
+      appBar: AppBar(title: Text('ui_chrome.order_details_pdf'.tr)),
       body: Column(
         children: [
           // Expanded(
@@ -305,7 +306,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                 Text(_status),
                 ElevatedButton(
                   onPressed: _pdfFile != null ? _sharePDF : null,
-                  child: const Text('Share PDF'),
+                  child: Text('mobile_order_card.opt_share_pdf'.tr),
                 ),
               ],
             ),

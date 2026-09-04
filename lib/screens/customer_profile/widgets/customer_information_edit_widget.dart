@@ -861,14 +861,14 @@ class _CustomerInformationEditWidgetState
               mainAxisSize: MainAxisSize.min,
               children: [
                 ListTile(
-                  title: const Text('B2C'),
+                  title: Text('customers.type_b2c'.tr),
                   onTap: () {
                     setState(() => _selectedCustomerType = 'B2C');
                     Navigator.pop(context);
                   },
                 ),
                 ListTile(
-                  title: const Text('B2B'),
+                  title: Text('customers.type_b2b'.tr),
                   onTap: () {
                     setState(() => _selectedCustomerType = 'B2B');
                     Navigator.pop(context);

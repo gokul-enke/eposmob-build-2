@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/features/products/domain/variant_form_payload.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/product_property.dart';
@@ -387,7 +388,7 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
                 setState(() => controller.addRow());
               },
               icon: const Icon(Icons.add, size: 18),
-              label: const Text('Add Variant'),
+              label: Text('product_detail.add_variant'.tr),
               style: OutlinedButton.styleFrom(
                 foregroundColor: ColorManager.kPrimaryColor,
                 side: BorderSide(color: ColorManager.kPrimaryColor),
@@ -416,14 +417,13 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Options',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          Text(
+            'product_detail.options'.tr,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 2),
-          const Text(
-            'Define option types (e.g. Colour: Red, Blue) and generate every '
-            'combination as a variant automatically.',
+          Text(
+            'product_detail.options_hint'.tr,
             style: TextStyle(fontSize: 11, color: Colors.black54),
           ),
           const SizedBox(height: 10),
@@ -443,7 +443,7 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
               TextButton.icon(
                 onPressed: () => setState(() => controller.addOptionGroup()),
                 icon: const Icon(Icons.add, size: 16),
-                label: const Text('Add Option'),
+                label: Text('product_detail.add_option'.tr),
                 style: TextButton.styleFrom(
                   foregroundColor: ColorManager.kPrimaryColor,
                 ),
@@ -453,7 +453,7 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
                   onPressed: () =>
                       setState(() => controller.generateFromOptions()),
                   icon: const Icon(Icons.auto_fix_high, size: 16),
-                  label: const Text('Generate Variants'),
+                  label: Text('product_detail.generate_variants'.tr),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: ColorManager.kPrimaryColor,
                     foregroundColor: Colors.white,
@@ -617,16 +617,14 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              'No product properties are available. Variants need at least one '
-              'property (attribute) configured.',
+            child: Text('product_detail.no_properties'.tr,
               style: TextStyle(fontSize: 11, color: Colors.orange.shade800),
             ),
           ),
           if (widget.onRetryLoadProperties != null)
             TextButton(
               onPressed: widget.onRetryLoadProperties,
-              child: const Text('Retry'),
+              child: Text('product_detail.retry'.tr),
             ),
         ],
       ),
@@ -709,34 +707,34 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
   Widget _buildTableHeaderRow() {
     return Row(
       children: [
-        const SizedBox(
+        SizedBox(
             width: _colAttr,
-            child: Text('Attributes', style: _tableHeaderStyle)),
+            child: Text('product_detail.attributes'.tr, style: _tableHeaderStyle)),
         const SizedBox(width: _colGap),
-        const SizedBox(
-            width: _colSku, child: Text('SKU', style: _tableHeaderStyle)),
+        SizedBox(
+            width: _colSku, child: Text('product_detail.sku'.tr, style: _tableHeaderStyle)),
         const SizedBox(width: _colGap),
-        const SizedBox(
+        SizedBox(
             width: _colBarcode,
-            child: Text('Barcode', style: _tableHeaderStyle)),
+            child: Text('product_detail.barcode'.tr, style: _tableHeaderStyle)),
         const SizedBox(width: _colGap),
-        const SizedBox(
-            width: _colPrice, child: Text('Price', style: _tableHeaderStyle)),
+        SizedBox(
+            width: _colPrice, child: Text('product_detail.price'.tr, style: _tableHeaderStyle)),
         const SizedBox(width: _colGap),
-        const SizedBox(
-            width: _colMrp, child: Text('MRP', style: _tableHeaderStyle)),
+        SizedBox(
+            width: _colMrp, child: Text('product_detail.mrp'.tr, style: _tableHeaderStyle)),
         if (widget.showPurchasePrice) ...[
           const SizedBox(width: _colGap),
-          const SizedBox(
+          SizedBox(
               width: _colPurchase,
-              child: Text('Purchase Price', style: _tableHeaderStyle)),
+              child: Text('product_detail.purchase_price'.tr, style: _tableHeaderStyle)),
         ],
         const SizedBox(width: _colGap),
-        const SizedBox(
-            width: _colQty, child: Text('Qty', style: _tableHeaderStyle)),
+        SizedBox(
+            width: _colQty, child: Text('product_detail.qty'.tr, style: _tableHeaderStyle)),
         const SizedBox(width: _colGap),
-        const SizedBox(
-            width: _colActive, child: Text('Active', style: _tableHeaderStyle)),
+        SizedBox(
+            width: _colActive, child: Text('product_detail.active'.tr, style: _tableHeaderStyle)),
         const SizedBox(width: _colDelete),
       ],
     );
@@ -869,7 +867,7 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text('Edit Attributes'),
+              title: Text('product_detail.edit_attributes'.tr),
               content: SizedBox(
                 width: 420,
                 child: Column(
@@ -894,7 +892,7 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
                           row.attributes.add(VariantAttributeRow());
                         }),
                         icon: const Icon(Icons.add, size: 16),
-                        label: const Text('Add Attribute'),
+                        label: Text('product_detail.add_attribute'.tr),
                         style: TextButton.styleFrom(
                           foregroundColor: ColorManager.kPrimaryColor,
                         ),
@@ -906,7 +904,7 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Done'),
+                  child: Text('product_detail.done'.tr),
                 ),
               ],
             );
@@ -979,12 +977,12 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Attribute',
-                  style: TextStyle(fontSize: 12, color: Colors.black54)),
+              Text('product_detail.attribute'.tr,
+                  style: const TextStyle(fontSize: 12, color: Colors.black54)),
               const SizedBox(height: 4),
               CustomDropDownWithSearch<ProductProperty>(
                 title: '',
-                hintText: 'Select attribute',
+                hintText: 'product_detail.select_attribute'.tr,
                 value: selectedProp,
                 height: 42,
                 margin: EdgeInsets.zero,
@@ -1035,12 +1033,12 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Value',
-              style: TextStyle(fontSize: 12, color: Colors.black54)),
+          Text('product_detail.value'.tr,
+              style: const TextStyle(fontSize: 12, color: Colors.black54)),
           const SizedBox(height: 4),
           CustomDropDownWithSearch<String>(
             title: '',
-            hintText: 'Select value',
+            hintText: 'product_detail.select_value'.tr,
             value: selected,
             height: 42,
             margin: EdgeInsets.zero,

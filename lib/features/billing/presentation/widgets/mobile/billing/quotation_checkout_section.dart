@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/features/billing/domain/quotation_checkout.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
@@ -71,7 +72,7 @@ class _QuotationCheckoutSectionState extends State<QuotationCheckoutSection> {
             OutlinedButton.icon(
               onPressed: widget.onSelectCustomer,
               icon: const Icon(Icons.person_search, size: 18),
-              label: const Text('Select saved customer'),
+              label: Text('ui_chrome.select_saved_customer'.tr),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 40),
               ),

@@ -638,7 +638,7 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
         child: DropdownButton<ProductTax>(
           value: _entryTax,
           isExpanded: true,
-          hint: const Text('No Tax', style: TextStyle(fontSize: 12)),
+          hint: Text('ui_codes.no_tax'.tr, style: const TextStyle(fontSize: 12)),
           items: (_selectedProduct?.taxes ?? [])
               .map((t) => DropdownMenuItem(value: t, child: Text('${t.rate}%')))
               .toList(),

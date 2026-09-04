@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/domain/product_variant_selection.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
@@ -764,7 +765,7 @@ class ProductCartHelper {
         var enabled = false;
         return StatefulBuilder(
           builder: (context, setDialogState) => AlertDialog(
-            title: const Text('Warranty coverage'),
+            title: Text('ui_chrome.warranty_coverage'.tr),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -787,7 +788,7 @@ class ProductCartHelper {
                   value: enabled,
                   onChanged: (value) =>
                       setDialogState(() => enabled = value ?? false),
-                  title: const Text('Enable warranty for this item'),
+                  title: Text('ui_chrome.enable_warranty'.tr),
                   subtitle: const Text(
                     'Select this only when the customer accepts warranty coverage.',
                   ),
@@ -797,11 +798,11 @@ class ProductCartHelper {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(dialogContext).pop(),
-                child: const Text('Cancel'),
+                child: Text('general.cancel'.tr),
               ),
               FilledButton(
                 onPressed: () => Navigator.of(dialogContext).pop(enabled),
-                child: const Text('Add to cart'),
+                child: Text('billing.add_to_cart'.tr),
               ),
             ],
           ),

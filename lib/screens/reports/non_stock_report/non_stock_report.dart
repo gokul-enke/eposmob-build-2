@@ -18,6 +18,7 @@ import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/models/executive.dart'; // For Store model
 import 'package:pos_machine/models/category_list.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/get_non_stock_report_model.dart';
 import 'dart:ui';
@@ -801,7 +802,7 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
           border: Border.all(color: textColor.withOpacity(0.2)),
         ),
         child: Text(
-          status,
+          UiCodeLabels.stockStatus(status),
           style: buildCustomStyle(
             FontWeightManager.bold,
             FontSize.s8,

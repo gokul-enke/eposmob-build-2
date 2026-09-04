@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 import 'package:intl/intl.dart';
 import '../../components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
@@ -742,7 +743,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                   });
                   searchVouchers();
                 },
-                displayText: (status) => status.toUpperCase(),
+                displayText: UiCodeLabels.status,
                 height: 45,
                 margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
               );
@@ -1016,13 +1017,13 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                                                        ),
                                                      ),
                                                    ),
-                                                  _buildTableCell(voucher.type),
+                                                  _buildTableCell(UiCodeLabels.voucherType(voucher.type)),
                                                   _buildTableCell(
                                                       voucher.voucherDate),
                                                   _buildTableCell(
                                                       voucher.dueDate),
                                                   _buildTableCell(
-                                                      voucher.paymentMethod),
+                                                      UiCodeLabels.payment(voucher.paymentMethod)),
                                                   _buildTableCell(
                                                       '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${voucher.amount}'),
                                                   Center(
@@ -1243,7 +1244,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        status.toUpperCase(),
+        UiCodeLabels.status(status),
         style: TextStyle(
           color: textColor,
           fontSize: 10,
@@ -1302,13 +1303,13 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
             CommonDetailsDialog.buildKeyValueRow('customer_voucher.col_voucher_number'.tr, voucher.voucherNumber, copyable: true),
             CommonDetailsDialog.buildKeyValueRow('customer_voucher.customer_name_hint'.tr, voucher.customer.user.name),
             CommonDetailsDialog.buildKeyValueRow('customer_voucher.field_customer_phone'.tr, voucher.customer.user.phone, copyable: true),
-            CommonDetailsDialog.buildKeyValueRow('customer_voucher.col_type'.tr, voucher.type),
+            CommonDetailsDialog.buildKeyValueRow('customer_voucher.col_type'.tr, UiCodeLabels.voucherType(voucher.type)),
           ],
           [
             CommonDetailsDialog.buildKeyValueRow('customer_voucher.col_voucher_date'.tr, voucher.voucherDate),
             CommonDetailsDialog.buildKeyValueRow('customer_voucher.col_due_date'.tr, voucher.dueDate),
             CommonDetailsDialog.buildKeyValueRow('customer_voucher.col_status'.tr, voucher.status),
-            CommonDetailsDialog.buildKeyValueRow('customer_voucher.col_payment_method'.tr, voucher.paymentMethod),
+            CommonDetailsDialog.buildKeyValueRow('customer_voucher.col_payment_method'.tr, UiCodeLabels.payment(voucher.paymentMethod)),
           ],
         ],
         sectionTitle: 'customer_voucher.items_section_title'.tr,

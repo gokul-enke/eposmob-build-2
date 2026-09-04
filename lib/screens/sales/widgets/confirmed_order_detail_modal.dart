@@ -4,6 +4,7 @@ import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -207,7 +208,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                                     order.status!.isNotEmpty) ...[
                                   const SizedBox(height: 8),
                                   _buildInfoRow("confirmed_orders.order_status".tr,
-                                      order.status!.toUpperCase(),
+                                      UiCodeLabels.status(order.status),
                                       valueStyle: TextStyle(
                                         color: order.status!.toLowerCase() ==
                                                 'confirmed'

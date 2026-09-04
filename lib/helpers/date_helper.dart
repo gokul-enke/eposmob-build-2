@@ -77,12 +77,14 @@ class DateHelper {
   }
 
   static String formatDate(DateTime date) {
-    final DateFormat formatter = DateFormat('yyyy MMM dd');
+    final DateFormat formatter =
+        DateFormat('yyyy MMM dd', Get.locale?.languageCode ?? 'en');
     return formatter.format(date);
   }
 
   static String formatYearMonthDay(DateTime date) {
-    final DateFormat formatter = DateFormat('yyyy MMM dd');
+    final DateFormat formatter =
+        DateFormat('yyyy MMM dd', Get.locale?.languageCode ?? 'en');
     return formatter.format(date);
   }
 

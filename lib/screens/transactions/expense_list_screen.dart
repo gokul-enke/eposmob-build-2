@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 import 'package:provider/provider.dart';
 
 import '../../newcomponents/custom_container_box.dart';
@@ -465,7 +467,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
           });
           provider.setStatus(val ?? 'All');
         },
-        displayText: (item) => item,
+        displayText: (item) => UiCodeLabels.status(item),
         showName: false,
         height: 44,
         autofocus: false,
@@ -900,30 +902,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
   }
 
   String _formatPaymentDate(DateTime paymentDate) {
-    return '${paymentDate.day.toString().padLeft(2, '0')} '
-        '${_getMonthName(paymentDate.month)} '
-        '${paymentDate.year}';
-  }
-
-  String _getMonthName(int monthNum) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    if (monthNum >= 1 && monthNum <= 12) {
-      return months[monthNum - 1];
-    }
-    return '';
+    return DateHelper.formatDate(paymentDate);
   }
 }
 

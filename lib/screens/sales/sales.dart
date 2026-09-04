@@ -23,6 +23,7 @@ import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/order_details.dart';
@@ -1782,7 +1783,7 @@ Powered by CloudPOS''',
       case 'cancelled':
         return 'sales.status_cancelled'.tr;
       default:
-        return status.toUpperCase();
+        return UiCodeLabels.status(status);
     }
   }
 

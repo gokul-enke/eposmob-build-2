@@ -16,6 +16,7 @@ import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../helpers/date_helper.dart';
+import '../../helpers/ui_code_labels.dart';
 import '../../models/list_transaction.dart';
 import '../../providers/auth_model.dart';
 import '../../providers/invoice_provider.dart';
@@ -272,8 +273,8 @@ class _CustomerTransactionListScreenState
           [
             CommonDetailsDialog.buildKeyValueRow('party_accounts.customer_name'.tr, transaction.customerName ?? 'party_accounts.no_name'.tr),
             CommonDetailsDialog.buildKeyValueRow('party_accounts.date'.tr, transaction.date ?? 'party_accounts.na'.tr),
-            CommonDetailsDialog.buildKeyValueRow('party_accounts.type'.tr, transaction.type ?? 'party_accounts.na'.tr),
-            CommonDetailsDialog.buildKeyValueRow('party_accounts.transaction_type'.tr, transaction.transactionType ?? 'party_accounts.na'.tr),
+            CommonDetailsDialog.buildKeyValueRow('party_accounts.type'.tr, UiCodeLabels.documentKind(transaction.type ?? 'party_accounts.na'.tr)),
+            CommonDetailsDialog.buildKeyValueRow('party_accounts.transaction_type'.tr, UiCodeLabels.documentKind(transaction.transactionType ?? 'party_accounts.na'.tr)),
             CommonDetailsDialog.buildKeyValueRow(
               'party_accounts.payment_method'.tr,
               paymentLabel,

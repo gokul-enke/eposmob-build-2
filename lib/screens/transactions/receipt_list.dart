@@ -15,6 +15,7 @@ import '../../components/build_dialog_box.dart';
 import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../helpers/date_helper.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 import '../../providers/auth_model.dart';
 import '../../providers/invoice_provider.dart';
 import '../../resources/color_manager.dart';
@@ -386,7 +387,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        status.toUpperCase(),
+        UiCodeLabels.status(status),
         style: TextStyle(
           color: textColor,
           fontSize: 10,

@@ -1859,7 +1859,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
               child: OutlinedButton.icon(
                 onPressed: () => Navigator.of(context).maybePop(),
                 icon: const Icon(Icons.close, size: 15),
-                label: const Text('Cancel'),
+                label: Text('general.cancel'.tr),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFF475569),
                   side: const BorderSide(color: Color(0xFFCBD5E1)),
