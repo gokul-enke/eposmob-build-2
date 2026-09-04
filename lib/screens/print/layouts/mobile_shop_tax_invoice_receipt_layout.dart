@@ -2881,7 +2881,16 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
             ? resolvedEnglish!.trim()
             : english);
 
-    if (isEnglish) return englishText;
+    // Single-language English output still shows a label the store typed only
+    // in Arabic — `default` is absent from many responses, so demanding an
+    // English variant would silently replace configured text with a hardcoded
+    // one. Bilingual keeps the strict split below so the two lines cannot
+    // collapse to the same Arabic string.
+    if (isEnglish) {
+      if (configuredEnglish.isNotEmpty) return configuredEnglish;
+      if (configuredArabic.isNotEmpty) return configuredArabic;
+      return englishText;
+    }
     if (!isBilingual) return arabicText;
     if (inlineBilingual) {
       return _getInlineBilingualText(arabic: arabicText, english: englishText);
