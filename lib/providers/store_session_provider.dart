@@ -15,6 +15,7 @@ import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
+import 'package:pos_machine/providers/printer_settings_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
@@ -90,6 +91,7 @@ class StoreSessionProvider extends ChangeNotifier {
     final invoiceProvider = context.read<InvoiceProvider>();
     final purchaseProvider = context.read<PurchaseProvider>();
     final docConfigProvider = context.read<DocumentConfigProvider>();
+    final printerSettingsProvider = context.read<PrinterSettingsProvider>();
     final categoryProvider = context.read<CategoryProvider>();
     final localProductProvider = context.read<LocalProductProvider>();
     final masterDataProvider = context.read<MasterDataProvider>();
@@ -253,6 +255,14 @@ class StoreSessionProvider extends ChangeNotifier {
       } catch (e) {
         debugPrint(
             'Warning: Failed to load document configurations after store selection: $e');
+      }
+
+      try {
+        await printerSettingsProvider.fetchAndApplyDefaults(
+          accessToken: accessToken,
+        );
+      } catch (e) {
+        debugPrint('Warning: Failed to load printer settings defaults: $e');
       }
 
       await _updateStatus('store_bootstrap.refreshing_categories'.tr);

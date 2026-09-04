@@ -17,6 +17,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:printing/printing.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
+import 'package:pos_machine/providers/printer_settings_provider.dart';
 import 'package:pos_machine/screens/print/barcode_layout_settings_panel.dart';
 import 'package:pos_machine/screens/print/widgets/printer_settings_responsive.dart';
 import 'package:pos_machine/screens/print/widgets/common_print_margins_card.dart';
@@ -569,6 +570,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       if (isPdfSharing) {
         await prefs.remove(_paperSizePrefsKey);
         await prefs.remove(_receiptThemePrefsKey);
+        await prefs.remove(
+            PrinterSettingsProvider.userSelectedFlagKey(_paperSizePrefsKey));
+        await prefs.remove(PrinterSettingsProvider.userSelectedFlagKey(
+            _receiptThemePrefsKey));
       } else {
         await DevelopmentPrinterService.clearTargetSelection(
           _printerPrefsKey,
@@ -582,6 +587,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         await prefs.remove(_paperSizePrefsKey);
         await prefs.remove(_fontStylePrefsKey);
         await prefs.remove(_receiptThemePrefsKey);
+        await prefs.remove(
+            PrinterSettingsProvider.userSelectedFlagKey(_paperSizePrefsKey));
+        await prefs.remove(PrinterSettingsProvider.userSelectedFlagKey(
+            _receiptThemePrefsKey));
       }
 
       if (isPdfSharing) {
@@ -611,6 +620,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   Future<void> _saveDefaultPaperSize(String paperSize) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_paperSizePrefsKey, paperSize);
+    await PrinterSettingsProvider.markUserSelected(prefs, _paperSizePrefsKey);
 
     if (mounted) {
       showScaffold(
@@ -623,6 +633,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   Future<void> _saveReceiptTheme(String theme) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_receiptThemePrefsKey, theme.toLowerCase());
+    await PrinterSettingsProvider.markUserSelected(
+        prefs, _receiptThemePrefsKey);
 
     if (mounted) {
       showScaffold(

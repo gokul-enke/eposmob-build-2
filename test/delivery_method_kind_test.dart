@@ -144,6 +144,149 @@ void main() {
 
       expect(method.translations['ar'], 'base');
     });
+
+    test('normalizes an underscored locale key', () {
+      // The backend's language table stores `en_ar` while its master-data
+      // payload reports the same language as `en-ar`.
+      final method = DeliveryMethod.fromMap({
+        'id': '2',
+        'name': 'Car Delivery',
+        'translations': {'ar_SA': 'توصيل بالسيارة'},
+      });
+
+      expect(method.translations['ar-sa'], 'توصيل بالسيارة');
+      expect(method.translations['ar'], 'توصيل بالسيارة');
+    });
+  });
+
+  group('translations parsing — live EAV row shape', () {
+    // Verbatim from GET /api/v1/logistics/list-delivery-methods?locale=ar on
+    // the demo tenant. The API does not send the agreed {locale: label} map; it
+    // dumps the translation table's rows, each with a fully nested language
+    // object. Before this was handled the entire list was discarded.
+    Map<String, dynamic> liveRow({
+      required int entityId,
+      required String locale,
+      required String value,
+      String key = 'name',
+    }) {
+      return {
+        'id': 200,
+        'company_id': 2,
+        'entity_type': 'delivery_method',
+        'entity_id': entityId,
+        'language_id': 4,
+        'locale': locale,
+        'key': key,
+        'value': value,
+        'created_at': '2026-09-03 11:41:00',
+        'updated_at': '2026-09-03 11:41:00',
+        'language': {
+          'id': 4,
+          'name': 'Arabic',
+          'code': locale,
+          'type': 'rtl',
+          'active': 1,
+        },
+      };
+    }
+
+    test('reads the locale/value pairs out of the row list', () {
+      final method = DeliveryMethod.fromMap({
+        'id': '150',
+        'name': 'التوصيل بالسيارة',
+        'code': 'car-delivery',
+        'status': 'Y',
+        'translations': [
+          liveRow(
+              entityId: 150, locale: 'ar', value: 'التوصيل بالسيارة'),
+        ],
+      });
+
+      expect(method.translations['ar'], 'التوصيل بالسيارة');
+      expect(method.kind, DeliveryKind.carDelivery);
+      expect(method.requiresCarNumber, isTrue);
+    });
+
+    test('skips rows for a column other than name', () {
+      final method = DeliveryMethod.fromMap({
+        'id': '150',
+        'name': 'Car Delivery',
+        'translations': [
+          liveRow(
+              entityId: 150,
+              locale: 'ar',
+              value: 'وصف',
+              key: 'description'),
+          liveRow(entityId: 150, locale: 'ar', value: 'التوصيل بالسيارة'),
+        ],
+      });
+
+      expect(method.translations['ar'], 'التوصيل بالسيارة',
+          reason: 'the description row must not win the ar slot');
+    });
+
+    test('falls back to the nested language.code when locale is absent', () {
+      final row = liveRow(entityId: 150, locale: 'ar', value: 'التوصيل');
+      row.remove('locale');
+
+      final method = DeliveryMethod.fromMap({
+        'id': '150',
+        'name': 'Car Delivery',
+        'translations': [row],
+      });
+
+      expect(method.translations['ar'], 'التوصيل');
+    });
+
+    test('survives malformed rows without dropping the good ones', () {
+      final method = DeliveryMethod.fromMap({
+        'id': '150',
+        'name': 'Car Delivery',
+        'translations': [
+          'not a row',
+          {'locale': 'ar'}, // no value
+          {'value': 'orphan'}, // no locale
+          {'locale': 'en', 'key': 'name', 'value': '  '}, // blank
+          liveRow(entityId: 150, locale: 'ar', value: 'التوصيل بالسيارة'),
+        ],
+      });
+
+      expect(method.translations, {'ar': 'التوصيل بالسيارة'});
+    });
+
+    test('a row list caches as the map shape and round trips', () {
+      // toJson writes the normalized map, so the next read takes the Map branch.
+      final original = DeliveryMethod.fromMap({
+        'id': '150',
+        'name': 'التوصيل بالسيارة',
+        'code': 'car-delivery',
+        'translations': [
+          liveRow(entityId: 150, locale: 'ar', value: 'التوصيل بالسيارة'),
+        ],
+      });
+
+      final restored = DeliveryMethod.fromMap(original.toJson());
+
+      expect(restored.translations, original.translations);
+      expect(restored.translations['ar'], 'التوصيل بالسيارة');
+    });
+
+    test('an ar-only row set still resolves kind from code', () {
+      // The live payload carries no `en` row, so the English-translation
+      // fallback in `kind` has nothing to work with — `code` must carry it.
+      final method = DeliveryMethod.fromMap({
+        'id': '149',
+        'name': 'الاستلام من المتجر',
+        'code': 'store-takeaway',
+        'translations': [
+          liveRow(entityId: 149, locale: 'ar', value: 'الاستلام من المتجر'),
+        ],
+      });
+
+      expect(method.translations.containsKey('en'), isFalse);
+      expect(method.kind, DeliveryKind.storeTakeaway);
+    });
   });
 
   group('status parsing', () {

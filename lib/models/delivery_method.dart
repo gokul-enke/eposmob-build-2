@@ -243,25 +243,41 @@ class DeliveryMethod {
     };
   }
 
-  /// Reads the `translations` field defensively.
+  /// Reads the `translations` field defensively across all three shapes the
+  /// backend has been observed to emit.
   ///
-  /// The backend currently emits `[]` (PHP's empty associative array) rather
-  /// than `{}` when a record has no translations, so both shapes must parse.
-  /// Keys are lowercased; a region-qualified key (`ar-sa`) additionally
-  /// populates its base language (`ar`) when that is not already present, since
-  /// the client looks up by base language only.
-  static Map<String, String> parseTranslations(dynamic raw) {
-    if (raw is! Map) return const {};
+  /// 1. `{"en": "Car Delivery", "ar": "..."}` — the agreed contract shape.
+  /// 2. `[]` — PHP's `json_encode` of an empty associative array, which is what
+  ///    every untranslated record looks like today.
+  /// 3. `[{"locale": "ar", "key": "name", "value": "...", "language": {...}}]` —
+  ///    the raw translation *rows* the live API actually returns for delivery
+  ///    methods. Without this branch the whole list is discarded as "not a Map"
+  ///    and [translations] is silently always empty, which disables offline
+  ///    language switching entirely.
+  ///
+  /// [field] selects which translated column to read out of shape 3; rows that
+  /// name a different column are skipped, and a row with no `key` at all is
+  /// assumed to be the requested one.
+  ///
+  /// Keys are lowercased and `_` is normalized to `-` (the backend's language
+  /// table stores `en_ar` while its master-data payload reports `en-ar`). A
+  /// region-qualified key (`ar-sa`) additionally populates its base language
+  /// (`ar`) when that is not already present, since the client looks up by base
+  /// language only.
+  static Map<String, String> parseTranslations(
+    dynamic raw, {
+    String field = 'name',
+  }) {
+    final Map<String, String> result;
+    if (raw is Map) {
+      result = _translationsFromMap(raw);
+    } else if (raw is List) {
+      result = _translationsFromRows(raw, field);
+    } else {
+      return const {};
+    }
 
-    final result = <String, String>{};
-    raw.forEach((key, value) {
-      if (value == null) return;
-      final text = value.toString().trim();
-      if (text.isEmpty) return;
-      final normalizedKey = key.toString().trim().toLowerCase();
-      if (normalizedKey.isEmpty) return;
-      result[normalizedKey] = text;
-    });
+    if (result.isEmpty) return const {};
 
     // Backfill base languages from region-qualified keys (`ar-sa` -> `ar`).
     for (final entry in result.entries.toList()) {
@@ -274,6 +290,70 @@ class DeliveryMethod {
 
     return result;
   }
+
+  /// Shape 1: `{locale: label}`.
+  static Map<String, String> _translationsFromMap(Map<dynamic, dynamic> raw) {
+    final result = <String, String>{};
+    raw.forEach((key, value) {
+      if (value == null) return;
+      final text = value.toString().trim();
+      if (text.isEmpty) return;
+      final normalizedKey = _normalizeLocale(key.toString());
+      if (normalizedKey.isEmpty) return;
+      result[normalizedKey] = text;
+    });
+    return result;
+  }
+
+  /// Shape 3: a list of `(locale, key, value)` translation rows.
+  static Map<String, String> _translationsFromRows(
+    List<dynamic> rows,
+    String field,
+  ) {
+    final wanted = field.trim().toLowerCase();
+    final result = <String, String>{};
+
+    for (final row in rows) {
+      if (row is! Map) continue;
+
+      // A row set can carry several translated columns per locale.
+      final column = row['key']?.toString().trim().toLowerCase();
+      if (column != null && column.isNotEmpty && column != wanted) continue;
+
+      final locale = _localeOfRow(row);
+      if (locale == null || locale.isEmpty) continue;
+
+      final text = row['value']?.toString().trim();
+      if (text == null || text.isEmpty) continue;
+
+      // First row wins, so a duplicate cannot flip the label non-deterministically.
+      result.putIfAbsent(locale, () => text);
+    }
+
+    return result;
+  }
+
+  /// Row locale, preferring the flat `locale` column and falling back to the
+  /// nested `language.code` object the API embeds alongside it.
+  static String? _localeOfRow(Map<dynamic, dynamic> row) {
+    final direct = row['locale']?.toString();
+    if (direct != null && direct.trim().isNotEmpty) {
+      return _normalizeLocale(direct);
+    }
+
+    final language = row['language'];
+    if (language is Map) {
+      final code = language['code']?.toString();
+      if (code != null && code.trim().isNotEmpty) {
+        return _normalizeLocale(code);
+      }
+    }
+
+    return null;
+  }
+
+  static String _normalizeLocale(String raw) =>
+      raw.trim().toLowerCase().replaceAll('_', '-');
 
   static String? _nonEmpty(String? value) {
     final trimmed = value?.trim();

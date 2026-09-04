@@ -3387,7 +3387,8 @@
     "msg_dev_mode_disabled": "تم تعطيل وضع المطور. تم استعادة إعدادات الطابعة الفعلية.",
     "msg_dev_mode_error": "تعذّر تحديث وضع المطور: @error",
     "lang_english": "الإنجليزية",
-    "lang_arabic": "العربية"
+    "lang_arabic": "العربية",
+    "lang_malayalam": "മലയാളം"
   },
   "company_info": {
     "title": "معلومات الشركة",

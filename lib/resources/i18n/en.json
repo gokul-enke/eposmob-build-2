@@ -3387,7 +3387,8 @@
     "msg_dev_mode_disabled": "Developer Mode disabled. Physical printer settings restored.",
     "msg_dev_mode_error": "Could not update Developer Mode: @error",
     "lang_english": "English",
-    "lang_arabic": "Arabic"
+    "lang_arabic": "Arabic",
+    "lang_malayalam": "Malayalam"
   },
   "company_info": {
     "title": "Company Information",

@@ -619,18 +619,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
           title: Text('settings.language_select'.tr),
           content: StatefulBuilder(
             builder: (context, setState) {
+              // NOTE: these language names are intentionally hardcoded in
+              // their own native script (not '.tr') so a user can recognize
+              // their language even if the app is currently showing a
+              // language they don't read. Do NOT localize/translate these
+              // labels into the currently selected app language.
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   RadioListTile<String>(
-                    title: Text('settings_ui.lang_english'.tr),
+                    title: const Text('English'),
                     value: 'en',
                     groupValue: selected,
                     onChanged: (v) => setState(() => selected = v!),
                   ),
                   RadioListTile<String>(
-                    title: Text('settings_ui.lang_arabic'.tr),
+                    title: const Text('العربية'),
                     value: 'ar',
+                    groupValue: selected,
+                    onChanged: (v) => setState(() => selected = v!),
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('മലയാളം'),
+                    value: 'ml',
                     groupValue: selected,
                     onChanged: (v) => setState(() => selected = v!),
                   ),
