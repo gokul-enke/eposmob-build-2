@@ -124,7 +124,12 @@ void main() {
       );
     });
 
-    test('does not leak Arabic into English-only output', () {
+    test('prints Arabic-only configuration on an English document', () {
+      // Stores run an English template and still localize individual fields in
+      // Arabic. The renderer fallback is a placeholder for keys left empty, not
+      // a language filter, so configured text must survive. This previously
+      // asserted the opposite ('Fallback EN'), which contradicted the shipped
+      // behaviour and masked the resolved-label regression below.
       final arabicOnly = <String, DisplayOption>{
         'showStoreName': DisplayOption(
           visible: true,
@@ -140,7 +145,43 @@ void main() {
           englishFallback: 'Fallback EN',
           arabicFallback: 'احتياطي',
         ),
-        'Fallback EN',
+        'متجر الاختبار',
+      );
+    });
+
+    test('configured value outranks a resolved master label', () {
+      // Regression: resolved_labels.tax mirrors showTaxHeader ("TAX"), yet
+      // every renderer also passes it as showTax's resolved label. Ranked above
+      // the store's own value it replaced the configured "ضريبة" with "TAX" on
+      // an English document, so the settings preview disagreed with the print.
+      final options = <String, DisplayOption>{
+        'showTax': DisplayOption(visible: true, value: 'ضريبة'),
+      };
+      expect(
+        ReceiptConfigurationContract.label(
+          options: options,
+          key: 'showTax',
+          mode: ReceiptLanguageMode.english,
+          resolvedArabic: 'TAX',
+          englishFallback: 'VAT',
+          arabicFallback: 'الضريبة',
+        ),
+        'ضريبة',
+      );
+    });
+
+    test('still uses the resolved master label when the key is unconfigured',
+        () {
+      expect(
+        ReceiptConfigurationContract.label(
+          options: const <String, DisplayOption>{},
+          key: 'showTax',
+          mode: ReceiptLanguageMode.english,
+          resolvedEnglish: 'Sales Tax',
+          englishFallback: 'VAT',
+          arabicFallback: 'الضريبة',
+        ),
+        'Sales Tax',
       );
     });
 

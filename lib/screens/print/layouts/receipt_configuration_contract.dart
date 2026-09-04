@@ -148,6 +148,14 @@ class ReceiptConfigurationContract {
   /// script: when a store configures only Arabic on an English document, that
   /// Arabic is what prints. Renderer fallbacks apply only to keys the store
   /// left empty.
+  ///
+  /// [resolvedEnglish]/[resolvedArabic] come from the response's
+  /// `resolved_labels`, which are master-data defaults keyed by concept rather
+  /// than by display key — `resolved_labels.tax` mirrors `showTaxHeader` (the
+  /// item-table column) yet every renderer also passes it for `showTax` (the
+  /// totals row). They therefore rank *below* this key's own `default`/`value`:
+  /// a label the store typed against this exact key must win over a master
+  /// default derived from a different one.
   static String label({
     required Map<String, DisplayOption>? options,
     required String key,
@@ -169,29 +177,30 @@ class ReceiptConfigurationContract {
       arabicFallback,
       _arabicFallbackForEnglish(englishFallback),
     ]);
-    // Same-script candidates are preferred, but configured text is never
-    // discarded for being in the "wrong" script: a store that types an Arabic
-    // store name on an English document must see that Arabic on the receipt,
-    // not a hardcoded English placeholder. The renderer fallback is therefore
-    // the last resort, used only when nothing at all was configured.
+    // Two tiers, in order: text the store typed against *this* key, then the
+    // master-data and renderer defaults. Same-script candidates are preferred
+    // within each tier, but configured text is never discarded for being in
+    // the "wrong" script: a store that types an Arabic store name on an
+    // English document must see that Arabic on the receipt, not a hardcoded
+    // English placeholder or a master default borrowed from another key.
     final english = _firstNonEmpty([
       _withoutArabic(defaultValue),
-      _withoutArabic(resolvedEnglish),
-      _withoutArabic(resolvedArabic),
       _withoutArabic(value),
       defaultValue,
-      _clean(resolvedEnglish),
       value,
+      _withoutArabic(resolvedEnglish),
+      _withoutArabic(resolvedArabic),
+      _clean(resolvedEnglish),
       _clean(resolvedArabic),
       safeEnglishFallback,
     ]);
     final arabic = _firstNonEmpty([
       _withArabic(value),
-      _withArabic(resolvedArabic),
       _withArabic(defaultValue),
       value,
-      _clean(resolvedArabic),
       defaultValue,
+      _withArabic(resolvedArabic),
+      _clean(resolvedArabic),
       _clean(resolvedEnglish),
       // The renderer-owned fallback may legitimately be transliterated or
       // contain only punctuation/numbers.
@@ -202,15 +211,15 @@ class ReceiptConfigurationContract {
     // the renderer can still supply the missing counterpart line.
     final bilingualEnglish = _firstNonEmpty([
       _withoutArabic(defaultValue),
+      _withoutArabic(value),
       _withoutArabic(resolvedEnglish),
       _withoutArabic(resolvedArabic),
-      _withoutArabic(value),
       _withoutArabic(safeEnglishFallback),
     ]);
     final bilingualArabic = _firstNonEmpty([
       _withArabic(value),
-      _withArabic(resolvedArabic),
       _withArabic(defaultValue),
+      _withArabic(resolvedArabic),
       _clean(safeArabicFallback),
     ]);
 
