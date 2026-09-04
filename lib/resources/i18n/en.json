@@ -1071,6 +1071,7 @@
     "network_error": "Network error occurred",
     "invalid_price_item": "Invalid price for item @name",
     "invalid_mrp_item": "Invalid MRP for item @name",
+    "msg_error": "Error Occurred! Try Again",
     "payment_method_labels": {
       "credit": "Credit",
       "return": "Return",
@@ -1100,6 +1101,13 @@
     "payment_method_label": "Payment Method *",
     "select_payment_method": "Select payment method",
     "payment_required": "Payment method is required",
+    "type_cash": "Cash",
+    "type_bank": "Bank",
+    "payment_cash": "Cash",
+    "payment_upi": "UPI",
+    "payment_cod": "COD",
+    "payment_online": "Online",
+    "payment_cheque": "Cheque",
     "btn_create_another": "Create & Create Another",
     "btn_create": "Create"
   },

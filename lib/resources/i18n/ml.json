@@ -377,7 +377,7 @@
     "label_payment_ref": "പേയ്‌മെന്റ് റഫറൻസ്",
     "hint_payment_ref": "റഫറൻസ് നൽകുക",
     "label_amount": "തുക",
-    "label_to": "",
+    "label_to": "ലേക്ക്",
     "hint_to": "യൂസർ തിരഞ്ഞെടുക്കുക",
     "label_comment": "കമന്റ്",
     "hint_comment": "ഓപ്ഷണൽ കമന്റ്",
@@ -698,7 +698,7 @@
     "field_balance": "ബാലൻസ്",
     "section_transactions": "കമ്പനി അക്കൗണ്ട് ട്രാൻസാക്ഷനുകൾ",
     "col_from": "ൽ നിന്ന്",
-    "col_to": "",
+    "col_to": "ലേക്ക്",
     "col_type": "തരം",
     "col_status": "സ്റ്റാറ്റസ്",
     "col_amount": "തുക",
@@ -838,7 +838,7 @@
     "previous": "മുമ്പത്തേത്",
     "next": "അടുത്തത്",
     "page": "പേജ്",
-    "of": "",
+    "of": "ൽ",
     "page_of": "പേജ് @current @total"
   },
   "general": {
@@ -1071,6 +1071,7 @@
     "network_error": "നെറ്റ്‌വർക്ക് പിഴവ്",
     "invalid_price_item": "തെറ്റായ വില ഇനം @name",
     "invalid_mrp_item": "തെറ്റായ MRP ഇനം @name",
+    "msg_error": "പിഴവ്: സംഭവിച്ചു! വീണ്ടും ശ്രമിക്കുക",
     "payment_method_labels": {
       "credit": "ക്രെഡിറ്റ്",
       "return": "റിട്ടേൺ",
@@ -1100,7 +1101,14 @@
     "payment_method_label": "പേയ്‌മെന്റ് രീതി *",
     "select_payment_method": "പേയ്‌മെന്റ് രീതി തിരഞ്ഞെടുക്കുക",
     "payment_required": "പേയ്‌മെന്റ് രീതി നിർബന്ധമാണ്",
-    "btn_create_another": "& സൃഷ്ടിക്കുക മറ്റൊരു സൃഷ്ടിക്കുക",
+    "type_cash": "ക്യാഷ്",
+    "type_bank": "ബാങ്ക്",
+    "payment_cash": "ക്യാഷ്",
+    "payment_upi": "UPI",
+    "payment_cod": "COD",
+    "payment_online": "ഓൺലൈൻ",
+    "payment_cheque": "ചെക്ക്",
+    "btn_create_another":"& സൃഷ്ടിക്കുക മറ്റൊരു സൃഷ്ടിക്കുക",
     "btn_create": "സൃഷ്ടിക്കുക"
   },
   "customers": {
@@ -1755,7 +1763,7 @@
     "hint_select_employee": "ജീവനക്കാരൻ തിരഞ്ഞെടുക്കുക",
     "btn_view_details": "വിവരങ്ങൾ കാണുക",
     "confirm_close_day": "സ്ഥിരീകരിക്കുക & അടയ്ക്കുക ദിവസം",
-    "at": "",
+    "at": "സമയത്ത്",
     "add_row": "വരി ചേർക്കുക",
     "remove_row": "വരി നീക്കം ചെയ്യുക",
     "denomination": "ഡിനോമിനേഷൻ",
@@ -2253,9 +2261,9 @@
     "status_low_stock": "കുറവ് സ്റ്റോക്ക്",
     "status_at_reorder_level": "റീഓർഡർ ലെവലിൽ",
     "status_available": "ലഭ്യം",
-    "status_in_short": "",
+    "status_in_short": "ഇൻ",
     "status_low_short": "കുറവ്",
-    "status_out_short": ""
+    "status_out_short": "ഔട്ട്"
   },
   "add_stock": {
     "title": "ഉൽപ്പന്നം സ്റ്റോക്ക് ചേർക്കുക",
@@ -2557,7 +2565,7 @@
     "month_feb": "Feb",
     "month_mar": "Mar",
     "month_apr": "Apr",
-    "month_may": "",
+    "month_may": "മെയ്",
     "month_jun": "Jun",
     "month_jul": "Jul",
     "month_aug": "Aug",

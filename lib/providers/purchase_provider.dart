@@ -10,6 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/list_purchase_voucher.dart';
 import 'package:pos_machine/models/list_unit.dart';
+import 'package:pos_machine/models/master_data.dart';
+import 'package:pos_machine/resources/api_locale.dart';
 
 import '../models/get_store.dart';
 import '../models/get_suppliers.dart';
@@ -58,8 +60,22 @@ class PurchaseProvider extends ChangeNotifier {
       ListPurchaseModelDataDetails;
   // UnitList? unitList;
   // UnitList? get getUnitList => unitList;
+  /// Machine unit values keyed by unit id (`{"6953": "PCS"}`). Identical in
+  /// every locale — stored units are matched against these.
   Map<String, String>? unitList;
   Map<String, String>? get getUnitList => unitList;
+
+  /// Locale-resolved unit display text keyed by unit id. Falls back to the
+  /// machine value per-entry until the backend ships the `labels` map, so it is
+  /// always safe to render.
+  Map<String, String>? unitLabels;
+  Map<String, String>? get getUnitLabels => unitLabels ?? unitList;
+
+  /// Display text for a unit id, falling back to the machine value.
+  String? unitLabelFor(String? unitId) {
+    if (unitId == null || unitId.isEmpty) return null;
+    return unitLabels?[unitId] ?? unitList?[unitId];
+  }
   Map<String, String>? masterDataValues;
   Map<String, dynamic>? activePurchaseOrderDetails;
 
@@ -301,29 +317,35 @@ class PurchaseProvider extends ChangeNotifier {
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
 
-    final Map<String, String> queryParameters = {};
-    if (activeStoreId != null) {
-      queryParameters['store_id'] = activeStoreId.toString();
-    }
-    final url =
-        Uri.parse(APPUrl.listUnits).replace(queryParameters: queryParameters);
+    // ApiLocale deliberately withholds the locale from this endpoint until the
+    // backend ships the additive `labels` map; the parsing below is already
+    // ready for it, so unblocking is a one-line change there.
+    final url = ApiLocale.build(APPUrl.listUnits, {
+      if (activeStoreId != null) 'store_id': activeStoreId.toString(),
+    });
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
     try {
-      final response = await http.get(url, headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $accessToken',
-        'X-Tenant': apiKey,
-      });
+      final response = await http.get(
+        url,
+        headers: ApiLocale.headers(
+          apiKey: apiKey,
+          accessToken: accessToken,
+          localized: ApiLocale.isLocalized(url),
+        ),
+      );
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
         // debugPrint(response.body.toString());
         final jsonData = json.decode(response.body);
         UnitsResponse unitsResponse = UnitsResponse.fromJson(jsonData);
 
+        // Machine values, never the localized labels — product/stock forms
+        // match a stored unit against these.
         unitList = unitsResponse.unitList;
+        unitLabels = unitsResponse.displayList;
 
         notifyListeners();
       } else {}
@@ -343,22 +365,19 @@ class PurchaseProvider extends ChangeNotifier {
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
 
-    final Map<String, String> queryParameters = {'code': code};
-    if (activeStoreId != null) {
-      queryParameters['store_id'] = activeStoreId.toString();
-    }
-    final url = Uri.parse(APPUrl.getMasterDataValues)
-        .replace(queryParameters: queryParameters);
+    final url = ApiLocale.build(APPUrl.getMasterDataValues, {
+      'code': code,
+      if (activeStoreId != null) 'store_id': activeStoreId.toString(),
+    });
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
     try {
-      final response = await http.get(url, headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $accessToken',
-        'X-Tenant': apiKey,
-      });
+      final response = await http.get(
+        url,
+        headers: ApiLocale.headers(apiKey: apiKey, accessToken: accessToken),
+      );
       debugPrint('Master data API response status: ${response.statusCode}');
       if (response.statusCode == 200) {
         debugPrint('Master data response: ${response.body}');
@@ -367,14 +386,18 @@ class PurchaseProvider extends ChangeNotifier {
         if (jsonData['status'] == 'success' && jsonData['data'] != null) {
           // Handle both new List structure and legacy Map structure
           if (jsonData['data'] is List) {
-            // New structure: List of objects with id, value, description
+            // New structure: List of objects with id, value, description.
+            // Parsed through MasterDataValue so the row's `translations` map is
+            // honored: `label` resolves against the active locale and falls
+            // back to the server-resolved description, then the machine value.
+            // The key stays `value` — it is what gets persisted on stock rows,
+            // so it must never become a translated string.
             masterDataValues = {};
-            for (var item in jsonData['data']) {
-              final value = item['value']?.toString() ?? '';
-              final description = item['description']?.toString() ?? value;
-              if (value.isNotEmpty) {
-                masterDataValues![value] = description;
-              }
+            for (final item in jsonData['data']) {
+              if (item is! Map<String, dynamic>) continue;
+              final parsed = MasterDataValue.fromJson(item);
+              if (parsed.value.isEmpty) continue;
+              masterDataValues![parsed.value] = parsed.label;
             }
             debugPrint(
                 'Master data values loaded (from List): $masterDataValues');

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:pos_machine/resources/localization_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Map<String, String> _loadAndFlatten(String path) {
@@ -40,27 +41,61 @@ Set<String> _duplicateTopLevelNamespaces(String path) {
 
 void main() {
   group('localization resources', () {
-    final english = _loadAndFlatten('lib/resources/i18n/en.json');
-    final arabic = _loadAndFlatten('lib/resources/i18n/ar.json');
+    final locales = LocalizationService.supportedLocales
+        .map((locale) => locale.languageCode)
+        .toList();
+    const referenceCode = 'en';
 
-    test('English and Arabic expose the same translation keys', () {
-      expect(arabic.keys.toSet(), english.keys.toSet());
+    final bundles = {
+      for (final code in locales)
+        code: _loadAndFlatten('lib/resources/i18n/$code.json'),
+    };
+
+    test('every supported locale exposes the same translation keys as English',
+        () {
+      final referenceKeys = bundles[referenceCode]!.keys.toSet();
+
+      for (final code in locales) {
+        if (code == referenceCode) continue;
+        final keys = bundles[code]!.keys.toSet();
+        final missing = referenceKeys.difference(keys);
+        final extra = keys.difference(referenceKeys);
+        expect(
+          missing,
+          isEmpty,
+          reason: '$code.json is missing keys: $missing',
+        );
+        expect(
+          extra,
+          isEmpty,
+          reason: '$code.json has extra keys not in en.json: $extra',
+        );
+      }
     });
 
-    test('English and Arabic translations are not empty', () {
-      expect(english.values.where((value) => value.trim().isEmpty), isEmpty);
-      expect(arabic.values.where((value) => value.trim().isEmpty), isEmpty);
+    test('every supported locale has no empty or whitespace-only values', () {
+      for (final code in locales) {
+        final emptyKeys = bundles[code]!
+            .entries
+            .where((entry) => entry.value.trim().isEmpty)
+            .map((entry) => entry.key)
+            .toSet();
+        expect(
+          emptyKeys,
+          isEmpty,
+          reason: '$code.json has empty/whitespace-only values for keys: $emptyKeys',
+        );
+      }
     });
 
     test('locale files do not shadow top-level namespaces', () {
-      expect(
-        _duplicateTopLevelNamespaces('lib/resources/i18n/en.json'),
-        isEmpty,
-      );
-      expect(
-        _duplicateTopLevelNamespaces('lib/resources/i18n/ar.json'),
-        isEmpty,
-      );
+      for (final code in locales) {
+        expect(
+          _duplicateTopLevelNamespaces('lib/resources/i18n/$code.json'),
+          isEmpty,
+          reason: '$code.json has duplicate top-level namespaces',
+        );
+      }
     });
   });
 }

@@ -1071,6 +1071,7 @@
     "network_error": "حدث خطأ في الشبكة",
     "invalid_price_item": "سعر غير صحيح للعنصر @name",
     "invalid_mrp_item": "MRP غير صحيح للعنصر @name",
+    "msg_error": "حدث خطأ! أعد المحاولة",
     "payment_method_labels": {
       "credit": "ائتمان",
       "return": "إرجاع",
@@ -1100,7 +1101,14 @@
     "payment_method_label": "طريقة الدفع *",
     "select_payment_method": "اختر طريقة الدفع",
     "payment_required": "طريقة الدفع مطلوبة",
-    "btn_create_another": "إنشاء وإنشاء آخر",
+    "type_cash": "نقد",
+    "type_bank": "بنك",
+    "payment_cash": "نقد",
+    "payment_upi": "UPI",
+    "payment_cod": "كود",
+    "payment_online": "أونلاين",
+    "payment_cheque": "شيك",
+    "btn_create_another":"إنشاء وإنشاء آخر",
     "btn_create": "إنشاء"
   },
   "customers": {

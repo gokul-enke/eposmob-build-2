@@ -1,20 +1,63 @@
 class UnitsResponse {
   final String status;
   final String message;
+
+  /// The **machine** unit values (`PCS`, `KG`), keyed by unit id.
+  ///
+  /// This map must stay in the tenant's base language for every locale. Unit
+  /// resolution on the product, stock and purchase forms matches a product's
+  /// stored unit against both the keys *and* the values here, so a translated
+  /// value silently breaks the unit dropdown. See backend action item 1 in
+  /// `TRANSLATION_AGREED_SCOPE.md`.
   final Map<String, String> unitList;
+
+  /// Locale-resolved display text keyed by the same unit id, from the additive
+  /// `labels` map. Empty until the backend ships it — [displayFor] falls back
+  /// to [unitList] so the UI reads the same either way.
+  final Map<String, String> labels;
 
   UnitsResponse({
     required this.status,
     required this.message,
     required this.unitList,
+    this.labels = const {},
   });
+
+  /// Display text for a unit id: the localized label when the backend has one,
+  /// otherwise the machine value.
+  String? displayFor(String unitId) {
+    final label = labels[unitId]?.trim();
+    if (label != null && label.isNotEmpty) return label;
+    return unitList[unitId];
+  }
+
+  /// `{id: displayText}` for every known unit, for dropdowns that want one map.
+  Map<String, String> get displayList => {
+        for (final entry in unitList.entries)
+          entry.key: displayFor(entry.key) ?? entry.value,
+      };
 
   factory UnitsResponse.fromJson(Map<String, dynamic> json) {
     return UnitsResponse(
-      status: json['status'],
-      message: json['message'],
-      unitList: Map<String, String>.from(json['data']),
+      status: json['status']?.toString() ?? '',
+      message: json['message']?.toString() ?? '',
+      unitList: _stringMap(json['data']),
+      labels: _stringMap(json['labels']),
     );
+  }
+
+  /// Tolerates a missing key, a null, and the `[]` PHP emits for an empty
+  /// associative array — any of which would otherwise throw on a hard cast.
+  static Map<String, String> _stringMap(dynamic raw) {
+    if (raw is! Map) return const {};
+    final result = <String, String>{};
+    raw.forEach((key, value) {
+      if (value == null) return;
+      final text = value.toString();
+      if (text.isEmpty) return;
+      result[key.toString()] = text;
+    });
+    return result;
   }
 }
 

@@ -26,25 +26,32 @@ class ApiLocale {
 
   /// Endpoints that must NOT receive `locale` yet.
   ///
-  /// `product/list-units` currently swaps the meaning of its `data` map when a
-  /// locale is present: without one it returns the original unit values
+  /// `product/list-units` is documented to swap the meaning of its `data` map
+  /// when a locale is present: without one it returns the original unit values
   /// (`PCS`), with one it returns translated descriptions (`قطعة`). Product
   /// unit resolution matches a stored unit against those values, so requesting
-  /// a locale here breaks the unit dropdown on the product, stock and purchase
-  /// forms.
+  /// a locale here would break the unit dropdown on the product, stock and
+  /// purchase forms.
   ///
-  /// Remove an entry once the backend ships the additive `labels` map for it
-  /// (backend action item 1 in TRANSLATION_AGREED_SCOPE.md).
+  /// A live capture on 2026-09-04 showed `data` *not* varying by locale, but
+  /// the additive `labels` map (backend action item 1 in
+  /// TRANSLATION_AGREED_SCOPE.md) has not shipped either, so requesting a
+  /// locale here currently buys nothing and risks the documented behaviour on
+  /// another backend build. `UnitsResponse` already parses `labels`, so
+  /// unblocking is deleting the line below and nothing else.
+  ///
+  /// Every other endpoint was verified to return byte-identical payloads with
+  /// and without `?locale=`, with machine keys/values frozen — so sending the
+  /// locale is a no-op today and starts working the moment the backend
+  /// resolves labels, with no client change.
   static const Set<String> notYetLocalized = {
     'product/list-units',
-    // Master data stays on the default language until the backend's blocking
-    // items are resolved — see TRANSLATION_AGREED_SCOPE.md.
-    'master-data-values',
-    'cart/cart-item-statuses',
-    'website-settings',
   };
 
-  static bool _isLocalized(Uri uri) {
+  /// Whether [uri] will actually carry the language. Callers that build their
+  /// own headers need this to keep `Accept-Language` consistent with the query
+  /// parameter, since the backend lets the header override the param.
+  static bool isLocalized(Uri uri) {
     if (!enabled) return false;
     final path = uri.path;
     for (final blocked in notYetLocalized) {
@@ -53,10 +60,18 @@ class ApiLocale {
     return true;
   }
 
-  /// Languages the app ships translation bundles for. The backend advertises
-  /// more (and currently some invalid entries), but requesting a language we
-  /// have no UI strings for would produce a half-translated screen.
-  static const Set<String> supported = {'en', 'ar'};
+  /// Languages the app ships translation bundles for.
+  ///
+  /// Derived from [LocalizationService.supportedLocales] rather than being a
+  /// second hardcoded list: when the two drifted, a Malayalam session silently
+  /// requested `en` from the API and rendered Malayalam UI chrome around
+  /// English payment and delivery labels. The backend falls back to its base
+  /// language for a locale it has no translations for, which is exactly the
+  /// behaviour we want while a language is only partly seeded.
+  static Set<String> get supported => {
+        for (final locale in LocalizationService.supportedLocales)
+          locale.languageCode.trim().toLowerCase(),
+      };
 
   static const String fallback = 'en';
 
@@ -70,7 +85,7 @@ class ApiLocale {
   /// Adds `locale` to a URL's query string, preserving existing parameters.
   /// A no-op for endpoints in [notYetLocalized] or when [enabled] is false.
   static Uri apply(Uri uri) {
-    if (!_isLocalized(uri)) return uri;
+    if (!isLocalized(uri)) return uri;
     final params = Map<String, String>.from(uri.queryParameters);
     params['locale'] = current;
     return uri.replace(queryParameters: params);

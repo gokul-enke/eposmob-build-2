@@ -275,6 +275,37 @@ We need to know which it is:
 
 ---
 
+## Client readiness — what happens when you push
+
+The client half is **done and shipped**, built defensively so it behaves
+identically against today's API and starts working the moment yours does. You
+should not need to coordinate a release with us.
+
+| Your change | What the app does |
+|---|---|
+| Seed master-data `translations` | Labels start resolving immediately. Parsed by `MasterDataValue`/`PaymentMethod`, which already read `translations` and re-resolve at render time. |
+| `translations` as `{}` instead of `[]` | No-op — both shapes already parse, as does your delivery-method row shape. |
+| Make `?locale=` resolve `description`/`label` | No-op — every master-data request already carries `?locale=` **and** `Accept-Language`, and caches are keyed per language. |
+| Add delivery capability flags | Picked up automatically; `requires_car_number` / `requires_address` / `icon_key` / `sort_order` already override our inference. |
+| Add `labels` to `list-units` | One line to delete on our side (`product/list-units` is the last entry in our not-yet-localized list). `UnitsResponse` already parses `labels` with a per-entry fallback to `data`. |
+| Clean `available_languages` | No-op — we never consumed the dirty list. |
+
+Two things to know:
+
+- **We now request `ml` (Malayalam) as well as `en` and `ar`.** Verified that
+  `?locale=ml` falls back cleanly to the base language today, so this is safe
+  before you seed anything. See the question below.
+- **We send `?locale=` and `Accept-Language` with the same value on every
+  localized request**, so the resolved language is identical under either
+  precedence rule. No transition window to coordinate when you make `?locale=`
+  authoritative.
+
+Verified against this tenant on 2026-09-04: all endpoints return `200` under
+`en`/`ar`/`ml`, and the machine `value` fields are byte-identical across all
+three locales for `PAYMENT_METHOD`, `RACKS`, `TABLE_LIST`, `PRODUCT_UNITS` and
+`CASH_DENOMINATIONS` (52 rows). Please keep it that way — that freeze is what
+makes the rest of this safe.
+
 ## Suggested order
 
 | # | Item | Why first |

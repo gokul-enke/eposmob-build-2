@@ -1711,7 +1711,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                   child: OutlinedButton.icon(
                     onPressed: _addSaleUnitRow,
                     icon: const Icon(Icons.add, size: 18),
-                    label: Text('products.add_sale_unit'.tr),
+                    label: Text('product_sale_unit.add_sale_unit'.tr),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: ColorManager.kPrimaryColor,
                       side: BorderSide(color: ColorManager.kPrimaryColor),

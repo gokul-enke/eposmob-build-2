@@ -1,3 +1,4 @@
+import 'package:pos_machine/models/api_translations.dart';
 import 'package:pos_machine/models/master_data.dart';
 
 /// How a payment method behaves at checkout.
@@ -22,13 +23,14 @@ class PaymentMethod {
   const PaymentMethod({
     required this.id,
     required this.code,
-    required this.label,
+    required String label,
+    this.translations = const {},
     this.enabled = true,
     this.sortOrder = 0,
     this.iconKey,
     this.behavior = PaymentBehavior.collected,
     this.requiresReference = false,
-  });
+  }) : rawLabel = label;
 
   /// Backend id (master-data value id). Empty string when unknown.
   final String id;
@@ -37,8 +39,18 @@ class PaymentMethod {
   /// `DEBIT`, `ONLINE`, or any dynamic backend code.
   final String code;
 
-  /// Human-facing label shown in the UI (already localized upstream if needed).
-  final String label;
+  /// Label exactly as the server resolved it at fetch time. Prefer [label],
+  /// which re-resolves against the active locale; this is what gets cached so
+  /// a stale localized string is never baked into local storage.
+  final String rawLabel;
+
+  /// Per-language display text keyed by base language code (`en`, `ar`, `ml`).
+  final Map<String, String> translations;
+
+  /// Human-facing label for the active app locale, resolved at render time so
+  /// a language switch relabels cached methods with no network call.
+  String get label =>
+      ApiTranslations.resolve(translations, fallback: rawLabel);
 
   /// Whether the method is enabled for the active store.
   final bool enabled;
@@ -112,6 +124,12 @@ class PaymentMethod {
       id: rawId,
       code: code.toUpperCase(),
       label: label.isNotEmpty ? label : code,
+      // Master data translates `description`; `label`/`name` are accepted too
+      // so a row set that names the column differently still parses.
+      translations: ApiTranslations.parse(
+        json['translations'],
+        fields: const ['description', 'label', 'name', 'value'],
+      ),
       enabled: _parseBool(json['enabled'], defaultValue: true),
       sortOrder: int.tryParse(json['sort_order']?.toString() ?? '') ?? 0,
       iconKey: json['icon_key']?.toString().trim().isNotEmpty ?? false
@@ -135,6 +153,7 @@ class PaymentMethod {
       label: value.description.trim().isNotEmpty
           ? value.description.trim()
           : value.value,
+      translations: value.translations,
       behavior: _inferBehavior(code),
       requiresReference: _inferBehavior(code) == PaymentBehavior.terminal,
     );
@@ -144,7 +163,10 @@ class PaymentMethod {
     return {
       'id': id,
       'code': code,
-      'label': label,
+      // Cache the server-resolved text, never the locale-resolved one, so a
+      // cache written in Arabic does not pin an Arabic label into English.
+      'label': rawLabel,
+      if (translations.isNotEmpty) 'translations': translations,
       'enabled': enabled,
       'sort_order': sortOrder,
       'icon_key': iconKey,
@@ -152,7 +174,7 @@ class PaymentMethod {
       'requires_reference': requiresReference,
       // Legacy keys retained so downstream MasterDataValue consumers still work.
       'value': code,
-      'description': label,
+      'description': rawLabel,
     };
   }
 
@@ -160,6 +182,7 @@ class PaymentMethod {
     String? id,
     String? code,
     String? label,
+    Map<String, String>? translations,
     bool? enabled,
     int? sortOrder,
     String? iconKey,
@@ -169,7 +192,8 @@ class PaymentMethod {
     return PaymentMethod(
       id: id ?? this.id,
       code: code ?? this.code,
-      label: label ?? this.label,
+      label: label ?? rawLabel,
+      translations: translations ?? this.translations,
       enabled: enabled ?? this.enabled,
       sortOrder: sortOrder ?? this.sortOrder,
       iconKey: iconKey ?? this.iconKey,
