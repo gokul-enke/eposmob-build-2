@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:pos_machine/components/build_title.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -292,7 +293,7 @@ class _BuildDropDownWithSearchState<T>
                           focusNode: _searchFocusNode,
                           autofocus: widget.autofocus,
                           decoration: InputDecoration(
-                            hintText: widget.searchHintText ?? 'Search...',
+                            hintText: widget.searchHintText ?? 'general.search'.tr,
                             hintStyle: buildCustomStyle(
                               FontWeightManager.medium,
                               FontSize.s12,
@@ -395,7 +396,7 @@ class _BuildDropDownWithSearchState<T>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 16),
                             child: Text(
-                              'No items found',
+                              'general.no_items_found'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.medium,
                                 FontSize.s12,
@@ -425,7 +426,7 @@ class _BuildDropDownWithSearchState<T>
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Loading...',
+                                  'general.loading'.tr,
                                   style: buildCustomStyle(
                                     FontWeightManager.medium,
                                     FontSize.s12,

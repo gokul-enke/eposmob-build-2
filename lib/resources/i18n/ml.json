@@ -142,6 +142,13 @@
     "label_balance_status": "ബാലൻസ് സ്റ്റാറ്റസ്",
     "label_payment_type": "പേയ്‌മെന്റ് തരം",
     "na": "N/A"
+    ,"stock_mismatch": "സ്റ്റോക്ക് പൊരുത്തക്കേട്"
+    ,"sell_anyway": "എന്തായാലും വിൽക്കുക"
+    ,"please_wait": "ദയവായി കാത്തിരിക്കുക..."
+    ,"search": "തിരയുക"
+    ,"no_items_found": "ഇനങ്ങൾ കണ്ടെത്തിയില്ല"
+    ,"numeric_keyboard": "സംഖ്യാ കീബോർഡ്"
+    ,"virtual_keyboard": "വെർച്വൽ കീബോർഡ്"
   },
   "supplier_list_mobile": {
     "title": "സപ്ലയർ ലിസ്റ്റ്",
@@ -623,6 +630,11 @@
     "no_order_title": "ഓപ്പൺ ഓർഡർ ൽ നിന്ന് സെയിൽസ്",
     "no_order_subtitle": "പോകുക സെയിൽസ് → ഓർഡർ ആക്ഷനുകൾ → റിട്ടേൺ തുടങ്ങുക a റിട്ടേൺ",
     "na": "N/A",
+    "cash": "ക്യാഷ്",
+    "card": "കാർഡ്",
+    "upi": "UPI",
+    "enter_payment_amount": "@method തുക നൽകുക",
+    "expected": "പ്രതീക്ഷിക്കുന്നത്",
     "order_ref": "ഓർഡർ #@number",
     "section_order_items": "ഓർഡർ ഇനങ്ങൾ",
     "error_no_qty": "ബാക്കിയുള്ള അളവ് റിട്ടേൺ ഈ ഇനം ഇല്ല",
@@ -4203,6 +4215,8 @@
     "error_login_again": "വീണ്ടും ലോഗിൻ ചെയ്യുക",
     "msg_no_changes": "മാറ്റങ്ങൾ അപ്ഡേറ്റ് ഇല്ല",
     "updated_successfully": "കസ്റ്റമർ വിജയകരമായി അപ്‌ഡേറ്റ് ചെയ്തു",
+    "error_update_failed": "കസ്റ്റമറെ അപ്‌ഡേറ്റ് ചെയ്യുന്നതിൽ പരാജയപ്പെട്ടു",
+    "error_update_retry": "കസ്റ്റമറെ അപ്‌ഡേറ്റ് ചെയ്യുന്നതിൽ പരാജയപ്പെട്ടു. ദയവായി വീണ്ടും ശ്രമിക്കുക.",
     "gender_male": "പുരുഷൻ",
     "gender_female": "സ്ത്രീ",
     "gender_other": "മറ്റുള്ളവ",
@@ -5204,6 +5218,9 @@
     "label_address_type": "വിലാസത്തിന്റെ തരം",
     "label_shipping_address": "ഷിപ്പിംഗ് വിലാസം",
     "label_pincode": "പിൻകോഡ്",
+    "validator_email_invalid": "ശരിയായ ഇമെയിൽ വിലാസം നൽകുക",
+    "validator_phone_required": "ഫോൺ നമ്പർ നിർബന്ധമാണ്",
+    "validator_phone_invalid": "ശരിയായ ഫോൺ നമ്പർ നൽകുക",
     "label_district": "ജില്ല",
     "label_state": "സംസ്ഥാനം",
     "label_city": "നഗരം",
@@ -5613,6 +5630,14 @@
     "btn_back": "തിരികെ"
   },
   "checkout_modal": {
+    "title_finalize_order": "ഓർഡർ പൂർത്തിയാക്കുക",
+    "confirm_payment_selection": "പേയ്മെന്റ് തിരഞ്ഞെടുപ്പ് സ്ഥിരീകരിക്കുക",
+    "msg_select_customer_for_quotation": "ക്വട്ടേഷൻ സൃഷ്ടിക്കുന്നതിന് മുമ്പ് ഒരു കസ്റ്റമറെ തിരഞ്ഞെടുക്കുക",
+    "msg_expiry_before_quotation": "കാലാവധി തീയതി ക്വട്ടേഷൻ തീയതിക്ക് മുമ്പാകരുത്",
+    "msg_unable_to_create_quotation": "ക്വട്ടേഷൻ സൃഷ്ടിക്കാൻ കഴിഞ്ഞില്ല",
+    "msg_saved_customer_required": "സ്ഥിരീകരിക്കുന്നതിന് മുമ്പ് സേവ് ചെയ്ത കസ്റ്റമറെ സൃഷ്ടിക്കുകയോ തിരഞ്ഞെടുക്കുകയോ ചെയ്യുക",
+    "msg_select_customer_before_confirm": "സ്ഥിരീകരിക്കുന്നതിന് മുമ്പ് ഒരു കസ്റ്റമറെ തിരഞ്ഞെടുക്കുക",
+    "label_balance": "ബാലൻസ്",
     "tooltip_close": "അടയ്ക്കുക",
     "search_by_name_or_phone_number": " പേര് അല്ലെങ്കിൽ ഫോൺ നമ്പർ... തിരയുക",
     "hint_customer_name": "കസ്റ്റമർ പേര്",
@@ -5686,6 +5711,18 @@
     "status_preparing": "തയ്യാറാക്കുന്നു",
     "status_ready": "റെഡി",
     "status_served": "സെർവ് ചെയ്തു"
+  },
+  "calendar": {
+    "date_must_be_between": "@from നും @to നും ഇടയിലുള്ള തീയതി തിരഞ്ഞെടുക്കുക",
+    "invalid_date_format": "തീയതി ശരിയല്ല. ശ്രമിക്കുക: 20250205 അല്ലെങ്കിൽ 2025-02-05 അല്ലെങ്കിൽ 05-02-2025",
+    "quick_date_selection": "ദ്രുത തീയതി തിരഞ്ഞെടുക്കൽ",
+    "one_week": "1 ആഴ്ച",
+    "one_month": "1 മാസം",
+    "three_months": "3 മാസം",
+    "six_months": "6 മാസം",
+    "one_year": "1 വർഷം",
+    "custom_date": "ഇഷ്ടാനുസൃത തീയതി",
+    "select_time": "സമയം തിരഞ്ഞെടുക്കുക"
   },
   "ui_chrome": {
     "whatsapp_status": "WhatsApp സ്റ്റാറ്റസ്",

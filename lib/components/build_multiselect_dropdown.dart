@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_title.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -219,7 +220,7 @@ class _BuildMultiSelectDropDownWithSearchState<T>
             itemHeight: _itemHeight,
             maxHeight: _maxDropdownHeight,
             searchController: _controller,
-            searchHintText: widget.searchHintText ?? "Search...",
+            searchHintText: widget.searchHintText ?? 'general.search'.tr,
             onClose: _hideDropdown,
           ),
         ],
@@ -859,7 +860,7 @@ class _MultiSelectDropdownOverlayState<T>
             ),
             const SizedBox(width: 8),
             Text(
-              'Loading...',
+              'general.loading'.tr,
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s12,
@@ -886,7 +887,7 @@ class _MultiSelectDropdownOverlayState<T>
             ),
             const SizedBox(height: 8),
             Text(
-              'No items found',
+              'general.no_items_found'.tr,
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s12,

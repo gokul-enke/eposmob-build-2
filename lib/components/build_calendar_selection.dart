@@ -244,7 +244,7 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
                                 Navigator.of(context).pop();
                               },
                               child: Text(
-                                'Cancel',
+                                'general.cancel'.tr,
                                 style: TextStyle(
                                   fontFamily: 'Poppins',
                                   fontWeight: FontWeight.w600,
@@ -382,7 +382,11 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
         final lastDate = widget.lastDate ?? DateTime(2101);
         
         if (parsedDate.isBefore(firstDate) || parsedDate.isAfter(lastDate)) {
-          _showDateValidationError('Date must be between ${DateFormat('MMM dd, yyyy').format(firstDate)} and ${DateFormat('MMM dd, yyyy').format(lastDate)}');
+          _showDateValidationError(
+              '${'calendar.date_must_be_between'.trParams({
+                'from': DateFormat('MMM dd, yyyy').format(firstDate),
+                'to': DateFormat('MMM dd, yyyy').format(lastDate),
+              })}');
           return;
         }
         
@@ -392,10 +396,10 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
         });
         widget.onDateSelected(parsedDate);
       } else {
-        _showDateValidationError('Invalid date. Try: 20250205 or 2025-02-05 or 05-02-2025');
+        _showDateValidationError('calendar.invalid_date_format'.tr);
       }
     } catch (e) {
-      _showDateValidationError('Invalid date. Try: 20250205 or 2025-02-05 or 05-02-2025');
+      _showDateValidationError('calendar.invalid_date_format'.tr);
     }
   }
 
@@ -447,7 +451,7 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
         return AlertDialog(
           backgroundColor: Colors.white,
           title: Text(
-            'Quick Date Selection',
+            'calendar.quick_date_selection'.tr,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s16,
@@ -462,11 +466,11 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildQuickDateButton('1 Week', DateTime.now().add(const Duration(days: 7))),
-                _buildQuickDateButton('1 Month', DateTime.now().add(const Duration(days: 30))),
-                _buildQuickDateButton('3 Months', DateTime.now().add(const Duration(days: 90))),
-                _buildQuickDateButton('6 Months', DateTime.now().add(const Duration(days: 180))),
-                _buildQuickDateButton('1 Year', DateTime.now().add(const Duration(days: 365))),
+                _buildQuickDateButton('calendar.one_week'.tr, DateTime.now().add(const Duration(days: 7))),
+                _buildQuickDateButton('calendar.one_month'.tr, DateTime.now().add(const Duration(days: 30))),
+                _buildQuickDateButton('calendar.three_months'.tr, DateTime.now().add(const Duration(days: 90))),
+                _buildQuickDateButton('calendar.six_months'.tr, DateTime.now().add(const Duration(days: 180))),
+                _buildQuickDateButton('calendar.one_year'.tr, DateTime.now().add(const Duration(days: 365))),
                 const SizedBox(height: 16),
                 Container(
                   width: double.infinity,
@@ -483,7 +487,7 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
                       size: 18,
                     ),
                     label: Text(
-                      'Custom Date',
+                      'calendar.custom_date'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s12,
@@ -785,7 +789,7 @@ class _TimePickerTableCellState extends State<TimePickerTableCell> {
                   ? selectedTime!.format(context)
                   : widget.initialTime != null
                       ? widget.initialTime!.format(context)
-                      : 'Select Time',
+                      : 'calendar.select_time'.tr,
               style: TextStyle(
                 fontWeight: FontWeightManager.medium,
                 fontSize: FontSize.s12,

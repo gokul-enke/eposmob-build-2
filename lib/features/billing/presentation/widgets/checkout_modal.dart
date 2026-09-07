@@ -37,7 +37,7 @@ class CheckoutModal extends StatefulWidget {
   final List<CustomerListModelData> availableCustomers;
   final CustomerListModelData? selectedCustomer;
   final CheckoutModalMode mode;
-  final String title;
+  final String? title;
 
   // Payment Modal State
   final bool hasOpenedPaymentModalOnce;
@@ -81,8 +81,8 @@ class CheckoutModal extends StatefulWidget {
   final double flatDiscount;
   final double percentageDiscount;
   final bool isCouponApplied;
-  final String confirmButtonTitle;
-  final String printButtonTitle;
+  final String? confirmButtonTitle;
+  final String? printButtonTitle;
   final bool requireCheckoutCompletion;
   final bool isQuotationMode;
   final bool requireSavedCustomer;
@@ -143,7 +143,7 @@ class CheckoutModal extends StatefulWidget {
     required this.availableCustomers,
     this.selectedCustomer,
     this.mode = CheckoutModalMode.checkout,
-    this.title = 'Finalize Order',
+    this.title,
     this.hasOpenedPaymentModalOnce = false,
     required this.isCashSelected,
     required this.isCardSelected,
@@ -177,8 +177,8 @@ class CheckoutModal extends StatefulWidget {
     required this.flatDiscount,
     required this.percentageDiscount,
     required this.isCouponApplied,
-    this.confirmButtonTitle = 'Confirm',
-    this.printButtonTitle = 'Confirm & Print',
+    this.confirmButtonTitle,
+    this.printButtonTitle,
     this.requireCheckoutCompletion = true,
     this.isQuotationMode = false,
     this.requireSavedCustomer = false,
@@ -1125,7 +1125,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         alignment: Alignment.center,
         children: [
           Text(
-            widget.title,
+            widget.title ?? 'checkout_modal.title_finalize_order'.tr,
             style: buildCustomStyle(
               FontWeightManager.bold,
               _isDenseCheckout ? FontSize.s18 : FontSize.s20,
@@ -1164,7 +1164,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
               Align(
                 alignment: Alignment.center,
                 child: Text(
-                  "Finalize Order",
+                  'checkout_modal.title_finalize_order'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.bold,
                     FontSize.s20,
@@ -2472,7 +2472,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Delivery charges',
+                                    'checkout_modal.label_delivery_charges'.tr,
                                     style: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,
@@ -3227,7 +3227,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                   : (_localSelectedCustomer?.balance ?? 0.0),
                           isDefaultCustomer:
                               _isDefaultCustomer(_localSelectedCustomer),
-                          customButtonTitle: "Confirm Payment Selection",
+                          customButtonTitle:
+                              'checkout_modal.confirm_payment_selection'.tr,
                           closeOnApply: false,
                           showConfirmButton: false,
                           showAsDialog: false,
@@ -3328,7 +3329,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
     if (_lIsUpiSelected) labels.add('UPI');
     if (_lIsCodSelected) labels.add('COD');
     if (_lIsDebitSelected) labels.add('CREDIT');
-    if (labels.isEmpty) return 'Not selected';
+    if (labels.isEmpty) return 'checkout_modal.label_not_selected'.tr;
     return labels.join(', ');
   }
 
@@ -3611,21 +3612,21 @@ class _CheckoutModalState extends State<CheckoutModal> {
   String _disabledActionMessage() {
     if (widget.isQuotationMode) {
       if (!_hasQuotationCustomer) {
-        return 'Please select a customer before creating quotation';
+        return 'checkout_modal.msg_select_customer_for_quotation'.tr;
       }
       if (_lQuotationExpiryDate.isBefore(_lQuotationDate)) {
-        return 'Expiry date cannot be before quotation date';
+        return 'checkout_modal.msg_expiry_before_quotation'.tr;
       }
-      return 'Unable to create quotation';
+      return 'checkout_modal.msg_unable_to_create_quotation'.tr;
     }
     if (_hasQuoteOnlyCustomerNeedingSave) {
-      return 'Create or select a saved customer before confirming';
+      return 'checkout_modal.msg_saved_customer_required'.tr;
     }
     if (_localSelectedCustomer == null) {
-      return 'Please select a customer before confirming';
+      return 'checkout_modal.msg_select_customer_before_confirm'.tr;
     }
     if (!_hasOpenedPaymentModalOnce && _currentStep != 3) {
-      return 'Please configure payment before confirm';
+      return 'checkout_modal.msg_configure_payment_before_confirm'.tr;
     }
     final paymentResult = _validateLocalPayment();
     if (!paymentResult.isValid) {
@@ -3650,7 +3651,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
     if (_hasInlineQuotationCustomer) {
       return _quotationCustomerNameController.text.trim();
     }
-    return _localSelectedCustomer?.name ?? 'Not Selected';
+    return _localSelectedCustomer?.name ??
+        'checkout_modal.label_not_selected'.tr;
   }
 
   bool _isDefaultCustomer(CustomerListModelData? customer) {
@@ -3692,7 +3694,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
     }
     if (!_isDefaultCustomer(customer)) {
       lines.add(
-          'Balance: $currency ${(customer.balance ?? 0.0).toStringAsFixed(2)}');
+          '${'checkout_modal.label_balance'.tr}: $currency '
+          '${(customer.balance ?? 0.0).toStringAsFixed(2)}');
     }
 
     return lines.join('\n');
@@ -3851,7 +3854,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                   child: Opacity(
                     opacity: _canConfirmOrPrint ? 1.0 : 0.5,
                     child: CustomRoundButtonWithIconAdvanced(
-                      title: widget.confirmButtonTitle,
+                      title: widget.confirmButtonTitle ??
+                          'general.confirm'.tr,
                       isLoading: _isConfirming,
                       shortcutLabel: 'F2',
                       fct: _canConfirmOrPrint
@@ -3890,7 +3894,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                   child: Opacity(
                     opacity: _canPrint ? 1.0 : 0.5,
                     child: CustomRoundButtonWithIconAdvanced(
-                      title: widget.printButtonTitle,
+                      title: widget.printButtonTitle ??
+                          'general.confirm_and_print'.tr,
                       isLoading: _isPrinting,
                       shortcutLabel: 'F6',
                       fct: _canPrint
@@ -4198,7 +4203,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       ? 'Create customer'
                       : widget.isQuotationMode
                           ? _quotationCustomerDisplayName
-                          : (_localSelectedCustomer?.name ?? 'Not Selected'),
+                          : (_localSelectedCustomer?.name ??
+                              'checkout_modal.label_not_selected'.tr),
                   hasCustomer,
                   Icons.person_outline,
                   0,

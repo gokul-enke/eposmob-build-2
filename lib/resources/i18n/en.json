@@ -142,6 +142,13 @@
     "label_balance_status": "Balance Status",
     "label_payment_type": "Payment Type",
     "na": "N/A"
+    ,"stock_mismatch": "Stock mismatch"
+    ,"sell_anyway": "Sell anyway"
+    ,"please_wait": "Please wait..."
+    ,"search": "Search..."
+    ,"no_items_found": "No items found"
+    ,"numeric_keyboard": "Numeric Keyboard"
+    ,"virtual_keyboard": "Virtual Keyboard"
   },
   "supplier_list_mobile": {
     "title": "Supplier List",
@@ -623,6 +630,11 @@
     "no_order_title": "Open an order from Sales",
     "no_order_subtitle": "Go to Sales → order actions → Return to start a return",
     "na": "N/A",
+    "cash": "Cash",
+    "card": "Card",
+    "upi": "UPI",
+    "enter_payment_amount": "Enter @method Amount",
+    "expected": "Expected",
     "order_ref": "Order #@number",
     "section_order_items": "Order Items",
     "error_no_qty": "No remaining quantity to return for this item",
@@ -4208,6 +4220,8 @@
     "validator_balance_invalid": "Please enter a valid balance",
     "validator_balance_negative": "Balance cannot be negative",
     "error_login_again": "Please login again",
+    "error_update_failed": "Failed to update customer",
+    "error_update_retry": "Failed to update customer. Please try again.",
     "msg_no_changes": "No changes to update",
     "updated_successfully": "Customer updated successfully",
     "gender_male": "Male",
@@ -5208,6 +5222,9 @@
     "label_address_type": "Address Type",
     "label_shipping_address": "Shipping Address",
     "label_pincode": "Pincode",
+    "validator_email_invalid": "Enter a valid email address",
+    "validator_phone_required": "Phone number is required",
+    "validator_phone_invalid": "Enter a valid phone number",
     "label_district": "District",
     "label_state": "State",
     "label_city": "City",
@@ -5616,6 +5633,14 @@
     "btn_back": "Back"
   },
   "checkout_modal": {
+    "title_finalize_order": "Finalize Order",
+    "confirm_payment_selection": "Confirm Payment Selection",
+    "msg_select_customer_for_quotation": "Please select a customer before creating quotation",
+    "msg_expiry_before_quotation": "Expiry date cannot be before quotation date",
+    "msg_unable_to_create_quotation": "Unable to create quotation",
+    "msg_saved_customer_required": "Create or select a saved customer before confirming",
+    "msg_select_customer_before_confirm": "Please select a customer before confirming",
+    "label_balance": "Balance",
     "tooltip_close": "Close",
     "search_by_name_or_phone_number": "Search by name or phone number...",
     "hint_customer_name": "Customer name",
@@ -5689,6 +5714,18 @@
     "status_preparing": "Preparing",
     "status_ready": "Ready",
     "status_served": "Served"
+  },
+  "calendar": {
+    "date_must_be_between": "Date must be between @from and @to",
+    "invalid_date_format": "Invalid date. Try: 20250205 or 2025-02-05 or 05-02-2025",
+    "quick_date_selection": "Quick Date Selection",
+    "one_week": "1 Week",
+    "one_month": "1 Month",
+    "three_months": "3 Months",
+    "six_months": "6 Months",
+    "one_year": "1 Year",
+    "custom_date": "Custom Date",
+    "select_time": "Select Time"
   },
   "ui_chrome": {
     "whatsapp_status": "WhatsApp Status",

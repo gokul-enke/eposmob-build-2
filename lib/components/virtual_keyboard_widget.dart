@@ -112,8 +112,8 @@ class _VirtualKeyboardWidgetState extends State<VirtualKeyboardWidget> {
                     Expanded(
                       child: Text(
                         widget.keyboardType == VirtualKeyboardType.Numeric
-                            ? 'Numeric Keyboard'
-                            : 'Virtual Keyboard',
+                            ? 'general.numeric_keyboard'.tr
+                            : 'general.virtual_keyboard'.tr,
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,

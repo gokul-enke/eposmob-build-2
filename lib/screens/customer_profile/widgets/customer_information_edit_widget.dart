@@ -573,7 +573,7 @@ class _CustomerInformationEditWidgetState
         });
       } else {
         // Handle error response
-        String errorMsg = "Failed to update customer";
+        String errorMsg = 'customer_profile.error_update_failed'.tr;
 
         try {
           // Check if message is a Map (validation errors) or String
@@ -603,7 +603,7 @@ class _CustomerInformationEditWidgetState
           }
         } catch (e) {
           debugPrint("Error parsing error message: $e");
-          errorMsg = "Failed to update customer. Please try again.";
+            errorMsg = 'customer_profile.error_update_retry'.tr;
         }
 
         if (mounted) {

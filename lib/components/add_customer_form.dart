@@ -1070,17 +1070,17 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
     const pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$";
     final regex = RegExp(pattern);
     return value!.isNotEmpty && !regex.hasMatch(value)
-        ? 'Enter a valid email address'
+        ? 'add_customer.validator_email_invalid'.tr
         : null;
   }
 
   String? validatePhoneNumber(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Phone number is required';
+      return 'add_customer.validator_phone_required'.tr;
     }
     final phoneNumber = value.replaceAll("-", "");
     if (phoneNumber.length < 10) {
-      return 'Enter a valid phone number';
+      return 'add_customer.validator_phone_invalid'.tr;
     }
     return null;
   }
