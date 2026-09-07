@@ -6,6 +6,7 @@ import '../../../controllers/sidebar_controller.dart';
 import '../../../providers/app_settings_provider.dart';
 import '../../../providers/auth_model.dart';
 import '../../../providers/invoice_provider.dart';
+import '../../../providers/role_provider.dart';
 import '../../../resources/color_manager.dart';
 import '../../../resources/font_manager.dart';
 import '../../../resources/style_manager.dart';
@@ -51,6 +52,11 @@ class _ZatcaFailedAlertState extends State<ZatcaFailedAlert> {
   void _fetchCount() {
     if (_inFlight || _succeeded || _attempts >= _maxAttempts) return;
 
+    final canViewInvoices = context
+        .read<RoleProvider>()
+        .currentUserHasPermissionSync('menu.transactions.invoice.access');
+    if (!canViewInvoices) return;
+
     final phase2Enabled =
         context.read<AppSettingsProvider>().appSettings?.zatcaPhase2Enabled ??
             false;
@@ -86,6 +92,11 @@ class _ZatcaFailedAlertState extends State<ZatcaFailedAlert> {
   }
 
   void _openFailedInvoices() {
+    final canViewInvoices = context
+        .read<RoleProvider>()
+        .currentUserHasPermissionSync('menu.transactions.invoice.access');
+    if (!canViewInvoices) return;
+
     context
         .read<InvoiceProvider>()
         .requestZatcaStatusFilter(InvoiceProvider.zatcaFailedFilterValue);
@@ -95,6 +106,11 @@ class _ZatcaFailedAlertState extends State<ZatcaFailedAlert> {
 
   @override
   Widget build(BuildContext context) {
+    final canViewInvoices = context.select<RoleProvider, bool>((provider) =>
+        provider
+            .currentUserHasPermissionSync('menu.transactions.invoice.access'));
+    if (!canViewInvoices) return const SizedBox.shrink();
+
     // select rather than watch: InvoiceProvider notifies on every invoice list
     // load and filter change, and this card only cares about the count.
     final phase2Enabled = context.select<AppSettingsProvider, bool>(

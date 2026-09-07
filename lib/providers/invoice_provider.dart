@@ -537,6 +537,25 @@ class InvoiceProvider extends ChangeNotifier {
     }
   }
 
+  bool get _hasActiveInvoiceFilters =>
+      _filterName != null ||
+      _filterInvoiceNumber != null ||
+      _filterFromDate != null ||
+      _filterToDate != null ||
+      _filterStatus != null ||
+      _filterZatcaStatus != null ||
+      _filterOrderNumber != null ||
+      _filterPhone != null ||
+      _filterEmail != null;
+
+  void _clearInvoiceResults() {
+    _allInvoices = <Invoice>[];
+    _filteredInvoices = <Invoice>[];
+    invoiceListDetails = <Invoice>[];
+    _currentPage = 1;
+    _totalPages = 1;
+  }
+
   void resetReceiptFilters() {
     _receiptFilterName = null;
     _receiptFilterReceiptNumber = null;
@@ -1642,6 +1661,7 @@ class InvoiceProvider extends ChangeNotifier {
     int? page,
     int? perPage,
     bool loadAll = false,
+    http.Client? client,
   }) async {
     debugPrint(
         "listAllInvoices called: name=$name, page=$page, loadAll=$loadAll");
@@ -1686,6 +1706,15 @@ class InvoiceProvider extends ChangeNotifier {
     final resolvedPerPage =
         loadAll ? (perPage ?? 1000) : (perPage ?? _itemsPerPage);
     final mappedZatcaStatus = _mapZatcaStatusToApi(_filterZatcaStatus);
+    final hasActiveFilters = _hasActiveInvoiceFilters;
+
+    // Do not keep displaying an unfiltered/previous result while a filtered
+    // request (especially FAILED) is loading. If that request fails, the
+    // empty state is safer than showing invoices that do not match the filter.
+    if (hasActiveFilters) {
+      _clearInvoiceResults();
+      notifyListeners();
+    }
 
     final queryParams = <String, String>{
       'page': resolvedPage.toString(),
@@ -1712,16 +1741,19 @@ class InvoiceProvider extends ChangeNotifier {
     debugPrint("Fetching invoices from: $uri");
 
     if (apiKey == null || apiKey.isEmpty) {
+      if (hasActiveFilters) _clearInvoiceResults();
+      _isLoading = false;
+      notifyListeners();
       throw const HttpException("API key not found. Please restart the app.");
     }
     try {
-      final response = await http.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'X-Tenant': apiKey,
-        },
-      );
+      final headers = {
+        'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
+      };
+      final response = await (client == null
+          ? http.get(uri, headers: headers)
+          : client.get(uri, headers: headers));
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
@@ -1754,6 +1786,7 @@ class InvoiceProvider extends ChangeNotifier {
           uri: uri,
           response: response,
         );
+        if (hasActiveFilters) _clearInvoiceResults();
         _isLoading = false;
         notifyListeners();
         return {
@@ -1766,6 +1799,7 @@ class InvoiceProvider extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint("Exception fetching invoices: $e");
+      if (hasActiveFilters) _clearInvoiceResults();
       _isLoading = false;
       notifyListeners();
       return {'status': 'error', 'message': e.toString()};
@@ -2165,6 +2199,11 @@ class InvoiceProvider extends ChangeNotifier {
 
   int _failedZatcaCount = 0;
 
+  // Every refresh gets a monotonically increasing version. Responses from an
+  // older refresh must not replace the result of a newer refresh, even when
+  // both requests use the same tenant and store.
+  int _failedZatcaCountRequestVersion = 0;
+
   /// Tenant and store the current [_failedZatcaCount] belongs to. This provider
   /// is app-scoped and survives logout, so without it a count fetched for one
   /// account could still be on screen after signing into another — and a failed
@@ -2192,6 +2231,29 @@ class InvoiceProvider extends ChangeNotifier {
   static String _scopeKey(String? apiKey, int? storeId) =>
       '${apiKey ?? ''}|${storeId ?? ''}';
 
+  static int? _parseFailedZatcaTotal(dynamic value) {
+    if (value is int) {
+      return value >= 0 ? value : null;
+    }
+
+    if (value is num) {
+      final parsed = value.toDouble();
+      if (parsed.isFinite &&
+          parsed == parsed.truncateToDouble() &&
+          parsed >= 0) {
+        return parsed.toInt();
+      }
+      return null;
+    }
+
+    if (value is String) {
+      final parsed = int.tryParse(value.trim());
+      return parsed != null && parsed >= 0 ? parsed : null;
+    }
+
+    return null;
+  }
+
   /// Counts invoices that failed to send to ZATCA, for the dashboard alert.
   ///
   /// Deliberately does not go through [listAllInvoices]: that method writes the
@@ -2211,6 +2273,7 @@ class InvoiceProvider extends ChangeNotifier {
     required String accessToken,
     http.Client? client,
   }) async {
+    final requestVersion = ++_failedZatcaCountRequestVersion;
     bool succeeded = false;
 
     try {
@@ -2232,6 +2295,13 @@ class InvoiceProvider extends ChangeNotifier {
         _failedZatcaCount = 0;
         _failedZatcaCountScope = requestScope;
         notifyListeners();
+      }
+
+      // A count without a selected store is ambiguous and can be tenant-wide.
+      // Do not make a request until the store session has been established.
+      if (activeStoreId == null) {
+        debugPrint('[ZATCA][FailedCount] Missing active store, skipping.');
+        return false;
       }
 
       final queryParams = <String, String>{
@@ -2268,11 +2338,31 @@ class InvoiceProvider extends ChangeNotifier {
           return false;
         }
 
+        if (requestVersion != _failedZatcaCountRequestVersion) {
+          debugPrint('[ZATCA][FailedCount] A newer request completed first, '
+              'discarding response version $requestVersion.');
+          return false;
+        }
+
         final jsonData = json.decode(response.body);
-        final data = jsonData['data'];
-        final total = data is Map ? data['total'] : null;
-        _failedZatcaCount =
-            total is int ? total : int.tryParse('${total ?? ''}') ?? 0;
+        if (jsonData is! Map || jsonData['data'] is! Map) {
+          throw const FormatException('Missing failed invoice count data');
+        }
+
+        final total = _parseFailedZatcaTotal(jsonData['data']['total']);
+        if (total == null) {
+          throw const FormatException('Invalid failed invoice count total');
+        }
+
+        // Keep this check immediately before mutation. There are no awaits
+        // after it, so a newer request cannot interleave with the write.
+        if (requestVersion != _failedZatcaCountRequestVersion) {
+          debugPrint('[ZATCA][FailedCount] A newer request completed first, '
+              'discarding response version $requestVersion.');
+          return false;
+        }
+
+        _failedZatcaCount = total;
         succeeded = true;
         debugPrint('[ZATCA][FailedCount] total = $_failedZatcaCount');
       } else {

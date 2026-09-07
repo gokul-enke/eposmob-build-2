@@ -7,6 +7,8 @@
 /// than silently showing "no failures".
 library;
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -23,7 +25,8 @@ void main() {
     });
   });
 
-  MockClient jsonClient(int status, String body, {void Function(http.Request)? onRequest}) {
+  MockClient jsonClient(int status, String body,
+      {void Function(http.Request)? onRequest}) {
     return MockClient((request) async {
       onRequest?.call(request);
       return http.Response(body, status,
@@ -86,7 +89,7 @@ void main() {
       expect(provider.failedZatcaCount, 7);
     });
 
-    test('treats a missing total as zero rather than throwing', () async {
+    test('reports failure when the total is missing', () async {
       final provider = InvoiceProvider();
 
       final ok = await provider.fetchFailedZatcaCount(
@@ -94,7 +97,7 @@ void main() {
         client: jsonClient(200, '{"data":{}}'),
       );
 
-      expect(ok, isTrue);
+      expect(ok, isFalse);
       expect(provider.failedZatcaCount, 0);
     });
 
@@ -148,18 +151,21 @@ void main() {
       expect(provider.failedZatcaCount, 0);
     });
 
-    test('omits store_id when no active store is set', () async {
+    test('does not request a tenant-wide count without an active store',
+        () async {
       SharedPreferences.setMockInitialValues({'api_key': 'test-tenant'});
       final provider = InvoiceProvider();
-      late Uri captured;
+      var called = false;
 
-      await provider.fetchFailedZatcaCount(
+      final ok = await provider.fetchFailedZatcaCount(
         accessToken: 'token',
         client: jsonClient(200, '{"data":{"total":0}}',
-            onRequest: (request) => captured = request.url),
+            onRequest: (_) => called = true),
       );
 
-      expect(captured.queryParameters.containsKey('store_id'), isFalse);
+      expect(ok, isFalse);
+      expect(called, isFalse);
+      expect(provider.failedZatcaCount, 0);
     });
   });
 
@@ -276,6 +282,75 @@ void main() {
       expect(provider.failedZatcaCount, 14,
           reason: 'same tenant and store, so a blip keeps the known count');
     });
+
+    test('does not let an older overlapping request overwrite a newer count',
+        () async {
+      final provider = InvoiceProvider();
+      final oldStarted = Completer<void>();
+      final newStarted = Completer<void>();
+      final oldResponse = Completer<http.Response>();
+      final newResponse = Completer<http.Response>();
+
+      final oldRequest = provider.fetchFailedZatcaCount(
+        accessToken: 'token',
+        client: MockClient((_) {
+          oldStarted.complete();
+          return oldResponse.future;
+        }),
+      );
+      await oldStarted.future;
+
+      final newRequest = provider.fetchFailedZatcaCount(
+        accessToken: 'token',
+        client: MockClient((_) {
+          newStarted.complete();
+          return newResponse.future;
+        }),
+      );
+      await newStarted.future;
+
+      newResponse.complete(http.Response('{"data":{"total":7}}', 200));
+      expect(await newRequest, isTrue);
+      expect(provider.failedZatcaCount, 7);
+
+      oldResponse.complete(http.Response('{"data":{"total":99}}', 200));
+      expect(await oldRequest, isFalse);
+      expect(provider.failedZatcaCount, 7);
+    });
+  });
+
+  test('clears stale invoices when a filtered request fails', () async {
+    final provider = InvoiceProvider();
+    const successfulResponse = '''
+      {"status":"success","message":"ok","data":{
+        "current_page":1,"data":[{
+          "id":1,"customer_id":1,"invoice_number":"INV-1",
+          "type":"sale","company_id":1,"amount":"10.00",
+          "invoice_date":"2026-09-07","due_date":"2026-09-07",
+          "status":"paid","created_by":1,
+          "created_at":"2026-09-07T00:00:00Z",
+          "updated_at":"2026-09-07T00:00:00Z",
+          "customer":{"id":1,"user_id":1,
+            "user":{"id":1,"name":"Customer","email":"","phone":""}}
+        }],"first_page_url":"","last_page_url":"",
+        "last_page":1,"total":1,"per_page":20}}
+    ''';
+
+    await provider.listAllInvoices(
+      accessToken: 'token',
+      client: jsonClient(200, successfulResponse),
+    );
+    expect(provider.invoiceListDetails, hasLength(1));
+
+    final result = await provider.listAllInvoices(
+      accessToken: 'token',
+      zatcaStatus: InvoiceProvider.zatcaFailedFilterValue,
+      client: jsonClient(500, '{"message":"server error"}'),
+    );
+
+    expect(result, containsPair('status', 'error'));
+    expect(provider.invoiceListDetails, isEmpty);
+    expect(provider.filteredInvoices, isEmpty);
   });
 
   group('pending ZATCA status filter', () {
@@ -284,8 +359,7 @@ void main() {
 
       expect(provider.consumePendingZatcaStatusFilter(), isNull);
 
-      provider.requestZatcaStatusFilter(
-          InvoiceProvider.zatcaFailedFilterValue);
+      provider.requestZatcaStatusFilter(InvoiceProvider.zatcaFailedFilterValue);
 
       expect(provider.consumePendingZatcaStatusFilter(),
           InvoiceProvider.zatcaFailedFilterValue);

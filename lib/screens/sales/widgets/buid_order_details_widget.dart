@@ -858,7 +858,7 @@ class OrderDetailWidget extends StatelessWidget {
 
   Widget _buildPackingSection(
       BuildContext context, OrderDetailsModelDataPacking? packing) {
-    final photos = packing?.packingPhotos ?? const <String>[];
+    final photos = packing?.photosForDisplay ?? const <String>[];
     final video = packing?.packingVideo ?? '';
     final packedAt = packing?.packedAt ?? '';
     // The web view keeps these two apart: `packed_by` is the resolved staff

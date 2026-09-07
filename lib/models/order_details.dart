@@ -824,11 +824,30 @@ class OrderDetailsModelDataCustomerDetails {
         email: json["email"],
         phone: json["phone"],
         customerId: json["customer_id"], // Keep as int? if it's an int
-        address:
-            json["address"] == null ? [] : List<dynamic>.from(json["address"]),
+        address: _parseAddressList(json["address"]),
         customerType: json["customer_type"]?.toString(),
         alternatePhone: json["alternate_phone"],
       );
+
+  static List<dynamic> _parseAddressList(dynamic value) {
+    if (value == null) return [];
+    if (value is List) return List<dynamic>.from(value);
+    if (value is Map) return [value];
+
+    if (value is String) {
+      try {
+        final decoded = json.decode(value);
+        if (decoded is List) return List<dynamic>.from(decoded);
+        if (decoded is Map) return [decoded];
+      } catch (_) {
+        // Keep a loose map string as one entry; the shipping parser decodes it
+        // below. Plain text remains harmless and is ignored there.
+      }
+      return [value];
+    }
+
+    return [];
+  }
 
   Map<String, dynamic> toJson() => {
         "name": name,
@@ -902,9 +921,24 @@ class OrderDetailsModelDataPacking {
   bool get hasDetails =>
       (packedAt != null && packedAt!.isNotEmpty) ||
       packerName != null ||
-      (packingPhotos?.isNotEmpty ?? false) ||
+      photosForDisplay.isNotEmpty ||
       (packingVideo != null && packingVideo!.isNotEmpty) ||
       isPacked == true;
+
+  /// The API has used both `packing_photos` and `packing_photo_paths` for the
+  /// same set of image URLs. Keep both forms available to the UI, preserving
+  /// order and removing duplicates when a response contains both.
+  List<String> get photosForDisplay {
+    final result = <String>[];
+    for (final photos in [packingPhotos, packingPhotoPaths]) {
+      for (final photo in photos ?? const <String>[]) {
+        if (photo.trim().isNotEmpty && !result.contains(photo)) {
+          result.add(photo);
+        }
+      }
+    }
+    return result;
+  }
 
   /// Backend rule: packed when `packed_at` plus a packer is present.
   bool get isPackedResolved {
@@ -932,8 +966,7 @@ class OrderDetailsModelDataPacking {
       id: _parseInt(json["id"]),
       packedByUserId: _parseInt(json["packed_by_user_id"]),
       packedByName: json["packed_by_name"]?.toString(),
-      packedByUserName:
-          packedBy is Map ? packedBy["name"]?.toString() : null,
+      packedByUserName: packedBy is Map ? packedBy["name"]?.toString() : null,
       packedAt: json["packed_at"]?.toString(),
       packingPhotoPaths: _parseStringList(json["packing_photo_paths"]),
       packingPhotos: _parseStringList(json["packing_photos"]),
@@ -1103,11 +1136,13 @@ class OrderDetailsModelDataDeliveryAddress {
 
     Map? savedAddress;
     final details = json["customer_details"];
-    if (details is Map &&
-        details["address"] is List &&
-        (details["address"] as List).isNotEmpty) {
-      final first = (details["address"] as List).first;
-      if (first is Map) savedAddress = first;
+    if (details is Map) {
+      final addresses = OrderDetailsModelDataCustomerDetails._parseAddressList(
+          details["address"]);
+      if (addresses.isNotEmpty) {
+        final first = addresses.first;
+        savedAddress = _asMap(first);
+      }
     }
 
     // One source or the other, never a mix. Filling gaps in the order's

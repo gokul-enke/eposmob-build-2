@@ -17,8 +17,7 @@ void main() {
         'order_props': [
           {'props_code': 'DELIVERY_ADDRESS', 'props_value': propsValue},
         ],
-        if (savedAddress != null)
-          'customer_details': {'address': savedAddress},
+        if (savedAddress != null) 'customer_details': {'address': savedAddress},
       };
 
   group('props_value shapes', () {
@@ -164,6 +163,32 @@ void main() {
       expect(address?.address, '12 Elm Street');
       expect(address?.state, isNull);
       expect(address?.landmark, isNull);
+    });
+
+    test('reads a JSON-encoded saved address', () {
+      final address = OrderDetailsModelDataDeliveryAddress.fromOrderJson({
+        'customer_details': {
+          'address': [
+            '{"address":"Office, 12 Elm Street","city":"Kozhikode",'
+                '"type":"Office"}'
+          ],
+        }
+      });
+
+      expect(address?.address, 'Office, 12 Elm Street');
+      expect(address?.city, 'Kozhikode');
+      expect(address?.addressType, 'Office');
+    });
+
+    test('reads a whole JSON-encoded saved address collection', () {
+      final address = OrderDetailsModelDataDeliveryAddress.fromOrderJson({
+        'customer_details': {
+          'address': '[{"address":"Warehouse, Gate 2","city":"Kochi"}]',
+        }
+      });
+
+      expect(address?.address, 'Warehouse, Gate 2');
+      expect(address?.city, 'Kochi');
     });
   });
 }
