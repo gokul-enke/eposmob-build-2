@@ -78,11 +78,23 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _invoiceProvider = Provider.of<InvoiceProvider>(context, listen: false);
+
+      // Applied when the user arrives from the dashboard ZATCA alert, so the
+      // list opens already showing the failed invoices. Consumed once, so
+      // navigating here normally later is unfiltered.
+      final pendingZatcaStatus =
+          _invoiceProvider!.consumePendingZatcaStatusFilter();
+      if (pendingZatcaStatus != null && mounted) {
+        setState(() {
+          selectedZatcaStatus = pendingZatcaStatus;
+        });
+      }
+
       loadInvoices();
     });
 
     _sidebarIndexWorker = ever<int>(sideBarController.index, (currentIndex) {
-      if (currentIndex != 21) {
+      if (currentIndex != SideBarController.invoiceListScreenIndex) {
         _resetInvoiceFilters(
           clearProviderFilters: true,
           reloadProvider: false,
@@ -653,7 +665,13 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       }
 
       await Provider.of<InvoiceProvider>(context, listen: false)
-          .listAllInvoices(accessToken: accessToken);
+          .listAllInvoices(
+        accessToken: accessToken,
+        // Normally null; set when arriving from the dashboard ZATCA alert so
+        // the first request is already filtered rather than loading everything
+        // and then re-fetching.
+        zatcaStatus: selectedZatcaStatus,
+      );
       setState(() {
         isInitialized = true;
       });
