@@ -3452,7 +3452,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildPostingRow('billing.to_customer_credit'.tr,
+                    _buildPostingRow('billing.customer_credit_posted'.tr,
                         postingAmounts['toCustomerCredit']!,
                         color: ColorManager.kButtonGreen),
                     _buildPostingRow(

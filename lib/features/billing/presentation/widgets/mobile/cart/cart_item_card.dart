@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/domain/billing_crash_guards.dart';
 import 'package:pos_machine/features/billing/domain/billing_debug_log.dart';
@@ -246,7 +247,7 @@ class CartItemCard extends StatelessWidget {
                   if (canViewBillingProductDetails)
                     _CardIconButton(
                       key: const ValueKey('cart_product_details_action'),
-                      tooltip: 'Product details',
+                      tooltip: 'product_detail.view_details'.tr,
                       icon: Icons.info_outline,
                       iconColor: ColorManager.kGreyColor,
                       onTap: () => _showProductDetailsDialog(context, item),
@@ -254,7 +255,7 @@ class CartItemCard extends StatelessWidget {
                   if (canShowPurchaseHistoryAction)
                     _CardIconButton(
                       key: const ValueKey('cart_purchase_history_action'),
-                      tooltip: 'Customer purchase history',
+                      tooltip: 'billing.customer_purchase_history'.tr,
                       icon: Icons.history,
                       iconColor: ColorManager.kPrimaryColor,
                       onTap: () => _showCustomerPurchaseHistoryForCartItem(
@@ -264,7 +265,7 @@ class CartItemCard extends StatelessWidget {
                       ),
                     ),
                   _CardIconButton(
-                    tooltip: 'Remove item',
+                    tooltip: 'billing.remove_item'.tr,
                     icon: Icons.delete_outline,
                     iconColor: ColorManager.kButtonRed,
                     onTap: onRemove,

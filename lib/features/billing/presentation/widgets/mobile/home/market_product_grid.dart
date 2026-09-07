@@ -387,7 +387,7 @@ class _ListBodyTapTarget extends StatelessWidget {
     }
 
     return Semantics(
-      label: 'Add product to cart',
+      label: 'billing.add_product_to_cart'.tr,
       button: true,
       child: Material(
         color: Colors.transparent,

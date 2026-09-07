@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:provider/provider.dart';
@@ -54,28 +55,28 @@ class MobileBottomNav extends StatelessWidget {
                 children: [
                   _NavItem(
                     selected: currentIndex == 0,
-                    label: 'Market',
+                    label: 'billing.market'.tr,
                     outlinedIcon: Icons.storefront_outlined,
                     filledIcon: Icons.storefront,
                     onTap: () => onTap(0),
                   ),
                   _NavItem(
                     selected: currentIndex == 1,
-                    label: 'Billing',
+                    label: 'billing.billing'.tr,
                     outlinedIcon: Icons.payment_outlined,
                     filledIcon: Icons.payment,
                     onTap: () => onTap(1),
                   ),
                   _NavItem(
                     selected: currentIndex == 2,
-                    label: 'Order',
+                    label: 'billing.order'.tr,
                     outlinedIcon: Icons.receipt_long_outlined,
                     filledIcon: Icons.receipt_long,
                     onTap: () => onTap(2),
                   ),
                   _NavItem(
                     selected: currentIndex == 3,
-                    label: 'Cart',
+                    label: 'billing.cart'.tr,
                     outlinedIcon: Icons.shopping_cart_outlined,
                     filledIcon: Icons.shopping_cart,
                     badgeCount: cartCount,

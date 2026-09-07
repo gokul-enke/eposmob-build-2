@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/domain/billing_crash_guards.dart';
@@ -249,7 +250,7 @@ class _MobileCartPriceFieldState extends State<MobileCartPriceField> {
         fontSize: 12,
         fontWeight: FontWeight.w500,
       ),
-      decoration: _cartFieldDecoration(label: 'Price'),
+      decoration: _cartFieldDecoration(label: 'product_detail.price'.tr),
       onChanged: (value) {
         widget.controller.updateDisplayPriceWhileEditing(
           provider: context.read<LocalProductProvider>(),
@@ -347,7 +348,7 @@ class _MobileCartMrpFieldState extends State<MobileCartMrpField> {
         fontSize: 12,
         fontWeight: FontWeight.w500,
       ),
-      decoration: _cartFieldDecoration(label: 'MRP'),
+      decoration: _cartFieldDecoration(label: 'product_detail.mrp'.tr),
       onChanged: (value) {
         widget.controller.updateDisplayMrpWhileEditing(
           provider: context.read<LocalProductProvider>(),
@@ -400,7 +401,7 @@ class MobileCartTaxDisplay extends StatelessWidget {
           Expanded(
             child: _MobileCartReadOnlyField(
               key: ValueKey('tax-rate-${item.product.productId}'),
-              label: 'Tax %',
+              label: 'billing.tax_percent'.tr,
               value: taxRate.toString(),
             ),
           ),
@@ -410,7 +411,7 @@ class MobileCartTaxDisplay extends StatelessWidget {
           Expanded(
             child: _MobileCartReadOnlyField(
               key: ValueKey('tax-amt-${item.product.productId}'),
-              label: 'Tax',
+              label: 'billing.tax'.tr,
               value: AmountHelper.formatAmount(taxAmount),
             ),
           ),

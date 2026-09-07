@@ -112,18 +112,18 @@ class _QuotationCheckoutSectionState extends State<QuotationCheckoutSection> {
             children: [
               Expanded(
                 child: _InlineField(
-                  label: 'Customer Name',
+                  label: 'checkout_modal.label_customer_name'.tr,
                   controller: widget.inlineNameController,
-                  hintText: 'Customer name',
+                  hintText: 'checkout_modal.hint_customer_name'.tr,
                   onChanged: (_) => widget.onInlineCustomerChanged(),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _InlineField(
-                  label: 'Customer Phone',
+                  label: 'checkout_modal.label_customer_phone'.tr,
                   controller: widget.inlinePhoneController,
-                  hintText: 'Customer phone',
+                  hintText: 'checkout_modal.hint_customer_phone'.tr,
                   keyboardType: TextInputType.phone,
                   onChanged: (_) => widget.onInlineCustomerChanged(),
                 ),
@@ -135,7 +135,7 @@ class _QuotationCheckoutSectionState extends State<QuotationCheckoutSection> {
             children: [
               Expanded(
                 child: _DateField(
-                  label: 'Quotation Date',
+                  label: 'checkout_modal.label_quotation_date'.tr,
                   date: widget.quotationDate,
                   onTap: () => _pickDate(
                     initialDate: widget.quotationDate,
@@ -154,7 +154,7 @@ class _QuotationCheckoutSectionState extends State<QuotationCheckoutSection> {
               const SizedBox(width: 10),
               Expanded(
                 child: _DateField(
-                  label: 'Expiry Date',
+                  label: 'checkout_modal.label_expiry_date'.tr,
                   date: widget.expiryDate,
                   onTap: () => _pickDate(
                     initialDate: widget.expiryDate.isBefore(widget.quotationDate)

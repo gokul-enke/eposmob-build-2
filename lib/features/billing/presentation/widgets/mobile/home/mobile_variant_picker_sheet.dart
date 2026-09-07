@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/features/billing/domain/product_variant_selection.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/mobile_sheet_header.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -149,8 +150,8 @@ class _MobileVariantPickerSheetState extends State<_MobileVariantPickerSheet> {
         mainAxisSize: widget.expandToFill ? MainAxisSize.max : MainAxisSize.min,
         children: [
           MobileSheetHeader(
-            title: widget.product.productName ?? 'Select variant',
-            subtitle: 'Choose a variant to add to cart',
+            title: widget.product.productName ?? 'billing.select_variant'.tr,
+            subtitle: 'billing.choose_variant_to_cart'.tr,
             thumbnail: buildProductThumbnail(
               productName: widget.product.productName,
               attachments: widget.product.attachment,

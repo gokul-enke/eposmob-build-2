@@ -391,13 +391,13 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
           elevation: 0,
           backgroundColor: primaryColor,
         ),
-        body: const Center(
+        body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 16),
-              Text('Loading printer and configuration...'),
+              Text('voucher_print.loading_printer_config'.tr),
             ],
           ),
         ),
@@ -442,8 +442,8 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Paper Size',
+                    Text(
+                      'voucher_print.paper_size'.tr,
                       style: TextStyle(
                         color: textPrimaryColor,
                         fontSize: 20,
@@ -488,8 +488,8 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Available Printers',
+                    Text(
+                      'voucher_print.available_printers'.tr,
                       style: TextStyle(
                         color: textPrimaryColor,
                         fontSize: 20,
@@ -499,7 +499,7 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
                     const SizedBox(height: 8),
                     Text(
                       _isScanning
-                          ? 'Scanning...'
+                          ? 'voucher_print.scanning'.tr
                           : '${devices.length} devices found',
                       style: const TextStyle(
                         color: textSecondaryColor,
@@ -523,8 +523,8 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
                             color: textSecondaryColor,
                           ),
                           const SizedBox(height: 16),
-                          const Text(
-                            'No printers found',
+                          Text(
+                            'voucher_print.no_printers_found'.tr,
                             style: TextStyle(
                               color: textSecondaryColor,
                               fontSize: 16,
@@ -533,7 +533,7 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Tap the refresh button to scan for printers',
+                            'voucher_print.tap_refresh_to_scan'.tr,
                             style: TextStyle(
                               color: textSecondaryColor.withOpacity(0.8),
                               fontSize: 14,
@@ -551,7 +551,11 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
                                     ),
                                   )
                                 : const Icon(Icons.refresh),
-                            label: Text(_isScanning ? 'Scanning...' : 'Scan'),
+                            label: Text(
+                              _isScanning
+                                  ? 'voucher_print.scanning'.tr
+                                  : 'voucher_print.scan'.tr,
+                            ),
                           ),
                         ],
                       ),
@@ -622,7 +626,11 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
                       ),
                     )
                   : const Icon(Icons.refresh),
-              label: Text(_isScanning ? 'Scanning...' : 'Scan Printers'),
+              label: Text(
+                _isScanning
+                    ? 'voucher_print.scanning'.tr
+                    : 'voucher_print.scan_printers'.tr,
+              ),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 backgroundColor: primaryColor,

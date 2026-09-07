@@ -68,12 +68,12 @@ here with exact source locations so they are not lost between passes:
 | `lib/features/billing/presentation/widgets/mobile/billing_tab.dart` | 402, 415 | Fixed during this pass via `billing.select_delivery_method` and `billing.coupon` |
 | `lib/features/billing/presentation/widgets/mobile/orders/order_stat_card.dart` | 75, 90 | Fixed during this pass via `billing.active_orders` and `billing.ready_for_pickup` |
 | `lib/features/billing/presentation/widgets/coupon_modal.dart` | 195-261, 320, 410, 499, 506, 511, 550, 580, 650, 710, 749, 805, 822 | Fixed during this pass via `coupon.*` and `general.skip`/`general.clear` keys; coupon names remain dynamic |
-| `lib/features/billing/presentation/widgets/payment_method_modal.dart` | 1629-1630, 1709, 1763-1805, 1844-1847, 2284, 2793, 2989, 3435-3451 | Payment settlement labels, explanations, and input hints |
+| `lib/features/billing/presentation/widgets/payment_method_modal.dart` | 1629-1630, 1709, 1763-1805, 1844-1847, 2284, 2793, 2989, 3435-3451 | Fixed during this pass via `billing.*`; amounts/currency and payment method codes remain dynamic |
 | `lib/features/billing/presentation/widgets/product_variant_details_section.dart` | 57, 140-143, 202-211 | Fixed during this pass via `product_detail.*`; SKU/variant IDs/supplier values remain data |
 | `lib/features/billing/presentation/widgets/pos_security_key_dialog.dart` | 106, 109 | Fixed during this pass via `security_key.*`; action text is runtime context |
 | `lib/screens/transactions/invoice_list_mobile.dart` | 145, 179, 316, 352-392, 478-484, 564 | Fixed during this pass via `invoice.*`; invoice values/statuses remain data |
-| `lib/screens/transactions/widgets/customer_voucher_print.dart` | 328, 400, 554, 625 | Static printer/configuration loading and scan labels |
-| `lib/screens/transactions/widgets/supplier_voucher_print.dart` | 418, 458, 507, 542, 551, 680, 706, 727 | Printer selection/list/scan labels |
+| `lib/screens/transactions/widgets/customer_voucher_print.dart` | 328, 400, 554, 625 | Loading, paper/printer, scan, and empty-state labels localized via `voucher_print.*`; printer names/addresses remain device data |
+| `lib/screens/transactions/widgets/supplier_voucher_print.dart` | 418, 458, 507, 542, 551, 680, 706, 727 | Printer selection/list/scan labels localized via `voucher_print.*`; printer names/addresses remain device data |
 | `lib/widgets/side_menu.dart` | 1172, 1183, 1230 | Fixed during this pass via `general.logged_out_successfully`, `general.logged_out_locally`, and `general.default_name` |
 
 ## Verification notes
@@ -85,3 +85,16 @@ here with exact source locations so they are not lost between passes:
 - Do not treat English account names, product names, store names, email addresses, currency codes, receipt-config values, or language identifiers as missing static translations.
 - The second route-level fix batch was hot-restarted successfully in Malayalam. The running app exposed the expected Malayalam keyboard tooltip after restart.
 - The coupon, invoice-list, variant-stock, and POS security-key static labels were localized and lint-checked successfully. Dynamic coupon names, invoice values/statuses, variant IDs/SKUs, and security-key action text remain runtime data/context.
+- A further source sweep found additional mobile billing labels and localized the bottom navigation, cart actions, coupon section, quotation customer fields, and product-card action semantics. These changes were lint-checked successfully.
+- Remaining source-sweep items are separated below: API/error payloads, account/product names, printer/device values, and print-document labels are dynamic or configuration data and remain review-only.
+
+### Additional unresolved/dynamic source-sweep items
+
+| Exact source | Line(s) | Reason |
+|---|---:|---|
+| `lib/screens/transactions/widgets/share_helper.dart` | 172-1666 | Static error prefixes can be localized in a later dedicated pass, but filenames, phone numbers, provider errors, and exception text are dynamic. |
+| `lib/screens/billing/restaurant/widgets/order_panel.dart` | 1695, 1705, 3565, 6688, 6765, 7167, 7872, 8027, 8335, 8733 | Fixed error prefixes are mixed with API responses/exceptions; preserve server/device details while localizing templates. |
+| `lib/features/billing/presentation/widgets/mobile/home/mobile_product_details_sheet.dart` | 263, 308, 465, 499, 504, 559, 567, 681, 770, 964, 1427, 1564, 2043 | Several messages contain dynamic language names, barcode values, exceptions, tax names, or product names; static portions require placeholder-based localization. |
+| `lib/features/billing/presentation/pages/billing_page.dart` | 1422, 3228, 3277, 4526-4635, 8172-8326, 9258-9300 | Error/status messages include runtime API/error details and need a dedicated placeholder review. |
+| `lib/screens/print/widgets/receipt_configuration_workspace.dart` | 75-694 | Receipt field/language/configuration labels may intentionally remain configuration identifiers; verify product requirements before changing. |
+| `lib/screens/invoice/invoice_pdf.dart` | 138-273 | Printed document template labels and company/customer placeholders are document-output content, not app chrome; review separately. |
