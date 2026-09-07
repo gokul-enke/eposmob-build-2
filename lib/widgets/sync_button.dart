@@ -81,10 +81,10 @@ class SyncButton extends StatelessWidget {
                 children: [
                   Text(
                     syncProvider.isSyncing 
-                        ? 'Syncing...' 
+                        ? 'sync.syncing_data'.tr 
                         : syncProvider.hasError 
-                            ? 'Sync Failed'
-                            : 'Sync Data',
+                            ? 'sync.sync_failed_retry'.tr
+                            : 'sync.sync_all_data'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.medium,
                       FontSize.s10,
@@ -96,7 +96,7 @@ class SyncButton extends StatelessWidget {
                   ),
                   if (syncProvider.lastSyncTime != null)
                     Text(
-                      'Last: ${syncProvider.getFormattedLastSyncTime()}',
+                      '${'sync.last_sync'.tr}: ${syncProvider.getFormattedLastSyncTime()}',
                       style: buildCustomStyle(
                         FontWeightManager.regular,
                         FontSize.s8,
@@ -119,8 +119,8 @@ class SyncButton extends StatelessWidget {
   ) {
     if (!billingProvider.hasInternet) {
       return billingProvider.isManualOfflineMode
-          ? 'Offline Mode is enabled. Disable it in Settings to sync.'
-          : 'No internet connection available for sync.';
+          ? 'sync.offline_sync_tooltip'.tr
+          : 'sync.no_internet_sync_tooltip'.tr;
     }
 
     if (syncProvider.isSyncing) {

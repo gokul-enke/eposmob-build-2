@@ -8915,7 +8915,9 @@ class BillingPageState extends State<BillingPage>
       if ((double.tryParse(entry.value) ?? 0) > 0) {
         final label = _extraPaymentValues[entry.key];
         activeMethods.add(
-          label != null && label.isNotEmpty ? label : 'Extra',
+          label != null && label.isNotEmpty
+              ? label
+              : 'billing.extra_payment_method'.tr,
         );
       }
     }
@@ -8955,7 +8957,11 @@ class BillingPageState extends State<BillingPage>
     for (final entry in _extraPaymentAmounts.entries) {
       if ((double.tryParse(entry.value) ?? 0) > 0) {
         final label = _extraPaymentValues[entry.key];
-        activeMethods.add(label != null && label.isNotEmpty ? label : 'Extra');
+        activeMethods.add(
+          label != null && label.isNotEmpty
+              ? label
+              : 'billing.extra_payment_method'.tr,
+        );
       }
     }
 

@@ -752,7 +752,7 @@ class _OrderListNewState extends State<OrderListNew> {
         ),
         const SizedBox(width: 10),
         CustomRoundButton(
-          title: "Apply",
+          title: 'billing.apply'.tr,
           fct: _applyCoupon,
           fontSize: FontSize.s14,
           height: MediaQuery.of(context).size.height * .07,
@@ -772,18 +772,18 @@ class _OrderListNewState extends State<OrderListNew> {
             BuildPaymentRow(
               amount:
                   "$currency ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.subTotal ?? 0.00)}",
-              title: "Net amount",
+              title: 'billing.net_amount'.tr,
               color: ColorManager.textColor,
             ),
             BuildPaymentRow(
               amount: "$currency 0.00",
-              title: "Shipping",
+              title: 'billing.shipping'.tr,
               color: ColorManager.textColor,
             ),
             BuildPaymentRow(
               amount:
                   "$currency ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.discount ?? 0.00)}",
-              title: "Discount",
+              title: 'billing.discount'.tr,
               color: ColorManager.textColor,
             ),
             GestureDetector(
@@ -794,7 +794,7 @@ class _OrderListNewState extends State<OrderListNew> {
                           .totalTax ??
                       0.00,
                 )}",
-                title: "GST",
+                title: 'billing.gst'.tr,
                 color: ColorManager.kPrimaryColor,
               ),
               onTap: () {
@@ -815,7 +815,7 @@ class _OrderListNewState extends State<OrderListNew> {
             BuildPaymentRow(
               amount:
                   "$currency ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal ?? 0.00)}",
-              title: "Total Payable",
+              title: 'billing.total_payable'.tr,
               secondRowTextStyle: buildCustomStyle(
                 FontWeightManager.bold,
                 FontSize.s15,
@@ -845,7 +845,7 @@ class _OrderListNewState extends State<OrderListNew> {
           children: [
             BuildPaymentRow(
               amount: "",
-              title: "Payment Method",
+              title: 'billing.payment_method'.tr,
               firstRowTextStyle: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s14,

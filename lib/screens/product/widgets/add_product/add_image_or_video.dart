@@ -596,7 +596,7 @@ class _AddProductImageOrVideoScreenState
               BuildTextTile(
                 isStarRed: true,
                 isTextField: true,
-                    title: 'product_media.file'.tr,
+                title: 'product_media.file'.tr,
                 textStyle: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s14,
@@ -724,7 +724,7 @@ class _AddProductImageOrVideoScreenState
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      "Select Image",
+                                      'general.select_image'.tr,
                                       style: buildCustomStyle(
                                         FontWeightManager.medium,
                                         FontSize.s14,
@@ -798,7 +798,7 @@ class _AddProductImageOrVideoScreenState
                                                     const EdgeInsets.all(15.0),
                                                 child: Center(
                                                     child: Text(
-                                                  "Select",
+                                                  'general.select'.tr,
                                                   style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s12,
@@ -816,7 +816,7 @@ class _AddProductImageOrVideoScreenState
                                                     const EdgeInsets.all(15.0),
                                                 child: Center(
                                                     child: Text(
-                                                  "Image Title",
+                                                  'general.image_title'.tr,
                                                   style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s12,
@@ -834,7 +834,7 @@ class _AddProductImageOrVideoScreenState
                                                     const EdgeInsets.all(15.0),
                                                 child: Center(
                                                     child: Text(
-                                                  "Preview",
+                                                  'general.preview'.tr,
                                                   style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s12,
@@ -1041,7 +1041,7 @@ class _AddProductImageOrVideoScreenState
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      "Select Image",
+                                      'general.select_image'.tr,
                                       style: buildCustomStyle(
                                         FontWeightManager.medium,
                                         FontSize.s14,
@@ -1115,7 +1115,7 @@ class _AddProductImageOrVideoScreenState
                                                     const EdgeInsets.all(15.0),
                                                 child: Center(
                                                     child: Text(
-                                                  "Select",
+                                                  'general.select'.tr,
                                                   style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s12,
@@ -1133,7 +1133,7 @@ class _AddProductImageOrVideoScreenState
                                                     const EdgeInsets.all(15.0),
                                                 child: Center(
                                                     child: Text(
-                                                  "Image Title",
+                                                  'general.image_title'.tr,
                                                   style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s12,
@@ -1151,7 +1151,7 @@ class _AddProductImageOrVideoScreenState
                                                     const EdgeInsets.all(15.0),
                                                 child: Center(
                                                     child: Text(
-                                                  "Preview",
+                                                  'general.preview'.tr,
                                                   style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s12,
@@ -1195,9 +1195,8 @@ class _AddProductImageOrVideoScreenState
                                                         debugPrint(
                                                             "showDialog $index $selectedImageIndex");
                                                         pathEditingController
-                                                            .text = image.id
-                                                                .toString() ??
-                                                            "";
+                                                                .text =
+                                                            image.id.toString();
                                                         altEditingController
                                                                 .text =
                                                             image.alt ?? "";

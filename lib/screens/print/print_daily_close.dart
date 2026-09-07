@@ -159,8 +159,7 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('ui_codes.permissions_required'.tr),
-        content: const Text(
-            'This app needs Bluetooth and Location permissions to scan for printers.'),
+        content: Text('voucher_print.printer_permissions_required'.tr),
         actions: [
           TextButton(
             child: Text('general.ok'.tr),
@@ -312,7 +311,9 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
     if (mounted) {
       showScaffold(
         context: context,
-        message: "${printer.deviceName.toString()} Printer Selected",
+        message: 'voucher_print.printer_selected'.trParams({
+          'name': printer.deviceName.toString(),
+        }),
       );
     }
   }
@@ -352,9 +353,7 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
       builder: (dialogContext) {
         return AlertDialog(
           title: Text('ui_codes.print_transaction_list'.tr),
-          content: const Text(
-            'Do you want to include transaction details in this print?',
-          ),
+          content: Text('print.include_transaction_details_prompt'.tr),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
@@ -389,7 +388,7 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
       if (mounted) {
         showScaffold(
           context: context,
-          message: "Daily Close Report printed successfully!",
+          message: 'print.daily_close_printed_successfully'.tr,
         );
         Navigator.pop(context);
       }
@@ -397,7 +396,9 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Failed to print: ${e.toString()}",
+          message: 'print.daily_close_print_failed'.trParams(
+            {'error': e.toString()},
+          ),
         );
       }
     }
@@ -417,7 +418,7 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
       if (mounted) {
         showScaffold(
           context: context,
-          message: "Daily Close PDF generated successfully!",
+          message: 'print.daily_close_pdf_generated_successfully'.tr,
         );
         Navigator.pop(context);
       }
@@ -425,7 +426,9 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Failed to generate PDF: ${e.toString()}",
+          message: 'print.pdf_generation_failed'.trParams(
+            {'error': e.toString()},
+          ),
         );
       }
     }

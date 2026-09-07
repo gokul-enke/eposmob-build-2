@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -370,9 +371,9 @@ class BarcodePrinterService {
       }
 
       if (bytes.isEmpty) {
-        return const _DirectPrintResult(
+        return _DirectPrintResult(
           _DirectPrintStatus.failed,
-          'Nothing to print',
+          'product_barcode.nothing_to_print'.tr,
         );
       }
       bytes.addAll(generator.cut());
@@ -383,7 +384,10 @@ class BarcodePrinterService {
       await printerUtils.sendPrintJob(selectedPrinter, bytes);
       return _DirectPrintResult(
         _DirectPrintStatus.success,
-        'Sent to printer: ${selectedPrinter.deviceName ?? 'Barcode printer'}',
+        'product_barcode.sent_to_printer'.trParams({
+          'name': selectedPrinter.deviceName ??
+              'product_barcode.default_printer'.tr,
+        }),
       );
     } catch (error, stackTrace) {
       debugPrint('[BarcodePrint] Direct print failed: $error');
@@ -466,12 +470,12 @@ class BarcodePrinterService {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'No stocks selected to print.',
+          message: 'product_barcode.no_stocks_selected'.tr,
         );
       }
-      return const BarcodePrintResult(
+      return BarcodePrintResult(
         BarcodePrintStatus.failed,
-        'No stocks selected to print.',
+        'product_barcode.no_stocks_selected'.tr,
       );
     }
 
@@ -481,8 +485,10 @@ class BarcodePrinterService {
     );
     if (totalLabels < 1 || totalLabels > 2000) {
       final message = totalLabels < 1
-          ? 'Nothing to print. Enter a quantity for at least one item.'
-          : 'This job contains $totalLabels labels. Reduce it to 2000 or fewer.';
+          ? 'product_barcode.no_quantity_to_print'.tr
+          : 'product_barcode.too_many_labels'.trParams(
+              {'count': totalLabels.toString()},
+            );
       if (context.mounted) {
         showScaffoldError(context: context, message: message);
       }
@@ -500,8 +506,10 @@ class BarcodePrinterService {
           drawText: false,
         );
       } catch (error) {
-        final message =
-            'Invalid barcode for ${item.product.productName ?? 'a product'}: $error';
+        final message = 'product_barcode.invalid_barcode_for'.trParams({
+          'product': item.product.productName ?? 'product_detail.product',
+          'error': error.toString(),
+        });
         if (context.mounted) {
           showScaffoldError(context: context, message: message);
         }
@@ -517,7 +525,7 @@ class BarcodePrinterService {
       if (context.mounted) {
         showLoadingOverlay(
           context,
-          message: 'Printing barcodes... (PDF fallback enabled)',
+          message: 'product_barcode.printing_barcodes'.tr,
         );
       }
 
@@ -891,11 +899,14 @@ class BarcodePrinterService {
         final result = await OpenFile.open(file.path);
         if (result.type == ResultType.done) {
           if (context.mounted) {
-            showScaffold(context: context, message: 'Barcode PDF opened');
+            showScaffold(
+              context: context,
+              message: 'product_barcode.pdf_opened'.tr,
+            );
           }
-          return const BarcodePrintResult(
+          return BarcodePrintResult(
             BarcodePrintStatus.pdfOpened,
-            'Barcode PDF opened',
+            'product_barcode.pdf_opened'.tr,
           );
         }
         return _sharePdfFallback(file);
@@ -911,7 +922,9 @@ class BarcodePrinterService {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: "Error generating PDF: $e",
+          message: 'print.pdf_generation_failed'.trParams(
+            {'error': e.toString()},
+          ),
         );
       }
       return BarcodePrintResult(
@@ -1113,12 +1126,12 @@ class BarcodePrinterService {
 
     if (dialogResult.exitCode == 0) {
       if (context.mounted) {
-        showScaffold(context: context, message: 'Print dialog opened');
+        showScaffold(context: context, message: 'print.print_dialog_opened'.tr);
       }
       debugPrint('[BarcodePrint:Windows] ── _handleWindowsPdf END (dialog) ──');
-      return const BarcodePrintResult(
+      return BarcodePrintResult(
         BarcodePrintStatus.pdfOpened,
-        'Print dialog opened',
+        'print.print_dialog_opened'.tr,
       );
     }
 
@@ -1128,14 +1141,16 @@ class BarcodePrinterService {
     final openResult = await OpenFile.open(winPath);
     if (openResult.type == ResultType.done) {
       if (context.mounted) {
-        showScaffold(context: context, message: 'Barcode PDF opened');
+        showScaffold(
+            context: context, message: 'product_barcode.pdf_opened'.tr);
       }
-      return const BarcodePrintResult(
+      return BarcodePrintResult(
         BarcodePrintStatus.pdfOpened,
-        'Barcode PDF opened',
+        'product_barcode.pdf_opened'.tr,
       );
     }
-    final message = 'PDF saved but could not be opened: ${file.path}';
+    final message =
+        'print.pdf_saved_could_not_open'.trParams({'path': file.path});
     if (context.mounted) {
       showScaffoldError(context: context, message: message);
     }
@@ -1152,25 +1167,28 @@ class BarcodePrinterService {
         // ignore: deprecated_member_use
         final result = await Share.shareXFiles(
           [XFile(file.path)],
-          subject: 'Barcode Stickers',
-          text: 'Barcode Stickers PDF',
+          subject: 'product_barcode.stickers'.tr,
+          text: 'product_barcode.stickers_pdf'.tr,
         );
         if (result.status == ShareResultStatus.success) {
           if (context.mounted) {
-            showScaffold(context: context, message: "PDF shared");
+            showScaffold(
+              context: context,
+              message: 'print.pdf_shared'.tr,
+            );
           }
-          return const BarcodePrintResult(
+          return BarcodePrintResult(
             BarcodePrintStatus.pdfShared,
-            'Barcode PDF shared',
+            'product_barcode.pdf_shared'.tr,
           );
         }
-        final message = 'PDF saved: ${file.path}';
+        final message = 'print.pdf_saved'.trParams({'path': file.path});
         if (context.mounted) {
           showScaffold(context: context, message: message);
         }
         return BarcodePrintResult(BarcodePrintStatus.pdfSaved, message);
       } else {
-        final message = 'PDF saved: ${file.path}';
+        final message = 'print.pdf_saved'.trParams({'path': file.path});
         if (context.mounted) {
           showScaffold(context: context, message: message);
         }
@@ -1178,7 +1196,8 @@ class BarcodePrinterService {
       }
     } catch (e) {
       debugPrint("Error sharing PDF: $e");
-      final message = 'PDF saved but could not be shared: ${file.path}';
+      final message =
+          'print.pdf_saved_could_not_share'.trParams({'path': file.path});
       if (context.mounted) {
         showScaffoldError(context: context, message: message);
       }

@@ -714,7 +714,7 @@ class _EditProductImageOrVideoScreenState
               BuildTextTile(
                 isStarRed: true,
                 isTextField: true,
-                    title: 'product_media.file'.tr,
+                title: 'product_media.file'.tr,
                 textStyle: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s14,
@@ -778,7 +778,7 @@ class _EditProductImageOrVideoScreenState
               Padding(
                 padding: const EdgeInsets.only(left: 20.0),
                 child: CustomRoundButton(
-                                      title: 'general.select_image'.tr,
+                  title: 'general.select_image'.tr,
                   fct: () async {
                     showDialogFunctionForProductDetailsAnimatedAddMore(
                         context,
@@ -842,7 +842,7 @@ class _EditProductImageOrVideoScreenState
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      "Select Image",
+                                      'general.select_image'.tr,
                                       style: buildCustomStyle(
                                         FontWeightManager.medium,
                                         FontSize.s14,
@@ -916,7 +916,7 @@ class _EditProductImageOrVideoScreenState
                                                     const EdgeInsets.all(15.0),
                                                 child: Center(
                                                     child: Text(
-                                                  "Select",
+                                                  'general.select'.tr,
                                                   style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s12,
@@ -934,7 +934,7 @@ class _EditProductImageOrVideoScreenState
                                                     const EdgeInsets.all(15.0),
                                                 child: Center(
                                                     child: Text(
-                                                  "Image Title",
+                                                  'general.image_title'.tr,
                                                   style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s12,
@@ -952,7 +952,7 @@ class _EditProductImageOrVideoScreenState
                                                     const EdgeInsets.all(15.0),
                                                 child: Center(
                                                     child: Text(
-                                                  "Preview",
+                                                  'general.preview'.tr,
                                                   style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s12,
@@ -1159,7 +1159,7 @@ class _EditProductImageOrVideoScreenState
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      "Select Image",
+                                      'general.select_image'.tr,
                                       style: buildCustomStyle(
                                         FontWeightManager.medium,
                                         FontSize.s14,
@@ -1233,7 +1233,7 @@ class _EditProductImageOrVideoScreenState
                                                     const EdgeInsets.all(15.0),
                                                 child: Center(
                                                     child: Text(
-                                                  "Select",
+                                                  'general.select'.tr,
                                                   style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s12,
@@ -1251,7 +1251,7 @@ class _EditProductImageOrVideoScreenState
                                                     const EdgeInsets.all(15.0),
                                                 child: Center(
                                                     child: Text(
-                                                  "Image Title",
+                                                  'general.image_title'.tr,
                                                   style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s12,
@@ -1269,7 +1269,7 @@ class _EditProductImageOrVideoScreenState
                                                     const EdgeInsets.all(15.0),
                                                 child: Center(
                                                     child: Text(
-                                                  "Preview",
+                                                  'general.preview'.tr,
                                                   style: buildCustomStyle(
                                                     FontWeightManager.medium,
                                                     FontSize.s12,

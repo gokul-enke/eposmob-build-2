@@ -74,7 +74,7 @@ class CategoryListItem extends StatelessWidget {
                   children: [
                     Center(
                       child: Text(
-                        'Search Category',
+                        'common.search_category'.tr,
                         style: ResponsiveWidget.isMobile(context)
                             ? buildCustomStyle(FontWeightManager.semiBold,
                                 FontSize.s12, 0.30, ColorManager.textColor)

@@ -75,7 +75,7 @@ class _CommonPrinterSettingsCardState extends State<CommonPrinterSettingsCard> {
       if (!mounted) return;
       setState(() => _usePrinterSettings = previousValue);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not save printer setting')),
+        SnackBar(content: Text('printer_settings.save_failed'.tr)),
       );
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -134,8 +134,8 @@ class _CommonPrinterSettingsCardState extends State<CommonPrinterSettingsCard> {
           ),
           subtitle: Text(
             _usePrinterSettings
-                ? 'Enable only when the printer driver is configured for the exact document size.'
-                : 'Recommended for normal invoices because it preserves the PDF page size and helps prevent cropping.',
+                ? 'printer_settings.exact_document_size_hint'.tr
+                : 'printer_settings.preserve_pdf_size_hint'.tr,
             maxLines: 3,
             style: buildCustomStyle(
               FontWeightManager.regular,

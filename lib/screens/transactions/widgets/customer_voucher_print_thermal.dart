@@ -184,7 +184,7 @@ class CustomerVoucherThermalPrinter {
 
       // Customer Information
       bytes += generator.text(
-        'Customer Details',
+        'voucher_print.customer_details'.tr,
         styles: PosStyles(
           align: PosAlign.left,
           height: textSizeSmall,
@@ -194,7 +194,7 @@ class CustomerVoucherThermalPrinter {
       );
 
       bytes += generator.text(
-        'Name: ${voucher.customer.user.name}',
+        '${'voucher_print.name'.tr}: ${voucher.customer.user.name}',
         styles: PosStyles(
           align: PosAlign.left,
           height: textSizeSmall,
@@ -203,7 +203,7 @@ class CustomerVoucherThermalPrinter {
       );
 
       bytes += generator.text(
-        'Phone: ${voucher.customer.user.phone}',
+        '${'voucher_print.phone'.tr}: ${voucher.customer.user.phone}',
         styles: PosStyles(
           align: PosAlign.left,
           height: textSizeSmall,
@@ -217,7 +217,7 @@ class CustomerVoucherThermalPrinter {
       // Items Table Header
       bytes += generator.row([
         PosColumn(
-          text: 'Item',
+          text: 'voucher_print.item'.tr,
           width: 6,
           styles: PosStyles(
             align: PosAlign.left,
@@ -227,7 +227,7 @@ class CustomerVoucherThermalPrinter {
           ),
         ),
         PosColumn(
-          text: 'Qty',
+          text: 'voucher_print.qty'.tr,
           width: 2,
           styles: PosStyles(
             align: PosAlign.center,
@@ -237,7 +237,7 @@ class CustomerVoucherThermalPrinter {
           ),
         ),
         PosColumn(
-          text: 'Amount',
+          text: 'voucher_print.amount'.tr,
           width: 4,
           styles: PosStyles(
             align: PosAlign.right,

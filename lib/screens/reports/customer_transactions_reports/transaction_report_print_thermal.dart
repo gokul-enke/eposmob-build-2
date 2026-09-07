@@ -1135,7 +1135,7 @@ class TransactionReportThermalPrinter {
     // Only add customer information section if at least one field should be shown
     if (showName || showEmail || showPhone || showAddress || showDates) {
       // Add a header for customer details
-      bytes += generator.text('Customer Information',
+      bytes += generator.text('voucher_print.customer_information'.tr,
           styles: PosStyles(
               fontType: fontType,
               align: PosAlign.center,
@@ -1147,7 +1147,8 @@ class TransactionReportThermalPrinter {
 
       // Add customer details based on visibility settings
       if (showName) {
-        bytes += generator.text('Name: $customerName',
+        bytes += generator.text(
+            '${'voucher_print.name'.tr}: $customerName',
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.left,
@@ -1156,7 +1157,8 @@ class TransactionReportThermalPrinter {
       }
 
       if (showEmail) {
-        bytes += generator.text('Email: $customerEmail',
+        bytes += generator.text(
+            '${'voucher_print.email'.tr}: $customerEmail',
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.left,
@@ -1165,7 +1167,8 @@ class TransactionReportThermalPrinter {
       }
 
       if (showPhone) {
-        bytes += generator.text('Phone: $customerPhone',
+        bytes += generator.text(
+            '${'voucher_print.phone'.tr}: $customerPhone',
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.left,

@@ -168,10 +168,10 @@ class KotPrintPage extends StatefulWidget {
       if (context.mounted) {
         final normalizedKotType = kotType.trim().toLowerCase();
         final successMessage = normalizedKotType == 'cancel'
-            ? 'Cancel KOT printed successfully!'
+            ? 'print.cancel_kot_printed_successfully'.tr
             : normalizedKotType == 'add_on'
-                ? 'Add-on KOT printed successfully!'
-                : 'KOT printed successfully!';
+                ? 'print.add_on_kot_printed_successfully'.tr
+                : 'print.kot_printed_successfully'.tr;
         showScaffold(
           context: context,
           message: successMessage,
@@ -260,8 +260,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('ui_codes.permissions_required'.tr),
-        content: const Text(
-            'This app needs Bluetooth and Location permissions to scan for printers.'),
+        content: Text('voucher_print.printer_permissions_required'.tr),
         actions: [
           TextButton(
             child: Text('general.ok'.tr),
@@ -418,7 +417,9 @@ class _KotPrintPageState extends State<KotPrintPage> {
     if (mounted) {
       showScaffold(
         context: context,
-        message: "${printer.deviceName.toString()} Printer Selected",
+        message: 'voucher_print.printer_selected'.trParams({
+          'name': printer.deviceName.toString(),
+        }),
       );
     }
   }
@@ -477,7 +478,9 @@ class _KotPrintPageState extends State<KotPrintPage> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Error loading document configurations: ${e.toString()}",
+          message: 'voucher_print.error_loading_document_config'.trParams(
+            {'error': e.toString()},
+          ),
         );
       }
     }
@@ -489,7 +492,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Document configuration not loaded. Please try again.",
+          message: 'voucher_print.document_config_not_loaded_retry'.tr,
         );
       }
       return;
@@ -542,7 +545,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
       if (mounted) {
         showScaffold(
           context: context,
-          message: "KOT printed successfully!",
+          message: 'print.kot_printed_successfully'.tr,
         );
         Navigator.pop(context, true);
       }
@@ -550,7 +553,9 @@ class _KotPrintPageState extends State<KotPrintPage> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Failed to print KOT: ${e.toString()}",
+          message: 'print.kot_print_failed'.trParams(
+            {'error': e.toString()},
+          ),
         );
       }
     }
@@ -584,7 +589,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
       if (mounted) {
         showScaffold(
           context: context,
-          message: "KOT PDF generated successfully!",
+          message: 'print.kot_pdf_generated_successfully'.tr,
         );
         Navigator.pop(context, true);
       }
@@ -592,7 +597,9 @@ class _KotPrintPageState extends State<KotPrintPage> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Failed to generate KOT PDF: ${e.toString()}",
+          message: 'print.kot_pdf_generation_failed'.trParams(
+            {'error': e.toString()},
+          ),
         );
       }
     }

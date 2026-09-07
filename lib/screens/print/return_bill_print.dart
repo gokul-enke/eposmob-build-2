@@ -153,8 +153,7 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('ui_codes.permissions_required'.tr),
-        content: const Text(
-            'This app needs Bluetooth and Location permissions to scan for printers.'),
+        content: Text('voucher_print.printer_permissions_required'.tr),
         actions: [
           TextButton(
             child: Text('general.ok'.tr),
@@ -309,7 +308,9 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
     if (mounted) {
       showScaffold(
         context: context,
-        message: "${printer.deviceName.toString()} Printer Selected",
+        message: 'voucher_print.printer_selected'.trParams({
+          'name': printer.deviceName.toString(),
+        }),
       );
     }
   }
@@ -361,7 +362,8 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
       await docConfigProvider.fetchDocumentConfigurations(
           accessToken: accessToken);
 
-      debugPrint("Loading 'Credit Note'/'Return Bill' configuration from API...");
+      debugPrint(
+          "Loading 'Credit Note'/'Return Bill' configuration from API...");
       _returnBillDocumentConfig =
           docConfigProvider.getDocumentConfig("Credit Note") ??
               docConfigProvider.getDocumentConfig("Return Bill");
@@ -385,7 +387,9 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Error loading document configurations: ${e.toString()}",
+          message: 'voucher_print.error_loading_document_config'.trParams(
+            {'error': e.toString()},
+          ),
         );
       }
     }
@@ -398,7 +402,7 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Document configuration not loaded. Please try again.",
+          message: 'voucher_print.document_config_not_loaded_retry'.tr,
         );
       }
       return;
@@ -535,8 +539,8 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'Print Return Bill',
+        title: Text(
+          'voucher_print.print_return_bill'.tr,
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -575,8 +579,8 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Paper Size',
+                    Text(
+                      'voucher_print.paper_size'.tr,
                       style: TextStyle(
                         color: textPrimaryColor,
                         fontSize: 18,
@@ -631,8 +635,8 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Available Printers',
+                    Text(
+                      'voucher_print.available_printers'.tr,
                       style: TextStyle(
                         color: textPrimaryColor,
                         fontSize: 18,
@@ -642,8 +646,10 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
                     const SizedBox(height: 8),
                     Text(
                       _isScanning
-                          ? 'Scanning...'
-                          : '${devices.length} device${devices.length != 1 ? 's' : ''} found',
+                          ? 'voucher_print.scanning'.tr
+                          : 'voucher_print.info_devices_found'.trParams({
+                              'count': devices.length.toString(),
+                            }),
                       style: const TextStyle(
                         color: textSecondaryColor,
                         fontSize: 14,
@@ -666,8 +672,8 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
                             color: textSecondaryColor,
                           ),
                           const SizedBox(height: 16),
-                          const Text(
-                            'No Printers Found',
+                          Text(
+                            'voucher_print.no_printers_found'.tr,
                             style: TextStyle(
                               color: textPrimaryColor,
                               fontSize: 18,
@@ -676,7 +682,7 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Tap the refresh button to scan for printers',
+                            'voucher_print.tap_refresh_to_scan'.tr,
                             style: TextStyle(
                               color: textSecondaryColor.withOpacity(0.8),
                               fontSize: 14,
@@ -721,7 +727,8 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
                                 size: 32,
                               ),
                               title: Text(
-                                printer.deviceName ?? 'Unknown device',
+                                printer.deviceName ??
+                                    'voucher_print.unknown_device'.tr,
                                 style: TextStyle(
                                   color: textPrimaryColor,
                                   fontWeight: isSelected
@@ -731,7 +738,7 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
                                 ),
                               ),
                               subtitle: Text(
-                                printer.address ?? 'No address',
+                                printer.address ?? 'general.not_available'.tr,
                                 style: const TextStyle(
                                   color: textSecondaryColor,
                                   fontSize: 13,
@@ -756,7 +763,9 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
                                 ),
                                 onPressed: () => selectPrinter(printer),
                                 child: Text(
-                                  isSelected ? 'Selected' : 'Select',
+                                  isSelected
+                                      ? 'voucher_print.selected'.tr
+                                      : 'voucher_print.select'.tr,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 13,
@@ -786,7 +795,7 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Loading document configuration...',
+                        'voucher_print.loading_document_config'.tr,
                         style: TextStyle(
                           color: Colors.orange[700],
                           fontSize: 14,
@@ -804,7 +813,7 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
                         }
                       },
                       child: Text(
-                        'Retry',
+                        'general.retry'.tr,
                         style: TextStyle(
                           color: Colors.orange[700],
                           fontWeight: FontWeight.bold,
@@ -827,7 +836,7 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
                   showScaffoldError(
                     context: context,
                     message:
-                        "Document configuration not loaded. Please wait or try again.",
+                        'voucher_print.document_config_not_loaded_retry'.tr,
                   );
                   return;
                 }
@@ -835,8 +844,8 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
                     appSettings.customerCareEmail);
               },
               icon: const Icon(Icons.receipt_long, size: 20),
-              label: const Text(
-                'Print Return Bill',
+              label: Text(
+                'voucher_print.print_return_bill'.tr,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,

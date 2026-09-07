@@ -787,7 +787,7 @@ class BillingPageState extends State<BillingPage>
       debugPrint("Error adding item: $e");
       showScaffoldError(
         context: context,
-        message: "Invalid Barcode. Please try again.",
+        message: 'billing.invalid_barcode'.tr,
       );
     } finally {
       // Processing state is managed by BillingProvider's debounce logic

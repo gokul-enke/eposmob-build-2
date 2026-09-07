@@ -196,10 +196,10 @@ class ThermalPrinter {
       debugPrint("Receipt generated, sending to printer...");
       // Print receipt
       await _printerUtils.sendPrintJob(selectedPrinter, bytes);
-      debugPrint("Print job sent successfully");
+      debugPrint('print.job_sent_successfully'.tr);
 
       if (context.mounted) {
-        showScaffold(context: context, message: "Print job sent successfully");
+        showScaffold(context: context, message: 'print.job_sent_successfully'.tr);
         Navigator.pop(context);
         SideBarController sideBarController = Get.put(SideBarController());
         sideBarController.index.value = 90;
@@ -209,7 +209,7 @@ class ThermalPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: "Error printing: ${e.toString()}",
+          message: 'print.error_printing'.trParams({'error': e.toString()}),
         );
       }
     } finally {

@@ -603,7 +603,7 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                                                                         null
                                                                     ? stock
                                                                         .expiryDate!
-                                                                    : 'No expiry',
+                                                                    : 'general.no_expiry'.tr,
                                                                 style:
                                                                     TextStyle(
                                                                   fontSize: 10,

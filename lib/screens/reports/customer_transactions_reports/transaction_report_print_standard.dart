@@ -970,7 +970,8 @@ class TransactionReportStandardPrinter {
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text('Total Transactions:', style: style),
+            pw.Text('customer_transaction_report.total_transactions'.tr,
+                style: style),
             pw.Text(itemCount.toString(), style: style),
           ],
         ),
@@ -984,7 +985,8 @@ class TransactionReportStandardPrinter {
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text('Total Amount:', style: style),
+            pw.Text('customer_transaction_report.total_amount'.tr,
+                style: style),
             pw.Text(totalMRP.toStringAsFixed(2), style: style),
           ],
         ),
@@ -998,7 +1000,7 @@ class TransactionReportStandardPrinter {
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text('You Saved:', style: style),
+            pw.Text('customer_transaction_report.you_saved'.tr, style: style),
             pw.Text(savedTotalValue.toStringAsFixed(2), style: style),
           ],
         ),
@@ -1012,7 +1014,7 @@ class TransactionReportStandardPrinter {
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text('Discount:', style: style),
+            pw.Text('customer_transaction_report.discount'.tr, style: style),
             pw.Text(discountAmountValue.toStringAsFixed(2), style: style),
           ],
         ),
@@ -1022,7 +1024,7 @@ class TransactionReportStandardPrinter {
 
     // Display Net Total (Amount)
     if (displayConfig?['showNetAmount']?.visible == true) {
-      const label = 'Net Total';
+      final label = 'customer_transaction_report.net_total'.tr;
       summaryWidgets.add(pw.Divider(color: PdfColors.black));
       summaryWidgets.add(
         pw.Row(
@@ -1307,7 +1309,8 @@ class TransactionReportStandardPrinter {
       customerDetailWidgets.add(
         pw.Padding(
           padding: const pw.EdgeInsets.only(bottom: 8),
-          child: pw.Text('N/A', style: customerDetailStyle),
+          child: pw.Text('customer_transaction_report.na'.tr,
+              style: customerDetailStyle),
         ),
       );
     }
@@ -1326,7 +1329,7 @@ class TransactionReportStandardPrinter {
         children: [
           // Add a header for customer details
           pw.Text(
-            'Customer Information',
+            'voucher_print.customer_information'.tr,
             style: customerInfoHeaderStyle,
           ),
           pw.SizedBox(height: 8),

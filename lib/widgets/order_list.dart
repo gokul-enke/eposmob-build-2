@@ -925,26 +925,26 @@ class _OrderListState extends State<OrderList> {
                       BuildPaymentRow(
                         amount:
                             "${Provider.of<CartProvider>(context, listen: true).priceSummary!.subTotal ?? 0.00}",
-                        title: "Net amount",
+                        title: 'billing.net_amount'.tr,
                         color: ColorManager.textColor,
                       ),
                       BuildPaymentRow(
                         amount:
                             "${Provider.of<CartProvider>(context, listen: true).priceSummary!.discount ?? 0.00}",
-                        title: "Discount",
+                        title: 'billing.discount'.tr,
                         color: ColorManager.textColor,
                       ),
                       BuildPaymentRow(
                         amount:
                             "${Provider.of<CartProvider>(context, listen: true).priceSummary!.totalTax ?? 0.00}",
-                        title: "Tax Amount",
+                        title: 'billing.tax_amount'.tr,
                         color: ColorManager.textColor,
                       ),
                       const Divider(thickness: 2),
                       BuildPaymentRow(
                         amount:
                             "${Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal ?? 0.00}",
-                        title: "Payable",
+                        title: 'billing.payable'.tr,
                         secondRowTextStyle: buildCustomStyle(
                           FontWeightManager.bold,
                           FontSize.s15,
@@ -962,7 +962,7 @@ class _OrderListState extends State<OrderList> {
                       const SizedBox(height: 5),
                       BuildPaymentRow(
                         amount: "",
-                        title: "Payment Method",
+                        title: 'billing.payment_method'.tr,
                         firstRowTextStyle: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s14,

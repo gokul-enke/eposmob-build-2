@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
@@ -64,7 +65,7 @@ class ContractStandardPdfLayout implements StandardPdfLayout {
         if (params.context.mounted) {
           showScaffold(
             context: params.context,
-            message: 'Development PDF saved to ${file.path}',
+            message: 'print.pdf_saved'.trParams({'path': file.path}),
           );
         }
         return;
@@ -104,7 +105,7 @@ class ContractStandardPdfLayout implements StandardPdfLayout {
           if (result.type != ResultType.done && params.context.mounted) {
             showScaffold(
               context: params.context,
-              message: 'PDF saved to ${file.path}',
+              message: 'print.pdf_saved'.trParams({'path': file.path}),
             );
           }
         } catch (error) {
@@ -112,7 +113,7 @@ class ContractStandardPdfLayout implements StandardPdfLayout {
           if (params.context.mounted) {
             showScaffold(
               context: params.context,
-              message: 'PDF saved to ${file.path}',
+            message: 'print.pdf_saved'.trParams({'path': file.path}),
             );
           }
         }
@@ -123,7 +124,8 @@ class ContractStandardPdfLayout implements StandardPdfLayout {
       if (params.context.mounted) {
         showScaffoldError(
           context: params.context,
-          message: 'Error generating PDF: $error',
+          message: 'print.pdf_generation_failed'.trParams(
+              {'error': error.toString()}),
         );
       }
       if (params.selectedPrinter.isDevelopment) rethrow;

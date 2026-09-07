@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/document_configurations.dart';
@@ -105,7 +106,7 @@ class KotStandardPrinter {
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: "Generating KOT PDF...",
+          message: 'print.generating_kot_pdf'.tr,
         );
       }
 
@@ -189,23 +190,23 @@ class KotStandardPrinter {
               ? displayConfig!['showOrderNumber']!.value as String
               : (resolvedLabels?.orderNumber?.isNotEmpty == true
                   ? resolvedLabels!.orderNumber!
-                  : 'Order');
+                  : 'daily_sales_close.order'.tr);
 
       final tableLabel =
           (displayConfig?['showTableNumber']?.value as String?)?.isNotEmpty ==
                   true
               ? displayConfig!['showTableNumber']!.value as String
-              : 'Table';
+              : 'daily_sales_close.table'.tr;
 
       final timeLabel =
           (displayConfig?['showDateTime']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showDateTime']!.value as String
-              : 'Time';
+              : 'daily_sales_close.time'.tr;
       final tokenLabel =
           (displayConfig?['showTokenNumber']?.value as String?)?.isNotEmpty ==
                   true
               ? displayConfig!['showTokenNumber']!.value as String
-              : 'Token';
+              : 'daily_sales_close.token'.tr;
       final hasToken = tokenNumber != null && tokenNumber.trim().isNotEmpty;
 
       final slLabel =
@@ -213,7 +214,7 @@ class KotStandardPrinter {
               ? displayConfig!['showSLNumber']!.value as String
               : (resolvedLabels?.slNumber?.isNotEmpty == true
                   ? resolvedLabels!.slNumber!
-                  : 'Si#');
+                  : 'daily_sales_close.sl_no'.tr);
 
       final particularsLabel =
           (displayConfig?['showParticulars']?.value as String?)?.isNotEmpty ==
@@ -221,40 +222,40 @@ class KotStandardPrinter {
               ? displayConfig!['showParticulars']!.value as String
               : (resolvedLabels?.particulars?.isNotEmpty == true
                   ? resolvedLabels!.particulars!
-                  : 'PARTICULARS');
+                  : 'daily_sales_close.particulars'.tr);
 
       final qtyLabel =
           (displayConfig?['showQty']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showQty']!.value as String
               : (resolvedLabels?.qty?.isNotEmpty == true
                   ? resolvedLabels!.qty!
-                  : 'QTY');
+                  : 'daily_sales_close.qty'.tr);
 
       final mrpLabel =
           (displayConfig?['showMRP']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showMRP']!.value as String
               : (resolvedLabels?.mrp?.isNotEmpty == true
                   ? resolvedLabels!.mrp!
-                  : 'MRP');
+                  : 'daily_sales_close.mrp'.tr);
 
       final rateLabel =
           (displayConfig?['showRate']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showRate']!.value as String
               : (resolvedLabels?.rate?.isNotEmpty == true
                   ? resolvedLabels!.rate!
-                  : 'RATE');
+                  : 'daily_sales_close.rate'.tr);
 
       final totalLabel =
           (displayConfig?['showTotal']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showTotal']!.value as String
               : (resolvedLabels?.total?.isNotEmpty == true
                   ? resolvedLabels!.total!
-                  : 'Total');
+                  : 'daily_sales_close.total'.tr);
 
       final commentLabel =
           (displayConfig?['showComment']?.value as String?)?.isNotEmpty == true
               ? displayConfig!['showComment']!.value as String
-              : 'Note';
+              : 'daily_sales_close.note'.tr;
 
       // Build table columns dynamically based on visibility
       List<pw.FlexColumnWidth> columnWidths = [];
@@ -368,7 +369,8 @@ class KotStandardPrinter {
                 pw.SizedBox(height: isA5 ? 10 : 15),
 
                 // Items section header
-                pw.Text('ORDER ITEMS', style: subheaderStyle),
+                pw.Text('daily_sales_close.order_items'.tr,
+                    style: subheaderStyle),
                 pw.SizedBox(height: 5),
                 pw.Divider(thickness: 1),
 
@@ -441,7 +443,8 @@ class KotStandardPrinter {
                                     style: itemStyle,
                                     textDirection: pw.TextDirection.ltr),
                                 if (itemNotes != null && itemNotes.isNotEmpty)
-                                  pw.Text('  Note: $itemNotes',
+                                  pw.Text(
+                                      '${'daily_sales_close.note'.tr}: $itemNotes',
                                       style: commentStyle),
                               ],
                             ),
@@ -570,7 +573,10 @@ class KotStandardPrinter {
             await _sharePdfFallback(file);
           } else {
             if (context.mounted) {
-              showScaffold(context: context, message: "KOT PDF opened");
+              showScaffold(
+                context: context,
+                message: 'print.kot_pdf_opened'.tr,
+              );
             }
           }
         } catch (e) {
@@ -585,7 +591,9 @@ class KotStandardPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: "Error generating KOT PDF: $e",
+          message: 'print.kot_pdf_generation_failed'.trParams(
+            {'error': e.toString()},
+          ),
         );
       }
     }
@@ -597,13 +605,16 @@ class KotStandardPrinter {
       final result = await Process.run('cmd', ['/c', 'start', '', file.path]);
       if (result.exitCode == 0) {
         if (context.mounted) {
-          showScaffold(context: context, message: "KOT PDF opened");
+          showScaffold(
+            context: context,
+            message: 'print.kot_pdf_opened'.tr,
+          );
         }
       } else {
         if (context.mounted) {
           showScaffold(
             context: context,
-            message: "PDF saved: ${file.path}",
+            message: 'print.pdf_saved'.trParams({'path': file.path}),
           );
         }
       }
@@ -612,7 +623,7 @@ class KotStandardPrinter {
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: "PDF saved: ${file.path}",
+          message: 'print.pdf_saved'.trParams({'path': file.path}),
         );
       }
     }
@@ -633,11 +644,17 @@ class KotStandardPrinter {
         );
 
         if (context.mounted) {
-          showScaffold(context: context, message: "KOT PDF shared");
+          showScaffold(
+            context: context,
+            message: 'print.kot_pdf_shared'.tr,
+          );
         }
       } else {
         if (context.mounted) {
-          showScaffold(context: context, message: "PDF saved: ${file.path}");
+          showScaffold(
+            context: context,
+            message: 'print.pdf_saved'.trParams({'path': file.path}),
+          );
         }
       }
     } catch (e) {
@@ -645,7 +662,7 @@ class KotStandardPrinter {
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: "PDF saved: ${file.path}",
+          message: 'print.pdf_saved'.trParams({'path': file.path}),
         );
       }
     }

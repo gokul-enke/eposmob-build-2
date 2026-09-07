@@ -135,9 +135,9 @@ class MarketProductGrid extends StatelessWidget {
     );
 
     if (products.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          'No products found',
+          'stock.no_products_found'.tr,
           style: TextStyle(
             fontFamily: 'Poppins',
             color: Colors.grey,

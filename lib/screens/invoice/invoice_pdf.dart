@@ -8,7 +8,8 @@ import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:share_plus_platform_interface/share_plus_platform_interface.dart' show XFile;
+import 'package:share_plus_platform_interface/share_plus_platform_interface.dart'
+    show XFile;
 // import 'package:pdf_render/pdf_render_widgets.dart';
 import 'package:provider/provider.dart';
 
@@ -21,7 +22,7 @@ class InvoiceScreen extends StatefulWidget {
 
 class _InvoiceScreenState extends State<InvoiceScreen> {
   File? _pdfFile;
-  String _status = 'Fetching order details...';
+  String _status = 'invoice_pdf.fetching_order_details'.tr;
   OrderDetailsModel? _orderDetails;
 
   @override
@@ -46,7 +47,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
 
   Future<void> _fetchOrderDetails() async {
     setState(() {
-      _status = 'Fetching order details...';
+      _status = 'invoice_pdf.fetching_order_details'.tr;
     });
 
     try {
@@ -125,7 +126,8 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
       });
     } catch (e) {
       setState(() {
-        _status = 'Error generating PDF: $e';
+        _status = 'invoice_pdf.error_generating_pdf'
+            .trParams({'error': e.toString()});
       });
       // debugPrint('Error generating PDF: $e');
     }
@@ -135,9 +137,9 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text('Order Details',
+        pw.Text('invoice_pdf.order_details'.tr,
             style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
-        pw.Text('(Original for Recipient)',
+        pw.Text('invoice_pdf.original_for_recipient'.tr,
             style: const pw.TextStyle(fontSize: 14)),
       ],
     );
@@ -152,12 +154,12 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text('Sold By:',
+              pw.Text('invoice_pdf.sold_by'.tr,
                   style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-              pw.Text('Your Company Name'),
-              pw.Text('Your Company Address'),
-              pw.Text('Phone: Your Phone'),
-              pw.Text('Email: Your Email'),
+              pw.Text('invoice_pdf.company_name'.tr),
+              pw.Text('invoice_pdf.company_address'.tr),
+              pw.Text('invoice_pdf.company_phone'.tr),
+              pw.Text('invoice_pdf.company_email'.tr),
             ],
           ),
         ),
@@ -166,12 +168,16 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text('Customer Details:',
+              pw.Text('invoice_pdf.customer_details'.tr,
                   style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-              pw.Text('Name: ${customerDetails?.name ?? 'N/A'}'),
-              pw.Text('Email: ${customerDetails?.email ?? 'N/A'}'),
-              pw.Text('Phone: ${customerDetails?.phone ?? 'N/A'}'),
-              pw.Text('Customer ID: ${customerDetails?.customerId ?? 'N/A'}'),
+              pw.Text(
+                  '${'invoice_pdf.name'.tr}: ${customerDetails?.name ?? 'N/A'}'),
+              pw.Text(
+                  '${'invoice_pdf.email'.tr}: ${customerDetails?.email ?? 'N/A'}'),
+              pw.Text(
+                  '${'invoice_pdf.phone'.tr}: ${customerDetails?.phone ?? 'N/A'}'),
+              pw.Text(
+                  '${'invoice_pdf.customer_id'.tr}: ${customerDetails?.customerId ?? 'N/A'}'),
             ],
           ),
         ),
@@ -186,19 +192,21 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
         pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text('PAN NO: Your PAN'),
-            pw.Text('GST Registration No: Your GST'),
+            pw.Text('invoice_pdf.pan_no'.tr),
+            pw.Text('invoice_pdf.gst_registration_no'.tr),
           ],
         ),
         pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.end,
           children: [
             pw.Text(
-                'Order Number: ${_orderDetails?.data?.orderNumber ?? 'N/A'}'),
-            pw.Text('Order Date: ${_orderDetails?.data?.orderDate ?? 'N/A'}'),
+                '${'invoice_pdf.order_number'.tr}: ${_orderDetails?.data?.orderNumber ?? 'N/A'}'),
             pw.Text(
-                'Order Status: ${_orderDetails?.data?.orderStatus ?? 'N/A'}'),
-            pw.Text('Store ID: ${_orderDetails?.data?.storeId ?? 'N/A'}'),
+                '${'invoice_pdf.order_date'.tr}: ${_orderDetails?.data?.orderDate ?? 'N/A'}'),
+            pw.Text(
+                '${'invoice_pdf.order_status'.tr}: ${_orderDetails?.data?.orderStatus ?? 'N/A'}'),
+            pw.Text(
+                '${'invoice_pdf.store_id'.tr}: ${_orderDetails?.data?.storeId ?? 'N/A'}'),
           ],
         ),
       ],
@@ -223,7 +231,12 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
         fontWeight: pw.FontWeight.bold,
       ),
       cellStyle: const pw.TextStyle(),
-      headers: ['Item Name', 'Unit Price', 'Quantity', 'Total Price'],
+      headers: [
+        'invoice_pdf.item_name'.tr,
+        'invoice_pdf.unit_price'.tr,
+        'invoice_pdf.quantity'.tr,
+        'invoice_pdf.total_price'.tr,
+      ],
       data: cartItems!
           .map((item) => [
                 item.productName ?? 'N/A',
@@ -242,10 +255,11 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.end,
         children: [
-          _buildTotalRow('Subtotal', priceSummary?.subTotal),
-          _buildTotalRow('Tax', priceSummary?.totalTax),
-          _buildTotalRow('Discount', priceSummary?.discount),
-          _buildTotalRow('Net Total', priceSummary?.netTotal, isBold: true),
+          _buildTotalRow('invoice_pdf.subtotal'.tr, priceSummary?.subTotal),
+          _buildTotalRow('invoice_pdf.tax'.tr, priceSummary?.totalTax),
+          _buildTotalRow('invoice_pdf.discount'.tr, priceSummary?.discount),
+          _buildTotalRow('invoice_pdf.net_total'.tr, priceSummary?.netTotal,
+              isBold: true),
         ],
       ),
     );
@@ -267,10 +281,10 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Text(
-            'Payment Status: ${_orderDetails?.data?.paymentStatus ?? 'N/A'}'),
+            '${'invoice_pdf.payment_status'.tr}: ${_orderDetails?.data?.paymentStatus ?? 'N/A'}'),
         pw.Text(
-            'Delivery Status: ${_orderDetails?.data?.deliveryStatus ?? 'N/A'}'),
-        pw.Text('Thank you for your order!'),
+            '${'invoice_pdf.delivery_status'.tr}: ${_orderDetails?.data?.deliveryStatus ?? 'N/A'}'),
+        pw.Text('invoice_pdf.thank_you'.tr),
       ],
     );
   }
@@ -280,8 +294,9 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
       // share_plus v10+ uses shareXFiles with XFile
       await Share.shareXFiles(
         [XFile(_pdfFile!.path)],
-        text: 'Here is your order details PDF',
-        subject: 'Order PDF #${_orderDetails?.data?.orderNumber ?? ''}',
+        text: 'invoice_pdf.share_text'.tr,
+        subject:
+            '${'invoice_pdf.share_subject'.tr} #${_orderDetails?.data?.orderNumber ?? ''}',
       );
     } else {
       // debugPrint('PDF file is null, cannot share');

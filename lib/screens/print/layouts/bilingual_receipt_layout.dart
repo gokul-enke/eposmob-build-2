@@ -197,7 +197,7 @@ class BilingualReceiptLayout implements ReceiptLayout {
             if (savedFile != null && context.mounted) {
               showScaffold(
                 context: context,
-                message: 'Development print saved to ${savedFile.path}',
+                message: 'print.development_print_saved'.trParams({'path': savedFile.path}),
               );
             }
             return;
@@ -249,7 +249,7 @@ class BilingualReceiptLayout implements ReceiptLayout {
       debugPrint("Print job sent successfully.");
 
       if (context.mounted) {
-        showScaffold(context: context, message: "Print job sent successfully");
+        showScaffold(context: context, message: 'print.job_sent_successfully'.tr);
         // Note: Navigation is now handled by the caller
         // PrintPage has its own back button, auto-print doesn't need navigation
       }
@@ -258,7 +258,7 @@ class BilingualReceiptLayout implements ReceiptLayout {
       debugPrint("Stacktrace: $stacktrace");
       if (context.mounted) {
         showScaffoldError(
-            context: context, message: "Error printing: ${e.toString()}");
+            context: context, message: 'print.error_printing'.trParams({'error': e.toString()}));
       }
       rethrow;
     } finally {

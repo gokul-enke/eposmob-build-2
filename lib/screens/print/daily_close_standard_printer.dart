@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/daily_sales_close.dart';
@@ -80,7 +81,7 @@ class DailyCloseStandardPrinter {
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: "Generating Daily Close PDF...",
+          message: 'print.generating_daily_close_pdf'.tr,
         );
       }
 
@@ -140,14 +141,16 @@ class DailyCloseStandardPrinter {
                 pw.Center(
                   child: pw.Column(
                     children: [
-                      pw.Text('DAILY CLOSE REPORT', style: headerStyle),
+                      pw.Text('daily_sales_close.title'.tr, style: headerStyle),
                       if (data.store?.name != null) ...[
                         pw.SizedBox(height: 5),
                         pw.Text(data.store!.name!, style: subheaderStyle),
                       ],
                       pw.SizedBox(height: 5),
                       pw.Text(
-                        'Generated on: ${DateHelper.getCurrentFormattedTimeWithAMPM()}',
+                        'daily_sales_close.generated_on'.trParams({
+                          'time': DateHelper.getCurrentFormattedTimeWithAMPM(),
+                        }),
                         style: pw.TextStyle(
                           font: regularFont,
                           fontSize: isA5 ? 8.0 : 10.0,
@@ -169,8 +172,18 @@ class DailyCloseStandardPrinter {
                       child: pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          _buildInfoRow('Opening', _formatDateTime(data.openingDate, data.openingTime), labelStyle, valueStyle),
-                          _buildInfoRow('Closing', _formatDateTime(data.closingDate, data.closingTime), labelStyle, valueStyle),
+                          _buildInfoRow(
+                              'daily_sales_close.opening'.tr,
+                              _formatDateTime(
+                                  data.openingDate, data.openingTime),
+                              labelStyle,
+                              valueStyle),
+                          _buildInfoRow(
+                              'daily_sales_close.closing'.tr,
+                              _formatDateTime(
+                                  data.closingDate, data.closingTime),
+                              labelStyle,
+                              valueStyle),
                         ],
                       ),
                     ),
@@ -179,7 +192,11 @@ class DailyCloseStandardPrinter {
                       child: pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          _buildInfoRow('Sales Executive', data.salesExecutive?.name ?? '-', labelStyle, valueStyle),
+                          _buildInfoRow(
+                              'daily_sales_close.sales_executive'.tr,
+                              data.salesExecutive?.name ?? '-',
+                              labelStyle,
+                              valueStyle),
                         ],
                       ),
                     ),
@@ -188,7 +205,8 @@ class DailyCloseStandardPrinter {
                 pw.SizedBox(height: 20),
 
                 // Sales Summary Section
-                pw.Text('SALES SUMMARY', style: sectionTitleStyle),
+                pw.Text('daily_sales_close.sales_summary'.tr,
+                    style: sectionTitleStyle),
                 pw.SizedBox(height: 10),
                 pw.Container(
                   padding: const pw.EdgeInsets.all(10),
@@ -203,7 +221,11 @@ class DailyCloseStandardPrinter {
                         child: pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
                           children: [
-                            _buildSummaryItem('Total Orders', data.totalOrders?.toString() ?? '0', labelStyle, valueStyle),
+                            _buildSummaryItem(
+                                'daily_sales_close.total_orders'.tr,
+                                data.totalOrders?.toString() ?? '0',
+                                labelStyle,
+                                valueStyle),
                           ],
                         ),
                       ),
@@ -211,7 +233,12 @@ class DailyCloseStandardPrinter {
                         child: pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
                           children: [
-                            _buildSummaryItem('Total Sales', data.totalSales ?? '0.00', labelStyle, valueStyle, isHighlight: true),
+                            _buildSummaryItem(
+                                'daily_sales_close.total_sales'.tr,
+                                data.totalSales ?? '0.00',
+                                labelStyle,
+                                valueStyle,
+                                isHighlight: true),
                           ],
                         ),
                       ),
@@ -222,54 +249,84 @@ class DailyCloseStandardPrinter {
                 pw.Table(
                   border: pw.TableBorder.all(color: PdfColors.grey300),
                   children: [
-                    _buildTableRow('Total Returns', data.totalReturns ?? '0.00', bodyStyle),
-                    _buildTableRow('Total Refunds', data.totalRefunds ?? '0.00', bodyStyle),
+                    _buildTableRow('daily_sales_close.total_returns'.tr,
+                        data.totalReturns ?? '0.00', bodyStyle),
+                    _buildTableRow('daily_sales_close.total_refunds'.tr,
+                        data.totalRefunds ?? '0.00', bodyStyle),
                   ],
                 ),
                 pw.SizedBox(height: 20),
 
                 // Payment Breakdown Section
-                pw.Text('PAYMENT BREAKDOWN', style: sectionTitleStyle),
+                pw.Text('daily_sales_close.payment_breakdown'.tr,
+                    style: sectionTitleStyle),
                 pw.SizedBox(height: 10),
                 pw.Table(
                   border: pw.TableBorder.all(color: PdfColors.grey300),
                   children: [
-                    _buildTableRow('Cash Sales', data.totalCash ?? '0.00', bodyStyle),
-                    _buildTableRow('Online Sales', data.totalOnline ?? '0.00', bodyStyle),
-                    _buildTableRow('Credit Amount', data.totalCredit ?? '0.00', bodyStyle),
-                    _buildTableRow('Credit Collected', data.totalCreditCollected ?? '0.00', bodyStyle),
+                    _buildTableRow('daily_sales_close.cash_sales'.tr,
+                        data.totalCash ?? '0.00', bodyStyle),
+                    _buildTableRow('daily_sales_close.online_sales'.tr,
+                        data.totalOnline ?? '0.00', bodyStyle),
+                    _buildTableRow('daily_sales_close.credit_amount'.tr,
+                        data.totalCredit ?? '0.00', bodyStyle),
+                    _buildTableRow('daily_sales_close.credit_collected'.tr,
+                        data.totalCreditCollected ?? '0.00', bodyStyle),
                   ],
                 ),
                 pw.SizedBox(height: 20),
 
                 // Expenses Breakdown Section
-                pw.Text('EXPENSES BREAKDOWN', style: sectionTitleStyle),
+                pw.Text('daily_sales_close.expenses_breakdown'.tr,
+                    style: sectionTitleStyle),
                 pw.SizedBox(height: 10),
                 pw.Table(
                   border: pw.TableBorder.all(color: PdfColors.grey300),
                   children: [
-                    _buildTableRow('Cash Expenses', data.cashExpenses ?? '0.00', bodyStyle),
-                    _buildTableRow('Bank Expenses', data.bankExpenses ?? '0.00', bodyStyle),
-                    _buildTableRow('Total Expenses', data.totalExpenses ?? '0.00', bodyStyle),
+                    _buildTableRow('daily_sales_close.cash_expenses'.tr,
+                        data.cashExpenses ?? '0.00', bodyStyle),
+                    _buildTableRow('daily_sales_close.bank_expenses'.tr,
+                        data.bankExpenses ?? '0.00', bodyStyle),
+                    _buildTableRow('daily_sales_close.total_expenses'.tr,
+                        data.totalExpenses ?? '0.00', bodyStyle),
                   ],
                 ),
                 pw.SizedBox(height: 20),
 
                 // Cash Summary Section
                 if (data.cashSummary != null) ...[
-                  pw.Text('CASH SUMMARY', style: sectionTitleStyle),
+                  pw.Text('daily_sales_close.cash_summary'.tr,
+                      style: sectionTitleStyle),
                   pw.SizedBox(height: 10),
                   pw.Table(
                     border: pw.TableBorder.all(color: PdfColors.grey300),
                     children: [
-                      _buildTableRow('Opening Cash In Hand', data.cashSummary?.openingCashInHand ?? '0.00', bodyStyle),
-                      _buildTableRow('Cash Refunds', data.cashSummary?.cashRefunds ?? '0.00', bodyStyle),
-                      _buildTableRow('Cash Drop Amount', data.cashSummary?.cashDropAmount ?? '0.00', bodyStyle),
-                      _buildTableRow('Expected Closing Cash', data.cashSummary?.expectedClosingCash ?? '0.00', bodyStyle),
-                      _buildTableRow('Today Cash Collection', data.cashSummary?.todayCashCollection ?? '0.00', bodyStyle),
-                      _buildTableRow('Closing Cash In Hand', data.cashSummary?.closingCashInHand ?? '0.00', bodyStyle),
-                      _buildTableRow('Short Cash', data.cashSummary?.shortCash ?? '0.00', bodyStyle),
-                      _buildTableRow('Excess Cash', data.cashSummary?.excessCash ?? '0.00', bodyStyle),
+                      _buildTableRow(
+                          'daily_sales_close.opening_cash_in_hand'.tr,
+                          data.cashSummary?.openingCashInHand ?? '0.00',
+                          bodyStyle),
+                      _buildTableRow('daily_sales_close.cash_refunds'.tr,
+                          data.cashSummary?.cashRefunds ?? '0.00', bodyStyle),
+                      _buildTableRow(
+                          'daily_sales_close.cash_drop_amount'.tr,
+                          data.cashSummary?.cashDropAmount ?? '0.00',
+                          bodyStyle),
+                      _buildTableRow(
+                          'daily_sales_close.expected_closing_cash'.tr,
+                          data.cashSummary?.expectedClosingCash ?? '0.00',
+                          bodyStyle),
+                      _buildTableRow(
+                          'daily_sales_close.today_cash_collection'.tr,
+                          data.cashSummary?.todayCashCollection ?? '0.00',
+                          bodyStyle),
+                      _buildTableRow(
+                          'daily_sales_close.closing_cash_in_hand'.tr,
+                          data.cashSummary?.closingCashInHand ?? '0.00',
+                          bodyStyle),
+                      _buildTableRow('daily_sales_close.short_cash'.tr,
+                          data.cashSummary?.shortCash ?? '0.00', bodyStyle),
+                      _buildTableRow('daily_sales_close.excess_cash'.tr,
+                          data.cashSummary?.excessCash ?? '0.00', bodyStyle),
                     ],
                   ),
                   pw.SizedBox(height: 20),
@@ -289,17 +346,23 @@ class DailyCloseStandardPrinter {
                       pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          pw.Text('Payment Received', style: labelStyle),
+                          pw.Text('daily_sales_close.total_payment_received'.tr,
+                              style: labelStyle),
                           pw.SizedBox(height: 5),
-                          pw.Text(data.totalPaymentReceived ?? '0.00', style: sectionTitleStyle),
+                          pw.Text(data.totalPaymentReceived ?? '0.00',
+                              style: sectionTitleStyle),
                         ],
                       ),
                       pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.end,
                         children: [
-                          pw.Text('Collected on Sale', style: labelStyle),
+                          pw.Text(
+                              'daily_sales_close.total_amount_collected_on_sale'
+                                  .tr,
+                              style: labelStyle),
                           pw.SizedBox(height: 5),
-                          pw.Text(data.totalAmountCollectedOnSale ?? '0.00', style: sectionTitleStyle),
+                          pw.Text(data.totalAmountCollectedOnSale ?? '0.00',
+                              style: sectionTitleStyle),
                         ],
                       ),
                     ],
@@ -309,33 +372,41 @@ class DailyCloseStandardPrinter {
 
                 // Transactions Section
                 if (includeTransactions &&
-                  data.transactions != null &&
-                  data.transactions!.isNotEmpty) ...[
-                  pw.Text('TRANSACTIONS', style: sectionTitleStyle),
+                    data.transactions != null &&
+                    data.transactions!.isNotEmpty) ...[
+                  pw.Text('daily_sales_close.transactions'.tr,
+                      style: sectionTitleStyle),
                   pw.SizedBox(height: 10),
                   pw.Table(
                     border: pw.TableBorder.all(color: PdfColors.grey300),
                     columnWidths: {
                       0: const pw.FixedColumnWidth(30), // SL
-                      1: const pw.FlexColumnWidth(2),   // Order No
-                      2: const pw.FlexColumnWidth(2),   // Customer
-                      3: const pw.FlexColumnWidth(1),   // Amount
-                      4: const pw.FlexColumnWidth(1),   // Paid
-                      5: const pw.FlexColumnWidth(1),   // Type
-                      6: const pw.FlexColumnWidth(1),   // Time
+                      1: const pw.FlexColumnWidth(2), // Order No
+                      2: const pw.FlexColumnWidth(2), // Customer
+                      3: const pw.FlexColumnWidth(1), // Amount
+                      4: const pw.FlexColumnWidth(1), // Paid
+                      5: const pw.FlexColumnWidth(1), // Type
+                      6: const pw.FlexColumnWidth(1), // Time
                     },
                     children: [
                       // Header Row
                       pw.TableRow(
-                        decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                        decoration:
+                            const pw.BoxDecoration(color: PdfColors.grey200),
                         children: [
                           _buildTableHeaderCell('#', labelStyle),
-                          _buildTableHeaderCell('Order No', labelStyle),
-                          _buildTableHeaderCell('Customer', labelStyle),
-                          _buildTableHeaderCell('Amount', labelStyle),
-                          _buildTableHeaderCell('Paid', labelStyle),
-                          _buildTableHeaderCell('Type', labelStyle),
-                          _buildTableHeaderCell('Time', labelStyle),
+                          _buildTableHeaderCell(
+                              'daily_sales_close.order_no'.tr, labelStyle),
+                          _buildTableHeaderCell(
+                              'daily_sales_close.customer'.tr, labelStyle),
+                          _buildTableHeaderCell(
+                              'daily_sales_close.amount'.tr, labelStyle),
+                          _buildTableHeaderCell(
+                              'daily_sales_close.paid'.tr, labelStyle),
+                          _buildTableHeaderCell(
+                              'daily_sales_close.type'.tr, labelStyle),
+                          _buildTableHeaderCell(
+                              'daily_sales_close.time'.tr, labelStyle),
                         ],
                       ),
                       // Data Rows
@@ -347,8 +418,10 @@ class DailyCloseStandardPrinter {
                             _buildTableCell(index.toString(), bodyStyle),
                             _buildTableCell(tx.orderNumber ?? '-', bodyStyle),
                             _buildTableCell(tx.customerName ?? '-', bodyStyle),
-                            _buildTableCell(tx.orderAmount?.toString() ?? '0', bodyStyle),
-                            _buildTableCell(tx.paidAmount?.toString() ?? '0', bodyStyle),
+                            _buildTableCell(
+                                tx.orderAmount?.toString() ?? '0', bodyStyle),
+                            _buildTableCell(
+                                tx.paidAmount?.toString() ?? '0', bodyStyle),
                             _buildTableCell(tx.paymentType ?? '-', bodyStyle),
                             _buildTableCell(tx.time ?? '-', bodyStyle),
                           ],
@@ -356,10 +429,13 @@ class DailyCloseStandardPrinter {
                       }).toList(),
                     ],
                   ),
-                ] else if (includeTransactions && (data.totalOrders ?? 0) > 0) ...[
-                  pw.Text('TRANSACTIONS', style: sectionTitleStyle),
+                ] else if (includeTransactions &&
+                    (data.totalOrders ?? 0) > 0) ...[
+                  pw.Text('daily_sales_close.transactions'.tr,
+                      style: sectionTitleStyle),
                   pw.SizedBox(height: 10),
-                  pw.Text('(No transaction details available)', style: bodyStyle),
+                  pw.Text('daily_sales_close.no_transactions_found'.tr,
+                      style: bodyStyle),
                 ],
               ],
             );
@@ -403,7 +479,10 @@ class DailyCloseStandardPrinter {
             await _sharePdfFallback(file);
           } else {
             if (context.mounted) {
-              showScaffold(context: context, message: "PDF opened");
+              showScaffold(
+                context: context,
+                message: 'print.pdf_opened'.tr,
+              );
             }
           }
         } catch (e) {
@@ -418,7 +497,9 @@ class DailyCloseStandardPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: "Error generating PDF: $e",
+          message: 'print.pdf_generation_failed'.trParams(
+            {'error': e.toString()},
+          ),
         );
       }
     }
@@ -437,7 +518,7 @@ class DailyCloseStandardPrinter {
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: "Generating Daily Close PDF...",
+          message: 'print.generating_daily_close_pdf'.tr,
         );
       }
 
@@ -491,232 +572,294 @@ class DailyCloseStandardPrinter {
           margin: pw.EdgeInsets.all(isA5 ? 20 : 40),
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           build: (pw.Context context) => [
-                // Header
-                pw.Center(
+            // Header
+            pw.Center(
+              child: pw.Column(
+                children: [
+                  pw.Text('daily_sales_close.title'.tr, style: headerStyle),
+                  if (data.store?.name != null) ...[
+                    pw.SizedBox(height: 5),
+                    pw.Text(data.store!.name!, style: subheaderStyle),
+                  ],
+                  pw.SizedBox(height: 5),
+                  pw.Text(
+                    'daily_sales_close.generated_on'.trParams({
+                      'time': DateHelper.getCurrentFormattedTimeWithAMPM(),
+                    }),
+                    style: pw.TextStyle(
+                      font: regularFont,
+                      fontSize: isA5 ? 8.0 : 10.0,
+                      color: PdfColors.grey600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 20),
+            pw.Divider(thickness: 1, color: PdfColors.grey300),
+            pw.SizedBox(height: 20),
+
+            // Info Section
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Expanded(
                   child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('DAILY CLOSE REPORT', style: headerStyle),
-                      if (data.store?.name != null) ...[
-                        pw.SizedBox(height: 5),
-                        pw.Text(data.store!.name!, style: subheaderStyle),
-                      ],
-                      pw.SizedBox(height: 5),
-                      pw.Text(
-                        'Generated on: ${DateHelper.getCurrentFormattedTimeWithAMPM()}',
-                        style: pw.TextStyle(
-                          font: regularFont,
-                          fontSize: isA5 ? 8.0 : 10.0,
-                          color: PdfColors.grey600,
-                        ),
-                      ),
+                      _buildInfoRow(
+                          'daily_sales_close.opening'.tr,
+                          _formatDateTime(data.openingDate, data.openingTime),
+                          labelStyle,
+                          valueStyle),
+                      _buildInfoRow(
+                          'daily_sales_close.closing'.tr,
+                          _formatDateTime(data.closingDate, data.closingTime),
+                          labelStyle,
+                          valueStyle),
                     ],
                   ),
                 ),
-                pw.SizedBox(height: 20),
-                pw.Divider(thickness: 1, color: PdfColors.grey300),
-                pw.SizedBox(height: 20),
-
-                // Info Section
-                pw.Row(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Expanded(
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          _buildInfoRow('Opening', _formatDateTime(data.openingDate, data.openingTime), labelStyle, valueStyle),
-                          _buildInfoRow('Closing', _formatDateTime(data.closingDate, data.closingTime), labelStyle, valueStyle),
-                        ],
-                      ),
-                    ),
-                    pw.SizedBox(width: 20),
-                    pw.Expanded(
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          _buildInfoRow('Sales Executive', data.salesExecutive?.name ?? '-', labelStyle, valueStyle),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                pw.SizedBox(height: 20),
-
-                // Sales Summary Section
-                pw.Text('SALES SUMMARY', style: sectionTitleStyle),
-                pw.SizedBox(height: 10),
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(10),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.grey300),
-                    borderRadius: pw.BorderRadius.circular(5),
-                    color: PdfColors.grey100,
-                  ),
-                  child: pw.Row(
+                pw.SizedBox(width: 20),
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Expanded(
-                        child: pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: [
-                            _buildSummaryItem('Total Orders', data.totalOrders?.toString() ?? '0', labelStyle, valueStyle),
-                          ],
-                        ),
-                      ),
-                      pw.Expanded(
-                        child: pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: [
-                            _buildSummaryItem('Total Sales', data.totalSales ?? '0.00', labelStyle, valueStyle, isHighlight: true),
-                          ],
-                        ),
-                      ),
+                      _buildInfoRow(
+                          'daily_sales_close.sales_executive'.tr,
+                          data.salesExecutive?.name ?? '-',
+                          labelStyle,
+                          valueStyle),
                     ],
                   ),
                 ),
-                pw.SizedBox(height: 10),
-                pw.Table(
-                  border: pw.TableBorder.all(color: PdfColors.grey300),
-                  children: [
-                    _buildTableRow('Total Returns', data.totalReturns ?? '0.00', bodyStyle),
-                    _buildTableRow('Total Refunds', data.totalRefunds ?? '0.00', bodyStyle),
-                  ],
-                ),
-                pw.SizedBox(height: 20),
-
-                // Payment Breakdown Section
-                pw.Text('PAYMENT BREAKDOWN', style: sectionTitleStyle),
-                pw.SizedBox(height: 10),
-                pw.Table(
-                  border: pw.TableBorder.all(color: PdfColors.grey300),
-                  children: [
-                    _buildTableRow('Cash Sales', data.totalCash ?? '0.00', bodyStyle),
-                    _buildTableRow('Online Sales', data.totalOnline ?? '0.00', bodyStyle),
-                    _buildTableRow('Credit Amount', data.totalCredit ?? '0.00', bodyStyle),
-                    _buildTableRow('Credit Collected', data.totalCreditCollected ?? '0.00', bodyStyle),
-                  ],
-                ),
-                pw.SizedBox(height: 20),
-
-                // Expenses Breakdown Section
-                pw.Text('EXPENSES BREAKDOWN', style: sectionTitleStyle),
-                pw.SizedBox(height: 10),
-                pw.Table(
-                  border: pw.TableBorder.all(color: PdfColors.grey300),
-                  children: [
-                    _buildTableRow('Cash Expenses', data.cashExpenses ?? '0.00', bodyStyle),
-                    _buildTableRow('Bank Expenses', data.bankExpenses ?? '0.00', bodyStyle),
-                    _buildTableRow('Total Expenses', data.totalExpenses ?? '0.00', bodyStyle),
-                  ],
-                ),
-                pw.SizedBox(height: 20),
-
-                // Cash Summary Section
-                if (data.cashSummary != null) ...[
-                  pw.Text('CASH SUMMARY', style: sectionTitleStyle),
-                  pw.SizedBox(height: 10),
-                  pw.Table(
-                    border: pw.TableBorder.all(color: PdfColors.grey300),
-                    children: [
-                      _buildTableRow('Opening Cash In Hand', data.cashSummary?.openingCashInHand ?? '0.00', bodyStyle),
-                      _buildTableRow('Cash Refunds', data.cashSummary?.cashRefunds ?? '0.00', bodyStyle),
-                      _buildTableRow('Cash Drop Amount', data.cashSummary?.cashDropAmount ?? '0.00', bodyStyle),
-                      _buildTableRow('Expected Closing Cash', data.cashSummary?.expectedClosingCash ?? '0.00', bodyStyle),
-                      _buildTableRow('Today Cash Collection', data.cashSummary?.todayCashCollection ?? '0.00', bodyStyle),
-                      _buildTableRow('Closing Cash In Hand', data.cashSummary?.closingCashInHand ?? '0.00', bodyStyle),
-                      _buildTableRow('Short Cash', data.cashSummary?.shortCash ?? '0.00', bodyStyle),
-                      _buildTableRow('Excess Cash', data.cashSummary?.excessCash ?? '0.00', bodyStyle),
-                    ],
-                  ),
-                  pw.SizedBox(height: 20),
-                ],
-
-                // Totals Section
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(15),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.blueGrey200),
-                    borderRadius: pw.BorderRadius.circular(5),
-                    color: PdfColors.blue50,
-                  ),
-                  child: pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Text('Payment Received', style: labelStyle),
-                          pw.SizedBox(height: 5),
-                          pw.Text(data.totalPaymentReceived ?? '0.00', style: sectionTitleStyle),
-                        ],
-                      ),
-                      pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.end,
-                        children: [
-                          pw.Text('Collected on Sale', style: labelStyle),
-                          pw.SizedBox(height: 5),
-                          pw.Text(data.totalAmountCollectedOnSale ?? '0.00', style: sectionTitleStyle),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                pw.SizedBox(height: 20),
-
-                // Transactions Section
-                if (includeTransactions &&
-                  data.transactions != null &&
-                  data.transactions!.isNotEmpty) ...[
-                  pw.Text('TRANSACTIONS', style: sectionTitleStyle),
-                  pw.SizedBox(height: 10),
-                  pw.Table(
-                    border: pw.TableBorder.all(color: PdfColors.grey300),
-                    columnWidths: {
-                      0: const pw.FixedColumnWidth(30), // SL
-                      1: const pw.FlexColumnWidth(2),   // Order No
-                      2: const pw.FlexColumnWidth(2),   // Customer
-                      3: const pw.FlexColumnWidth(1),   // Amount
-                      4: const pw.FlexColumnWidth(1),   // Paid
-                      5: const pw.FlexColumnWidth(1),   // Type
-                      6: const pw.FlexColumnWidth(1),   // Time
-                    },
-                    children: [
-                      // Header Row
-                      pw.TableRow(
-                        decoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                        children: [
-                          _buildTableHeaderCell('#', labelStyle),
-                          _buildTableHeaderCell('Order No', labelStyle),
-                          _buildTableHeaderCell('Customer', labelStyle),
-                          _buildTableHeaderCell('Amount', labelStyle),
-                          _buildTableHeaderCell('Paid', labelStyle),
-                          _buildTableHeaderCell('Type', labelStyle),
-                          _buildTableHeaderCell('Time', labelStyle),
-                        ],
-                      ),
-                      // Data Rows
-                      ...data.transactions!.asMap().entries.map((entry) {
-                        final index = entry.key + 1;
-                        final tx = entry.value;
-                        return pw.TableRow(
-                          children: [
-                            _buildTableCell(index.toString(), bodyStyle),
-                            _buildTableCell(tx.orderNumber ?? '-', bodyStyle),
-                            _buildTableCell(tx.customerName ?? '-', bodyStyle),
-                            _buildTableCell(tx.orderAmount?.toString() ?? '0', bodyStyle),
-                            _buildTableCell(tx.paidAmount?.toString() ?? '0', bodyStyle),
-                            _buildTableCell(tx.paymentType ?? '-', bodyStyle),
-                            _buildTableCell(tx.time ?? '-', bodyStyle),
-                          ],
-                        );
-                      }).toList(),
-                    ],
-                  ),
-                ] else if (includeTransactions && (data.totalOrders ?? 0) > 0) ...[
-                  pw.Text('TRANSACTIONS', style: sectionTitleStyle),
-                  pw.SizedBox(height: 10),
-                  pw.Text('(No transaction details available)', style: bodyStyle),
-                ],
               ],
+            ),
+            pw.SizedBox(height: 20),
+
+            // Sales Summary Section
+            pw.Text('daily_sales_close.sales_summary'.tr,
+                style: sectionTitleStyle),
+            pw.SizedBox(height: 10),
+            pw.Container(
+              padding: const pw.EdgeInsets.all(10),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey300),
+                borderRadius: pw.BorderRadius.circular(5),
+                color: PdfColors.grey100,
+              ),
+              child: pw.Row(
+                children: [
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        _buildSummaryItem(
+                            'daily_sales_close.total_orders'.tr,
+                            data.totalOrders?.toString() ?? '0',
+                            labelStyle,
+                            valueStyle),
+                      ],
+                    ),
+                  ),
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        _buildSummaryItem('daily_sales_close.total_sales'.tr,
+                            data.totalSales ?? '0.00', labelStyle, valueStyle,
+                            isHighlight: true),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 10),
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey300),
+              children: [
+                _buildTableRow('daily_sales_close.total_returns'.tr,
+                    data.totalReturns ?? '0.00', bodyStyle),
+                _buildTableRow('daily_sales_close.total_refunds'.tr,
+                    data.totalRefunds ?? '0.00', bodyStyle),
+              ],
+            ),
+            pw.SizedBox(height: 20),
+
+            // Payment Breakdown Section
+            pw.Text('daily_sales_close.payment_breakdown'.tr,
+                style: sectionTitleStyle),
+            pw.SizedBox(height: 10),
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey300),
+              children: [
+                _buildTableRow('daily_sales_close.cash_sales'.tr,
+                    data.totalCash ?? '0.00', bodyStyle),
+                _buildTableRow('daily_sales_close.online_sales'.tr,
+                    data.totalOnline ?? '0.00', bodyStyle),
+                _buildTableRow('daily_sales_close.credit_amount'.tr,
+                    data.totalCredit ?? '0.00', bodyStyle),
+                _buildTableRow('daily_sales_close.credit_collected'.tr,
+                    data.totalCreditCollected ?? '0.00', bodyStyle),
+              ],
+            ),
+            pw.SizedBox(height: 20),
+
+            // Expenses Breakdown Section
+            pw.Text('daily_sales_close.expenses_breakdown'.tr,
+                style: sectionTitleStyle),
+            pw.SizedBox(height: 10),
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey300),
+              children: [
+                _buildTableRow('daily_sales_close.cash_expenses'.tr,
+                    data.cashExpenses ?? '0.00', bodyStyle),
+                _buildTableRow('daily_sales_close.bank_expenses'.tr,
+                    data.bankExpenses ?? '0.00', bodyStyle),
+                _buildTableRow('daily_sales_close.total_expenses'.tr,
+                    data.totalExpenses ?? '0.00', bodyStyle),
+              ],
+            ),
+            pw.SizedBox(height: 20),
+
+            // Cash Summary Section
+            if (data.cashSummary != null) ...[
+              pw.Text('daily_sales_close.cash_summary'.tr,
+                  style: sectionTitleStyle),
+              pw.SizedBox(height: 10),
+              pw.Table(
+                border: pw.TableBorder.all(color: PdfColors.grey300),
+                children: [
+                  _buildTableRow('daily_sales_close.opening_cash_in_hand'.tr,
+                      data.cashSummary?.openingCashInHand ?? '0.00', bodyStyle),
+                  _buildTableRow('daily_sales_close.cash_refunds'.tr,
+                      data.cashSummary?.cashRefunds ?? '0.00', bodyStyle),
+                  _buildTableRow('daily_sales_close.cash_drop_amount'.tr,
+                      data.cashSummary?.cashDropAmount ?? '0.00', bodyStyle),
+                  _buildTableRow(
+                      'daily_sales_close.expected_closing_cash'.tr,
+                      data.cashSummary?.expectedClosingCash ?? '0.00',
+                      bodyStyle),
+                  _buildTableRow(
+                      'daily_sales_close.today_cash_collection'.tr,
+                      data.cashSummary?.todayCashCollection ?? '0.00',
+                      bodyStyle),
+                  _buildTableRow('daily_sales_close.closing_cash_in_hand'.tr,
+                      data.cashSummary?.closingCashInHand ?? '0.00', bodyStyle),
+                  _buildTableRow('daily_sales_close.short_cash'.tr,
+                      data.cashSummary?.shortCash ?? '0.00', bodyStyle),
+                  _buildTableRow('daily_sales_close.excess_cash'.tr,
+                      data.cashSummary?.excessCash ?? '0.00', bodyStyle),
+                ],
+              ),
+              pw.SizedBox(height: 20),
+            ],
+
+            // Totals Section
+            pw.Container(
+              padding: const pw.EdgeInsets.all(15),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.blueGrey200),
+                borderRadius: pw.BorderRadius.circular(5),
+                color: PdfColors.blue50,
+              ),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('daily_sales_close.total_payment_received'.tr,
+                          style: labelStyle),
+                      pw.SizedBox(height: 5),
+                      pw.Text(data.totalPaymentReceived ?? '0.00',
+                          style: sectionTitleStyle),
+                    ],
+                  ),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Text(
+                          'daily_sales_close.total_amount_collected_on_sale'.tr,
+                          style: labelStyle),
+                      pw.SizedBox(height: 5),
+                      pw.Text(data.totalAmountCollectedOnSale ?? '0.00',
+                          style: sectionTitleStyle),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 20),
+
+            // Transactions Section
+            if (includeTransactions &&
+                data.transactions != null &&
+                data.transactions!.isNotEmpty) ...[
+              pw.Text('daily_sales_close.transactions'.tr,
+                  style: sectionTitleStyle),
+              pw.SizedBox(height: 10),
+              pw.Table(
+                border: pw.TableBorder.all(color: PdfColors.grey300),
+                columnWidths: {
+                  0: const pw.FixedColumnWidth(30), // SL
+                  1: const pw.FlexColumnWidth(2), // Order No
+                  2: const pw.FlexColumnWidth(2), // Customer
+                  3: const pw.FlexColumnWidth(1), // Amount
+                  4: const pw.FlexColumnWidth(1), // Paid
+                  5: const pw.FlexColumnWidth(1), // Type
+                  6: const pw.FlexColumnWidth(1), // Time
+                },
+                children: [
+                  // Header Row
+                  pw.TableRow(
+                    decoration:
+                        const pw.BoxDecoration(color: PdfColors.grey200),
+                    children: [
+                      _buildTableHeaderCell('#', labelStyle),
+                      _buildTableHeaderCell(
+                          'daily_sales_close.order_no'.tr, labelStyle),
+                      _buildTableHeaderCell(
+                          'daily_sales_close.customer'.tr, labelStyle),
+                      _buildTableHeaderCell(
+                          'daily_sales_close.amount'.tr, labelStyle),
+                      _buildTableHeaderCell(
+                          'daily_sales_close.paid'.tr, labelStyle),
+                      _buildTableHeaderCell(
+                          'daily_sales_close.type'.tr, labelStyle),
+                      _buildTableHeaderCell(
+                          'daily_sales_close.time'.tr, labelStyle),
+                    ],
+                  ),
+                  // Data Rows
+                  ...data.transactions!.asMap().entries.map((entry) {
+                    final index = entry.key + 1;
+                    final tx = entry.value;
+                    return pw.TableRow(
+                      children: [
+                        _buildTableCell(index.toString(), bodyStyle),
+                        _buildTableCell(tx.orderNumber ?? '-', bodyStyle),
+                        _buildTableCell(tx.customerName ?? '-', bodyStyle),
+                        _buildTableCell(
+                            tx.orderAmount?.toString() ?? '0', bodyStyle),
+                        _buildTableCell(
+                            tx.paidAmount?.toString() ?? '0', bodyStyle),
+                        _buildTableCell(tx.paymentType ?? '-', bodyStyle),
+                        _buildTableCell(tx.time ?? '-', bodyStyle),
+                      ],
+                    );
+                  }).toList(),
+                ],
+              ),
+            ] else if (includeTransactions && (data.totalOrders ?? 0) > 0) ...[
+              pw.Text('daily_sales_close.transactions'.tr,
+                  style: sectionTitleStyle),
+              pw.SizedBox(height: 10),
+              pw.Text('daily_sales_close.no_transactions_found'.tr,
+                  style: bodyStyle),
+            ],
+          ],
         ),
       );
 
@@ -735,17 +878,23 @@ class DailyCloseStandardPrinter {
         await OpenFile.open(file.path);
 
         if (context.mounted) {
-          showScaffold(context: context, message: "PDF opened");
+          showScaffold(
+            context: context,
+            message: 'print.pdf_opened'.tr,
+          );
         }
       } else {
         // On Android/iOS — use share_plus
         await Share.shareXFiles(
           [XFile(file.path)],
-          subject: 'Daily Close Report',
+          subject: 'daily_sales_close.title'.tr,
         );
 
         if (context.mounted) {
-          showScaffold(context: context, message: "PDF shared");
+          showScaffold(
+            context: context,
+            message: 'print.pdf_shared'.tr,
+          );
         }
       }
 
@@ -756,7 +905,9 @@ class DailyCloseStandardPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: "Error generating PDF: $e",
+          message: 'print.pdf_generation_failed'.trParams(
+            {'error': e.toString()},
+          ),
         );
       }
     }
@@ -764,27 +915,21 @@ class DailyCloseStandardPrinter {
 
   String _formatDateTime(String? dateStr, String? timeStr) {
     if (dateStr == null) return '-';
-    
+
     try {
       // Parse date (yyyy-MM-dd)
       DateTime date = DateTime.parse(dateStr);
-      
+
       // If time is provided, combine
       if (timeStr != null) {
         // timeStr is usually HH:mm:ss
         List<String> parts = timeStr.split(':');
         if (parts.length >= 2) {
-          date = DateTime(
-            date.year, 
-            date.month, 
-            date.day, 
-            int.parse(parts[0]), 
-            int.parse(parts[1]), 
-            parts.length > 2 ? int.parse(parts[2]) : 0
-          );
+          date = DateTime(date.year, date.month, date.day, int.parse(parts[0]),
+              int.parse(parts[1]), parts.length > 2 ? int.parse(parts[2]) : 0);
         }
       }
-      
+
       return DateFormat('dd-MM-yyyy hh:mm a').format(date);
     } catch (e) {
       // Fallback
@@ -792,7 +937,8 @@ class DailyCloseStandardPrinter {
     }
   }
 
-  pw.Widget _buildInfoRow(String label, String value, pw.TextStyle labelStyle, pw.TextStyle valueStyle) {
+  pw.Widget _buildInfoRow(String label, String value, pw.TextStyle labelStyle,
+      pw.TextStyle valueStyle) {
     return pw.Padding(
       padding: const pw.EdgeInsets.only(bottom: 5),
       child: pw.Row(
@@ -804,7 +950,9 @@ class DailyCloseStandardPrinter {
     );
   }
 
-  pw.Widget _buildSummaryItem(String label, String value, pw.TextStyle labelStyle, pw.TextStyle valueStyle, {bool isHighlight = false}) {
+  pw.Widget _buildSummaryItem(String label, String value,
+      pw.TextStyle labelStyle, pw.TextStyle valueStyle,
+      {bool isHighlight = false}) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -812,7 +960,10 @@ class DailyCloseStandardPrinter {
         pw.SizedBox(height: 2),
         pw.Text(
           value,
-          style: isHighlight ? valueStyle.copyWith(fontSize: valueStyle.fontSize! + 4, color: PdfColors.blue800) : valueStyle,
+          style: isHighlight
+              ? valueStyle.copyWith(
+                  fontSize: valueStyle.fontSize! + 4, color: PdfColors.blue800)
+              : valueStyle,
         ),
       ],
     );
@@ -821,7 +972,8 @@ class DailyCloseStandardPrinter {
   pw.Widget _buildTableHeaderCell(String text, pw.TextStyle style) {
     return pw.Padding(
       padding: const pw.EdgeInsets.all(5),
-      child: pw.Text(text, style: style.copyWith(fontWeight: pw.FontWeight.bold)),
+      child:
+          pw.Text(text, style: style.copyWith(fontWeight: pw.FontWeight.bold)),
     );
   }
 
@@ -853,13 +1005,16 @@ class DailyCloseStandardPrinter {
       final result = await Process.run('cmd', ['/c', 'start', '', file.path]);
       if (result.exitCode == 0) {
         if (context.mounted) {
-          showScaffold(context: context, message: "PDF opened");
+          showScaffold(
+            context: context,
+            message: 'print.pdf_opened'.tr,
+          );
         }
       } else {
         if (context.mounted) {
           showScaffold(
             context: context,
-            message: "PDF saved: ${file.path}",
+            message: 'print.pdf_saved'.trParams({'path': file.path}),
           );
         }
       }
@@ -868,7 +1023,7 @@ class DailyCloseStandardPrinter {
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: "PDF saved: ${file.path}",
+          message: 'print.pdf_saved'.trParams({'path': file.path}),
         );
       }
     }
@@ -883,16 +1038,22 @@ class DailyCloseStandardPrinter {
         // ignore: deprecated_member_use
         await Share.shareXFiles(
           [XFile(file.path)],
-          subject: 'Daily Close Report',
-          text: 'Daily Sales Close Report',
+          subject: 'daily_sales_close.title'.tr,
+          text: 'daily_sales_close.title'.tr,
         );
 
         if (context.mounted) {
-          showScaffold(context: context, message: "PDF shared");
+          showScaffold(
+            context: context,
+            message: 'print.pdf_shared'.tr,
+          );
         }
       } else {
         if (context.mounted) {
-          showScaffold(context: context, message: "PDF saved: ${file.path}");
+          showScaffold(
+            context: context,
+            message: 'print.pdf_saved'.trParams({'path': file.path}),
+          );
         }
       }
     } catch (e) {
@@ -900,7 +1061,7 @@ class DailyCloseStandardPrinter {
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: "PDF saved: ${file.path}",
+          message: 'print.pdf_saved'.trParams({'path': file.path}),
         );
       }
     }

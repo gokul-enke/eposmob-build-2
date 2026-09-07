@@ -2401,7 +2401,7 @@ class StandardPrinter {
               },
             )
           else
-            pw.Text('No return items to display', style: bodyStyle),
+            pw.Text('sales_return.no_items_available'.tr, style: bodyStyle),
           pw.SizedBox(height: 15),
           // Return Summary
           if (displayConfig?['showReturnNetAmount']?.visible == true ||
@@ -2478,7 +2478,7 @@ class StandardPrinter {
             ),
           if (hasCreditNoteConfig) ...[
             pw.SizedBox(height: 4),
-            pw.Text('Amount in Words:', style: subheaderStyle),
+            pw.Text('sales_return.amount_in_words'.tr, style: subheaderStyle),
             pw.Text(
               '${AmountHelper().convertNumberToWords(calculatedReturnTotal, language: isRtl ? 'ar' : 'en')}${isRtl ? ' فقط.' : ' Only.'}',
               style: summaryStyle,

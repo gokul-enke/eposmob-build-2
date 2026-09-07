@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
 import '../../../components/build_container_box.dart';
@@ -145,25 +146,25 @@ class PendingOrderWidget extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 14.0),
                     child: Column(
                       children: [
-                        const BuildPaymentRow(
+                        BuildPaymentRow(
                           amount: "\$75.00",
-                          title: "Net amount",
+                          title: 'billing.net_amount'.tr,
                           color: ColorManager.textColor,
                         ),
-                        const BuildPaymentRow(
+                        BuildPaymentRow(
                           amount: "\$20.00",
-                          title: "Discount",
+                          title: 'billing.discount'.tr,
                           color: ColorManager.textColor,
                         ),
-                        const BuildPaymentRow(
+                        BuildPaymentRow(
                           amount: "\$20.00",
-                          title: "Tax Amount",
+                          title: 'billing.tax_amount'.tr,
                           color: ColorManager.textColor,
                         ),
                         const Divider(thickness: 2),
                         BuildPaymentRow(
                           amount: "\$115.00",
-                          title: "Payable",
+                          title: 'billing.payable'.tr,
                           secondRowTextStyle: buildCustomStyle(
                             FontWeightManager.bold,
                             FontSize.s15,
@@ -180,7 +181,7 @@ class PendingOrderWidget extends StatelessWidget {
                         ),
                         BuildPaymentRow(
                           amount: "\$100.00",
-                          title: "Balance amount",
+                      title: 'billing.balance_amount'.tr,
                           secondRowTextStyle: buildCustomStyle(
                             FontWeightManager.medium,
                             FontSize.s12,
@@ -195,7 +196,7 @@ class PendingOrderWidget extends StatelessWidget {
                           ),
                           color: ColorManager.textColorRed,
                         ),
-                        const SizedBox(height: 5),
+            const SizedBox(height: 5),
                       ],
                     ),
                   ),
@@ -207,7 +208,7 @@ class PendingOrderWidget extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     CustomRoundButtonWithIcon(
-                      title: "Resume",
+                      title: 'general.resume'.tr,
                       size: size,
                       radius: 4,
                       fct: () {},
@@ -229,7 +230,7 @@ class PendingOrderWidget extends StatelessWidget {
                         boxColor: Colors.transparent,
                         borderColor: ColorManager.kPrimaryColor,
                         textColor: ColorManager.kPrimaryColor,
-                        title: "Remove",
+                        title: 'general.remove'.tr,
                         fct: () {},
                         fontSize: FontSize.s12,
                         height: 40,

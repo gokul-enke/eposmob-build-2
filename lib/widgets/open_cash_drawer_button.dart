@@ -51,9 +51,7 @@ class _OpenCashDrawerButtonState extends State<OpenCashDrawerButton> {
   Widget build(BuildContext context) {
     return IconButton(
       tooltip: widget.tooltip ??
-          (Get.locale?.languageCode == 'ml'
-              ? 'ക്യാഷ് ഡ്രോയർ തുറക്കുക'
-              : 'Open cash drawer'),
+          'general.unable_open_cash_drawer'.tr,
       onPressed: _isOpening ? null : _handleTap,
       icon: _isOpening
           ? SizedBox(

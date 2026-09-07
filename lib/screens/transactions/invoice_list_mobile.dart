@@ -379,7 +379,8 @@ class InvoiceMobileView extends StatelessWidget {
         Row(
           children: [
             Text(
-              "${selectedInvoiceIds.length} selected",
+              'invoice.selected_count'.trParams(
+                  {'count': selectedInvoiceIds.length.toString()}),
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
                   0.20, ColorManager.textColor),
             ),
@@ -592,14 +593,16 @@ class _InvoiceCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          "Amount: ${invoice.amount}",
+                          'invoice.amount_prefix'.trParams(
+                              {'amount': invoice.amount.toString()}),
                           style: buildCustomStyle(FontWeightManager.regular,
                               FontSize.s12, 0.13, Colors.black54),
                         ),
                       ),
                       Expanded(
                         child: Text(
-                          "Type: ${invoice.type}",
+                          'invoice.type_prefix'.trParams(
+                              {'type': invoice.type.toString()}),
                           style: buildCustomStyle(FontWeightManager.regular,
                               FontSize.s12, 0.13, Colors.black54),
                         ),
@@ -611,14 +614,16 @@ class _InvoiceCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          "Invoice: ${invoice.invoiceDate}",
+                          'invoice.date_prefix'.trParams(
+                              {'date': invoice.invoiceDate.toString()}),
                           style: buildCustomStyle(FontWeightManager.regular,
                               FontSize.s12, 0.13, Colors.black54),
                         ),
                       ),
                       Expanded(
                         child: Text(
-                          "Due: ${invoice.dueDate}",
+                          'invoice.due_prefix'.trParams(
+                              {'date': invoice.dueDate.toString()}),
                           style: buildCustomStyle(FontWeightManager.regular,
                               FontSize.s12, 0.13, Colors.black54),
                         ),

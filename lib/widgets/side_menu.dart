@@ -210,12 +210,8 @@ class _SideMenuState extends State<SideMenu> {
                   size: isExpanded ? 24 : 16,
                 ),
                 tooltip: isExpanded
-                    ? (Get.locale?.languageCode == 'ml'
-                        ? 'സൈഡ്ബാർ ചുരുക്കുക'
-                        : 'Collapse Sidebar')
-                    : (Get.locale?.languageCode == 'ml'
-                        ? 'സൈഡ്ബാർ വികസിപ്പിക്കുക'
-                        : 'Expand Sidebar'),
+                    ? 'general.collapse_sidebar'.tr
+                    : 'general.expand_sidebar'.tr,
                 padding: EdgeInsets.all(isExpanded ? 8 : 8),
                 constraints: const BoxConstraints(),
                 onPressed: () {

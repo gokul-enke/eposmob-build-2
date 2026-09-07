@@ -262,8 +262,8 @@ class _MobileMarketAddSheetState extends State<_MobileMarketAddSheet> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: const Text(
-                'Add to cart',
+              child: Text(
+                'billing.add_to_cart'.tr,
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 15,

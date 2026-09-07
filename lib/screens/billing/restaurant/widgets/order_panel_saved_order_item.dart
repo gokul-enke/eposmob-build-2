@@ -72,7 +72,8 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
         debugPrint('❌ Price update failed: ${response['message']}');
         showScaffoldError(
             context: context,
-            message: response['message'] ?? 'Failed to update price');
+            message: response['message'] ??
+                'restaurant.restaurant_order_item.error_updating_price'.tr);
       }
     } catch (e) {
       debugPrint('❌ Exception updating price: $e');

@@ -163,21 +163,27 @@ class CustomerVoucherStandardPrinter {
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text(
-                        'Voucher #: ${voucher.voucherNumber}',
+                        '${'voucher_print.voucher_number'.tr}: ${voucher.voucherNumber}',
                         style: summaryStyle,
                       ),
-                      pw.Text('Date: ${voucher.voucherDate}', style: bodyStyle),
-                      pw.Text('Due Date: ${voucher.dueDate}', style: bodyStyle),
+                      pw.Text(
+                          '${'voucher_print.date'.tr}: ${voucher.voucherDate}',
+                          style: bodyStyle),
+                      pw.Text(
+                          '${'voucher_print.due_date'.tr}: ${voucher.dueDate}',
+                          style: bodyStyle),
                     ],
                   ),
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
                       pw.Text(
-                        'Status: ${voucher.status.toUpperCase()}',
+                        '${'voucher_print.status'.tr}: ${voucher.status.toUpperCase()}',
                         style: summaryStyle,
                       ),
-                      pw.Text('Payment: ${voucher.paymentMethod}', style: bodyStyle),
+                      pw.Text(
+                          '${'voucher_print.payment'.tr}: ${voucher.paymentMethod}',
+                          style: bodyStyle),
                     ],
                   ),
                 ],
@@ -186,14 +192,20 @@ class CustomerVoucherStandardPrinter {
 
               // Customer Information
               pw.Text(
-                'Customer Details',
+                'voucher_print.customer_details'.tr,
                 style: summaryStyle,
               ),
-              pw.Text('Name: ${voucher.customer.user.name}', style: bodyStyle),
-              pw.Text('Phone: ${voucher.customer.user.phone}', style: bodyStyle),
+              pw.Text(
+                  '${'voucher_print.name'.tr}: ${voucher.customer.user.name}',
+                  style: bodyStyle),
+              pw.Text(
+                  '${'voucher_print.phone'.tr}: ${voucher.customer.user.phone}',
+                  style: bodyStyle),
               if (voucher.customer.user.email != null &&
                   voucher.customer.user.email!.isNotEmpty)
-                pw.Text('Email: ${voucher.customer.user.email}', style: bodyStyle),
+                pw.Text(
+                    '${'voucher_print.email'.tr}: ${voucher.customer.user.email}',
+                    style: bodyStyle),
               pw.SizedBox(height: 10),
 
               // Divider

@@ -157,21 +157,27 @@ class SupplierVoucherStandardPrinter {
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text(
-                        'Voucher #: ${voucher.voucherNumber}',
+                        '${'voucher_print.voucher_number'.tr}: ${voucher.voucherNumber}',
                         style: summaryStyle,
                       ),
-                      pw.Text('Date: ${voucher.voucherDate}', style: bodyStyle),
-                      pw.Text('Due Date: ${voucher.dueDate}', style: bodyStyle),
+                      pw.Text(
+                          '${'voucher_print.date'.tr}: ${voucher.voucherDate}',
+                          style: bodyStyle),
+                      pw.Text(
+                          '${'voucher_print.due_date'.tr}: ${voucher.dueDate}',
+                          style: bodyStyle),
                     ],
                   ),
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
                       pw.Text(
-                        'Status: ${voucher.status.toUpperCase()}',
+                        '${'voucher_print.status'.tr}: ${voucher.status.toUpperCase()}',
                         style: summaryStyle,
                       ),
-                      pw.Text('Payment: ${voucher.paymentMethod}', style: bodyStyle),
+                      pw.Text(
+                          '${'voucher_print.payment'.tr}: ${voucher.paymentMethod}',
+                          style: bodyStyle),
                     ],
                   ),
                 ],
@@ -180,11 +186,15 @@ class SupplierVoucherStandardPrinter {
 
               // Supplier Information
               pw.Text(
-                'Supplier Details',
+                'voucher_print.supplier_details'.tr,
                 style: summaryStyle,
               ),
-              pw.Text('Name: ${voucher.supplier.name}', style: bodyStyle),
-              pw.Text('Phone: ${voucher.supplier.phone}', style: bodyStyle),
+              pw.Text(
+                  '${'voucher_print.name'.tr}: ${voucher.supplier.name}',
+                  style: bodyStyle),
+              pw.Text(
+                  '${'voucher_print.phone'.tr}: ${voucher.supplier.phone}',
+                  style: bodyStyle),
               pw.SizedBox(height: 10),
 
               // Divider

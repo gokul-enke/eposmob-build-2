@@ -1465,7 +1465,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                     onChanged: _filterCustomers,
                                     decoration: InputDecoration(
                                       hintText:
-                                          'Search by name or phone number...',
+                                          'checkout_modal.search_by_name_or_phone_number'
+                                              .tr,
                                       hintStyle: TextStyle(
                                           color: Colors.grey.shade500),
                                       prefixIcon: Icon(Icons.search,

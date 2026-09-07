@@ -321,7 +321,7 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
                                           color: Colors.grey.shade300),
                                       const SizedBox(height: 12),
                                       Text(
-                                        'No customers found',
+                                        'billing.no_customers_found'.tr,
                                         style: TextStyle(
                                           color: Colors.grey.shade500,
                                           fontSize: 14,
@@ -619,8 +619,8 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text(
-                'Done',
+              child: Text(
+                'general.done'.tr,
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,

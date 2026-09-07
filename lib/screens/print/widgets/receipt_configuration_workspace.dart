@@ -72,9 +72,9 @@ class _ReceiptConfigurationWorkspaceState
   static const _sections = <_ReceiptSection>[
     _ReceiptSection(
       id: 'store',
-      label: 'Store',
+      label: 'printer_settings.section_store',
       icon: Icons.storefront_outlined,
-      description: 'Store identity and receipt heading',
+      description: 'printer_settings.section_store_description',
       keys: [
         'showExtraHeading1',
         'showExtraHeading2',
@@ -90,9 +90,9 @@ class _ReceiptConfigurationWorkspaceState
     ),
     _ReceiptSection(
       id: 'invoice',
-      label: 'Invoice',
+      label: 'printer_settings.section_invoice',
       icon: Icons.receipt_long_outlined,
-      description: 'Document title, number, date and token',
+      description: 'printer_settings.section_invoice_description',
       keys: [
         'showInvoiceTitle',
         'showInvoiceTitleB2b',
@@ -105,9 +105,9 @@ class _ReceiptConfigurationWorkspaceState
     ),
     _ReceiptSection(
       id: 'customer',
-      label: 'Customer',
+      label: 'printer_settings.section_customer',
       icon: Icons.person_outline_rounded,
-      description: 'Customer, payment and delivery labels',
+      description: 'printer_settings.section_customer_description',
       keys: [
         'showCustomerNameAndPhone',
         'showCustomerName',
@@ -126,9 +126,9 @@ class _ReceiptConfigurationWorkspaceState
     ),
     _ReceiptSection(
       id: 'items',
-      label: 'Items',
+      label: 'printer_settings.section_items',
       icon: Icons.table_chart_outlined,
-      description: 'Item-table columns and line details',
+      description: 'printer_settings.section_items_description',
       keys: [
         'showSLNumber',
         'showParticulars',
@@ -146,9 +146,9 @@ class _ReceiptConfigurationWorkspaceState
     ),
     _ReceiptSection(
       id: 'totals',
-      label: 'Totals & bank',
+      label: 'printer_settings.section_totals',
       icon: Icons.calculate_outlined,
-      description: 'Calculated totals, balances and bank details',
+      description: 'printer_settings.section_totals_description',
       keys: [
         'showTotalMRP',
         'showMRPTotal',
@@ -184,9 +184,9 @@ class _ReceiptConfigurationWorkspaceState
     ),
     _ReceiptSection(
       id: 'footer',
-      label: 'Footer',
+      label: 'printer_settings.section_footer',
       icon: Icons.vertical_align_bottom_rounded,
-      description: 'QR, tax footer and closing messages',
+      description: 'printer_settings.section_footer_description',
       keys: [
         'showQRCode',
         'showVATFooter',
@@ -268,8 +268,8 @@ class _ReceiptConfigurationWorkspaceState
       embedded: true,
       collapsible: false,
       icon: Icons.list_alt_rounded,
-      title: 'Field reference',
-      subtitle: 'Every synced label and what supplies its value',
+      title: 'printer_settings.field_reference'.tr,
+      subtitle: 'printer_settings.field_reference_subtitle'.tr,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -286,8 +286,8 @@ class _ReceiptConfigurationWorkspaceState
       embedded: true,
       collapsible: false,
       icon: Icons.preview_outlined,
-      title: 'Live preview',
-      subtitle: 'Render a sample receipt using the current settings',
+      title: 'printer_settings.live_preview'.tr,
+      subtitle: 'printer_settings.live_preview_subtitle'.tr,
       child: _buildPreviewPanel(),
     );
   }
@@ -319,8 +319,8 @@ class _ReceiptConfigurationWorkspaceState
           Expanded(
             child: Text(
               hasConfig
-                  ? 'Values come from Document Configuration. Edit them in the Admin Panel, then Resync.'
-                  : 'Configure the Bill template in the Admin Panel, then Resync.',
+              ? 'printer_settings.values_from_document_config'.tr
+              : 'printer_settings.configure_bill_template'.tr,
               style: TextStyle(
                 height: 1.35,
                 fontSize: 12,
@@ -348,7 +348,9 @@ class _ReceiptConfigurationWorkspaceState
               child: CircularProgressIndicator(strokeWidth: 2),
             )
           : const Icon(Icons.sync_rounded, size: 18),
-      label: Text(widget.isResyncing ? 'Syncing...' : 'Resync'),
+      label: Text(widget.isResyncing
+          ? 'printer_settings.btn_resyncing'.tr
+          : 'printer_settings.btn_resync'.tr),
     );
   }
 
@@ -368,7 +370,7 @@ class _ReceiptConfigurationWorkspaceState
                 size: 17,
                 color: selected ? Colors.white : ColorManager.kPrimaryColor,
               ),
-              label: Text(section.label),
+              label: Text(section.label.tr),
               labelStyle: TextStyle(
                 color: selected ? Colors.white : Colors.grey.shade800,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
@@ -406,7 +408,7 @@ class _ReceiptConfigurationWorkspaceState
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 13, 16, 11),
             child: Text(
-              section.description,
+              section.description.tr,
               style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
           ),
@@ -579,15 +581,21 @@ class _ReceiptConfigurationWorkspaceState
       child: Row(
         children: [
           const SizedBox(width: 25),
-          SizedBox(width: 163, child: Text('Field', style: labelStyle)),
-          Expanded(child: Text('English', style: labelStyle)),
+          SizedBox(
+              width: 163,
+              child: Text('printer_settings.field'.tr, style: labelStyle)),
+          Expanded(
+              child: Text('printer_settings.english'.tr, style: labelStyle)),
           const SizedBox(width: 8),
           Expanded(
             child:
-                Text('Arabic', textAlign: TextAlign.right, style: labelStyle),
+                Text('printer_settings.arabic'.tr,
+                    textAlign: TextAlign.right, style: labelStyle),
           ),
           const SizedBox(width: 8),
-          SizedBox(width: 105, child: Text('Source', style: labelStyle)),
+          SizedBox(
+              width: 105,
+              child: Text('printer_settings.source'.tr, style: labelStyle)),
         ],
       ),
     );
@@ -595,9 +603,9 @@ class _ReceiptConfigurationWorkspaceState
 
   Widget _compactValue(String value, bool available, {bool rtl = false}) {
     final display = !available
-        ? 'Not supplied'
+        ? 'printer_settings.not_supplied'.tr
         : value.isEmpty
-            ? 'Empty'
+            ? 'printer_settings.empty'.tr
             : value;
     return Container(
       height: 34,
@@ -648,9 +656,9 @@ class _ReceiptConfigurationWorkspaceState
           ),
           child: Text(
             !available
-                ? 'Not supplied by API'
+                ? 'printer_settings.not_supplied_by_api'.tr
                 : value.isEmpty
-                    ? 'Empty'
+                    ? 'printer_settings.empty'.tr
                     : value,
             textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
             style: TextStyle(
@@ -745,9 +753,9 @@ class _ReceiptConfigurationWorkspaceState
           ),
           const SizedBox(height: 10),
           Text(
-            '${widget.themeName} is selected. This shared preview shows configured '
-            'visibility and language using sample order data; the selected template’s '
-            'styling and spacing may differ.',
+            'printer_settings.preview_notice'.trParams({
+              'theme': widget.themeName,
+            }),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600),
           ),
@@ -770,13 +778,13 @@ class _ReceiptConfigurationWorkspaceState
           Icon(Icons.receipt_long_outlined,
               size: 38, color: Colors.grey.shade400),
           const SizedBox(height: 10),
-          const Text(
-            'Bill configuration not found',
+          Text(
+            'printer_settings.bill_configuration_not_found'.tr,
             style: TextStyle(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 4),
           Text(
-            'Press Resync after configuring the document template.',
+            'printer_settings.press_resync_after_configuration'.tr,
             style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
           ),
         ],

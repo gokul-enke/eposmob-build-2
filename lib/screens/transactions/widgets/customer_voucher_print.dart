@@ -111,8 +111,7 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('ui_codes.permissions_required'.tr),
-        content: const Text(
-            'This app needs Bluetooth and Location permissions to scan for printers.'),
+        content: Text('voucher_print.printer_permissions_required'.tr),
         actions: [
           TextButton(
             child: Text('general.ok'.tr),
@@ -377,8 +376,8 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
       return Scaffold(
         backgroundColor: backgroundColor,
         appBar: AppBar(
-          title: const Text(
-            'Print Customer Voucher',
+          title: Text(
+            'voucher_print.customer_title'.tr,
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -407,8 +406,8 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'Print Customer Voucher',
+        title: Text(
+          'voucher_print.customer_title'.tr,
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,

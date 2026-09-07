@@ -96,8 +96,8 @@ class _UserSwitcherState extends State<UserSwitcher> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            "Switch User",
+                          Text(
+                            'general.switch_user'.tr,
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -112,13 +112,15 @@ class _UserSwitcherState extends State<UserSwitcher> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        "Enter password for ${executive.name}",
+                        'general.enter_password_for'.trParams(
+                          {'name': executive.name},
+                        ),
                         style: const TextStyle(
                             fontSize: 16, color: Colors.black54),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        executive.email ?? 'No email',
+                        executive.email ?? 'general.no_email'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.medium,
                           FontSize.s14,
@@ -420,7 +422,7 @@ class _UserSwitcherState extends State<UserSwitcher> {
                                 maxLines: 1,
                               ),
                               Text(
-                                currentUser.email ?? 'No email',
+                                currentUser.email ?? 'general.no_email'.tr,
                                 style: buildCustomStyle(
                                   FontWeightManager.regular,
                                   emailFontSize,
@@ -471,7 +473,7 @@ class _UserSwitcherState extends State<UserSwitcher> {
                           Padding(
                             padding: const EdgeInsets.all(10.0),
                             child: Text(
-                              'Switch User',
+                              'general.switch_user'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.medium,
                                 FontSize.s14,
@@ -520,7 +522,7 @@ class _UserSwitcherState extends State<UserSwitcher> {
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       subtitle: Text(
-                                        executive.email ?? 'No email',
+                                        executive.email ?? 'general.no_email'.tr,
                                         style: buildCustomStyle(
                                           FontWeightManager.regular,
                                           FontSize.s12,

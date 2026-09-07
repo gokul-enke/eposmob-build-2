@@ -23,8 +23,9 @@ class _BillingPageMobileState extends State<BillingPageMobile> {
     super.initState();
     // Initialize the billing provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final billingProvider = Provider.of<BillingProvider>(context, listen: false);
-      
+      final billingProvider =
+          Provider.of<BillingProvider>(context, listen: false);
+
       // Initialize connectivity listener with UI feedback
       billingProvider.initConnectivityListener(
         onConnectivityChanged: (message) {
@@ -33,16 +34,17 @@ class _BillingPageMobileState extends State<BillingPageMobile> {
               SnackBar(
                 content: Text(message),
                 duration: const Duration(seconds: 2),
-                backgroundColor: message.contains('No internet') ? Colors.red : Colors.green,
+                backgroundColor:
+                    message.contains('No internet') ? Colors.red : Colors.green,
               ),
             );
           }
         },
       );
-      
+
       // Initialize delivery method
       billingProvider.initializeDeliveryMethod();
-      
+
       // Register keyboard shortcuts
       billingProvider.registerDefaultKeyboardShortcuts(
         onClearCart: () => _clearCart(),
@@ -54,12 +56,14 @@ class _BillingPageMobileState extends State<BillingPageMobile> {
   }
 
   void _clearCart() {
-    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
-    final localProvider = Provider.of<LocalProductProvider>(context, listen: false);
-    
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    final localProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+
     billingProvider.clearCart();
     localProvider.clearCart();
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('mobile_billing.msg_cart_cleared'.tr)),
     );
@@ -131,18 +135,18 @@ class _BillingPageMobileState extends State<BillingPageMobile> {
             letterSpacing: 0.1,
           ),
           type: BottomNavigationBarType.fixed,
-          items: const [
+          items: [
             BottomNavigationBarItem(
               icon: Icon(Icons.home),
-              label: 'Home',
+              label: 'nav.home'.tr,
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.point_of_sale),
-              label: 'Billing',
+              label: 'nav.billing'.tr,
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.list_alt),
-              label: 'Orders',
+              label: 'nav.orders'.tr,
             ),
           ],
         ),
@@ -168,7 +172,7 @@ class _BillingPageMobileState extends State<BillingPageMobile> {
                   _currentIndex = 0; // Switch to home tab
                 });
                 localProvider.loadOrderForEditing(orderId);
-                
+
                 // Update billing provider state
                 billingProvider.setLastRehydratedOrderId(orderId);
               },

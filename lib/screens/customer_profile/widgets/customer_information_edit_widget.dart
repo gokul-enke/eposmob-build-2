@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -517,7 +515,8 @@ class _CustomerInformationEditWidgetState
             "Customer update successful, updating local customer data...");
         showScaffold(
             context: context,
-            message: response["message"] ?? "Customer updated successfully");
+            message: response["message"] ??
+                'customer_profile.updated_successfully'.tr);
 
         // Update the local customer data with the new information
         if (widget.customer != null) {
@@ -622,7 +621,10 @@ class _CustomerInformationEditWidgetState
 
       if (mounted) {
         showScaffoldError(
-            context: context, message: "An error occurred: $error");
+            context: context,
+            message: 'general.error_prefix'.trParams(
+              {'error': error.toString()},
+            ));
       }
     }
   }

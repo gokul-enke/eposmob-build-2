@@ -586,7 +586,7 @@ class SupplierTransactionReportStandardPrinter {
         children: [
           // Add a header for supplier details
           pw.Text(
-            'Supplier Information',
+            'voucher_print.supplier_information'.tr,
             style: supplierInfoHeaderStyle,
           ),
           pw.SizedBox(height: 8),

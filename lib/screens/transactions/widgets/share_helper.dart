@@ -65,8 +65,8 @@ class ShareHelper {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const Text(
-                  'Share Invoice',
+                Text(
+                  'share_helper.share_invoice'.tr,
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
@@ -100,8 +100,10 @@ class ShareHelper {
                   ),
                   title: Text(
                     (customerEmail != null && customerEmail.isNotEmpty)
-                        ? 'Share to Email ($customerEmail)'
-                        : 'Share to Email',
+                        ? 'share_helper.share_to_email_with_address'.trParams(
+                            {'email': customerEmail},
+                          )
+                        : 'share_helper.share_to_email'.tr,
                   ),
                   onTap: () async {
                     Navigator.pop(ctx);
@@ -122,8 +124,10 @@ class ShareHelper {
                   ),
                   title: Text(
                     (customerPhone != null && customerPhone.isNotEmpty)
-                        ? 'Share via WhatsApp ($customerPhone)'
-                        : 'Share via WhatsApp',
+                        ? 'share_helper.share_via_whatsapp_with_phone'.trParams(
+                            {'phone': customerPhone},
+                          )
+                        : 'share_helper.share_via_whatsapp'.tr,
                   ),
                   onTap: () async {
                     Navigator.pop(ctx);
@@ -180,7 +184,8 @@ class ShareHelper {
 
       // If not cached, fetch from API with type=default
       if (invoiceConfig == null) {
-        debugPrint('[ShareInvoice] Fetching Invoice config from API (type=default)...');
+        debugPrint(
+            '[ShareInvoice] Fetching Invoice config from API (type=default)...');
         invoiceConfig =
             await docConfigProvider.fetchDocumentConfigByTypeAndLanguage(
           accessToken: token,
@@ -210,16 +215,16 @@ class ShareHelper {
       if (details == null) {
         Navigator.of(context, rootNavigator: true).pop();
         showScaffoldError(
-            context: context, message: 'share_helper.msg_failed_load_invoice'.tr);
+            context: context,
+            message: 'share_helper.msg_failed_load_invoice'.tr);
         return;
       }
 
       // 3. Get currency
-      final currency =
-          Provider.of<AppSettingsProvider>(context, listen: false)
-                  .appSettings
-                  ?.currency ??
-              'SAR';
+      final currency = Provider.of<AppSettingsProvider>(context, listen: false)
+              .appSettings
+              ?.currency ??
+          'SAR';
 
       // Get company address from store session if available
       final storeSession =
@@ -305,8 +310,7 @@ class ShareHelper {
       debugPrint('[ShareInvoice] Error: $e');
       if (context.mounted) {
         showScaffoldError(
-            context: context,
-            message: 'share_helper.msg_error_invoice_pdf'.tr);
+            context: context, message: 'share_helper.msg_error_invoice_pdf'.tr);
       }
     }
   }
@@ -329,7 +333,8 @@ class ShareHelper {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('share_helper.dialog_invoice_label'.trParams({'number': invoiceNumber})),
+            Text('share_helper.dialog_invoice_label'
+                .trParams({'number': invoiceNumber})),
             const SizedBox(height: 8),
             Text('File: ${pdfFile.path.split('/').last}'),
             const SizedBox(height: 16),
@@ -463,8 +468,9 @@ class ShareHelper {
               ],
             ),
             content: Text(
-              'WhatsApp bot is not connected. Would you like to connect now?\n\n'
-              'Status: ${whatsappProvider.connectionStatus}',
+              'share_helper.wa_connect_prompt'.trParams(
+                {'status': whatsappProvider.connectionStatus},
+              ),
             ),
             actions: [
               TextButton(
@@ -486,16 +492,14 @@ class ShareHelper {
 
       if (customerPhone == null || customerPhone.isEmpty) {
         showScaffoldError(
-            context: context,
-            message: 'share_helper.msg_no_phone'.tr);
+            context: context, message: 'share_helper.msg_no_phone'.tr);
         return;
       }
 
-      final currency =
-          Provider.of<AppSettingsProvider>(context, listen: false)
-                  .appSettings
-                  ?.currency ??
-              'SAR';
+      final currency = Provider.of<AppSettingsProvider>(context, listen: false)
+              .appSettings
+              ?.currency ??
+          'SAR';
 
       final success = await whatsappProvider.sendInvoiceMessage(
         phoneNumber: customerPhone,
@@ -509,20 +513,22 @@ class ShareHelper {
         if (success) {
           showScaffold(
               context: context,
-              message: 'Invoice sent via WhatsApp to $customerPhone');
+              message: 'share_helper.invoice_sent_via_whatsapp'.trParams(
+                {'phone': customerPhone},
+              ));
         } else {
           showScaffoldError(
               context: context,
-              message:
-                  'Failed to send WhatsApp message: ${whatsappProvider.lastError}');
+              message: 'share_helper.failed_send_whatsapp'.trParams(
+                {'error': whatsappProvider.lastError},
+              ));
         }
       }
     } catch (e) {
       debugPrint('Error in WhatsApp sharing: $e');
       if (context.mounted) {
         showScaffoldError(
-            context: context,
-            message: 'share_helper.msg_wa_error'.tr);
+            context: context, message: 'share_helper.msg_wa_error'.tr);
       }
     }
   }
@@ -557,8 +563,8 @@ class ShareHelper {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const Text(
-                  'Share Receipt',
+                Text(
+                  'share_helper.share_receipt'.tr,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -607,8 +613,10 @@ class ShareHelper {
                   ),
                   title: Text(
                     (receipt.customer.user.phone.isNotEmpty)
-                        ? 'Share via WhatsApp (${receipt.customer.user.phone})'
-                        : 'Share via WhatsApp',
+                        ? 'share_helper.share_via_whatsapp_with_phone'.trParams(
+                            {'phone': receipt.customer.user.phone},
+                          )
+                        : 'share_helper.share_via_whatsapp'.tr,
                   ),
                   onTap: () async {
                     Navigator.pop(ctx);
@@ -656,7 +664,8 @@ class ShareHelper {
 
       // If not cached, fetch from API with type=receipt
       if (receiptConfig == null) {
-        debugPrint('[ShareReceipt] Fetching Receipt config from API (type=receipt)...');
+        debugPrint(
+            '[ShareReceipt] Fetching Receipt config from API (type=receipt)...');
         receiptConfig =
             await docConfigProvider.fetchDocumentConfigByTypeAndLanguage(
           accessToken: token,
@@ -677,11 +686,10 @@ class ShareHelper {
           'header=${receiptConfig.header}, template=${receiptConfig.template}');
 
       // 2. Get currency
-      final currency =
-          Provider.of<AppSettingsProvider>(context, listen: false)
-                  .appSettings
-                  ?.currency ??
-              'SAR';
+      final currency = Provider.of<AppSettingsProvider>(context, listen: false)
+              .appSettings
+              ?.currency ??
+          'SAR';
 
       // Get company address from store session if available
       final storeSession =
@@ -705,7 +713,7 @@ class ShareHelper {
         if (context.mounted) {
           showScaffoldError(
               context: context,
-            message: 'share_helper.msg_failed_receipt_pdf'.tr);
+              message: 'share_helper.msg_failed_receipt_pdf'.tr);
         }
         return;
       }
@@ -735,12 +743,14 @@ class ShareHelper {
             }
             return;
           } else {
-            _handleWindowsAlternativeSharing(context, pdfFile, receipt.receiptNumber);
+            _handleWindowsAlternativeSharing(
+                context, pdfFile, receipt.receiptNumber);
             return;
           }
         } catch (e) {
           debugPrint('ShareParams API failed: $e');
-          _handleWindowsAlternativeSharing(context, pdfFile, receipt.receiptNumber);
+          _handleWindowsAlternativeSharing(
+              context, pdfFile, receipt.receiptNumber);
           return;
         }
       } else {
@@ -758,7 +768,7 @@ class ShareHelper {
 
       if (context.mounted) {
         showScaffold(
-            context: context, message: 'Receipt PDF shared successfully!');
+            context: context, message: 'share_helper.receipt_pdf_shared'.tr);
       }
     } catch (e) {
       if (Navigator.canPop(context)) {
@@ -768,7 +778,7 @@ class ShareHelper {
       if (context.mounted) {
         showScaffoldError(
             context: context,
-            message: 'Error generating Receipt PDF. Please try again.');
+            message: 'share_helper.error_generating_receipt_pdf'.tr);
       }
     }
   }
@@ -780,7 +790,8 @@ class ShareHelper {
   }) async {
     try {
       final String email = receipt.customer.user.email;
-      final String subject = Uri.encodeComponent('Receipt Payment Reference: ${receipt.receiptNumber}');
+      final String subject = Uri.encodeComponent(
+          'Receipt Payment Reference: ${receipt.receiptNumber}');
       final String body = Uri.encodeComponent(
           'Dear ${receipt.customer.user.name},\n\n'
           'Thank you for your payment. Please find your receipt details below:\n\n'
@@ -790,7 +801,8 @@ class ShareHelper {
           'Payment Method: ${receipt.paymentMethod}\n\n'
           'Best regards,\n'
           '${receipt.company.name}');
-      final Uri mailtoUri = Uri.parse('mailto:$email?subject=$subject&body=$body');
+      final Uri mailtoUri =
+          Uri.parse('mailto:$email?subject=$subject&body=$body');
 
       if (await canLaunchUrl(mailtoUri)) {
         await launchUrl(mailtoUri);
@@ -831,8 +843,9 @@ class ShareHelper {
               ],
             ),
             content: Text(
-              'WhatsApp bot is not connected. Would you like to connect now?\n\n'
-              'Status: ${whatsappProvider.connectionStatus}',
+              'share_helper.wa_connect_prompt'.trParams(
+                {'status': whatsappProvider.connectionStatus},
+              ),
             ),
             actions: [
               TextButton(
@@ -855,8 +868,7 @@ class ShareHelper {
       final customerPhone = receipt.customer.user.phone;
       if (customerPhone.isEmpty) {
         showScaffoldError(
-            context: context,
-            message: 'share_helper.msg_no_phone'.tr);
+            context: context, message: 'share_helper.msg_no_phone'.tr);
         return;
       }
 
@@ -897,11 +909,10 @@ class ShareHelper {
         return;
       }
 
-      final currency =
-          Provider.of<AppSettingsProvider>(context, listen: false)
-                  .appSettings
-                  ?.currency ??
-              'SAR';
+      final currency = Provider.of<AppSettingsProvider>(context, listen: false)
+              .appSettings
+              ?.currency ??
+          'SAR';
 
       final storeSession =
           Provider.of<StoreSessionProvider>(context, listen: false);
@@ -921,13 +932,13 @@ class ShareHelper {
       if (pdfFile == null) {
         if (context.mounted) {
           showScaffoldError(
-              context: context, message: 'Failed to generate PDF for WhatsApp.');
+              context: context,
+              message: 'share_helper.failed_generate_pdf_whatsapp'.tr);
         }
         return;
       }
 
-      final messageText =
-          'Dear ${receipt.customer.user.name},\n\n'
+      final messageText = 'Dear ${receipt.customer.user.name},\n\n'
           'Thank you for your payment. Please find your receipt ${receipt.receiptNumber} attached.\n\n'
           'Total Amount: $currency ${receipt.amount}\n'
           'Payment Reference: ${receipt.paymentReference}\n'
@@ -945,20 +956,22 @@ class ShareHelper {
         if (success) {
           showScaffold(
               context: context,
-              message: 'Receipt sent via WhatsApp to $customerPhone');
+              message: 'share_helper.receipt_sent_via_whatsapp'.trParams(
+                {'phone': customerPhone},
+              ));
         } else {
           showScaffoldError(
               context: context,
-              message:
-                  'Failed to send WhatsApp message: ${whatsappProvider.lastError}');
+              message: 'share_helper.failed_send_whatsapp'.trParams(
+                {'error': whatsappProvider.lastError},
+              ));
         }
       }
     } catch (e) {
       debugPrint('Error in WhatsApp sharing: $e');
       if (context.mounted) {
         showScaffoldError(
-            context: context,
-            message: 'share_helper.msg_wa_error'.tr);
+            context: context, message: 'share_helper.msg_wa_error'.tr);
       }
     }
   }
@@ -993,8 +1006,8 @@ class ShareHelper {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const Text(
-                  'Share Voucher',
+                Text(
+                  'share_helper.share_voucher'.tr,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -1029,22 +1042,26 @@ class ShareHelper {
                     child: Icon(Icons.email, color: Color(0xFF1E88E5)),
                   ),
                   title: Text(
-                    (voucher.customer.user.email != null && voucher.customer.user.email!.isNotEmpty)
-                        ? 'Share to ${voucher.customer.user.email}'
-                        : 'Share to Email',
+                    (voucher.customer.user.email != null &&
+                            voucher.customer.user.email!.isNotEmpty)
+                        ? 'share_helper.share_to_email_with_address'.trParams(
+                            {'email': voucher.customer.user.email!},
+                          )
+                        : 'share_helper.share_to_email'.tr,
                   ),
                   onTap: () async {
                     Navigator.pop(ctx);
                     final email = voucher.customer.user.email ?? '';
-                    final subject = Uri.encodeComponent('Voucher #${voucher.voucherNumber}');
+                    final subject = Uri.encodeComponent(
+                        'Voucher #${voucher.voucherNumber}');
                     final body = Uri.encodeComponent(
-                      'Dear ${voucher.customer.user.name},\n\n'
-                      'Please find details of your voucher #${voucher.voucherNumber}.\n'
-                      'Total Amount: ${voucher.amount}\n'
-                      'Status: ${voucher.status.toUpperCase()}\n\n'
-                      'Best regards,'
-                    );
-                    final mailtoUrl = 'mailto:$email?subject=$subject&body=$body';
+                        'Dear ${voucher.customer.user.name},\n\n'
+                        'Please find details of your voucher #${voucher.voucherNumber}.\n'
+                        'Total Amount: ${voucher.amount}\n'
+                        'Status: ${voucher.status.toUpperCase()}\n\n'
+                        'Best regards,');
+                    final mailtoUrl =
+                        'mailto:$email?subject=$subject&body=$body';
                     try {
                       await launchUrl(Uri.parse(mailtoUrl));
                     } catch (e) {
@@ -1066,8 +1083,10 @@ class ShareHelper {
                   ),
                   title: Text(
                     voucher.customer.user.phone.isNotEmpty
-                        ? 'Send via WhatsApp to ${voucher.customer.user.phone}'
-                        : 'Send via WhatsApp',
+                        ? 'share_helper.opt_send_whatsapp_to_number'.trParams(
+                            {'phone': voucher.customer.user.phone},
+                          )
+                        : 'share_helper.opt_send_whatsapp'.tr,
                   ),
                   onTap: () async {
                     Navigator.pop(ctx);
@@ -1099,13 +1118,16 @@ class ShareHelper {
       );
 
       // 1. Fetch document config for type 'Voucher'
-      final docConfigProvider = Provider.of<DocumentConfigProvider>(context, listen: false);
+      final docConfigProvider =
+          Provider.of<DocumentConfigProvider>(context, listen: false);
       String? token = Provider.of<AuthModel>(context, listen: false).token;
-      
-      DocumentConfig? voucherConfig = docConfigProvider.getDocumentConfig('Voucher');
+
+      DocumentConfig? voucherConfig =
+          docConfigProvider.getDocumentConfig('Voucher');
       if (voucherConfig == null && token != null) {
         debugPrint('[ShareVoucher] Fetching config from API (type=Voucher)...');
-        voucherConfig = await docConfigProvider.fetchDocumentConfigByTypeAndLanguage(
+        voucherConfig =
+            await docConfigProvider.fetchDocumentConfigByTypeAndLanguage(
           accessToken: token,
           type: 'voucher',
         );
@@ -1125,11 +1147,13 @@ class ShareHelper {
 
       // 2. Fetch currency
       final currency = Provider.of<AppSettingsProvider>(context, listen: false)
-          .appSettings
-          ?.currency ?? 'SAR';
+              .appSettings
+              ?.currency ??
+          'SAR';
 
       // 3. Fetch store details for billing
-      final storeSession = Provider.of<StoreSessionProvider>(context, listen: false);
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
       final companyName = storeSession.activeStore?.storeName ?? 'Store';
       final companyAddress = storeSession.activeStore?.location;
 
@@ -1178,12 +1202,14 @@ class ShareHelper {
             }
             return;
           } else {
-            _handleWindowsAlternativeSharing(context, pdfFile, 'Voucher #${voucher.voucherNumber}');
+            _handleWindowsAlternativeSharing(
+                context, pdfFile, 'Voucher #${voucher.voucherNumber}');
             return;
           }
         } catch (e) {
           debugPrint('ShareParams API failed: $e');
-          _handleWindowsAlternativeSharing(context, pdfFile, 'Voucher #${voucher.voucherNumber}');
+          _handleWindowsAlternativeSharing(
+              context, pdfFile, 'Voucher #${voucher.voucherNumber}');
           return;
         }
       } else {
@@ -1201,7 +1227,7 @@ class ShareHelper {
 
       if (context.mounted) {
         showScaffold(
-            context: context, message: 'Voucher PDF shared successfully!');
+            context: context, message: 'share_helper.voucher_pdf_shared'.tr);
       }
     } catch (e) {
       debugPrint('Error sharing voucher PDF: $e');
@@ -1209,7 +1235,10 @@ class ShareHelper {
         if (Navigator.canPop(context)) {
           Navigator.of(context, rootNavigator: true).pop();
         }
-        showScaffoldError(context: context, message: 'Error generating PDF. Please try again.');
+        showScaffoldError(
+          context: context,
+          message: 'share_helper.error_generating_pdf'.tr,
+        );
       }
     }
   }
@@ -1235,12 +1264,15 @@ class ShareHelper {
       );
 
       // 1. Fetch document config for type 'Voucher'
-      final docConfigProvider = Provider.of<DocumentConfigProvider>(context, listen: false);
+      final docConfigProvider =
+          Provider.of<DocumentConfigProvider>(context, listen: false);
       String? token = Provider.of<AuthModel>(context, listen: false).token;
-      
-      DocumentConfig? voucherConfig = docConfigProvider.getDocumentConfig('Voucher');
+
+      DocumentConfig? voucherConfig =
+          docConfigProvider.getDocumentConfig('Voucher');
       if (voucherConfig == null && token != null) {
-        voucherConfig = await docConfigProvider.fetchDocumentConfigByTypeAndLanguage(
+        voucherConfig =
+            await docConfigProvider.fetchDocumentConfigByTypeAndLanguage(
           accessToken: token,
           type: 'voucher',
         );
@@ -1260,11 +1292,13 @@ class ShareHelper {
 
       // 2. Fetch currency
       final currency = Provider.of<AppSettingsProvider>(context, listen: false)
-          .appSettings
-          ?.currency ?? 'SAR';
+              .appSettings
+              ?.currency ??
+          'SAR';
 
       // 3. Fetch store details for billing
-      final storeSession = Provider.of<StoreSessionProvider>(context, listen: false);
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
       final companyName = storeSession.activeStore?.storeName ?? 'Store';
       final companyAddress = storeSession.activeStore?.location;
 
@@ -1292,9 +1326,9 @@ class ShareHelper {
       }
 
       // 5. Send PDF
-      final whatsappProvider = Provider.of<WhatsappProvider>(context, listen: false);
-      final messageText =
-          'Dear ${voucher.customer.user.name},\n\n'
+      final whatsappProvider =
+          Provider.of<WhatsappProvider>(context, listen: false);
+      final messageText = 'Dear ${voucher.customer.user.name},\n\n'
           'Please find details of your voucher #${voucher.voucherNumber} attached.\n\n'
           'Total Amount: $currency ${voucher.amount}\n'
           'Status: ${voucher.status.toUpperCase()}\n'
@@ -1310,11 +1344,18 @@ class ShareHelper {
 
       if (context.mounted) {
         if (success) {
-          showScaffold(context: context, message: 'Voucher sent via WhatsApp to $customerPhone');
+          showScaffold(
+            context: context,
+            message: 'share_helper.voucher_sent_via_whatsapp'.trParams(
+              {'phone': customerPhone},
+            ),
+          );
         } else {
           showScaffoldError(
             context: context,
-            message: 'Failed to send WhatsApp message: ${whatsappProvider.lastError}',
+            message: 'share_helper.failed_send_whatsapp'.trParams(
+              {'error': whatsappProvider.lastError},
+            ),
           );
         }
       }
@@ -1360,8 +1401,8 @@ class ShareHelper {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const Text(
-                  'Share Supplier Voucher',
+                Text(
+                  'share_helper.share_supplier_voucher'.tr,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -1397,21 +1438,24 @@ class ShareHelper {
                   ),
                   title: Text(
                     voucher.supplier.email.isNotEmpty
-                        ? 'Share to ${voucher.supplier.email}'
-                        : 'Share to Email',
+                        ? 'share_helper.share_to_email_with_address'.trParams(
+                            {'email': voucher.supplier.email},
+                          )
+                        : 'share_helper.share_to_email'.tr,
                   ),
                   onTap: () async {
                     Navigator.pop(ctx);
                     final email = voucher.supplier.email;
-                    final subject = Uri.encodeComponent('Supplier Voucher #${voucher.voucherNumber}');
+                    final subject = Uri.encodeComponent(
+                        'Supplier Voucher #${voucher.voucherNumber}');
                     final body = Uri.encodeComponent(
-                      'Dear ${voucher.supplier.name},\n\n'
-                      'Please find details of your supplier voucher #${voucher.voucherNumber}.\n'
-                      'Total Amount: ${voucher.amount}\n'
-                      'Status: ${voucher.status.toUpperCase()}\n\n'
-                      'Best regards,'
-                    );
-                    final mailtoUrl = 'mailto:$email?subject=$subject&body=$body';
+                        'Dear ${voucher.supplier.name},\n\n'
+                        'Please find details of your supplier voucher #${voucher.voucherNumber}.\n'
+                        'Total Amount: ${voucher.amount}\n'
+                        'Status: ${voucher.status.toUpperCase()}\n\n'
+                        'Best regards,');
+                    final mailtoUrl =
+                        'mailto:$email?subject=$subject&body=$body';
                     try {
                       await launchUrl(Uri.parse(mailtoUrl));
                     } catch (e) {
@@ -1433,8 +1477,10 @@ class ShareHelper {
                   ),
                   title: Text(
                     voucher.supplier.phone.isNotEmpty
-                        ? 'Send via WhatsApp to ${voucher.supplier.phone}'
-                        : 'Send via WhatsApp',
+                        ? 'share_helper.opt_send_whatsapp_to_number'.trParams(
+                            {'phone': voucher.supplier.phone},
+                          )
+                        : 'share_helper.opt_send_whatsapp'.tr,
                   ),
                   onTap: () async {
                     Navigator.pop(ctx);
@@ -1466,10 +1512,12 @@ class ShareHelper {
       );
 
       // 1. Fetch document config for type 'Supplier Voucher'
-      final docConfigProvider = Provider.of<DocumentConfigProvider>(context, listen: false);
+      final docConfigProvider =
+          Provider.of<DocumentConfigProvider>(context, listen: false);
       String? token = Provider.of<AuthModel>(context, listen: false).token;
-      
-      DocumentConfig? voucherConfig = docConfigProvider.getDocumentConfig('Supplier Voucher');
+
+      DocumentConfig? voucherConfig =
+          docConfigProvider.getDocumentConfig('Supplier Voucher');
       if (voucherConfig == null && token != null) {
         debugPrint('[ShareSupplierVoucher] Fetching config from API...');
         await docConfigProvider.fetchDocumentConfigurations(accessToken: token);
@@ -1483,19 +1531,21 @@ class ShareHelper {
           }
           showScaffoldError(
               context: context,
-              message: 'share_helper.msg_supplier_voucher_template_not_found'
-                  .tr);
+              message:
+                  'share_helper.msg_supplier_voucher_template_not_found'.tr);
         }
         return;
       }
 
       // 2. Fetch currency
       final currency = Provider.of<AppSettingsProvider>(context, listen: false)
-          .appSettings
-          ?.currency ?? 'SAR';
+              .appSettings
+              ?.currency ??
+          'SAR';
 
       // 3. Fetch store details for billing
-      final storeSession = Provider.of<StoreSessionProvider>(context, listen: false);
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
       final companyName = storeSession.activeStore?.storeName ?? 'Store';
       final companyAddress = storeSession.activeStore?.location;
 
@@ -1544,12 +1594,14 @@ class ShareHelper {
             }
             return;
           } else {
-            _handleWindowsAlternativeSharing(context, pdfFile, 'Supplier Voucher #${voucher.voucherNumber}');
+            _handleWindowsAlternativeSharing(
+                context, pdfFile, 'Supplier Voucher #${voucher.voucherNumber}');
             return;
           }
         } catch (e) {
           debugPrint('ShareParams API failed: $e');
-          _handleWindowsAlternativeSharing(context, pdfFile, 'Supplier Voucher #${voucher.voucherNumber}');
+          _handleWindowsAlternativeSharing(
+              context, pdfFile, 'Supplier Voucher #${voucher.voucherNumber}');
           return;
         }
       } else {
@@ -1559,7 +1611,8 @@ class ShareHelper {
           mimeType: 'application/pdf',
         );
         final params = ShareParams(
-          text: 'Please find attached the supplier voucher #${voucher.voucherNumber}',
+          text:
+              'Please find attached the supplier voucher #${voucher.voucherNumber}',
           files: [enhancedXFile],
         );
         await SharePlus.instance.share(params);
@@ -1567,7 +1620,8 @@ class ShareHelper {
 
       if (context.mounted) {
         showScaffold(
-            context: context, message: 'Supplier Voucher PDF shared successfully!');
+            context: context,
+            message: 'share_helper.supplier_voucher_pdf_shared'.tr);
       }
     } catch (e) {
       debugPrint('Error sharing supplier voucher PDF: $e');
@@ -1575,7 +1629,10 @@ class ShareHelper {
         if (Navigator.canPop(context)) {
           Navigator.of(context, rootNavigator: true).pop();
         }
-        showScaffoldError(context: context, message: 'Error generating PDF. Please try again.');
+        showScaffoldError(
+          context: context,
+          message: 'share_helper.error_generating_pdf'.tr,
+        );
       }
     }
   }
@@ -1587,7 +1644,10 @@ class ShareHelper {
     try {
       final String customerPhone = voucher.supplier.phone.trim();
       if (customerPhone.isEmpty) {
-        showScaffoldError(context: context, message: 'Supplier phone number is empty.');
+        showScaffoldError(
+          context: context,
+          message: 'share_helper.supplier_phone_empty'.tr,
+        );
         return;
       }
 
@@ -1600,10 +1660,12 @@ class ShareHelper {
       );
 
       // 1. Fetch document config for type 'Supplier Voucher'
-      final docConfigProvider = Provider.of<DocumentConfigProvider>(context, listen: false);
+      final docConfigProvider =
+          Provider.of<DocumentConfigProvider>(context, listen: false);
       String? token = Provider.of<AuthModel>(context, listen: false).token;
-      
-      DocumentConfig? voucherConfig = docConfigProvider.getDocumentConfig('Supplier Voucher');
+
+      DocumentConfig? voucherConfig =
+          docConfigProvider.getDocumentConfig('Supplier Voucher');
       if (voucherConfig == null && token != null) {
         await docConfigProvider.fetchDocumentConfigurations(accessToken: token);
         voucherConfig = docConfigProvider.getDocumentConfig('Supplier Voucher');
@@ -1616,19 +1678,21 @@ class ShareHelper {
           }
           showScaffoldError(
               context: context,
-              message: 'share_helper.msg_supplier_voucher_template_not_found'
-                  .tr);
+              message:
+                  'share_helper.msg_supplier_voucher_template_not_found'.tr);
         }
         return;
       }
 
       // 2. Fetch currency
       final currency = Provider.of<AppSettingsProvider>(context, listen: false)
-          .appSettings
-          ?.currency ?? 'SAR';
+              .appSettings
+              ?.currency ??
+          'SAR';
 
       // 3. Fetch store details for billing
-      final storeSession = Provider.of<StoreSessionProvider>(context, listen: false);
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
       final companyName = storeSession.activeStore?.storeName ?? 'Store';
       final companyAddress = storeSession.activeStore?.location;
 
@@ -1656,9 +1720,9 @@ class ShareHelper {
       }
 
       // 5. Send PDF
-      final whatsappProvider = Provider.of<WhatsappProvider>(context, listen: false);
-      final messageText =
-          'Dear ${voucher.supplier.name},\n\n'
+      final whatsappProvider =
+          Provider.of<WhatsappProvider>(context, listen: false);
+      final messageText = 'Dear ${voucher.supplier.name},\n\n'
           'Please find details of your supplier voucher #${voucher.voucherNumber} attached.\n\n'
           'Total Amount: $currency ${voucher.amount}\n'
           'Status: ${voucher.status.toUpperCase()}\n'
@@ -1674,11 +1738,17 @@ class ShareHelper {
 
       if (context.mounted) {
         if (success) {
-          showScaffold(context: context, message: 'Supplier Voucher sent via WhatsApp to $customerPhone');
+          showScaffold(
+            context: context,
+            message: 'share_helper.supplier_voucher_sent_via_whatsapp'
+                .trParams({'phone': customerPhone}),
+          );
         } else {
           showScaffoldError(
             context: context,
-            message: 'Failed to send WhatsApp message: ${whatsappProvider.lastError}',
+            message: 'share_helper.failed_send_whatsapp'.trParams(
+              {'error': whatsappProvider.lastError},
+            ),
           );
         }
       }
@@ -1688,8 +1758,8 @@ class ShareHelper {
         if (Navigator.canPop(context)) {
           Navigator.of(context, rootNavigator: true).pop();
         }
-          showScaffoldError(
-              context: context, message: 'share_helper.msg_wa_error'.tr);
+        showScaffoldError(
+            context: context, message: 'share_helper.msg_wa_error'.tr);
       }
     }
   }

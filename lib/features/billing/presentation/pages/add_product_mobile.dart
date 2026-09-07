@@ -1166,7 +1166,9 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                               border: Border.all(color: Colors.orange.shade200),
                             ),
                             child: Text(
-                              'No product found with barcode ${widget.barcode}',
+                                  'product_detail.no_product_found_barcode'.trParams(
+                                    {'barcode': widget.barcode!},
+                                  ),
                               style: TextStyle(
                                 fontFamily: 'Poppins',
                                 fontSize: 13,
@@ -2005,8 +2007,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                 ),
               ),
               onPressed: () => setState(() => _currentStep = 1),
-              child: Text(
-                'Back',
+                  child: Text(
+                'general.back'.tr,
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 16,

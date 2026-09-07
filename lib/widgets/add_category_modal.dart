@@ -192,7 +192,7 @@ class _AddCategoryModalState extends State<AddCategoryModal> with CategoryFormMi
             validator: isRequired
                 ? (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Required';
+                      return 'general.required'.tr;
                     }
                     return null;
                   }

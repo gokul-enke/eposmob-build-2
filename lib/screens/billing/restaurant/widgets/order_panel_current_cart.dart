@@ -1200,7 +1200,9 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    'Items: $totalItems',
+                    'general.items_count'.trParams(
+                      {'count': totalItems.toString()},
+                    ),
                     style: buildCustomStyle(
                         FontWeightManager.medium,
                         widget.isCompact ? FontSize.s11 : FontSize.s13,

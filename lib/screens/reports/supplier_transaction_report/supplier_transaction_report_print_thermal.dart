@@ -309,7 +309,7 @@ class SupplierTransactionReportThermalPrinter {
     debugPrint("To date: $toDate");
 
     // Add supplier information header
-    bytes += generator.text('SUPPLIER INFORMATION',
+    bytes += generator.text('voucher_print.supplier_information'.tr,
         styles: PosStyles(
             fontType: fontType,
             align: PosAlign.center,
@@ -321,7 +321,8 @@ class SupplierTransactionReportThermalPrinter {
     if (displayConfig?['showSupplierName']?.visible == true &&
         supplierName != null &&
         supplierName.isNotEmpty) {
-      bytes += generator.text('Name: $supplierName',
+      bytes += generator.text(
+          '${'voucher_print.name'.tr}: $supplierName',
           styles: PosStyles(
               fontType: fontType,
               align: PosAlign.left,
@@ -332,7 +333,8 @@ class SupplierTransactionReportThermalPrinter {
     if (displayConfig?['showSupplierPhone']?.visible == true &&
         supplierPhone != null &&
         supplierPhone.isNotEmpty) {
-      bytes += generator.text('Phone: $supplierPhone',
+      bytes += generator.text(
+          '${'voucher_print.phone'.tr}: $supplierPhone',
           styles: PosStyles(
               fontType: fontType,
               align: PosAlign.left,
@@ -343,7 +345,8 @@ class SupplierTransactionReportThermalPrinter {
     if (displayConfig?['showSupplierEmail']?.visible == true &&
         supplierEmail != null &&
         supplierEmail.isNotEmpty) {
-      bytes += generator.text('Email: $supplierEmail',
+      bytes += generator.text(
+          '${'voucher_print.email'.tr}: $supplierEmail',
           styles: PosStyles(
               fontType: fontType,
               align: PosAlign.left,

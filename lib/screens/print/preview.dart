@@ -40,14 +40,14 @@ class ReceiptPreviewWidget extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    'Dummy Thermal Receipt',
+                  Text(
+                    'voucher_print.dummy_thermal_receipt'.tr,
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'Thank you for your purchase!',
+                  Text(
+                    'voucher_print.thank_you_purchase'.tr,
                     style: TextStyle(fontSize: 12),
                     textAlign: TextAlign.center,
                   ),
@@ -63,8 +63,8 @@ class ReceiptPreviewWidget extends StatelessWidget {
                   const Divider(),
                   const ReceiptItem('Total:', 45.00, isTotal: true),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Have a great day!',
+                  Text(
+                    'voucher_print.have_a_great_day'.tr,
                     style: TextStyle(fontSize: 12),
                     textAlign: TextAlign.center,
                   ),

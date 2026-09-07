@@ -147,7 +147,7 @@ Future<bool> showEditStockDialog({
                                 children: [
                                   Expanded(
                                     child: _buildEditableField(
-                                      'Retail Price',
+                                      'stock.retail_price'.tr,
                                       retailPriceController,
                                     ),
                                   ),
@@ -155,7 +155,7 @@ Future<bool> showEditStockDialog({
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: _buildEditableField(
-                                        'MRP',
+                                        'product_detail.mrp'.tr,
                                         mrpController,
                                       ),
                                     ),
@@ -168,7 +168,7 @@ Future<bool> showEditStockDialog({
                                   if (showPurchasePrice) ...[
                                     Expanded(
                                       child: _buildEditableField(
-                                        'Purchase Price',
+                                        'product_detail.purchase_price'.tr,
                                         purchasePriceController,
                                       ),
                                     ),
@@ -176,7 +176,7 @@ Future<bool> showEditStockDialog({
                                   ],
                                   Expanded(
                                     child: _buildEditableField(
-                                      'Quantity',
+                                      'stock.quantity'.tr,
                                       quantityController,
                                     ),
                                   ),
@@ -187,7 +187,7 @@ Future<bool> showEditStockDialog({
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Rack',
+                                    'stock.rack'.tr,
                                     style: buildCustomStyle(
                                       FontWeightManager.semiBold,
                                       FontSize.s14,
@@ -206,7 +206,10 @@ Future<bool> showEditStockDialog({
                                       ),
                                     )
                                   else if (rackMap.isEmpty)
-                                    _buildEditableField('Rack', rackController)
+                                    _buildEditableField(
+                                      'stock.rack'.tr,
+                                      rackController,
+                                    )
                                   else
                                     BuildBoxShadowContainer(
                                       circleRadius: 7,

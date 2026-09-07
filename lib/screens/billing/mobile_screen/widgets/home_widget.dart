@@ -472,8 +472,8 @@ class _HomeWidgetState extends State<HomeWidget> {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          const Text(
-            'ORDER ITEMS',
+          Text(
+            'billing.section_order_items'.tr,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -550,8 +550,8 @@ class _HomeWidgetState extends State<HomeWidget> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'TOTAL:',
+              Text(
+                '${'general.total'.tr}:',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -666,8 +666,8 @@ class _HomeWidgetState extends State<HomeWidget> {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: const Text(
-              'CLEAR',
+            child: Text(
+              'general.clear'.tr,
               style: TextStyle(color: Colors.red),
             ),
           ),
@@ -685,7 +685,7 @@ class _HomeWidgetState extends State<HomeWidget> {
               ),
             ),
             child: Text(
-              isEditingOrder ? 'UPDATE' : 'SAVE',
+              isEditingOrder ? 'general.update'.tr : 'general.save'.tr,
               style: const TextStyle(color: Colors.orange),
             ),
           ),
@@ -711,8 +711,8 @@ class _HomeWidgetState extends State<HomeWidget> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text(
-                'CONFIRM',
+              child: Text(
+                'general.confirm'.tr,
                 style: TextStyle(color: Colors.white),
               ),
             ),

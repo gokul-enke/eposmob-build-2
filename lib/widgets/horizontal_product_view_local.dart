@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:pos_machine/helpers/product_cart_helper.dart';
@@ -119,7 +120,7 @@ class _HorizontalProductViewLocalState
     double? selectedPrice = await showDialog<double>(
       context: context,
       builder: (context) => PriceSelectionModal(
-        productName: product.productName ?? 'Unknown Product',
+        productName: product.productName ?? 'general.unknown_product'.tr,
         prices: customPrices,
         onPriceSelected: (double price) {
           debugPrint("🎯 HORIZONTAL MODAL: Price selected: $currency$price");

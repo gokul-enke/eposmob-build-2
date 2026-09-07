@@ -2076,9 +2076,9 @@ class BillingMobilePaymentController {
           normalized.contains('APPROVED') ||
           normalized.contains('TXN SUCCESS');
       if (isSuccess) {
-        return const PineLabsTerminalResult(
+        return PineLabsTerminalResult(
           success: true,
-          message: 'Pine Labs payment successful',
+          message: 'billing.pine_labs_payment_successful'.tr,
         );
       }
       return PineLabsTerminalResult(success: false, message: resultStr);

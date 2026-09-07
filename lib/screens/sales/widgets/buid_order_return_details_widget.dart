@@ -105,7 +105,7 @@ class OrderReturnsWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Return Order Details",
+                      'sales_return.details_title'.tr,
                       style: ResponsiveWidget.isMobile(context)
                           ? buildCustomStyle(FontWeightManager.semiBold,
                               FontSize.s12, 0.30, ColorManager.textColor)
@@ -217,7 +217,7 @@ class OrderReturnsWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'RETURN SUMMARY',
+          'sales_return.return_summary'.tr,
           style: buildCustomStyle(
             FontWeightManager.semiBold,
             FontSize.s14,
@@ -228,18 +228,18 @@ class OrderReturnsWidget extends StatelessWidget {
         const SizedBox(height: 10),
         BuildPaymentRow(
           amount: '${orderReturns!.returnItems?.length ?? 0}',
-          title: "Total Items",
+          title: 'sales_return.total_items'.tr,
           color: ColorManager.textColor,
         ),
         BuildPaymentRow(
           amount: "$currency ${returnTotal.toStringAsFixed(2)}",
-          title: "Total MRP",
+          title: 'sales_return.total_mrp'.tr,
           color: ColorManager.textColor,
         ),
         const Divider(thickness: 2),
         BuildPaymentRow(
           amount: "$currency ${returnTotal.toStringAsFixed(2)}",
-          title: "Net Total",
+          title: 'sales_return.net_total'.tr,
           secondRowTextStyle: buildCustomStyle(
             FontWeightManager.bold,
             FontSize.s15,
@@ -268,7 +268,7 @@ class OrderReturnsWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'FINAL SUMMARY',
+          'sales_return.final_summary'.tr,
           style: buildCustomStyle(
             FontWeightManager.semiBold,
             FontSize.s16,
@@ -279,18 +279,18 @@ class OrderReturnsWidget extends StatelessWidget {
         const SizedBox(height: 10),
         BuildPaymentRow(
           amount: "$currency ${orderTotal.toStringAsFixed(2)}",
-          title: "Total Purchase",
+          title: 'sales_return.total_purchase'.tr,
           color: ColorManager.textColor,
         ),
         BuildPaymentRow(
           amount: "$currency ${returnTotal.toStringAsFixed(2)}",
-          title: "Total Return",
+          title: 'sales_return.total_return'.tr,
           color: ColorManager.textColorRed,
         ),
         const Divider(thickness: 2),
         BuildPaymentRow(
           amount: "$currency ${finalTotal.toStringAsFixed(2)}",
-          title: "Net Total",
+          title: 'sales_return.net_total'.tr,
           secondRowTextStyle: buildCustomStyle(
             FontWeightManager.bold,
             FontSize.s15,

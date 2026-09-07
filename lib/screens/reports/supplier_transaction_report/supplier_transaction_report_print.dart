@@ -241,7 +241,9 @@ class _SupplierTransactionReportPrintState
     if (mounted) {
       showScaffold(
         context: context,
-        message: "${printer.deviceName.toString()} Printer Selected",
+        message: 'voucher_print.printer_selected'.trParams({
+          'name': printer.deviceName.toString(),
+        }),
       );
     }
   }
@@ -312,7 +314,9 @@ class _SupplierTransactionReportPrintState
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Error loading document configurations: ${e.toString()}",
+          message: 'voucher_print.error_loading_document_config'.trParams(
+            {'error': e.toString()},
+          ),
         );
       }
     }
@@ -439,7 +443,9 @@ class _SupplierTransactionReportPrintState
         if (mounted) {
           showScaffoldError(
             context: context,
-            message: "Error sharing PDF: ${e.toString()}",
+            message: 'voucher_print.error_sharing_pdf'.trParams(
+              {'error': e.toString()},
+            ),
           );
         }
       }
@@ -448,7 +454,7 @@ class _SupplierTransactionReportPrintState
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Error generating PDF for sharing",
+          message: 'voucher_print.error_generating_pdf_for_sharing'.tr,
         );
       }
     }
