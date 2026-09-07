@@ -399,7 +399,7 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                   // Delivery & Options Section (Select Delivery Method)
                   BillingSectionRow(
                     icon: Icons.local_shipping_outlined,
-                    title: 'Select Delivery Method',
+                    title: 'billing.select_delivery_method'.tr,
                     value: _deliveryValueText(
                       billingProvider,
                       deliveryMethodsProvider,
@@ -412,7 +412,7 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                   if (showCouponSection) ...[
                     BillingSectionRow(
                       icon: Icons.local_offer_outlined,
-                      title: 'Coupon',
+                      title: 'billing.coupon'.tr,
                       value: _couponValueText(
                         billingProvider,
                         localProductProvider,

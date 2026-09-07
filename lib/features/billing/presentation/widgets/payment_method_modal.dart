@@ -1626,8 +1626,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                   children: [
                     _buildCheckoutSectionHeader(
                       step: 1,
-                      title: 'Payment',
-                      subtitle: 'Enter received amounts',
+                      title: 'billing.payment'.tr,
+                      subtitle: 'billing.enter_received_amounts'.tr,
                       stackSubtitle: true,
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -1760,17 +1760,17 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                     const SizedBox(height: 12),
                     _buildCheckoutSectionHeader(
                       step: 2,
-                      title: 'Remaining Amount',
-                      subtitle: '(Auto calculated)',
+                      title: 'billing.remaining_amount'.tr,
+                      subtitle: 'billing.auto_calculated'.tr,
                     ),
                     const SizedBox(height: 8),
                     if (outstanding > 0)
                       _buildCustomerAccountAction(
-                        title: 'Sell on Credit',
-                        titleNote: '(Amount Due)',
+                        title: 'billing.sell_on_credit'.tr,
+                        titleNote: 'billing.amount_due'.tr,
                         subtitle: widget.isDefaultCustomer
-                            ? 'Record the unpaid amount as due'
-                            : 'Add remaining amount to customer account',
+                            ? 'billing.record_unpaid_due'.tr
+                            : 'billing.add_remaining_to_account'.tr,
                         amount: outstanding,
                         currency: currency,
                         value: isCreditSelected,
@@ -1781,28 +1781,28 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                         icon: Icons.receipt_long_outlined,
                         isDense: isDense,
                         footerLabel: widget.isDefaultCustomer
-                            ? 'Amount Due (will be recorded as due)'
-                            : 'Amount Due (will be added to customer account)',
+                            ? 'billing.amount_due_recorded'.tr
+                            : 'billing.amount_due_added'.tr,
                         onChanged: (_) => _togglePaymentMethod('credit'),
                       )
                     else
                       _buildCollapsedSettlementRow(
                         icon: Icons.receipt_long_outlined,
-                        title: 'Sell on Credit',
-                        note: 'Nothing remaining — fully covered',
+                        title: 'billing.sell_on_credit'.tr,
+                        note: 'billing.nothing_remaining'.tr,
                         trailing: '0.00 $currency',
                       ),
                     const SizedBox(height: 12),
                     _buildCheckoutSectionHeader(
                       step: 3,
-                      title: 'Excess Amount',
-                      subtitle: '(if any)',
+                      title: 'billing.excess_amount'.tr,
+                      subtitle: 'billing.if_any'.tr,
                     ),
                     const SizedBox(height: 8),
                     if (excess > 0 && canStoreCustomerCredit) ...[
                       _buildCustomerAccountAction(
-                        title: 'Excess Amount',
-                        subtitle: 'Will be created as customer account credit',
+                        title: 'billing.excess_amount'.tr,
+                        subtitle: 'billing.excess_to_account_credit'.tr,
                         amount: excess,
                         currency: currency,
                         value: toCustomerCreditEnabled,
@@ -1832,19 +1832,24 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                       _buildCheckoutAccountNote(
                         Icons.info_outline,
                         toCustomerCreditEnabled
-                            ? '$currency ${toCustomerCredit.toStringAsFixed(2)} will '
-                                'be stored as customer account credit.'
-                            : '$currency ${excess.toStringAsFixed(2)} will be returned '
-                                'as change unless customer credit is enabled.',
+                            ? 'billing.credit_amount_stored'.trParams({
+                                'currency': currency,
+                                'amount':
+                                    toCustomerCredit.toStringAsFixed(2),
+                              })
+                            : 'billing.excess_returned_as_change'.trParams({
+                                'currency': currency,
+                                'amount': excess.toStringAsFixed(2),
+                              }),
                         _cxCredit,
                       ),
                     ] else
                       _buildCollapsedSettlementRow(
                         icon: Icons.account_balance_wallet_outlined,
-                        title: 'Excess Amount',
+                        title: 'billing.excess_amount'.tr,
                         note: excess > 0
-                            ? 'Select a customer to store account credit'
-                            : 'No excess collected',
+                            ? 'billing.select_customer_for_credit'.tr
+                            : 'billing.no_excess_collected'.tr,
                         trailing: '${excess.toStringAsFixed(2)} $currency',
                       ),
                   ],
@@ -2281,7 +2286,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
-                  hintText: 'Reference number',
+                  hintText: 'billing.reference_number'.tr,
                   hintStyle: buildCustomStyle(
                     FontWeightManager.regular,
                     FontSize.s12,
@@ -2790,7 +2795,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                               size: size,
                               width: double.infinity,
                               height: size.height * .06,
-                              hintText: 'Enter transaction reference number',
+                              hintText: 'billing.enter_transaction_reference'.tr,
                               onTap: () {
                                 Provider.of<KeyboardProvider>(context,
                                         listen: false)
@@ -2986,7 +2991,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                         size: size,
                         width: double.infinity,
                         height: size.height * .06,
-                        hintText: 'Enter amount to add as customer credit',
+                        hintText: 'billing.enter_customer_credit_amount'.tr,
                         focusNode: toCustomerCreditFocusNode,
                         onTap: () {
                           Provider.of<KeyboardProvider>(context, listen: false)
@@ -3432,10 +3437,14 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildPostingRow('Cash Posted:', postingAmounts['cash']!),
-                    _buildPostingRow('Card Posted:', postingAmounts['card']!),
-                    _buildPostingRow('UPI Posted:', postingAmounts['upi']!),
-                    _buildPostingRow('COD Posted:', postingAmounts['cod']!),
+                    _buildPostingRow(
+                        'billing.cash_posted'.tr, postingAmounts['cash']!),
+                    _buildPostingRow(
+                        'billing.card_posted'.tr, postingAmounts['card']!),
+                    _buildPostingRow(
+                        'billing.upi_posted'.tr, postingAmounts['upi']!),
+                    _buildPostingRow(
+                        'billing.cod_posted'.tr, postingAmounts['cod']!),
                   ],
                 ),
               ),
@@ -3443,11 +3452,12 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildPostingRow('To Customer Credit:',
+                    _buildPostingRow('billing.to_customer_credit'.tr,
                         postingAmounts['toCustomerCredit']!,
                         color: ColorManager.kButtonGreen),
                     _buildPostingRow(
-                        'Cash Balance:', postingAmounts['balance']!,
+                        'billing.cash_balance_label'.tr,
+                        postingAmounts['balance']!,
                         color: ColorManager.kButtonGreen),
                     _buildNetDueRow(),
                   ],

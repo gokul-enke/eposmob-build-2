@@ -209,7 +209,13 @@ class _SideMenuState extends State<SideMenu> {
                   color: ColorManager.kPrimaryColor,
                   size: isExpanded ? 24 : 16,
                 ),
-                tooltip: isExpanded ? 'Collapse Sidebar' : 'Expand Sidebar',
+                tooltip: isExpanded
+                    ? (Get.locale?.languageCode == 'ml'
+                        ? 'സൈഡ്ബാർ ചുരുക്കുക'
+                        : 'Collapse Sidebar')
+                    : (Get.locale?.languageCode == 'ml'
+                        ? 'സൈഡ്ബാർ വികസിപ്പിക്കുക'
+                        : 'Expand Sidebar'),
                 padding: EdgeInsets.all(isExpanded ? 8 : 8),
                 constraints: const BoxConstraints(),
                 onPressed: () {
@@ -1163,7 +1169,7 @@ class _SideMenuState extends State<SideMenu> {
                     );
                   });
 
-              String message = 'Logged out successfully';
+              String message = 'general.logged_out_successfully'.tr;
               try {
                 final value =
                     await AuthenticationProvider().logout(token, context);
@@ -1174,7 +1180,7 @@ class _SideMenuState extends State<SideMenu> {
                 // Server logout is best-effort. The user must still be able to
                 // leave the local session when the network is unavailable.
                 debugPrint('Server logout deferred: $error');
-                message = 'Logged out locally';
+                message = 'general.logged_out_locally'.tr;
               }
 
               await SessionResetService.resetAfterLogout(context);
@@ -1221,7 +1227,7 @@ class _SideMenuState extends State<SideMenu> {
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.done) {
                         return Text(
-                          snapshot.data ?? 'Default Name',
+                          snapshot.data ?? 'general.default_name'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.semiBold,
                             FontSize.s14,

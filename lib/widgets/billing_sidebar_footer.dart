@@ -511,7 +511,7 @@ class BillingSidebarFooter extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: CustomRoundButton(
-            title: 'Confirm & Print',
+            title: 'general.confirm_and_print'.tr,
             fct: onConfirmAndPrint,
             height: 38,
             width: double.infinity,

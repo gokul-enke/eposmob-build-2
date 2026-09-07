@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 
 class OrderStatCard extends StatelessWidget {
@@ -72,7 +73,7 @@ class ActiveOrdersStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return OrderStatCard(
-      title: 'Active Orders',
+      title: 'billing.active_orders'.tr,
       value: value,
       valueColor: ColorManager.kPrimaryColor,
     );
@@ -87,7 +88,7 @@ class ReadyOrdersStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return OrderStatCard(
-      title: 'Ready for Pickup',
+      title: 'billing.ready_for_pickup'.tr,
       value: value,
       valueColor: Colors.green,
     );

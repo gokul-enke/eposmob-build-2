@@ -156,7 +156,7 @@ class _CustomerAddressFormWidgetState extends State<CustomerAddressFormWidget> {
       if (response['status'] == 'success') {
         showScaffold(
           context: context,
-          message: response['message'] ?? "Success",
+          message: response['message'] ?? "general.success".tr,
         );
         FocusScope.of(context).unfocus(); // Unfocus to prevent FocusNode error
         if (response['data'] != null) {
@@ -169,13 +169,13 @@ class _CustomerAddressFormWidgetState extends State<CustomerAddressFormWidget> {
       } else {
         showScaffoldError(
           context: context,
-          message: response['message'] ?? "Action failed",
+          message: response['message'] ?? "general.action_failed".tr,
         );
       }
     } catch (e) {
       showScaffoldError(
         context: context,
-        message: "Error: $e",
+        message: "${'general.error_prefix'.tr} $e",
       );
     } finally {
       if (mounted) setState(() => isSubmitting = false);

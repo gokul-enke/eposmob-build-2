@@ -1671,8 +1671,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Quotation customer is not saved',
+                Text(
+                  'checkout_modal.msg_quotation_customer_not_saved'.tr,
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w800,

@@ -6885,8 +6885,8 @@ class OrderPanelState extends State<OrderPanel> {
   Future<bool> _confirmCustomerCopyPrint() async {
     return (await ConfirmationDialog.show(
           context: context,
-          title: 'Print customer copy?',
-          message: 'Do you want to print a customer copy now?',
+          title: 'general.print_customer_copy'.tr,
+          message: 'general.print_customer_copy_prompt'.tr,
           confirmText: 'Yes, print',
           cancelText: 'No',
         )) ??

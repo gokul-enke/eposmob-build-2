@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 import 'package:pos_machine/components/build_confirmation_dialog.dart';
@@ -1471,8 +1472,8 @@ class BillingMobileController {
 
     final shouldPrintCustomerCopy = await ConfirmationDialog.show(
           context: context,
-          title: 'Print customer copy?',
-          message: 'Do you want to print a customer copy now?',
+          title: 'general.print_customer_copy'.tr,
+          message: 'general.print_customer_copy_prompt'.tr,
           confirmText: 'Yes, print',
           cancelText: 'No',
         ) ??

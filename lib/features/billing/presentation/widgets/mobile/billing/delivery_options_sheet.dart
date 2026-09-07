@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/delivery_options_section.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/mobile_sheet_header.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -37,7 +38,7 @@ class _DeliveryOptionsSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             MobileSheetHeader(
-              title: 'Select Delivery Method',
+              title: 'billing.select_delivery_method'.tr,
               onClose: () => Navigator.pop(context),
             ),
             const Flexible(
@@ -62,8 +63,8 @@ class _DeliveryOptionsSheet extends StatelessWidget {
                       ),
                     ),
                     onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      'Done',
+                    child: Text(
+                      'billing.done'.tr,
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,

@@ -1633,7 +1633,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         if (matchedSaleUnit != null && !multiSaleUnitEnabled) {
           showScaffoldError(
             context: context,
-            message: 'Multi sale units are disabled for this store.',
+            message: 'billing.error_multi_sale_disabled'.tr,
           );
           return;
         }
@@ -1908,9 +1908,13 @@ class BillingPageState extends State<BillingPageRestaurant>
               localProductProvider.getCurrentDiscount()['percentageDiscount'] ??
                   0.0,
           isCouponApplied: isCouponApplied,
-          confirmButtonTitle: isSaveMode ? 'billing.save_order'.tr : 'Confirm',
+          confirmButtonTitle: isSaveMode
+              ? 'billing.save_order'.tr
+              : 'general.confirm'.tr,
           printButtonTitle:
-              isSaveMode ? 'billing.save_and_print'.tr : 'Confirm & Print',
+              isSaveMode
+                  ? 'billing.save_and_print'.tr
+                  : 'general.confirm_and_print'.tr,
           requireCheckoutCompletion: !isSaveMode,
           initialStep: initialStep,
 
@@ -2650,7 +2654,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                 Icons.help_outline,
                 color: Colors.grey.shade600,
               ),
-              tooltip: 'Keyboard Shortcuts (Ctrl+H)',
+              tooltip: 'billing.keyboard_shortcuts'.tr,
               onPressed: () => KeyboardShortcutsHelpDialog.show(
                 context,
                 mode: KeyboardShortcutsHelpMode.restaurant,
@@ -2692,7 +2696,8 @@ class BillingPageState extends State<BillingPageRestaurant>
                         ? ColorManager.kPrimaryColor
                         : Colors.grey.shade600,
                   ),
-                  tooltip: 'Font: ${fontProvider.fontSizeLevelName}',
+                  tooltip:
+                      '${'billing.font_prefix'.tr}${fontProvider.fontSizeLevelName}',
                   onPressed: () {
                     fontProvider.cycleFontSize();
                   },
@@ -6897,8 +6902,8 @@ class BillingPageState extends State<BillingPageRestaurant>
   Future<bool> _confirmCustomerCopyPrint() async {
     return (await ConfirmationDialog.show(
           context: context,
-          title: 'Print customer copy?',
-          message: 'Do you want to print a customer copy now?',
+          title: 'general.print_customer_copy'.tr,
+          message: 'general.print_customer_copy_prompt'.tr,
           confirmText: 'Yes, print',
           cancelText: 'No',
         )) ??

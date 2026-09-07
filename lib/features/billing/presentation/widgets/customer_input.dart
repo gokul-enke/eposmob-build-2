@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -51,7 +52,7 @@ class _CustomerInputState extends State<CustomerInput> {
                       controller: billingProvider.mobileNumberTextController,
                       readOnly: true,
                       size: widget.size,
-                      hintText: 'Phone Number',
+                      hintText: 'billing.phone_number_hint'.tr,
                     ),
                   )
                 : Expanded(
@@ -270,7 +271,7 @@ class _CustomerInputState extends State<CustomerInput> {
                               controller: autoCompleteController,
                               focusNode: focusNode,
                               decoration: InputDecoration(
-                                hintText: 'Enter mobile number',
+                                hintText: 'billing.enter_mobile_number'.tr,
                                 hintStyle: buildCustomStyle(
                                   FontWeight.w500,
                                   12,

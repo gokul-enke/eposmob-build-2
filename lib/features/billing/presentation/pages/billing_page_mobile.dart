@@ -698,7 +698,10 @@ class BillingPageMobileState extends State<BillingPageMobile>
         _autocompletePhoneKey = GlobalKey();
       });
 
-      showScaffold(context: context, message: "Cart Cleared Successfully");
+      showScaffold(
+        context: context,
+        message: 'billing.cart_cleared'.tr,
+      );
       _focusTextField();
     } catch (e) {
       billingDebugLog('Error clearing cart: $e');
@@ -1023,7 +1026,9 @@ class BillingPageMobileState extends State<BillingPageMobile>
       }
 
       showScaffold(
-          context: context, message: 'Quotation created successfully!');
+        context: context,
+        message: 'billing.quotation_created'.tr,
+      );
       if (result.printError != null) {
         showScaffoldError(context: context, message: result.printError!);
       }
@@ -1166,9 +1171,9 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
     final confirmed = await DeleteConfirmationDialog.show(
       context: context,
-      title: 'Delete Order',
+      title: 'order_list.dialog_title_delete'.tr,
       itemName: orderLabel,
-      message: 'This order will be permanently removed from your saved orders.',
+      message: 'order_list.dialog_message_delete'.tr,
       warningIcon: Icons.receipt_long_outlined,
       onDelete: () {},
     );
@@ -1185,7 +1190,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
     _controller.deleteSavedOrder(context, order.id);
     showScaffold(
       context: context,
-      message: 'Order deleted successfully',
+      message: 'order_list.success_order_deleted'.tr,
     );
   }
 

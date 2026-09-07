@@ -1005,8 +1005,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             CommonPrinterSettingsCard(
               embedded: true,
               enabled: _isStandardPdf,
-              disabledNote: 'Only affects A4 and A5 print jobs. '
-                  'Switch the paper size to A4 or A5 to change it.',
+              disabledNote: 'printer_settings.margin_std_note'.tr,
             ),
           ],
         ],

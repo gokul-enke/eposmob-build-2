@@ -137,12 +137,12 @@ class InvoiceMobileView extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Invoice List",
+          'invoice.mobile_list_title'.tr,
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s18,
               0.30, ColorManager.textColor),
         ),
         CustomRoundButton(
-          title: "Create",
+          title: 'invoice.create'.tr,
           fct: onCreateInvoice,
           fontSize: 12,
           height: 40,
@@ -166,7 +166,7 @@ class InvoiceMobileView extends StatelessWidget {
           childrenPadding:
               const EdgeInsets.fromLTRB(12, 0, 12, 12),
           title: Text(
-            "Filters",
+            'invoice.filters'.tr,
             style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,
                 0.20, ColorManager.textColor),
           ),
@@ -176,19 +176,19 @@ class InvoiceMobileView extends StatelessWidget {
             _mobileTextField(
               controller: invoiceNumberController,
               focusNode: invoiceNoFocusNode,
-              hint: "Invoice No",
+              hint: 'invoice.invoice_no'.tr,
             ),
             const SizedBox(height: 10),
             _mobileTextField(
               controller: searchTextController,
               focusNode: nameFocusNode,
-              hint: "Name",
+              hint: 'invoice.name'.tr,
             ),
             const SizedBox(height: 10),
             _mobileTextField(
               controller: phoneController,
               focusNode: phoneFocusNode,
-              hint: "Phone",
+              hint: 'invoice.phone'.tr,
               keyboardType: TextInputType.phone,
             ),
             const SizedBox(height: 10),
@@ -313,7 +313,7 @@ class InvoiceMobileView extends StatelessWidget {
         style: buildCustomStyle(FontWeightManager.medium, FontSize.s11,
             0.18, ColorManager.textColor),
         decoration: decoration.copyWith(
-          hintText: "DD/MM/YYYY",
+          hintText: 'invoice.date_format'.tr,
           hintStyle: buildCustomStyle(FontWeightManager.medium, FontSize.s11,
               0.18, ColorManager.textColor),
           prefixIcon: const Icon(Icons.calendar_today,
@@ -349,25 +349,25 @@ class InvoiceMobileView extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             children: [
               _bulkButton(
-                title: "Sync ALL",
+                title: 'invoice.sync_all'.tr,
                 color: Colors.blueAccent,
                 syncType: 'all',
               ),
               const SizedBox(width: 8),
               _bulkButton(
-                title: "Sync Failed",
+                title: 'invoice.sync_failed'.tr,
                 color: Colors.redAccent,
                 syncType: 'failed',
               ),
               const SizedBox(width: 8),
               _bulkButton(
-                title: "Sync Not Sent",
+                title: 'invoice.sync_not_sent'.tr,
                 color: Colors.orangeAccent,
                 syncType: 'not_sent',
               ),
               const SizedBox(width: 8),
               _bulkButton(
-                title: "Sync Selected",
+                title: 'invoice.sync_selected'.tr,
                 color: hasSelection ? Colors.lightBlue : Colors.grey,
                 syncType: 'selected',
                 enabled: hasSelection,
@@ -389,7 +389,7 @@ class InvoiceMobileView extends StatelessWidget {
               InkWell(
                 onTap: onSelectPage,
                 child: Text(
-                  "Select Page",
+                  'invoice.select_page'.tr,
                   style: buildCustomStyle(FontWeightManager.bold,
                       FontSize.s11, 0.18, ColorManager.kPrimaryColor),
                 ),
@@ -398,7 +398,7 @@ class InvoiceMobileView extends StatelessWidget {
             InkWell(
               onTap: onUnselectAll,
               child: Text(
-                "Unselect",
+                'invoice.unselect'.tr,
                 style: buildCustomStyle(FontWeightManager.bold, FontSize.s11,
                     0.18, const Color.fromARGB(255, 198, 78, 78)),
               ),
@@ -475,13 +475,13 @@ class InvoiceMobileView extends StatelessWidget {
               size: 56, color: ColorManager.kPrimaryColor.withOpacity(0.7)),
           const SizedBox(height: 12),
           Text(
-            'No invoices found',
+            'invoice.no_invoices_found'.tr,
             style: buildCustomStyle(FontWeightManager.medium, FontSize.s16,
                 0.27, ColorManager.textColor),
           ),
           const SizedBox(height: 6),
           Text(
-            'Try adjusting your search criteria',
+            'invoice.adjust_search'.tr,
             style: buildCustomStyle(
                 FontWeightManager.regular, FontSize.s12, 0.20, Colors.grey),
           ),
@@ -561,7 +561,7 @@ class _InvoiceCard extends StatelessWidget {
                               ClipboardData(text: invoice.invoiceNumber));
                           showScaffold(
                             context: context,
-                            message: 'Invoice number copied to clipboard',
+                            message: 'invoice.number_copied'.tr,
                           );
                         },
                         child: Icon(

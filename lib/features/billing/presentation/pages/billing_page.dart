@@ -2553,7 +2553,7 @@ class BillingPageState extends State<BillingPage>
                   Icons.help_outline,
                   color: Colors.grey.shade600,
                 ),
-                tooltip: 'Keyboard Shortcuts (Ctrl+H)',
+                tooltip: 'billing.keyboard_shortcuts'.tr,
                 onPressed: () {
                   KeyboardShortcutsHelpDialog.show(context);
                 },
@@ -2594,7 +2594,8 @@ class BillingPageState extends State<BillingPage>
                           ? ColorManager.kPrimaryColor
                           : Colors.grey.shade600,
                     ),
-                    tooltip: 'Font: ${fontProvider.fontSizeLevelName}',
+                    tooltip:
+                        '${'billing.font_prefix'.tr}${fontProvider.fontSizeLevelName}',
                     onPressed: () {
                       fontProvider.cycleFontSize();
                     },
@@ -9358,8 +9359,8 @@ class BillingPageState extends State<BillingPage>
   Future<bool> _confirmCustomerCopyPrint() async {
     return (await ConfirmationDialog.show(
           context: context,
-          title: 'Print customer copy?',
-          message: 'Do you want to print a customer copy now?',
+          title: 'general.print_customer_copy'.tr,
+          message: 'general.print_customer_copy_prompt'.tr,
           confirmText: 'Yes, print',
           cancelText: 'No',
         )) ??
