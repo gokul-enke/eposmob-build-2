@@ -196,8 +196,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   /// Returns a description for the selected theme
   String _getThemeDescription(String themeId) {
-    final prefix =
-        _isStandardPdf ? 'printer_settings.desc_pdf_' : 'printer_settings.desc_';
+    final prefix = _isStandardPdf
+        ? 'printer_settings.desc_pdf_'
+        : 'printer_settings.desc_';
     final key = '$prefix$themeId';
     final translated = key.tr;
     if (translated != key) return translated;
@@ -572,8 +573,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         await prefs.remove(_receiptThemePrefsKey);
         await prefs.remove(
             PrinterSettingsProvider.userSelectedFlagKey(_paperSizePrefsKey));
-        await prefs.remove(PrinterSettingsProvider.userSelectedFlagKey(
-            _receiptThemePrefsKey));
+        await prefs.remove(
+            PrinterSettingsProvider.userSelectedFlagKey(_receiptThemePrefsKey));
       } else {
         await DevelopmentPrinterService.clearTargetSelection(
           _printerPrefsKey,
@@ -589,8 +590,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         await prefs.remove(_receiptThemePrefsKey);
         await prefs.remove(
             PrinterSettingsProvider.userSelectedFlagKey(_paperSizePrefsKey));
-        await prefs.remove(PrinterSettingsProvider.userSelectedFlagKey(
-            _receiptThemePrefsKey));
+        await prefs.remove(
+            PrinterSettingsProvider.userSelectedFlagKey(_receiptThemePrefsKey));
       }
 
       if (isPdfSharing) {
@@ -1015,7 +1016,6 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   Widget _buildHeader() {
     final isCompact = printerIsCompact(context);
-    final cardPadding = printerCardPadding(context);
 
     final titleBlock = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1044,7 +1044,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                     : 'printer_settings.title'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.semiBold,
-                  isCompact ? FontSize.s18 : FontSize.s20,
+                  isCompact ? FontSize.s20 : 24,
                   0.30,
                   ColorManager.textColor,
                 ),
@@ -1069,8 +1069,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       ],
     );
 
-    return PrinterSettingsCard(
-      padding: cardPadding,
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 8, horizontal: isCompact ? 0 : 4),
       child: isCompact
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1106,13 +1106,13 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           ? 'printer_settings.btn_resyncing'.tr
           : 'printer_settings.btn_resync_doc'.tr,
       size: Size.zero,
-      height: isCompact ? 36 : 40,
+      height: 44,
       width: isCompact ? double.infinity : 120,
       fontSize: isCompact ? 12 : 13,
       icon: const Icon(Icons.sync_rounded,
           size: 16, color: ColorManager.kPrimaryColor),
       boxColor: Colors.white,
-      borderColor: ColorManager.kPrimaryColor,
+      borderColor: const Color(0xFFDDE3EB),
       textColor: ColorManager.kPrimaryColor,
     );
   }
@@ -1124,13 +1124,13 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           ? 'printer_settings.btn_clear'.tr
           : 'printer_settings.btn_clear_printer'.tr,
       size: Size.zero,
-      height: isCompact ? 36 : 40,
+      height: 44,
       width: isCompact ? double.infinity : 100,
       fontSize: isCompact ? 12 : 13,
       icon: const Icon(Icons.restart_alt_rounded,
           size: 16, color: ColorManager.kButtonRed),
       boxColor: Colors.white,
-      borderColor: ColorManager.kButtonRed,
+      borderColor: const Color(0xFFE2E7EE),
       textColor: ColorManager.kButtonRed,
     );
   }
@@ -1289,7 +1289,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         decoration: BoxDecoration(
           color: isSelected
               ? ColorManager.kPrimaryColor.withValues(alpha: 0.05)
-              : Colors.grey.shade50,
+              : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
@@ -1314,10 +1314,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                     border: Border.all(color: Colors.grey.shade200),
                   ),
                   child: Icon(
-                    Icons.print_rounded,
+                    isSelected
+                        ? Icons.check_circle_rounded
+                        : Icons.print_outlined,
                     color: isSelected
                         ? ColorManager.kPrimaryColor
-                        : ColorManager.kGreyColor,
+                        : const Color(0xFF596579),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1366,9 +1368,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
               fontSize: 14,
               borderColor: isSelected
                   ? ColorManager.kPrimaryColor
-                  : ColorManager.kGreyColor,
+                  : const Color(0xFF596579),
               boxColor: isSelected ? ColorManager.kPrimaryColor : Colors.white,
-              textColor: isSelected ? Colors.white : ColorManager.kGreyColor,
+              textColor: isSelected ? Colors.white : const Color(0xFF596579),
             ),
           ],
         ),
@@ -1379,7 +1381,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       decoration: BoxDecoration(
         color: isSelected
             ? ColorManager.kPrimaryColor.withValues(alpha: 0.05)
-            : Colors.grey.shade50,
+            : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isSelected
@@ -1401,10 +1403,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             border: Border.all(color: Colors.grey.shade200),
           ),
           child: Icon(
-            Icons.print_rounded,
+            isSelected ? Icons.check_circle_rounded : Icons.print_outlined,
             color: isSelected
                 ? ColorManager.kPrimaryColor
-                : ColorManager.kGreyColor,
+                : const Color(0xFF596579),
           ),
         ),
         title: Text(
@@ -1437,9 +1439,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           width: 108,
           fontSize: 14,
           borderColor:
-              isSelected ? ColorManager.kPrimaryColor : ColorManager.kGreyColor,
+              isSelected ? ColorManager.kPrimaryColor : const Color(0xFF596579),
           boxColor: isSelected ? ColorManager.kPrimaryColor : Colors.white,
-          textColor: isSelected ? Colors.white : ColorManager.kGreyColor,
+          textColor: isSelected ? Colors.white : const Color(0xFF596579),
         ),
       ),
     );

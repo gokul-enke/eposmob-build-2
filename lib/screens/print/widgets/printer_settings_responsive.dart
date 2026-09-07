@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -29,7 +28,7 @@ EdgeInsets printerCardPadding(BuildContext context) =>
 double printerSectionGap(BuildContext context) =>
     printerIsCompact(context) ? 12 : 16;
 
-/// White page shell with SafeArea and responsive padding.
+/// Printer page shell with a quiet background and responsive padding.
 class PrinterSettingsPageShell extends StatelessWidget {
   final Widget child;
   final bool scrollable;
@@ -44,15 +43,24 @@ class PrinterSettingsPageShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SettingsPageShell(
-      scrollable: scrollable,
-      padding: padding,
-      child: child,
+    final width = MediaQuery.sizeOf(context).width;
+    final insets = padding ??
+        EdgeInsets.symmetric(
+          horizontal: printerHorizontalPadding(width),
+          vertical: printerVerticalPadding(width),
+        );
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: scrollable
+            ? SingleChildScrollView(padding: insets, child: child)
+            : Padding(padding: insets, child: SizedBox.expand(child: child)),
+      ),
     );
   }
 }
 
-/// Card container matching the Shopify-like settings style.
+/// Flat bordered surface for printer controls.
 class PrinterSettingsCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
@@ -65,7 +73,14 @@ class PrinterSettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SettingsContentCard(padding: padding, child: child);
+    return Material(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: Color(0xFFE2E7EE)),
+      ),
+      child: Padding(padding: padding, child: child),
+    );
   }
 }
 
@@ -213,83 +228,95 @@ class PrinterTabSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    final isCompact = width < kPrinterPhoneBreakpoint;
-
-    final tabs = _tabs
-        .map(
-          (tab) => _PrinterTabChip(
-            label: _tabLabel(tab.$1, compact: isCompact),
-            isSelected: selectedType == tab.$1,
-            onTap: () => onSelected(tab.$1),
-            minWidth: isCompact ? 88.0 : 120.0,
-          ),
-        )
-        .toList();
-
-    if (isCompact) {
-      return SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        clipBehavior: Clip.none,
-        padding: const EdgeInsetsDirectional.only(end: 4),
-        child: Row(children: tabs),
+    return LayoutBuilder(builder: (context, constraints) {
+      final compact = constraints.maxWidth < 760;
+      final tabs = _tabs
+          .map((tab) => _PrinterTabChip(
+                label: _tabLabel(tab.$1, compact: compact),
+                icon: switch (tab.$1) {
+                  'Billing' => Icons.receipt_long_outlined,
+                  'Quotation' => Icons.description_outlined,
+                  'Kitchen' => Icons.restaurant_outlined,
+                  'Barcode' => Icons.qr_code_rounded,
+                  _ => Icons.picture_as_pdf_outlined,
+                },
+                isSelected: selectedType == tab.$1,
+                onTap: () => onSelected(tab.$1),
+              ))
+          .toList();
+      return DecoratedBox(
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Color(0xFFDDE3EB))),
+        ),
+        child: compact
+            ? SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(children: tabs),
+              )
+            : Row(children: tabs.map((tab) => Expanded(child: tab)).toList()),
       );
-    }
-
-    return Row(children: tabs.map((t) => Expanded(child: t)).toList());
+    });
   }
 }
 
 class _PrinterTabChip extends StatelessWidget {
   final String label;
+  final IconData icon;
   final bool isSelected;
   final VoidCallback onTap;
-  final double minWidth;
 
   const _PrinterTabChip({
     required this.label,
+    required this.icon,
     required this.isSelected,
     required this.onTap,
-    required this.minWidth,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
+    final color =
+        isSelected ? ColorManager.kPrimaryColor : const Color(0xFF596579);
+    return Semantics(
+      selected: isSelected,
+      button: true,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(24),
-          child: Container(
-            height: 44,
-            constraints: BoxConstraints(minWidth: minWidth),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+          child: Ink(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
             decoration: BoxDecoration(
               color: isSelected
-                  ? ColorManager.kPrimaryColor
-                  : Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
+                  ? ColorManager.kPrimaryColor.withValues(alpha: 0.06)
+                  : Colors.transparent,
+              border: Border(
+                  bottom: BorderSide(
+                width: 3,
                 color: isSelected
                     ? ColorManager.kPrimaryColor
-                    : Colors.grey.shade300,
-              ),
+                    : Colors.transparent,
+              )),
             ),
-            child: Center(
-              child: Text(
-                label,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: buildCustomStyle(
-                  FontWeightManager.semiBold,
-                  FontSize.s12,
-                  0.18,
-                  isSelected ? Colors.white : ColorManager.textColor,
-                ),
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 18, color: color),
+                const SizedBox(width: 8),
+                Flexible(
+                    child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s12,
+                    0,
+                    color,
+                  ),
+                )),
+              ],
             ),
           ),
         ),
@@ -298,7 +325,7 @@ class _PrinterTabChip extends StatelessWidget {
   }
 }
 
-/// B2C / B2B segment pills with helper text below.
+/// Secondary B2C / B2B selector with contextual helper text.
 class PrinterSegmentSelector extends StatelessWidget {
   final String selectedSegment;
   final ValueChanged<String> onSelected;
@@ -322,24 +349,19 @@ class PrinterSegmentSelector extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () => onSelected(segment),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(8),
           child: Container(
-            height: isCompact ? 44 : 38,
+            height: 44,
             width: isCompact ? double.infinity : null,
             padding: EdgeInsets.symmetric(
               horizontal: isCompact ? 10 : 18,
               vertical: isCompact ? 10 : 8,
             ),
             decoration: BoxDecoration(
-              color: isActive
-                  ? ColorManager.kPrimaryColor.withValues(alpha: 0.12)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(20),
+              color: isActive ? Colors.white : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isActive
-                    ? ColorManager.kPrimaryColor
-                    : Colors.grey.shade300,
-                width: 1.5,
+                color: isActive ? const Color(0xFFDDE3EB) : Colors.transparent,
               ),
             ),
             child: Center(
@@ -377,26 +399,26 @@ class PrinterSegmentSelector extends StatelessWidget {
       ),
     ];
 
-    final selectorRow = Row(
-      mainAxisSize: isCompact ? MainAxisSize.max : MainAxisSize.min,
-      children: [
-        isCompact ? Expanded(child: pills[0]) : pills[0],
-        const SizedBox(width: 8),
-        isCompact ? Expanded(child: pills[1]) : pills[1],
-      ],
+    final selectorRow = Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEBEFF4),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: isCompact ? MainAxisSize.max : MainAxisSize.min,
+        children: [
+          isCompact ? Expanded(child: pills[0]) : pills[0],
+          const SizedBox(width: 4),
+          isCompact ? Expanded(child: pills[1]) : pills[1],
+        ],
+      ),
     );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (isCompact)
-          selectorRow
-        else
-          FractionallySizedBox(
-            widthFactor: 0.5,
-            alignment: Alignment.centerLeft,
-            child: selectorRow,
-          ),
+        selectorRow,
         const SizedBox(height: 8),
         Text(
           helperText,
@@ -447,18 +469,32 @@ class PrinterDropdownField extends StatelessWidget {
           ),
         );
 
-        final dropdown = BuildBoxShadowContainer(
-          circleRadius: 10,
-          showShadow: false,
-          border: Border.all(color: Colors.grey.shade300),
-          color: Colors.grey.shade50,
-          padding: const EdgeInsetsDirectional.symmetric(horizontal: 12),
-          child: DropdownButton<String>(
-            value: value,
-            isExpanded: true,
-            underline: const SizedBox(),
-            items: items,
-            onChanged: onChanged,
+        final dropdown = DecoratedBox(
+          decoration: BoxDecoration(
+            color: const Color(0xFFFAFBFC),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFDDE3EB)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: value,
+                isExpanded: true,
+                borderRadius: BorderRadius.circular(12),
+                dropdownColor: Colors.white,
+                focusColor: ColorManager.kPrimaryColor.withValues(alpha: 0.12),
+                icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s14,
+                  0,
+                  ColorManager.textColor,
+                ),
+                items: items,
+                onChanged: onChanged,
+              ),
+            ),
           ),
         );
 
@@ -627,7 +663,7 @@ class PrinterSettingsSplitLayout extends StatefulWidget {
     super.key,
     required this.settingsColumn,
     required this.printerColumn,
-    this.breakpoint = kPrinterPhoneBreakpoint,
+    this.breakpoint = 900,
   });
 
   @override
@@ -821,7 +857,7 @@ class PrinterScopeChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.grey.shade300),
       ),
       child: Row(
