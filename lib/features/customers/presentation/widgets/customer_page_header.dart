@@ -92,7 +92,7 @@ class CustomerPageHeader extends StatelessWidget {
             FilledButton.icon(
               onPressed: onAddCustomer,
               icon: const Icon(Icons.add_rounded, size: 19),
-              label: Text(compact ? 'Add' : 'Add customer'),
+              label: Text(compact ? 'customers.add_short'.tr : 'customers.add'.tr),
               style: FilledButton.styleFrom(
                 minimumSize: const Size(0, 44),
                 padding: const EdgeInsets.symmetric(horizontal: 16),

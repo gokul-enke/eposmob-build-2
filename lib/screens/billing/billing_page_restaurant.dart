@@ -13,6 +13,8 @@ import 'package:pos_machine/components/build_tax_modal.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/delivery_method_display.dart';
+import 'package:pos_machine/models/delivery_method_registry.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
@@ -5334,7 +5336,8 @@ class BillingPageState extends State<BillingPageRestaurant>
       // Get selected payment methods (optional - no validation required)
       List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
 
-      if (deliveryMethod == "Car Delivery" && _carNumberController.text == "") {
+      if (DeliveryMethodRegistry.requiresCarNumber(deliveryMethod) &&
+          _carNumberController.text == "") {
         showScaffoldError(
           context: context,
           message: "billing.enter_car_number".tr,
@@ -5736,7 +5739,8 @@ class BillingPageState extends State<BillingPageRestaurant>
       // Get selected payment methods (optional - no validation required)
       List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
 
-      if (deliveryMethod == "Car Delivery" && _carNumberController.text == "") {
+      if (DeliveryMethodRegistry.requiresCarNumber(deliveryMethod) &&
+          _carNumberController.text == "") {
         showScaffoldError(
           context: context,
           message: "billing.enter_car_number".tr,
@@ -6371,13 +6375,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                   const SizedBox(width: 12),
                   // Delivery Method Icon
                   _buildQuickAccessIcon(
-                    icon: deliveryMethod == "Store Takeaway"
-                        ? Icons.store
-                        : deliveryMethod == "Car Delivery"
-                            ? Icons.car_rental
-                            : deliveryMethod == "Door Delivery"
-                                ? Icons.doorbell_outlined
-                                : Icons.local_shipping,
+                    icon: DeliveryMethodDisplay.iconFor(deliveryMethod),
                     label: _getDeliveryMethodLabel(),
                     color: ColorManager.kButtonBlue,
                     onTap: () => _showDeliveryMethodModal(),
@@ -6516,21 +6514,8 @@ class BillingPageState extends State<BillingPageRestaurant>
     return 'billing.payment_tab'.tr; // Default
   }
 
-  String _getDeliveryMethodLabel() {
-    // Map delivery method names to translation keys
-    switch (deliveryMethod) {
-      case "Store Takeaway":
-        return 'common.store_takeaway'.tr;
-      case "Car Delivery":
-        return 'common.car_delivery'.tr;
-      case "Door Delivery":
-        return 'common.door_delivery'.tr;
-      case "Third Party Logistics":
-        return 'common.third_party_logistics'.tr;
-      default:
-        return deliveryMethod.tr;
-    }
-  }
+  String _getDeliveryMethodLabel() =>
+      DeliveryMethodDisplay.labelFor(deliveryMethod);
 
   Widget _buildQuickAccessIcon({
     required IconData icon,
@@ -8834,7 +8819,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                'Loading products...',
+                                'billing.loading_products'.tr,
                                 style: TextStyle(
                                   color: Colors.grey.shade600,
                                   fontSize: 13,
@@ -8853,7 +8838,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                                       size: 64, color: Colors.grey.shade300),
                                   const SizedBox(height: 16),
                                   Text(
-                                    "No products available",
+                                    'billing.no_products_available'.tr,
                                     style: TextStyle(
                                       color: Colors.grey.shade500,
                                       fontSize: 16,
@@ -8862,8 +8847,8 @@ class BillingPageState extends State<BillingPageRestaurant>
                                   const SizedBox(height: 12),
                                   CustomRoundButton(
                                     title: _isResyncingProducts
-                                        ? 'Resyncing...'
-                                        : 'Resync Products',
+                                        ? 'restaurant.resyncing'.tr
+                                        : 'restaurant.resync_products'.tr,
                                     fct: _isResyncingProducts
                                         ? () {}
                                         : _resyncProductsFromMainGrid,
@@ -9093,20 +9078,23 @@ class BillingPageState extends State<BillingPageRestaurant>
       if (localProductProvider.sellableProducts.isEmpty) {
         showScaffoldError(
           context: context,
-          message:
-              'Resync finished but no products were returned. Check tenant/API key or internet.',
+          message: 'settings_ui.msg_resync_empty'.tr,
         );
       } else {
         showScaffold(
           context: context,
-          message: 'Products resynced successfully',
+          message: 'settings_ui.msg_resync_success'.trParams({
+            'count': '${localProductProvider.sellableProducts.length}',
+          }),
         );
       }
     } catch (e) {
       if (!mounted) return;
       showScaffoldError(
         context: context,
-        message: 'Failed to resync products: ${e.toString()}',
+        message: 'settings_ui.msg_resync_failed'.trParams({
+          'error': e.toString(),
+        }),
       );
     } finally {
       if (mounted) {
@@ -9230,7 +9218,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           child: Padding(
             padding: const EdgeInsets.all(6),
             child: Text(
-              "${product.productName} / ${product.unit}",
+           "${product.localizedName} / ${product.unit}",
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(

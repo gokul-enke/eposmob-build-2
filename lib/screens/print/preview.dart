@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:intl/intl.dart';
 
@@ -18,7 +19,7 @@ class ReceiptPreviewWidget extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Receipt Preview'),
+        title: Text('ui_chrome.receipt_preview'.tr),
       ),
       body: Center(
         child: Container(

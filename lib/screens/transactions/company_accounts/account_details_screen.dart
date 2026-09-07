@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/company_accounts.dart';
 import 'package:pos_machine/providers/company_account_provider.dart';
@@ -701,7 +702,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
-          status.toUpperCase(),
+          UiCodeLabels.status(status),
           style: TextStyle(
             color: textColor,
             fontSize: 10,

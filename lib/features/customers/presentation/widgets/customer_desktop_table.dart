@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 
@@ -75,7 +76,7 @@ class CustomerDesktopTable extends StatelessWidget {
       final customer = entry.value;
       final balance = customer.balance ?? 0;
       final displayNumber = index + 1 + (currentPage - 1) * itemsPerPage;
-      final name = customer.name?.trim();
+      final name = CustomerDisplay.name(customer.name);
 
       return TableRow(
         decoration: const BoxDecoration(
@@ -98,7 +99,7 @@ class CustomerDesktopTable extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    name == null || name.isEmpty ? 'Unnamed customer' : name,
+                    name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -134,7 +135,7 @@ class CustomerDesktopTable extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: () => onViewCustomer(customer),
                 icon: const Icon(Icons.visibility, size: 15),
-                label: const Text('View'),
+                label: Text('customers.view'.tr),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(0, 36),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -194,12 +195,12 @@ class CustomerDesktopTable extends StatelessWidget {
                 children: [
                   TableRow(
                     children: [
-                      _headerCell('NO.', alignment: TextAlign.center),
-                      _headerCell('CUSTOMER'),
-                      _headerCell('BALANCE'),
-                      _headerCell('PHONE'),
-                      _headerCell('TYPE'),
-                      _headerCell('ACTION'),
+                      _headerCell('customers.col_no'.tr, alignment: TextAlign.center),
+                      _headerCell('customers.col_customer'.tr),
+                      _headerCell('customers.col_balance'.tr),
+                      _headerCell('customers.col_phone'.tr),
+                      _headerCell('customers.col_type'.tr),
+                      _headerCell('customers.col_action'.tr),
                     ],
                   ),
                 ],

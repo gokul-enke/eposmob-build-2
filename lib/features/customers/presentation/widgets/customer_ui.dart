@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 
 /// Customer-list presentation primitives.
@@ -6,6 +7,18 @@ import 'package:pos_machine/resources/color_manager.dart';
 /// Keep these feature-scoped until another module needs the same visual and
 /// interaction contract. At that point, promote the genuinely shared pieces
 /// instead of copying them.
+abstract final class CustomerDisplay {
+  static bool isUnnamed(String? name) {
+    final trimmed = name?.trim() ?? '';
+    if (trimmed.isEmpty) return true;
+    final lower = trimmed.toLowerCase();
+    return lower == 'no name' || lower == 'unnamed';
+  }
+
+  static String name(String? value) =>
+      isUnnamed(value) ? 'customers.unnamed'.tr : value!.trim();
+}
+
 abstract final class CustomerUiColors {
   static const canvas = Color(0xFFF6F6F7);
   static const surface = Colors.white;
@@ -63,11 +76,13 @@ class CustomerAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final trimmedName = name?.trim() ?? '';
+    final trimmedName = CustomerDisplay.isUnnamed(name) ? '' : name!.trim();
     final initial = trimmedName.isEmpty ? '#' : trimmedName[0].toUpperCase();
 
     return Semantics(
-      label: trimmedName.isEmpty ? 'Unnamed customer' : '$trimmedName avatar',
+      label: trimmedName.isEmpty
+          ? 'customers.unnamed'.tr
+          : 'customers.avatar_label'.trParams({'name': trimmedName}),
       excludeSemantics: true,
       child: Container(
         width: size,
@@ -108,7 +123,7 @@ class CustomerTypeBadge extends StatelessWidget {
         isBusiness ? CustomerUiColors.green : ColorManager.kPrimaryColor;
 
     return Semantics(
-      label: 'Customer type $value',
+      label: 'customers.type_semantics'.trParams({'type': value}),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
         decoration: BoxDecoration(
@@ -116,7 +131,7 @@ class CustomerTypeBadge extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
         ),
         child: Text(
-          value,
+          isBusiness ? 'customers.type_b2b'.tr : 'customers.type_b2c'.tr,
           style: TextStyle(
             color: foreground,
             fontSize: 11,
@@ -216,17 +231,17 @@ class CustomerEmptyState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 18),
-            const Text(
-              'No customers found',
-              style: TextStyle(
+            Text(
+              'customers.empty_title'.tr,
+              style: const TextStyle(
                 color: CustomerUiColors.heading,
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
-              'Try changing or clearing the filters above.',
+            Text(
+              'customers.empty_subtitle'.tr,
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: CustomerUiColors.muted,
@@ -269,7 +284,10 @@ class CustomerPaginationBar extends StatelessWidget {
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 440;
           final countLabel = Text(
-            '$visibleItemCount customer${visibleItemCount == 1 ? '' : 's'} on this page',
+            visibleItemCount == 1
+                ? 'customers.count_on_page_one'.tr
+                : 'customers.count_on_page'
+                    .trParams({'count': '$visibleItemCount'}),
             style: const TextStyle(
               color: CustomerUiColors.muted,
               fontSize: 12,
@@ -280,7 +298,7 @@ class CustomerPaginationBar extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               _CustomerPageButton(
-                tooltip: 'Previous page',
+                tooltip: 'pagination.previous'.tr,
                 icon: Icons.chevron_left_rounded,
                 onPressed: currentPage > 1
                     ? () => onPageChanged(currentPage - 1)
@@ -289,7 +307,10 @@ class CustomerPaginationBar extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: Text(
-                  'Page $currentPage of $totalPages',
+                  'pagination.page_of'.trParams({
+                    'current': '$currentPage',
+                    'total': '$totalPages',
+                  }),
                   style: const TextStyle(
                     color: CustomerUiColors.body,
                     fontSize: 12,
@@ -298,7 +319,7 @@ class CustomerPaginationBar extends StatelessWidget {
                 ),
               ),
               _CustomerPageButton(
-                tooltip: 'Next page',
+                tooltip: 'pagination.next'.tr,
                 icon: Icons.chevron_right_rounded,
                 onPressed: currentPage < totalPages
                     ? () => onPageChanged(currentPage + 1)

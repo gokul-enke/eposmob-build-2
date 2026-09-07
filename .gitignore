@@ -11,6 +11,7 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+.tools/
 
 # IntelliJ related
 *.iml
@@ -74,3 +75,4 @@ Todo.md
 /tmp
 /artifacts
 /project-tracker
+/.tools

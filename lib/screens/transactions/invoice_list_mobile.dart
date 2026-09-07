@@ -11,6 +11,7 @@ import '../../components/build_round_button.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import '../../helpers/ui_code_labels.dart';
 
 /// Mobile card-based layout for the invoice list screen.
 ///
@@ -219,7 +220,7 @@ class InvoiceMobileView extends StatelessWidget {
               items:
                   statusOptions.where((s) => s != "All Status").toList(),
               onChanged: onStatusChanged,
-              displayText: (status) => status.toUpperCase(),
+              displayText: (status) => UiCodeLabels.status(status),
               height: 45,
               margin: EdgeInsets.zero,
             ),
@@ -233,7 +234,7 @@ class InvoiceMobileView extends StatelessWidget {
                   .where((s) => s != "All ZATCA Status")
                   .toList(),
               onChanged: onZatcaStatusChanged,
-              displayText: (status) => status.toUpperCase(),
+              displayText: (status) => UiCodeLabels.zatca(status),
               height: 45,
               margin: EdgeInsets.zero,
             ),
@@ -241,7 +242,7 @@ class InvoiceMobileView extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: CustomRoundButton(
-                title: "Reset",
+                title: "general.reset".tr,
                 boxColor: Colors.white,
                 textColor: ColorManager.kPrimaryColor,
                 fct: onReset,
@@ -686,14 +687,14 @@ class _InvoiceCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
       child: Text(
-        status.toUpperCase(),
+        UiCodeLabels.status(status),
         style: TextStyle(color: fg, fontSize: 9, fontWeight: FontWeight.bold),
       ),
     );
   }
 
   Widget _zatcaChip(Invoice invoice) {
-    String label = "NOT SENT";
+    String label = 'invoice.zatca_status_not_sent'.tr;
     Color bg = Colors.orange.withOpacity(0.12);
     Color fg = Colors.orange;
 
@@ -708,15 +709,15 @@ class _InvoiceCard extends StatelessWidget {
         zatcaRequestStatus == 'pending' || zatcaRequestStatus == 'processing';
 
     if (isPass) {
-      label = "SENT";
+      label = 'invoice.zatca_status_sent'.tr;
       bg = Colors.green.withOpacity(0.12);
       fg = Colors.green;
     } else if (isFailed) {
-      label = "FAILED";
+      label = 'invoice.zatca_status_failed'.tr;
       bg = Colors.red.withOpacity(0.12);
       fg = Colors.red;
     } else if (isPending) {
-      label = "PENDING";
+      label = 'invoice.zatca_status_pending'.tr;
       bg = Colors.blue.withOpacity(0.12);
       fg = Colors.blue;
     }

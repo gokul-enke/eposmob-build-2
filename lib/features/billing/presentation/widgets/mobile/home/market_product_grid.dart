@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import 'package:pos_machine/components/build_dialog_box.dart';
 
@@ -408,13 +409,13 @@ class _ListStockChip extends StatelessWidget {
   String get _label {
     switch (status) {
       case ProductStockDisplayStatus.available:
-        return 'Available';
+        return 'stock.status_available'.tr;
       case ProductStockDisplayStatus.lowStock:
-        return 'Low Stock';
+        return 'stock.status_low_stock'.tr;
       case ProductStockDisplayStatus.atReorderLevel:
-        return 'At Reorder Level';
+        return 'stock.status_at_reorder_level'.tr;
       case ProductStockDisplayStatus.outOfStock:
-        return 'Out of Stock';
+        return 'stock.status_out_of_stock'.tr;
     }
   }
 

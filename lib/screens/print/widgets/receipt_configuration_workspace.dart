@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -211,10 +212,10 @@ class _ReceiptConfigurationWorkspaceState
     // the user asks for it.
     return PrinterDisclosureCard(
       icon: Icons.receipt_long_outlined,
-      title: 'Receipt layout & preview',
+      title: 'printer_settings.preview_title'.tr,
       subtitle: config == null
-          ? 'No Bill document configuration is currently synced'
-          : 'Check synced labels and preview the printed receipt',
+          ? 'printer_settings.preview_empty'.tr
+          : 'printer_settings.preview_subtitle'.tr,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -233,7 +234,10 @@ class _ReceiptConfigurationWorkspaceState
                 ),
                 _SummaryChip(
                   icon: Icons.visibility_outlined,
-                  text: '$visibleCount/${_options.length} visible',
+                  text: 'printer_settings.visible_count'.trParams({
+                    'visible': '$visibleCount',
+                    'total': '${_options.length}',
+                  }),
                 ),
               ],
             ),
@@ -262,6 +266,7 @@ class _ReceiptConfigurationWorkspaceState
   Widget _buildFieldReferenceCard() {
     return PrinterDisclosureCard(
       embedded: true,
+      collapsible: false,
       icon: Icons.list_alt_rounded,
       title: 'Field reference',
       subtitle: 'Every synced label and what supplies its value',
@@ -279,6 +284,7 @@ class _ReceiptConfigurationWorkspaceState
   Widget _buildLivePreviewCard() {
     return PrinterDisclosureCard(
       embedded: true,
+      collapsible: false,
       icon: Icons.preview_outlined,
       title: 'Live preview',
       subtitle: 'Render a sample receipt using the current settings',
@@ -786,17 +792,17 @@ class _ReceiptConfigurationWorkspaceState
   static String _languageName(String? language) {
     switch (language?.toLowerCase().replaceAll('-', '_')) {
       case 'en':
-        return 'English config';
+        return 'printer_settings.lang_english_config'.tr;
       case 'ar':
-        return 'Arabic config';
+        return 'printer_settings.lang_arabic_config'.tr;
       case 'en_ar':
       case 'ar_en':
       case 'bilingual':
-        return 'Bilingual config';
+        return 'printer_settings.lang_bilingual_config'.tr;
       default:
         return language?.trim().isNotEmpty == true
             ? language!
-            : 'Language not set';
+            : 'printer_settings.lang_not_set'.tr;
     }
   }
 
@@ -1049,8 +1055,7 @@ class _CommonReceiptPreviewState extends State<_CommonReceiptPreview> {
                     color: Colors.amber.shade700, size: 26),
                 const SizedBox(height: 9),
                 Text(
-                  'Rendered preview is unavailable. Showing the configuration '
-                  'visibility guide instead.',
+                  'printer_settings.preview_unavailable'.tr,
                   textAlign: TextAlign.center,
                   style:
                       TextStyle(fontSize: 10.5, color: Colors.amber.shade900),
@@ -1061,7 +1066,7 @@ class _CommonReceiptPreviewState extends State<_CommonReceiptPreview> {
                     _previewFuture = _render();
                   }),
                   icon: const Icon(Icons.refresh_rounded, size: 16),
-                  label: const Text('Retry rendered preview'),
+                  label: Text('printer_settings.retry_preview'.tr),
                 ),
                 const SizedBox(height: 10),
                 _ReceiptSample(

@@ -1097,7 +1097,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                                     const Color(0xFFD97706).withOpacity(0.4)),
                           ),
                           child: Text(
-                            'PENDING',
+                            'ui_codes.status_pending'.tr,
                             style: buildCustomStyle(
                                 FontWeightManager.semiBold,
                                 widget.isCompact ? FontSize.s10 : FontSize.s11,

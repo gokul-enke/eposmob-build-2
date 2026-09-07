@@ -75,13 +75,13 @@ class _TabBarForEditProductState extends State<TabBarForEditProduct>
                       onPressed: () {
                         sideBarController.index.value = 14;
                       },
-                      text: 'All Products',
+                      text: 'product_tabs.back_all_products'.tr,
                       // Optionally, you can customize the color and size
                       // color: ColorManager.customColor,
                       // size: 20.0,
                     ),
                     Text(
-                      'Edit Product',
+                      'product_tabs.heading_edit_product'.tr,
                       style: buildCustomStyle(FontWeightManager.semiBold,
                           FontSize.s20, 0.30, ColorManager.textColor),
                     ),
@@ -91,13 +91,13 @@ class _TabBarForEditProductState extends State<TabBarForEditProduct>
                     TabBar(
                       controller: tabController,
                       key: UniqueKey(),
-                      tabs: const [
+                      tabs: [
                         Tab(
-                          text: 'Primary Details',
+                          text: 'product_tabs.tab_primary_details'.tr,
                         ),
-                        Tab(text: 'Product Names'),
-                        Tab(text: 'Product Properties'),
-                        Tab(text: 'Image/Video'),
+                        Tab(text: 'product_tabs.tab_product_names'.tr),
+                        Tab(text: 'product_tabs.tab_product_properties'.tr),
+                        Tab(text: 'product_tabs.tab_image_video'.tr),
                       ],
                       labelColor: ColorManager.kPrimaryColor,
                       indicatorColor:

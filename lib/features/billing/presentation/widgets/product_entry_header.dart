@@ -196,10 +196,10 @@ class ProductEntryHeader extends StatelessWidget {
                                                 unitPriceController.text =
                                                     defaultPrice.toString();
                                                 quantityController.text = '1';
-                                                billingProvider
-                                                    .selectedProductNameController
-                                                    .text = selectedProduct
-                                                        .productName ??
+                                               billingProvider
+                                                   .selectedProductNameController
+                                                   .text = selectedProduct
+                                                        .localizedName ??
                                                     '';
                                                 barcodeController.text =
                                                     selectedProduct.barcode ??
@@ -468,10 +468,10 @@ class ProductEntryHeader extends StatelessWidget {
                                         unitPriceController.text =
                                             defaultPrice.toString();
                                         quantityController.text = '1';
-                                        billingProvider
-                                                .selectedProductNameController
-                                                .text =
-                                            selectedProduct.productName ?? '';
+                                       billingProvider
+                                               .selectedProductNameController
+                                               .text =
+                                            selectedProduct.localizedName ?? '';
                                         barcodeController.text =
                                             selectedProduct.barcode ?? '';
                                       },

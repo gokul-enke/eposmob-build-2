@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -138,12 +139,12 @@ class _PosSecurityKeyDialogState extends State<_PosSecurityKeyDialog> {
         TextButton(
           key: const ValueKey(PosSecurityKeyDialog.cancelButtonKey),
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
+          child: Text('general.cancel'.tr),
         ),
         FilledButton(
           key: const ValueKey(PosSecurityKeyDialog.verifyButtonKey),
           onPressed: _verify,
-          child: const Text('Verify'),
+          child: Text('general.verify'.tr),
         ),
       ],
     );

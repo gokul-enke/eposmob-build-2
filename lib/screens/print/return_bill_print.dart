@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -151,12 +152,12 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Permissions Required'),
+        title: Text('ui_codes.permissions_required'.tr),
         content: const Text(
             'This app needs Bluetooth and Location permissions to scan for printers.'),
         actions: [
           TextButton(
-            child: const Text('OK'),
+            child: Text('general.ok'.tr),
             onPressed: () {
               Navigator.of(context).pop();
               openAppSettings();

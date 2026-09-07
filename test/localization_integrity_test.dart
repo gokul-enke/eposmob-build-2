@@ -39,10 +39,14 @@ Set<String> _placeholders(String value) {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('only English and Arabic are selectable application locales', () {
+  test('the selectable application locales are the ones we ship bundles for',
+      () {
+    // Adding a language here is a deliberate release decision: the picker in
+    // Settings, the API's `?locale=` (via ApiLocale.supported, which derives
+    // from this list) and the bundled JSON must all move together.
     expect(
       LocalizationService.supportedLocales,
-      const [Locale('en'), Locale('ar')],
+      const [Locale('en'), Locale('ar'), Locale('ml')],
     );
   });
 
@@ -60,11 +64,24 @@ void main() {
 
   test('unsupported runtime locale updates are rejected safely', () async {
     SharedPreferences.setMockInitialValues({});
-    await LocalizationService.updateLocale(const Locale('ml'));
+    // `hi` is not shipped; picking it must not leave the app on a locale with
+    // no bundle, which would render every screen as raw dot-notation keys.
+    await LocalizationService.updateLocale(const Locale('hi'));
 
     expect(LocalizationService.locale, const Locale('en'));
     final preferences = await SharedPreferences.getInstance();
     expect(preferences.getString('app_locale_code'), 'en');
+  });
+
+  test('a supported runtime locale is accepted and persisted', () async {
+    SharedPreferences.setMockInitialValues({});
+    await LocalizationService.updateLocale(const Locale('ml'));
+
+    expect(LocalizationService.locale, const Locale('ml'));
+    final preferences = await SharedPreferences.getInstance();
+    expect(preferences.getString('app_locale_code'), 'ml');
+
+    await LocalizationService.updateLocale(const Locale('en'));
   });
 
   test('English and Arabic resources have identical, non-empty keys', () async {

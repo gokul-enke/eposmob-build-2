@@ -159,12 +159,12 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Permissions Required'),
+        title: Text('ui_codes.permissions_required'.tr),
         content: const Text(
             'This app needs Bluetooth and Location permissions to scan for printers.'),
         actions: [
           TextButton(
-            child: const Text('OK'),
+            child: Text('general.ok'.tr),
             onPressed: () {
               Navigator.of(context).pop();
               openAppSettings();
@@ -352,22 +352,22 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Print Transaction List?'),
+          title: Text('ui_codes.print_transaction_list'.tr),
           content: const Text(
             'Do you want to include transaction details in this print?',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
+              child: Text('general.cancel'.tr),
             ),
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('No'),
+              child: Text('general.no'.tr),
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Yes'),
+              child: Text('general.yes'.tr),
             ),
           ],
         );

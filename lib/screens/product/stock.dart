@@ -13,6 +13,7 @@ import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
@@ -135,7 +136,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
       debugPrint("Error loading stocks: $error");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error loading stocks: $error")),
+          SnackBar(content: Text('stock.error_loading_stocks'.trParams({'error': '$error'}))),
         );
         setState(() {
           initLoading = false;
@@ -334,7 +335,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
     showEditStockDialog(
       context: context,
       stockId: stock.stockId!,
-      title: 'Edit Stock: ${stock.productName ?? ''}',
+      title: 'stock.edit_stock_title'.trParams({'productName': stock.productName ?? ''}),
       initialRetailPrice: stock.retailPrice ?? '',
       initialMrp: stock.mrp ?? '',
       initialPurchasePrice: stock.purchaseRate ?? '',
@@ -929,6 +930,11 @@ class _AddStockScreenState extends State<AddStockScreen> {
   }
 
   Widget _buildStockStatusDropdown() {
+    final statusOptions = [
+      'Out of Stock',
+      'Low Stock',
+      'At Reorder Level',
+    ];
     return BuildDropDownWithSearch<String>(
       title: null,
       showName: false,
@@ -936,14 +942,14 @@ class _AddStockScreenState extends State<AddStockScreen> {
       value: stockStatusController.text == "All Statuses"
           ? null
           : stockStatusController.text,
-      items: const ["Out of Stock", "Low Stock", "At Reorder Level"],
+      items: statusOptions,
       onChanged: (String? newValue) {
         setState(() {
           stockStatusController.text = newValue ?? "All Statuses";
         });
         searchStocks();
       },
-      displayText: (status) => status,
+      displayText: UiCodeLabels.stockStatus,
       searchController: TextEditingController(),
       height: 45,
       margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),

@@ -16,7 +16,9 @@ import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/add_to_cart.dart';
 import 'package:pos_machine/models/add_to_order.dart';
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/helpers/delivery_method_display.dart';
 import 'package:pos_machine/models/delivery_method.dart';
+import 'package:pos_machine/models/delivery_method_registry.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/models/order_details.dart';
@@ -1300,14 +1302,7 @@ class _EditOrderState extends State<EditOrder> {
                     child: Column(
                       children: [
                         Icon(
-                          method.name == "Store Takeaway"
-                              ? Icons.store
-                              : method.name == "Car Delivery"
-                                  ? Icons.car_rental
-                                  : method.name == "Door Delivery"
-                                      ? Icons.doorbell_outlined
-                                      : Icons
-                                          .local_shipping, // Default icon for other methods
+                          DeliveryMethodDisplay.iconForMethod(method),
                           size: 16,
                           color: Colors.black,
                         ),
@@ -1327,7 +1322,7 @@ class _EditOrderState extends State<EditOrder> {
               }).toList(),
             ),
             const SizedBox(height: 10),
-            if (deliveryMethod == "Car Delivery")
+            if (DeliveryMethodRegistry.requiresCarNumber(deliveryMethod))
               SizedBox(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.start,
@@ -1869,7 +1864,7 @@ class _EditOrderState extends State<EditOrder> {
           context: context,
           message: 'edit_order.msg_select_payment'.tr,
         );
-      } else if (deliveryMethod == "Car Delivery" &&
+      } else if (DeliveryMethodRegistry.requiresCarNumber(deliveryMethod) &&
           _carNumberController.text == "") {
         showScaffoldError(
           context: context,
@@ -1997,7 +1992,7 @@ class _EditOrderState extends State<EditOrder> {
           context: context,
           message: 'edit_order.msg_select_payment'.tr,
         );
-      } else if (deliveryMethod == "Car Delivery" &&
+      } else if (DeliveryMethodRegistry.requiresCarNumber(deliveryMethod) &&
           _carNumberController.text == "") {
         showScaffoldError(
           context: context,
@@ -2179,7 +2174,7 @@ class _EditOrderState extends State<EditOrder> {
           context: context,
           message: 'edit_order.msg_select_payment'.tr,
         );
-      } else if (deliveryMethod == "Car Delivery" &&
+      } else if (DeliveryMethodRegistry.requiresCarNumber(deliveryMethod) &&
           _carNumberController.text == "") {
         showScaffoldError(
           context: context,
@@ -2242,7 +2237,7 @@ class _EditOrderState extends State<EditOrder> {
           // if (response["status"] == "success") {
           showScaffold(
             context: context,
-            message: "Order Confirmed Successfully",
+            message: 'edit_order.msg_order_confirmed'.tr,
           );
           sideBarController.index.value = 90;
           // Clear the mobile number after successful save

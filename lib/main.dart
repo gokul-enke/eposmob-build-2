@@ -50,6 +50,7 @@ import 'package:pos_machine/providers/whatsapp_provider.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/bank_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
+import 'package:pos_machine/providers/printer_settings_provider.dart';
 import 'package:pos_machine/providers/pine_labs_terminal_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/providers/quotations_provider.dart';
@@ -382,6 +383,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SyncProvider()),
         ChangeNotifierProvider(create: (_) => SharedPreferenceProvider()),
         ChangeNotifierProvider(create: (_) => StoreSessionProvider()),
+        ChangeNotifierProvider(create: (_) => PrinterSettingsProvider()),
         ChangeNotifierProvider(create: (_) => TableProvider()),
         ChangeNotifierProvider(create: (_) => MenuProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()),

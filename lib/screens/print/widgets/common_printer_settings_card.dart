@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -97,12 +98,12 @@ class _CommonPrinterSettingsCardState extends State<CommonPrinterSettingsCard> {
       children: [
         PrinterSectionHeader(
           icon: Icons.settings_input_component_rounded,
-          title: 'Printer Driver Settings',
-          subtitle: 'How standard A4/A5 PDFs are sent to Windows',
+          title: 'printer_settings.driver_settings'.tr,
+          subtitle: 'printer_settings.driver_settings_sub'.tr,
           trailing: TextButton.icon(
             onPressed: isInteractive ? _resetSetting : null,
             icon: const Icon(Icons.restore, size: 18),
-            label: const Text('Reset'),
+            label: Text('general.reset'.tr),
             style: TextButton.styleFrom(
               foregroundColor: ColorManager.kPrimaryColor,
               padding: EdgeInsets.symmetric(
@@ -119,8 +120,8 @@ class _CommonPrinterSettingsCardState extends State<CommonPrinterSettingsCard> {
           onChanged: isInteractive ? _updateSetting : null,
           title: Text(
             _usePrinterSettings
-                ? 'Use the selected printer’s saved media settings'
-                : 'Use the PDF’s selected A4/A5 page size',
+                ? 'printer_settings.use_printer_media'.tr
+                : 'printer_settings.use_pdf_page_size'.tr,
             // buildCustomStyle bakes in TextOverflow.ellipsis, which clips to a
             // single line unless maxLines is given explicitly.
             maxLines: 2,

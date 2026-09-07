@@ -969,7 +969,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     showEditStockDialog(
       context: context,
       stockId: stock.id!,
-      title: 'Edit Stock',
+      title: 'product_detail.edit_stock'.tr,
       initialRetailPrice: stock.price ?? '',
       initialMrp: stock.mrp ?? '',
       showMrp: _showMrp(),
@@ -1095,10 +1095,10 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       ),
       child: Text(
         isOutOfStock
-            ? 'Out of Stock'
+            ? 'stock.status_out_of_stock'.tr
             : atReorderLevel
-                ? 'At Reorder Level'
-                : 'Low Stock',
+                ? 'stock.status_at_reorder_level'.tr
+                : 'stock.status_low_stock'.tr,
         style: TextStyle(
           fontFamily: 'Poppins',
           fontSize: 11,
@@ -1189,54 +1189,54 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                 IconButton(
                   icon: const Icon(Icons.edit_outlined, size: 20),
                   color: ColorManager.kPrimaryColor,
-                  tooltip: 'Edit stock',
+                  tooltip: 'stock.edit'.tr,
                   onPressed: () => _showEditStockRowModal(stock),
                 ),
             ],
           ),
           const SizedBox(height: 4),
           MobileDetailRow(
-            label: 'Quantity',
-            value: stock.quantity?.toString() ?? 'N/A',
+            label: 'product_detail.quantity'.tr,
+            value: stock.quantity?.toString() ?? 'general.na'.tr,
             valueColor: rowLowStock ? ColorManager.kOrange : null,
             dense: true,
           ),
           MobileDetailRow(
-            label: 'Price',
+            label: 'product_detail.price'.tr,
             value: stock.price != null && stock.price!.isNotEmpty
                 ? '$currency ${stock.price}'
-                : 'N/A',
+                : 'general.na'.tr,
             highlight: true,
             dense: true,
           ),
           if (showMrp)
             MobileDetailRow(
-              label: 'MRP',
+              label: 'product_detail.mrp'.tr,
               value: stock.mrp != null && stock.mrp!.isNotEmpty
                   ? '$currency ${stock.mrp}'
-                  : 'N/A',
+                  : 'general.na'.tr,
               dense: true,
             ),
           if (canViewPurchasePrice)
             MobileDetailRow(
-              label: 'Purchase Price',
+              label: 'product_detail.purchase_price'.tr,
               value:
                   stock.purchasePrice != null && stock.purchasePrice!.isNotEmpty
                       ? '$currency ${stock.purchasePrice}'
-                      : 'N/A',
+                      : 'general.na'.tr,
               dense: true,
             ),
           MobileDetailRow(
-            label: 'Wholesale Price',
+            label: 'product_detail.wholesale_price'.tr,
             value:
                 stock.wholesalePrice != null && stock.wholesalePrice!.isNotEmpty
                     ? '$currency ${stock.wholesalePrice}'
-                    : 'N/A',
+                    : 'general.na'.tr,
             dense: true,
           ),
           MobileDetailRow(
-            label: 'Min Count',
-            value: stock.wholesaleMinUnit?.toString() ?? 'N/A',
+            label: 'product_detail.min_count'.tr,
+            value: stock.wholesaleMinUnit?.toString() ?? 'general.na'.tr,
             dense: true,
           ),
           const Padding(
@@ -1244,33 +1244,33 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
             child: Divider(height: 1),
           ),
           MobileDetailRow(
-            label: 'Supplier',
-            value: stock.supplier ?? 'N/A',
+            label: 'product_detail.supplier'.tr,
+            value: stock.supplier ?? 'general.na'.tr,
             dense: true,
           ),
           MobileDetailRow(
-            label: 'Store Name',
-            value: stock.storeName ?? 'N/A',
+            label: 'product_detail.store_name'.tr,
+            value: stock.storeName ?? 'general.na'.tr,
             dense: true,
           ),
           MobileDetailRow(
-            label: 'SKU',
-            value: stock.sku ?? 'N/A',
+            label: 'product_detail.sku'.tr,
+            value: stock.sku ?? 'general.na'.tr,
             dense: true,
           ),
           MobileDetailRow(
-            label: 'Rack',
-            value: stock.rack ?? 'N/A',
+            label: 'product_detail.rack'.tr,
+            value: stock.rack ?? 'general.na'.tr,
             dense: true,
           ),
           MobileDetailRow(
-            label: 'Date',
-            value: stock.date ?? 'N/A',
+            label: 'product_detail.date_col'.tr,
+            value: stock.date ?? 'general.na'.tr,
             dense: true,
           ),
           MobileDetailRow(
-            label: 'Expiry Date',
-            value: stock.expiryDate ?? 'N/A',
+            label: 'product_detail.expiry_date'.tr,
+            value: stock.expiryDate ?? 'general.na'.tr,
             dense: true,
           ),
         ],
@@ -1321,75 +1321,75 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       padding: const EdgeInsets.only(top: 8, bottom: 24),
       children: [
         MobileDetailSection(
-          title: 'Basic Info',
+          title: 'product_detail.basic_info'.tr,
           icon: Icons.info_outline,
           initiallyExpanded: true,
           children: [
             MobileDetailRow(
-              label: 'Product Name',
-              value: product.productName ?? 'N/A',
+              label: 'product_detail.product_name'.tr,
+              value: product.productName ?? 'general.na'.tr,
             ),
             MobileDetailRow(
-              label: 'Slug',
-              value: product.productSlug ?? 'N/A',
+              label: 'product_detail.slug'.tr,
+              value: product.productSlug ?? 'general.na'.tr,
             ),
             MobileDetailRow(
-              label: 'Category',
-              value: product.category?.name ?? 'N/A',
+              label: 'product_detail.category'.tr,
+              value: product.category?.name ?? 'general.na'.tr,
             ),
             if (itemCodeEnabled)
               MobileDetailRow(
                 label: 'billing.item_code'.tr,
-                value: product.itemCode ?? 'N/A',
+                value: product.itemCode ?? 'general.na'.tr,
                 copyable: true,
               ),
             MobileDetailRow(
-              label: 'Barcode',
-              value: product.barcode ?? 'N/A',
+              label: 'product_detail.barcode'.tr,
+              value: product.barcode ?? 'general.na'.tr,
               copyable: true,
             ),
             MobileDetailRow(
-              label: 'Unit',
-              value: product.unit ?? 'N/A',
+              label: 'product_detail.unit'.tr,
+              value: product.unit ?? 'general.na'.tr,
             ),
             MobileDetailRow(
-              label: 'SKU',
-              value: product.sku ?? 'Not Available',
+              label: 'product_detail.sku'.tr,
+              value: product.sku ?? 'product_detail.not_available'.tr,
             ),
             MobileDetailRow(
-              label: 'Rating',
-              value: product.rating ?? 'N/A',
+              label: 'product_detail.rating'.tr,
+              value: product.rating ?? 'general.na'.tr,
             ),
           ],
         ),
         MobileDetailSection(
-          title: 'Pricing',
+          title: 'product_detail.pricing'.tr,
           icon: Icons.sell_outlined,
           initiallyExpanded: true,
           children: [
             MobileDetailRow(
-              label: 'Price',
+              label: 'product_detail.price'.tr,
               value: product.price?.price != null
                   ? '$currency ${product.price!.price}'
-                  : 'N/A',
+                  : 'general.na'.tr,
               highlight: true,
             ),
             if (showMrp)
               MobileDetailRow(
-                label: 'MRP',
-                value: product.mrp != null ? '$currency ${product.mrp}' : 'N/A',
+                label: 'product_detail.mrp'.tr,
+                value: product.mrp != null ? '$currency ${product.mrp}' : 'general.na'.tr,
                 highlight: true,
               ),
             MobileDetailRow(
-              label: 'Offer Price',
+              label: 'product_detail.offer_price'.tr,
               value: product.offerPrice != null
                   ? '$currency ${product.offerPrice}'
-                  : 'N/A',
+                  : 'general.na'.tr,
               highlight: true,
             ),
             if (canViewPurchasePrice)
               MobileDetailRow(
-                label: 'Purchase Price',
+                label: 'product_detail.purchase_price'.tr,
                 value: product.purchasePrice != null &&
                         product.purchasePrice!.isNotEmpty
                     ? '$currency ${product.purchasePrice}'
@@ -1397,28 +1397,28 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                         ? (product.stock!.first.purchasePrice != null &&
                                 product.stock!.first.purchasePrice!.isNotEmpty
                             ? '$currency ${product.stock!.first.purchasePrice}'
-                            : 'N/A')
-                        : 'N/A'),
+                            : 'general.na'.tr)
+                        : 'general.na'.tr),
               ),
             MobileDetailRow(
-              label: 'Max Discount Percentage',
+              label: 'product_detail.max_discount_percentage'.tr,
               value: formatProductDetailsNumeric(product.minMarginPercentage)
                       .isNotEmpty
                   ? '${formatProductDetailsNumeric(product.minMarginPercentage)}%'
-                  : 'N/A',
+                  : 'general.na'.tr,
             ),
             MobileDetailRow(
-              label: 'Max Discount Amount',
+              label: 'product_detail.max_discount_amount'.tr,
               value: formatProductDetailsNumeric(product.minMarginPrice)
                       .isNotEmpty
                   ? '$currency ${formatProductDetailsNumeric(product.minMarginPrice)}'
-                  : 'N/A',
+                  : 'general.na'.tr,
             ),
           ],
         ),
         if (product.taxes != null && product.taxes!.isNotEmpty)
           MobileDetailSection(
-            title: 'Tax',
+            title: 'product_detail.tax_fallback'.tr,
             icon: Icons.percent_outlined,
             initiallyExpanded: false,
             children: [
@@ -1444,7 +1444,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
             ),
           ),
         MobileDetailSection(
-          title: 'Stock',
+          title: 'product_detail.stock_information'.tr,
           icon: Icons.inventory_2_outlined,
           initiallyExpanded: true,
           badge: stockRows.isNotEmpty
@@ -1452,21 +1452,21 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
               : null,
           children: [
             MobileDetailRow(
-              label: 'Available Qty',
+              label: 'product_detail.available_qty'.tr,
               value: availableQuantity == null
-                  ? 'N/A'
+                  ? 'general.na'.tr
                   : formatProductStockNumber(availableQuantity),
               valueColor: hasStockAlert ? stockAlertColor : null,
               trailing:
                   hasStockAlert ? _buildStockStatusBadge(stockStatus) : null,
             ),
             MobileDetailRow(
-              label: 'Reorder Level',
-              value: product.reorderLevel?.toString() ?? 'N/A',
+              label: 'product_detail.reorder_level'.tr,
+              value: product.reorderLevel?.toString() ?? 'general.na'.tr,
             ),
             MobileDetailRow(
-              label: 'Location',
-              value: product.productLocation?.toString() ?? 'N/A',
+              label: 'product_detail.location'.tr,
+              value: product.productLocation?.toString() ?? 'general.na'.tr,
             ),
             const SizedBox(height: 8),
             if (stockRows.isNotEmpty)
@@ -1506,16 +1506,16 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
         ),
         if (product.weightInfo != null)
           MobileDetailSection(
-            title: 'Weight',
+            title: 'product_detail.weight'.tr,
             icon: Icons.scale_outlined,
             initiallyExpanded: false,
             children: [
               MobileDetailRow(
-                label: 'Weight',
-                value: product.weightInfo!.weight?.toString() ?? 'N/A',
+                label: 'product_detail.weight'.tr,
+                value: product.weightInfo!.weight?.toString() ?? 'general.na'.tr,
               ),
               MobileDetailRow(
-                label: 'Is Weighted',
+                label: 'product_detail.is_weighted'.tr,
                 value: product.weightInfo!.isWeighted == true ? 'Yes' : 'No',
               ),
             ],
@@ -1523,7 +1523,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
         if (product.description != null &&
             product.description.toString().isNotEmpty)
           MobileDetailSection(
-            title: 'Description',
+            title: 'product_detail.description'.tr,
             icon: Icons.description_outlined,
             initiallyExpanded: false,
             child: Container(
@@ -1629,13 +1629,13 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
         padding: const EdgeInsets.only(top: 8, bottom: 24),
         children: [
           MobileDetailSection(
-            title: 'Basic',
+            title: 'product_detail.basic'.tr,
             icon: Icons.info_outline,
             initiallyExpanded: true,
             children: [
               _mobileTextField(
                 controller: _nameController,
-                label: 'Product Name',
+                label: 'product_detail.product_name'.tr,
                 hint: 'Enter product name',
                 validator: (value) =>
                     value == null || value.trim().isEmpty ? 'Required' : null,
@@ -1653,7 +1653,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
               const SizedBox(height: 12),
               _mobileTextField(
                 controller: _slugController,
-                label: 'Slug',
+                label: 'product_detail.slug'.tr,
                 hint: 'Enter slug',
                 validator: (value) =>
                     value == null || value.trim().isEmpty ? 'Required' : null,
@@ -1661,13 +1661,13 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
               const SizedBox(height: 12),
               _mobileTextField(
                 controller: _barcodeController,
-                label: 'Barcode',
+                label: 'product_detail.barcode'.tr,
                 hint: 'Enter barcode',
               ),
               const SizedBox(height: 12),
               CustomDropDownWithSearch<Category>(
-                title: 'Category',
-                hintText: 'Select category',
+                title: 'product_detail.category'.tr,
+                hintText: 'product_detail.select_category_hint'.tr,
                 value: selectedCategory,
                 items: categories,
                 height: 48,
@@ -1685,8 +1685,8 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
               ),
               const SizedBox(height: 12),
               CustomDropDownWithSearch<_DropdownOption>(
-                title: 'Unit',
-                hintText: 'Select unit',
+                title: 'product_detail.unit'.tr,
+                hintText: 'product_detail.select_unit_hint'.tr,
                 value: selectedUnitOption,
                 items: unitOptions,
                 onChanged: (option) {
@@ -1706,13 +1706,13 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
             ],
           ),
           MobileDetailSection(
-            title: 'Pricing & Stock',
+            title: 'product_detail.pricing_and_stock'.tr,
             icon: Icons.sell_outlined,
             initiallyExpanded: true,
             children: [
               _mobileTextField(
                 controller: _priceController,
-                label: 'Price',
+                label: 'product_detail.price'.tr,
                 hint: 'Enter price',
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
@@ -1720,7 +1720,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
               const SizedBox(height: 12),
               _mobileTextField(
                 controller: _quantityController,
-                label: 'Quantity',
+                label: 'product_detail.quantity'.tr,
                 hint: 'Enter quantity',
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: false),
@@ -1729,7 +1729,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                 const SizedBox(height: 12),
                 _mobileTextField(
                   controller: _mrpController,
-                  label: 'MRP',
+                  label: 'product_detail.mrp'.tr,
                   hint: 'Enter MRP',
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
@@ -1739,7 +1739,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                 const SizedBox(height: 12),
                 _mobileTextField(
                   controller: _purchasePriceController,
-                  label: 'Purchase Price',
+                  label: 'product_detail.purchase_price'.tr,
                   hint: 'Enter purchase price',
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
@@ -1748,7 +1748,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
               const SizedBox(height: 12),
               _mobileTextField(
                 controller: _minMarginController,
-                label: 'Max Discount Percentage',
+                label: 'product_detail.max_discount_percentage'.tr,
                 hint: 'Enter max discount percentage',
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
@@ -1756,7 +1756,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
               const SizedBox(height: 12),
               _mobileTextField(
                 controller: _minMarginPriceController,
-                label: 'Max Discount Amount',
+                label: 'product_detail.max_discount_amount'.tr,
                 hint: 'Enter max discount amount',
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
@@ -1765,23 +1765,23 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
           ),
           _buildVariantsSection(),
           MobileDetailSection(
-            title: 'Translations',
+            title: 'product_detail.translations'.tr,
             icon: Icons.translate,
             initiallyExpanded: extraLanguages.isNotEmpty,
             children: [
               if (languageProvider.isLoading &&
                   languageProvider.languages.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Row(
                     children: [
-                      SizedBox(
+                      const SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
-                      SizedBox(width: 8),
-                      Text('Loading languages...'),
+                      const SizedBox(width: 8),
+                      Text('product_detail.loading_languages'.tr),
                     ],
                   ),
                 )
@@ -1792,13 +1792,13 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                     Expanded(child: Text(languageProvider.error!)),
                     TextButton(
                       onPressed: _retryFetchLanguages,
-                      child: const Text('Retry'),
+                      child: Text('product_detail.retry'.tr),
                     ),
                   ],
                 )
               else if (extraLanguages.isEmpty)
                 Text(
-                  'No additional languages configured.',
+                  'product_detail.no_additional_languages'.tr,
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 13,
@@ -1815,8 +1815,8 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                         Expanded(
                           child: _mobileTextField(
                             controller: _languageNameControllers[language.id]!,
-                            label: 'Name (${language.name})',
-                            hint: 'Translated name',
+                            label: 'product_detail.product_name_in_language'.trParams({'language': language.name}),
+                            hint: 'product_detail.translated_name'.tr,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -1979,13 +1979,13 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
         color: Colors.white,
         child: SizedBox(
           height: sheetHeight,
-          child: const Center(
+          child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Loading product details...'),
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text('product_detail.loading_product_details'.tr),
               ],
             ),
           ),
@@ -2004,14 +2004,14 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
               children: [
                 const Icon(Icons.error, size: 48, color: Colors.red),
                 const SizedBox(height: 16),
-                const Text('Product not found'),
+                Text('product_detail.product_not_found'.tr),
                 const SizedBox(height: 16),
                 FilledButton(
                   onPressed: () => Navigator.pop(context),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size(200, 44),
                   ),
-                  child: const Text('Close'),
+                  child: Text('product_detail.close'.tr),
                 ),
               ],
             ),

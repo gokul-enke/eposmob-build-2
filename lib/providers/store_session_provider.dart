@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/admin_settings_provider.dart';
@@ -14,6 +15,7 @@ import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
+import 'package:pos_machine/providers/printer_settings_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
@@ -89,6 +91,7 @@ class StoreSessionProvider extends ChangeNotifier {
     final invoiceProvider = context.read<InvoiceProvider>();
     final purchaseProvider = context.read<PurchaseProvider>();
     final docConfigProvider = context.read<DocumentConfigProvider>();
+    final printerSettingsProvider = context.read<PrinterSettingsProvider>();
     final categoryProvider = context.read<CategoryProvider>();
     final localProductProvider = context.read<LocalProductProvider>();
     final masterDataProvider = context.read<MasterDataProvider>();
@@ -105,7 +108,7 @@ class StoreSessionProvider extends ChangeNotifier {
 
         // Show UI status only in debug mode
         if (kDebugMode) {
-          await _updateStatus('Store changed. Clearing local data cache...');
+          await _updateStatus('store_bootstrap.clearing_cache'.tr);
         }
 
         // Always clear local data
@@ -115,21 +118,21 @@ class StoreSessionProvider extends ChangeNotifier {
 
         // Show UI status only in debug mode
         if (kDebugMode) {
-          await _updateStatus('Local cache cleared for new store sync.');
+          await _updateStatus('store_bootstrap.cache_cleared'.tr);
         }
         debugPrint('✅ [Store] Local data cleared for store: $selectedStoreId');
       }
 
-      await _updateStatus('Loading user permissions...');
+      await _updateStatus('store_bootstrap.loading_permissions'.tr);
       try {
         await roleProvider.fetchRoles(context);
-        await _updateStatus('User permissions loaded successfully');
+        await _updateStatus('store_bootstrap.permissions_loaded'.tr);
       } catch (e) {
         debugPrint('Warning: Failed to load user permissions: $e');
-        await _updateStatus('Warning: Could not load permissions');
+        await _updateStatus('store_bootstrap.permissions_warning'.tr);
       }
 
-      await _updateStatus('Syncing delivery methods...');
+      await _updateStatus('store_bootstrap.syncing_delivery'.tr);
       try {
         debugPrint(
             '🚚 [StoreBootstrap] Fetching delivery methods during store selection...');
@@ -141,13 +144,13 @@ class StoreSessionProvider extends ChangeNotifier {
             '🚚 [StoreBootstrap] ⚠️ Failed to load delivery methods: $e');
       }
 
-      await _updateStatus('Loading general settings...');
+      await _updateStatus('store_bootstrap.loading_general'.tr);
       await generalSettingsProvider.fetchGeneralSettings();
 
-      await _updateStatus('Applying app preferences...');
+      await _updateStatus('store_bootstrap.applying_prefs'.tr);
       await appSettingsProvider.fetchAppSettings();
 
-      await _updateStatus('Syncing customer directory...');
+      await _updateStatus('store_bootstrap.syncing_customers'.tr);
       if (accessToken.isNotEmpty) {
         try {
           await customerProvider.fetchCustomers(
@@ -160,46 +163,46 @@ class StoreSessionProvider extends ChangeNotifier {
         }
       }
 
-      await _updateStatus('Loading branding assets...');
+      await _updateStatus('store_bootstrap.loading_branding'.tr);
       await adminSettingsProvider.fetchAdminSettings();
 
-      await _updateStatus('Syncing bank accounts...');
+      await _updateStatus('store_bootstrap.syncing_banks'.tr);
       try {
         await bankProvider.fetchBanks(accessToken: accessToken);
       } catch (e) {
         debugPrint('Warning: Failed to load banks after store selection: $e');
       }
 
-      await _updateStatus('Preparing invoices...');
+      await _updateStatus('store_bootstrap.preparing_invoices'.tr);
       await invoiceProvider.listAllInvoiceAccountTypes(accessToken);
 
-      await _updateStatus('Syncing payment methods...');
+      await _updateStatus('store_bootstrap.syncing_payments'.tr);
       await invoiceProvider.listAllPaymentList(
         accessToken,
         forceRefresh: true,
       );
 
-      await _updateStatus('Refreshing checkout payment methods...');
+      await _updateStatus('store_bootstrap.refreshing_checkout_payments'.tr);
       try {
         await masterDataProvider.fetchPaymentMethods(forceRefresh: true);
       } catch (e) {
         debugPrint('Warning: Failed to refresh checkout payment methods: $e');
       }
 
-      await _updateStatus('Loading stock grouping configuration...');
+      await _updateStatus('store_bootstrap.loading_stock_grouping'.tr);
       try {
         await masterDataProvider.fetchStockGroupingFields(forceRefresh: true);
       } catch (e) {
         debugPrint('Warning: Failed to load stock grouping fields: $e');
       }
 
-      await _updateStatus('Fetching voucher types...');
+      await _updateStatus('store_bootstrap.fetching_vouchers'.tr);
       await invoiceProvider.listVoucherAccountType(accessToken);
 
-      await _updateStatus('Updating user directory...');
+      await _updateStatus('store_bootstrap.updating_users'.tr);
       await invoiceProvider.listUsersList(accessToken);
 
-      await _updateStatus('Retrieving store details...');
+      await _updateStatus('store_bootstrap.retrieving_store'.tr);
       await purchaseProvider.listAllStores(accessToken, null);
 
       try {
@@ -230,18 +233,21 @@ class StoreSessionProvider extends ChangeNotifier {
         debugPrint('Warning: Could not find/map store_open_time details: $e');
       }
 
-      await _updateStatus('Loading supplier catalog...');
+      await _updateStatus('store_bootstrap.loading_suppliers'.tr);
       await purchaseProvider.listAllSuppliers(accessToken, null);
       final supplierLength = purchaseProvider.getSupplierList?.length ?? 0;
-      await _updateStatus('Suppliers synced: $supplierLength available.');
+      await _updateStatus(
+        'store_bootstrap.suppliers_synced'
+            .trParams({'count': '$supplierLength'}),
+      );
 
-      await _updateStatus('Syncing measurement units...');
+      await _updateStatus('store_bootstrap.syncing_units'.tr);
       await purchaseProvider.listAllUnits(accessToken);
 
-      await _updateStatus('Fetching rack metadata...');
+      await _updateStatus('store_bootstrap.fetching_racks'.tr);
       await purchaseProvider.listMasterDataValues(accessToken, 'RACKS');
 
-      await _updateStatus('Downloading document configurations...');
+      await _updateStatus('store_bootstrap.downloading_docs'.tr);
       try {
         await docConfigProvider.fetchDocumentConfigurations(
           accessToken: accessToken,
@@ -251,29 +257,44 @@ class StoreSessionProvider extends ChangeNotifier {
             'Warning: Failed to load document configurations after store selection: $e');
       }
 
-      await _updateStatus('Refreshing product categories...');
+      try {
+        await printerSettingsProvider.fetchAndApplyDefaults(
+          accessToken: accessToken,
+        );
+      } catch (e) {
+        debugPrint('Warning: Failed to load printer settings defaults: $e');
+      }
+
+      await _updateStatus('store_bootstrap.refreshing_categories'.tr);
       try {
         await categoryProvider.prefetchAllScopesForStore(force: true);
         final categoryCount = categoryProvider.sellableCategories.length;
         await _updateStatus(
-          'Categories ready: $categoryCount sellable, '
-          '${categoryProvider.allCategories.length} total.',
+          'store_bootstrap.categories_ready'.trParams({
+            'sellable': '$categoryCount',
+            'total': '${categoryProvider.allCategories.length}',
+          }),
         );
       } catch (e) {
         debugPrint(
             'Warning: Failed to load categories after store selection: $e');
       }
 
-      await _updateStatus(
-          'Fetching product catalog (this may take a moment)...');
+      await _updateStatus('store_bootstrap.fetching_products'.tr);
       await localProductProvider.fetchProductsFromAPI(
         onProgress: (loaded, batch) async {
           await _updateStatus(
-              'Loading products... $loaded loaded (latest batch: $batch)');
+            'store_bootstrap.loading_products'.trParams({
+              'loaded': '$loaded',
+              'batch': '$batch',
+            }),
+          );
         },
       );
       final productCount = localProductProvider.products.length;
-      await _updateStatus('Products ready: $productCount loaded.');
+      await _updateStatus(
+        'store_bootstrap.products_ready'.trParams({'count': '$productCount'}),
+      );
 
       final prefs = await SharedPreferenceProvider().getApiKey();
       final companyId = await SharedPreferenceProvider().getCompanyId();
@@ -282,7 +303,7 @@ class StoreSessionProvider extends ChangeNotifier {
           prefs.isNotEmpty &&
           companyId != null &&
           selectedStoreId != null) {
-        await _updateStatus('Starting realtime synchronization...');
+        await _updateStatus('store_bootstrap.starting_realtime'.tr);
         final realtimeSyncProvider = context.read<RealtimeSyncProvider>();
         final realtimeSession = RealtimeSyncSession(
           backendBaseUrl: APPUrl.baseURL,
@@ -301,7 +322,7 @@ class StoreSessionProvider extends ChangeNotifier {
         );
       }
 
-      await _updateStatus('Finishing touches...');
+      await _updateStatus('store_bootstrap.finishing'.tr);
     } finally {
       _isBootstrapping = false;
       _statusMessage = null;

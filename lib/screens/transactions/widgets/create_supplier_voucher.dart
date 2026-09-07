@@ -653,7 +653,7 @@ class _CreateSupplierVoucherScreenState
                 0.27, ColorManager.textColor),
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'This field is required';
+                return 'general.field_required'.tr;
               }
               return null;
             },
@@ -708,7 +708,7 @@ class _CreateSupplierVoucherScreenState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Status',
+          'general.status'.tr,
           style: buildCustomStyle(FontWeightManager.regular, FontSize.s14, 0.27,
               Colors.black.withOpacity(0.6)),
         ),
@@ -725,9 +725,9 @@ class _CreateSupplierVoucherScreenState
             // Navigate to next field after selection
           },
           displayText: (String? value) {
-            if (value == null) return 'Select Status';
+            if (value == null) return 'supplier_voucher.hint_select_status'.tr;
             final status = statusOptions.firstWhere((s) => s['value'] == value,
-                orElse: () => {'display': 'Unknown'});
+                orElse: () => {'display': 'general.unknown'.tr});
             return status['display']!;
           },
           height: 45,

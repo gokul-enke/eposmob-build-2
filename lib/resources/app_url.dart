@@ -236,6 +236,8 @@ class APPUrl {
       '$baseURL/api/v1/master-data-values?code=PAYMENT_METHOD';
   static String get documentConfigs =>
       '$baseURL/api/v1/document/document-configs';
+  static String get printerSettings =>
+      '$baseURL/api/v1/document/printer-settings';
   static String get supplierTransactions =>
       '$baseURL/api/v1/suppliers/list-transactions';
   static String get supplierTransactionsV2 =>

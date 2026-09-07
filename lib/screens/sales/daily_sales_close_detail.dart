@@ -433,13 +433,9 @@ class _DailySalesCloseDetailScreenState
               'CREDIT': '0.00',
             };
 
-        String formatKey(String key) {
-          final upper = key.toUpperCase();
-          if (upper == 'COD' || upper == 'UPI') {
-            return upper;
-          }
-          if (key.isEmpty) return '';
-          return key[0].toUpperCase() + key.substring(1).toLowerCase();
+        String translatePaymentMethod(String key) {
+          final lower = key.toLowerCase();
+          return 'billing.payment_method_labels.$lower'.tr;
         }
 
         final entries = breakdown.entries.toList();
@@ -453,14 +449,14 @@ class _DailySalesCloseDetailScreenState
               children: [
                 Expanded(
                   child: _buildDetailItem(
-                    formatKey(entry1.key),
+                    translatePaymentMethod(entry1.key),
                     '$currency ${entry1.value ?? '0.00'}',
                   ),
                 ),
                 if (entry2 != null)
                   Expanded(
                     child: _buildDetailItem(
-                      formatKey(entry2.key),
+                      translatePaymentMethod(entry2.key),
                       '$currency ${entry2.value ?? '0.00'}',
                     ),
                   )
@@ -1035,8 +1031,11 @@ class _DailySalesCloseDetailScreenState
                         });
                       }
                     },
-                    displayText: (item) =>
-                        item == 'All' ? 'common.all'.tr : item,
+                    displayText: (item) {
+                      if (item == 'All') return 'common.all'.tr;
+                      final key = item.toLowerCase();
+                      return 'billing.payment_method_labels.$key'.tr;
+                    },
                     height:
                         size.height * 0.048, // Match minimal text field height
                   ),

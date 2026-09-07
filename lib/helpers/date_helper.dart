@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/foundation.dart';
@@ -76,12 +77,14 @@ class DateHelper {
   }
 
   static String formatDate(DateTime date) {
-    final DateFormat formatter = DateFormat('yyyy MMM dd');
+    final DateFormat formatter =
+        DateFormat('yyyy MMM dd', Get.locale?.languageCode ?? 'en');
     return formatter.format(date);
   }
 
   static String formatYearMonthDay(DateTime date) {
-    final DateFormat formatter = DateFormat('yyyy MMM dd');
+    final DateFormat formatter =
+        DateFormat('yyyy MMM dd', Get.locale?.languageCode ?? 'en');
     return formatter.format(date);
   }
 
@@ -256,11 +259,11 @@ class DateHelper {
     final days = duration.inDays;
 
     if (days > 0) {
-      return '${days}d ago';
+      return 'common.time_ago_days'.trParams({'count': '$days'});
     } else if (hours > 0) {
-      return '${hours}h ago';
+      return 'common.time_ago_hours'.trParams({'count': '$hours'});
     } else {
-      return '${minutes}m ago';
+      return 'common.time_ago_minutes'.trParams({'count': '$minutes'});
     }
   }
 

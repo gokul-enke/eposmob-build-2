@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 
@@ -199,9 +200,9 @@ class PrintService {
                 ),
                 ListTile(
                   leading: const Icon(Icons.receipt_long),
-                  title: const Text('Print Sales'),
+                  title: Text('ui_chrome.print_sales'.tr),
                   subtitle:
-                      const Text('Receipt with returned quantities removed'),
+                      Text('ui_chrome.print_sales_sub'.tr),
                   onTap: () {
                     debugPrint('[PrintService] Print Sales tapped');
                     Navigator.pop(sheetContext, PrintMode.salesOnly);
@@ -209,8 +210,8 @@ class PrintService {
                 ),
                 ListTile(
                   leading: const Icon(Icons.assignment_return),
-                  title: const Text('Print Return'),
-                  subtitle: const Text('Return receipt only'),
+                  title: Text('ui_chrome.print_return'.tr),
+                  subtitle: Text('ui_chrome.print_return_sub'.tr),
                   onTap: () {
                     debugPrint('[PrintService] Print Return tapped');
                     Navigator.pop(sheetContext, PrintMode.returnOnly);
@@ -218,8 +219,8 @@ class PrintService {
                 ),
                 ListTile(
                   leading: const Icon(Icons.receipt),
-                  title: const Text('Print Combined'),
-                  subtitle: const Text('Full bill with sales and returns'),
+                  title: Text('ui_chrome.print_combined'.tr),
+                  subtitle: Text('ui_chrome.print_combined_sub'.tr),
                   onTap: () {
                     debugPrint('[PrintService] Print Combined tapped');
                     Navigator.pop(sheetContext, PrintMode.combined);

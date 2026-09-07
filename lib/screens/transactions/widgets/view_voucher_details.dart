@@ -51,7 +51,7 @@ class ViewVoucherDetailsWidget extends StatelessWidget {
               onPressed: () {
                 sideBarController.index.value = 22;
               },
-              text: 'Voucher List',
+              text: 'view_voucher_details.btn_voucher_list'.tr,
               // Optionally, you can customize the color and size
               // color: ColorManager.customColor,
               // size: 20.0,
@@ -60,7 +60,7 @@ class ViewVoucherDetailsWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  " Voucher Details  ",
+                  'view_voucher_details.page_title'.tr,
                   style: buildCustomStyle(FontWeightManager.semiBold,
                       FontSize.s20, 0.30, ColorManager.textColor),
                 ),
@@ -82,7 +82,7 @@ class ViewVoucherDetailsWidget extends StatelessWidget {
               margin: const EdgeInsets.only(
                   top: 20, bottom: 0, left: 10, right: 10),
               child: Text(
-                " Details  ",
+                'view_voucher_details.section_details'.tr,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s15, 0.30, Colors.white),
               ),
@@ -99,21 +99,21 @@ class ViewVoucherDetailsWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     BuildDetailRow(
-                      title1: "Customer Name",
+                      title1: 'view_voucher_details.label_customer_name'.tr,
                       content1: listTransaction?.customerName ?? "",
-                      title2: "Amount",
+                      title2: 'view_voucher_details.label_amount'.tr,
                       content2: listTransaction?.amount ?? "",
                     ),
                     BuildDetailRow(
-                      title1: "Transaction Type",
+                      title1: 'view_voucher_details.label_transaction_type'.tr,
                       content1: listTransaction?.type ?? "",
-                      title2: "Payment Method",
+                      title2: 'view_voucher_details.label_payment_method'.tr,
                       content2: listTransaction?.paymentMethod ?? "",
                     ),
                     BuildDetailRow(
-                      title1: "Reference",
+                      title1: 'view_voucher_details.label_reference'.tr,
                       content1: listTransaction?.reference ?? "",
-                      title2: "Comment",
+                      title2: 'view_voucher_details.label_comment'.tr,
                       content2: listTransaction?.transactionComment ?? "",
                     ),
                     // BuildDetailRow(
@@ -142,7 +142,7 @@ class ViewVoucherDetailsWidget extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(left: 10.0),
                       child: CustomRoundButton(
-                        title: "Back",
+                        title: 'view_voucher_details.btn_back'.tr,
                         boxColor: Colors.white,
                         textColor: ColorManager.kPrimaryColor,
                         fct: () async {

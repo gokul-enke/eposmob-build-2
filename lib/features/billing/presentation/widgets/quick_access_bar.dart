@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
+import 'package:pos_machine/helpers/delivery_method_display.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -47,17 +49,14 @@ class QuickAccessBar extends StatelessWidget {
             // Delivery Method Icon
             Consumer<BillingProvider>(builder: (context, bp, _) {
               final dm = bp.deliveryMethod;
-              final icon = dm == "Store Takeaway"
-                  ? Icons.store
-                  : dm == "Car Delivery"
-                      ? Icons.car_rental
-                      : dm == "Door Delivery"
-                          ? Icons.doorbell_outlined
-                          : Icons.local_shipping;
+              final icon = DeliveryMethodDisplay.iconFor(dm);
+              // First word of the localized label — `split(' ')` on the raw
+              // name would slice an Arabic label at the wrong place.
+              final label = DeliveryMethodDisplay.labelFor(dm);
               return _buildQuickAccessIcon(
                 context: context,
                 icon: icon,
-                label: dm.split(' ').first,
+                label: label.split(' ').first,
                 color: ColorManager.kButtonBlue,
                 onTap: onShowDeliveryMethodModal,
               );
@@ -79,8 +78,8 @@ class QuickAccessBar extends StatelessWidget {
                           ? Icons.discount
                           : Icons.local_offer_outlined,
                       label: billingProvider.isCouponApplied
-                          ? 'Applied'
-                          : 'Discount',
+                          ? 'billing.applied_label'.tr
+                          : 'billing.discount'.tr,
                       color: billingProvider.isCouponApplied
                           ? ColorManager.kButtonGreen
                           : ColorManager.kButtonYellow,
@@ -106,7 +105,7 @@ class QuickAccessBar extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        'Total Paid: ',
+                        '${'billing.total_paid'.tr}: ',
                         style: buildCustomStyle(
                           FontWeightManager.medium,
                           FontSize.s15,
@@ -129,7 +128,7 @@ class QuickAccessBar extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        'Balance: ',
+                        '${'billing.balance'.tr}: ',
                         style: buildCustomStyle(
                           FontWeightManager.medium,
                           FontSize.s15,

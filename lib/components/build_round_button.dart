@@ -135,37 +135,52 @@ class CustomRoundButtonWithIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      alignment: Alignment.center,
-      width: width, // 200,
-      height: height, //size.height * .055,
-      decoration: BoxDecoration(
-        border: Border.all(color: borderColor ?? ColorManager.kPrimaryColor),
-        color: boxColor ?? ColorManager.kPrimaryColor,
-        borderRadius: BorderRadius.circular(radius ?? 8),
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: width,
+        minHeight: height,
+        maxHeight: height,
       ),
-      child: MaterialButton(
-        padding: EdgeInsets.zero,
-        onPressed: () {
-          fct();
-        },
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            icon,
-            const SizedBox(
-              width: 8,
+      child: Container(
+        alignment: Alignment.center,
+        width: double.infinity,
+        height: height,
+        decoration: BoxDecoration(
+          border: Border.all(color: borderColor ?? ColorManager.kPrimaryColor),
+          color: boxColor ?? ColorManager.kPrimaryColor,
+          borderRadius: BorderRadius.circular(radius ?? 8),
+        ),
+        child: MaterialButton(
+          padding: EdgeInsets.zero,
+          minWidth: 0,
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          onPressed: () {
+            fct();
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                icon,
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontFamily: FontConstants.fontFamily,
+                        fontSize: fontSize,
+                        fontWeight: FontWeightManager.medium,
+                        color: textColor ?? Colors.white),
+                  ),
+                ),
+              ],
             ),
-            Text(
-              title,
-              style: TextStyle(
-                  fontFamily: FontConstants.fontFamily,
-                  fontSize: fontSize,
-                  fontWeight: FontWeightManager.medium,
-                  color: textColor ?? Colors.white),
-            ),
-          ],
+          ),
         ),
       ),
     );

@@ -1422,7 +1422,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
         if (mounted) {
           showScaffold(
             context: context,
-            message: '${'kitchen.item_status_updated'.tr}${statusValue ?? 'new status'}',
+            message: '${'kitchen.item_status_updated'.tr}${statusValue ?? 'kitchen.status_fallback'.tr}',
           );
         }
       } else {
@@ -2684,7 +2684,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    '${cookingTime.inMinutes}m',
+                    '${cookingTime.inMinutes}${'kitchen.minutes_suffix'.tr}',
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s10, 0.21, const Color(0xFF2563EB)),
                   ),

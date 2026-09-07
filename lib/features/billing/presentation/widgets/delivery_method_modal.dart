@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
+import 'package:pos_machine/helpers/delivery_method_display.dart';
+import 'package:pos_machine/models/delivery_method_registry.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -86,20 +88,8 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
     super.dispose();
   }
 
-  String _getDeliveryMethodTranslation(String methodName) {
-    switch (methodName) {
-      case "Store Takeaway":
-        return 'common.store_takeaway'.tr;
-      case "Car Delivery":
-        return 'common.car_delivery'.tr;
-      case "Door Delivery":
-        return 'common.door_delivery'.tr;
-      case "Third Party Logistics":
-        return 'common.third_party_logistics'.tr;
-      default:
-        return methodName.tr;
-    }
-  }
+  String _getDeliveryMethodTranslation(String methodName) =>
+      DeliveryMethodDisplay.labelFor(methodName);
 
   @override
   Widget build(BuildContext context) {
@@ -207,13 +197,7 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              method.name == "Store Takeaway"
-                                  ? Icons.store
-                                  : method.name == "Car Delivery"
-                                      ? Icons.car_rental
-                                      : method.name == "Door Delivery"
-                                          ? Icons.doorbell_outlined
-                                          : Icons.local_shipping,
+                              DeliveryMethodDisplay.iconForMethod(method),
                               size: 22,
                               color: isSelected ? ColorManager.kPrimaryColor : Colors.grey.shade700,
                             ),
@@ -269,12 +253,13 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                   ),
                 ],
                 const SizedBox(height: 30),
-                if (deliveryMethod == "Car Delivery") ...[
+                if (DeliveryMethodRegistry.requiresCarNumber(
+                    deliveryMethod)) ...[
                   buildColumnWidgetForTextFields(
                     controller: carNumberController,
                     size: size,
                     height: size.height * .06,
-                    hintText: 'Car Number:',
+                    hintText: 'delivery_form.hint_car_number'.tr,
                     width: double.infinity,
                     margin: EdgeInsets.zero,
                     onTap: () {
@@ -289,7 +274,7 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                   controller: commentController,
                   size: size,
                   height: size.height * .06,
-                  hintText: 'Comment:',
+                  hintText: 'delivery_form.hint_comment'.tr,
                   width: double.infinity,
                   margin: EdgeInsets.zero,
                   onTap: () {
@@ -298,7 +283,7 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                         replaceOnFirstInput: true);
                   },
                 ),
-                if (deliveryMethod == "Door Delivery") ...[
+                if (DeliveryMethodRegistry.requiresAddress(deliveryMethod)) ...[
                   const SizedBox(height: 10),
                   Consumer<CustomerSelectionProvider>(
                     builder: (context, customerProvider, child) {
@@ -313,7 +298,7 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Choose an address:',
+                            'delivery_form.label_choose_address'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.medium,
                               FontSize.s12,
@@ -373,7 +358,7 @@ class _DeliveryMethodModalState extends State<DeliveryMethodModal> {
                     controller: addressController,
                     size: size,
                     height: size.height * .06,
-                    hintText: 'Address:',
+                    hintText: 'delivery_form.hint_address'.tr,
                     width: double.infinity,
                     margin: EdgeInsets.zero,
                     onTap: () {

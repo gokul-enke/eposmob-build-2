@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart'; // Re-enabled for .tr translations
 import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:pos_machine/helpers/delivery_method_display.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/delivery_method.dart';
+import 'package:pos_machine/models/delivery_method_registry.dart';
 // import 'package:pos_machine/resources/color_manager.dart'; // Unused
 import 'package:pos_machine/resources/font_manager.dart';
 // import 'package:pos_machine/resources/style_manager.dart'; // Unused
@@ -1136,7 +1138,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
             child: IconButton(
               icon: const Icon(Icons.close),
               onPressed: () => Navigator.pop(context),
-              tooltip: 'Close',
+              tooltip: 'checkout_modal.tooltip_close'.tr,
             ),
           ),
         ],
@@ -1176,7 +1178,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 child: IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: () => Navigator.pop(context),
-                  tooltip: 'Close',
+                  tooltip: 'checkout_modal.tooltip_close'.tr,
                 ),
               ),
             ],
@@ -1187,20 +1189,20 @@ class _CheckoutModalState extends State<CheckoutModal> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildStepIndicator(0, 'Customer', Icons.person,
+                _buildStepIndicator(0, 'billing.customer'.tr, Icons.person,
                     isActive: _currentStep == 0, isCompleted: hasCustomer),
                 if (widget.enableDelivery) ...[
                   _buildStepConnector(isActive: _currentStep > 0),
-                  _buildStepIndicator(1, 'Delivery', Icons.local_shipping,
+                  _buildStepIndicator(1, 'delivery.delivery_methods'.tr, Icons.local_shipping,
                       isActive: _currentStep == 1, isCompleted: hasDelivery),
                 ],
                 _buildStepConnector(
                     isActive: _currentStep > (widget.enableDelivery ? 1 : 0)),
-                _buildStepIndicator(2, 'Discount', Icons.discount,
+                _buildStepIndicator(2, 'billing.discount'.tr, Icons.discount,
                     isActive: _currentStep == 2, isCompleted: hasDiscount),
                 if (!widget.isQuotationMode) ...[
                   _buildStepConnector(isActive: _currentStep > 2),
-                  _buildStepIndicator(3, 'Payment', Icons.payment,
+                  _buildStepIndicator(3, 'billing.payment_tab'.tr, Icons.payment,
                       isActive: _currentStep == 3, isCompleted: hasPayment),
                 ],
               ],
@@ -1337,7 +1339,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               focusNode: _customerSearchFocusNode,
                               onChanged: _filterCustomers,
                               decoration: InputDecoration(
-                                hintText: 'Search by name or phone number...',
+                                hintText: 'checkout_modal.search_by_name_or_phone_number'.tr,
                                 hintStyle:
                                     TextStyle(color: Colors.grey.shade500),
                                 prefixIcon: Icon(Icons.search,
@@ -1394,8 +1396,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                       )
                                     : const Icon(Icons.person_add),
                                 label: Text(_isAddingCustomer
-                                    ? 'Adding...'
-                                    : 'Add New Customer'),
+                                    ? 'checkout_modal.btn_adding'.tr
+                                    : 'checkout_modal.btn_add_new_customer'.tr),
                                 style: ElevatedButton.styleFrom(
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 12),
@@ -1420,9 +1422,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                           child: _isSelectionOnly
                               ? _buildSelectionOnlySidePanel(
                                   icon: Icons.person,
-                                  title: 'Selected Customer',
+                                  title: 'checkout_modal.label_selected_customer'.tr,
                                   value: _localSelectedCustomer?.name ??
-                                      'Not selected',
+                                      'checkout_modal.label_not_selected'.tr,
                                   supportingText:
                                       _selectedCustomerSupportingText(),
                                   canDone: _localSelectedCustomer != null,
@@ -1523,8 +1525,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                             )
                                           : const Icon(Icons.person_add),
                                       label: Text(_isAddingCustomer
-                                          ? 'Adding...'
-                                          : 'Add New Customer'),
+                                          ? 'checkout_modal.btn_adding'.tr
+                                          : 'checkout_modal.btn_add_new_customer'.tr),
                                       style: ElevatedButton.styleFrom(
                                         padding: const EdgeInsets.symmetric(
                                             vertical: 16),
@@ -1554,9 +1556,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                           child: _isSelectionOnly
                               ? _buildSelectionOnlySidePanel(
                                   icon: Icons.person,
-                                  title: 'Selected Customer',
+                                  title: 'checkout_modal.label_selected_customer'.tr,
                                   value: _localSelectedCustomer?.name ??
-                                      'Not selected',
+                                      'checkout_modal.label_not_selected'.tr,
                                   supportingText:
                                       _selectedCustomerSupportingText(),
                                   canDone: _localSelectedCustomer != null,
@@ -1610,7 +1612,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
             children: [
               Expanded(
                 child: _buildQuotationDateField(
-                  label: 'Quotation Date',
+                  label: 'checkout_modal.label_quotation_date'.tr,
                   date: _lQuotationDate,
                   firstDate: DateTime(2020),
                   onDateSelected: (date) =>
@@ -1620,7 +1622,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
               const SizedBox(width: 10),
               Expanded(
                 child: _buildQuotationDateField(
-                  label: 'Expiry Date',
+                  label: 'checkout_modal.label_expiry_date'.tr,
                   date: _lQuotationExpiryDate,
                   firstDate: _lQuotationDate,
                   isExpiry: true,
@@ -1704,7 +1706,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.add, size: 16),
-            label: Text(_isAddingCustomer ? 'Creating...' : 'Create'),
+            label: Text(_isAddingCustomer ? 'checkout_modal.btn_creating'.tr : 'checkout_modal.btn_create'.tr),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF059669),
               foregroundColor: Colors.white,
@@ -1728,19 +1730,19 @@ class _CheckoutModalState extends State<CheckoutModal> {
           children: [
             Expanded(
               child: _buildQuotationInputField(
-                label: 'Customer Name',
+                label: 'checkout_modal.label_customer_name'.tr,
                 controller: _quotationCustomerNameController,
                 focusNode: _quotationCustomerNameFocusNode,
-                hintText: 'Customer name',
+                hintText: 'checkout_modal.hint_customer_name'.tr,
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: _buildQuotationInputField(
-                label: 'Customer Phone',
+                label: 'checkout_modal.label_customer_phone'.tr,
                 controller: _quotationCustomerPhoneController,
                 focusNode: _quotationCustomerPhoneFocusNode,
-                hintText: 'Customer phone',
+                hintText: 'checkout_modal.hint_customer_phone'.tr,
                 keyboardType: TextInputType.phone,
               ),
             ),
@@ -1909,7 +1911,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
           children: [
             Icon(Icons.search_off, size: 48, color: Colors.grey.shade300),
             const SizedBox(height: 16),
-            Text('No customers found',
+            Text('checkout_modal.msg_no_customers_found'.tr,
                 style: TextStyle(color: Colors.grey.shade600)),
           ],
         ),
@@ -2324,17 +2326,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                               MainAxisAlignment.center,
                                           children: [
                                             Icon(
-                                              method.name == "Store Takeaway"
-                                                  ? Icons.store
-                                                  : method.name ==
-                                                          "Car Delivery"
-                                                      ? Icons.car_rental
-                                                      : method.name ==
-                                                              "Door Delivery"
-                                                          ? Icons
-                                                              .doorbell_outlined
-                                                          : Icons
-                                                              .local_shipping,
+                                              DeliveryMethodDisplay
+                                                  .iconForMethod(method),
                                               size: 22,
                                               color: isSelected
                                                   ? ColorManager.kPrimaryColor
@@ -2586,7 +2579,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             ),
                           ],
                           const SizedBox(height: 30),
-                          if (_lDeliveryMethod == "Car Delivery") ...[
+                          if (DeliveryMethodRegistry.requiresCarNumber(
+                              _lDeliveryMethod)) ...[
                             FocusTraversalOrder(
                               order: const NumericFocusOrder(60),
                               child: buildColumnWidgetForTextFields(
@@ -2594,7 +2588,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                 focusNode: _deliveryCarNumberFocusNode,
                                 size: size,
                                 height: 50,
-                                hintText: 'Car Number:',
+                                hintText: 'checkout_modal.hint_car_number'.tr,
                                 width: double.infinity,
                                 margin: EdgeInsets.zero,
                                 onTap: () {
@@ -2615,7 +2609,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               focusNode: _deliveryCommentFocusNode,
                               size: size,
                               height: 50,
-                              hintText: 'Comment:',
+                              hintText: 'checkout_modal.hint_comment'.tr,
                               width: double.infinity,
                               margin: EdgeInsets.zero,
                               onTap: () {
@@ -2627,7 +2621,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               onchanged: (_) => _handleDeliveryUpdate(),
                             ),
                           ),
-                          if (_lDeliveryMethod == "Door Delivery") ...[
+                          if (DeliveryMethodRegistry.requiresAddress(
+                              _lDeliveryMethod)) ...[
                             const SizedBox(height: 10),
                             Consumer<CustomerSelectionProvider>(
                               builder: (context, customerProvider, child) {
@@ -2643,7 +2638,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Choose an address:',
+                                      'checkout_modal.hint_choose_an_address'.tr,
                                       style: buildCustomStyle(
                                         FontWeightManager.medium,
                                         FontSize.s12,
@@ -2712,7 +2707,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                 focusNode: _deliveryAddressFocusNode,
                                 size: size,
                                 height: 50,
-                                hintText: 'Address:',
+                                hintText: 'checkout_modal.hint_address'.tr,
                                 width: double.infinity,
                                 margin: EdgeInsets.zero,
                                 onTap: () {
@@ -2744,10 +2739,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                         child: _isSelectionOnly
                             ? _buildSelectionOnlySidePanel(
                                 icon: Icons.local_shipping,
-                                title: 'Selected Delivery',
+                                title: 'checkout_modal.label_selected_delivery'.tr,
                                 value: _lDeliveryMethod.isNotEmpty
                                     ? _lDeliveryMethod
-                                    : 'Not selected',
+                                    : 'checkout_modal.label_not_selected'.tr,
                                 supportingText: _lDeliveryMethodId.isNotEmpty
                                     ? 'Method ID: $_lDeliveryMethodId'
                                     : null,
@@ -2785,10 +2780,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       child: _isSelectionOnly
                           ? _buildSelectionOnlySidePanel(
                               icon: Icons.local_shipping,
-                              title: 'Selected Delivery',
+                              title: 'checkout_modal.label_selected_delivery'.tr,
                               value: _lDeliveryMethod.isNotEmpty
                                   ? _lDeliveryMethod
-                                  : 'Not selected',
+                                  : 'checkout_modal.label_not_selected'.tr,
                               supportingText: _lDeliveryMethodId.isNotEmpty
                                   ? 'Method ID: $_lDeliveryMethodId'
                                   : null,
@@ -3115,7 +3110,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                     : (_localSelectedCustomer?.balance ?? 0.0),
                             isDefaultCustomer:
                                 _isDefaultCustomer(_localSelectedCustomer),
-                            customButtonTitle: "Confirm Payment Selection",
+                            customButtonTitle: 'checkout_modal.btn_done'.tr,
                             closeOnApply: false,
                             showConfirmButton: false,
                             showAsDialog: false,
@@ -3171,7 +3166,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                           child: _isSelectionOnly
                               ? _buildSelectionOnlySidePanel(
                                   icon: Icons.payments_rounded,
-                                  title: 'Selected Payment',
+                                  title: 'checkout_modal.label_selected_payment'.tr,
                                   value: _selectionOnlyPaymentLabel(),
                                   supportingText:
                                       _selectionOnlyPaymentSupportingText(),
@@ -3289,7 +3284,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                         child: _isSelectionOnly
                             ? _buildSelectionOnlySidePanel(
                                 icon: Icons.payments_rounded,
-                                title: 'Selected Payment',
+                                title: 'checkout_modal.label_selected_payment'.tr,
                                 value: _selectionOnlyPaymentLabel(),
                                 supportingText:
                                     _selectionOnlyPaymentSupportingText(),
@@ -3422,7 +3417,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text('Delivery Charge',
+        Text('billing.delivery_charge'.tr,
             style: TextStyle(
               fontWeight: FontWeight.w500,
               fontSize: _isDenseCheckout ? 13 : 14,
@@ -3519,7 +3514,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
   }
 
   String _paymentStatusLabel() {
-    if (_isPaymentStateValid()) return 'Configured';
+    if (_isPaymentStateValid()) return 'checkout_modal.label_configured'.tr;
     if (!PaymentValidation.hasCollectedPayment(
       isCashSelected: _lIsCashSelected,
       isCardSelected: _lIsCardSelected,
@@ -3531,9 +3526,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
       codAmount: _lCodAmount,
       extraAmounts: _lExtraAmounts,
     )) {
-      return 'Not Configured';
+      return 'checkout_modal.label_not_configured'.tr;
     }
-    return _validateLocalPayment().message ?? 'Not Configured';
+    return _validateLocalPayment().message ?? 'checkout_modal.label_not_configured'.tr;
   }
 
   void _syncPaymentAutofillIfNeeded({
@@ -3633,11 +3628,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
     }
     final paymentResult = _validateLocalPayment();
     if (!paymentResult.isValid) {
-      return paymentResult.message ?? 'Please configure payment before confirm';
+      return paymentResult.message ?? 'checkout_modal.msg_configure_payment_before_confirm'.tr;
     }
     return widget.requireCheckoutCompletion
-        ? 'Please configure payment before confirm'
-        : 'Unable to proceed';
+        ? 'checkout_modal.msg_configure_payment_before_confirm'.tr
+        : 'checkout_modal.msg_unable_to_proceed'.tr;
   }
 
   bool get _hasQuotationCustomer {
@@ -3782,7 +3777,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text('Close'),
+                child: Text('general.close'.tr),
               ),
             ),
             const SizedBox(width: 12),
@@ -3797,7 +3792,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text('Done'),
+                child: Text('checkout_modal.btn_done'.tr),
               ),
             ),
           ],
@@ -3809,11 +3804,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
   Widget _buildFooter({
     VoidCallback? onBack,
     VoidCallback? onNext,
-    String nextLabel = 'Next',
+    String? nextLabel,
     bool isNextEnabled = true,
     VoidCallback? onPrint,
     VoidCallback? onConfirm,
   }) {
+    final resolvedNextLabel = nextLabel ?? 'checkout_modal.btn_next'.tr;
     final compactFooter = widget.isQuotationMode || _isDenseCheckout;
     final double horizontalPadding =
         _isMobileCheckout ? 2.0 : (_isDenseCheckout ? 8.0 : 12.0);
@@ -3833,7 +3829,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
               if (onBack != null) ...[
                 Expanded(
                   child: CustomRoundButtonWithIconAdvanced(
-                    title: 'Back',
+                    title: 'checkout_modal.btn_back'.tr,
                     fct: onBack,
                     size: MediaQuery.of(context).size,
                     icon: const Icon(Icons.arrow_back,
@@ -3929,7 +3925,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
               if (onNext != null)
                 Expanded(
                   child: CustomRoundButtonWithIconAdvanced(
-                    title: nextLabel,
+                    title: resolvedNextLabel,
                     fct: isNextEnabled ? onNext : () {},
                     size: MediaQuery.of(context).size,
                     icon: const Icon(Icons.arrow_forward,
@@ -4029,7 +4025,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Order Summary',
+                'checkout_modal.label_order_summary'.tr,
                 style: TextStyle(
                   fontSize: _isDenseCheckout ? 16 : 18,
                   fontWeight: FontWeight.w800,
@@ -4038,17 +4034,17 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 ),
               ),
               SizedBox(height: _isDenseCheckout ? 8 : 12),
-              _buildSummaryRow('Net Amount', subTotal, Colors.black),
+              _buildSummaryRow('billing.net_amount'.tr, subTotal, Colors.black),
               SizedBox(
                   height:
                       widget.isQuotationMode ? 6 : (_isDenseCheckout ? 7 : 10)),
               _buildSummaryRow(
-                  'Discount', -discountAmount, const Color(0xFFEF4444),
+                  'billing.discount'.tr, -discountAmount, const Color(0xFFEF4444),
                   labelColor: const Color(0xFFEF4444)),
               SizedBox(
                   height:
                       widget.isQuotationMode ? 6 : (_isDenseCheckout ? 7 : 10)),
-              _buildSummaryRow('Tax', taxAmount, const Color(0xFF64748B),
+              _buildSummaryRow('billing.tax'.tr, taxAmount, const Color(0xFF64748B),
                   labelColor: const Color(0xFF64748B)),
               if (hasDelivery && _isfreeDeliveryMinimumAmount()) ...[
                 SizedBox(height: _isDenseCheckout ? 7 : 10),
@@ -4063,14 +4059,14 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     height: 1, thickness: 1.5, color: Color(0xFFF1F5F9)),
               ),
               _buildSummaryRow(
-                  'Total Payable', effectiveTotal, const Color(0xFF2563EB),
+                  'billing.total_payable'.tr, effectiveTotal, const Color(0xFF2563EB),
                   isBold: true,
                   large: true,
                   labelColor: const Color(0xFF2563EB)),
               if (_localSelectedCustomer != null && !isDefaultCustomer) ...[
                 SizedBox(height: _isDenseCheckout ? 7 : 10),
                 _buildSummaryRow(
-                    'Cust. Prev. Balance',
+                    'billing.customer_prev_balance'.tr,
                     prevBalance,
                     prevBalance >= 0
                         ? const Color(0xFF059669)
@@ -4081,10 +4077,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
               ],
               if (!widget.isQuotationMode) ...[
                 SizedBox(height: _isDenseCheckout ? 7 : 10),
-                _buildSummaryRow('Total Paid', totalPaid, Colors.black),
+                _buildSummaryRow('billing.total_paid'.tr, totalPaid, Colors.black),
                 SizedBox(height: _isDenseCheckout ? 7 : 10),
                 _buildSummaryRow(
-                    'Balance', displayBalance, const Color(0xFF059669),
+                    'billing.balance'.tr, displayBalance, const Color(0xFF059669),
                     labelColor: const Color(0xFF059669)),
               ],
             ],
@@ -4111,13 +4107,13 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             : (_isDenseCheckout ? 72.0 : 92.0));
                     final tiles = <Widget>[
                       _buildClickableCheckItem(
-                        'Customer',
+                        'billing.customer'.tr,
                         _hasQuoteOnlyCustomerNeedingSave
-                            ? 'Create customer'
+                            ? 'checkout_modal.label_create_customer'.tr
                             : widget.isQuotationMode
                                 ? _quotationCustomerDisplayName
                                 : (_localSelectedCustomer?.name ??
-                                    'Not Selected'),
+                                    'checkout_modal.label_not_selected'.tr),
                         hasCustomer,
                         Icons.person_outline,
                         0,
@@ -4125,26 +4121,26 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       ),
                       if (widget.enableDelivery)
                         _buildClickableCheckItem(
-                          'Delivery',
+                          'checkout_modal.label_delivery'.tr,
                           _lDeliveryMethod,
                           hasDelivery,
                           Icons.local_shipping_outlined,
                           1,
                         ),
                       _buildClickableCheckItem(
-                        'Discount',
+                        'billing.discount'.tr,
                         hasDiscount
                             ? (_localPercentageDiscount > 0
                                 ? '${_localPercentageDiscount.toStringAsFixed(0)}%'
                                 : _localFlatDiscount.toStringAsFixed(2))
-                            : 'Not Applied',
+                            : 'checkout_modal.label_not_applied'.tr,
                         hasDiscount,
                         Icons.discount_outlined,
                         2,
                       ),
                       if (!widget.isQuotationMode)
                         _buildClickableCheckItem(
-                          'Payment',
+                          'checkout_modal.label_payment'.tr,
                           _paymentStatusLabel(),
                           hasPayment,
                           Icons.payment_outlined,
@@ -4216,19 +4212,19 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     1,
                   ),
                 _buildClickableCheckItem(
-                  'Discount',
+                  'billing.discount'.tr,
                   hasDiscount
                       ? (_localPercentageDiscount > 0
                           ? '${_localPercentageDiscount.toStringAsFixed(0)}%'
                           : _localFlatDiscount.toStringAsFixed(2))
-                      : 'Not Applied',
+                      : 'checkout_modal.label_not_applied'.tr,
                   hasDiscount,
                   Icons.discount_outlined,
                   2,
                 ),
                 if (!widget.isQuotationMode)
                   _buildClickableCheckItem(
-                    'Payment',
+                    'checkout_modal.label_payment'.tr,
                     _paymentStatusLabel(),
                     hasPayment,
                     Icons.payment_outlined,

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
-import 'package:pos_machine/helpers/date_helper.dart';
 import 'dart:convert';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -15,11 +15,10 @@ import 'dart:async';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:printing/printing.dart';
-import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
+import 'package:pos_machine/providers/printer_settings_provider.dart';
 import 'package:pos_machine/screens/print/barcode_layout_settings_panel.dart';
-import 'package:pos_machine/screens/print/thermal/printer_utils.dart';
 import 'package:pos_machine/screens/print/widgets/printer_settings_responsive.dart';
 import 'package:pos_machine/screens/print/widgets/common_print_margins_card.dart';
 import 'package:pos_machine/screens/print/widgets/common_printer_settings_card.dart';
@@ -91,6 +90,13 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   final List<Map<String, String>> standardPdfThemes = PdfShareSettings.themes;
 
   bool get _isPdfSharing => selectedSettingsType == 'PDF Sharing';
+
+  String _localizedThemeName(Map<String, String> theme) {
+    final id = theme['id'] ?? '';
+    final key = 'printer_settings.theme_$id';
+    final translated = key.tr;
+    return translated == key ? (theme['name'] ?? id) : translated;
+  }
 
   List<String> get _activePaperSizes =>
       _isPdfSharing ? PdfShareSettings.paperSizes : paperSizes;
@@ -190,56 +196,15 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   /// Returns a description for the selected theme
   String _getThemeDescription(String themeId) {
-    if (_isStandardPdf) {
-      switch (themeId) {
-        case 'classic':
-          return 'Traditional A4/A5 PDF layout with standard formatting';
-        case 'simplified_tax_invoice':
-          return 'ZATCA Simplified Tax Invoice with teal accent header/footer, bilingual columns and totals';
-        case 'centered_simplified_tax_invoice':
-          return 'Simplified Tax Invoice with Arabic details on the left, a centered logo and English details on the right';
-        case 'bilingual_centered_tax_invoice':
-          return 'Bilingual centered Tax Invoice with Arabic details on the left, a centered logo and English details on the right';
-        case 'boxed_bilingual_tax_invoice':
-          return 'Boxed bilingual Tax Invoice with seller, buyer, invoice, items, bank and totals sections';
-        case 'boxed_header_tax_invoice':
-          return 'Boxed header Tax Invoice with seller, buyer, invoice, items, bank and totals sections';
-        default:
-          return 'Standard PDF layout';
-      }
-    }
-    switch (themeId) {
-      case 'classic':
-        return 'Traditional receipt layout with standard formatting';
-      case 'arabic_and_english':
-        return 'Bilingual layout optimized for Arabic and English';
-      case 'arabic_english_table_headers':
-        return 'Arabic and English layout with bilingual table headers only';
-      case 'arabic_and_english_3':
-        return 'Bilingual layout with English name only.';
-      case 'premium':
-        return 'Premium design with enhanced visual styling and layout';
-      case 'premium1':
-        return 'Premium design with enhanced visual styling';
-      case 'premium2':
-        return 'Premium design with enhanced visual styling and invoice number in box';
-      case 'premium2_bilingual':
-        return 'Pilot clone of Premium 2 for language-driven bilingual and direction testing';
-      case 'standard':
-        return 'Clean and minimal receipt layout';
-      case 'supermarket':
-        return 'Modern & clean design with enhanced spacing';
-      case 'supermarket2':
-        return 'Modern with Delivery Icon';
-      case 'supermarkerrecpt3':
-        return 'Supermarket-style receipt layout (version 3)';
-      case 'bilingual':
-        return 'Bilingual layout with English and Arabic support';
-      case 'mobile_shop_tax_invoice':
-        return 'Bilingual ZATCA tax invoice for mobile shops with SN, VAT, QTY, PRICE and AMOUNT columns';
-      default:
-        return 'Modern & clean design with enhanced spacing';
-    }
+    final prefix = _isStandardPdf
+        ? 'printer_settings.desc_pdf_'
+        : 'printer_settings.desc_';
+    final key = '$prefix$themeId';
+    final translated = key.tr;
+    if (translated != key) return translated;
+    return _isStandardPdf
+        ? 'printer_settings.desc_pdf_default'.tr
+        : 'printer_settings.desc_thermal_default'.tr;
   }
 
   @override
@@ -292,12 +257,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Permissions Required'),
-        content: const Text(
-            'This app needs Bluetooth and Location permissions to scan for printers.'),
+        title: Text('printer_settings.dialog_perm_title'.tr),
+        content: Text('printer_settings.dialog_perm_content'.tr),
         actions: [
           TextButton(
-            child: const Text('OK'),
+            child: Text('printer_settings.dialog_ok'.tr),
             onPressed: () {
               Navigator.of(context).pop();
               openAppSettings();
@@ -406,7 +370,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Could not scan for printers: $e',
+          message: 'printer_settings.error_scan_reason'
+              .trParams({'error': e.toString()}),
         );
       }
     } finally {
@@ -440,14 +405,16 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       showScaffold(
         context: context,
         message: printer.isDevelopment
-            ? 'Development Printer selected. Prints will be saved to a folder.'
-            : "${printer.deviceName.toString()} Printer Selected",
+            ? 'printer_settings.toast_dev_printer_selected'.tr
+            : 'printer_settings.toast_printer_selected'
+                .trParams({'device': printer.deviceName.toString()}),
       );
     } catch (error) {
       if (!mounted) return;
       showScaffoldError(
         context: context,
-        message: 'Could not save printer selection: $error',
+        message: 'printer_settings.error_save_selection_reason'
+            .trParams({'error': error.toString()}),
       );
     }
   }
@@ -581,7 +548,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       setState(() => isLoading = false);
       showScaffoldError(
         context: context,
-        message: 'Could not load printer settings: $error',
+        message: 'printer_settings.error_load_settings_reason'
+            .trParams({'error': error.toString()}),
       );
     }
   }
@@ -603,6 +571,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       if (isPdfSharing) {
         await prefs.remove(_paperSizePrefsKey);
         await prefs.remove(_receiptThemePrefsKey);
+        await prefs.remove(
+            PrinterSettingsProvider.userSelectedFlagKey(_paperSizePrefsKey));
+        await prefs.remove(
+            PrinterSettingsProvider.userSelectedFlagKey(_receiptThemePrefsKey));
       } else {
         await DevelopmentPrinterService.clearTargetSelection(
           _printerPrefsKey,
@@ -616,6 +588,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         await prefs.remove(_paperSizePrefsKey);
         await prefs.remove(_fontStylePrefsKey);
         await prefs.remove(_receiptThemePrefsKey);
+        await prefs.remove(
+            PrinterSettingsProvider.userSelectedFlagKey(_paperSizePrefsKey));
+        await prefs.remove(
+            PrinterSettingsProvider.userSelectedFlagKey(_receiptThemePrefsKey));
       }
 
       if (isPdfSharing) {
@@ -626,15 +602,17 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         showScaffold(
           context: context,
           message: isPdfSharing
-              ? 'PDF Sharing settings reset to compatible defaults'
-              : '$selectedSettingsType printer settings reset to default',
+              ? 'printer_settings.toast_reset_pdf_sharing'.tr
+              : 'printer_settings.toast_reset_settings'
+                  .trParams({'type': selectedSettingsType}),
         );
       }
     } catch (e) {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Error resetting printer settings: ${e.toString()}",
+          message: 'printer_settings.error_reset_reason'
+              .trParams({'error': e.toString()}),
         );
       }
     }
@@ -643,11 +621,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   Future<void> _saveDefaultPaperSize(String paperSize) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_paperSizePrefsKey, paperSize);
+    await PrinterSettingsProvider.markUserSelected(prefs, _paperSizePrefsKey);
 
     if (mounted) {
       showScaffold(
         context: context,
-        message: "Default paper size saved",
+        message: "printer_settings.toast_paper_size_saved".tr,
       );
     }
   }
@@ -655,11 +634,13 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   Future<void> _saveReceiptTheme(String theme) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_receiptThemePrefsKey, theme.toLowerCase());
+    await PrinterSettingsProvider.markUserSelected(
+        prefs, _receiptThemePrefsKey);
 
     if (mounted) {
       showScaffold(
         context: context,
-        message: "Receipt theme saved",
+        message: "printer_settings.toast_theme_saved".tr,
       );
     }
   }
@@ -671,7 +652,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     if (accessToken == null || accessToken.isEmpty) {
       showScaffoldError(
         context: context,
-        message: 'Missing access token. Please login again.',
+        message: 'printer_settings.toast_missing_token'.tr,
       );
       return;
     }
@@ -690,13 +671,14 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       if (!mounted) return;
       showScaffold(
         context: context,
-        message: 'Document configuration resynced successfully',
+        message: 'printer_settings.toast_resync_success'.tr,
       );
     } catch (e) {
       if (!mounted) return;
       showScaffoldError(
         context: context,
-        message: 'Failed to resync document configurations: ${e.toString()}',
+        message: 'printer_settings.error_resync_reason'
+            .trParams({'error': e.toString()}),
       );
     } finally {
       if (mounted) {
@@ -704,499 +686,6 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           _isResyncingDocConfig = false;
         });
       }
-    }
-  }
-
-  Future<void> _printSample() async {
-    if (selectedPrinter == null) {
-      showScaffoldError(
-        context: context,
-        message: "Please select a printer first",
-      );
-      return;
-    }
-    if (selectedPrinter!.isDevelopment) {
-      showScaffoldError(
-        context: context,
-        message:
-            'Development Printer previews are created from actual receipts. '
-            'Print a bill or quotation to save its image.',
-      );
-      return;
-    }
-
-    try {
-      // Convert selected font style to PosFontType
-      PosFontType fontType = selectedFontStyle.contains('Font A')
-          ? PosFontType.fontA
-          : PosFontType.fontB;
-
-      // Create dummy cart items
-      List<Map<String, dynamic>> dummyCartItems = [
-        {
-          'productName': 'Premium Coffee Beans (Arabica)',
-          'mrp': '450.00',
-          'quantity': '2',
-          'unitPrice': '400.00',
-          'totalPrice': '800.00'
-        },
-        {
-          'productName': 'Organic Green Tea Leaves',
-          'mrp': '250.00',
-          'quantity': '1',
-          'unitPrice': '225.00',
-          'totalPrice': '225.00'
-        },
-        {
-          'productName': 'Fresh Milk (Full Cream) 1L',
-          'mrp': '65.00',
-          'quantity': '3',
-          'unitPrice': '60.00',
-          'totalPrice': '180.00'
-        },
-        {
-          'productName': 'Whole Wheat Bread',
-          'mrp': '45.00',
-          'quantity': '2',
-          'unitPrice': '40.00',
-          'totalPrice': '80.00'
-        },
-        {
-          'productName': 'Premium Dark Chocolate Bar',
-          'mrp': '120.00',
-          'quantity': '1',
-          'unitPrice': '110.00',
-          'totalPrice': '110.00'
-        },
-      ];
-
-      // Print sample with the selected font style
-      await _printSampleReceipt(
-        selectedPrinter!,
-        dummyCartItems,
-        fontType,
-        '1395.00', // Total amount
-        '55.00', // Saved amount
-        DateTime.now().toIso8601String(),
-        'SAMPLE-${DateTime.now().millisecondsSinceEpoch}',
-      );
-
-      if (mounted) {
-        showScaffold(
-          context: context,
-          message: "Sample receipt sent to printer",
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        showScaffoldError(
-          context: context,
-          message: "Error printing sample: ${e.toString()}",
-        );
-      }
-    }
-  }
-
-  Future<void> _printSampleReceipt(
-    BluetoothPrinter printer,
-    List<Map<String, dynamic>> cartItems,
-    PosFontType fontType,
-    String formattedTotal,
-    String savedTotal,
-    String orderDate,
-    String orderNumber,
-  ) async {
-    final printerUtils = ThermalPrinterUtils();
-
-    try {
-      // Connect to printer
-      await printerUtils.connectToPrinter(printer);
-
-      // Generate receipt with all fields enabled (dummy document config)
-      final profile = await CapabilityProfile.load();
-      PaperSize paperSize =
-          selectedPaperSize == '58mm' ? PaperSize.mm58 : PaperSize.mm80;
-      final generator = Generator(paperSize, profile);
-      List<int> bytes = [];
-
-      // Text sizes based on font type
-      PosTextSize textSizeTitle = PosTextSize.size4;
-      PosTextSize textSizeBig = PosTextSize.size3;
-      PosTextSize textSizeMedium = PosTextSize.size2;
-      PosTextSize textSizeSmall = PosTextSize.size1;
-
-      // Header
-      bytes += generator.text('SAMPLE STORE',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeTitle));
-
-      bytes += generator.text('Sample Receipt Test',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeMedium));
-
-      bytes += generator.text('123 Sample Street, Demo City',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeSmall));
-
-      bytes += generator.text('TEL: +1-234-567-8900',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeSmall));
-
-      bytes += generator.text('Email: sample@store.com',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeSmall));
-
-      bytes += generator.text('INVOICE',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeMedium));
-
-      bytes += generator.text('INV No: $orderNumber',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeMedium));
-
-      // Table header
-      bytes += generator.row([
-        PosColumn(
-            text: 'SL#',
-            width: 1,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: true,
-                height: textSizeMedium)),
-        PosColumn(
-            text: 'PARTICULARS',
-            width: 3,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: true,
-                height: textSizeMedium)),
-        PosColumn(
-            text: 'MRP',
-            width: 2,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSizeMedium)),
-        PosColumn(
-            text: 'QTY',
-            width: 2,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSizeMedium)),
-        PosColumn(
-            text: 'RATE',
-            width: 2,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSizeMedium)),
-        PosColumn(
-            text: 'TOTAL',
-            width: 2,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSizeMedium)),
-      ]);
-      bytes += generator.hr();
-
-      // Cart items
-      for (var i = 0; i < cartItems.length; i++) {
-        var item = cartItems[i];
-
-        // Product name row
-        bytes += generator.row([
-          PosColumn(
-              text: '${i + 1}',
-              width: 1,
-              styles: PosStyles(
-                  fontType: fontType,
-                  align: PosAlign.left,
-                  bold: true,
-                  height: textSizeMedium)),
-          PosColumn(
-              text: item['productName'],
-              width: 11,
-              styles: PosStyles(
-                  fontType: fontType,
-                  align: PosAlign.left,
-                  bold: true,
-                  height: textSizeMedium)),
-        ]);
-
-        // Price details row
-        bytes += generator.row([
-          PosColumn(
-              text: '',
-              width: 1,
-              styles: PosStyles(fontType: fontType, align: PosAlign.left)),
-          PosColumn(
-              text: '',
-              width: 3,
-              styles: PosStyles(fontType: fontType, align: PosAlign.left)),
-          PosColumn(
-              text: item['mrp'],
-              width: 2,
-              styles: PosStyles(
-                  fontType: fontType,
-                  align: PosAlign.right,
-                  bold: false,
-                  height: textSizeMedium)),
-          PosColumn(
-              text: item['quantity'],
-              width: 2,
-              styles: PosStyles(
-                  fontType: fontType,
-                  align: PosAlign.right,
-                  bold: false,
-                  height: textSizeMedium)),
-          PosColumn(
-              text: item['unitPrice'],
-              width: 2,
-              styles: PosStyles(
-                  fontType: fontType,
-                  align: PosAlign.right,
-                  bold: false,
-                  height: textSizeMedium)),
-          PosColumn(
-              text: item['totalPrice'],
-              width: 2,
-              styles: PosStyles(
-                  fontType: fontType,
-                  align: PosAlign.right,
-                  bold: false,
-                  height: textSizeMedium)),
-        ]);
-      }
-
-      bytes += generator.hr();
-
-      // Totals
-      bytes += generator.row([
-        PosColumn(
-            text: 'Items',
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: false,
-                height: textSizeSmall)),
-        PosColumn(
-            text: '${cartItems.length}',
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSizeSmall)),
-      ]);
-
-      bytes += generator.row([
-        PosColumn(
-            text: 'Total Quantity',
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: false,
-                height: textSizeSmall)),
-        PosColumn(
-            text: '9',
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSizeSmall)),
-      ]);
-
-      bytes += generator.row([
-        PosColumn(
-            text: 'Total MRP',
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: false,
-                height: textSizeSmall)),
-        PosColumn(
-            text: '1450.00',
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSizeSmall)),
-      ]);
-
-      bytes += generator.row([
-        PosColumn(
-            text: 'You Saved',
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: false,
-                height: textSizeMedium)),
-        PosColumn(
-            text: savedTotal,
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSizeMedium)),
-      ]);
-
-      bytes += generator.row([
-        PosColumn(
-            text: 'Net Total',
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: true,
-                height: textSizeBig)),
-        PosColumn(
-            text: formattedTotal,
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSizeBig)),
-      ]);
-
-      bytes += generator.hr();
-
-      // Amount in words
-      bytes += generator.text(
-          'One Thousand Three Hundred Ninety Five Rupees Only.',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeSmall));
-
-      // Date and time
-      final now = DateHelper.now();
-      bytes += generator.row([
-        PosColumn(
-            text: '${now.day}/${now.month}/${now.year}',
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.left,
-                bold: true,
-                height: textSizeSmall)),
-        PosColumn(
-            text: '${now.hour}:${now.minute.toString().padLeft(2, '0')}',
-            width: 6,
-            styles: PosStyles(
-                fontType: fontType,
-                align: PosAlign.right,
-                bold: true,
-                height: textSizeSmall)),
-      ]);
-
-      bytes += generator.hr();
-
-      // Barcode
-      try {
-        List<String> code39Data =
-            orderNumber.replaceAll(RegExp(r'[^A-Z0-9\-]'), '').split("");
-        bytes += generator.barcode(
-          Barcode.code39(code39Data),
-          height: selectedPaperSize == '58mm' ? 20 : 30,
-          width: 1,
-          textPos: BarcodeText.none,
-          align: PosAlign.center,
-        );
-      } catch (e) {
-        bytes += generator.text(orderNumber,
-            styles: PosStyles(
-                fontType: fontType, align: PosAlign.center, bold: true));
-      }
-
-      // Terms and conditions
-      bytes += generator.hr();
-      bytes += generator.text('TERMS & CONDITIONS:',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.left,
-              bold: true,
-              height: textSizeSmall));
-      bytes += generator.text('1. All sales are final unless defective.',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.left,
-              bold: false,
-              height: textSizeSmall));
-      bytes += generator.text('2. Returns accepted within 7 days with receipt.',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.left,
-              bold: false,
-              height: textSizeSmall));
-      bytes += generator.text(
-          '3. Store credit issued for returns without receipt.',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.left,
-              bold: false,
-              height: textSizeSmall));
-
-      // Thank you message
-      bytes += generator.hr();
-      bytes += generator.text('Thank You for Shopping with Us!',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeMedium));
-
-      bytes += generator.text('Visit Again Soon!',
-          styles: PosStyles(
-              fontType: fontType,
-              align: PosAlign.center,
-              bold: true,
-              height: textSizeSmall));
-
-      // Cut
-      bytes += generator.cut();
-
-      // Print
-      await printerUtils.sendPrintJob(printer, bytes);
-    } finally {
-      await printerUtils.disconnectPrinter(printer);
     }
   }
 
@@ -1229,14 +718,15 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       if (mounted) {
         showScaffold(
           context: context,
-          message: "All Hive data cleared successfully",
+          message: "printer_settings.toast_hive_cleared".tr,
         );
       }
     } catch (e) {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Error clearing Hive data: ${e.toString()}",
+          message: "printer_settings.error_clear_hive_reason"
+              .trParams({'error': e.toString()}),
         );
       }
     }
@@ -1355,7 +845,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     final fieldGap = isCompact ? 12.0 : 20.0;
 
     final paperField = PrinterDropdownField(
-      label: 'Paper Size',
+      label: 'printer_settings.label_paper_size'.tr,
       value: _activePaperSizes.contains(selectedPaperSize)
           ? selectedPaperSize
           : (_isPdfSharing ? PdfShareSettings.defaultPaperSize : '80mm'),
@@ -1396,12 +886,14 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     final themeField = !_usesReceiptSettings
         ? null
         : PrinterDropdownField(
-            label: _isPdfSharing ? 'Template' : 'Theme',
+            label: _isPdfSharing
+                ? 'printer_settings.label_template'.tr
+                : 'printer_settings.label_theme'.tr,
             value: selectedReceiptTheme,
             items: _activeThemes.map((Map<String, String> theme) {
               return DropdownMenuItem<String>(
                 value: theme['id'],
-                child: Text(theme['name']!),
+                child: Text(_localizedThemeName(theme)),
               );
             }).toList(),
             onChanged: (String? newValue) {
@@ -1434,10 +926,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         children: [
           PrinterSectionHeader(
             icon: Icons.description_rounded,
-            title: _isPdfSharing ? 'PDF Output' : 'Receipt Output',
+            title: _isPdfSharing
+                ? 'printer_settings.section_output_pdf'.tr
+                : 'printer_settings.section_output_receipt'.tr,
             subtitle: _isPdfSharing
-                ? 'Page size and template used for generated invoice files'
-                : 'Paper size and visual layout for printed receipts',
+                ? 'printer_settings.subtitle_output_pdf'.tr
+                : 'printer_settings.subtitle_output_receipt'.tr,
           ),
           SizedBox(height: fieldGap),
           fields,
@@ -1479,24 +973,23 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     final isBarcodeTab = selectedSettingsType == 'Barcode';
     final marginsEnabled = !isBarcodeTab && _isStandardPdf;
     final String marginsDisabledNote = isBarcodeTab
-        ? 'Barcode stickers use their own Page Margin setting instead.'
-        : 'Only affects A4 and A5 print jobs. '
-            'Switch the paper size to A4 or A5 to change it.';
+        ? 'printer_settings.margin_barcode_note'.tr
+        : 'printer_settings.margin_std_note'.tr;
 
     final String subtitle;
     if (isBarcodeTab) {
-      subtitle = 'Barcode stickers keep their own Page Margin';
+      subtitle = 'printer_settings.margin_barcode_subtitle'.tr;
     } else if (showDriverSetting) {
-      subtitle = 'PDF margins and printer driver behaviour';
+      subtitle = 'printer_settings.margin_pdf_subtitle'.tr;
     } else {
-      subtitle = 'Shared PDF page margins';
+      subtitle = 'printer_settings.margin_shared_subtitle'.tr;
     }
 
     return PrinterDisclosureCard(
       icon: Icons.tune_rounded,
-      title: 'Advanced print options',
+      title: 'printer_settings.section_advanced_title'.tr,
       subtitle: subtitle,
-      scopeLabel: 'Applies to all tabs',
+      scopeLabel: 'printer_settings.section_advanced_scope'.tr,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1523,7 +1016,6 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   Widget _buildHeader() {
     final isCompact = printerIsCompact(context);
-    final cardPadding = printerCardPadding(context);
 
     final titleBlock = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1547,10 +1039,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                _isPdfSharing ? 'PDF Sharing Settings' : 'Printer Settings',
+                _isPdfSharing
+                    ? 'printer_settings.title_pdf_sharing'.tr
+                    : 'printer_settings.title'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.semiBold,
-                  isCompact ? FontSize.s18 : FontSize.s20,
+                  isCompact ? FontSize.s20 : 24,
                   0.30,
                   ColorManager.textColor,
                 ),
@@ -1558,8 +1052,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
               const SizedBox(height: 4),
               Text(
                 _isPdfSharing
-                    ? 'Configure invoice PDFs independently from physical printers'
-                    : 'Configure printers, paper sizes and receipt themes',
+                    ? 'printer_settings.subtitle_pdf_sharing'.tr
+                    : 'printer_settings.subtitle'.tr,
                 maxLines: isCompact ? 2 : 3,
                 overflow: TextOverflow.ellipsis,
                 style: buildCustomStyle(
@@ -1575,36 +1069,21 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       ],
     );
 
-    final showTestPrint = selectedSettingsType != 'Barcode' && !_isStandardPdf;
-
-    final testPrintButton = CustomRoundButton(
-      fct: _printSample,
-      title: 'Test Print',
-      height: 44,
-      width: isCompact ? double.infinity : 130,
-      fontSize: 14,
-      borderColor: ColorManager.kPrimaryColor,
-      boxColor: ColorManager.kPrimaryColor,
-      textColor: Colors.white,
-    );
-
-    return PrinterSettingsCard(
-      padding: cardPadding,
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 8, horizontal: isCompact ? 0 : 4),
       child: isCompact
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                titleBlock,
+                const SizedBox(height: 12),
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(child: titleBlock),
-                    _buildHeaderMenu(),
+                    Expanded(child: _buildResyncButton(isCompact)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _buildClearButton(isCompact)),
                   ],
                 ),
-                if (showTestPrint) ...[
-                  const SizedBox(height: 12),
-                  testPrintButton,
-                ],
               ],
             )
           : Row(
@@ -1612,79 +1091,47 @@ class _PrinterSettingsState extends State<PrinterSettings> {
               children: [
                 Expanded(child: titleBlock),
                 const SizedBox(width: 16),
-                if (showTestPrint) ...[
-                  testPrintButton,
-                  const SizedBox(width: 4),
-                ],
-                _buildHeaderMenu(),
+                _buildResyncButton(isCompact),
+                const SizedBox(width: 8),
+                _buildClearButton(isCompact),
               ],
             ),
     );
   }
 
-  /// Overflow menu for the rare, page-wide actions.
-  ///
-  /// Resync and Clear are recovery actions used occasionally; as solid buttons
-  /// they were the loudest elements on a settings page, and the destructive one
-  /// sat directly under the cursor.
-  Widget _buildHeaderMenu() {
-    Widget item(IconData icon, String label, {Color? color, Widget? leading}) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          leading ?? Icon(icon, size: 20, color: color),
-          const SizedBox(width: 12),
-          Text(
-            label,
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s13,
-              0.15,
-              color ?? ColorManager.textColor,
-            ),
-          ),
-        ],
-      );
-    }
+  Widget _buildResyncButton(bool isCompact) {
+    return CustomRoundButtonWithIcon(
+      fct: _isResyncingDocConfig ? () {} : _resyncDocumentConfigurations,
+      title: _isResyncingDocConfig
+          ? 'printer_settings.btn_resyncing'.tr
+          : 'printer_settings.btn_resync_doc'.tr,
+      size: Size.zero,
+      height: 44,
+      width: isCompact ? double.infinity : 120,
+      fontSize: isCompact ? 12 : 13,
+      icon: const Icon(Icons.sync_rounded,
+          size: 16, color: ColorManager.kPrimaryColor),
+      boxColor: Colors.white,
+      borderColor: const Color(0xFFDDE3EB),
+      textColor: ColorManager.kPrimaryColor,
+    );
+  }
 
-    return PopupMenuButton<String>(
-      tooltip: 'More actions',
-      position: PopupMenuPosition.under,
-      icon: const Icon(Icons.more_vert_rounded, color: ColorManager.kGreyColor),
-      onSelected: (value) {
-        switch (value) {
-          case 'resync':
-            _resyncDocumentConfigurations();
-            break;
-          case 'clear':
-            clearDefaultPrinter();
-            break;
-        }
-      },
-      itemBuilder: (context) => [
-        PopupMenuItem<String>(
-          value: 'resync',
-          enabled: !_isResyncingDocConfig,
-          child: item(
-            Icons.sync_rounded,
-            _isResyncingDocConfig ? 'Resyncing…' : 'Resync doc config',
-            leading: _isResyncingDocConfig
-                ? const SizedBox.square(
-                    dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : null,
-          ),
-        ),
-        PopupMenuItem<String>(
-          value: 'clear',
-          child: item(
-            Icons.restart_alt_rounded,
-            _isPdfSharing ? 'Reset PDF settings' : 'Clear default printer',
-            color: ColorManager.kButtonRed,
-          ),
-        ),
-      ],
+  Widget _buildClearButton(bool isCompact) {
+    return CustomRoundButtonWithIcon(
+      fct: clearDefaultPrinter,
+      title: _isPdfSharing
+          ? 'printer_settings.btn_clear'.tr
+          : 'printer_settings.btn_clear_printer'.tr,
+      size: Size.zero,
+      height: 44,
+      width: isCompact ? double.infinity : 100,
+      fontSize: isCompact ? 12 : 13,
+      icon: const Icon(Icons.restart_alt_rounded,
+          size: 16, color: ColorManager.kButtonRed),
+      boxColor: Colors.white,
+      borderColor: const Color(0xFFE2E7EE),
+      textColor: ColorManager.kButtonRed,
     );
   }
 
@@ -1712,12 +1159,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         _loadSettings();
       },
       helperText: _isPdfSharing
-          ? 'Choose the page size and PDF template for '
-              '${selectedSegment == 'B2B' ? 'business (B2B)' : 'retail (B2C)'} '
-              'invoice sharing. B2B uses the B2C sharing profile when left unconfigured.'
-          : 'Configure a separate printer, paper size and theme for '
-              '${selectedSegment == 'B2B' ? 'business (B2B)' : 'retail (B2C)'} '
-              'bills. B2B uses the B2C settings when left unconfigured.',
+          ? (selectedSegment == 'B2B'
+              ? 'printer_settings.helper_pdf_b2b'.tr
+              : 'printer_settings.helper_pdf_b2c'.tr)
+          : (selectedSegment == 'B2B'
+              ? 'printer_settings.helper_receipt_b2b'.tr
+              : 'printer_settings.helper_receipt_b2c'.tr),
     );
   }
 
@@ -1734,13 +1181,15 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         children: [
           PrinterSectionHeader(
             icon: Icons.devices_rounded,
-            title: 'Available Printers',
+            title: 'printer_settings.section_printers'.tr,
             subtitle: _developerModeEnabled && _supportsDevelopmentPrinter
-                ? 'Select a physical printer or save output to a folder'
-                : 'Scan and select a default printer',
+                ? 'printer_settings.section_printers_sub_dev'.tr
+                : 'printer_settings.section_printers_sub'.tr,
             trailing: CustomRoundButton(
               fct: () => _isScanning ? null : _checkPermissions(),
-              title: _isScanning ? 'Scanning...' : 'Scan for Printers',
+              title: _isScanning
+                  ? 'printer_settings.btn_scanning'.tr
+                  : 'printer_settings.btn_scan'.tr,
               height: 44,
               width: isCompact ? double.infinity : 160,
               fontSize: 14,
@@ -1757,8 +1206,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           SizedBox(height: listGap),
           PrinterInfoStrip(
             text: _isScanning
-                ? 'Scanning for printers...'
-                : '${displayDevices.length} device${displayDevices.length == 1 ? '' : 's'} found',
+                ? 'printer_settings.info_scanning'.tr
+                : 'printer_settings.info_devices_found'
+                    .trParams({'count': displayDevices.length.toString()}),
             icon: _isScanning
                 ? Icons.bluetooth_searching_rounded
                 : Icons.devices_other_rounded,
@@ -1766,7 +1216,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           if (selectedPrinter != null) ...[
             const SizedBox(height: 10),
             SettingsStatusBadge(
-              label: selectedPrinter!.deviceName ?? 'Printer selected',
+              label: selectedPrinter!.deviceName ??
+                  'printer_settings.status_printer_selected'.tr,
               isPositive: true,
               icon: Icons.check_circle_outline_rounded,
             ),
@@ -1776,8 +1227,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                 future: DevelopmentPrinterService.getOutputDirectory(),
                 builder: (context, snapshot) => PrinterInfoStrip(
                   text: snapshot.hasData
-                      ? 'Output folder: ${snapshot.data!.path}'
-                      : 'Preparing development output folder...',
+                      ? 'printer_settings.output_folder_prefix'.tr +
+                          snapshot.data!.path
+                      : 'printer_settings.info_preparing_folder'.tr,
                   icon: Icons.folder_outlined,
                 ),
               ),
@@ -1785,10 +1237,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           ],
           SizedBox(height: listGap),
           displayDevices.isEmpty
-              ? const PrinterEmptyState(
-                  title: 'No printers found',
-                  subtitle:
-                      'Tap the scan button above to search for nearby printers',
+              ? PrinterEmptyState(
+                  title: 'printer_settings.empty_title'.tr,
+                  subtitle: 'printer_settings.empty_subtitle'.tr,
                 )
               // A plain Column instead of a shrink-wrapped, non-scrolling
               // ListView: same layout, but Column supports intrinsic-height
@@ -1826,7 +1277,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     required bool isSelected,
     required bool isCompact,
   }) {
-    final deviceName = printer.deviceName ?? 'Unknown device';
+    final deviceName =
+        printer.deviceName ?? 'printer_settings.unknown_device'.tr;
     final subtitle = printer.isDevelopment
         ? 'Saves PDFs and thermal receipt images to a local folder'
         : printer.address ?? printer.typePrinter.name;
@@ -1837,7 +1289,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         decoration: BoxDecoration(
           color: isSelected
               ? ColorManager.kPrimaryColor.withValues(alpha: 0.05)
-              : Colors.grey.shade50,
+              : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
@@ -1862,10 +1314,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                     border: Border.all(color: Colors.grey.shade200),
                   ),
                   child: Icon(
-                    Icons.print_rounded,
+                    isSelected
+                        ? Icons.check_circle_rounded
+                        : Icons.print_outlined,
                     color: isSelected
                         ? ColorManager.kPrimaryColor
-                        : ColorManager.kGreyColor,
+                        : const Color(0xFF596579),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1906,15 +1360,17 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             const SizedBox(height: 12),
             CustomRoundButton(
               fct: () => selectPrinter(printer),
-              title: isSelected ? 'Selected' : 'Select',
+              title: isSelected
+                  ? 'printer_settings.btn_selected'.tr
+                  : 'printer_settings.btn_select'.tr,
               height: 44,
               width: double.infinity,
               fontSize: 14,
               borderColor: isSelected
                   ? ColorManager.kPrimaryColor
-                  : ColorManager.kGreyColor,
+                  : const Color(0xFF596579),
               boxColor: isSelected ? ColorManager.kPrimaryColor : Colors.white,
-              textColor: isSelected ? Colors.white : ColorManager.kGreyColor,
+              textColor: isSelected ? Colors.white : const Color(0xFF596579),
             ),
           ],
         ),
@@ -1925,7 +1381,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       decoration: BoxDecoration(
         color: isSelected
             ? ColorManager.kPrimaryColor.withValues(alpha: 0.05)
-            : Colors.grey.shade50,
+            : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isSelected
@@ -1947,10 +1403,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             border: Border.all(color: Colors.grey.shade200),
           ),
           child: Icon(
-            Icons.print_rounded,
+            isSelected ? Icons.check_circle_rounded : Icons.print_outlined,
             color: isSelected
                 ? ColorManager.kPrimaryColor
-                : ColorManager.kGreyColor,
+                : const Color(0xFF596579),
           ),
         ),
         title: Text(
@@ -1976,14 +1432,16 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         ),
         trailing: CustomRoundButton(
           fct: () => selectPrinter(printer),
-          title: isSelected ? 'Selected' : 'Select',
+          title: isSelected
+              ? 'printer_settings.btn_selected'.tr
+              : 'printer_settings.btn_select'.tr,
           height: 44,
           width: 108,
           fontSize: 14,
           borderColor:
-              isSelected ? ColorManager.kPrimaryColor : ColorManager.kGreyColor,
+              isSelected ? ColorManager.kPrimaryColor : const Color(0xFF596579),
           boxColor: isSelected ? ColorManager.kPrimaryColor : Colors.white,
-          textColor: isSelected ? Colors.white : ColorManager.kGreyColor,
+          textColor: isSelected ? Colors.white : const Color(0xFF596579),
         ),
       ),
     );

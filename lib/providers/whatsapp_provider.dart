@@ -554,20 +554,20 @@ We appreciate your business!
                   : Colors.orange,
             ),
             const SizedBox(width: 8),
-            const Text('WhatsApp Status'),
+            Text('ui_chrome.whatsapp_status'.tr),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Status: ${_whatsappController.connectionStatus.value}'),
+            Text('${'ui_chrome.status_label'.tr} ${_whatsappController.connectionStatus.value}'),
             const SizedBox(height: 8),
             Text(getConnectionStatusMessage()),
             if (_lastError.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
-                'Last Error: $_lastError',
+                '${'ui_chrome.last_error_label'.tr} $_lastError',
                 style: const TextStyle(color: Colors.red),
               ),
             ],
@@ -580,11 +580,11 @@ We appreciate your business!
                 Navigator.of(context).pop();
                 await _whatsappController.connect();
               },
-              child: const Text('Connect'),
+              child: Text('ui_chrome.connect'.tr),
             ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+            child: Text('general.close'.tr),
           ),
         ],
       ),
@@ -711,25 +711,24 @@ We appreciate your business!
           children: [
             Icon(Icons.info_outline, color: Colors.blue[700]),
             const SizedBox(width: 8),
-            const Text('WhatsApp Bot Limitation'),
+            Text('ui_chrome.whatsapp_bot_limitation'.tr),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'WhatsApp Bot Integration Info:',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            Text('ui_chrome.wa_integration_info'.tr,
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            const Text('⚠️  PDF files cannot be sent directly through the WhatsApp bot.'),
+            Text('ui_chrome.wa_pdf_cannot_send'.tr),
             const SizedBox(height: 8),
-            const Text('✅ What we do instead:'),
+            Text('ui_chrome.wa_instead'.tr),
             const SizedBox(height: 4),
-            const Text('  • Send message with PDF information'),
-            const Text('  • Include download link (if available)'),
-            const Text('  • Provide file location details'),
+            Text('ui_chrome.wa_send_info'.tr),
+            Text('ui_chrome.wa_download_link'.tr),
+            Text('ui_chrome.wa_file_location'.tr),
             if (pdfFile != null) ...[
               const SizedBox(height: 12),
               Container(
@@ -741,24 +740,24 @@ We appreciate your business!
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('PDF Generated:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text('File: ${pdfFile.path.split('/').last}'),
-                    Text('Location: ${pdfFile.parent.path}'),
+                    Text('ui_chrome.pdf_generated'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text('${'ui_chrome.file_label'.tr} ${pdfFile.path.split('/').last}'),
+                    Text('${'ui_chrome.location_label'.tr} ${pdfFile.parent.path}'),
                   ],
                 ),
               ),
             ],
             const SizedBox(height: 12),
-            const Text(
-              '💡 To share the actual PDF file, use the "Share as PDF" option which opens your device\'s sharing menu.',
-              style: TextStyle(fontStyle: FontStyle.italic),
+            Text(
+              'ui_chrome.wa_share_hint'.tr,
+              style: const TextStyle(fontStyle: FontStyle.italic),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Understood'),
+            child: Text('ui_chrome.understood'.tr),
           ),
           if (pdfFile != null)
             ElevatedButton(
@@ -766,7 +765,7 @@ We appreciate your business!
                 Navigator.of(context).pop();
                 // You can add logic here to open file location
               },
-              child: const Text('Open File Location'),
+              child: Text('ui_codes.open_file_location'.tr),
             ),
         ],
       ),

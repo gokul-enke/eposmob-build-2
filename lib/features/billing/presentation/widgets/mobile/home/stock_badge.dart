@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/features/billing/domain/product_details_helpers.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 
@@ -15,25 +16,25 @@ class StockBadge extends StatelessWidget {
   String get _label {
     switch (status) {
       case ProductStockDisplayStatus.available:
-        return 'Available';
+        return 'stock.status_available'.tr;
       case ProductStockDisplayStatus.lowStock:
-        return 'Low Stock';
+        return 'stock.status_low_stock'.tr;
       case ProductStockDisplayStatus.atReorderLevel:
-        return 'At Reorder Level';
+        return 'stock.status_at_reorder_level'.tr;
       case ProductStockDisplayStatus.outOfStock:
-        return 'Out Of Stock';
+        return 'stock.status_out_of_stock'.tr;
     }
   }
 
   String get _compactLabel {
     switch (status) {
       case ProductStockDisplayStatus.available:
-        return 'In';
+        return 'stock.status_in_short'.tr;
       case ProductStockDisplayStatus.lowStock:
       case ProductStockDisplayStatus.atReorderLevel:
-        return 'Low';
+        return 'stock.status_low_short'.tr;
       case ProductStockDisplayStatus.outOfStock:
-        return 'Out';
+        return 'stock.status_out_short'.tr;
     }
   }
 

@@ -9,6 +9,7 @@ import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 
 class MobileFilters extends StatelessWidget {
   final TextEditingController orderNumberController;
@@ -149,7 +150,7 @@ class MobileFilters extends StatelessWidget {
                 return DropdownMenuItem<String>(
                   value: status,
                   child: Text(
-                    status.toUpperCase(),
+                    UiCodeLabels.status(status),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: buildCustomStyle(

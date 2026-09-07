@@ -10,6 +10,7 @@ import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
+import 'package:pos_machine/helpers/delivery_method_display.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -73,13 +74,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
   String? _activeTableId;
   int? _activeCategoryId;
   dynamic _selectedOrderFromOrderPanel; // New state to hold selected order
-  int?
-      _refreshCounter; // Counter to trigger refreshes without creating new objects
+  int? _refreshCounter; // Counter to trigger refreshes without creating new objects
   final GlobalKey<OrderPanelState> _orderPanelKey =
       GlobalKey<OrderPanelState>(); // Key to access OrderPanel methods
   final GlobalKey<MenuPanelState> _menuPanelKey = GlobalKey<MenuPanelState>();
-  bool _isLoadingSendToKitchen =
-      false; // Loading state for Send to Kitchen button
+  bool _isLoadingSendToKitchen = false; // Loading state for Send to Kitchen button
   bool _isLoadingPrint = false; // Loading state for Print button
   bool _isLoadingKotBill = false;
   bool _isLoadingCounterConfirmOrder = false;
@@ -115,16 +114,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
   DeliveryMethodsProvider? _deliveryMethodsProviderForDefaults;
   GeneralSettingsProvider? _generalSettingsProviderForStock;
 
-  String get _menuTitle => widget.storeMode
-      ? 'restaurant.products_tab'.tr
-      : 'restaurant.menu_tab'.tr;
+  String get _menuTitle =>
+      widget.storeMode ? 'restaurant.products_tab'.tr : 'restaurant.menu_tab'.tr;
 
   void _syncStockEnabledSetting() {
-    final stockEnabled =
-        _generalSettingsProviderForStock?.generalSettings?.stockEnabled ??
-            false;
-    Provider.of<LocalProductProvider>(context, listen: false)
-        .setStockEnabled(stockEnabled);
+    final stockEnabled = _generalSettingsProviderForStock?.generalSettings?.stockEnabled ?? false;
+    Provider.of<LocalProductProvider>(context, listen: false).setStockEnabled(stockEnabled);
   }
 
   @override
@@ -142,9 +137,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
     _loadPanelWidthPreferences();
     // Initialize data
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _appSettingsProviderForDefaults =
-          Provider.of<AppSettingsProvider>(context, listen: false)
-            ..addListener(_applyDefaultCounterDeliveryMethodContext);
+      _appSettingsProviderForDefaults = Provider.of<AppSettingsProvider>(context, listen: false)
+        ..addListener(_applyDefaultCounterDeliveryMethodContext);
       _deliveryMethodsProviderForDefaults =
           Provider.of<DeliveryMethodsProvider>(context, listen: false)
             ..addListener(_applyDefaultCounterDeliveryMethodContext);
@@ -158,10 +152,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
   @override
   void dispose() {
-    _appSettingsProviderForDefaults
-        ?.removeListener(_applyDefaultCounterDeliveryMethodContext);
-    _deliveryMethodsProviderForDefaults
-        ?.removeListener(_applyDefaultCounterDeliveryMethodContext);
+    _appSettingsProviderForDefaults?.removeListener(_applyDefaultCounterDeliveryMethodContext);
+    _deliveryMethodsProviderForDefaults?.removeListener(_applyDefaultCounterDeliveryMethodContext);
     _generalSettingsProviderForStock?.removeListener(_syncStockEnabledSetting);
     HardwareKeyboard.instance.removeHandler(_onRestaurantHardwareKey);
     super.dispose();
@@ -215,13 +207,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
   void _handleRestaurantShortcut(KeyDownEvent event) {
     final key = event.logicalKey;
     final orderPanelState = _orderPanelKey.currentState;
-    final hasInternet =
-        Provider.of<BillingProvider>(context, listen: false).hasInternet;
-    final appSettings =
-        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    final hasInternet = Provider.of<BillingProvider>(context, listen: false).hasInternet;
+    final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
     final showConfirmOrderButton = appSettings?.showConfirmOrderButton ?? true;
-    final showConfirmAndPrintButton =
-        appSettings?.showConfirmOrderAndPrintButton ?? true;
+    final showConfirmAndPrintButton = appSettings?.showConfirmOrderAndPrintButton ?? true;
 
     try {
       if (key == LogicalKeyboardKey.escape) {
@@ -238,8 +227,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           return;
         }
         if (key == LogicalKeyboardKey.keyK) {
-          final keyboardProvider =
-              Provider.of<KeyboardProvider>(context, listen: false);
+          final keyboardProvider = Provider.of<KeyboardProvider>(context, listen: false);
           if (keyboardProvider.showKeyboardFeature) {
             keyboardProvider.featureOff();
             keyboardProvider.clear();
@@ -273,22 +261,18 @@ class _RestaurantPageState extends State<RestaurantPage> {
         setState(() {
           _showTablesPanel = !_showTablesPanel;
           if (MediaQuery.of(context).size.width < 900) {
-            final homeView =
-                widget.storeMode ? MobileView.products : MobileView.tables;
-            _currentMobileView = _currentMobileView == MobileView.orders
-                ? homeView
-                : MobileView.orders;
+            final homeView = widget.storeMode ? MobileView.products : MobileView.tables;
+            _currentMobileView =
+                _currentMobileView == MobileView.orders ? homeView : MobileView.orders;
           }
         });
         _saveTablesPanelPreference(_showTablesPanel);
         return;
       }
 
-      final disableCounterConfirmActions =
-          _shouldDisableCounterCheckoutActions();
+      final disableCounterConfirmActions = _shouldDisableCounterCheckoutActions();
       if (key == LogicalKeyboardKey.f1) {
-        unawaited(orderPanelState?.clearCurrentCartFromParent() ??
-            Future<void>.value());
+        unawaited(orderPanelState?.clearCurrentCartFromParent() ?? Future<void>.value());
       } else if (key == LogicalKeyboardKey.f2) {
         if (disableCounterConfirmActions) return;
         if (hasInternet && !showConfirmOrderButton) return;
@@ -301,12 +285,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
           );
         }
       } else if (key == LogicalKeyboardKey.f3) {
-        unawaited(orderPanelState?.showCustomerSelectionModal() ??
-            Future<void>.value());
+        unawaited(orderPanelState?.showCustomerSelectionModal() ?? Future<void>.value());
       } else if (key == LogicalKeyboardKey.f4) {
         if (_isCounterBillingMode) {
-          unawaited(orderPanelState?.showDeliverySelectionModalFromParent() ??
-              Future<void>.value());
+          unawaited(
+              orderPanelState?.showDeliverySelectionModalFromParent() ?? Future<void>.value());
         } else {
           _showDiningSelectionModal();
         }
@@ -332,12 +315,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
       } else if (key == LogicalKeyboardKey.f7) {
         _startNewCounterOrder();
       } else if (key == LogicalKeyboardKey.f8) {
-        unawaited(orderPanelState?.saveCurrentCartFromParent() ??
-            Future<void>.value());
+        unawaited(orderPanelState?.saveCurrentCartFromParent() ?? Future<void>.value());
       } else if (key == LogicalKeyboardKey.f9) {
         if (hasInternet) {
-          unawaited(orderPanelState?.saveCurrentCartFromParent() ??
-              Future<void>.value());
+          unawaited(orderPanelState?.saveCurrentCartFromParent() ?? Future<void>.value());
         } else {
           if (disableCounterConfirmActions) return;
           // Offline F9 = Save & Print (respects skip-checkout setting).
@@ -361,15 +342,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
   Future<void> _loadPanelWidthPreferences() async {
     final authModel = Provider.of<AuthModel>(context, listen: false);
-    final prefsProvider =
-        Provider.of<SharedPreferenceProvider>(context, listen: false);
+    final prefsProvider = Provider.of<SharedPreferenceProvider>(context, listen: false);
 
-    final leftFraction =
-        await prefsProvider.getRestaurantLeftPanelWidthFraction(
+    final leftFraction = await prefsProvider.getRestaurantLeftPanelWidthFraction(
       userId: authModel.userId,
     );
-    final rightFraction =
-        await prefsProvider.getRestaurantRightPanelWidthFraction(
+    final rightFraction = await prefsProvider.getRestaurantRightPanelWidthFraction(
       userId: authModel.userId,
     );
 
@@ -378,9 +356,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       if (leftFraction != null && leftFraction.isFinite && leftFraction > 0) {
         _leftPanelWidthFraction = leftFraction;
       }
-      if (rightFraction != null &&
-          rightFraction.isFinite &&
-          rightFraction > 0) {
+      if (rightFraction != null && rightFraction.isFinite && rightFraction > 0) {
         _rightPanelWidthFraction = rightFraction;
       }
     });
@@ -388,8 +364,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
   Future<void> _saveLeftPanelWidthPreference() async {
     final authModel = Provider.of<AuthModel>(context, listen: false);
-    final prefsProvider =
-        Provider.of<SharedPreferenceProvider>(context, listen: false);
+    final prefsProvider = Provider.of<SharedPreferenceProvider>(context, listen: false);
     await prefsProvider.saveRestaurantLeftPanelWidthFraction(
       _leftPanelWidthFraction,
       userId: authModel.userId,
@@ -398,8 +373,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
   Future<void> _saveRightPanelWidthPreference() async {
     final authModel = Provider.of<AuthModel>(context, listen: false);
-    final prefsProvider =
-        Provider.of<SharedPreferenceProvider>(context, listen: false);
+    final prefsProvider = Provider.of<SharedPreferenceProvider>(context, listen: false);
     await prefsProvider.saveRestaurantRightPanelWidthFraction(
       _rightPanelWidthFraction,
       userId: authModel.userId,
@@ -408,8 +382,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
   Future<void> _loadTablesPanelPreference() async {
     final authModel = Provider.of<AuthModel>(context, listen: false);
-    final prefsProvider =
-        Provider.of<SharedPreferenceProvider>(context, listen: false);
+    final prefsProvider = Provider.of<SharedPreferenceProvider>(context, listen: false);
     final isVisible = await prefsProvider.getRestaurantTablesPanelVisible(
       userId: authModel.userId,
     );
@@ -425,8 +398,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
   Future<void> _saveTablesPanelPreference(bool isVisible) async {
     final authModel = Provider.of<AuthModel>(context, listen: false);
-    final prefsProvider =
-        Provider.of<SharedPreferenceProvider>(context, listen: false);
+    final prefsProvider = Provider.of<SharedPreferenceProvider>(context, listen: false);
     await prefsProvider.saveRestaurantTablesPanelVisible(
       isVisible,
       userId: authModel.userId,
@@ -434,10 +406,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   Future<void> _initializeData() async {
-    final categoryProvider =
-        Provider.of<CategoryProvider>(context, listen: false);
-    final productProvider =
-        Provider.of<LocalProductProvider>(context, listen: false);
+    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+    final productProvider = Provider.of<LocalProductProvider>(context, listen: false);
     final tableProvider = Provider.of<TableProvider>(context, listen: false);
     final authModel = Provider.of<AuthModel>(context, listen: false);
 
@@ -451,8 +421,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
     // Delivery methods: already loaded during store bootstrap (StoreSessionProvider).
     // Just ensure they're available — this returns immediately from memory if already loaded.
-    final deliveryMethodsProvider =
-        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    final deliveryMethodsProvider = Provider.of<DeliveryMethodsProvider>(context, listen: false);
     if (!deliveryMethodsProvider.hasMethods) {
       debugPrint(
           '🚚 [RestaurantPage] Delivery methods not in memory — triggering fetch (will use cache if available)');
@@ -505,34 +474,24 @@ class _RestaurantPageState extends State<RestaurantPage> {
               final totalWidth = constraints.maxWidth;
               final splitterCount = _showTablesPanel ? 2 : 1;
               final totalSplitterWidth = splitterCount * _splitterWidth;
-              final availableWidth =
-                  math.max(0, totalWidth - totalSplitterWidth);
+              final availableWidth = math.max(0, totalWidth - totalSplitterWidth);
               final leftMin = _showTablesPanel
-                  ? (isDenseDesktop
-                      ? _denseLeftPanelMinWidth
-                      : _leftPanelMinWidth)
+                  ? (isDenseDesktop ? _denseLeftPanelMinWidth : _leftPanelMinWidth)
                   : 0.0;
-              final menuMin =
-                  isDenseDesktop ? _denseMenuPanelMinWidth : _menuPanelMinWidth;
-              final rightMin = isDenseDesktop
-                  ? _denseRightPanelMinWidth
-                  : _rightPanelMinWidth;
-              final leftMax = _showTablesPanel
-                  ? math.max(leftMin, availableWidth - menuMin - rightMin)
-                  : 0.0;
+              final menuMin = isDenseDesktop ? _denseMenuPanelMinWidth : _menuPanelMinWidth;
+              final rightMin = isDenseDesktop ? _denseRightPanelMinWidth : _rightPanelMinWidth;
+              final leftMax =
+                  _showTablesPanel ? math.max(leftMin, availableWidth - menuMin - rightMin) : 0.0;
               final rightMax = math.max(
                 rightMin,
                 availableWidth - (_showTablesPanel ? leftMin : 0) - menuMin,
               );
 
               final leftWidth = _showTablesPanel
-                  ? (availableWidth * _leftPanelWidthFraction)
-                      .clamp(leftMin, leftMax)
-                      .toDouble()
+                  ? (availableWidth * _leftPanelWidthFraction).clamp(leftMin, leftMax).toDouble()
                   : 0.0;
-              final rightWidth = (availableWidth * _rightPanelWidthFraction)
-                  .clamp(rightMin, rightMax)
-                  .toDouble();
+              final rightWidth =
+                  (availableWidth * _rightPanelWidthFraction).clamp(rightMin, rightMax).toDouble();
               final menuWidth = math.max(
                 menuMin,
                 availableWidth - leftWidth - rightWidth,
@@ -548,11 +507,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   if (_showTablesPanel)
                     _buildHorizontalSplitter(
                       onDragUpdate: (dx) {
-                        final nextLeftWidth =
-                            (leftWidth + dx).clamp(leftMin, leftMax).toDouble();
+                        final nextLeftWidth = (leftWidth + dx).clamp(leftMin, leftMax).toDouble();
                         setState(() {
-                          _leftPanelWidthFraction =
-                              nextLeftWidth / availableWidth;
+                          _leftPanelWidthFraction = nextLeftWidth / availableWidth;
                         });
                       },
                       onDragEnd: _saveLeftPanelWidthPreference,
@@ -566,12 +523,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   ),
                   _buildHorizontalSplitter(
                     onDragUpdate: (dx) {
-                      final nextRightWidth = (rightWidth - dx)
-                          .clamp(rightMin, rightMax)
-                          .toDouble();
+                      final nextRightWidth = (rightWidth - dx).clamp(rightMin, rightMax).toDouble();
                       setState(() {
-                        _rightPanelWidthFraction =
-                            nextRightWidth / availableWidth;
+                        _rightPanelWidthFraction = nextRightWidth / availableWidth;
                       });
                     },
                     onDragEnd: _saveRightPanelWidthPreference,
@@ -582,15 +536,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       key: _orderPanelKey,
                       tableId: _activeTableId,
                       preselectedDeliveryMethodId: _selectedDeliveryMethodId,
-                      preselectedDeliveryMethodName:
-                          _selectedDeliveryMethodName,
+                      preselectedDeliveryMethodName: _selectedDeliveryMethodName,
                       screenSize: screenSize,
                       onSendToKitchen: _sendOrderToKitchenWithLoading,
                       onNewOrder: _handleNewOrder,
                       onPrintOrder: _printOrderWithLoading,
                       onKotBill: _sendKotBillWithLoading,
-                      allowCounterBilling:
-                          widget.allowCounterBillingFromAttender,
+                      allowCounterBilling: widget.allowCounterBillingFromAttender,
                       isCounterBillingMode: _isCounterBillingMode,
                       onOrderSelected: (order) {
                         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -615,10 +567,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       isCompact: isDenseDesktop,
                       onLocalDraftLoaded: _applyLocalDraftContext,
                       onLocalDraftSaved: _resetCounterOrderContextAfterSave,
-                      onEditedOrderConfirmed:
-                          _resetCounterOrderContextAfterSave,
-                      onCheckoutActionLoadingChanged:
-                          _setCounterCheckoutLoading,
+                      onEditedOrderConfirmed: _resetCounterOrderContextAfterSave,
+                      onCheckoutActionLoadingChanged: _setCounterCheckoutLoading,
                       hideFooterActionButtons: widget.storeMode,
                       hideOngoingOrdersTab: widget.storeMode,
                     ),
@@ -674,8 +624,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   Widget _buildCounterSelectionPanel(Size screenSize) {
-    final customerSelectionProvider =
-        Provider.of<CustomerSelectionProvider>(context);
+    final customerSelectionProvider = Provider.of<CustomerSelectionProvider>(context);
 
     return Container(
       margin: const EdgeInsets.all(8),
@@ -754,8 +703,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     _buildCounterSelectorButton(
                       icon: Icons.restaurant_rounded,
                       title: 'restaurant.dining_label'.tr,
-                      value: _counterDiningLabel(
-                          fallback: 'restaurant.select_table_short'.tr),
+                      value: _counterDiningLabel(fallback: 'restaurant.select_table_short'.tr),
                       color: const Color(0xFF2563EB),
                       isSelected: _hasCounterDiningSelection,
                       onTap: _showDiningSelectionModal,
@@ -789,8 +737,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   _buildCounterSelectorButton(
                     icon: Icons.payments_rounded,
                     title: 'restaurant.payment_label'.tr,
-                    value: _counterPaymentLabel(
-                        fallback: 'restaurant.select_payment'.tr),
+                    value: _counterPaymentLabel(fallback: 'restaurant.select_payment'.tr),
                     color: const Color(0xFFEA580C),
                     isSelected: _hasCounterPaymentSelection,
                     onTap: () async {
@@ -811,8 +758,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   _buildCounterSelectorButton(
                     icon: Icons.local_shipping_rounded,
                     title: 'restaurant.delivery_label'.tr,
-                    value: _counterDeliveryLabel(
-                        fallback: 'restaurant.select_delivery'.tr),
+                    value: _counterDeliveryLabel(fallback: 'restaurant.select_delivery'.tr),
                     color: const Color(0xFF059669),
                     isSelected: _hasCounterDeliverySelection,
                     onTap: () async {
@@ -827,10 +773,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       }
                       await state.showDeliverySelectionModalFromParent();
                       if (!mounted) return;
-                      final deliveryMethodId =
-                          state.selectedDeliveryMethodIdForDraft;
-                      final deliveryMethod =
-                          state.selectedDeliveryMethodForDraft;
+                      final deliveryMethodId = state.selectedDeliveryMethodIdForDraft;
+                      final deliveryMethod = state.selectedDeliveryMethodForDraft;
                       if (deliveryMethodId.isNotEmpty) {
                         _selectDeliveryMethod(
                           deliveryMethodId,
@@ -915,8 +859,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right_rounded,
-                  color: Colors.grey.shade500, size: 18),
+              Icon(Icons.chevron_right_rounded, color: Colors.grey.shade500, size: 18),
             ],
           ),
         ),
@@ -929,10 +872,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
       builder: (context, localProductProvider, _) {
         final hasItems = localProductProvider.cartItems.isNotEmpty;
         final hasInternet = Provider.of<BillingProvider>(context).hasInternet;
-        final appSettings =
-            Provider.of<AppSettingsProvider>(context).appSettings;
-        final showConfirmAndPrintButton =
-            appSettings?.showConfirmOrderAndPrintButton ?? true;
+        final appSettings = Provider.of<AppSettingsProvider>(context).appSettings;
+        final showConfirmAndPrintButton = appSettings?.showConfirmOrderAndPrintButton ?? true;
         final canCheckout = hasItems;
         final isCheckoutActionLoading =
             _isLoadingCounterConfirmOrder || _isLoadingCounterConfirmAndPrint;
@@ -971,8 +912,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     shortcutLabel: showShortcuts ? 'F1' : null,
                     color: const Color(0xFFEF233C),
                     isDisabled: !hasItems || isCheckoutActionLoading,
-                    onPressed: () => _orderPanelKey.currentState
-                        ?.clearCurrentCartFromParent(),
+                    onPressed: () => _orderPanelKey.currentState?.clearCurrentCartFromParent(),
                   ),
                   const SizedBox(width: 12),
                   _buildCounterActionButton(
@@ -980,8 +920,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     shortcutLabel: showShortcuts ? 'F8' : null,
                     color: const Color(0xFFF59E0B),
                     isDisabled: !hasItems || isCheckoutActionLoading,
-                    onPressed: () => _orderPanelKey.currentState
-                        ?.saveCurrentCartFromParent(),
+                    onPressed: () => _orderPanelKey.currentState?.saveCurrentCartFromParent(),
                   ),
                   if (hasFooterCheckoutAction) const SizedBox(width: 12),
                   if (hasInternet) ...[
@@ -992,8 +931,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         color: const Color(0xFF5B8DEF),
                         isDisabled: !canCheckout || disableConfirmActions,
                         isLoading: _isLoadingCounterConfirmAndPrint,
-                        onPressed: () => _orderPanelKey.currentState
-                            ?.showCurrentCartConfirmAndPrintFromParent(),
+                        onPressed: () =>
+                            _orderPanelKey.currentState?.showCurrentCartConfirmAndPrintFromParent(),
                       ),
                       if (showFooterConfirmOrder) const SizedBox(width: 12),
                     ],
@@ -1004,8 +943,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         color: const Color(0xFF08C63F),
                         isDisabled: !canCheckout || disableConfirmActions,
                         isLoading: confirmOrderIsLoading,
-                        onPressed: () => _orderPanelKey.currentState
-                            ?.showCurrentCartCheckoutFromParent(),
+                        onPressed: () =>
+                            _orderPanelKey.currentState?.showCurrentCartCheckoutFromParent(),
                       ),
                   ] else
                     _buildCounterActionButton(
@@ -1014,8 +953,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       color: const Color(0xFFF59E0B),
                       isDisabled: !canCheckout || disableConfirmActions,
                       isLoading: isCheckoutActionLoading,
-                      onPressed: () => _orderPanelKey.currentState
-                          ?.showOfflineSaveAndPrintCheckoutFromParent(),
+                      onPressed: () =>
+                          _orderPanelKey.currentState?.showOfflineSaveAndPrintCheckoutFromParent(),
                     ),
                 ],
               ),
@@ -1037,8 +976,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   bool _isKotBillAllowedForCurrentContext(AppSettings? appSettings) {
-    final hasDineInContext =
-        _activeTableId != null || _isSelectedDeliveryMethodDineIn();
+    final hasDineInContext = _activeTableId != null || _isSelectedDeliveryMethodDineIn();
     return !hasDineInContext || (appSettings?.kotBillAllowedForDineIn ?? false);
   }
 
@@ -1050,13 +988,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
       return false;
     }
 
-    final deliveryMethodsProvider =
-        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    final deliveryMethodsProvider = Provider.of<DeliveryMethodsProvider>(context, listen: false);
     DeliveryMethod? selectedMethod;
     for (final method in deliveryMethodsProvider.deliveryMethods) {
-      if (selectedId != null &&
-          selectedId.isNotEmpty &&
-          method.id == selectedId) {
+      if (selectedId != null && selectedId.isNotEmpty && method.id == selectedId) {
         selectedMethod = method;
         break;
       }
@@ -1084,8 +1019,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     final foregroundColor = disabled ? const Color(0xFF94A3B8) : Colors.white;
     final shortcutBackgroundColor =
         disabled ? const Color(0xFFF8FAFC) : Colors.white.withOpacity(0.18);
-    final shortcutBorderColor =
-        disabled ? const Color(0xFFE2E8F0) : Colors.white.withOpacity(0.35);
+    final shortcutBorderColor = disabled ? const Color(0xFFE2E8F0) : Colors.white.withOpacity(0.35);
 
     return Expanded(
       child: ElevatedButton(
@@ -1128,8 +1062,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   if (shortcutLabel != null) ...[
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 3),
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                       decoration: BoxDecoration(
                         color: shortcutBackgroundColor,
                         borderRadius: BorderRadius.circular(6),
@@ -1344,13 +1277,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   DeliveryMethod? _resolveDefaultDeliveryMethod() {
-    final deliveryMethodsProvider =
-        Provider.of<DeliveryMethodsProvider>(context, listen: false);
-    final appSettingsDefault =
-        Provider.of<AppSettingsProvider>(context, listen: false)
-            .appSettings
-            ?.defaultDeliveryMethod
-            .trim();
+    final deliveryMethodsProvider = Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    final appSettingsDefault = Provider.of<AppSettingsProvider>(context, listen: false)
+        .appSettings
+        ?.defaultDeliveryMethod
+        .trim();
 
     return deliveryMethodsProvider.resolveDefaultDeliveryMethod(
       appSettingsDefault: appSettingsDefault,
@@ -1365,8 +1296,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       return;
     }
 
-    final deliveryMethodsProvider =
-        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    final deliveryMethodsProvider = Provider.of<DeliveryMethodsProvider>(context, listen: false);
     if (!deliveryMethodsProvider.hasMethods) return;
 
     final defaultMethod = _resolveDefaultDeliveryMethod();
@@ -1418,18 +1348,15 @@ class _RestaurantPageState extends State<RestaurantPage> {
     );
   }
 
-  Widget _buildAttenderTopBar(
-      {required bool isCompact, bool isMobile = false}) {
-    final customerSelectionProvider =
-        Provider.of<CustomerSelectionProvider>(context);
-    final isCounterEnabled =
-        widget.allowCounterBillingFromAttender && _isCounterBillingMode;
+  Widget _buildAttenderTopBar({required bool isCompact, bool isMobile = false}) {
+    final customerSelectionProvider = Provider.of<CustomerSelectionProvider>(context);
+    final isCounterEnabled = widget.allowCounterBillingFromAttender && _isCounterBillingMode;
     final hasActiveTable = _activeTableId != null;
     final contextLabel = hasActiveTable
-        ? (_selectedTableName ?? 'Selected table')
+        ? (_selectedTableName ?? 'restaurant.selected_table'.tr)
         : isCounterEnabled
-            ? (_selectedDeliveryMethodName ?? 'Choose Dining or Delivery')
-            : (_selectedDeliveryMethodName ?? 'Select table or delivery');
+            ? (_selectedDeliveryMethodName ?? 'restaurant.choose_dining_or_delivery'.tr)
+            : (_selectedDeliveryMethodName ?? 'restaurant.select_table_or_delivery'.tr);
     final title = _topBarOrderTitle;
     final contextIcon = hasActiveTable
         ? Icons.table_restaurant_rounded
@@ -1478,8 +1405,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
               color: const Color(0xFF2563EB),
               size: isCompact ? 18 : 20,
             ),
-            tooltip:
-                _showTablesPanel ? 'Hide Tables Panel' : 'Show Tables Panel',
+            tooltip: _showTablesPanel
+                ? 'restaurant.hide_tables_panel'.tr
+                : 'restaurant.show_tables_panel'.tr,
             onPressed: () {
               final nextValue = !_showTablesPanel;
               setState(() => _showTablesPanel = nextValue);
@@ -1547,9 +1475,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         Icon(
                           contextIcon,
                           size: 14,
-                          color: isCounterEnabled
-                              ? const Color(0xFF047857)
-                              : const Color(0xFF2563EB),
+                          color:
+                              isCounterEnabled ? const Color(0xFF047857) : const Color(0xFF2563EB),
                         ),
                         const SizedBox(width: 6),
                         Text(
@@ -1558,9 +1485,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                             FontWeightManager.semiBold,
                             FontSize.s12,
                             0.21,
-                            isCounterEnabled
-                                ? const Color(0xFF047857)
-                                : const Color(0xFF1D4ED8),
+                            isCounterEnabled ? const Color(0xFF047857) : const Color(0xFF1D4ED8),
                           ),
                         ),
                       ],
@@ -1680,9 +1605,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           if (deliveryMethodId.isNotEmpty) {
             _selectDeliveryMethod(
               deliveryMethodId,
-              deliveryMethod.isNotEmpty
-                  ? deliveryMethod
-                  : 'restaurant.delivery_label'.tr,
+              deliveryMethod.isNotEmpty ? deliveryMethod : 'restaurant.delivery_label'.tr,
             );
           } else {
             setState(() {});
@@ -1739,14 +1662,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
               if (widget.allowCounterBillingFromAttender)
                 IconButton(
                   visualDensity: VisualDensity.compact,
-                  constraints:
-                      const BoxConstraints(minWidth: 30, minHeight: 30),
+                  constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
                   icon: const Icon(
                     Icons.add_shopping_cart_rounded,
                     size: 18,
                     color: Color(0xFF2563EB),
                   ),
-                  tooltip: 'New Order',
+                  tooltip: 'billing.new_order'.tr,
                   onPressed: _startNewCounterOrder,
                 ),
               const SyncButton(
@@ -1808,9 +1730,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   String get _topBarOrderTitle {
     if (_editingLocalDraft != null) {
       final orderNumber = _editingLocalDraft!.orderNumber.trim();
-      return orderNumber.isNotEmpty
-          ? 'Edit Draft - #$orderNumber'
-          : 'Edit Draft';
+      return orderNumber.isNotEmpty ? 'Edit Draft - #$orderNumber' : 'Edit Draft';
     }
 
     final selected = _selectedOrderFromOrderPanel;
@@ -1876,8 +1796,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       for (final prop in propsList) {
         final propMap = _asMap(prop);
         if (propMap == null) continue;
-        final code = _cleanContextText(propMap['props_code'] ?? propMap['code'])
-            ?.toUpperCase();
+        final code = _cleanContextText(propMap['props_code'] ?? propMap['code'])?.toUpperCase();
         if (code != normalizedCode) continue;
         return _cleanContextText(propMap['props_value'] ?? propMap['value']);
       }
@@ -1889,8 +1808,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   String? _deliveryMethodNameForId(String? id) {
     final normalizedId = id?.trim();
     if (normalizedId == null || normalizedId.isEmpty) return null;
-    final deliveryMethodsProvider =
-        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    final deliveryMethodsProvider = Provider.of<DeliveryMethodsProvider>(context, listen: false);
     for (final method in deliveryMethodsProvider.deliveryMethods) {
       if (method.id == normalizedId) return method.name;
     }
@@ -1900,8 +1818,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   String? _deliveryMethodIdForName(String? name) {
     final normalizedName = name?.trim().toLowerCase();
     if (normalizedName == null || normalizedName.isEmpty) return null;
-    final deliveryMethodsProvider =
-        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    final deliveryMethodsProvider = Provider.of<DeliveryMethodsProvider>(context, listen: false);
     for (final method in deliveryMethodsProvider.deliveryMethods) {
       if (method.name.trim().toLowerCase() == normalizedName ||
           (method.code?.trim().toLowerCase() == normalizedName)) {
@@ -1968,9 +1885,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
   String? _editingOrderDeliveryMethodNameFrom(dynamic order) {
     final deliveryMethodMap = _asMap(_readPath(order, ['delivery_method']));
-    final directDeliveryMethod = deliveryMethodMap == null
-        ? _readPath(order, ['delivery_method'])
-        : null;
+    final directDeliveryMethod =
+        deliveryMethodMap == null ? _readPath(order, ['delivery_method']) : null;
     return _firstNonEmptyTopBarValue([
           _readPath(order, ['delivery_method_name']),
           deliveryMethodMap?['name'],
@@ -2008,8 +1924,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     _editingOrderHasCustomer = _editingOrderHasCustomerData(order);
     _editingOrderTableName = _editingOrderTableNameFrom(order);
     _editingOrderHasTable = _editingOrderTableName != null;
-    _editingOrderDeliveryMethodId =
-        deliveryId ?? _deliveryMethodIdForName(deliveryName);
+    _editingOrderDeliveryMethodId = deliveryId ?? _deliveryMethodIdForName(deliveryName);
     _editingOrderDeliveryMethodName =
         deliveryName ?? _deliveryMethodNameForId(deliveryId) ?? deliveryId;
   }
@@ -2040,8 +1955,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     if (_selectedOrderFromOrderPanel != null &&
         editLabel != null &&
         (providerLabel == null ||
-            (customerSelectionProvider.isDefaultCustomer &&
-                providerLabel != editLabel))) {
+            (customerSelectionProvider.isDefaultCustomer && providerLabel != editLabel))) {
       return editLabel;
     }
 
@@ -2052,19 +1966,14 @@ class _RestaurantPageState extends State<RestaurantPage> {
     CustomerSelectionProvider customerSelectionProvider,
   ) {
     return customerSelectionProvider.selectedCustomerID != null ||
-        (customerSelectionProvider.selectedCustomerPhone?.trim().isNotEmpty ??
-            false) ||
+        (customerSelectionProvider.selectedCustomerPhone?.trim().isNotEmpty ?? false) ||
         _orderPanelKey.currentState?.selectedCustomerIdForDraft != null ||
-        (_orderPanelKey.currentState?.selectedCustomerPhoneForDraft
-                ?.trim()
-                .isNotEmpty ??
-            false) ||
+        (_orderPanelKey.currentState?.selectedCustomerPhoneForDraft?.trim().isNotEmpty ?? false) ||
         (_selectedOrderFromOrderPanel != null && _editingOrderHasCustomer);
   }
 
   String _counterDiningLabel({required String fallback}) {
-    if (_selectedOrderFromOrderPanel != null &&
-        (_editingOrderTableName?.isNotEmpty ?? false)) {
+    if (_selectedOrderFromOrderPanel != null && (_editingOrderTableName?.isNotEmpty ?? false)) {
       return _editingOrderTableName!;
     }
     return _selectedTableName ?? fallback;
@@ -2076,11 +1985,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   String _counterDeliveryLabel({required String fallback}) {
-    if (_selectedOrderFromOrderPanel != null &&
-        (_editingOrderDeliveryMethodName?.isNotEmpty ?? false)) {
-      return _editingOrderDeliveryMethodName!;
-    }
-    return _selectedDeliveryMethodName ?? fallback;
+    final raw = (_selectedOrderFromOrderPanel != null &&
+            (_editingOrderDeliveryMethodName?.isNotEmpty ?? false))
+        ? _editingOrderDeliveryMethodName
+        : _selectedDeliveryMethodName;
+    if (raw == null || raw.trim().isEmpty) return fallback;
+    final localized = DeliveryMethodDisplay.labelFor(raw);
+    return localized.isNotEmpty ? localized : raw;
   }
 
   bool get _hasCounterDeliverySelection {
@@ -2088,6 +1999,33 @@ class _RestaurantPageState extends State<RestaurantPage> {
         (_selectedOrderFromOrderPanel != null &&
             ((_editingOrderDeliveryMethodId?.isNotEmpty ?? false) ||
                 (_editingOrderDeliveryMethodName?.isNotEmpty ?? false)));
+  }
+
+  String _localizedPaymentCodes(String raw) {
+    return raw
+        .split(',')
+        .map((part) {
+          switch (part.trim().toUpperCase()) {
+            case 'CASH':
+              return 'billing.cash'.tr;
+            case 'CARD':
+              return 'billing.card'.tr;
+            case 'UPI':
+              return 'billing.upi'.tr;
+            case 'COD':
+              return 'billing.cod'.tr;
+            case 'CREDIT':
+              return 'transaction_status_labels.credit'.tr;
+            case 'DEBIT':
+              return 'transaction_status_labels.debit'.tr;
+            case 'ONLINE':
+              return 'billing.payment_online'.tr;
+            default:
+              return part.trim();
+          }
+        })
+        .where((part) => part.isNotEmpty)
+        .join(', ');
   }
 
   String _appDefaultPaymentMethodLabel() {
@@ -2101,15 +2039,17 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   String _counterPaymentLabel({required String fallback}) {
-    return _orderPanelKey.currentState?.selectedPaymentMethodLabelForDraft ??
-        _appDefaultPaymentMethodLabel();
+    final raw =
+        _orderPanelKey.currentState?.selectedPaymentMethodLabelForDraft ??
+            _appDefaultPaymentMethodLabel();
+    if (raw.trim().isEmpty) return fallback;
+    return _localizedPaymentCodes(raw);
   }
 
   bool get _hasCounterPaymentSelection {
     // App default (usually CASH) is always treated as selected for the chip,
     // matching checkout autofill — even before OrderPanel hydrates.
-    return _orderPanelKey.currentState?.hasPaymentMethodSelectedForDraft ??
-        true;
+    return _orderPanelKey.currentState?.hasPaymentMethodSelectedForDraft ?? true;
   }
 
   /// Ensures OrderPanel is mounted (mobile Products tab keeps it Offstage)
@@ -2143,8 +2083,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
         child: Container(
-          constraints:
-              BoxConstraints(maxWidth: maxWidth ?? (isCompact ? 108 : 150)),
+          constraints: BoxConstraints(maxWidth: maxWidth ?? (isCompact ? 108 : 150)),
           padding: EdgeInsets.symmetric(
             horizontal: isCompact ? 8 : 10,
             vertical: isCompact ? 4 : 5,
@@ -2153,16 +2092,14 @@ class _RestaurantPageState extends State<RestaurantPage> {
             color: isSelected ? color.withOpacity(0.10) : Colors.grey.shade50,
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
-              color:
-                  isSelected ? color.withOpacity(0.45) : Colors.grey.shade200,
+              color: isSelected ? color.withOpacity(0.45) : Colors.grey.shade200,
             ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon,
-                  size: isCompact ? 13 : 14,
-                  color: isSelected ? color : Colors.grey.shade600),
+                  size: isCompact ? 13 : 14, color: isSelected ? color : Colors.grey.shade600),
               SizedBox(width: isCompact ? 5 : 6),
               Flexible(
                 child: Text(
@@ -2194,12 +2131,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
           builder: (context, keyboardProvider, child) {
             return IconButton(
               visualDensity: VisualDensity.compact,
-              constraints:
-                  BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
+              constraints: BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
               icon: Icon(
-                keyboardProvider.showKeyboardFeature
-                    ? Icons.keyboard_hide
-                    : Icons.keyboard,
+                keyboardProvider.showKeyboardFeature ? Icons.keyboard_hide : Icons.keyboard,
                 size: iconSize,
                 color: keyboardProvider.showKeyboardFeature
                     ? const Color(0xFF2563EB)
@@ -2221,14 +2155,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
         ),
         IconButton(
           visualDensity: VisualDensity.compact,
-          constraints:
-              BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
+          constraints: BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
           icon: Icon(
             Icons.help_outline,
             size: iconSize,
             color: Colors.grey.shade600,
           ),
-          tooltip: 'Keyboard Shortcuts (Ctrl+H)',
+          tooltip: 'restaurant.keyboard_shortcuts'.tr,
           onPressed: () => KeyboardShortcutsHelpDialog.show(
             context,
             mode: KeyboardShortcutsHelpMode.restaurant,
@@ -2238,16 +2171,14 @@ class _RestaurantPageState extends State<RestaurantPage> {
           builder: (context, fontProvider, child) {
             return IconButton(
               visualDensity: VisualDensity.compact,
-              constraints:
-                  BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
+              constraints: BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
               icon: Icon(
                 Icons.text_fields,
                 size: iconSize,
-                color: fontProvider.fontSizeLevel > 0
-                    ? const Color(0xFF2563EB)
-                    : Colors.grey.shade600,
+                color:
+                    fontProvider.fontSizeLevel > 0 ? const Color(0xFF2563EB) : Colors.grey.shade600,
               ),
-              tooltip: 'Font: ${fontProvider.fontSizeLevelName}',
+              tooltip: '${'restaurant.font_prefix'.tr}${fontProvider.fontSizeLevelName}',
               onPressed: fontProvider.cycleFontSize,
             );
           },
@@ -2272,9 +2203,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             vertical: isCompact ? 3 : 4,
           ),
           decoration: BoxDecoration(
-            color: hasInternet
-                ? Colors.green.withOpacity(0.1)
-                : Colors.red.withOpacity(0.1),
+            color: hasInternet ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: hasInternet ? Colors.green : Colors.red,
@@ -2295,9 +2224,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
     final isEnabled = _isCounterBillingMode;
 
     return Tooltip(
-      message: isEnabled
-          ? 'Disable quick counter billing'
-          : 'Enable quick counter billing',
+      message:
+          isEnabled ? 'restaurant.disable_quick_counter'.tr : 'restaurant.enable_quick_counter'.tr,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -2329,9 +2257,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 ),
                 SizedBox(width: isCompact ? 6 : 8),
                 Text(
-                  isCompact
-                      ? (isEnabled ? 'Counter On' : 'Counter')
-                      : 'Quick Counter',
+                  isCompact ? (isEnabled ? 'Counter On' : 'Counter') : 'Quick Counter',
                   style: buildCustomStyle(
                     FontWeightManager.bold,
                     isCompact ? FontSize.s12 : FontSize.s13,
@@ -2352,9 +2278,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   child: AnimatedAlign(
                     duration: const Duration(milliseconds: 200),
                     curve: Curves.easeOut,
-                    alignment: isEnabled
-                        ? Alignment.centerRight
-                        : Alignment.centerLeft,
+                    alignment: isEnabled ? Alignment.centerRight : Alignment.centerLeft,
                     child: Container(
                       width: isCompact ? 12 : 14,
                       height: isCompact ? 12 : 14,
@@ -2502,13 +2426,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFF1A56DB)
-              : const Color(0xFF1A56DB).withOpacity(0.07),
+          color: isSelected ? const Color(0xFF1A56DB) : const Color(0xFF1A56DB).withOpacity(0.07),
           border: Border.all(
-            color: isSelected
-                ? const Color(0xFF1A56DB)
-                : const Color(0xFF1A56DB).withOpacity(0.3),
+            color: isSelected ? const Color(0xFF1A56DB) : const Color(0xFF1A56DB).withOpacity(0.3),
             width: 1.5,
           ),
           borderRadius: BorderRadius.circular(8),
@@ -2532,8 +2452,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, _) {
         final items = localProductProvider.cartItems;
-        final itemCount =
-            items.fold<int>(0, (sum, item) => sum + item.quantity.toInt());
+        final itemCount = items.fold<int>(0, (sum, item) => sum + item.quantity.toInt());
         if (itemCount == 0) return const SizedBox.shrink();
 
         double total = 0;
@@ -2541,10 +2460,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           total += (item.price ?? 0) * item.quantity;
         }
         final currency =
-            Provider.of<AppSettingsProvider>(context, listen: false)
-                    .appSettings
-                    ?.currency ??
-                'INR';
+            Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR';
 
         return Padding(
           padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
@@ -2552,17 +2468,14 @@ class _RestaurantPageState extends State<RestaurantPage> {
             color: const Color(0xFF2563EB),
             borderRadius: BorderRadius.circular(14),
             child: InkWell(
-              onTap: () =>
-                  setState(() => _currentMobileView = MobileView.orders),
+              onTap: () => setState(() => _currentMobileView = MobileView.orders),
               borderRadius: BorderRadius.circular(14),
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.18),
                         borderRadius: BorderRadius.circular(999),
@@ -2598,8 +2511,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    const Icon(Icons.arrow_forward_rounded,
-                        color: Colors.white, size: 16),
+                    const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 16),
                   ],
                 ),
               ),
@@ -2690,8 +2602,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     required VoidCallback onTap,
     int badgeCount = 0,
   }) {
-    final color =
-        isSelected ? const Color(0xFF2563EB) : const Color(0xFF64748B);
+    final color = isSelected ? const Color(0xFF2563EB) : const Color(0xFF64748B);
     return Expanded(
       child: Material(
         color: Colors.transparent,
@@ -2750,9 +2661,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 Text(
                   label,
                   style: buildCustomStyle(
-                    isSelected
-                        ? FontWeightManager.bold
-                        : FontWeightManager.medium,
+                    isSelected ? FontWeightManager.bold : FontWeightManager.medium,
                     FontSize.s11,
                     0.21,
                     color,
@@ -2831,9 +2740,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     : 'restaurant.back_to_tables'.tr,
                 onPressed: () {
                   setState(() {
-                    _currentMobileView = widget.storeMode
-                        ? MobileView.products
-                        : MobileView.tables;
+                    _currentMobileView = widget.storeMode ? MobileView.products : MobileView.tables;
                   });
                 },
               ),
@@ -2864,8 +2771,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
               // Menu shortcut (also available in the bottom nav)
               IconButton(
                 visualDensity: VisualDensity.compact,
-                icon:
-                    const Icon(Icons.restaurant_menu, color: Color(0xFF2563EB)),
+                icon: const Icon(Icons.restaurant_menu, color: Color(0xFF2563EB)),
                 onPressed: () => _showProductsBottomSheet(context),
                 tooltip: _menuTitle,
               ),
@@ -2993,8 +2899,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         },
                         activeCategoryId: _activeCategoryId,
                         onItemAdd: (product, quantity) async {
-                          final itemWasAdded =
-                              await _handleItemAdd(product, quantity);
+                          final itemWasAdded = await _handleItemAdd(product, quantity);
                           // Optionally close the bottom sheet after adding
                           // Navigator.pop(context);
                           return itemWasAdded;
@@ -3008,8 +2913,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     // while editing an existing order, which adds via API)
                     Consumer<LocalProductProvider>(
                       builder: (context, localProductProvider, _) {
-                        final itemCount =
-                            localProductProvider.cartItems.fold<int>(
+                        final itemCount = localProductProvider.cartItems.fold<int>(
                           0,
                           (sum, item) => sum + item.quantity.toInt(),
                         );
@@ -3126,15 +3030,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
       if (isEditingExistingOrder) {
         // Use the cart_id from the selected saved order
-        int? targetCartId = int.tryParse((_selectedOrderFromOrderPanel['cart']
-                        ?['id'] ??
-                    _selectedOrderFromOrderPanel['cart_id'])
-                ?.toString() ??
-            '');
+        int? targetCartId = int.tryParse(
+            (_selectedOrderFromOrderPanel['cart']?['id'] ?? _selectedOrderFromOrderPanel['cart_id'])
+                    ?.toString() ??
+                '');
 
         // Get the customer ID from the selected order (not the logged-in user ID)
-        final customerId = _selectedOrderFromOrderPanel['cart']
-                ?['customer_id'] ??
+        final customerId = _selectedOrderFromOrderPanel['cart']?['customer_id'] ??
             _selectedOrderFromOrderPanel['customer_id'] ??
             authModel.userId ??
             1;
@@ -3159,7 +3061,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
           if (mounted) {
             showScaffold(
               context: context,
-              message: 'restaurant.added_to_existing_order'.tr.replaceAll('@product', product.productName ?? ''),
+              message: 'restaurant.added_to_existing_order'
+                  .tr
+                  .replaceAll('@product', product.productName ?? ''),
             );
 
             // Wait for server update then refresh the selected order and list silently
@@ -3170,8 +3074,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             await _orderPanelKey.currentState?.refreshSavedOrdersSilently();
             // Scroll to and highlight the newly added item so it's impossible to miss
             if (product.productId != null) {
-              _orderPanelKey.currentState
-                  ?.scrollToAndHighlightNewItem(product.productId!);
+              _orderPanelKey.currentState?.scrollToAndHighlightNewItem(product.productId!);
             }
 
             // Ensure parent widget also updates its state
@@ -3184,17 +3087,17 @@ class _RestaurantPageState extends State<RestaurantPage> {
           if (mounted) {
             showScaffoldError(
               context: context,
-              message:
-                  'restaurant.failed_add_product'.tr.replaceAll('@product', product.productName ?? '').replaceAll('@error', (addResponse?['message'] ?? 'Unknown error').toString()),
+              message: 'restaurant.failed_add_product'
+                  .tr
+                  .replaceAll('@product', product.productName ?? '')
+                  .replaceAll('@error', (addResponse?['message'] ?? 'Unknown error').toString()),
             );
           }
         }
       } else {
         // New order: strictly local cart only (no API here)
-        debugPrint(
-            '🛒 Adding product to local cart via LocalProductProvider (new order)');
-        final localProductProvider =
-            Provider.of<LocalProductProvider>(context, listen: false);
+        debugPrint('🛒 Adding product to local cart via LocalProductProvider (new order)');
+        final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
         final cartQuantityBefore = localProductProvider.cartItems.fold<num>(
           0,
           (sum, item) => sum + item.quantity,
@@ -3217,13 +3120,17 @@ class _RestaurantPageState extends State<RestaurantPage> {
             showScaffold(
               context: context,
               message: _activeTableId != null
-                  ? 'restaurant.added_to_table'.tr.replaceAll('@product', product.productName ?? '').replaceAll('@table', _activeTableId.toString())
-                  : 'restaurant.added_to_order'.tr.replaceAll('@product', product.productName ?? ''),
+                  ? 'restaurant.added_to_table'
+                      .tr
+                      .replaceAll('@product', product.productName ?? '')
+                      .replaceAll('@table', _activeTableId.toString())
+                  : 'restaurant.added_to_order'
+                      .tr
+                      .replaceAll('@product', product.productName ?? ''),
             );
             // Ensure the OrderPanel shows Current Order immediately
             setState(() {});
-            _orderPanelKey.currentState
-                ?.showCurrentOrderTab(preserveLoadedDraftMetadata: true);
+            _orderPanelKey.currentState?.showCurrentOrderTab(preserveLoadedDraftMetadata: true);
           }
         }
       }
@@ -3255,8 +3162,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
+      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
 
       final cartItems = _cartItemsForKitchenSync(localProductProvider);
       if (cartItems.isEmpty) {
@@ -3266,8 +3172,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         );
         return null;
       }
-      final loadedDraftIdForCleanup =
-          _loadedLocalDraftIdForKitchenSync(localProductProvider);
+      final loadedDraftIdForCleanup = _loadedLocalDraftIdForKitchenSync(localProductProvider);
 
       // Convert local cart items to API format
       List<Map<String, dynamic>> items = [];
@@ -3278,8 +3183,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           'price': item.price?.toString() ?? '0',
           'mrp': item.mrp?.toString() ?? '0',
           'stock_id': item.selectedStock?.id, // Include stock_id if available
-          if (item.comment != null && item.comment!.isNotEmpty)
-            'comment': item.comment,
+          if (item.comment != null && item.comment!.isNotEmpty) 'comment': item.comment,
         });
       }
 
@@ -3290,8 +3194,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       debugPrint('➡️ Calling CartProvider.addToOrderAPI');
       final currentComment = _orderPanelKey.currentState?.orderComment ?? "";
       final manualComment = currentComment.trim();
-      final resolvedCustomerId =
-          _orderPanelKey.currentState?.selectedCustomerIdForDraft;
+      final resolvedCustomerId = _orderPanelKey.currentState?.selectedCustomerIdForDraft;
       final resolvedDeliveryMethodId =
           _selectedDeliveryMethodId ?? _resolveDefaultDeliveryMethodId();
       final sendToKitchenRequestBody = {
@@ -3314,8 +3217,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         'delivery_time': null,
         'table': _activeTableId,
       };
-      debugPrint(
-          '📤 SEND TO KITCHEN request body: ${json.encode(sendToKitchenRequestBody)}');
+      debugPrint('📤 SEND TO KITCHEN request body: ${json.encode(sendToKitchenRequestBody)}');
       final response = await cartProvider.addToOrderAPI(
         items: items,
         cartIds: 0, // Use 0 for new cart since we're creating a new order
@@ -3349,8 +3251,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
       if (response["order_id"] != null) {
         showScaffold(
           context: context,
-          message:
-              'restaurant.order_sent_kitchen_success'.tr.replaceAll('@table', _activeTableId.toString()).replaceAll('@orderId', response["order_id"].toString()),
+          message: 'restaurant.order_sent_kitchen_success'
+              .tr
+              .replaceAll('@table', _activeTableId.toString())
+              .replaceAll('@orderId', response["order_id"].toString()),
         );
 
         // Clear the local cart after successful submission
@@ -3372,16 +3276,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
           });
         }
 
-        final openedCreatedOrder =
-            await _openCounterKitchenOrderAfterSend(response);
+        final openedCreatedOrder = await _openCounterKitchenOrderAfterSend(response);
         if (!openedCreatedOrder) {
           // Refresh saved orders for the currently opened table/delivery method
-          if (mounted &&
-              (_activeTableId != null || _selectedDeliveryMethodId != null)) {
-            debugPrint(
-                '🔄 Refreshing saved orders after sending order to kitchen');
-            await Future.delayed(const Duration(
-                milliseconds: 1000)); // Wait for server to process
+          if (mounted && (_activeTableId != null || _selectedDeliveryMethodId != null)) {
+            debugPrint('🔄 Refreshing saved orders after sending order to kitchen');
+            await Future.delayed(const Duration(milliseconds: 1000)); // Wait for server to process
             _orderPanelKey.currentState?.refreshSavedOrders();
           }
 
@@ -3391,8 +3291,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
       } else {
         showScaffoldError(
           context: context,
-          message:
-              'restaurant.failed_send_kitchen_message'.tr.replaceAll('@message', (response["message"] ?? "Unknown error").toString()),
+          message: 'restaurant.failed_send_kitchen_message'
+              .tr
+              .replaceAll('@message', (response["message"] ?? "Unknown error").toString()),
         );
         return null;
       }
@@ -3408,8 +3309,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   List<LocalCartItem> _cartItemsForKitchenSync(
     LocalProductProvider localProductProvider,
   ) {
-    final loadedDraftId = _orderPanelKey.currentState?.loadedLocalDraftId ??
-        _editingLocalDraft?.id;
+    final loadedDraftId = _orderPanelKey.currentState?.loadedLocalDraftId ?? _editingLocalDraft?.id;
     if (loadedDraftId != null && loadedDraftId.isNotEmpty) {
       if (localProductProvider.currentOrder?.id == loadedDraftId &&
           localProductProvider.cartItems.isNotEmpty) {
@@ -3435,9 +3335,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     ];
 
     for (final id in candidateIds) {
-      if (id != null &&
-          id.isNotEmpty &&
-          localProductProvider.findOrderById(id) != null) {
+      if (id != null && id.isNotEmpty && localProductProvider.findOrderById(id) != null) {
         return id;
       }
     }
@@ -3450,8 +3348,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       0,
       (sum, item) => sum + ((item.price ?? 0) * item.quantity).toDouble(),
     );
-    final appSettingsProvider =
-        Provider.of<AppSettingsProvider>(context, listen: false);
+    final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
     if (appSettingsProvider.appSettings?.priceRoundOff == true) {
       return AmountHelper.roundOffAmount(total);
     }
@@ -3479,12 +3376,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
           final match = propsList.firstWhere(
             (e) =>
                 (e is Map) &&
-                (e['code'] ?? e['props_code'])?.toString().toUpperCase() ==
-                    'ORDER_TOKEN_NUMBER',
+                (e['code'] ?? e['props_code'])?.toString().toUpperCase() == 'ORDER_TOKEN_NUMBER',
             orElse: () => null,
           );
-          if (match is Map &&
-              (match['value'] ?? match['props_value']) != null) {
+          if (match is Map && (match['value'] ?? match['props_value']) != null) {
             tokenNumber = (match['value'] ?? match['props_value']).toString();
           }
         } catch (_) {}
@@ -3502,8 +3397,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
   Future<void> _handleNewOrder() async {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
-    final localProductProvider =
-        Provider.of<LocalProductProvider>(context, listen: false);
+    final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
 
     // Clear the local cart first
     if (localProductProvider.cartItems.isNotEmpty) {
@@ -3562,16 +3456,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   bool _shouldAutoMarkServedForKotBill() {
-    final appSettings =
-        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
-    return _isKotBillEnabled(appSettings) &&
-        (appSettings?.kotBillAutoMarkServed ?? false);
+    final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    return _isKotBillEnabled(appSettings) && (appSettings?.kotBillAutoMarkServed ?? false);
   }
 
   Future<void> _sendKotBillWithLoading() async {
     if (_isLoadingKotBill) return;
-    final appSettings =
-        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
     if (!_isKotBillEnabled(appSettings)) {
       showScaffoldError(
         context: context,
@@ -3634,8 +3525,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
+      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
 
       // Get the selected draft/current cart data BEFORE sending.
       final cartItems = _cartItemsForKitchenSync(localProductProvider);
@@ -3647,14 +3537,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
         );
         return;
       }
-      final loadedDraftIdForCleanup =
-          _loadedLocalDraftIdForKitchenSync(localProductProvider);
+      final loadedDraftIdForCleanup = _loadedLocalDraftIdForKitchenSync(localProductProvider);
 
       // Capture data for printing BEFORE clearing
-      final tableName =
-          _selectedTableName ?? _selectedDeliveryMethodName ?? 'Order';
-      final showTableLabel =
-          _selectedTableName != null && _selectedTableName!.trim().isNotEmpty;
+      final tableName = _selectedTableName ?? _selectedDeliveryMethodName ?? 'Order';
+      final showTableLabel = _selectedTableName != null && _selectedTableName!.trim().isNotEmpty;
       final currentComment = _orderPanelKey.currentState?.orderComment ?? "";
       final manualComment = currentComment.trim();
       final total = _totalForKitchenItems(cartItems);
@@ -3667,11 +3554,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
           'quantity': item.quantity.toString(),
           'unitPrice': item.price?.toStringAsFixed(2) ?? '0.00',
           'totalPrice': ((item.price ?? 0) * item.quantity).toStringAsFixed(2),
-          'mrp': item.mrp?.toStringAsFixed(2) ??
-              item.price?.toStringAsFixed(2) ??
-              '0.00',
-          if (item.comment != null && item.comment!.isNotEmpty)
-            'notes': item.comment,
+          'mrp': item.mrp?.toStringAsFixed(2) ?? item.price?.toStringAsFixed(2) ?? '0.00',
+          if (item.comment != null && item.comment!.isNotEmpty) 'notes': item.comment,
         });
       }
 
@@ -3684,15 +3568,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
           'price': item.price?.toString() ?? '0',
           'mrp': item.mrp?.toString() ?? '0',
           'stock_id': item.selectedStock?.id,
-          if (item.comment != null && item.comment!.isNotEmpty)
-            'comment': item.comment,
+          if (item.comment != null && item.comment!.isNotEmpty) 'comment': item.comment,
         });
       }
 
       // Call the addToOrderAPI with status: "new"
       debugPrint('➡️ Print: Calling CartProvider.addToOrderAPI');
-      final resolvedCustomerId =
-          _orderPanelKey.currentState?.selectedCustomerIdForDraft;
+      final resolvedCustomerId = _orderPanelKey.currentState?.selectedCustomerIdForDraft;
       final resolvedDeliveryMethodId =
           _selectedDeliveryMethodId ?? _resolveDefaultDeliveryMethodId();
       final response = await cartProvider.addToOrderAPI(
@@ -3726,8 +3608,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       }
       if (response["order_id"] != null) {
         // Get order number from API response
-        final orderNumber = response["order_number"]?.toString() ??
-            'ORD-${response["order_id"]}';
+        final orderNumber = response["order_number"]?.toString() ?? 'ORD-${response["order_id"]}';
         String? tokenNumber = _extractTokenNumber(response);
         if ((tokenNumber == null || tokenNumber.isEmpty) &&
             (_activeTableId != null || _selectedDeliveryMethodId != null)) {
@@ -3736,8 +3617,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             final savedResponse = await cartProvider.listSavedOrders(
               accessToken: authModel.token ?? '',
               tableId: _activeTableId,
-              deliveryMethodId:
-                  _activeTableId == null ? _selectedDeliveryMethodId : null,
+              deliveryMethodId: _activeTableId == null ? _selectedDeliveryMethodId : null,
             );
             if (savedResponse['status'] == 'success') {
               final orders = savedResponse['orders'] as List<dynamic>;
@@ -3777,12 +3657,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
           });
         }
 
-        final openedCreatedOrder =
-            await _openCounterKitchenOrderAfterSend(response);
+        final openedCreatedOrder = await _openCounterKitchenOrderAfterSend(response);
         if (!openedCreatedOrder) {
           // Refresh saved orders for both table and delivery-method contexts
-          if (mounted &&
-              (_activeTableId != null || _selectedDeliveryMethodId != null)) {
+          if (mounted && (_activeTableId != null || _selectedDeliveryMethodId != null)) {
             _orderPanelKey.currentState?.refreshSavedOrders();
           }
 
@@ -3790,8 +3668,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         }
 
         // Check if KOT print is enabled in app settings
-        final appSettingsProvider =
-            Provider.of<AppSettingsProvider>(context, listen: false);
+        final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
         if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
           // Get current time for KOT (using DateHelper for timezone support)
           final orderTime = DateHelper.getCurrentFormattedTimeWithAMPM();
@@ -3820,8 +3697,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       showTableLabel: showTableLabel,
                       orderTime: orderTime,
                       items: printItems,
-                      comment:
-                          currentComment.isNotEmpty ? currentComment : null,
+                      comment: currentComment.isNotEmpty ? currentComment : null,
                     ),
                   ),
                 );
@@ -3855,8 +3731,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     if (_activeTableId == null && _selectedDeliveryMethodId == null) return;
 
     try {
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
+      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
       final orderPanelState = _orderPanelKey.currentState;
       final cartItems = localProductProvider.cartItems;
 
@@ -3874,8 +3749,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         customerName: orderPanelState?.selectedCustomerNameForDraft,
         customerPhone: orderPanelState?.selectedCustomerPhoneForDraft,
         comment: (() {
-          final draftComment =
-              orderPanelState?.buildTaggedDraftComment(_activeTableId ?? '');
+          final draftComment = orderPanelState?.buildTaggedDraftComment(_activeTableId ?? '');
           if (draftComment == null) return null;
           final trimmed = draftComment.trim();
           return trimmed.isNotEmpty ? trimmed : null;
@@ -3887,8 +3761,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         balanceAmount: orderPanelState?.balanceAmountForDraft,
         transactionId: orderPanelState?.transactionNumberForDraft,
         couponId: orderPanelState?.couponIdForDraft,
-        deliveryMethodId: _selectedDeliveryMethodId ??
-            orderPanelState?.deliveryMethodIdForDraft,
+        deliveryMethodId: _selectedDeliveryMethodId ?? orderPanelState?.deliveryMethodIdForDraft,
         carNumber: orderPanelState?.carNumberForDraft,
         status: 'pending',
         deliveryDate: orderPanelState?.deliveryDateForDraft,
@@ -3904,8 +3777,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         customerType: orderPanelState?.selectedCustomerTypeForDraft,
       );
 
-      debugPrint(
-          '✅ Auto-saved pending draft for ${_activeTableId ?? _selectedDeliveryMethodName}');
+      debugPrint('✅ Auto-saved pending draft for ${_activeTableId ?? _selectedDeliveryMethodName}');
       localProductProvider.clearCart();
       localProductProvider.clearCurrentOrder();
     } catch (e) {

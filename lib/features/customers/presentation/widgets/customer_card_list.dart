@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 
@@ -25,7 +26,7 @@ class CustomerCardList extends StatelessWidget {
     required CustomerListModelData customer,
   }) {
     final balance = customer.balance ?? 0;
-    final customerName = customer.name?.trim();
+    final customerName = CustomerDisplay.name(customer.name);
 
     return CustomerSurface(
       padding: const EdgeInsets.all(14),
@@ -41,9 +42,7 @@ class CustomerCardList extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      customerName == null || customerName.isEmpty
-                          ? 'Unnamed customer'
-                          : customerName,
+                      customerName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -80,7 +79,7 @@ class CustomerCardList extends StatelessWidget {
                 Expanded(
                   child: CustomerMetric(
                     icon: Icons.account_balance_wallet_outlined,
-                    label: 'Balance',
+                    label: 'customers.balance'.tr,
                     value: balance.toStringAsFixed(2),
                     valueColor: balance >= 0
                         ? CustomerUiColors.green
@@ -96,10 +95,10 @@ class CustomerCardList extends StatelessWidget {
                 Expanded(
                   child: CustomerMetric(
                     icon: Icons.phone_outlined,
-                    label: 'Phone',
+                    label: 'customers.phone'.tr,
                     value: customer.phone?.isNotEmpty == true
                         ? customer.phone!
-                        : 'Not provided',
+                        : 'customers.not_provided'.tr,
                   ),
                 ),
               ],
@@ -111,7 +110,7 @@ class CustomerCardList extends StatelessWidget {
             child: OutlinedButton.icon(
               onPressed: () => onViewCustomer(customer),
               icon: const Icon(Icons.open_in_new_rounded, size: 17),
-              label: const Text('View Profile'),
+              label: Text('customers.view_profile'.tr),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(42),
                 foregroundColor: ColorManager.kPrimaryColor,

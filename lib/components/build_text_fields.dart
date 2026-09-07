@@ -470,6 +470,7 @@ class BuildDropDownStatic extends StatelessWidget {
   final String hintText;
   final String title;
   final void Function(String?)? onChanged;
+  final String Function(String)? itemLabel;
   final double? height;
   final double? width;
   final EdgeInsetsGeometry? margin;
@@ -486,6 +487,7 @@ class BuildDropDownStatic extends StatelessWidget {
       required this.hintText,
       this.isStarRed,
       required this.onChanged,
+      this.itemLabel,
       required this.title,
       this.height,
       this.width,
@@ -540,7 +542,7 @@ class BuildDropDownStatic extends StatelessWidget {
                   return DropdownMenuItem<String>(
                     value: unit,
                     child: Text(
-                      unit,
+                      itemLabel?.call(unit) ?? unit,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s12,

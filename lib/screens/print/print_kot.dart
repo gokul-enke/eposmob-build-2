@@ -259,12 +259,12 @@ class _KotPrintPageState extends State<KotPrintPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Permissions Required'),
+        title: Text('ui_codes.permissions_required'.tr),
         content: const Text(
             'This app needs Bluetooth and Location permissions to scan for printers.'),
         actions: [
           TextButton(
-            child: const Text('OK'),
+            child: Text('general.ok'.tr),
             onPressed: () {
               Navigator.of(context).pop();
               openAppSettings();

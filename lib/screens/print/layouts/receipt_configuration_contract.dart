@@ -143,9 +143,19 @@ class ReceiptConfigurationContract {
       option(options, key)?.visible == true;
 
   /// Resolves a configured label according to the API's current semantics:
-  /// `default` is English and `value` is Arabic. English-only responses that
-  /// put their text in `value` are supported, while wrong-script leakage is
-  /// rejected when a better language value exists.
+  /// `default` is English and `value` is Arabic. A same-script value is always
+  /// preferred, but configured text is never dropped for being in the other
+  /// script: when a store configures only Arabic on an English document, that
+  /// Arabic is what prints. Renderer fallbacks apply only to keys the store
+  /// left empty.
+  ///
+  /// [resolvedEnglish]/[resolvedArabic] come from the response's
+  /// `resolved_labels`, which are master-data defaults keyed by concept rather
+  /// than by display key — `resolved_labels.tax` mirrors `showTaxHeader` (the
+  /// item-table column) yet every renderer also passes it for `showTax` (the
+  /// totals row). They therefore rank *below* this key's own `default`/`value`:
+  /// a label the store typed against this exact key must win over a master
+  /// default derived from a different one.
   static String label({
     required Map<String, DisplayOption>? options,
     required String key,
@@ -167,19 +177,49 @@ class ReceiptConfigurationContract {
       arabicFallback,
       _arabicFallbackForEnglish(englishFallback),
     ]);
+    // Two tiers, in order: text the store typed against *this* key, then the
+    // master-data and renderer defaults. Same-script candidates are preferred
+    // within each tier, but configured text is never discarded for being in
+    // the "wrong" script: a store that types an Arabic store name on an
+    // English document must see that Arabic on the receipt, not a hardcoded
+    // English placeholder or a master default borrowed from another key.
     final english = _firstNonEmpty([
       _withoutArabic(defaultValue),
+      _withoutArabic(value),
+      defaultValue,
+      value,
       _withoutArabic(resolvedEnglish),
       _withoutArabic(resolvedArabic),
-      _withoutArabic(value),
-      _withoutArabic(safeEnglishFallback),
+      _clean(resolvedEnglish),
+      _clean(resolvedArabic),
+      safeEnglishFallback,
     ]);
     final arabic = _firstNonEmpty([
       _withArabic(value),
-      _withArabic(resolvedArabic),
       _withArabic(defaultValue),
+      value,
+      defaultValue,
+      _withArabic(resolvedArabic),
+      _clean(resolvedArabic),
+      _clean(resolvedEnglish),
       // The renderer-owned fallback may legitimately be transliterated or
       // contain only punctuation/numbers.
+      _clean(safeArabicFallback),
+    ]);
+    // Bilingual output prints both lines, so a wrong-script configured value
+    // is additive there rather than a replacement; keep the stricter split so
+    // the renderer can still supply the missing counterpart line.
+    final bilingualEnglish = _firstNonEmpty([
+      _withoutArabic(defaultValue),
+      _withoutArabic(value),
+      _withoutArabic(resolvedEnglish),
+      _withoutArabic(resolvedArabic),
+      _withoutArabic(safeEnglishFallback),
+    ]);
+    final bilingualArabic = _firstNonEmpty([
+      _withArabic(value),
+      _withArabic(defaultValue),
+      _withArabic(resolvedArabic),
       _clean(safeArabicFallback),
     ]);
 
@@ -189,11 +229,14 @@ class ReceiptConfigurationContract {
       case ReceiptLanguageMode.arabic:
         return arabic;
       case ReceiptLanguageMode.bilingual:
-        if (arabic.isEmpty) return english;
-        if (english.isEmpty || arabic.toLowerCase() == english.toLowerCase()) {
-          return arabic;
+        if (bilingualArabic.isEmpty) return bilingualEnglish;
+        if (bilingualEnglish.isEmpty ||
+            bilingualArabic.toLowerCase() == bilingualEnglish.toLowerCase()) {
+          return bilingualArabic;
         }
-        return inlineBilingual ? '$arabic / $english' : '$arabic\n$english';
+        return inlineBilingual
+            ? '$bilingualArabic / $bilingualEnglish'
+            : '$bilingualArabic\n$bilingualEnglish';
     }
   }
 
@@ -235,14 +278,12 @@ class ReceiptConfigurationContract {
       }
       return raw;
     }
-    if (mode.isEnglish) {
-      return _withoutArabic(raw).isNotEmpty
-          ? _withoutArabic(raw)
-          : _withoutArabic(englishFallback);
-    }
-    return _withArabic(raw).isNotEmpty
-        ? _withArabic(raw)
-        : _withArabic(arabicFallback);
+    // Single-language modes print the configured string as the store wrote it.
+    // Filtering it out by script would silently blank a header the client can
+    // see in the configuration screen, so the fallback applies only when
+    // nothing was configured at all.
+    if (raw.isNotEmpty) return raw;
+    return mode.isEnglish ? _clean(englishFallback) : _clean(arabicFallback);
   }
 
   static String _clean(dynamic value) => value?.toString().trim() ?? '';

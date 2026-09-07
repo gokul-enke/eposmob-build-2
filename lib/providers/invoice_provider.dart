@@ -20,6 +20,7 @@ import '../models/get_payment_method.dart';
 import '../models/get_users.dart';
 
 import '../models/list_transaction.dart';
+import '../resources/api_locale.dart';
 import '../resources/app_url.dart';
 
 class InvoiceProvider extends ChangeNotifier {
@@ -50,6 +51,10 @@ class InvoiceProvider extends ChangeNotifier {
 
   Map<String, String>? paymentList;
   int? _paymentListStoreId;
+
+  /// Language the in-memory payment list was fetched under, so a language
+  /// switch re-fetches instead of serving the previous language's labels.
+  String? _paymentListLocale;
   Map<String, String>? getVoucherAccountTypesModelData = {};
   Map<String, String>? getInvoiceAccountTypesModelData = {};
   List<GetUsersModelData>? getUsersList = [];
@@ -990,7 +995,8 @@ class InvoiceProvider extends ChangeNotifier {
     if (!forceRefresh &&
         paymentList != null &&
         paymentList!.isNotEmpty &&
-        _paymentListStoreId == activeStoreId) {
+        _paymentListStoreId == activeStoreId &&
+        _paymentListLocale == ApiLocale.current) {
       debugPrint(
           "[InvoiceProvider] Returning payment methods from memory for storeId=$activeStoreId");
       return;
@@ -1015,20 +1021,16 @@ class InvoiceProvider extends ChangeNotifier {
     }
 
     // Build URL with store_id parameter
-    final Map<String, String> queryParams = {};
-    if (activeStoreId != null) {
-      queryParams['store_id'] = activeStoreId.toString();
-    }
-    final url = Uri.parse(APPUrl.listTransactionType)
-        .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+    final url = ApiLocale.build(APPUrl.listTransactionType, {
+      if (activeStoreId != null) 'store_id': activeStoreId.toString(),
+    });
 
     try {
       debugPrint("[InvoiceProvider] Fetching payment methods from: $url");
-      final response = await http.get(url, headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $accessToken',
-        'X-Tenant': apiKey,
-      });
+      final response = await http.get(
+        url,
+        headers: ApiLocale.headers(apiKey: apiKey, accessToken: accessToken),
+      );
       debugPrint(
           "[InvoiceProvider] Payment methods response: ${response.statusCode}");
       if (response.statusCode == 200) {
@@ -1113,7 +1115,8 @@ class InvoiceProvider extends ChangeNotifier {
 
     if (paymentList != null &&
         paymentList!.isNotEmpty &&
-        _paymentListStoreId == activeStoreId) {
+        _paymentListStoreId == activeStoreId &&
+        _paymentListLocale == ApiLocale.current) {
       debugPrint(
           '[InvoiceProvider] Keeping in-memory payment methods for storeId=$activeStoreId (reason: $reason)');
       return;
@@ -1123,7 +1126,14 @@ class InvoiceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The cached payload holds server-resolved labels, so the language is part
+  /// of the key — otherwise an Arabic payload would be served to an English
+  /// session until something forced a refresh.
   String _paymentListCacheKey(int? activeStoreId) {
+    return '${_paymentListCacheKeyBase(activeStoreId)}${ApiLocale.cacheSuffix()}';
+  }
+
+  String _paymentListCacheKeyBase(int? activeStoreId) {
     return activeStoreId == null
         ? _paymentMethodsCacheKeyPrefix
         : '${_paymentMethodsCacheKeyPrefix}_$activeStoreId';
@@ -1132,6 +1142,7 @@ class InvoiceProvider extends ChangeNotifier {
   void _setPaymentList(Map<String, String>? methods, int? storeId) {
     paymentList = methods;
     _paymentListStoreId = storeId;
+    _paymentListLocale = ApiLocale.current;
   }
 
   /// Clears in-memory and SharedPreferences payment method cache for offline data.
@@ -1140,11 +1151,17 @@ class InvoiceProvider extends ChangeNotifier {
     final activeStoreId = prefs.getInt('active_store_id');
 
     await prefs.remove(_paymentMethodsCacheKeyPrefix);
+    // Drop every per-language variant, not just the active one.
+    for (final language in ApiLocale.supported) {
+      await prefs.remove('${_paymentListCacheKeyBase(activeStoreId)}_$language');
+      await prefs.remove('${_paymentListCacheKeyBase(null)}_$language');
+    }
     if (activeStoreId != null) {
       await prefs.remove(_paymentListCacheKey(activeStoreId));
     }
 
     _setPaymentList(null, null);
+    _paymentListLocale = null;
     notifyListeners();
     debugPrint('[InvoiceProvider] Cleared payment methods cache');
   }

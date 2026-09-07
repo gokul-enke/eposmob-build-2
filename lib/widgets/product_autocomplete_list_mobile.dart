@@ -159,7 +159,7 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
           return currentOptions;
         },
         displayStringForOption: (GetProduct product) =>
-            product.productName ?? '',
+            product.localizedName ?? '',
         onSelected: (GetProduct selectedProduct) async {
           await _handleProductSelection(selectedProduct);
           Provider.of<KeyboardProvider>(context, listen: false).hide();
@@ -332,7 +332,7 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
                             vertical: 8, // Slightly more padding for mobile
                           ),
                           title: Text(
-                            option.productName ?? '',
+                            option.localizedName ?? '',
                             maxLines: 2,
                             style: TextStyle(
                               fontSize: 14, // Slightly larger for mobile

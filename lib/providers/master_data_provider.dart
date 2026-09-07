@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/master_data.dart';
 import 'package:pos_machine/models/payment_method.dart';
+import 'package:pos_machine/resources/api_locale.dart';
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -19,6 +20,11 @@ class MasterDataProvider with ChangeNotifier {
   // Payment methods cache - now stores list of MasterDataValue
   List<MasterDataValue>? _paymentMethods;
   int? _paymentMethodsStoreId;
+
+  /// Language the in-memory payment methods were fetched under. Without this,
+  /// switching language would keep serving the previously-fetched language's
+  /// server-resolved labels until something forced a refresh.
+  String? _paymentMethodsLocale;
   bool _isLoadingPaymentMethods = false;
 
   // Backend/config-driven payment method models (parsed with all optional
@@ -33,11 +39,13 @@ class MasterDataProvider with ChangeNotifier {
   // Cash denominations cache
   List<MasterDataValue>? _cashDenominations;
   int? _cashDenominationsStoreId;
+  String? _cashDenominationsLocale;
   bool _isLoadingCashDenominations = false;
 
   // Quick-select notes shown on restaurant/KOT cart items.
   List<MasterDataValue>? _kotItemNoteOptions;
   int? _kotItemNoteOptionsStoreId;
+  String? _kotItemNoteOptionsLocale;
   bool _isLoadingKotItemNoteOptions = false;
 
   /// Maps API master data values (UPPERCASE) to Stock model field names (camelCase)
@@ -160,11 +168,13 @@ class MasterDataProvider with ChangeNotifier {
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
 
-    // Return cached in-memory data only if it belongs to the active store.
+    // Return cached in-memory data only if it belongs to the active store AND
+    // the active language.
     if (!forceRefresh &&
         _paymentMethods != null &&
         _paymentMethods!.isNotEmpty &&
-        _paymentMethodsStoreId == activeStoreId) {
+        _paymentMethodsStoreId == activeStoreId &&
+        _paymentMethodsLocale == ApiLocale.current) {
       return _paymentMethods;
     }
 
@@ -189,18 +199,16 @@ class MasterDataProvider with ChangeNotifier {
     }
 
     try {
-      final baseUri = Uri.parse(APPUrl.getPaymentMethods);
-      final queryParameters = Map<String, String>.from(baseUri.queryParameters);
-      if (activeStoreId != null) {
-        queryParameters['store_id'] = activeStoreId.toString();
-      }
-      final url = baseUri.replace(queryParameters: queryParameters);
+      final url = ApiLocale.build(APPUrl.getPaymentMethods, {
+        if (activeStoreId != null) 'store_id': activeStoreId.toString(),
+      });
       debugPrint('🔄 Fetching payment methods');
       debugPrint('📡 URL: $url');
 
-      final response = await http.get(url, headers: {
-        'X-Tenant': apiKey,
-      });
+      final response = await http.get(
+        url,
+        headers: ApiLocale.headers(apiKey: apiKey, json: false),
+      );
 
       debugPrint('📊 Response status: ${response.statusCode}');
       debugPrint('📄 Response body: ${response.body}');
@@ -316,13 +324,24 @@ class MasterDataProvider with ChangeNotifier {
     }
   }
 
+  /// Cache keys carry the language, because the payload holds server-resolved
+  /// labels — serving an Arabic payload to an English session would show the
+  /// wrong labels until the next forced refresh.
   String _paymentMethodsCacheKey(int? activeStoreId) {
+    return '${_paymentMethodsCacheKeyBase(activeStoreId)}${ApiLocale.cacheSuffix()}';
+  }
+
+  String _paymentMethodsCacheKeyBase(int? activeStoreId) {
     return activeStoreId == null
         ? _paymentMethodsCacheKeyPrefix
         : '${_paymentMethodsCacheKeyPrefix}_$activeStoreId';
   }
 
   String _paymentMethodModelsCacheKey(int? activeStoreId) {
+    return '${_paymentMethodModelsCacheKeyBase(activeStoreId)}${ApiLocale.cacheSuffix()}';
+  }
+
+  String _paymentMethodModelsCacheKeyBase(int? activeStoreId) {
     return activeStoreId == null
         ? _paymentMethodModelsCacheKeyPrefix
         : '${_paymentMethodModelsCacheKeyPrefix}_$activeStoreId';
@@ -375,6 +394,7 @@ class MasterDataProvider with ChangeNotifier {
   /// Clears payment methods cache to force re-fetch
   void clearPaymentMethodsCache() {
     _setPaymentMethods(null, null);
+    _paymentMethodsLocale = null;
     _paymentMethodModels = null;
     notifyListeners();
   }
@@ -446,6 +466,7 @@ class MasterDataProvider with ChangeNotifier {
   void _setPaymentMethods(List<MasterDataValue>? methods, int? storeId) {
     _paymentMethods = methods;
     _paymentMethodsStoreId = storeId;
+    _paymentMethodsLocale = ApiLocale.current;
     _paymentMethodModels = methods
         ?.map((value) => PaymentMethod.fromMasterDataValue(value))
         .toList();
@@ -468,21 +489,18 @@ class MasterDataProvider with ChangeNotifier {
     }
 
     try {
-      final baseUri = Uri.parse('${APPUrl.getMasterDataValues}?code=$code');
-      final queryParams = Map<String, String>.from(baseUri.queryParameters);
-
       final int? activeStoreId = prefs.getInt('active_store_id');
-      if (activeStoreId != null) {
-        queryParams['store_id'] = activeStoreId.toString();
-      }
-
-      final url = baseUri.replace(queryParameters: queryParams);
+      final url = ApiLocale.build(APPUrl.getMasterDataValues, {
+        'code': code,
+        if (activeStoreId != null) 'store_id': activeStoreId.toString(),
+      });
       debugPrint('🔄 Fetching master data for code: $code');
       debugPrint('📡 URL: $url');
 
-      final response = await http.get(url, headers: {
-        'X-Tenant': apiKey,
-      });
+      final response = await http.get(
+        url,
+        headers: ApiLocale.headers(apiKey: apiKey, json: false),
+      );
 
       debugPrint('📊 Response status: ${response.statusCode}');
       debugPrint('📄 Response body: ${response.body}');
@@ -526,7 +544,8 @@ class MasterDataProvider with ChangeNotifier {
     if (!forceRefresh &&
         _cashDenominations != null &&
         _cashDenominations!.isNotEmpty &&
-        _cashDenominationsStoreId == activeStoreId) {
+        _cashDenominationsStoreId == activeStoreId &&
+        _cashDenominationsLocale == ApiLocale.current) {
       return _cashDenominations;
     }
 
@@ -543,6 +562,7 @@ class MasterDataProvider with ChangeNotifier {
       });
       _cashDenominations = denominations;
       _cashDenominationsStoreId = activeStoreId;
+      _cashDenominationsLocale = ApiLocale.current;
       return _cashDenominations;
     } catch (e) {
       debugPrint('⚠️ Failed to fetch cash denominations: $e');
@@ -557,6 +577,7 @@ class MasterDataProvider with ChangeNotifier {
   void clearCashDenominationsCache() {
     _cashDenominations = null;
     _cashDenominationsStoreId = null;
+    _cashDenominationsLocale = null;
     notifyListeners();
   }
 
@@ -571,7 +592,8 @@ class MasterDataProvider with ChangeNotifier {
 
     if (!forceRefresh &&
         _kotItemNoteOptions != null &&
-        _kotItemNoteOptionsStoreId == activeStoreId) {
+        _kotItemNoteOptionsStoreId == activeStoreId &&
+        _kotItemNoteOptionsLocale == ApiLocale.current) {
       return _kotItemNoteOptions!;
     }
 
@@ -582,6 +604,7 @@ class MasterDataProvider with ChangeNotifier {
       final result = await fetchMasterData('KOT_ITEM_NOTE_OPTIONS');
       _kotItemNoteOptions = result?.data ?? const [];
       _kotItemNoteOptionsStoreId = activeStoreId;
+      _kotItemNoteOptionsLocale = ApiLocale.current;
       return _kotItemNoteOptions!;
     } catch (error) {
       debugPrint('⚠️ Failed to fetch KOT item note options: $error');

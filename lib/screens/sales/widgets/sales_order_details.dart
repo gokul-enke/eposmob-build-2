@@ -116,16 +116,16 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 debugPrint("No payments data found");
               }
             } else {
-              orderNumber = "Order data is null";
+              orderNumber = 'sales_order_details.err_order_data_null'.tr;
             }
           } catch (e) {
             debugPrint("Error parsing JSON data: $e");
-            orderNumber = "Error parsing order data";
+            orderNumber = 'sales_order_details.err_parsing_order_data'.tr;
           }
         });
       } else {
         setState(() {
-          orderNumber = "Order Details Not found";
+          orderNumber = 'sales_order_details.err_order_not_found'.tr;
         });
       }
     } catch (error) {
@@ -408,7 +408,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                       ?.toString() ??
                   "0.00";
               String storeName =
-                  orderDetailsModelData?.cart?.storeName ?? "Store";
+                  orderDetailsModelData?.cart?.storeName ?? 'sales_order_details.label_store'.tr;
               String orderDate = orderDetailsModelData?.orderDate ?? "";
 
               String? customerName = customerDetails?.name;
@@ -974,7 +974,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         );
 
         final params = ShareParams(
-          text: 'Please find attached the invoice for order #$orderNumber',
+          text: 'sales_order_details.msg_share_pdf_text'.trParams({'orderNumber': orderNumber}),
           files: [enhancedXFile],
         );
 
@@ -1110,12 +1110,12 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
       return;
     }
 
-    final message = 'Here is the link for your invoice: $invoiceUrl';
+    final message = 'sales_order_details.msg_email_body'.trParams({'invoiceUrl': invoiceUrl});
     final uri = Uri(
       scheme: 'mailto',
       path: customerDetails?.email ?? '',
       queryParameters: <String, String>{
-        'subject': 'Invoice #$orderNumber',
+        'subject': 'sales_order_details.msg_email_subject'.trParams({'orderNumber': orderNumber}),
         'body': message,
       },
     );
@@ -1179,7 +1179,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
       }
 
       final customerPhone = customerDetails!.phone!;
-      final customerName = customerDetails?.name ?? 'Valued Customer';
+      final customerName = customerDetails?.name ?? 'sales_order_details.label_default_customer'.tr;
       final totalAmount =
           orderDetailsModelData?.priceSummary?.netPayable?.toString() ??
               orderDetailsModelData?.priceSummary?.netTotal?.toString() ??
