@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 
 class TermsPage extends StatelessWidget {
@@ -15,9 +16,9 @@ class TermsPage extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         centerTitle: true,
-        title: const Text(
-          'Terms and Conditions',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        title: Text(
+          'legal.terms_and_condition.page_title'.tr,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
       ),
       body: _buildBody(size),
@@ -25,116 +26,116 @@ class TermsPage extends StatelessWidget {
   }
 
   Widget _buildBody(Size size) {
-    return const SingleChildScrollView(
-      padding: EdgeInsets.all(16),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
       child: BuildBoxShadowContainer(
         circleRadius: 13,
         color: Colors.white,
-        margin: EdgeInsets.all(4),
-        padding: EdgeInsets.all(16),
+        margin: const EdgeInsets.all(4),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Terms and Conditions',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              'legal.terms_and_condition.heading'.tr,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
-              'Last updated:',
-              style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+              'legal.terms_and_condition.label_last_updated'.tr,
+              style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
-              'Introduction',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              'legal.terms_and_condition.section_introduction'.tr,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 8),
-            Text(
+            const SizedBox(height: 8),
+            const Text(
               'Your privacy is important to us. This privacy policy explains how we collect, use, disclose, and safeguard your information when you use our application.',
             ),
-            Divider(),
+            const Divider(),
             Text(
-              'Information We Collect',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              'legal.terms_and_condition.section_info_collect'.tr,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 8),
-            Text(
+            const SizedBox(height: 8),
+            const Text(
               'We collect the following types of information:',
             ),
-            Text(
+            const Text(
               '- Personal Data (e.g., name, email address)',
             ),
-            Text(
+            const Text(
               '- Usage Data (e.g., interaction with the app)',
             ),
-            Divider(),
+            const Divider(),
             Text(
-              'How We Use Your Information',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              'legal.terms_and_condition.section_how_use'.tr,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 8),
-            Text(
+            const SizedBox(height: 8),
+            const Text(
               'We use the information we collect in the following ways:',
             ),
-            Text(
+            const Text(
               '- To provide and maintain our Service',
             ),
-            Text(
+            const Text(
               '- To notify you about changes to our Service',
             ),
-            Text(
+            const Text(
               '- To provide customer support',
             ),
-            Divider(),
+            const Divider(),
             Text(
-              'Disclosure of Your Information',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              'legal.terms_and_condition.section_disclosure'.tr,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 8),
-            Text(
+            const SizedBox(height: 8),
+            const Text(
               'We may share your information with third parties only in the following circumstances:',
             ),
-            Text(
+            const Text(
               '- With service providers for business purposes',
             ),
-            Text(
+            const Text(
               '- With law enforcement if required by law',
             ),
-            Divider(),
+            const Divider(),
             Text(
-              'Security of Your Information',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              'legal.terms_and_condition.section_security'.tr,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 8),
-            Text(
+            const SizedBox(height: 8),
+            const Text(
               'We implement reasonable security measures to protect your information from unauthorized access or disclosure.',
             ),
-            Divider(),
+            const Divider(),
             Text(
-              'Your Rights',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              'legal.terms_and_condition.section_rights'.tr,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 8),
-            Text(
+            const SizedBox(height: 8),
+            const Text(
               'You have the right to request access to the personal information we have about you, to correct any inaccuracies, and to request the deletion of your personal data.',
             ),
-            Divider(),
+            const Divider(),
             Text(
-              'Changes to This Privacy Policy',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              'legal.terms_and_condition.section_changes'.tr,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 8),
-            Text(
+            const SizedBox(height: 8),
+            const Text(
               'We may update our privacy policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page.',
             ),
-            Divider(),
+            const Divider(),
             Text(
-              'Contact Us',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              'legal.terms_and_condition.section_contact'.tr,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 8),
-            Text(
+            const SizedBox(height: 8),
+            const Text(
               'If you have any questions about this Privacy Policy, please contact us via email at support@example.com.',
             ),
           ],

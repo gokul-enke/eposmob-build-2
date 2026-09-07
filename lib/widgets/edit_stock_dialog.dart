@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
@@ -217,7 +218,7 @@ Future<bool> showEditStockDialog({
                                         child: DropdownButton<String>(
                                           value: selectedRackId,
                                           isExpanded: true,
-                                          hint: const Text('Select Rack'),
+                                          hint: Text('product_detail.select_rack'.tr),
                                           items: rackMap.entries
                                               .map(
                                                 (entry) =>

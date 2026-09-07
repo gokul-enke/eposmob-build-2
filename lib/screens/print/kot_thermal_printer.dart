@@ -9,7 +9,6 @@ import 'package:pos_machine/screens/print/kot_print_helpers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image/image.dart' as img;
 import 'dart:ui' as ui;
-import 'package:pos_machine/services/common_print_settings.dart';
 
 /// Kitchen Order Ticket (KOT) Printer using Document Configuration
 /// Prints: Order number, Table, Time, Items (qty + name), Comment
@@ -497,20 +496,17 @@ class KotThermalPrinter {
     final double baseFontSize = getBaseFontSize(is58mm);
     final double lineHeight = getLineHeight(is58mm);
     final double padding = getPadding(is58mm);
-    final marginMm = await CommonPrintSettings.loadMarginMm();
-    final marginPx = CommonPrintSettings.thermalMarginPixels(
-      width: width,
-      marginMm: marginMm,
-    );
-    final contentWidth = (width - (marginPx * 2)).clamp(1.0, width).toDouble();
+    // The shared Print Margins setting only applies to standard PDF output
+    // (A4/A5) — thermal paper is fixed-width and printers already reserve
+    // their own non-printable edge, so no extra margin is added here.
 
     // First pass: Calculate total height
     double contentHeight = padding * 2; // Top and bottom content padding
     for (var row in rows) {
       contentHeight += _calculateRowHeight(
-          row, baseFontSize, lineHeight, contentWidth, padding, is58mm);
+          row, baseFontSize, lineHeight, width, padding, is58mm);
     }
-    final totalHeight = marginPx + contentHeight + marginPx;
+    final totalHeight = contentHeight;
 
     // Create recorder
     final recorder = ui.PictureRecorder();
@@ -522,16 +518,13 @@ class KotThermalPrinter {
       Paint()..color = Colors.white,
     );
 
-    double yOffset = marginPx.toDouble() + padding;
+    double yOffset = padding;
 
     // Second pass: Render each row
-    canvas.save();
-    canvas.translate(marginPx.toDouble(), 0);
     for (var row in rows) {
-      yOffset = _renderRow(row, canvas, yOffset, contentWidth, baseFontSize,
-          lineHeight, padding, is58mm);
+      yOffset = _renderRow(
+          row, canvas, yOffset, width, baseFontSize, lineHeight, padding, is58mm);
     }
-    canvas.restore();
 
     // Convert to image
     final picture = recorder.endRecording();

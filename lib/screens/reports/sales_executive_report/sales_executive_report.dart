@@ -381,7 +381,7 @@ class _SalesExecutiveReportScreenState
             style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
                 0.18, ColorManager.textColor),
             decoration: decoration.copyWith(
-              hintText: "YYYY-MM-DD HH:MM:SS",
+              hintText: 'general.datetime_format_hint'.tr,
               hintStyle: buildCustomStyle(FontWeightManager.medium,
                   FontSize.s10, 0.18, ColorManager.textColor),
               prefixIcon: Container(
@@ -426,7 +426,7 @@ class _SalesExecutiveReportScreenState
             style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
                 0.18, ColorManager.textColor),
             decoration: decoration.copyWith(
-              hintText: "YYYY-MM-DD HH:MM:SS",
+              hintText: 'general.datetime_format_hint'.tr,
               hintStyle: buildCustomStyle(FontWeightManager.medium,
                   FontSize.s10, 0.18, ColorManager.textColor),
               prefixIcon: Container(

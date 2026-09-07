@@ -606,7 +606,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
 
   Widget _buildApplyButton() {
     return CustomRoundButton(
-      title: "Apply",
+      title: 'kiosk_order.btn_apply'.tr,
       fct: _applyCoupon,
       fontSize: FontSize.s14,
       height: MediaQuery.of(context).size.height * .07,
@@ -686,12 +686,12 @@ class KioskOrderPageState extends State<KioskOrderPage> {
                       .priceSummary!
                       .subTotal ??
                   0.00),
-          title: "Net amount",
+          title: 'kiosk_order.label_net_amount'.tr,
           color: ColorManager.textColor,
         ),
-        const BuildPaymentRow(
+        BuildPaymentRow(
           amount: "0.00",
-          title: "Shipping",
+          title: 'kiosk_order.label_shipping'.tr,
           color: ColorManager.textColor,
         ),
         BuildPaymentRow(
@@ -700,7 +700,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
                       .priceSummary!
                       .discount ??
                   0.00),
-          title: "Discount",
+          title: 'kiosk_order.label_discount'.tr,
           color: ColorManager.textColor,
         ),
         GestureDetector(
@@ -710,7 +710,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
                         .priceSummary!
                         .totalTax ??
                     0.00),
-            title: "GST",
+            title: 'kiosk_order.label_gst'.tr,
             color: ColorManager.kPrimaryColor,
           ),
           onTap: () {
@@ -734,7 +734,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
                       .priceSummary!
                       .netTotal ??
                   0.00),
-          title: "Total Payable",
+          title: 'kiosk_order.label_total_payable'.tr,
           secondRowTextStyle: buildCustomStyle(FontWeightManager.bold,
               FontSize.s15, 0.23, ColorManager.textColor),
           firstRowTextStyle: buildCustomStyle(FontWeightManager.bold,
@@ -751,7 +751,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
         const SizedBox(height: 5),
         BuildPaymentRow(
           amount: "",
-          title: "Chose Payment Method",
+          title: 'kiosk_order.label_chose_payment_method'.tr,
           firstRowTextStyle: buildCustomStyle(FontWeightManager.semiBold,
               FontSize.s14, 0.21, ColorManager.kPrimaryColor),
           color: ColorManager.kPrimaryColor,
@@ -843,7 +843,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
             ),
             child: Center(
               child: Text(
-                'Pay INR ${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal)}',
+                'kiosk_order.btn_pay'.trParams({'amount': '${AmountHelper.formatAmount(Provider.of<CartProvider>(context, listen: true).priceSummary!.netTotal)}'}),
                 style: buildCustomStyle(
                     FontWeightManager.medium, FontSize.s16, 0.27, Colors.white),
               ),
@@ -902,7 +902,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
                   const ColorFilter.mode(Colors.white, BlendMode.srcIn),
             ),
             Text(
-              'Print',
+              'kiosk_order.btn_print'.tr,
               style: buildCustomStyle(
                   FontWeightManager.medium, FontSize.s10, 0.16, Colors.white),
             ),

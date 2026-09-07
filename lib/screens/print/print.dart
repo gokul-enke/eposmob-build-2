@@ -619,12 +619,12 @@ class _PrintPageState extends State<PrintPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Permissions Required'),
+        title: Text('ui_codes.permissions_required'.tr),
         content: const Text(
             'Allow Nearby devices and Location access to scan for printers. On Android 11 and older, Bluetooth scanning appears under Location.'),
         actions: [
           TextButton(
-            child: const Text('OK'),
+            child: Text('general.ok'.tr),
             onPressed: () {
               Navigator.of(context).pop();
               openAppSettings();
@@ -1341,7 +1341,7 @@ class _PrintPageState extends State<PrintPage> {
                       Text(
                         _isScanning
                             ? 'Scanning...'
-                            : '${devices.length} devices found',
+                            : '${devices.length} device${devices.length == 1 ? '' : 's'} found',
                         style: const TextStyle(
                           color: textSecondaryColor,
                           fontSize: 14,

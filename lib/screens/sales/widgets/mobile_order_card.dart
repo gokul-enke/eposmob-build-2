@@ -12,6 +12,7 @@ import 'package:pos_machine/components/build_dialog_box.dart'
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 import 'package:pos_machine/models/list_sales_order.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -59,7 +60,7 @@ class MobileOrderCard extends StatelessWidget {
       case 'cancelled':
         return 'sales.status_cancelled'.tr;
       default:
-        return status.toUpperCase();
+        return UiCodeLabels.status(status);
     }
   }
 

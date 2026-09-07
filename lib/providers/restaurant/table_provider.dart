@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/restaurant/table_model.dart';
 import '../../models/restaurant/table_list_model.dart';
+import '../../resources/api_locale.dart';
 import '../../resources/app_url.dart';
 
 class TableProvider with ChangeNotifier {
@@ -68,21 +69,16 @@ class TableProvider with ChangeNotifier {
       throw const HttpException("API key not found. Please restart the app.");
     }
 
-    final baseUri = Uri.parse(APPUrl.getTableList);
-    final queryParameters =
-        Map<String, String>.from(baseUri.queryParameters);
-    if (activeStoreId != null) {
-      queryParameters['store_id'] = activeStoreId.toString();
-    }
-    final url = baseUri.replace(queryParameters: queryParameters);
+    final url = ApiLocale.build(APPUrl.getTableList, {
+      if (activeStoreId != null) 'store_id': activeStoreId.toString(),
+    });
     debugPrint('🌐 TableProvider: Making request to: $url');
 
     try {
-      final headers = {
-        'Content-Type': 'application/json',
-        'X-Tenant': apiKey,
-        'Authorization': 'Bearer $accessToken',
-      };
+      final headers = ApiLocale.headers(
+        apiKey: apiKey,
+        accessToken: accessToken?.toString(),
+      );
 
       debugPrint('📤 TableProvider: Request headers: $headers');
 

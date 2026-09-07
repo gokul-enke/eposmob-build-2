@@ -333,8 +333,8 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
       child: CheckboxListTile(
         contentPadding: EdgeInsets.zero,
         controlAffinity: ListTileControlAffinity.leading,
-        title: const Text('Invert Print Colors'),
-        subtitle: const Text('Use for white-on-black printer output only.'),
+        title: Text('barcode_layout.label_invert_colors'.tr),
+        subtitle: Text('barcode_layout.invert_colors_hint'.tr),
         value: invertPrintColors,
         onChanged: (value) {
           _userAdjustedLayout = true;

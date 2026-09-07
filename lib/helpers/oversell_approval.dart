@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/models/get_product.dart';
 
 typedef OversellApprovalPrompt = Future<bool> Function({
@@ -32,16 +33,16 @@ Future<bool> showOversellApprovalDialog({
     context: context,
     barrierDismissible: false,
     builder: (dialogContext) => AlertDialog(
-      title: const Text('Oversell approval required'),
+      title: Text('ui_chrome.oversell_title'.tr),
       content: Text(message),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: const Text('Cancel'),
+          child: Text('general.cancel'.tr),
         ),
         FilledButton(
           onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: const Text('Approve & Add to Cart'),
+          child: Text('ui_chrome.approve_add_cart'.tr),
         ),
       ],
     ),

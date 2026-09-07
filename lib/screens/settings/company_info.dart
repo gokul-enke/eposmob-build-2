@@ -13,6 +13,7 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/screens/settings/widgets/settings_responsive.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 
 class CompanyInfoScreen extends StatefulWidget {
   const CompanyInfoScreen({super.key});
@@ -121,7 +122,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
 
         String userRole = await sharedPrefsProvider.getUserRole();
         _loggedInUserEmail =
-            userRole.contains('@') ? userRole : 'admin@company.com';
+            userRole.contains('@') ? userRole : 'company_info.fallback_email'.tr;
         _loggedInUserName = _userName; // Use admin user name as fallback
       }
     } catch (e) {
@@ -136,11 +137,11 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
 
         String userRole = await sharedPrefsProvider.getUserRole();
         _loggedInUserEmail =
-            userRole.contains('@') ? userRole : 'admin@company.com';
+            userRole.contains('@') ? userRole : 'company_info.fallback_email'.tr;
         _loggedInUserName = _userName; // Use admin user name as fallback
       } catch (settingsError) {
         debugPrint('Error fetching from shared preferences: $settingsError');
-        _loggedInUserEmail = 'admin@company.com';
+        _loggedInUserEmail = 'company_info.fallback_email'.tr;
         _loggedInUserName = _userName; // Use admin user name as fallback
       }
     }
@@ -213,7 +214,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
 
       // If still no company name, use a default
       if (_companyName == null || _companyName!.isEmpty) {
-        _companyName = 'Company Name Not Available';
+        _companyName = 'company_info.name_not_available'.tr;
       }
     }
   }
@@ -256,7 +257,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                           'company_info.label_email'.tr,
                           _loggedInUserEmail ?? 'company_info.loading'.tr,
                         ),
-                        MapEntry('company_info.label_user_role'.tr, _userRole ?? 'company_info.loading'.tr),
+                        MapEntry('company_info.label_user_role'.tr, UiCodeLabels.userRole(_userRole)),
                         MapEntry(
                           'company_info.label_customer_id'.tr,
                           _customerId?.toString() ?? 'company_info.loading'.tr,

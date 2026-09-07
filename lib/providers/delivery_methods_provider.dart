@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/delivery_method.dart';
+import 'package:pos_machine/models/delivery_method_registry.dart';
+import 'package:pos_machine/resources/api_locale.dart';
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -18,21 +21,23 @@ class DeliveryMethodsProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get hasMethods => _deliveryMethods.isNotEmpty;
 
-  // Add method to get default delivery method (Store Takeaway)
+  /// Default delivery method: the store-takeaway one when present, else the
+  /// first available.
+  ///
+  /// Resolved via [DeliveryMethod.kind] rather than by matching the English
+  /// name. The old `name.contains('store takeaway')` test stops matching as
+  /// soon as the API returns a localized name, and then silently falls through
+  /// to a hardcoded id that belongs to a different store.
   DeliveryMethod? get defaultDeliveryMethod {
-    try {
-      return _deliveryMethods.firstWhere(
-        (method) => method.name.toLowerCase().contains('store takeaway'),
-        orElse: () => _deliveryMethods.isNotEmpty
-            ? _deliveryMethods.first
-            : DeliveryMethod(id: "11", name: "Store Takeaway"),
-      );
-    } catch (e) {
-      // Fallback to first method or default
-      return _deliveryMethods.isNotEmpty
-          ? _deliveryMethods.first
-          : DeliveryMethod(id: "11", name: "Store Takeaway");
+    for (final method in _deliveryMethods) {
+      if (method.kind == DeliveryKind.storeTakeaway) return method;
     }
+    if (_deliveryMethods.isNotEmpty) return _deliveryMethods.first;
+    return DeliveryMethod(
+      id: "11",
+      name: 'common.store_takeaway'.tr,
+      code: "STORE_TAKEAWAY",
+    );
   }
 
   DeliveryMethod? resolveDefaultDeliveryMethod({String? appSettingsDefault}) {
@@ -40,11 +45,15 @@ class DeliveryMethodsProvider with ChangeNotifier {
     if (configuredDefault != null && configuredDefault.isNotEmpty) {
       for (final method in _deliveryMethods) {
         final code = method.code?.trim();
+        final target = configuredDefault.toLowerCase();
+        // Also match any translated name, so a default configured in one
+        // language still resolves while the app runs in another.
+        final matchesTranslation = method.translations.values
+            .any((value) => value.trim().toLowerCase() == target);
         if (method.id == configuredDefault ||
-            method.name.toLowerCase() == configuredDefault.toLowerCase() ||
-            (code != null &&
-                code.isNotEmpty &&
-                code.toLowerCase() == configuredDefault.toLowerCase())) {
+            method.name.toLowerCase() == target ||
+            matchesTranslation ||
+            (code != null && code.isNotEmpty && code.toLowerCase() == target)) {
           return method;
         }
       }
@@ -66,31 +75,9 @@ class DeliveryMethodsProvider with ChangeNotifier {
     if (rawData is List) {
       for (final item in rawData) {
         if (item is Map<String, dynamic>) {
-          final id = item['id']?.toString();
-          final name = item['name']?.toString();
-          final code = item['code']?.toString();
-
-          if (id != null && id.isNotEmpty && name != null && name.isNotEmpty) {
-            // Parse prices array if available
-            final List<DeliveryPrice> prices = [];
-            if (item['prices'] is List) {
-              for (final priceItem in item['prices']) {
-                if (priceItem is Map<String, dynamic>) {
-                  try {
-                    prices.add(DeliveryPrice.fromJson(priceItem));
-                  } catch (e) {
-                    debugPrint('Error parsing delivery price: $e');
-                  }
-                }
-              }
-            }
-
-            parsedMethods.add(DeliveryMethod(
-              id: id,
-              name: name,
-              code: code,
-              prices: prices,
-            ));
+          final method = DeliveryMethod.fromMap(item);
+          if (method.id.isNotEmpty && method.name.isNotEmpty) {
+            parsedMethods.add(method);
           }
         }
       }
@@ -102,11 +89,11 @@ class DeliveryMethodsProvider with ChangeNotifier {
         if (value is String) {
           parsedMethods.add(DeliveryMethod.fromJson(key, value));
         } else if (value is Map<String, dynamic>) {
-          final id = value['id']?.toString() ?? key;
-          final name = value['name']?.toString() ?? value['label']?.toString();
-
-          if (name != null && name.isNotEmpty) {
-            parsedMethods.add(DeliveryMethod(id: id, name: name));
+          final merged = Map<String, dynamic>.from(value);
+          merged['id'] = value['id']?.toString() ?? key;
+          final method = DeliveryMethod.fromMap(merged);
+          if (method.name.isNotEmpty) {
+            parsedMethods.add(method);
           }
         }
       });
@@ -183,17 +170,13 @@ class DeliveryMethodsProvider with ChangeNotifier {
         queryParameters['store_id'] = activeStoreId.toString();
       }
 
-      final url = Uri.parse(APPUrl.getDeliveryMethods)
-          .replace(queryParameters: queryParameters);
+      final url = ApiLocale.build(APPUrl.getDeliveryMethods, queryParameters);
       debugPrint('$_tag 🌐 API call → $url');
 
-      final headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-Tenant': apiKey,
-        if (accessToken != null && accessToken.isNotEmpty)
-          'Authorization': 'Bearer $accessToken',
-      };
+      final headers = ApiLocale.headers(
+        apiKey: apiKey,
+        accessToken: accessToken,
+      );
       debugPrint(
           '$_tag Headers: X-Tenant=${apiKey.substring(0, apiKey.length > 8 ? 8 : apiKey.length)}..., hasAuth=${accessToken != null && accessToken.isNotEmpty}');
 
@@ -267,6 +250,10 @@ class DeliveryMethodsProvider with ChangeNotifier {
   void _setDeliveryMethods(List<DeliveryMethod> methods, int? storeId) {
     _deliveryMethods = methods;
     _loadedStoreId = storeId;
+    // Keep the static registry in step so the billing flow can resolve a stored
+    // delivery-method string to a DeliveryKind without plumbing this provider
+    // through every widget. See DeliveryMethodRegistry.
+    DeliveryMethodRegistry.update(methods);
   }
 
   List<DeliveryMethod> _loadDeliveryMethodsFromLocalCache(
@@ -284,17 +271,7 @@ class DeliveryMethodsProvider with ChangeNotifier {
       final decoded = json.decode(raw) as List<dynamic>;
       final result = decoded
           .whereType<Map<String, dynamic>>()
-          .map(
-            (item) => DeliveryMethod(
-              id: item['id']?.toString() ?? '',
-              name: item['name']?.toString() ?? '',
-              code: item['code']?.toString(),
-              prices: ((item['prices'] as List<dynamic>?) ?? const [])
-                  .whereType<Map<String, dynamic>>()
-                  .map(DeliveryPrice.fromJson)
-                  .toList(),
-            ),
-          )
+          .map(DeliveryMethod.fromMap)
           .where((item) => item.id.isNotEmpty && item.name.isNotEmpty)
           .toList();
       debugPrint(
@@ -331,14 +308,27 @@ class DeliveryMethodsProvider with ChangeNotifier {
 
     await prefs.remove(_deliveryMethodsCacheKey(activeStoreId));
     await prefs.remove(_deliveryMethodsCacheKeyPrefix);
+    // Drop every per-language variant, not just the active one.
+    final cacheBase = _deliveryMethodsCacheKeyBase(activeStoreId);
+    for (final language in ApiLocale.supported) {
+      await prefs.remove('${cacheBase}_$language');
+    }
 
     _setDeliveryMethods([], null);
+    DeliveryMethodRegistry.clear();
     _hasFetchedOnce = false;
     notifyListeners();
     debugPrint('$_tag Cleared delivery methods cache');
   }
 
+  /// Cache key. Includes the active language because the cached payload holds
+  /// server-resolved names — serving an Arabic payload to an English session
+  /// would show the wrong labels until the next refresh.
   String _deliveryMethodsCacheKey(int? activeStoreId) {
+    return '${_deliveryMethodsCacheKeyBase(activeStoreId)}${ApiLocale.cacheSuffix()}';
+  }
+
+  String _deliveryMethodsCacheKeyBase(int? activeStoreId) {
     return activeStoreId == null
         ? _deliveryMethodsCacheKeyPrefix
         : '${_deliveryMethodsCacheKeyPrefix}_$activeStoreId';

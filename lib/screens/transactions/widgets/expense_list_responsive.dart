@@ -406,6 +406,22 @@ class ExpenseListStatusPill extends StatelessWidget {
 
   const ExpenseListStatusPill({super.key, required this.status});
 
+  String _statusLabel(String normalized) {
+    if (normalized.contains('SUCC') || normalized.contains('PAID')) {
+      return 'transaction_status_labels.succ'.tr;
+    }
+    if (normalized.contains('PEND') || normalized.contains('WAIT')) {
+      return 'quotations.status_pending'.tr;
+    }
+    if (normalized.contains('FAIL') || normalized.contains('REJ')) {
+      return 'transaction_status_labels.fail'.tr;
+    }
+    if (normalized.contains('INIT')) {
+      return 'transaction_status_labels.init'.tr;
+    }
+    return status;
+  }
+
   @override
   Widget build(BuildContext context) {
     final normalized = status.toUpperCase();
@@ -434,7 +450,7 @@ class ExpenseListStatusPill extends StatelessWidget {
         border: Border.all(color: fg.withOpacity(0.2)),
       ),
       child: Text(
-        normalized,
+        _statusLabel(normalized),
         style: buildCustomStyle(
           FontWeightManager.semiBold,
           FontSize.s10,

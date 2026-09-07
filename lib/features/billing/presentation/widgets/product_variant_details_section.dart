@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/features/billing/domain/product_variant_selection.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -151,29 +152,29 @@ class _VariantCard extends StatelessWidget {
             spacing: 18,
             runSpacing: 6,
             children: [
-              _Fact(label: 'Variant ID', value: '${variant.id}'),
-              _Fact(label: 'Store ID', value: '${variant.storeId ?? 'All'}'),
-              _Fact(label: 'SKU', value: variant.sku ?? 'N/A'),
-              _Fact(label: 'Barcode', value: variant.barcode ?? 'N/A'),
-              _Fact(label: 'Price', value: money(variant.price)),
-              if (showMrp) _Fact(label: 'MRP', value: money(variant.mrp)),
+              _Fact(label: 'product_detail.variant_id'.tr, value: '${variant.id}'),
+              _Fact(label: 'product_detail.store_id'.tr, value: '${variant.storeId ?? 'product_detail.all_stores'.tr}'),
+              _Fact(label: 'product_detail.sku'.tr, value: variant.sku ?? 'general.na'.tr),
+              _Fact(label: 'product_detail.barcode'.tr, value: variant.barcode ?? 'general.na'.tr),
+              _Fact(label: 'product_detail.price'.tr, value: money(variant.price)),
+              if (showMrp) _Fact(label: 'product_detail.mrp'.tr, value: money(variant.mrp)),
               if (showPurchasePrice)
                 _Fact(
-                  label: 'Purchase Price',
+                  label: 'product_detail.purchase_price'.tr,
                   value: money(variant.purchasePrice),
                 ),
               _Fact(
-                label: 'Available Qty',
+                label: 'product_detail.available_qty'.tr,
                 value: value(variant.availableQuantity ?? variant.quantity),
               ),
-              _Fact(label: 'Stock-row Qty', value: value(stockQuantity)),
+              _Fact(label: 'product_detail.stock_row_qty'.tr, value: value(stockQuantity)),
             ],
           ),
           const SizedBox(height: 10),
           Text(
             stocks.isEmpty
-                ? 'No stock rows for this variant in the active store'
-                : 'Variant stock rows (${stocks.length})',
+                ? 'product_detail.no_stock_rows'.tr
+                : 'product_detail.variant_stock_rows'.trParams({'count': '${stocks.length}'}),
             style: TextStyle(
               fontFamily: 'Poppins',
               fontSize: 12,

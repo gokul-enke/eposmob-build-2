@@ -837,7 +837,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
     _pendingPrintOrderNumber = orderNumber;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text(BillingMobileErrorMessages.printRetryPrompt),
+        content: Text(BillingMobileErrorMessages.printRetryPrompt),
         action: SnackBarAction(
           label: 'Retry',
           onPressed: () => _retryPendingPrint(),

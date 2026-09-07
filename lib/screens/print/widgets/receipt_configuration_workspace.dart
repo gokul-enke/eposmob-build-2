@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -206,72 +207,88 @@ class _ReceiptConfigurationWorkspaceState
     final visibleCount =
         _options.values.where((option) => option.visible == true).length;
 
-    return PrinterSettingsCard(
-      padding: EdgeInsets.all(compact ? 16 : 20),
+    // Collapsed by default: this is a reference-and-preview tool, not a
+    // setting. Nothing renders — including the expensive receipt render — until
+    // the user asks for it.
+    return PrinterDisclosureCard(
+      icon: Icons.receipt_long_outlined,
+      title: 'printer_settings.preview_title'.tr,
+      subtitle: config == null
+          ? 'printer_settings.preview_empty'.tr
+          : 'printer_settings.preview_subtitle'.tr,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          PrinterSectionHeader(
-            icon: Icons.preview_outlined,
-            title: 'Receipt Setup & Live Preview',
-            subtitle: config == null
-                ? 'No Bill document configuration is currently synced'
-                : 'Review every synced label and understand what supplies its printed value',
-            trailing: OutlinedButton.icon(
-              onPressed: widget.isResyncing ? null : widget.onResync,
-              icon: widget.isResyncing
-                  ? const SizedBox.square(
-                      dimension: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.sync_rounded, size: 18),
-              label: Text(widget.isResyncing ? 'Syncing...' : 'Resync'),
-            ),
-          ),
-          const SizedBox(height: 16),
           _buildNotice(config),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _SummaryChip(icon: Icons.straighten, text: widget.paperSize),
-              _SummaryChip(
-                  icon: Icons.palette_outlined, text: widget.themeName),
-              _SummaryChip(
-                icon: Icons.translate,
-                text: _languageName(config?.language),
-              ),
-              _SummaryChip(
-                icon: Icons.visibility_outlined,
-                text: '$visibleCount/${_options.length} visible',
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          _buildSectionSelector(),
-          const SizedBox(height: 16),
+          if (config != null) ...[
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                // Paper size and theme are deliberately not repeated here; the
+                // Receipt Output card above this one already states both.
+                _SummaryChip(
+                  icon: Icons.translate,
+                  text: _languageName(config.language),
+                ),
+                _SummaryChip(
+                  icon: Icons.visibility_outlined,
+                  text: 'printer_settings.visible_count'.trParams({
+                    'visible': '$visibleCount',
+                    'total': '${_options.length}',
+                  }),
+                ),
+              ],
+            ),
+          ],
+          SizedBox(height: compact ? 14 : 16),
           if (config == null)
             _buildEmptyState()
-          else if (compact)
-            Column(
-              children: [
-                _buildFieldsPanel(),
-                const SizedBox(height: 16),
-                _buildPreviewPanel(),
-              ],
-            )
-          else
+          else if (compact) ...[
+            _buildFieldReferenceCard(),
+            const SizedBox(height: 12),
+            _buildLivePreviewCard(),
+          ] else
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(flex: 7, child: _buildFieldsPanel()),
-                const SizedBox(width: 18),
-                Expanded(flex: 5, child: _buildPreviewPanel()),
+                Expanded(child: _buildFieldReferenceCard()),
+                const SizedBox(width: 16),
+                Expanded(child: _buildLivePreviewCard()),
               ],
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildFieldReferenceCard() {
+    return PrinterDisclosureCard(
+      embedded: true,
+      collapsible: false,
+      icon: Icons.list_alt_rounded,
+      title: 'Field reference',
+      subtitle: 'Every synced label and what supplies its value',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionSelector(),
+          const SizedBox(height: 14),
+          _buildFieldsPanel(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLivePreviewCard() {
+    return PrinterDisclosureCard(
+      embedded: true,
+      collapsible: false,
+      icon: Icons.preview_outlined,
+      title: 'Live preview',
+      subtitle: 'Render a sample receipt using the current settings',
+      child: _buildPreviewPanel(),
     );
   }
 
@@ -302,8 +319,8 @@ class _ReceiptConfigurationWorkspaceState
           Expanded(
             child: Text(
               hasConfig
-                  ? 'These are the current values from Document Configuration. Edit them in the Admin Panel, then press Resync. Sample amounts and customer details below are live-data examples, not saved labels.'
-                  : 'Configure the Bill template in the Admin Panel, then press Resync Doc Config.',
+                  ? 'Values come from Document Configuration. Edit them in the Admin Panel, then Resync.'
+                  : 'Configure the Bill template in the Admin Panel, then Resync.',
               style: TextStyle(
                 height: 1.35,
                 fontSize: 12,
@@ -312,8 +329,26 @@ class _ReceiptConfigurationWorkspaceState
               ),
             ),
           ),
+          const SizedBox(width: 10),
+          _buildResyncButton(),
         ],
       ),
+    );
+  }
+
+  /// Resync stays inside the expanded body rather than the collapsed header,
+  /// so the action is reachable where it is explained without competing with
+  /// the page-level actions in the header overflow menu.
+  Widget _buildResyncButton() {
+    return OutlinedButton.icon(
+      onPressed: widget.isResyncing ? null : widget.onResync,
+      icon: widget.isResyncing
+          ? const SizedBox.square(
+              dimension: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.sync_rounded, size: 18),
+      label: Text(widget.isResyncing ? 'Syncing...' : 'Resync'),
     );
   }
 
@@ -356,9 +391,12 @@ class _ReceiptConfigurationWorkspaceState
   Widget _buildFieldsPanel() {
     final section =
         _sections.firstWhere((section) => section.id == _selectedSection);
+    // White against the disclosure's grey panel. The section label is not
+    // repeated here because the selected chip above already shows it.
     return Container(
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
       ),
@@ -366,23 +404,10 @@ class _ReceiptConfigurationWorkspaceState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 15, 16, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  section.label,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  section.description,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                ),
-              ],
+            padding: const EdgeInsets.fromLTRB(16, 13, 16, 11),
+            child: Text(
+              section.description,
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
           ),
           Divider(height: 1, color: Colors.grey.shade200),
@@ -644,30 +669,16 @@ class _ReceiptConfigurationWorkspaceState
   }
 
   Widget _buildPreviewPanel() {
+    // No border and no title row: the enclosing disclosure supplies both. The
+    // darker fill stays so the white paper reads as paper.
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: const Color(0xfff1f3f7),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
         children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Common visibility preview',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                ),
-              ),
-              Text(
-                widget.paperSize,
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
           SegmentedButton<_PreviewLanguage>(
             segments: const [
               ButtonSegment(
@@ -781,17 +792,17 @@ class _ReceiptConfigurationWorkspaceState
   static String _languageName(String? language) {
     switch (language?.toLowerCase().replaceAll('-', '_')) {
       case 'en':
-        return 'English config';
+        return 'printer_settings.lang_english_config'.tr;
       case 'ar':
-        return 'Arabic config';
+        return 'printer_settings.lang_arabic_config'.tr;
       case 'en_ar':
       case 'ar_en':
       case 'bilingual':
-        return 'Bilingual config';
+        return 'printer_settings.lang_bilingual_config'.tr;
       default:
         return language?.trim().isNotEmpty == true
             ? language!
-            : 'Language not set';
+            : 'printer_settings.lang_not_set'.tr;
     }
   }
 
@@ -1044,8 +1055,7 @@ class _CommonReceiptPreviewState extends State<_CommonReceiptPreview> {
                     color: Colors.amber.shade700, size: 26),
                 const SizedBox(height: 9),
                 Text(
-                  'Rendered preview is unavailable. Showing the configuration '
-                  'visibility guide instead.',
+                  'printer_settings.preview_unavailable'.tr,
                   textAlign: TextAlign.center,
                   style:
                       TextStyle(fontSize: 10.5, color: Colors.amber.shade900),
@@ -1056,7 +1066,7 @@ class _CommonReceiptPreviewState extends State<_CommonReceiptPreview> {
                     _previewFuture = _render();
                   }),
                   icon: const Icon(Icons.refresh_rounded, size: 16),
-                  label: const Text('Retry rendered preview'),
+                  label: Text('printer_settings.retry_preview'.tr),
                 ),
                 const SizedBox(height: 10),
                 _ReceiptSample(

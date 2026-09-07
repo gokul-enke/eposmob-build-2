@@ -282,7 +282,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
 
   String _itemsReceivedLabel(PurchaseOrderData item) {
     if (item.itemsReceived == null || item.itemsReceived!.isEmpty) {
-      return "0 / 0";
+      return 'purchase_order.items_received_default'.tr;
     }
     return item.itemsReceived!;
   }
@@ -334,10 +334,10 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
   @override
   Widget build(BuildContext context) {
     if (!canViewPurchasePrice(context)) {
-      return const SafeArea(
+      return SafeArea(
         child: Center(
           child:
-              Text('Purchase permission is required to view purchase orders.'),
+              Text('purchase_order.permission_required_view'.tr),
         ),
       );
     }
@@ -1073,8 +1073,8 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                   Expanded(
                     child: TextField(
                       controller: controller,
-                      decoration: const InputDecoration(
-                        hintText: "yyyy-mm-dd",
+                      decoration: InputDecoration(
+                        hintText: 'purchase_order.date_format_hint'.tr,
                         border: InputBorder.none,
                         isDense: true,
                       ),

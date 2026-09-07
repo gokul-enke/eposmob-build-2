@@ -829,7 +829,7 @@ class _StockReportScreenState extends State<StockReportScreen> {
               children: [
                 _buildMobileCardStat(
                   'stock_report.stock_stat'.tr,
-                  "${item.totalQuantity ?? 0} ${item.unit ?? 'PCS'}",
+                  "${item.totalQuantity ?? 0} ${item.unit ?? 'general.default_unit'.tr}",
                 ),
                 _buildMobileCardStat('stock_report.expiry_stat'.tr, expDate),
               ],
@@ -1262,7 +1262,7 @@ class _StockReportScreenState extends State<StockReportScreen> {
         _buildTableCell(retailPriceVal),
         _buildTableCell(mrpVal),
         if (showPurchasePrice) _buildTableCell(purchasePriceVal),
-        _buildTableCell("${item.totalQuantity ?? 0} ${item.unit ?? 'PCS'}"),
+        _buildTableCell("${item.totalQuantity ?? 0} ${item.unit ?? 'general.default_unit'.tr}"),
         if (showPurchasePrice) _buildTableCell(stockVal),
         _buildTableCell(retailVal),
         _buildTableCell(expDate),

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:pos_machine/resources/api_locale.dart';
 
 GetProductModel getProductModelFromJson(String str) =>
     GetProductModel.fromJson(json.decode(str));
@@ -463,13 +464,34 @@ class GetProduct {
         "sku": sku,
         "offer_price": offerPrice,
         "product_location": productLocation,
-        "hsn_code": hsnCode, // Added HSN code field
-        "reorder_level": reorderLevel,
-        "sellable": sellable,
-        "purchasable": purchasable,
-        "sort_order": sortOrder,
-        "is_online_product": isOnlineProduct,
-      };
+       "hsn_code": hsnCode, // Added HSN code field
+       "reorder_level": reorderLevel,
+       "sellable": sellable,
+       "purchasable": purchasable,
+       "sort_order": sortOrder,
+       "is_online_product": isOnlineProduct,
+     };
+
+  /// Product name in the currently active app language, falling back to the
+  /// base [productName] when no translation is available.
+  ///
+  /// The `product/executive/list-products` endpoint 500s whenever `?locale=`
+  /// is sent (see `ApiLocale.notYetLocalized`), so unlike other list
+  /// endpoints the backend cannot localize [productName] itself. It does,
+  /// however, embed a `names` map (`{"en": ..., "ml": ..., "ar": ...}`) on
+  /// every product, so the client resolves the display name from that map
+  /// instead of relying on the request-level locale.
+  String? get localizedName {
+    final rawNames = names;
+    if (rawNames is Map) {
+      final locale = ApiLocale.current;
+      final localized = rawNames[locale] ?? rawNames[locale.toUpperCase()];
+      if (localized is String && localized.trim().isNotEmpty) {
+        return localized;
+      }
+    }
+    return productName;
+  }
 }
 
 class WeightInfo {

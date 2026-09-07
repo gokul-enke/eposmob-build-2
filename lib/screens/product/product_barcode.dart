@@ -598,7 +598,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                       'product_barcode.retail_price'.tr,
                       row.priceDisplay,
                     ),
-                    _buildDetailRow('MRP', row.mrpDisplay),
+                    _buildDetailRow('product_barcode.mrp'.tr, row.mrpDisplay),
                     _buildDetailRow(
                       'product_barcode.quantity'.tr,
                       row.quantity,
@@ -785,7 +785,9 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
         });
         searchProducts(1);
       },
-      displayText: (category) => category,
+      displayText: (category) => category == "All Categories"
+          ? 'product_barcode.all_categories'.tr
+          : category,
       searchController: categorySearchController,
       height: 45,
       margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),

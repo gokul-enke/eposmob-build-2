@@ -149,7 +149,7 @@ class ProductCardWidget extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(4.0),
               child: Text(
-                "${product.productName} / ${product.unit}",
+                "${product.localizedName} / ${product.unit}",
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(

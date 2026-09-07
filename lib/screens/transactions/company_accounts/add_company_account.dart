@@ -34,7 +34,7 @@ class _AddCompanyAccountScreenState extends State<AddCompanyAccountScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   // Sample data - replace with actual API calls when backend is ready
-  final List<String> typeOptions = ['Cash', 'Bank'];
+  final List<String> typeOptions = ['add_company_account.type_cash'.tr, 'add_company_account.type_bank'.tr];
   final List<String> storeOptions = [
     'Store 1',
     'Store 2',
@@ -46,11 +46,11 @@ class _AddCompanyAccountScreenState extends State<AddCompanyAccountScreen> {
     'Account 3'
   ]; // TODO: Replace with API data
   final List<String> paymentMethodOptions = [
-    'COD',
-    'Online',
-    'Cheque',
-    'UPI',
-    'Cash'
+    'add_company_account.payment_cod'.tr,
+    'add_company_account.payment_online'.tr,
+    'add_company_account.payment_cheque'.tr,
+    'add_company_account.payment_upi'.tr,
+    'add_company_account.payment_cash'.tr
   ];
 
   @override

@@ -334,8 +334,8 @@ class ShareHelper {
             const SizedBox(height: 8),
             Text('File: ${pdfFile.path.split('/').last}'),
             const SizedBox(height: 16),
-            const Text('Choose how to share your PDF:',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('share_helper.dialog_pdf_choose'.tr,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
         actions: [
@@ -359,7 +359,7 @@ class ShareHelper {
               }
             },
             icon: const Icon(Icons.folder_open),
-            label: const Text('Open File Location'),
+            label: Text('ui_codes.open_file_location'.tr),
           ),
           TextButton.icon(
             onPressed: () async {
@@ -381,7 +381,7 @@ class ShareHelper {
               }
             },
             icon: const Icon(Icons.open_in_new),
-            label: const Text('Open PDF'),
+            label: Text('ui_codes.open_pdf'.tr),
           ),
           TextButton.icon(
             onPressed: () async {
@@ -398,7 +398,7 @@ class ShareHelper {
               }
             },
             icon: const Icon(Icons.copy),
-            label: const Text('Copy Path'),
+            label: Text('ui_codes.copy_path'.tr),
           ),
         ],
       ),

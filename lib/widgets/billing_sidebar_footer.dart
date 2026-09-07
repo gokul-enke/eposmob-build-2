@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_payment_row.dart';
 import 'package:pos_machine/components/build_round_button.dart';
@@ -265,7 +266,12 @@ class BillingSidebarFooter extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              option.name ?? 'No Name',
+                              (option.name == null ||
+                                      option.name!.trim().isEmpty ||
+                                      option.name!.trim().toLowerCase() ==
+                                          'no name')
+                                  ? 'customers.unnamed'.tr
+                                  : option.name!.trim(),
                               style: buildCustomStyle(
                                 FontWeightManager.medium,
                                 FontSize.s12,

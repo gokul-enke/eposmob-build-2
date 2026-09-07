@@ -51,7 +51,7 @@ class ViewTransactionDetailsWidget extends StatelessWidget {
               onPressed: () {
                 sideBarController.index.value = 23;
               },
-              text: 'All Transactions',
+              text: 'view_transaction_details.btn_all_transactions'.tr,
               // Optionally, you can customize the color and size
               // color: ColorManager.customColor,
               // size: 20.0,
@@ -60,7 +60,7 @@ class ViewTransactionDetailsWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  " Transaction Details  ",
+                  'view_transaction_details.page_title'.tr,
                   style: buildCustomStyle(FontWeightManager.semiBold,
                       FontSize.s20, 0.30, ColorManager.textColor),
                 ),
@@ -82,7 +82,7 @@ class ViewTransactionDetailsWidget extends StatelessWidget {
               margin: const EdgeInsets.only(
                   top: 20, bottom: 0, left: 10, right: 10),
               child: Text(
-                " Details  ",
+                'view_transaction_details.section_details'.tr,
                 style: buildCustomStyle(FontWeightManager.semiBold,
                     FontSize.s15, 0.30, Colors.white),
               ),
@@ -99,40 +99,45 @@ class ViewTransactionDetailsWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     BuildDetailRow(
-                      title1: "Order Number",
+                      title1:
+                          'view_transaction_details.label_order_number'.tr,
                       content1: listTransaction?.orderId.toString() ?? "",
-                      title2: "Transaction Type",
+                      title2: 'view_transaction_details.label_transaction_type'
+                          .tr,
                       content2: listTransaction?.transactionType ?? "",
                     ),
                     BuildDetailRow(
-                      title1: "Customer Name",
+                      title1:
+                          'view_transaction_details.label_customer_name'.tr,
                       content1: listTransaction?.customerName ?? "",
-                      title2: "Amount",
+                      title2: 'view_transaction_details.label_amount'.tr,
                       content2: listTransaction?.amount ?? "",
                     ),
                     BuildDetailRow(
-                      title1: "Type",
+                      title1: 'view_transaction_details.label_type'.tr,
                       content1: listTransaction?.type ?? "",
-                      title2: "Status",
+                      title2: 'view_transaction_details.label_status'.tr,
                       content2: listTransaction?.status ?? "",
                     ),
                     BuildDetailRow(
-                      title1: "Date",
+                      title1: 'view_transaction_details.label_date'.tr,
                       content1: listTransaction?.reference ?? "",
-                      title2: "Invoice Number",
+                      title2:
+                          'view_transaction_details.label_invoice_number'.tr,
                       content2: listTransaction?.transactionComment ?? "",
                     ),
                     BuildDetailRow(
-                      title1: "Reference",
+                      title1: 'view_transaction_details.label_reference'.tr,
                       content1: listTransaction?.reference ?? "",
-                      title2: "Payment Method",
+                      title2:
+                          'view_transaction_details.label_payment_method'.tr,
                       content2: listTransaction?.paymentMethod ?? "",
                     ),
                     const SizedBox(height: 50),
                     Padding(
                       padding: const EdgeInsets.only(left: 10.0),
                       child: CustomRoundButton(
-                        title: "Back",
+                        title: 'view_transaction_details.btn_back'.tr,
                         boxColor: Colors.white,
                         textColor: ColorManager.kPrimaryColor,
                         fct: () async {

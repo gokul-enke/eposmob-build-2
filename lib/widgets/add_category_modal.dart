@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/category_list.dart';
@@ -621,7 +622,7 @@ class _AddCategoryModalState extends State<AddCategoryModal> with CategoryFormMi
                           onPressed: _isSubmitting
                               ? null
                               : () => Navigator.of(context).pop(false),
-                          child: const Text('Cancel'),
+                          child: Text('category.btn_cancel'.tr),
                         ),
                       ),
                     ),
@@ -647,7 +648,7 @@ class _AddCategoryModalState extends State<AddCategoryModal> with CategoryFormMi
                                     color: Colors.white,
                                   ),
                                 )
-                              : const Text('Create Category'),
+                              : Text('category.add'.tr),
                         ),
                       ),
                     ),

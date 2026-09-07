@@ -806,6 +806,7 @@ class OrderDetailsModelDataCustomerDetails {
   final String? customerType;
 
   final String? alternatePhone; // Added alternate_phone
+  final double? customerBalance; // Added customer_balance
 
   OrderDetailsModelDataCustomerDetails({
     this.name,
@@ -815,6 +816,7 @@ class OrderDetailsModelDataCustomerDetails {
     this.address,
     this.customerType,
     this.alternatePhone,
+    this.customerBalance,
   });
 
   factory OrderDetailsModelDataCustomerDetails.fromJson(
@@ -827,6 +829,9 @@ class OrderDetailsModelDataCustomerDetails {
         address: _parseAddressList(json["address"]),
         customerType: json["customer_type"]?.toString(),
         alternatePhone: json["alternate_phone"],
+        customerBalance: json["customer_balance"] == null
+            ? null
+            : (json["customer_balance"] as num).toDouble(),
       );
 
   static List<dynamic> _parseAddressList(dynamic value) {
@@ -857,6 +862,7 @@ class OrderDetailsModelDataCustomerDetails {
         "address": address,
         "customer_type": customerType,
         "alternate_phone": alternatePhone,
+        "customer_balance": customerBalance,
       };
 }
 

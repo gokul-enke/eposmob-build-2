@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
@@ -542,7 +543,7 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
         statusText = 'daily_sales_close.status_completed'.tr;
         break;
       default:
-        statusText = status.toUpperCase();
+        statusText = UiCodeLabels.status(status);
     }
 
     return Container(

@@ -67,6 +67,20 @@ class _SupplierTransactionDetailsScreenState
     super.dispose();
   }
 
+  /// Helper function to get translated label for dropdown values
+  String _getTranslatedLabel(String value) {
+    final labelMap = {
+      'Credit': 'transaction_status_labels.credit'.tr,
+      'Debit': 'transaction_status_labels.debit'.tr,
+      'Cash': 'transaction_status_labels.cash'.tr,
+      'Card': 'transaction_status_labels.card'.tr,
+      'Bank Transfer': 'transaction_status_labels.bank_transfer'.tr,
+      'Cheque': 'transaction_status_labels.cheque'.tr,
+      'UPI': 'transaction_status_labels.upi'.tr,
+    };
+    return labelMap[value] ?? value;
+  }
+
   // Set default date values: 1 month before current date for from_date, current date for to_date
   void _setInitialDateFilters() {
     final now = DateTime.now();
@@ -800,7 +814,7 @@ class _SupplierTransactionDetailsScreenState
                   return DropdownMenuItem<String>(
                     value: option,
                     child: Text(
-                      option,
+                      _getTranslatedLabel(option),
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s10,

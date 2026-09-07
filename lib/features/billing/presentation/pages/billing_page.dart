@@ -16,6 +16,8 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_tax_modal.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:pos_machine/helpers/delivery_method_display.dart';
+import 'package:pos_machine/models/delivery_method_registry.dart';
 import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/features/billing/domain/billing_totals.dart';
@@ -946,8 +948,13 @@ class BillingPageState extends State<BillingPage>
 
         // 4. Restore Transaction, Delivery, and Other Details
         _transactionNumberController.text = currentOrder.transactionId ?? "";
-        deliveryMethod =
-            currentOrder.deliveryMethod ?? "billing.store_takeaway".tr;
+        // Never store a *translated* string here: `deliveryMethod` is an
+        // identity that gets persisted with the order and compared later, so a
+        // value captured in Arabic would stop matching in English (and vice
+        // versa). Fall back to the default method's canonical name instead.
+        deliveryMethod = currentOrder.deliveryMethod ??
+            DeliveryMethodRegistry.defaultMethod?.name ??
+            "Store Takeaway";
         deliveryMethodId =
             currentOrder.deliveryMethodId ?? _getDefaultDeliveryMethodId();
         _selectedDeliveryCharge = currentOrder.deliveryCharge;
@@ -2193,7 +2200,7 @@ class BillingPageState extends State<BillingPage>
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Resyncing products...',
+                    'billing.resyncing_products'.tr,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -2228,7 +2235,7 @@ class BillingPageState extends State<BillingPage>
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'No products loaded',
+                  'billing.no_products_loaded'.tr,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -2237,7 +2244,7 @@ class BillingPageState extends State<BillingPage>
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Try resyncing products. Check internet and tenant if this continues.',
+                  'billing.try_resync_products'.tr,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 11,
@@ -2246,7 +2253,7 @@ class BillingPageState extends State<BillingPage>
                 ),
                 const SizedBox(height: 14),
                 CustomRoundButton(
-                  title: 'Add Product',
+                  title: 'billing.add_product'.tr,
                   fct: _openAddProductFromEmptyState,
                   width: 170,
                   height: 36,
@@ -2258,8 +2265,9 @@ class BillingPageState extends State<BillingPage>
                 ),
                 const SizedBox(height: 8),
                 CustomRoundButton(
-                  title:
-                      _isResyncingProducts ? 'Resyncing...' : 'Resync Products',
+                  title: _isResyncingProducts
+                      ? 'restaurant.resyncing'.tr
+                      : 'restaurant.resync_products'.tr,
                   fct: _isResyncingProducts
                       ? () {}
                       : _resyncProductsFromEmptyState,
@@ -2315,20 +2323,23 @@ class BillingPageState extends State<BillingPage>
       if (localProductProvider.sellableProducts.isEmpty) {
         showScaffoldError(
           context: context,
-          message:
-              'Resync finished but no products were returned. Check tenant/API key or internet.',
+          message: 'settings_ui.msg_resync_empty'.tr,
         );
       } else {
         showScaffold(
           context: context,
-          message: 'Products resynced successfully',
+          message: 'settings_ui.msg_resync_success'.trParams({
+            'count': '${localProductProvider.sellableProducts.length}',
+          }),
         );
       }
     } catch (e) {
       if (!mounted) return;
       showScaffoldError(
         context: context,
-        message: 'Failed to resync products: ${e.toString()}',
+        message: 'settings_ui.msg_resync_failed'.trParams({
+          'error': e.toString(),
+        }),
       );
     } finally {
       if (mounted) {
@@ -2487,25 +2498,25 @@ class BillingPageState extends State<BillingPage>
                 icon: Icons.person_rounded,
                 label: hasHeaderCustomer
                     ? fallbackCustomerName!.trim()
-                    : 'Customer',
+                    : 'billing.customer'.tr,
                 color: const Color(0xFF7C3AED),
                 isSelected: hasHeaderCustomer,
-                tooltip: 'Select customer',
+                tooltip: 'billing.customer'.tr,
                 onTap: () => _showHeaderSelectionModal(
                   initialStep: 0,
-                  title: 'Select Customer',
+                  title: 'billing.customer'.tr,
                 ),
               ),
               if (!_isQuotationPage)
                 _buildHeaderContextChip(
                   icon: _getHeaderPaymentIcon(),
-                  label: _getHeaderPaymentLabel(),
+                  label: _localizedHeaderPaymentLabel(),
                   color: const Color(0xFFEA580C),
                   isSelected: _hasHeaderPaymentSelection,
-                  tooltip: 'Select payment method',
+                  tooltip: 'billing.select_payment_method'.tr,
                   onTap: () => _showHeaderSelectionModal(
                     initialStep: 3,
-                    title: 'Select Payment Method',
+                    title: 'billing.select_payment_method'.tr,
                   ),
                 ),
               if (deliveryMethodsProvider.deliveryMethods.isNotEmpty)
@@ -2513,14 +2524,14 @@ class BillingPageState extends State<BillingPage>
                   icon: Icons.local_shipping_rounded,
                   label: deliveryMethod.trim().isNotEmpty
                       ? _getDeliveryMethodLabel()
-                      : 'Delivery',
+                      : 'delivery.select_delivery_method'.tr,
                   color: const Color(0xFF059669),
                   isSelected: deliveryMethodId.trim().isNotEmpty ||
                       deliveryMethod.trim().isNotEmpty,
-                  tooltip: 'Select delivery method',
+                  tooltip: 'delivery.select_delivery_method'.tr,
                   onTap: () => _showHeaderSelectionModal(
                     initialStep: 1,
-                    title: 'Select Delivery Method',
+                    title: 'delivery.select_delivery_method'.tr,
                   ),
                 ),
             ],
@@ -2680,6 +2691,26 @@ class BillingPageState extends State<BillingPage>
     if (methods.length > 1) return 'MULTI';
     if (methods.length == 1) return methods.first;
     return _headerDefaultPaymentLabel();
+  }
+
+  String _localizedHeaderPaymentLabel() {
+    final code = _getHeaderPaymentLabel();
+    switch (code) {
+      case 'CASH':
+        return 'billing.cash'.tr;
+      case 'CARD':
+        return 'billing.card'.tr;
+      case 'UPI':
+        return 'billing.upi'.tr;
+      case 'COD':
+        return 'billing.cod'.tr;
+      case 'CREDIT':
+        return 'transaction_status_labels.credit'.tr;
+      case 'MULTI':
+        return 'billing.multi'.tr;
+      default:
+        return code;
+    }
   }
 
   IconData _getHeaderPaymentIcon() {
@@ -3631,9 +3662,9 @@ class BillingPageState extends State<BillingPage>
                                                             CrossAxisAlignment
                                                                 .start,
                                                         children: [
-                                                          Text(
-                                                            item.product
-                                                                    .productName ??
+                                                         Text(
+                                                           item.product
+                                                                    .localizedName ??
                                                                 'general.unknown'
                                                                     .tr,
                                                             style:
@@ -4926,7 +4957,7 @@ class BillingPageState extends State<BillingPage>
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Tax Details'),
+            title: Text('billing.tax_details'.tr),
             content: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -4948,7 +4979,7 @@ class BillingPageState extends State<BillingPage>
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Close'),
+                child: Text('billing.close'.tr),
               ),
             ],
           ),
@@ -5004,7 +5035,7 @@ class BillingPageState extends State<BillingPage>
             showDialog(
               context: context,
               builder: (context) => AlertDialog(
-                title: const Text('Tax Details'),
+                title: Text('billing.tax_details'.tr),
                 content: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -5026,7 +5057,7 @@ class BillingPageState extends State<BillingPage>
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Close'),
+                    child: Text('billing.close'.tr),
                   ),
                 ],
               ),
@@ -5885,7 +5916,7 @@ class BillingPageState extends State<BillingPage>
               FocusTraversalOrder(
                 order: const NumericFocusOrder(155.0),
                 child: _buildActionButton(
-                  text: 'Create Quotation',
+                  text: 'billing.create_quotation'.tr,
                   color: Colors.teal.shade500,
                   onPressed: () => _showCheckoutModal(
                       actionMode: CheckoutActionMode.quotation),
@@ -5896,7 +5927,7 @@ class BillingPageState extends State<BillingPage>
               FocusTraversalOrder(
                 order: const NumericFocusOrder(156.0),
                 child: _buildActionButton(
-                  text: 'Quotation List',
+                  text: 'billing.quotation_list'.tr,
                   color: ColorManager.kPrimaryColor,
                   onPressed: () {
                     Get.find<SideBarController>().index.value = 87;
@@ -6678,7 +6709,8 @@ class BillingPageState extends State<BillingPage>
       // Get selected payment methods for multi-payment API payload
       List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
 
-      if (deliveryMethod == "Car Delivery" && _carNumberController.text == "") {
+      if (DeliveryMethodRegistry.requiresCarNumber(deliveryMethod) &&
+          _carNumberController.text == "") {
         showScaffoldError(
           context: context,
           message: "billing.enter_car_number".tr,
@@ -6878,18 +6910,20 @@ class BillingPageState extends State<BillingPage>
               debugPrint(
                   '[BillingPrint] Derived total paid from payment breakdown: $totalPaid');
             }
-            double? currentBalance;
-            final apiBalance =
-                _orderBalanceFromProps(orderDetails.data?.orderProps);
-            if (apiBalance != null) {
-              currentBalance = apiBalance;
-            } else if (oldBalance != null) {
+            double? currentBalance =
+                orderDetails.data?.customerDetails?.customerBalance;
+            if (currentBalance == null && oldBalance != null) {
               double cartTotal = double.tryParse(formattedTotal!) ?? 0.0;
               // Current balance = Old balance - (Cart Total - Amount Paid)
               // If customer paid less than cart total, their balance decreases (they owe more)
               // If customer paid more than cart total, their balance increases (they have credit)
               currentBalance = oldBalance - (cartTotal - totalPaid);
             }
+            // No order_props.BALANCE fallback: that field has been observed
+            // stale/incorrect (e.g. "0.0" right after a credit sale), so if
+            // we can't determine the balance from customer_details or a
+            // local computation, leave it null rather than print a value we
+            // can't trust.
 
             debugPrint(
                 "🖨️ Attempting auto-print for order #${orderDetails.data!.orderNumber}");
@@ -7071,7 +7105,8 @@ class BillingPageState extends State<BillingPage>
       // Get selected payment methods for multi-payment API payload
       List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
 
-      if (deliveryMethod == "Car Delivery" && _carNumberController.text == "") {
+      if (DeliveryMethodRegistry.requiresCarNumber(deliveryMethod) &&
+          _carNumberController.text == "") {
         showScaffoldError(
           context: context,
           message: "billing.enter_car_number".tr,
@@ -7847,11 +7882,15 @@ class BillingPageState extends State<BillingPage>
                   0.0,
           isCouponApplied: isCouponApplied,
           confirmButtonTitle: isQuotationMode
-              ? 'Create Quotation'
-              : (isSaveMode ? 'billing.save_order'.tr : 'Confirm'),
+              ? 'billing.create_quotation'.tr
+              : (isSaveMode
+                  ? 'billing.save_order'.tr
+                  : 'billing.confirm_order'.tr),
           printButtonTitle: isQuotationMode
-              ? 'Create & Print Quote'
-              : (isSaveMode ? 'billing.save_and_print'.tr : 'Confirm & Print'),
+              ? 'billing.create_and_print_quote'.tr
+              : (isSaveMode
+                  ? 'billing.save_and_print'.tr
+                  : 'billing.confirm_and_print'.tr),
           requireCheckoutCompletion: !(isSaveMode || isQuotationMode),
           isQuotationMode: isQuotationMode,
           requireSavedCustomer: requiresSavedQuotationCustomer,
@@ -8824,13 +8863,7 @@ class BillingPageState extends State<BillingPage>
                 const SizedBox(width: 12),
                 // Delivery Method Icon
                 _buildQuickAccessIcon(
-                  icon: deliveryMethod == "Store Takeaway"
-                      ? Icons.store
-                      : deliveryMethod == "Car Delivery"
-                          ? Icons.car_rental
-                          : deliveryMethod == "Door Delivery"
-                              ? Icons.doorbell_outlined
-                              : Icons.local_shipping,
+                  icon: DeliveryMethodDisplay.iconFor(deliveryMethod),
                   label: _getDeliveryMethodLabel(),
                   color: ColorManager.kButtonBlue,
                   onTap: () => _showDeliveryMethodModal(),
@@ -8927,21 +8960,8 @@ class BillingPageState extends State<BillingPage>
     return 'billing.payment_tab'.tr; // Default
   }
 
-  String _getDeliveryMethodLabel() {
-    // Map delivery method names to translation keys
-    switch (deliveryMethod) {
-      case "Store Takeaway":
-        return 'common.store_takeaway'.tr;
-      case "Car Delivery":
-        return 'common.car_delivery'.tr;
-      case "Door Delivery":
-        return 'common.door_delivery'.tr;
-      case "Third Party Logistics":
-        return 'common.third_party_logistics'.tr;
-      default:
-        return deliveryMethod.tr;
-    }
-  }
+  String _getDeliveryMethodLabel() =>
+      DeliveryMethodDisplay.labelFor(deliveryMethod);
 
   Widget _buildQuickAccessIcon({
     required IconData icon,
@@ -9470,16 +9490,6 @@ class BillingPageState extends State<BillingPage>
     }
 
     return autoPrintSuccess;
-  }
-
-  double? _orderBalanceFromProps(List<OrderDetailsModelDataOrderProp>? props) {
-    if (props == null) return null;
-    for (final prop in props) {
-      if (prop.propsCode?.toUpperCase() == 'BALANCE') {
-        return double.tryParse(prop.propsValue ?? '');
-      }
-    }
-    return null;
   }
 
   Future<void> printFromSavedOrder(SavedOrder savedOrder) async {

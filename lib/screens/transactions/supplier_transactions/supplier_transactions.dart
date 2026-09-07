@@ -7,6 +7,7 @@ import 'package:pos_machine/screens/transactions/widgets/supplier_auto_complete_
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 import '../../../providers/auth_model.dart';
 import '../../../providers/transaction_provider.dart';
 import '../../../components/build_container_box.dart';
@@ -233,7 +234,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        status.toUpperCase(),
+        UiCodeLabels.status(status),
         style: TextStyle(
           color: textColor,
           fontSize: 10,
@@ -253,7 +254,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        type,
+        UiCodeLabels.documentKind(type),
         style: TextStyle(
           color: color,
           fontWeight: FontWeight.bold,
@@ -276,9 +277,9 @@ class _TransactionScreenState extends State<TransactionScreen> {
           [
             CommonDetailsDialog.buildKeyValueRow('supplier_transactions.supplier_name'.tr, transaction.supplier.user.name),
             CommonDetailsDialog.buildKeyValueRow('supplier_transactions.date'.tr, DateHelper.formatISODate(transaction.date)),
-            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.type'.tr, transaction.type),
-            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.transaction_type'.tr, transaction.transactionType),
-            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.payment_mode'.tr, transaction.paymentMode),
+            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.type'.tr, UiCodeLabels.documentKind(transaction.type)),
+            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.transaction_type'.tr, UiCodeLabels.documentKind(transaction.transactionType)),
+            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.payment_mode'.tr, UiCodeLabels.payment(transaction.paymentMode)),
           ],
           [
             CommonDetailsDialog.buildKeyValueRow('supplier_transactions.amount'.tr, '${transaction.currency} ${transaction.amount}'),
@@ -333,7 +334,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
               dropdownColor: Colors.white,
               value: controller.text,
               hint: Text(
-                'Select $title',
+                title,
                 style: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s12,
@@ -346,7 +347,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 return DropdownMenuItem<String>(
                   value: value,
                   child: Text(
-                    value,
+                    UiCodeLabels.documentKind(value),
                     style: buildCustomStyle(
                       FontWeightManager.medium,
                       FontSize.s12,
@@ -799,8 +800,8 @@ class _TransactionScreenState extends State<TransactionScreen> {
         ),
         _buildTableCell(DateHelper.formatISODate(transaction.date)),
         Center(child: _buildTypeCell(transaction.type)),
-        _buildTableCell(transaction.transactionType),
-        _buildTableCell(transaction.paymentMode),
+        _buildTableCell(UiCodeLabels.documentKind(transaction.transactionType)),
+        _buildTableCell(UiCodeLabels.payment(transaction.paymentMode)),
         _buildTableCell('${transaction.currency} ${transaction.amount}'),
         TableCell(
           verticalAlignment: TableCellVerticalAlignment.middle,
@@ -990,7 +991,9 @@ class _TransactionScreenState extends State<TransactionScreen> {
       value: value,
       items: items
           .map((s) => DropdownMenuItem(
-              value: s, child: Text(s, style: const TextStyle(fontSize: 12))))
+              value: s,
+              child: Text(UiCodeLabels.documentKind(s),
+                  style: const TextStyle(fontSize: 12))))
           .toList(),
       onChanged: onChanged,
       decoration: _mobileInputDecoration(hint),
@@ -1041,7 +1044,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                       children: [
                         _buildTypeCell(tx.type),
                         const SizedBox(width: 8),
-                        Text(tx.transactionType,
+                        Text(UiCodeLabels.documentKind(tx.transactionType),
                             style: buildCustomStyle(FontWeightManager.regular,
                                 FontSize.s11, 0.16, Colors.grey)),
                         const Spacer(),

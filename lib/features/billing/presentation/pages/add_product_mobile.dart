@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/domain/add_created_product_to_cart.dart';
@@ -1369,7 +1370,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
               ),
               TextButton(
                 onPressed: _retryFetchLanguages,
-                child: const Text('Retry'),
+                child: Text('general.retry'.tr),
               ),
             ],
           );
@@ -1710,7 +1711,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                   child: OutlinedButton.icon(
                     onPressed: _addSaleUnitRow,
                     icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Add Sale Unit'),
+                    label: Text('product_sale_unit.add_sale_unit'.tr),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: ColorManager.kPrimaryColor,
                       side: BorderSide(color: ColorManager.kPrimaryColor),

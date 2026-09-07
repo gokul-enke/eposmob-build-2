@@ -332,20 +332,20 @@ class MenuPanelState extends State<MenuPanel> {
 
                           // Basic details
                           if (categoryName != null && categoryName.isNotEmpty)
-                            _buildKeyValueRow('Category', categoryName),
+                            _buildKeyValueRow('product_detail.category'.tr, categoryName),
                           if (product.sku != null &&
                               (product.sku ?? '').toString().isNotEmpty)
-                            _buildKeyValueRow('SKU', product.sku!),
+                            _buildKeyValueRow('product_detail.sku'.tr, product.sku!),
                           if (product.mrp != null)
-                            _buildKeyValueRow('MRP', '${product.mrp}'),
+                            _buildKeyValueRow('product_detail.mrp'.tr, '${product.mrp}'),
                           if (product.price?.price != null)
                             _buildKeyValueRow(
-                                'Price', '${product.price!.price}'),
+                                'product_detail.price'.tr, '${product.price!.price}'),
 
                           if (product.barcode != null &&
                               (product.barcode ?? '').toString().isNotEmpty)
                             _buildKeyValueRow(
-                                'Barcode', product.barcode.toString()),
+                                'product_detail.barcode'.tr, product.barcode.toString()),
                           if (stockEnabled &&
                               product.stock != null &&
                               product.stock!.isNotEmpty)
@@ -763,20 +763,23 @@ class MenuPanelState extends State<MenuPanel> {
       if (localProductProvider.sellableProducts.isEmpty) {
         showScaffoldError(
           context: context,
-          message:
-              'Resync finished but no products were returned. Check tenant/API key or internet.',
+          message: 'settings_ui.msg_resync_empty'.tr,
         );
       } else {
         showScaffold(
           context: context,
-          message: 'Products resynced successfully',
+          message: 'settings_ui.msg_resync_success'.trParams({
+            'count': '${localProductProvider.sellableProducts.length}',
+          }),
         );
       }
     } catch (e) {
       if (!mounted) return;
       showScaffoldError(
         context: context,
-        message: 'Failed to resync products: ${e.toString()}',
+        message: 'settings_ui.msg_resync_failed'.trParams({
+          'error': e.toString(),
+        }),
       );
     } finally {
       if (mounted) {
@@ -966,7 +969,7 @@ class MenuPanelState extends State<MenuPanel> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          '${items.length} items',
+                          '${items.length} ${'common.items'.tr}',
                           style: buildCustomStyle(FontWeightManager.semiBold,
                               FontSize.s11, 0.21, const Color(0xFF059669)),
                         ),

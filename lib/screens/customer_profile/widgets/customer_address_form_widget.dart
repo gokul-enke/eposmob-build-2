@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/customer_list.dart';
@@ -218,8 +219,8 @@ class _CustomerAddressFormWidgetState extends State<CustomerAddressFormWidget> {
                     const SizedBox(width: 12),
                     Text(
                       widget.address == null
-                          ? 'Add New Address'
-                          : 'Edit Address',
+                          ? "customer_address.title_add".tr
+                          : "customer_address.title_edit".tr,
                       style: buildCustomStyle(FontWeightManager.bold,
                           FontSize.s18, 0, ColorManager.kTitleTextColor),
                     ),
@@ -244,8 +245,8 @@ class _CustomerAddressFormWidgetState extends State<CustomerAddressFormWidget> {
                           children: [
                             Expanded(
                               child: _buildLocationDropdown(
-                                title: "States / Provinces",
-                                hint: "Select States / Provinces",
+                                title: "customer_address.label_state".tr,
+                                hint: "customer_address.hint_state".tr,
                                 value: selectedStateId,
                                 items: locationProvider.stateList,
                                 onChanged: (id) {
@@ -266,8 +267,8 @@ class _CustomerAddressFormWidgetState extends State<CustomerAddressFormWidget> {
                             const SizedBox(width: 20),
                             Expanded(
                               child: _buildLocationDropdown(
-                                title: "District / City",
-                                hint: "Select District / City",
+                                title: "customer_address.label_district".tr,
+                                hint: "customer_address.hint_district".tr,
                                 value: selectedDistrictId,
                                 items: locationProvider.districtList,
                                 onChanged: (id) {
@@ -291,8 +292,8 @@ class _CustomerAddressFormWidgetState extends State<CustomerAddressFormWidget> {
                           children: [
                             Expanded(
                               child: _buildLocationDropdown(
-                                title: "Pincode",
-                                hint: "Select Pincode",
+                                title: "customer_address.label_pincode".tr,
+                                hint: "customer_address.hint_pincode".tr,
                                 value: selectedPincodeId,
                                 items: locationProvider.pincodeList,
                                 onChanged: (id) {
@@ -307,8 +308,8 @@ class _CustomerAddressFormWidgetState extends State<CustomerAddressFormWidget> {
                                 size: size,
                                 controller: cityController,
                                 focusNode: cityFocusNode,
-                                title: "City",
-                                hintText: "Enter city",
+                                title: "customer_address.label_city".tr,
+                                hintText: "customer_address.hint_city".tr,
                               ),
                             ),
                           ],
@@ -319,11 +320,11 @@ class _CustomerAddressFormWidgetState extends State<CustomerAddressFormWidget> {
                           size: size,
                           controller: addressController,
                           focusNode: addressFocusNode,
-                          title: "Full Address",
-                          hintText: "House/Flat No, Apartment, Street",
+                          title: "customer_address.label_address".tr,
+                          hintText: "customer_address.hint_address".tr,
                           width: double.infinity,
                           isStarRed: true,
-                          validator: (v) => v!.isEmpty ? "Required" : null,
+                          validator: (v) => v!.isEmpty ? "customer_address.required".tr : null,
                         ),
                         const SizedBox(height: 20),
                         Row(
@@ -334,8 +335,8 @@ class _CustomerAddressFormWidgetState extends State<CustomerAddressFormWidget> {
                                 size: size,
                                 controller: landmarkController,
                                 focusNode: landmarkFocusNode,
-                                title: "Landmark",
-                                hintText: "Nearby landmark",
+                                title: "customer_address.label_landmark".tr,
+                                hintText: "customer_address.hint_landmark".tr,
                               ),
                             ),
                             const SizedBox(width: 20),
@@ -344,7 +345,7 @@ class _CustomerAddressFormWidgetState extends State<CustomerAddressFormWidget> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   BuildTextTile(
-                                    title: "Address Type",
+                                    title: "customer_address.label_address_type".tr,
                                     isStarRed: true,
                                     textStyle: buildCustomStyle(
                                       FontWeightManager.regular,
@@ -367,7 +368,8 @@ class _CustomerAddressFormWidgetState extends State<CustomerAddressFormWidget> {
                                       value: selectedType,
                                       items: addressTypes
                                           .map((t) => DropdownMenuItem(
-                                              value: t, child: Text(t)))
+                                              value: t,
+                                              child: Text(_translateAddressType(t))))
                                           .toList(),
                                       onChanged: (v) =>
                                           setState(() => selectedType = v!),
@@ -383,7 +385,7 @@ class _CustomerAddressFormWidgetState extends State<CustomerAddressFormWidget> {
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             CustomRoundButton(
-                              title: "Cancel",
+                              title: "customer_address.btn_cancel".tr,
                               fct: widget.onCancel,
                               width: 120,
                               height: 45,
@@ -395,10 +397,10 @@ class _CustomerAddressFormWidgetState extends State<CustomerAddressFormWidget> {
                             const SizedBox(width: 16),
                             CustomRoundButton(
                               title: isSubmitting
-                                  ? "Saving..."
+                                  ? "customer_address.btn_saving".tr
                                   : (widget.address == null
-                                      ? "Save Address"
-                                      : "Update Address"),
+                                      ? "customer_address.btn_save_address".tr
+                                      : "customer_address.btn_update_address".tr),
                               fct: isSubmitting ? () {} : _submit,
                               width: 160,
                               height: 45,
@@ -416,6 +418,19 @@ class _CustomerAddressFormWidgetState extends State<CustomerAddressFormWidget> {
         ),
       ),
     );
+  }
+
+  String _translateAddressType(String type) {
+    switch (type) {
+      case 'Home':
+        return "customer_address.type_home".tr;
+      case 'Office':
+        return "customer_address.type_office".tr;
+      case 'Other':
+        return "customer_address.type_other".tr;
+      default:
+        return type;
+    }
   }
 
   Widget _buildLocationDropdown({

@@ -16,6 +16,7 @@ import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../helpers/date_helper.dart';
+import '../../helpers/ui_code_labels.dart';
 import '../../models/list_transaction.dart';
 import '../../providers/auth_model.dart';
 import '../../providers/invoice_provider.dart';
@@ -272,8 +273,8 @@ class _CustomerTransactionListScreenState
           [
             CommonDetailsDialog.buildKeyValueRow('party_accounts.customer_name'.tr, transaction.customerName ?? 'party_accounts.no_name'.tr),
             CommonDetailsDialog.buildKeyValueRow('party_accounts.date'.tr, transaction.date ?? 'party_accounts.na'.tr),
-            CommonDetailsDialog.buildKeyValueRow('party_accounts.type'.tr, transaction.type ?? 'party_accounts.na'.tr),
-            CommonDetailsDialog.buildKeyValueRow('party_accounts.transaction_type'.tr, transaction.transactionType ?? 'party_accounts.na'.tr),
+            CommonDetailsDialog.buildKeyValueRow('party_accounts.type'.tr, UiCodeLabels.documentKind(transaction.type ?? 'party_accounts.na'.tr)),
+            CommonDetailsDialog.buildKeyValueRow('party_accounts.transaction_type'.tr, UiCodeLabels.documentKind(transaction.transactionType ?? 'party_accounts.na'.tr)),
             CommonDetailsDialog.buildKeyValueRow(
               'party_accounts.payment_method'.tr,
               paymentLabel,
@@ -395,7 +396,7 @@ class _CustomerTransactionListScreenState
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        status.toUpperCase(),
+        _statusLabel(status),
         style: TextStyle(
           color: textColor,
           fontSize: 10,
@@ -415,7 +416,7 @@ class _CustomerTransactionListScreenState
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        type,
+        _typeLabel(type),
         style: TextStyle(
           color: color,
           fontWeight: FontWeight.bold,
@@ -423,6 +424,35 @@ class _CustomerTransactionListScreenState
         ),
       ),
     );
+  }
+
+  String _typeLabel(String type) {
+    switch (type.toLowerCase()) {
+      case 'credit':
+        return 'transaction_status_labels.credit'.tr;
+      case 'debit':
+        return 'transaction_status_labels.debit'.tr;
+      case 'all':
+        return 'common.all'.tr;
+      default:
+        return type;
+    }
+  }
+
+  String _statusLabel(String status) {
+    switch (status.toUpperCase()) {
+      case 'SUCC':
+      case 'SUCCESS':
+        return 'transaction_status_labels.succ'.tr;
+      case 'INIT':
+      case 'INITIATED':
+        return 'transaction_status_labels.init'.tr;
+      case 'FAIL':
+      case 'FAILED':
+        return 'transaction_status_labels.fail'.tr;
+      default:
+        return status;
+    }
   }
 
   InputDecoration _mobileInputDecoration(String hint) {
@@ -455,7 +485,8 @@ class _CustomerTransactionListScreenState
       value: value,
       items: items
           .map((s) => DropdownMenuItem(
-              value: s, child: Text(s, style: const TextStyle(fontSize: 12))))
+              value: s,
+              child: Text(_typeLabel(s), style: const TextStyle(fontSize: 12))))
           .toList(),
       onChanged: onChanged,
       decoration: _mobileInputDecoration(hint),
@@ -599,7 +630,7 @@ class _CustomerTransactionListScreenState
           ),
           const SizedBox(height: 15),
           Text(
-            'No transactions found',
+            'party_accounts.no_transactions'.tr,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s18,
@@ -609,7 +640,7 @@ class _CustomerTransactionListScreenState
           ),
           const SizedBox(height: 8),
           Text(
-            'Try adjusting your search criteria',
+            'party_accounts.no_transactions_hint'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s14,
@@ -713,7 +744,7 @@ class _CustomerTransactionListScreenState
                                   size: 12, color: Colors.grey.shade400),
                               const SizedBox(width: 4),
                               Text(
-                                tx.date ?? 'N/A',
+                                tx.date ?? 'party_accounts.na'.tr,
                                 style: buildCustomStyle(FontWeightManager.regular,
                                     FontSize.s11, 0.16, Colors.grey),
                               ),
@@ -946,7 +977,7 @@ class _CustomerTransactionListScreenState
                                     return DropdownMenuItem<String>(
                                       value: type,
                                       child: Text(
-                                        type,
+                                        _typeLabel(type),
                                         style: buildCustomStyle(
                                           FontWeightManager.medium,
                                           FontSize.s11,
@@ -1293,7 +1324,7 @@ class _CustomerTransactionListScreenState
                                                                           .center,
                                                                   children: [
                                                                     Text(
-                                                                      transaction.referenceId ?? 'N/A',
+                                                                      transaction.referenceId ?? 'party_accounts.na'.tr,
                                                                       textAlign:
                                                                           TextAlign
                                                                               .center,
@@ -1322,7 +1353,7 @@ class _CustomerTransactionListScreenState
                                                                             context:
                                                                                 context,
                                                                             message:
-                                                                                'Reference ID copied to clipboard',
+                                                                                'party_accounts.ref_copied'.tr,
                                                                           );
                                                                         },
                                                                         child:

@@ -559,7 +559,11 @@ class SyncProvider extends ChangeNotifier {
       debugPrint("🚚 Syncing delivery methods...");
       final deliveryMethodsProvider =
           Provider.of<DeliveryMethodsProvider>(context, listen: false);
-      await deliveryMethodsProvider.fetchDeliveryMethods();
+      // forceRefresh: true — a plain call is a no-op once the methods are
+      // already cached in memory (see fetchDeliveryMethods), which means an
+      // explicit sync would silently keep serving labels captured under a
+      // previously active app language instead of the current one.
+      await deliveryMethodsProvider.fetchDeliveryMethods(forceRefresh: true);
       debugPrint("✅ Delivery methods synced successfully");
     } catch (e) {
       debugPrint("⚠️ Failed to sync delivery methods: $e");

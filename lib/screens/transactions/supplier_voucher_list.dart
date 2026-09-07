@@ -21,7 +21,8 @@ import '../../resources/style_manager.dart';
 import 'widgets/supplier_voucher_print.dart';
 import 'widgets/common_details_dialog.dart';
 import 'widgets/share_helper.dart';
-import 'supplier_voucher_list_mobile.dart'; 
+import 'supplier_voucher_list_mobile.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart'; 
 
 class SupplierVoucherListScreen extends StatefulWidget {
   const SupplierVoucherListScreen({super.key});
@@ -438,7 +439,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
                   });
                   searchVouchers();
                 },
-                displayText: (status) => status.toUpperCase(),
+                displayText: UiCodeLabels.status,
                 height: 45,
                 margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
               );
@@ -607,10 +608,10 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
                                           ),
                                         ),
                                       ),
-                                      _buildTableCell(voucher.type),
+                                      _buildTableCell(UiCodeLabels.voucherType(voucher.type)),
                                       _buildTableCell(voucher.voucherDate),
                                       _buildTableCell(voucher.dueDate),
-                                      _buildTableCell(voucher.paymentMethod),
+                                      _buildTableCell(UiCodeLabels.payment(voucher.paymentMethod)),
                                       _buildTableCell(
                                           '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${voucher.amount}'),
                                       Center(
@@ -800,7 +801,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        status.toUpperCase(),
+        UiCodeLabels.status(status),
         style: TextStyle(
           color: textColor,
           fontSize: 10,
@@ -859,13 +860,13 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
             CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_voucher_number'.tr, voucher.voucherNumber, copyable: true),
             CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_supplier_name'.tr, voucher.supplier.name),
             CommonDetailsDialog.buildKeyValueRow('supplier_voucher.field_supplier_phone'.tr, voucher.supplier.phone, copyable: true),
-            CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_type'.tr, voucher.type),
+            CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_type'.tr, UiCodeLabels.voucherType(voucher.type)),
           ],
           [
             CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_voucher_date'.tr, voucher.voucherDate),
             CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_due_date'.tr, voucher.dueDate),
             CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_status'.tr, voucher.status),
-            CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_payment_method'.tr, voucher.paymentMethod),
+            CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_payment_method'.tr, UiCodeLabels.payment(voucher.paymentMethod)),
           ],
         ],
         sectionTitle: 'supplier_voucher.items_section_title'.tr,

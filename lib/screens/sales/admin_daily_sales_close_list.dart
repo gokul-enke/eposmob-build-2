@@ -227,17 +227,17 @@ class _AdminDailySalesCloseListScreenState extends State<AdminDailySalesCloseLis
               children: [
                 TableRow(
                   children: [
-                    _buildTableHeader('ID'),
-                    _buildTableHeader('Sales Executive'),
-                    _buildTableHeader('Phone'),
-                    _buildTableHeader('Store'),
-                    _buildTableHeader('Closing Period'),
-                    _buildTableHeader('Total Orders'),
-                    _buildTableHeader('Total Sales'),
-                    _buildTableHeader('Online Sales'),
-                    _buildTableHeader('Cash Sales'),
-                    _buildTableHeader('Credit Amount'),
-                    _buildTableHeader('Action'),
+                    _buildTableHeader('daily_sales_close.col_id'.tr),
+                    _buildTableHeader('daily_sales_close.sales_executive'.tr),
+                    _buildTableHeader('daily_sales_close.col_phone'.tr),
+                    _buildTableHeader('daily_sales_close.col_store'.tr),
+                    _buildTableHeader('daily_sales_close.col_closing_period'.tr),
+                    _buildTableHeader('daily_sales_close.total_orders'.tr),
+                    _buildTableHeader('daily_sales_close.total_sales'.tr),
+                    _buildTableHeader('daily_sales_close.online_sales'.tr),
+                    _buildTableHeader('daily_sales_close.cash_sales'.tr),
+                    _buildTableHeader('daily_sales_close.credit_amount'.tr),
+                    _buildTableHeader('daily_sales_close.action'.tr),
                   ],
                 ),
               ],
@@ -396,18 +396,18 @@ class _AdminDailySalesCloseListScreenState extends State<AdminDailySalesCloseLis
             color: Colors.grey[400],
           ),
           const SizedBox(height: 16),
-          const Text(
-            'No Admin Daily Sales Closes Found',
-            style: TextStyle(
+          Text(
+            'daily_sales_close.no_records_admin'.tr,
+            style: const TextStyle(
               fontSize: 18,
               color: Colors.grey,
               fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Try adjusting your date range',
-            style: TextStyle(
+          Text(
+            'daily_sales_close.no_records_subtitle'.tr,
+            style: const TextStyle(
               fontSize: 14,
               color: Colors.grey,
             ),
@@ -452,7 +452,7 @@ class _AdminDailySalesCloseListScreenState extends State<AdminDailySalesCloseLis
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Admin: Daily Sales Records",
+                      'daily_sales_close.admin_title'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         FontSize.s20,
@@ -528,7 +528,7 @@ class _AdminDailySalesCloseListScreenState extends State<AdminDailySalesCloseLis
                                   Padding(
                                     padding: const EdgeInsets.all(8.0),
                                     child: Text(
-                                      "Date",
+                                      'daily_sales_close.filter_date'.tr,
                                       style: buildCustomStyle(
                                         FontWeightManager.regular,
                                         FontSize.s14,
@@ -591,7 +591,7 @@ class _AdminDailySalesCloseListScreenState extends State<AdminDailySalesCloseLis
                                            });
                                            fetchData();
                                          },
-                                         searchHintText: 'Search Name...',
+                                         searchHintText: 'daily_sales_close.search_hint_name'.tr,
                                        );
                                      },
                                    ),
@@ -714,7 +714,7 @@ class _AdminDailySalesCloseListScreenState extends State<AdminDailySalesCloseLis
             children: [
               Expanded(
                 child: Text(
-                  data.salesExecutive?.name ?? 'Unknown',
+                  data.salesExecutive?.name ?? 'daily_sales_close.card_unknown'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.semiBold,
                     FontSize.s16,
@@ -748,13 +748,13 @@ class _AdminDailySalesCloseListScreenState extends State<AdminDailySalesCloseLis
             children: [
               Expanded(
                 child: _buildItemDetail(
-                  'Orders',
+                  'daily_sales_close.orders_prefix'.tr.trim(),
                   data.totalOrders?.toString() ?? '0',
                 ),
               ),
               Expanded(
                 child: _buildItemDetail(
-                  'Total Sales',
+                  'daily_sales_close.total_sales'.tr,
                   data.totalSales ?? '0.00',
                 ),
               ),
@@ -765,14 +765,14 @@ class _AdminDailySalesCloseListScreenState extends State<AdminDailySalesCloseLis
             children: [
               Expanded(
                 child: _buildItemDetail(
-                  'User ID',
+                  'daily_sales_close.card_user_id'.tr,
                   data.salesExecutive?.id?.toString() ?? '-',
                 ),
               ),
               Expanded(
                 flex: 2,
                 child: _buildItemDetail(
-                  'Sales Executive',
+                  'daily_sales_close.sales_executive'.tr,
                   data.salesExecutive?.name ?? '-',
                 ),
               ),
@@ -783,13 +783,13 @@ class _AdminDailySalesCloseListScreenState extends State<AdminDailySalesCloseLis
             children: [
               Expanded(
                 child: _buildItemDetail(
-                  'Cash Sales',
+                  'daily_sales_close.cash_sales'.tr,
                   data.totalCash ?? '0.00',
                 ),
               ),
               Expanded(
                 child: _buildItemDetail(
-                  'Online Sales',
+                  'daily_sales_close.online_sales'.tr,
                   data.totalOnline ?? '0.00',
                 ),
               ),

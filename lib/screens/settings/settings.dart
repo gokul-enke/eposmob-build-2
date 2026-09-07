@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
@@ -15,6 +16,7 @@ import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
+import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/screens/login/login.dart';
 import 'package:pos_machine/services/session_reset_service.dart';
 import 'package:pos_machine/services/development_printer_service.dart';
@@ -619,11 +621,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
           title: Text('settings.language_select'.tr),
           content: StatefulBuilder(
             builder: (context, setState) {
+              // NOTE: these language names are intentionally hardcoded in
+              // their own native script (not '.tr') so a user can recognize
+              // their language even if the app is currently showing a
+              // language they don't read. Do NOT localize/translate these
+              // labels into the currently selected app language.
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   RadioListTile<String>(
-                    title: Text('settings_ui.lang_english'.tr),
+                    title: const Text('English'),
                     value: 'en',
                     groupValue: selected,
                     onChanged: (v) => setState(() => selected = v!),
@@ -631,6 +638,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   RadioListTile<String>(
                     title: const Text('العربية'),
                     value: 'ar',
+                    groupValue: selected,
+                    onChanged: (v) => setState(() => selected = v!),
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('മലയാളം'),
+                    value: 'ml',
                     groupValue: selected,
                     onChanged: (v) => setState(() => selected = v!),
                   ),
@@ -648,6 +661,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 final newLocale = Locale(selected);
                 await LocalizationService.updateLocale(newLocale);
                 Get.updateLocale(newLocale);
+                // Delivery-method labels are cached in memory/prefs and only
+                // resolved from the `translations` map at render time; if the
+                // cached payload predates translations (or was fetched while a
+                // different language was active) a language switch alone will
+                // not surface a translation that was never captured. Force a
+                // refetch so the active locale's names are guaranteed present.
+                if (context.mounted) {
+                  unawaited(
+                    Provider.of<DeliveryMethodsProvider>(context,
+                            listen: false)
+                        .fetchDeliveryMethods(forceRefresh: true),
+                  );
+                }
                 Get.back();
               },
               child: Text('general.ok'.tr),

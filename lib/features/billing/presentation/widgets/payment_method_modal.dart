@@ -119,6 +119,16 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   /// no payment tile is focused. Drives the visible orange focus ring
   /// rendered around the focused tile in [_buildModalPaymentRow].
   String? _focusedPaymentKey;
+
+  /// Row whose amount field holds keyboard focus (drives the tender-row
+  /// highlight independently of the label focus).
+  String? _focusedAmountKey;
+
+  /// Keyboard focus on the excess-amount field, for its focus ring.
+  bool _excessAmountFocused = false;
+
+  /// Keyboard focus on the transaction-reference field, for its focus ring.
+  bool _referenceFieldFocused = false;
   late TextEditingController cashAmountController;
   late TextEditingController cardAmountController;
   late TextEditingController upiAmountController;
@@ -160,6 +170,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
   // Credit option (visual only, for sales staff)
   bool isCreditSelected = false;
+  bool _creditSaleManuallyDisabled = false;
   late TextEditingController creditAmountController;
   bool _isApplying = false;
 
@@ -1367,21 +1378,31 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   void _syncCreditAmountWithRemaining() {
     // Any unpaid remainder is automatically treated as a credit sale.
     // `To Customer Credit` is a separate flow for allocating excess payment.
+    final totalCollected = _getTotalCollectedAmount();
+    if (toCustomerCreditEnabled && totalCollected <= widget.cartTotal) {
+      toCustomerCreditEnabled = false;
+      toCustomerCreditController.clear();
+      toCustomerCredit = 0.0;
+    }
+
     final creditRemainder = PaymentAutoFillHelper.autoCreditRemainder(
       cartTotal: widget.cartTotal,
-      totalCollected: _getTotalCollectedAmount(),
+      totalCollected: totalCollected,
       toCustomerCreditEnabled: toCustomerCreditEnabled,
     );
     if (creditRemainder == null) {
       return;
     }
 
-    if (creditRemainder.isNotEmpty) {
+    if (creditRemainder.isNotEmpty && !_creditSaleManuallyDisabled) {
       isCreditSelected = true;
       creditAmountController.text = creditRemainder;
     } else {
       isCreditSelected = false;
       creditAmountController.clear();
+      if (creditRemainder.isEmpty) {
+        _creditSaleManuallyDisabled = false;
+      }
     }
   }
 
@@ -1422,6 +1443,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
           break;
         case 'credit':
           isCreditSelected = !isCreditSelected;
+          _creditSaleManuallyDisabled = !isCreditSelected;
           targetSelected = isCreditSelected;
           targetController = creditAmountController;
           targetFocusNode = null;
@@ -1437,7 +1459,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
       // Handle selection (Toggle ON)
       if (targetSelected) {
-        if (paymentType != 'credit' && targetController != null) {
+        if (paymentType != 'credit') {
           final didPristineSwitch =
               _applyPristineSwitch(paymentType, targetController);
           if (!didPristineSwitch) {
@@ -1532,6 +1554,1088 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     }
   }
 
+  // ── Checkout panel design tokens ───────────────────────────────────────
+  static const Color _cxBorder = Color(0xFFE2E8F0);
+  static const Color _cxMuted = Color(0xFF64748B);
+  static const Color _cxFieldTrail = Color(0xFFF1F5F9);
+  static const Color _cxCredit = Color(0xFFF59E0B);
+  static const Color _cxCreditBg = Color(0xFFFFFBEB);
+
+  /// Shared input metrics so every field in the checkout panel lines up.
+  double _cxFieldHeight(bool isDense) => isDense ? 40 : 44;
+
+  /// Wide enough for 1,000,000.00 plus the currency segment — no wider.
+  double _cxAmountFieldWidth(bool isDense) => isDense ? 168 : 186;
+
+  double _cxReferenceFieldWidth(bool isDense) => isDense ? 260 : 320;
+
+  /// Accent colour for a tender row (cash green, card purple, bank blue, …).
+  Color _methodAccent(DesktopPaymentRow row) {
+    final key = '${row.code} ${row.label}'.toLowerCase();
+    if (key.contains('cash')) return const Color(0xFF16A34A);
+    if (key.contains('bank') ||
+        key.contains('transfer') ||
+        key.contains('neft') ||
+        key.contains('cheque')) {
+      return const Color(0xFF2563EB);
+    }
+    if (key.contains('card')) return const Color(0xFF7C3AED);
+    if (key.contains('upi') || key.contains('qr') || key.contains('wallet')) {
+      return const Color(0xFF0891B2);
+    }
+    if (key.contains('cod') || key.contains('ship')) {
+      return const Color(0xFFEA580C);
+    }
+    return _cxMuted;
+  }
+
+  Widget _buildCheckoutPaymentExperience(
+    BuildContext context,
+    Size size,
+    String currency,
+    bool isDense,
+  ) {
+    final collectedRows = _desktopRows
+        .where((row) => row.method.behavior == PaymentBehavior.collected)
+        .toList();
+    final totalCollected = _getTotalCollectedAmount();
+    final outstanding =
+        (widget.cartTotal - totalCollected).clamp(0.0, double.infinity);
+    final excess =
+        (totalCollected - widget.cartTotal).clamp(0.0, double.infinity);
+    final canStoreCustomerCredit = !widget.isDefaultCustomer;
+    final showReference = _desktopController.shouldShowTransactionReference(
+      rows: _desktopRows,
+      isSelected: _isCodeSelected,
+    );
+
+    return BuildBoxShadowContainer(
+      width: double.infinity,
+      circleRadius: 10,
+      color: Colors.white,
+      showShadow: widget.showShadow,
+      padding: EdgeInsets.all(isDense ? 12 : 16),
+      child: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: FocusTraversalGroup(
+                policy: OrderedTraversalPolicy(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildCheckoutSectionHeader(
+                      step: 1,
+                      title: 'Payment',
+                      subtitle: 'Enter received amounts',
+                      stackSubtitle: true,
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (totalCollected > 0) ...[
+                            if (isDense)
+                              IconButton(
+                                key: const ValueKey('clear_payments_button'),
+                                onPressed: _clearAllCollectedPayments,
+                                tooltip: 'billing.clear_payments'.tr,
+                                icon: const Icon(
+                                  Icons.clear_all_rounded,
+                                  size: 18,
+                                ),
+                                color: _cxMuted,
+                              )
+                            else
+                              TextButton.icon(
+                                key: const ValueKey('clear_payments_button'),
+                                onPressed: _clearAllCollectedPayments,
+                                icon: const Icon(Icons.clear_all_rounded,
+                                    size: 16),
+                                label: Text('billing.clear_payments'.tr),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: _cxMuted,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 10,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  textStyle: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s11,
+                                    0.14,
+                                    _cxMuted,
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(width: 6),
+                          ],
+                          OutlinedButton.icon(
+                            key: const ValueKey('exact_cash_button'),
+                            onPressed: _fillExactCash,
+                            icon: const Icon(Icons.payments_outlined, size: 16),
+                            label: Text('billing.exact_cash'.tr),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: ColorManager.kPrimaryColor,
+                              side: const BorderSide(
+                                color: ColorManager.kPrimaryColor,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              textStyle: buildCustomStyle(
+                                FontWeightManager.semiBold,
+                                FontSize.s12,
+                                0.14,
+                                ColorManager.kPrimaryColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (_isLoadingPaymentMethods)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    else if (collectedRows.isEmpty)
+                      _buildCheckoutEmptyState('No payment methods available')
+                    else
+                      Container(
+                        clipBehavior: Clip.antiAlias,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: _cxBorder),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Column(
+                          children: [
+                            for (var index = 0;
+                                index < collectedRows.length;
+                                index++) ...[
+                              FocusTraversalOrder(
+                                order: NumericFocusOrder((index + 1) * 10.0),
+                                child: _buildCheckoutPaymentRow(
+                                  collectedRows[index],
+                                  currency,
+                                  isDense,
+                                ),
+                              ),
+                              if (index != collectedRows.length - 1)
+                                const Divider(
+                                    height: 1, thickness: 1, color: _cxBorder),
+                            ],
+                            AnimatedSize(
+                              duration: const Duration(milliseconds: 180),
+                              curve: Curves.easeOut,
+                              alignment: Alignment.topCenter,
+                              child: showReference
+                                  ? Column(
+                                      children: [
+                                        const Divider(
+                                          height: 1,
+                                          thickness: 1,
+                                          color: _cxBorder,
+                                        ),
+                                        FocusTraversalOrder(
+                                          order: const NumericFocusOrder(60),
+                                          child: _buildCheckoutReferenceRow(
+                                              isDense),
+                                        ),
+                                      ],
+                                    )
+                                  : const SizedBox(width: double.infinity),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: 12),
+                    _buildCheckoutSectionHeader(
+                      step: 2,
+                      title: 'Remaining Amount',
+                      subtitle: '(Auto calculated)',
+                    ),
+                    const SizedBox(height: 8),
+                    if (outstanding > 0)
+                      _buildCustomerAccountAction(
+                        title: 'Sell on Credit',
+                        titleNote: '(Amount Due)',
+                        subtitle: widget.isDefaultCustomer
+                            ? 'Record the unpaid amount as due'
+                            : 'Add remaining amount to customer account',
+                        amount: outstanding,
+                        currency: currency,
+                        value: isCreditSelected,
+                        enabled: true,
+                        showSwitch: true,
+                        color: _cxCredit,
+                        background: _cxCreditBg,
+                        icon: Icons.receipt_long_outlined,
+                        isDense: isDense,
+                        footerLabel: widget.isDefaultCustomer
+                            ? 'Amount Due (will be recorded as due)'
+                            : 'Amount Due (will be added to customer account)',
+                        onChanged: (_) => _togglePaymentMethod('credit'),
+                      )
+                    else
+                      _buildCollapsedSettlementRow(
+                        icon: Icons.receipt_long_outlined,
+                        title: 'Sell on Credit',
+                        note: 'Nothing remaining — fully covered',
+                        trailing: '0.00 $currency',
+                      ),
+                    const SizedBox(height: 12),
+                    _buildCheckoutSectionHeader(
+                      step: 3,
+                      title: 'Excess Amount',
+                      subtitle: '(if any)',
+                    ),
+                    const SizedBox(height: 8),
+                    if (excess > 0 && canStoreCustomerCredit) ...[
+                      _buildCustomerAccountAction(
+                        title: 'Excess Amount',
+                        subtitle: 'Will be created as customer account credit',
+                        amount: excess,
+                        currency: currency,
+                        value: toCustomerCreditEnabled,
+                        enabled: true,
+                        color: _cxCredit,
+                        background: _cxCreditBg,
+                        icon: Icons.account_balance_wallet_outlined,
+                        isDense: isDense,
+                        shortcut: 'C+7',
+                        amountShortcut: 'C+8',
+                        amountController: toCustomerCreditEnabled
+                            ? toCustomerCreditController
+                            : null,
+                        amountFocusNode: toCustomerCreditFocusNode,
+                        onAmountTap: () {
+                          Provider.of<KeyboardProvider>(context, listen: false)
+                              .show(
+                            'number',
+                            toCustomerCreditController,
+                            replaceOnFirstInput: true,
+                          );
+                        },
+                        onChanged: (value) =>
+                            _setToCustomerCreditEnabled(value),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildCheckoutAccountNote(
+                        Icons.info_outline,
+                        toCustomerCreditEnabled
+                            ? '$currency ${toCustomerCredit.toStringAsFixed(2)} will '
+                                'be stored as customer account credit.'
+                            : '$currency ${excess.toStringAsFixed(2)} will be returned '
+                                'as change unless customer credit is enabled.',
+                        _cxCredit,
+                      ),
+                    ] else
+                      _buildCollapsedSettlementRow(
+                        icon: Icons.account_balance_wallet_outlined,
+                        title: 'Excess Amount',
+                        note: excess > 0
+                            ? 'Select a customer to store account credit'
+                            : 'No excess collected',
+                        trailing: '${excess.toStringAsFixed(2)} $currency',
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (!widget.showConfirmButton) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: const Icon(Icons.close, size: 15),
+                label: Text('general.cancel'.tr),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF475569),
+                  side: const BorderSide(color: Color(0xFFCBD5E1)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCheckoutSectionHeader({
+    required int step,
+    required String title,
+    required String subtitle,
+    bool stackSubtitle = false,
+    Widget? trailing,
+  }) {
+    final titleText = Text(
+      title,
+      style: buildCustomStyle(
+        FontWeightManager.semiBold,
+        FontSize.s15,
+        0.20,
+        ColorManager.kPrimaryColor,
+      ),
+    );
+    final subtitleText = Text(
+      subtitle,
+      overflow: TextOverflow.ellipsis,
+      style: buildCustomStyle(
+        FontWeightManager.regular,
+        FontSize.s11,
+        0.12,
+        _cxMuted,
+      ),
+    );
+
+    return Row(
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: ColorManager.kPrimaryColor,
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            '$step',
+            style: buildCustomStyle(
+              FontWeightManager.bold,
+              FontSize.s11,
+              0.10,
+              Colors.white,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: stackSubtitle
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [titleText, subtitleText],
+                )
+              : Row(
+                  children: [
+                    titleText,
+                    const SizedBox(width: 7),
+                    Flexible(child: subtitleText),
+                  ],
+                ),
+        ),
+        if (trailing != null) trailing,
+      ],
+    );
+  }
+
+  Widget _buildCheckoutPaymentRow(
+    DesktopPaymentRow row,
+    String currency,
+    bool isDense,
+  ) {
+    final accent = _methodAccent(row);
+    final shortcut = _shortcutForRow(row);
+    final isFocused =
+        _focusedPaymentKey == row.rowKey || _focusedAmountKey == row.rowKey;
+    final hasAmount = (double.tryParse(row.controller.text) ?? 0) > 0;
+    final isActive = row.selected || hasAmount;
+    final fieldBorderColor = isFocused
+        ? ColorManager.kPrimaryColor
+        : isActive
+            ? ColorManager.kPrimaryColor.withValues(alpha: 0.55)
+            : _cxBorder;
+    final labelWidth = isDense ? 150.0 : 180.0;
+
+    void toggle() {
+      if (row.methodId != null &&
+          !_desktopController.isCoreCollectedCode(row.code)) {
+        _toggleExtraMethod(row.methodId!);
+      } else {
+        _togglePaymentMethod(row.rowKey);
+      }
+    }
+
+    void focusAmount() {
+      if (!row.selected) {
+        toggle();
+        return;
+      }
+      final focusNode = row.focusNode;
+      if (focusNode == null) return;
+      focusNode.requestFocus();
+      if (row.controller.text.isNotEmpty) {
+        row.controller.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: row.controller.text.length,
+        );
+      }
+      Provider.of<KeyboardProvider>(context, listen: false).show(
+        'number',
+        row.controller,
+        replaceOnFirstInput: true,
+      );
+    }
+
+    final rowContent = AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      height: isDense ? 56 : 60,
+      padding: EdgeInsets.fromLTRB(isDense ? 10 : 12, 8, isDense ? 10 : 12, 8),
+      color: isActive ? accent.withValues(alpha: 0.05) : Colors.white,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          InkWell(
+            key: ValueKey('payment_method_${row.rowKey}'),
+            onTap: toggle,
+            onFocusChange: (focused) {
+              if (!mounted) return;
+              setState(() {
+                if (focused) {
+                  _focusedPaymentKey = row.rowKey;
+                } else if (_focusedPaymentKey == row.rowKey) {
+                  _focusedPaymentKey = null;
+                }
+              });
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: labelWidth,
+              child: Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: isActive ? 0.18 : 0.10),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: WebsafeSvg.asset(
+                      row.iconAsset,
+                      width: 17,
+                      height: 17,
+                      colorFilter: ColorFilter.mode(accent, BlendMode.srcIn),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      row.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s13,
+                        0.16,
+                        ColorManager.kTitleTextColor,
+                      ),
+                    ),
+                  ),
+                  if (shortcut != null) ...[
+                    const SizedBox(width: 6),
+                    _buildShortcutHint(shortcut),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Spacer(),
+          _buildCheckoutAmountField(
+            fieldKey: ValueKey('payment_amount_${row.rowKey}'),
+            controller: row.controller,
+            focusNode: row.focusNode,
+            readOnly: row.readOnly,
+            currency: currency,
+            isDense: isDense,
+            borderColor: fieldBorderColor,
+            valueColor: ColorManager.kTitleTextColor,
+            isFocused: isFocused,
+            onTapField: row.readOnly ? null : focusAmount,
+            onFocusChange: (focused) {
+              if (!mounted) return;
+              setState(() {
+                if (focused) {
+                  _focusedAmountKey = row.rowKey;
+                } else if (_focusedAmountKey == row.rowKey) {
+                  _focusedAmountKey = null;
+                }
+              });
+            },
+          ),
+        ],
+      ),
+    );
+
+    return rowContent;
+  }
+
+  /// Amount input with an attached currency segment. Fixed width and height so
+  /// every amount field in the checkout panel is identical, wherever it sits.
+  Widget _buildCheckoutAmountField({
+    required Key fieldKey,
+    required TextEditingController controller,
+    required FocusNode? focusNode,
+    required String currency,
+    required bool isDense,
+    required Color borderColor,
+    required Color valueColor,
+    required bool isFocused,
+    required VoidCallback? onTapField,
+    ValueChanged<bool>? onFocusChange,
+    bool readOnly = false,
+    String hintText = 'Enter amount',
+  }) {
+    final height = _cxFieldHeight(isDense);
+    final hasText = controller.text.trim().isNotEmpty;
+
+    Widget field = TextFormField(
+      key: fieldKey,
+      controller: controller,
+      focusNode: focusNode,
+      readOnly: readOnly,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      textAlign: hasText ? TextAlign.right : TextAlign.left,
+      textAlignVertical: TextAlignVertical.center,
+      cursorColor: ColorManager.kPrimaryColor,
+      onTap: onTapField,
+      decoration: InputDecoration(
+        isDense: true,
+        border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        focusedBorder: InputBorder.none,
+        hintText: hintText,
+        hintStyle: buildCustomStyle(
+          FontWeightManager.regular,
+          FontSize.s12,
+          0.14,
+          Colors.grey.shade400,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+      style: buildCustomStyle(
+        FontWeightManager.bold,
+        FontSize.s14,
+        0.16,
+        valueColor,
+      ),
+    );
+
+    if (onFocusChange != null) {
+      field = Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onFocusChange: onFocusChange,
+        child: field,
+      );
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      width: _cxAmountFieldWidth(isDense),
+      height: height,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor, width: isFocused ? 1.6 : 1),
+      ),
+      child: Row(
+        children: [
+          Expanded(child: field),
+          Container(
+            width: isDense ? 46 : 50,
+            height: height,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: _cxFieldTrail,
+              border: Border(left: BorderSide(color: borderColor)),
+            ),
+            child: Text(
+              currency,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s11,
+                0.12,
+                _cxMuted,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Transaction reference as a row inside the tender list — label left,
+  /// fixed-width field right, aligned with the amount column above it.
+  Widget _buildCheckoutReferenceRow(bool isDense) {
+    final height = _cxFieldHeight(isDense);
+
+    return Container(
+      color: const Color(0xFFFAFBFC),
+      padding: EdgeInsets.fromLTRB(isDense ? 10 : 12, 8, isDense ? 10 : 12, 8),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: _cxMuted.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.tag_rounded, size: 17, color: _cxMuted),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        'billing.transaction_reference'.tr,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s12,
+                          0.14,
+                          ColorManager.kTitleTextColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    _buildShortcutHint('C+6'),
+                  ],
+                ),
+                Text(
+                  '(optional)',
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s10,
+                    0.12,
+                    _cxMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            width: _cxReferenceFieldWidth(isDense),
+            height: height,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: _referenceFieldFocused
+                    ? ColorManager.kPrimaryColor
+                    : _cxBorder,
+                width: _referenceFieldFocused ? 1.6 : 1,
+              ),
+            ),
+            child: Focus(
+              canRequestFocus: false,
+              skipTraversal: true,
+              onFocusChange: (focused) {
+                if (!mounted) return;
+                setState(() => _referenceFieldFocused = focused);
+              },
+              child: TextFormField(
+                key: const ValueKey('transaction_reference_field'),
+                controller: transactionNumberController,
+                focusNode: transactionNumberFocusNode,
+                textAlignVertical: TextAlignVertical.center,
+                cursorColor: ColorManager.kPrimaryColor,
+                onTap: () {
+                  Provider.of<KeyboardProvider>(context, listen: false).show(
+                    'number',
+                    transactionNumberController,
+                    replaceOnFirstInput: true,
+                  );
+                },
+                decoration: InputDecoration(
+                  isDense: true,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  hintText: 'Reference number',
+                  hintStyle: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s12,
+                    0.14,
+                    Colors.grey.shade400,
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s13,
+                  0.14,
+                  ColorManager.kTitleTextColor,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Slim placeholder row shown when a settlement section doesn't apply —
+  /// keeps the step visible without spending a full card on it.
+  Widget _buildCollapsedSettlementRow({
+    required IconData icon,
+    required String title,
+    required String note,
+    required String trailing,
+  }) {
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _cxBorder),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Colors.grey.shade500),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s12,
+              0.14,
+              Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '— $note',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s11,
+                0.12,
+                Colors.grey.shade500,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            trailing,
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s12,
+              0.14,
+              Colors.grey.shade500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCustomerAccountAction({
+    required String title,
+    required String subtitle,
+    required double amount,
+    required String currency,
+    required bool value,
+    required bool enabled,
+    required Color color,
+    required Color background,
+    required IconData icon,
+    required ValueChanged<bool> onChanged,
+    required bool isDense,
+    bool showSwitch = true,
+    String? titleNote,
+    String? footerLabel,
+    String? shortcut,
+    String? amountShortcut,
+    TextEditingController? amountController,
+    FocusNode? amountFocusNode,
+    VoidCallback? onAmountTap,
+  }) {
+    final isEditable = amountController != null && value;
+
+    final Widget amountWidget = isEditable
+        ? _buildCheckoutAmountField(
+            fieldKey: const ValueKey('excess_credit_amount'),
+            controller: amountController,
+            focusNode: amountFocusNode,
+            currency: currency,
+            isDense: isDense,
+            borderColor:
+                _excessAmountFocused ? color : color.withValues(alpha: 0.45),
+            valueColor: color,
+            isFocused: _excessAmountFocused,
+            onTapField: onAmountTap,
+            onFocusChange: (focused) {
+              if (!mounted) return;
+              setState(() => _excessAmountFocused = focused);
+            },
+          )
+        : SizedBox(
+            width: _cxAmountFieldWidth(isDense),
+            height: _cxFieldHeight(isDense),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                '${amount.toStringAsFixed(2)} $currency',
+                textAlign: TextAlign.right,
+                style: buildCustomStyle(
+                  FontWeightManager.bold,
+                  FontSize.s14,
+                  0.16,
+                  enabled ? color : Colors.grey.shade500,
+                ),
+              ),
+            ),
+          );
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: enabled ? background : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: enabled ? color.withValues(alpha: 0.40) : _cxBorder,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: enabled ? color.withValues(alpha: 0.14) : Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  icon,
+                  size: 18,
+                  color: enabled ? color : Colors.grey.shade500,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s13,
+                              0.16,
+                              enabled
+                                  ? ColorManager.kTitleTextColor
+                                  : Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                        if (titleNote != null) ...[
+                          const SizedBox(width: 5),
+                          Text(
+                            titleNote,
+                            style: buildCustomStyle(
+                              FontWeightManager.regular,
+                              FontSize.s11,
+                              0.12,
+                              _cxMuted,
+                            ),
+                          ),
+                        ],
+                        if (shortcut != null) ...[
+                          const SizedBox(width: 6),
+                          _buildShortcutHint(shortcut),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.regular,
+                        FontSize.s11,
+                        0.12,
+                        _cxMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              if (showSwitch)
+                Switch(
+                  key: ValueKey(
+                    title.startsWith('Sell on Credit')
+                        ? 'sell_on_credit_toggle'
+                        : 'excess_credit_toggle',
+                  ),
+                  value: value,
+                  onChanged: enabled ? onChanged : null,
+                  activeThumbColor: value ? color : null,
+                )
+              else
+                Semantics(
+                  label: value
+                      ? 'Sell on credit is automatically applied'
+                      : 'No credit sale is needed',
+                  child: Container(
+                    height: 28,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: value
+                          ? color.withValues(alpha: 0.12)
+                          : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          value
+                              ? Icons.check_circle_outline
+                              : Icons.remove_circle_outline,
+                          size: 14,
+                          color: value ? color : Colors.grey.shade500,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          value ? 'Auto' : 'None',
+                          style: buildCustomStyle(
+                            FontWeightManager.semiBold,
+                            FontSize.s10,
+                            0.12,
+                            value ? color : Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (footerLabel != null) ...[
+            Container(height: 1, color: color.withValues(alpha: 0.20)),
+            const SizedBox(height: 8),
+          ],
+          Row(
+            children: [
+              if (footerLabel != null)
+                Expanded(
+                  child: Text(
+                    footerLabel,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s11,
+                      0.13,
+                      enabled ? ColorManager.kTextColor : Colors.grey.shade600,
+                    ),
+                  ),
+                )
+              else
+                const Spacer(),
+              const SizedBox(width: 10),
+              if (isEditable && amountShortcut != null) ...[
+                _buildShortcutHint(amountShortcut),
+                const SizedBox(width: 8),
+              ],
+              amountWidget,
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCheckoutAccountNote(IconData icon, String message, Color color) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            message,
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s9,
+              0.11,
+              Colors.grey.shade700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCheckoutEmptyState(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 18),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Text(
+        message,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s11,
+          0.14,
+          Colors.grey.shade600,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
@@ -1539,6 +2643,15 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         context.watch<AppSettingsProvider>().appSettings?.currency ?? 'INR';
     final isDenseEmbedded =
         widget.fullWidth && (size.width <= 1100 || size.height <= 800);
+
+    if (widget.fullWidth) {
+      return _buildCheckoutPaymentExperience(
+        context,
+        size,
+        currency,
+        isDenseEmbedded,
+      );
+    }
 
     // Calculate width: 85% of screen width, clamped between 550 and 900
     double modalWidth = size.width * 0.85;

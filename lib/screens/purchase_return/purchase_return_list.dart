@@ -454,8 +454,8 @@ class _PurchaseReturnListScreenState extends State<PurchaseReturnListScreen> {
                   Expanded(
                     child: TextField(
                       controller: controller,
-                      decoration: const InputDecoration(
-                        hintText: "yyyy-mm-dd",
+                      decoration: InputDecoration(
+                        hintText: 'purchase_return.date_hint'.tr,
                         border: InputBorder.none,
                         isDense: true,
                       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 
@@ -199,9 +200,9 @@ class PrintService {
                 ),
                 ListTile(
                   leading: const Icon(Icons.receipt_long),
-                  title: const Text('Print Sales'),
+                  title: Text('ui_chrome.print_sales'.tr),
                   subtitle:
-                      const Text('Receipt with returned quantities removed'),
+                      Text('ui_chrome.print_sales_sub'.tr),
                   onTap: () {
                     debugPrint('[PrintService] Print Sales tapped');
                     Navigator.pop(sheetContext, PrintMode.salesOnly);
@@ -209,8 +210,8 @@ class PrintService {
                 ),
                 ListTile(
                   leading: const Icon(Icons.assignment_return),
-                  title: const Text('Print Return'),
-                  subtitle: const Text('Return receipt only'),
+                  title: Text('ui_chrome.print_return'.tr),
+                  subtitle: Text('ui_chrome.print_return_sub'.tr),
                   onTap: () {
                     debugPrint('[PrintService] Print Return tapped');
                     Navigator.pop(sheetContext, PrintMode.returnOnly);
@@ -218,8 +219,8 @@ class PrintService {
                 ),
                 ListTile(
                   leading: const Icon(Icons.receipt),
-                  title: const Text('Print Combined'),
-                  subtitle: const Text('Full bill with sales and returns'),
+                  title: Text('ui_chrome.print_combined'.tr),
+                  subtitle: Text('ui_chrome.print_combined_sub'.tr),
                   onTap: () {
                     debugPrint('[PrintService] Print Combined tapped');
                     Navigator.pop(sheetContext, PrintMode.combined);
@@ -430,16 +431,20 @@ class PrintService {
         totalPaid: checkoutTotalPaid,
       );
       customerOldBalance = receiptBalance.oldBalance;
-      customerCurrentBalance = receiptBalance.currentBalance;
-    } else if (orderDetails.data?.orderProps != null) {
-      try {
-        final balanceProp = orderDetails.data!.orderProps!.firstWhere(
-          (prop) => prop.propsCode == 'BALANCE',
-          orElse: () => OrderDetailsModelDataOrderProp(),
-        );
-        customerCurrentBalance =
-            double.tryParse(balanceProp.propsValue?.toString() ?? '');
-      } catch (_) {}
+      // The order was just created, so the freshly-fetched order details'
+      // customer_balance already reflects it — prefer that over the
+      // locally-computed value when it's available.
+      customerCurrentBalance =
+          orderDetails.data?.customerDetails?.customerBalance ??
+              receiptBalance.currentBalance;
+    } else {
+      // No checkout-time balance context (e.g. reprinting an existing
+      // order) — use the customer's ledger balance. Deliberately no
+      // order_props.BALANCE fallback: that field has been observed stale
+      // (e.g. "0.0" right after a credit sale), so if customer_details
+      // doesn't have it, leave it null rather than print a wrong value.
+      customerCurrentBalance =
+          orderDetails.data?.customerDetails?.customerBalance;
     }
 
     final deliveryMethod = orderDetails.data?.deliveryMethodName;

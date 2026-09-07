@@ -64,7 +64,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
           "📌 Loaded ${supplierProvider.supplierList?.length ?? 0} suppliers");
     } catch (error) {
       debugPrint("❌ Supplier listing error: ${error.toString()}");
-      showScaffold(context: context, message: "Error fetching suppliers");
+      showScaffold(context: context, message: 'supplier_list.error_fetching'.tr);
     } finally {
       setState(() {
         initLoading = false;
@@ -125,7 +125,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
       );
     } catch (error) {
       debugPrint("❌ Supplier search error: ${error.toString()}");
-      showScaffold(context: context, message: "Error searching suppliers");
+      showScaffold(context: context, message: 'supplier_list.error_searching'.tr);
     }
   }
 
@@ -334,7 +334,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                           const SizedBox(
                                                               height: 15),
                                                           Text(
-                                                            'No suppliers found',
+                                                            'supplier_list.no_suppliers_desktop'.tr,
                                                             style:
                                                                 buildCustomStyle(
                                                               FontWeightManager
@@ -348,7 +348,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                           const SizedBox(
                                                               height: 8),
                                                           Text(
-                                                            'Try adjusting your search criteria',
+                                                            'supplier_list.try_adjusting_search'.tr,
                                                             style:
                                                                 buildCustomStyle(
                                                               FontWeightManager
@@ -494,7 +494,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                                                                         .isNotEmpty
                                                                     ? supplier
                                                                         .address
-                                                                    : 'N/A',
+                                                                    : 'supplier_details.na'.tr,
                                                                 textAlign:
                                                                     TextAlign
                                                                         .center,
@@ -964,7 +964,7 @@ class SupplierDetailModal extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "Supplier Details",
+                  'supplier_details.profile_title'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.bold,
                     FontSize.s24,
@@ -987,34 +987,34 @@ class SupplierDetailModal extends StatelessWidget {
                 child: Column(
                   children: [
                     const SizedBox(height: 16),
-                    _buildInfoRow("Name", supplier.name),
+                    _buildInfoRow('supplier_details.label_name'.tr, supplier.name),
                     const SizedBox(height: 8),
-                    _buildInfoRow("Email", supplier.email),
+                    _buildInfoRow('supplier_details.label_email'.tr, supplier.email),
                     const SizedBox(height: 8),
-                    _buildInfoRow("Phone", supplier.phone),
+                    _buildInfoRow('supplier_details.label_phone'.tr, supplier.phone),
                     const SizedBox(height: 8),
                     if (supplier.altPhone != null &&
                         supplier.altPhone!.isNotEmpty) ...[
-                      _buildInfoRow("Alternative Phone", supplier.altPhone!),
+                      _buildInfoRow('supplier_details.label_alt_phone'.tr, supplier.altPhone!),
                       const SizedBox(height: 8),
                     ],
-                    _buildInfoRow("Address", supplier.address),
+                    _buildInfoRow('supplier_details.label_address'.tr, supplier.address),
                     const SizedBox(height: 8),
                     _buildInfoRow(
-                        "Product Categories", supplier.productCategories),
+                        'supplier_details.label_product_categories'.tr, supplier.productCategories),
                     const SizedBox(height: 8),
                     _buildInfoRow(
-                        "Balance", supplier.balance.toStringAsFixed(2)),
+                        'supplier_details.label_balance'.tr, supplier.balance.toStringAsFixed(2)),
                     const SizedBox(height: 8),
                     _buildInfoRowWithColor(
-                        "Current Balance",
+                        'supplier_details.label_current_balance'.tr,
                         supplier.currentBalance.toStringAsFixed(2),
                         supplier.paymentType),
                     const SizedBox(height: 8),
-                    _buildInfoRowWithColor("Balance Status",
+                    _buildInfoRowWithColor('supplier_details.label_balance_status'.tr,
                         supplier.balanceStatus, supplier.paymentType),
                     const SizedBox(height: 8),
-                    _buildInfoRow("Payment Type", supplier.paymentType),
+                    _buildInfoRow('supplier_details.label_payment_type'.tr, supplier.paymentType),
                   ],
                 ),
               ),
@@ -1027,7 +1027,7 @@ class SupplierDetailModal extends StatelessWidget {
               children: [
                 CustomRoundButton(
                   fct: () => Navigator.of(context).pop(),
-                  title: "Close",
+                  title: 'general.close'.tr,
                   fontSize: FontSize.s12,
                   height: MediaQuery.of(context).size.height * .05,
                   width: 60,
@@ -1061,7 +1061,7 @@ class SupplierDetailModal extends StatelessWidget {
           const SizedBox(width: 16),
           Expanded(
             child: Text(
-              value.isNotEmpty ? value : 'N/A',
+              value.isNotEmpty ? value : 'supplier_details.na'.tr,
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s14,
@@ -1103,7 +1103,7 @@ class SupplierDetailModal extends StatelessWidget {
           const SizedBox(width: 16),
           Expanded(
             child: Text(
-              value.isNotEmpty ? value : 'N/A',
+              value.isNotEmpty ? value : 'supplier_details.na'.tr,
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s14,

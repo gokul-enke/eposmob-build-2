@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/helpers/delivery_method_display.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/delivery_method_modal.dart';
@@ -74,26 +75,26 @@ class _BillingWidgetState extends State<BillingWidget> {
                               padding: const EdgeInsets.all(16),
                               child: Column(
                                 children: [
-                                  const Text(
-                                    'ORDER SUMMARY',
-                                    style: TextStyle(
+                                  Text(
+                                    'billing.order_summary'.tr,
+                                    style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.blueGrey,
                                     ),
                                   ),
                                   const SizedBox(height: 12),
-                                  _buildSummaryRow('Subtotal:',
+                                  _buildSummaryRow('billing.subtotal'.tr,
                                       '${subtotal.toStringAsFixed(2)}'),
                                   if (billingProvider.isCouponApplied ||
                                       discountAmount > 0)
-                                    _buildSummaryRow('Discount:',
+                                    _buildSummaryRow('billing.discount'.tr,
                                         '-${discountAmount.toStringAsFixed(2)}'),
-                                  _buildSummaryRow('Tax (10%):',
+                                  _buildSummaryRow('billing.tax'.tr,
                                       '${taxAmount.toStringAsFixed(2)}'),
                                   const Divider(height: 24),
                                   _buildSummaryRow(
-                                    'GRAND TOTAL:',
+                                    'billing.total'.tr,
                                     '${grandTotal.toStringAsFixed(2)}',
                                     isBold: true,
                                     textColor: Colors.green,
@@ -107,9 +108,9 @@ class _BillingWidgetState extends State<BillingWidget> {
                               padding: const EdgeInsets.all(16),
                               child: Column(
                                 children: [
-                                  const Text(
-                                    'PAYMENT',
-                                    style: TextStyle(
+                                  Text(
+                                    'billing.payment'.tr,
+                                    style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.blueGrey,
@@ -133,7 +134,7 @@ class _BillingWidgetState extends State<BillingWidget> {
                                   ),
                                   const SizedBox(height: 12),
                                   _buildSummaryRow(
-                                    'BALANCE:',
+                                    'billing.balance'.tr,
                                     '${billingProvider.balanceAmount.toStringAsFixed(2)}',
                                     textColor:
                                         billingProvider.balanceAmount >= 0
@@ -147,7 +148,7 @@ class _BillingWidgetState extends State<BillingWidget> {
                                       .text
                                       .isNotEmpty)
                                     _buildSummaryRow(
-                                      'Transaction Ref:',
+                                      'billing.transaction_reference'.tr,
                                       billingProvider
                                           .transactionNumberController.text,
                                       textColor: Colors.blueGrey,
@@ -184,9 +185,9 @@ class _BillingWidgetState extends State<BillingWidget> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text(
-                          'COMPLETE ORDER',
-                          style: TextStyle(
+                        child: Text(
+                          'billing.complete_order'.tr,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
@@ -293,11 +294,7 @@ class _BillingWidgetState extends State<BillingWidget> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              billingProvider.deliveryMethod == "Store Takeaway"
-                  ? Icons.shopping_bag
-                  : billingProvider.deliveryMethod == "Car Delivery"
-                      ? Icons.car_rental
-                      : Icons.delivery_dining,
+              DeliveryMethodDisplay.iconFor(billingProvider.deliveryMethod),
               size: 18,
             ),
             const SizedBox(width: 6),
@@ -346,8 +343,8 @@ class _BillingWidgetState extends State<BillingWidget> {
             Flexible(
               child: Text(
                 billingProvider.isCouponApplied
-                    ? 'Coupon Applied'
-                    : 'Add Coupon',
+                    ? 'billing.coupon_applied'.tr
+                    : 'billing.add_coupon'.tr,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -488,43 +485,43 @@ class _BillingWidgetState extends State<BillingWidget> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Order Completed',
-                style: TextStyle(
+              Text(
+                'billing.order_completed'.tr,
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 16),
               _buildSummaryRow(
-                  'Customer:', billingProvider.mobileNumberTextController.text),
-              _buildSummaryRow('Delivery:', billingProvider.deliveryMethod),
-              _buildSummaryRow('Total:', '${grandTotal.toStringAsFixed(2)}'),
-              _buildSummaryRow('Paid:', '${totalPaid.toStringAsFixed(2)}'),
+                  'billing.customer'.tr, billingProvider.mobileNumberTextController.text),
+              _buildSummaryRow('billing.delivery'.tr, billingProvider.deliveryMethod),
+              _buildSummaryRow('billing.total'.tr, '${grandTotal.toStringAsFixed(2)}'),
+              _buildSummaryRow('billing.paid'.tr, '${totalPaid.toStringAsFixed(2)}'),
               _buildSummaryRow(
-                'Balance:',
+                'billing.balance'.tr,
                 '${billingProvider.balanceAmount.toStringAsFixed(2)}',
                 textColor: billingProvider.balanceAmount >= 0
                     ? Colors.green
                     : Colors.red,
               ),
               if (billingProvider.isCouponApplied)
-                _buildSummaryRow('Coupon:', billingProvider.couponCode),
+                _buildSummaryRow('billing.coupon'.tr, billingProvider.couponCode),
               const SizedBox(height: 16),
               if (billingProvider.isCashSelected &&
                   billingProvider.cashAmountController.text.isNotEmpty)
                 _buildSummaryRow(
-                    'Cash:', '${billingProvider.cashAmountController.text}'),
+                    'billing.cash'.tr, '${billingProvider.cashAmountController.text}'),
               if (billingProvider.isCardSelected &&
                   billingProvider.cardAmountController.text.isNotEmpty)
                 _buildSummaryRow(
-                    'Card:', '${billingProvider.cardAmountController.text}'),
+                    'billing.card'.tr, '${billingProvider.cardAmountController.text}'),
               if (billingProvider.isUpiSelected &&
                   billingProvider.upiAmountController.text.isNotEmpty)
                 _buildSummaryRow(
-                    'UPI:', '${billingProvider.upiAmountController.text}'),
+                    'billing.upi'.tr, '${billingProvider.upiAmountController.text}'),
               if (billingProvider.transactionNumberController.text.isNotEmpty)
-                _buildSummaryRow('Transaction Ref:',
+                _buildSummaryRow('billing.transaction_reference'.tr,
                     billingProvider.transactionNumberController.text),
               const SizedBox(height: 16),
               Row(
@@ -546,9 +543,9 @@ class _BillingWidgetState extends State<BillingWidget> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue[700],
                     ),
-                    child: const Text(
-                      'DONE',
-                      style: TextStyle(color: Colors.white),
+                    child: Text(
+                      'billing.done'.tr,
+                      style: const TextStyle(color: Colors.white),
                     ),
                   ),
                 ],

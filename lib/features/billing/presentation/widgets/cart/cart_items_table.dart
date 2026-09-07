@@ -307,7 +307,7 @@ class CartItemsTable extends StatelessWidget {
     final variantLabel = item.variantLabel;
     if (variantLabel.isEmpty) {
       return Text(
-        item.product.productName ?? 'general.unknown'.tr,
+        item.product.localizedName ?? 'general.unknown'.tr,
         style: buildCustomStyle(
           FontWeightManager.regular,
           12,
@@ -324,7 +324,7 @@ class CartItemsTable extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          item.product.productName ?? 'general.unknown'.tr,
+          item.product.localizedName ?? 'general.unknown'.tr,
           style: buildCustomStyle(
             FontWeightManager.regular,
             12,

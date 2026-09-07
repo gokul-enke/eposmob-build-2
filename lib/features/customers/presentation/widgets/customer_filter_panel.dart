@@ -239,7 +239,7 @@ class CustomerFilterPanel extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onReset,
                   icon: const Icon(Icons.restart_alt_rounded, size: 18),
-                  label: const Text('Reset filters'),
+                  label: Text('customers.reset_filters'.tr),
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size.fromHeight(44),
                     foregroundColor: ColorManager.kPrimaryColor,

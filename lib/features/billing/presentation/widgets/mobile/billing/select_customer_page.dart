@@ -299,7 +299,7 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
                               const SizedBox(height: 12),
                               TextButton(
                                 onPressed: _loadCustomers,
-                                child: const Text('Retry'),
+                                child: Text('general.retry'.tr),
                               ),
                             ],
                           ),

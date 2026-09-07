@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/features/billing/domain/payment_validation.dart';
@@ -11,6 +12,7 @@ import '../providers/customer_provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/delivery_methods_provider.dart';
 import '../models/delivery_method.dart';
+import '../models/delivery_method_registry.dart';
 import '../providers/sales_provider.dart';
 
 class BillingProvider extends ChangeNotifier {
@@ -143,9 +145,9 @@ class BillingProvider extends ChangeNotifier {
         // Optional callback for UI feedback
         if (onConnectivityChanged != null && !_isManualOfflineMode) {
           if (!isConnected) {
-            onConnectivityChanged('No internet connection');
+            onConnectivityChanged('billing.internet_lost'.tr);
           } else {
-            onConnectivityChanged('Internet connection restored');
+            onConnectivityChanged('billing.internet_restored'.tr);
           }
         }
       });
@@ -549,12 +551,12 @@ class BillingProvider extends ChangeNotifier {
   // Phone number validation logic
   bool validatePhoneNumber(String phone) {
     if (phone.isEmpty) {
-      setPhoneValidation(false, "Phone number is required");
+      setPhoneValidation(false, 'billing.phone_required'.tr);
       return false;
     }
 
     if (phone.length < 10) {
-      setPhoneValidation(false, "Phone number must be at least 10 digits");
+      setPhoneValidation(false, 'billing.phone_min_length'.tr);
       return false;
     }
 
@@ -690,7 +692,7 @@ class BillingProvider extends ChangeNotifier {
 
   bool validateCart() {
     if (_cartProductItems == null || _cartProductItems!.isEmpty) {
-      _cartValidationError = "Cart is empty";
+      _cartValidationError = 'billing.empty_cart'.tr;
       _isCartValid = false;
       notifyListeners();
       return false;
@@ -703,14 +705,14 @@ class BillingProvider extends ChangeNotifier {
       final customMRP = _customMRPs[i];
 
       if (customPrice != null && customPrice <= 0) {
-        _cartValidationError = "Invalid price for item ${item.productName}";
+        _cartValidationError = 'billing.invalid_price_item'.trParams({'name': item.productName ?? ''});
         _isCartValid = false;
         notifyListeners();
         return false;
       }
 
       if (customMRP != null && customMRP <= 0) {
-        _cartValidationError = "Invalid MRP for item ${item.productName}";
+        _cartValidationError = 'billing.invalid_mrp_item'.trParams({'name': item.productName ?? ''});
         _isCartValid = false;
         notifyListeners();
         return false;
@@ -834,21 +836,21 @@ class BillingProvider extends ChangeNotifier {
 
   bool validateProduct() {
     if (_selectedProduct == null) {
-      _productValidationError = "No product selected";
+      _productValidationError = 'billing.no_product_selected'.tr;
       _isProductValid = false;
       notifyListeners();
       return false;
     }
 
     if (_selectedProductName.isEmpty) {
-      _productValidationError = "Product name is required";
+      _productValidationError = 'billing.product_name_required'.tr;
       _isProductValid = false;
       notifyListeners();
       return false;
     }
 
     if (_hasStockTracking && !_isStockSufficient) {
-      _productValidationError = "Insufficient stock available";
+      _productValidationError = 'billing.insufficient_stock'.tr;
       _isProductValid = false;
       notifyListeners();
       return false;
@@ -1447,7 +1449,7 @@ class BillingProvider extends ChangeNotifier {
   // Delivery helpers
   bool requiresCarNumber() {
     try {
-      return (deliveryMethod == "Car Delivery");
+      return DeliveryMethodRegistry.requiresCarNumber(deliveryMethod);
     } catch (_) {
       return false;
     }
@@ -1855,7 +1857,8 @@ class BillingProvider extends ChangeNotifier {
 
   // Validate delivery requirements
   bool validateDelivery() {
-    if (_deliveryMethod == "Car Delivery" && _carNumber.isEmpty) {
+    if (DeliveryMethodRegistry.requiresCarNumber(_deliveryMethod) &&
+        _carNumber.isEmpty) {
       return false;
     }
     return true;
@@ -2116,7 +2119,7 @@ class BillingProvider extends ChangeNotifier {
       _toCustomerCreditEnabled = (order['toCustomerCredit'] == true);
 
       // Restore delivery information
-      _deliveryMethod = order['deliveryMethod'] ?? 'Store Takeaway';
+      _deliveryMethod = order['deliveryMethod'] ?? 'billing.store_takeaway'.tr;
       _deliveryMethodId = order['deliveryMethodId'] ?? '';
       _carNumber = order['carNumber'] ?? '';
       _orderComment = order['comment'] ?? '';
@@ -2235,10 +2238,10 @@ class BillingProvider extends ChangeNotifier {
       setCouponValidationError(null);
 
       if (couponCode.isEmpty) {
-        setCouponValidationError("Coupon code is required");
+        setCouponValidationError('billing.coupon_code_required'.tr);
         return {
           'success': false,
-          'message': 'Coupon code is required',
+          'message': 'billing.coupon_code_required'.tr,
         };
       }
 
@@ -2274,32 +2277,32 @@ class BillingProvider extends ChangeNotifier {
 
           return {
             'success': true,
-            'message': result['message'] ?? 'Coupon Applied Successfully',
+            'message': result['message'] ?? 'billing.msg_coupon_applied'.tr,
             'discountAmount': discountAmount,
             'discountedTotal': discountedTotal,
           };
         } else {
           // Handle failure
           setCouponValidationError(
-              result['message'] ?? 'Failed to Apply Coupon');
+              result['message'] ?? 'billing.msg_coupon_failed'.tr);
           return {
             'success': false,
-            'message': result['message'] ?? 'Failed to Apply Coupon',
+            'message': result['message'] ?? 'billing.msg_coupon_failed'.tr,
           };
         }
       } else {
-        setCouponValidationError('Error Occurred! Try Again');
+        setCouponValidationError('billing.msg_error'.tr);
         return {
           'success': false,
-          'message': 'Error Occurred! Try Again',
+          'message': 'billing.msg_error'.tr,
         };
       }
     } catch (e) {
       debugPrint('Error in applyCoupon: $e');
-      setCouponValidationError('Network error occurred');
+      setCouponValidationError('billing.network_error'.tr);
       return {
         'success': false,
-        'message': 'Network error occurred',
+        'message': 'billing.network_error'.tr,
       };
     }
   }
@@ -2834,7 +2837,7 @@ class BillingProvider extends ChangeNotifier {
   void initializeDeliveryMethod() {
     // Set initial default values
     final defaultMethod = getDefaultDeliveryMethod();
-    _deliveryMethod = defaultMethod?.name ?? "Store Takeaway";
+    _deliveryMethod = defaultMethod?.name ?? 'billing.store_takeaway'.tr;
     _deliveryMethodId = defaultMethod?.id ?? "";
     notifyListeners();
   }
@@ -2885,20 +2888,20 @@ class BillingProvider extends ChangeNotifier {
     }
   }
 
-  /// Get default delivery method (Store Takeaway)
+  /// Get default delivery method (store takeaway).
+  ///
+  /// Matched on [DeliveryMethod.kind] rather than the English display name, so
+  /// it keeps working once the API returns localized names.
   DeliveryMethod? getDefaultDeliveryMethod() {
-    try {
-      return _deliveryMethods.firstWhere(
-        (method) => method.name.toLowerCase().contains('store takeaway'),
-        orElse: () => _deliveryMethods.isNotEmpty
-            ? _deliveryMethods.first
-            : DeliveryMethod(id: "11", name: "Store Takeaway"),
-      );
-    } catch (e) {
-      return _deliveryMethods.isNotEmpty
-          ? _deliveryMethods.first
-          : DeliveryMethod(id: "11", name: "Store Takeaway");
+    for (final method in _deliveryMethods) {
+      if (method.kind == DeliveryKind.storeTakeaway) return method;
     }
+    if (_deliveryMethods.isNotEmpty) return _deliveryMethods.first;
+    return DeliveryMethod(
+      id: "11",
+      name: "Store Takeaway",
+      code: "STORE_TAKEAWAY",
+    );
   }
 
   static int _debugBalanceCalcCount = 0;
@@ -3121,19 +3124,21 @@ class BillingProvider extends ChangeNotifier {
     // Build label using methods that mirror billing_page.dart semantics
     final methods = getSelectedPaymentMethodsExcludingEmpty();
     final List<String> activeMethods = [];
-    if (methods.contains("CASH")) activeMethods.add("Cash");
-    if (methods.contains("CARD")) activeMethods.add("Card");
-    if (methods.contains("UPI")) activeMethods.add("UPI");
-    if (methods.contains("COD")) activeMethods.add("COD");
-    if (methods.contains("ONLINE")) activeMethods.add("Online");
+    if (methods.contains("CASH")) activeMethods.add('billing.cash'.tr);
+    if (methods.contains("CARD")) activeMethods.add('billing.card'.tr);
+    if (methods.contains("UPI")) activeMethods.add('billing.upi'.tr);
+    if (methods.contains("COD")) activeMethods.add('billing.cod'.tr);
+    if (methods.contains("ONLINE")) activeMethods.add('billing.payment_online'.tr);
     // DEBIT is not shown in label for collected payments
 
     if (activeMethods.isEmpty) {
-      return "Select Payment Method";
+      return 'billing.select_payment_method'.tr;
     } else if (activeMethods.length == 1) {
       return activeMethods.first;
     } else {
-      return "Multi-Payment (${activeMethods.length})";
+      return 'billing.multi_payment'.trParams({
+        'count': '${activeMethods.length}',
+      });
     }
   }
 

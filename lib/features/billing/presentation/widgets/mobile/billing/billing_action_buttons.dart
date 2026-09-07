@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
@@ -129,7 +130,7 @@ class BillingActionButtons extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Semantics(
-            label: 'Create Quotation',
+            label: 'billing.create_quotation'.tr,
             button: true,
             child: ExcludeSemantics(
               child: ElevatedButton.icon(
@@ -144,8 +145,8 @@ class BillingActionButtons extends StatelessWidget {
                       )
                     : const Icon(Icons.request_quote_outlined,
                         color: Colors.white, size: 18),
-                label: const Text(
-                  'Create Quotation',
+                label: Text(
+                  'billing.create_quotation'.tr,
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -173,7 +174,7 @@ class BillingActionButtons extends StatelessWidget {
             children: [
               Expanded(
                 child: Semantics(
-                  label: 'Create Quotation and Print',
+                  label: 'billing.create_quotation_and_print'.tr,
                   button: true,
                   child: ExcludeSemantics(
                     child: ElevatedButton.icon(
@@ -188,8 +189,8 @@ class BillingActionButtons extends StatelessWidget {
                             )
                           : const Icon(Icons.print,
                               color: Colors.white, size: 18),
-                      label: const Text(
-                        'Create & Print',
+                      label: Text(
+                        'billing.create_and_print'.tr,
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -217,13 +218,13 @@ class BillingActionButtons extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Semantics(
-                  label: 'Quotation List',
+                  label: 'billing.quotation_list'.tr,
                   button: true,
                   child: ExcludeSemantics(
                     child: OutlinedButton.icon(
                       icon: const Icon(Icons.list_alt, size: 18),
-                      label: const Text(
-                        'Quotation List',
+                      label: Text(
+                        'billing.quotation_list'.tr,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,

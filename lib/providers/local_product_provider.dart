@@ -19,6 +19,7 @@ import '../providers/app_settings_provider.dart';
 import '../providers/master_data_provider.dart';
 import '../providers/shared_preferences.dart' as prefs_provider;
 import '../widgets/stock_selection_modal.dart' show buildStockGroupingKey;
+import '../resources/api_locale.dart';
 
 /// A model representing a local cart item.
 /// It holds a product and its associated quantity in the offline cart.
@@ -2270,13 +2271,20 @@ class LocalProductProvider extends ChangeNotifier {
               Map<String, dynamic>.from(baseUri.queryParameters)
                 ..addAll(queryParams);
 
-          final url = baseUri.replace(queryParameters: finalQueryParams);
+          final url = ApiLocale.apply(
+            baseUri.replace(queryParameters: finalQueryParams),
+          );
 
-          futures.add(http.get(url, headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $accessToken',
-            'X-Tenant': apiKey,
-          }));
+          futures.add(http.get(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $accessToken',
+              'X-Tenant': apiKey,
+              if (ApiLocale.enabled && ApiLocale.isLocalized(url))
+                'Accept-Language': ApiLocale.current,
+            },
+          ));
         }
 
         // Wait for all requests in batch to complete
@@ -2318,7 +2326,7 @@ class LocalProductProvider extends ChangeNotifier {
               continue;
             }
 
-            allProducts.addAll(getProductModel.product!);
+           allProducts.addAll(getProductModel.product!);
             debugPrint(
                 '✅ [API] Page $pageNum: $productsFetched products (Total: ${allProducts.length})');
 

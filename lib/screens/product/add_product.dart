@@ -1319,10 +1319,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                         ),
                                                       ),
                                                       _buildTableCell(
-                                                        "${product.price?.price ?? 'N/A'}",
+                                                        "${product.price?.price ?? 'supplier_details.na'.tr}",
                                                       ),
                                                       _buildTableCell(
-                                                        "${product.mrp ?? 'N/A'}",
+                                                        "${product.mrp ?? 'supplier_details.na'.tr}",
                                                       ),
                                                       if (canViewPurchasePrice)
                                                         _buildTableCell(() {
@@ -1344,7 +1344,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                           final finalPrice =
                                                               productPurchasePrice ??
                                                                   stockPurchasePrice ??
-                                                                  'N/A';
+                                                                  'supplier_details.na'.tr;
 
                                                           debugPrint(
                                                             "🔍 PURCHASE PRICE DEBUG for ${product.productName}:",
@@ -1366,7 +1366,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                               .toString();
                                                         }()),
                                                       _buildTableCell(
-                                                        product.unit ?? 'N/A',
+                                                        product.unit ?? 'supplier_details.na'.tr,
                                                       ),
                                                       TableCell(
                                                         verticalAlignment:
@@ -1390,7 +1390,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                                 Flexible(
                                                                   child: Text(
                                                                     product.barcode ??
-                                                                        'N/A',
+                                                                        'supplier_details.na'.tr,
                                                                     maxLines: 2,
                                                                     overflow:
                                                                         TextOverflow

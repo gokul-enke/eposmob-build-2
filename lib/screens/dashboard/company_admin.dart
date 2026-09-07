@@ -981,7 +981,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        "Low Stock Alert",
+                        "company_admin.low_stock_alert".tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s15,
@@ -1905,7 +1905,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
     String subtitle = _getCardSubtitle(title);
 
     return DashboardStatCard(
-      title: title,
+      title: "dashboard.cards.${title.toLowerCase()}".tr,
       subtitle: subtitle,
       value: valueText,
       color: color,

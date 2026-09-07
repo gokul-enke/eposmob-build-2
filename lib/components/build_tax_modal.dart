@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 
 /// Shows per-tax-name amounts using the same data/format as desktop billing.
@@ -36,7 +37,7 @@ void showTaxDetailsBreakdown(
                 alignment: Alignment.centerRight,
                 child: ElevatedButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Close'),
+                  child: Text('general.close'.tr),
                 ),
               ),
             ],

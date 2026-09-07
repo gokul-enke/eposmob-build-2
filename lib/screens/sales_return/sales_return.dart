@@ -1121,9 +1121,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     if (cartItemId <= 0) {
       showScaffoldError(
         context: context,
-        message:
-            'This item cannot be returned because its cart item ID is missing. '
-            'Please refresh the order and try again.',
+        message: 'sales_return_form.error_missing_cart_item_id'.tr,
       );
       return;
     }

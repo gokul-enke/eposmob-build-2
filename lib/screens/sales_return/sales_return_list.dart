@@ -395,7 +395,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                   List<OrderReturnItem> returnItems = order.items.map((item) {
                     return OrderReturnItem(
                       id: item.id,
-                      productName: item.cartItem.product?.name ?? 'Unknown',
+                      productName: item.cartItem.product?.name ?? 'general.unknown'.tr,
                       quantity: item.quantity,
                       reason: item.reason,
                     );
@@ -663,7 +663,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                           order.items.map((item) {
                         return OrderReturnItem(
                           id: item.id,
-                          productName: item.cartItem.product?.name ?? 'Unknown',
+                          productName: item.cartItem.product?.name ?? 'general.unknown'.tr,
                           quantity: item.quantity,
                           reason: item.reason,
                         );

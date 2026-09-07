@@ -51,10 +51,10 @@ class _AddCustomersScreenState extends State<AddCustomersScreen> {
                           onPressed: () {
                             sideBarController.index.value = 5;
                           },
-                          text: 'All Customers',
+                          text: 'add_customer.back_to_customers'.tr,
                         ),
                         Text(
-                          'Add New Customer',
+                          'add_customer.title'.tr,
                           style: buildCustomStyle(FontWeightManager.semiBold,
                               FontSize.s20, 0.30, ColorManager.textColor),
                         ),

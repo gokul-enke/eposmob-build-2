@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/features/billing/domain/billing_crash_guards.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/models/delivery_method_registry.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
@@ -82,8 +84,8 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
             ),
             child: Text(
               deliveryProvider.isLoading
-                  ? 'Loading delivery methods...'
-                  : 'No delivery methods available',
+                  ? 'delivery_form.loading'.tr
+                  : 'delivery_form.empty'.tr,
               style: TextStyle(
                 fontSize: 13,
                 color: Colors.grey.shade700,
@@ -176,9 +178,9 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
         // Optional Car Delivery fields
         if (bp.requiresCarNumber()) ...[
           const SizedBox(height: 16),
-          const Text(
-            'Car Number:',
-            style: TextStyle(
+          Text(
+            'delivery_form.label_car_number'.tr,
+            style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
@@ -188,7 +190,7 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
           TextField(
             controller: bp.carNumberController,
             decoration: InputDecoration(
-              hintText: 'Enter car number...',
+              hintText: 'delivery_form.hint_car_number'.tr,
               filled: true,
               fillColor: const Color(0xFFF8FAFC),
               contentPadding:
@@ -217,16 +219,16 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
           ),
         ],
 
-        // Optional Door Delivery Address fields
-        if (bp.deliveryMethod == "Door Delivery") ...[
+        // Optional door-delivery address fields
+        if (DeliveryMethodRegistry.requiresAddress(bp.deliveryMethod)) ...[
           const SizedBox(height: 16),
           // Customer Address suggestions if selected
           if (customerProvider.hasSelectedCustomer &&
               customerProvider.selectedCustomer?.addresses != null &&
               customerProvider.selectedCustomer!.addresses!.isNotEmpty) ...[
-            const Text(
-              'Choose an address:',
-              style: TextStyle(
+            Text(
+              'delivery_form.label_choose_address'.tr,
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
                 color: Colors.black54,
@@ -265,9 +267,9 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
             ),
             const SizedBox(height: 12),
           ],
-          const Text(
-            'Address:',
-            style: TextStyle(
+          Text(
+            'delivery_form.label_address'.tr,
+            style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
@@ -278,7 +280,7 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
             controller: _addressController,
             maxLines: 2,
             decoration: InputDecoration(
-              hintText: 'Enter delivery address...',
+              hintText: 'delivery_form.hint_address'.tr,
               filled: true,
               fillColor: const Color(0xFFF8FAFC),
               contentPadding:
@@ -309,10 +311,10 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
 
         if (askDeliveryDate) ...[
           const SizedBox(height: 16),
-          const Text(
-            'Delivery Date:',
-            key: Key('delivery_date_label'),
-            style: TextStyle(
+          Text(
+            'delivery_form.label_delivery_date'.tr,
+            key: const Key('delivery_date_label'),
+            style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
@@ -324,10 +326,10 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
             onDateSelected: (date) => bp.setDeliveryDate(date),
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Delivery Time:',
-            key: Key('delivery_time_label'),
-            style: TextStyle(
+          Text(
+            'delivery_form.label_delivery_time'.tr,
+            key: const Key('delivery_time_label'),
+            style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
@@ -345,9 +347,9 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
         const Divider(height: 32, thickness: 1, color: Color(0xFFF1F5F9)),
 
         // Comment section
-        const Text(
-          'Comment:',
-          style: TextStyle(
+        Text(
+          'delivery_form.label_comment'.tr,
+          style: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.bold,
             color: Colors.black87,
@@ -359,7 +361,7 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
           maxLines: 3,
           minLines: 3,
           decoration: InputDecoration(
-            hintText: 'Add special instructions or comments...',
+            hintText: 'delivery_form.hint_comment'.tr,
             filled: true,
             fillColor: const Color(0xFFF8FAFC),
             contentPadding:

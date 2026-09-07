@@ -1342,13 +1342,13 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
   String? _validateReceiveItemFields(PurchaseOrderItem item) {
     final itemName = item.productData?.productName ?? 'Selected item';
     if ((double.tryParse(item.retailPrice) ?? 0) <= 0) {
-      return '$itemName: retail price is required';
+      return '$itemName: ${'purchase_order.error_retail_price_required'.tr}';
     }
     if ((double.tryParse(item.wholesalePrice) ?? 0) <= 0) {
-      return '$itemName: wholesale price is required';
+      return '$itemName: ${'purchase_order.error_wholesale_price_required'.tr}';
     }
     if ((double.tryParse(item.mrp) ?? 0) <= 0) {
-      return '$itemName: MRP is required';
+      return '$itemName: ${'purchase_order.error_mrp_required'.tr}';
     }
     return null;
   }
@@ -1356,14 +1356,14 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
   String? _validatePurchaseItemFields(PurchaseOrderItem item) {
     final itemName = item.productData?.productName ?? 'Selected item';
     if ((double.tryParse(item.quantity) ?? 0) <= 0) {
-      return '$itemName: quantity must be greater than zero';
+      return '$itemName: ${'purchase_order.error_quantity_zero'.tr}';
     }
     if ((double.tryParse(item.purchaseRate) ?? 0) < 0) {
-      return '$itemName: purchase rate cannot be negative';
+      return '$itemName: ${'purchase_order.error_purchase_rate_negative'.tr}';
     }
     if (item.selectedPurchaseUnit != null &&
         (double.tryParse(item.purchaseQty ?? '') ?? 0) <= 0) {
-      return '$itemName: purchase quantity must be greater than zero';
+      return '$itemName: ${'purchase_order.error_purchase_quantity_zero'.tr}';
     }
 
     final purchaseDay = DateTime(
@@ -1378,13 +1378,13 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         item.expDate!.day,
       );
       if (expiryDay.isBefore(purchaseDay)) {
-        return '$itemName: expiry date cannot be before purchase date';
+        return '$itemName: ${'purchase_order.error_expiry_before_purchase'.tr}';
       }
     }
     if (item.pkgMfg != null &&
         item.expDate != null &&
         item.pkgMfg!.isAfter(item.expDate!)) {
-      return '$itemName: manufacturing date cannot be after expiry date';
+      return '$itemName: ${'purchase_order.error_manufacturing_after_expiry'.tr}';
     }
     return null;
   }
@@ -1946,9 +1946,9 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
   @override
   Widget build(BuildContext context) {
     if (!canViewPurchasePrice(context)) {
-      return const SafeArea(
+      return SafeArea(
         child: Center(
-          child: Text('Purchase permission is required to create orders.'),
+          child: Text('purchase_order.permission_required_create'.tr),
         ),
       );
     }
@@ -2640,7 +2640,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Sale-unit price overrides (optional)',
+            'purchase_order.label_sale_unit_overrides'.tr,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s12,
@@ -2667,7 +2667,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                   ],
                   decoration: InputDecoration(
                     labelText: unitLabel(id),
-                    hintText: 'Use default price',
+                    hintText: 'purchase_order.hint_use_default_price'.tr,
                     prefixText: '$_currency ',
                     border: const OutlineInputBorder(),
                     isDense: true,
@@ -2677,7 +2677,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                     if (text.isEmpty) return null;
                     final price = double.tryParse(text);
                     return price == null || price < 0
-                        ? 'Enter a valid price'
+                        ? 'purchase_order.error_invalid_price'.tr
                         : null;
                   },
                   onChanged: (value) {

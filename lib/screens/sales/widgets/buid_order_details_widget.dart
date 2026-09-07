@@ -13,6 +13,7 @@ import '../../../resources/color_manager.dart';
 import '../../../resources/font_manager.dart';
 import '../../../resources/style_manager.dart';
 import '../../../responsive.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 import 'order_documents_section.dart';
 
 class OrderDetailWidget extends StatelessWidget {
@@ -765,7 +766,7 @@ class OrderDetailWidget extends StatelessWidget {
         border: Border.all(color: textColor.withOpacity(0.3)),
       ),
       child: Text(
-        status.toUpperCase(),
+        UiCodeLabels.status(status),
         style: TextStyle(
           color: textColor,
           fontSize: 12,
