@@ -874,6 +874,7 @@
     "language_select": "اختر اللغة"
   },
   "billing_mobile_errors": {
+    "product_out_of_stock": "@product غير متوفر في المخزون ولا يمكن بيعه",
     "empty_cart": "يرجى إضافة عناصر إلى السلة",
     "clear_cart_failed": "فشل مسح السلة. يرجى المحاولة مرة أخرى.",
     "save_order_failed": "فشل حفظ الطلب. يرجى المحاولة مرة أخرى.",

@@ -101,6 +101,13 @@ class BillingMobileErrorMessages {
   static String productNotSellable(String productName) =>
       '$productName is marked as not sellable';
 
+  /// Shown when POS_HIDE_NONSTOCK_PRODUCT hides an item that was reached via
+  /// barcode scan or search rather than the (already filtered) product grid.
+  static String productOutOfStock(String productName) =>
+      'billing_mobile_errors.product_out_of_stock'.trParams(
+        {'product': productName},
+      );
+
   // Coupon / discount
   static String get emptyCartDiscount => 'billing_mobile_errors.empty_cart_discount'.tr;
   static String get discountNegative => 'billing_mobile_errors.discount_negative'.tr;
@@ -225,6 +232,22 @@ class BillingMobileSettingsController {
     final allowed = appSettings?.allowOverselling ?? true;
     localProductProvider.setAllowOverselling(allowed);
     return allowed;
+  }
+
+  /// Mirrors POS_HIDE_NONSTOCK_PRODUCT into the product provider so every
+  /// catalog listing hides out-of-stock items. Returns the raw setting; the
+  /// provider decides whether stock tracking makes it effective.
+  bool syncHideNonStockProduct({
+    required AppSettings? appSettings,
+    required LocalProductProvider localProductProvider,
+    int? activeStoreId,
+  }) {
+    final hide = appSettings?.posHideNonStockProduct ?? false;
+    localProductProvider.setHideNonStockProduct(
+      hide,
+      activeStoreId: activeStoreId,
+    );
+    return hide;
   }
 
   bool isBarcodeSalesEnabled(AppSettings? appSettings) {

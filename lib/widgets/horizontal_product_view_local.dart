@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/widgets/price_selection_modal.dart';
 import 'package:pos_machine/widgets/product_card_widget.dart';
@@ -187,7 +188,18 @@ class _HorizontalProductViewLocalState
   Widget build(BuildContext context) {
     return Consumer<GridSelectionProvider>(
       builder: (context, gridProvider, child) {
-        final products = gridProvider.quickAccessProductList ?? [];
+        // Quick-access products come from their own provider, so apply the
+        // POS_HIDE_NONSTOCK_PRODUCT rule here too.
+        final quickAccess =
+            gridProvider.quickAccessProductList ?? <GetProduct>[];
+        final products = NonStockVisibility.isEnabledIn(context)
+            ? NonStockVisibility.filterProducts(
+                quickAccess,
+                hideNonStockProduct: true,
+                stockEnabled: true,
+                activeStoreId: NonStockVisibility.activeStoreIdOf(context),
+              )
+            : quickAccess;
 
         if (products.isEmpty) {
           return Container();

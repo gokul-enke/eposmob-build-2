@@ -9,6 +9,7 @@ import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/quantity_input_helper.dart';
 import 'package:pos_machine/helpers/product_search_helper.dart';
+import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
 import 'package:pos_machine/features/billing/domain/product_variant_selection.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -409,14 +410,18 @@ class LocalProductProvider extends ChangeNotifier {
   List<GetProduct> get filteredProducts => _filteredProducts;
 
   /// Returns only sellable products from filtered list (for billing screens)
-  /// Products with null sellable are treated as sellable (default behavior)
-  List<GetProduct> get sellableFilteredProducts =>
-      _filteredProducts.where((p) => p.sellable != false).toList();
+  /// Products with null sellable are treated as sellable (default behavior).
+  /// Out-of-stock products are additionally hidden when the
+  /// POS_HIDE_NONSTOCK_PRODUCT setting is active.
+  List<GetProduct> get sellableFilteredProducts => applyNonStockVisibility(
+      _filteredProducts.where((p) => p.sellable != false).toList());
 
   /// Returns only sellable products from complete list (for billing screens)
-  /// Products with null sellable are treated as sellable (default behavior)
-  List<GetProduct> get sellableProducts =>
-      _products.where((p) => p.sellable != false).toList();
+  /// Products with null sellable are treated as sellable (default behavior).
+  /// Out-of-stock products are additionally hidden when the
+  /// POS_HIDE_NONSTOCK_PRODUCT setting is active.
+  List<GetProduct> get sellableProducts => applyNonStockVisibility(
+      _products.where((p) => p.sellable != false).toList());
 
   // Currently selected product (for showing product details).
   GetProduct? _selectedProduct;
@@ -540,6 +545,15 @@ class LocalProductProvider extends ChangeNotifier {
   bool? _stockEnabled;
   bool _allowOverselling = true;
 
+  // POS_HIDE_NONSTOCK_PRODUCT: hides out-of-stock products/rows from every POS
+  // listing. Injected from AppSettingsProvider by the billing entry points,
+  // and only honored while stock tracking is enabled.
+  bool _hideNonStockProduct = false;
+
+  // Active store used to scope stock rows when deciding visibility, so stock
+  // held by another branch never keeps a sold-out product on screen.
+  int? _visibilityStoreId;
+
   // Discount management
   double _flatDiscount = 0.0;
   double _percentageDiscount = 0.0;
@@ -563,6 +577,48 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   bool get allowOverselling => _allowOverselling;
+
+  /// Mirrors the POS_HIDE_NONSTOCK_PRODUCT app setting. Billing entry points
+  /// call this alongside [setStockEnabled] so every catalog listing reacts to
+  /// the tenant configuration without reading providers itself.
+  void setHideNonStockProduct(bool hide, {int? activeStoreId}) {
+    final changed =
+        _hideNonStockProduct != hide || _visibilityStoreId != activeStoreId;
+    _hideNonStockProduct = hide;
+    _visibilityStoreId = activeStoreId;
+    if (changed) {
+      debugPrint('📦 Hide non-stock products updated: $_hideNonStockProduct '
+          '(store: $_visibilityStoreId)');
+      notifyListeners();
+    }
+  }
+
+  /// True when out-of-stock products/rows must be hidden from POS listings.
+  /// Requires stock tracking, otherwise quantities are not maintained and the
+  /// entire catalog would read as zero.
+  bool get hideNonStockProduct => NonStockVisibility.isActive(
+        hideNonStockProduct: _hideNonStockProduct,
+        stockEnabled: isStockEnabled,
+      );
+
+  /// Applies the POS_HIDE_NONSTOCK_PRODUCT rule to [products]. Returns the
+  /// list unchanged when the setting is off.
+  List<GetProduct> applyNonStockVisibility(List<GetProduct> products) =>
+      NonStockVisibility.filterProducts(
+        products,
+        hideNonStockProduct: _hideNonStockProduct,
+        stockEnabled: isStockEnabled,
+        activeStoreId: _visibilityStoreId,
+      );
+
+  /// Whether [product] may be shown/billed under the current settings.
+  bool isProductVisible(GetProduct product) {
+    if (!hideNonStockProduct) return true;
+    return NonStockVisibility.isProductVisible(
+      product,
+      activeStoreId: _visibilityStoreId,
+    );
+  }
 
   /// Active stock grouping fields, mirrored from [MasterDataProvider] so cart
   /// merge decisions use the same pricing signature as stock grouping. Defaults

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
 import 'package:pos_machine/features/billing/domain/product_variant_selection.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/mobile_sheet_header.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -101,10 +102,14 @@ class _MobileVariantPickerSheetState extends State<_MobileVariantPickerSheet> {
   @override
   void initState() {
     super.initState();
-    final active = ProductVariantSelection.activeVariantsForStore(
+    var active = ProductVariantSelection.activeVariantsForStore(
       widget.product,
       activeStoreId: widget.activeStoreId,
     );
+    // Never pre-select a variant the list is about to hide.
+    if (NonStockVisibility.isEnabledIn(context, listen: false)) {
+      active = NonStockVisibility.visibleVariants(active);
+    }
     if (active.length == 1) {
       _selected = active.first;
     }
@@ -135,10 +140,14 @@ class _MobileVariantPickerSheetState extends State<_MobileVariantPickerSheet> {
 
   Widget _buildContent(
       BuildContext context, ScrollController? scrollController) {
-    final variants = ProductVariantSelection.activeVariantsForStore(
+    final activeVariants = ProductVariantSelection.activeVariantsForStore(
       widget.product,
       activeStoreId: widget.activeStoreId,
     );
+    // POS_HIDE_NONSTOCK_PRODUCT: out-of-stock variants are not offered at all.
+    final variants = NonStockVisibility.isEnabledIn(context)
+        ? NonStockVisibility.visibleVariants(activeVariants)
+        : activeVariants;
     final productPrice =
         ProductVariantSelection.productBasePrice(widget.product);
     final currency =
@@ -217,7 +226,7 @@ class _MobileVariantPickerSheetState extends State<_MobileVariantPickerSheet> {
                                   if (variant.sku != null) ...[
                                     const SizedBox(height: 2),
                                     Text(
-                                      'SKU: ${variant.sku}',
+                                      'product.sku_prefix'.tr + (variant.sku ?? ''),
                                       style: TextStyle(
                                         fontFamily: 'Poppins',
                                         fontSize: 11,
@@ -228,7 +237,7 @@ class _MobileVariantPickerSheetState extends State<_MobileVariantPickerSheet> {
                                   if (outOfStock) ...[
                                     const SizedBox(height: 2),
                                     Text(
-                                      'Out of stock',
+                                      'billing.out_of_stock'.tr,
                                       style: TextStyle(
                                         fontFamily: 'Poppins',
                                         fontSize: 11,
@@ -255,7 +264,8 @@ class _MobileVariantPickerSheetState extends State<_MobileVariantPickerSheet> {
                                 ),
                                 if (variant.quantity != null)
                                   Text(
-                                    'Qty: ${variant.quantity}',
+                                    'general.quantity_prefix'.tr +
+                                        variant.quantity.toString(),
                                     style: TextStyle(
                                       fontFamily: 'Poppins',
                                       fontSize: 11,
@@ -296,8 +306,8 @@ class _MobileVariantPickerSheetState extends State<_MobileVariantPickerSheet> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                child: const Text(
-                  'Add to Cart',
+                child: Text(
+                  'billing.add_to_cart'.tr,
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     color: Colors.white,

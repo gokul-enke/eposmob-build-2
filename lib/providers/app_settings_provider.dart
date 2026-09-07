@@ -22,6 +22,8 @@ class AppSettingsProvider extends ChangeNotifier {
       appSettings?.posAuthenticateClearCart ?? false;
   String get posAuthenticateClearCartKey =>
       appSettings?.posAuthenticateClearCartKey ?? '';
+  bool get posHideNonStockProduct =>
+      appSettings?.posHideNonStockProduct ?? false;
 
   CompanySubscription? get companySubscriptionFallback {
     final settings = _appSettings;

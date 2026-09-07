@@ -69,7 +69,7 @@ void main() {
       await tester.tap(find.text('Red | L'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Add to Cart'));
+      await tester.tap(find.text('Add To Cart'));
       await tester.pumpAndSettle();
 
       expect(selected?.id, 10);
@@ -151,11 +151,11 @@ void main() {
       await tester.pumpAndSettle();
 
       final addButton = tester.widget<ElevatedButton>(
-        find.widgetWithText(ElevatedButton, 'Add to Cart'),
+        find.widgetWithText(ElevatedButton, 'Add To Cart'),
       );
       expect(addButton.onPressed, isNotNull);
 
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Add to Cart'));
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Add To Cart'));
       await tester.pumpAndSettle();
 
       expect(selected?.formattedAttributes, 'Blue | M');

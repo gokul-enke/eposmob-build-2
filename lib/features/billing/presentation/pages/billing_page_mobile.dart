@@ -10,6 +10,7 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
@@ -333,6 +334,11 @@ class BillingPageMobileState extends State<BillingPageMobile>
       appSettings: appSettings,
       localProductProvider: localProductProvider,
     );
+    _settingsController.syncHideNonStockProduct(
+      appSettings: appSettings,
+      localProductProvider: localProductProvider,
+      activeStoreId: NonStockVisibility.activeStoreIdOf(context),
+    );
     _settingsController.syncAppSettingsFlags(
       appSettings: appSettings,
       billingProvider: billingProvider,
@@ -363,6 +369,14 @@ class BillingPageMobileState extends State<BillingPageMobile>
         localProductProvider:
             Provider.of<LocalProductProvider>(context, listen: false),
       );
+      // stock_enabled gates POS_HIDE_NONSTOCK_PRODUCT, so re-apply visibility
+      // whenever stock tracking is toggled.
+      _settingsController.syncHideNonStockProduct(
+        appSettings: appSettingsProvider.appSettings,
+        localProductProvider:
+            Provider.of<LocalProductProvider>(context, listen: false),
+        activeStoreId: NonStockVisibility.activeStoreIdOf(context),
+      );
     };
     generalSettingsProvider.addListener(_generalSettingsListener!);
     _generalSettingsListener!();
@@ -376,6 +390,12 @@ class BillingPageMobileState extends State<BillingPageMobile>
         appSettings: appSettings,
         localProductProvider:
             Provider.of<LocalProductProvider>(context, listen: false),
+      );
+      _settingsController.syncHideNonStockProduct(
+        appSettings: appSettings,
+        localProductProvider:
+            Provider.of<LocalProductProvider>(context, listen: false),
+        activeStoreId: NonStockVisibility.activeStoreIdOf(context),
       );
       _settingsController.syncAppSettingsFlags(
         appSettings: appSettings,

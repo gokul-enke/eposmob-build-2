@@ -53,6 +53,7 @@ import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/providers/quotations_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
+import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -327,6 +328,10 @@ class BillingPageState extends State<BillingPage>
         Provider.of<AppSettingsProvider>(context, listen: false);
     localProductProvider.setAllowOverselling(
       appSettingsProvider.appSettings?.allowOverselling ?? true,
+    );
+    localProductProvider.setHideNonStockProduct(
+      appSettingsProvider.appSettings?.posHideNonStockProduct ?? false,
+      activeStoreId: NonStockVisibility.activeStoreIdOf(context),
     );
   }
 

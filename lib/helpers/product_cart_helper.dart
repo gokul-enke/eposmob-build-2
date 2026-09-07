@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
 import 'package:pos_machine/features/billing/domain/product_variant_selection.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/mobile_variant_picker_sheet.dart';
@@ -109,6 +110,7 @@ class ProductCartHelper {
     bool variantsOn = variantEnabled ?? false;
     bool variantSettingResolved = variantEnabled != null;
     bool allowOverselling = true;
+    bool hideNonStockSetting = false;
     int? activeStoreId;
     String? activeStoreName;
     try {
@@ -125,6 +127,8 @@ class ProductCartHelper {
           Provider.of<AppSettingsProvider>(context, listen: false);
       allowOverselling =
           appSettingsProvider.appSettings?.allowOverselling ?? true;
+      hideNonStockSetting =
+          appSettingsProvider.appSettings?.posHideNonStockProduct ?? false;
       if (variantEnabled == null) {
         variantsOn =
             appSettingsProvider.appSettings?.productVariantEnabled ?? false;
@@ -264,6 +268,37 @@ class ProductCartHelper {
     // Set the stock enabled status in LocalProductProvider
     localProductProvider.setStockEnabled(stockEnabled);
     localProductProvider.setAllowOverselling(allowOverselling);
+    localProductProvider.setHideNonStockProduct(
+      hideNonStockSetting,
+      activeStoreId: activeStoreId,
+    );
+
+    // POS_HIDE_NONSTOCK_PRODUCT only takes effect while stock is tracked;
+    // otherwise quantities are not maintained and everything reads as zero.
+    final bool hideNonStockProduct = NonStockVisibility.isActive(
+      hideNonStockProduct: hideNonStockSetting,
+      stockEnabled: stockEnabled,
+    );
+    debugPrint("📦 Hide non-stock products: $hideNonStockProduct");
+
+    // The grids already hide these products, but barcode scans and search
+    // adds bypass the grid — block them here so a hidden product can never
+    // be billed from any entry point.
+    if (hideNonStockProduct &&
+        !NonStockVisibility.isProductVisible(
+          product,
+          activeStoreId: activeStoreId,
+        )) {
+      showScaffoldError(
+        context: context,
+        message: BillingMobileErrorMessages.productOutOfStock(
+          product.localizedName ?? product.productName ?? 'This product',
+        ),
+      );
+      debugPrint("❌ Product is out of stock and hidden — aborting add");
+      debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
+      return;
+    }
 
     // Mirror the configured grouping fields so cart merge decisions use the
     // same pricing signature as stock grouping.
@@ -302,8 +337,10 @@ class ProductCartHelper {
           activeStoreId: activeStoreId,
           activeStoreName: activeStoreName,
           // Keep zero-quantity rows selectable in strict mode so the
-          // cashier can explicitly approve a one-time oversell.
-          includeNonPositive: true,
+          // cashier can explicitly approve a one-time oversell. When
+          // POS_HIDE_NONSTOCK_PRODUCT is on, the tenant has opted out of
+          // that: empty rows must never reach the selection modal.
+          includeNonPositive: !hideNonStockProduct,
         ),
         selectedVariant?.id,
       );
@@ -776,7 +813,9 @@ class ProductCartHelper {
                 if (warrantyCondition?.isNotEmpty == true) ...[
                   const SizedBox(height: 8),
                   Text(
-                    'Warranty condition: $warrantyCondition',
+                    'billing.warranty_condition'.trParams(
+                      {'condition': warrantyCondition ?? ''},
+                    ),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -789,8 +828,8 @@ class ProductCartHelper {
                   onChanged: (value) =>
                       setDialogState(() => enabled = value ?? false),
                   title: Text('ui_chrome.enable_warranty'.tr),
-                  subtitle: const Text(
-                    'Select this only when the customer accepts warranty coverage.',
+                  subtitle: Text(
+                    'billing.warranty_accept_hint'.tr,
                   ),
                 ),
               ],

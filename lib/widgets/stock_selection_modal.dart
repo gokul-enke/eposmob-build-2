@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -167,11 +168,18 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
             ?.currency ??
         'INR';
 
+    // POS_HIDE_NONSTOCK_PRODUCT: drop empty stock rows before grouping so a
+    // zero-quantity batch never appears as a selectable option.
+    final hideNonStockProduct = NonStockVisibility.isEnabledIn(context);
+    final stockOptions = hideNonStockProduct
+        ? NonStockVisibility.visibleStocks(widget.stockOptions)
+        : widget.stockOptions;
+
     // Group stocks by pricing information (using master data active fields)
     final masterDataProvider =
         Provider.of<MasterDataProvider>(context, listen: false);
     List<CombinedStock> combinedStocks = groupStocksByPricing(
-      widget.stockOptions,
+      stockOptions,
       activeFields: masterDataProvider.activeStockGroupingFields,
     );
 

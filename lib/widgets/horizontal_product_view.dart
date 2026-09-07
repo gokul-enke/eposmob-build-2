@@ -8,6 +8,7 @@ import '../providers/cart_provider.dart';
 import '../providers/auth_model.dart';
 import '../models/get_product.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 
 class HorizontalProductView extends StatefulWidget {
@@ -33,8 +34,19 @@ class _HorizontalProductViewState extends State<HorizontalProductView> {
     final gridProvider =
         Provider.of<GridSelectionProvider>(context, listen: false);
     await gridProvider.listQuickAccessProducts();
+    if (!mounted) return;
+    // Respect POS_HIDE_NONSTOCK_PRODUCT for quick-access products too.
+    final quickAccess = gridProvider.quickAccessProductList ?? <GetProduct>[];
+    final visible = NonStockVisibility.isEnabledIn(context, listen: false)
+        ? NonStockVisibility.filterProducts(
+            quickAccess,
+            hideNonStockProduct: true,
+            stockEnabled: true,
+            activeStoreId: NonStockVisibility.activeStoreIdOf(context),
+          )
+        : quickAccess;
     setState(() {
-      products = gridProvider.quickAccessProductList ?? [];
+      products = visible;
     });
   }
 

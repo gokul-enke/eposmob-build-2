@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter/services.dart';
+import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
@@ -119,7 +120,16 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
   void _syncStockEnabledSetting() {
     final stockEnabled = _generalSettingsProviderForStock?.generalSettings?.stockEnabled ?? false;
-    Provider.of<LocalProductProvider>(context, listen: false).setStockEnabled(stockEnabled);
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    localProductProvider.setStockEnabled(stockEnabled);
+    // POS_HIDE_NONSTOCK_PRODUCT keeps out-of-stock items out of the menu /
+    // products grid. It only applies while stock tracking is enabled.
+    localProductProvider.setHideNonStockProduct(
+      _appSettingsProviderForDefaults?.appSettings?.posHideNonStockProduct ??
+          false,
+      activeStoreId: NonStockVisibility.activeStoreIdOf(context),
+    );
   }
 
   @override
@@ -138,7 +148,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
     // Initialize data
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _appSettingsProviderForDefaults = Provider.of<AppSettingsProvider>(context, listen: false)
-        ..addListener(_applyDefaultCounterDeliveryMethodContext);
+        ..addListener(_applyDefaultCounterDeliveryMethodContext)
+        // POS_HIDE_NONSTOCK_PRODUCT lives in app settings, so re-apply
+        // catalog visibility whenever they change.
+        ..addListener(_syncStockEnabledSetting);
       _deliveryMethodsProviderForDefaults =
           Provider.of<DeliveryMethodsProvider>(context, listen: false)
             ..addListener(_applyDefaultCounterDeliveryMethodContext);
@@ -153,6 +166,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   @override
   void dispose() {
     _appSettingsProviderForDefaults?.removeListener(_applyDefaultCounterDeliveryMethodContext);
+    _appSettingsProviderForDefaults?.removeListener(_syncStockEnabledSetting);
     _deliveryMethodsProviderForDefaults?.removeListener(_applyDefaultCounterDeliveryMethodContext);
     _generalSettingsProviderForStock?.removeListener(_syncStockEnabledSetting);
     HardwareKeyboard.instance.removeHandler(_onRestaurantHardwareKey);
@@ -2938,7 +2952,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
                                   size: 18,
                                 ),
                                 label: Text(
-                                  'View Order  •  $itemCount item${itemCount == 1 ? '' : 's'}',
+                                  'restaurant.view_order_items'.trParams({
+                                    'count': itemCount.toString(),
+                                  }),
                                   style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w800,
