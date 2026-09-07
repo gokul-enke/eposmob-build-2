@@ -63,6 +63,17 @@ class APPUrl {
   static String get getListOrderDetails =>
       '$baseURL/api/v1/order/executive/order-details';
 
+  // Order fulfilment (external delivery and packing)
+  static String get externalLogistics =>
+      '$baseURL/api/v1/order/external-logistics';
+  static String externalLogisticWarehouses(int externalLogisticId) =>
+      '$baseURL/api/v1/order/external-logistics/$externalLogisticId/warehouses';
+  static String createExternalDelivery(String orderNumber) =>
+      '$baseURL/api/v1/order/order-details/${Uri.encodeComponent(orderNumber)}/external-delivery';
+  static String packingForOrder(String orderNumber) =>
+      '$baseURL/api/v1/order/packing/${Uri.encodeComponent(orderNumber)}';
+  static String get packingStaff => '$baseURL/api/v1/order/packing-staff';
+
   // Order documents — stream raw PDF bytes and require the auth headers,
   // so they must be downloaded programmatically rather than opened as URLs.
   // The order number is encoded rather than interpolated raw: today's values

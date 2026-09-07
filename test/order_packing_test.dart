@@ -11,22 +11,25 @@ void main() {
     expect(packing.hasDetails, isTrue);
   });
 
-  test('combines both packing photo fields without duplicates', () {
+  test('prefers display URLs while retaining stored photo paths', () {
     final packing = OrderDetailsModelDataPacking.fromJson({
       'packing_photos': [
         'https://example.com/packing-1.jpg',
         'https://example.com/packing-2.jpg',
       ],
       'packing_photo_paths': [
-        'https://example.com/packing-2.jpg',
-        'https://example.com/packing-3.jpg',
+        'orders/packing/photos/packing-1.jpg',
+        'orders/packing/photos/packing-2.jpg',
       ],
     });
 
     expect(packing.photosForDisplay, [
       'https://example.com/packing-1.jpg',
       'https://example.com/packing-2.jpg',
-      'https://example.com/packing-3.jpg',
+    ]);
+    expect(packing.packingPhotoPaths, [
+      'orders/packing/photos/packing-1.jpg',
+      'orders/packing/photos/packing-2.jpg',
     ]);
   });
 }

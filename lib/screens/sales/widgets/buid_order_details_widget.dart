@@ -15,12 +15,14 @@ import '../../../resources/style_manager.dart';
 import '../../../responsive.dart';
 import 'package:pos_machine/helpers/ui_code_labels.dart';
 import 'order_documents_section.dart';
+import 'order_fulfillment_actions.dart';
 
 class OrderDetailWidget extends StatelessWidget {
   final OrderDetailsModelData? orderDetailsModelData;
   final OrderDetailsModelDataCustomerDetails? customerDetails;
   final List<OrderDetailsModelDataCartItem>? cartItem;
   final OrderDetailsModelDataPriceSummary? priceSummary;
+  final Future<void> Function()? onFulfillmentUpdated;
 
   const OrderDetailWidget({
     Key? key,
@@ -28,6 +30,7 @@ class OrderDetailWidget extends StatelessWidget {
     required this.priceSummary,
     required this.cartItem,
     required this.customerDetails,
+    this.onFulfillmentUpdated,
   }) : super(key: key);
 
   // Calculate total MRP from all cart items
@@ -167,433 +170,427 @@ class OrderDetailWidget extends StatelessWidget {
                   _buildCustomerHeader(context),
                   // Cart Items - cards on mobile, table on desktop
                   _buildCartItemsTable(currency, context),
-                        Align(
-                          alignment: Alignment.bottomCenter,
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 14.0),
-                            child: Column(
-                              children: [
-                                // Displaying Price Summary
-                                BuildPaymentRow(
-                                  amount:
-                                      "$currency ${_formatAmount(effectivePriceSummary.netTotal)}",
-                                  title: 'sales_order_details.label_net_total_inc_tax'.tr,
-                                  color: ColorManager.textColor,
-                                  firstRowTextStyle: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    FontSize.s14,
-                                    0.21,
-                                    ColorManager.textColor,
-                                  ),
-                                  secondRowTextStyle: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    FontSize.s14,
-                                    0.21,
-                                    ColorManager.textColor,
-                                  ),
-                                ),
-                                BuildPaymentRow(
-                                  amount:
-                                      "$currency ${_formatAmount(effectivePriceSummary.netExcTax ?? orderDetailsModelData?.cart?.priceSummary?.netExcTax)}",
-                                  title: 'sales_order_details.label_net_total_exc_tax'.tr,
-                                  color: ColorManager.textColor,
-                                ),
-                                BuildPaymentRow(
-                                  amount:
-                                      "$currency ${_formatAmount(effectivePriceSummary.discount)}",
-                                  title: 'sales_order_details.label_discount'.tr,
-                                  color: ColorManager.textColor,
-                                ),
-                                BuildPaymentRow(
-                                  amount:
-                                      "$currency ${_formatAmount(effectivePriceSummary.totalTax)}",
-                                  title: (effectivePriceSummary.discount ?? 0) > 0
-                                      ? 'sales_order_details.label_tax_after_discount'.tr
-                                      : 'sales_order_details.label_tax_amount'.tr,
-                                  color: ColorManager.textColor,
-                                ),
-                                const Divider(thickness: 2),
-                                BuildPaymentRow(
-                                  amount:
-                                      "$currency ${_formatAmount(effectivePriceSummary.netPayable)}",
-                                  title: 'sales_order_details.label_payable'.tr,
-                                  secondRowTextStyle: buildCustomStyle(
-                                    FontWeightManager.bold,
-                                    FontSize.s15,
-                                    0.23,
-                                    ColorManager.kButtonGreen,
-                                  ),
-                                  firstRowTextStyle: buildCustomStyle(
-                                    FontWeightManager.bold,
-                                    FontSize.s15,
-                                    0.23,
-                                    ColorManager.kButtonGreen,
-                                  ),
-                                  color: ColorManager.kButtonGreen,
-                                ),
-                                BuildPaymentRow(
-                                  amount:
-                                      "$currency ${_balanceAmount(effectivePriceSummary).toStringAsFixed(2)}",
-                                  title: 'sales_order_details.label_balance_amount'.tr,
-                                  secondRowTextStyle: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s12,
-                                    0.18,
-                                    ColorManager.textColorRed,
-                                  ),
-                                  firstRowTextStyle: buildCustomStyle(
-                                    FontWeightManager.bold,
-                                    FontSize.s15,
-                                    0.23,
-                                    ColorManager.textColorRed,
-                                  ),
-                                  color: ColorManager.textColorRed,
-                                ),
-                                const SizedBox(height: 5),
-                              ],
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 14.0),
+                      child: Column(
+                        children: [
+                          // Displaying Price Summary
+                          BuildPaymentRow(
+                            amount:
+                                "$currency ${_formatAmount(effectivePriceSummary.netTotal)}",
+                            title: 'sales_order_details.label_net_total_inc_tax'
+                                .tr,
+                            color: ColorManager.textColor,
+                            firstRowTextStyle: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s14,
+                              0.21,
+                              ColorManager.textColor,
+                            ),
+                            secondRowTextStyle: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s14,
+                              0.21,
+                              ColorManager.textColor,
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 15),
-                      ],
+                          BuildPaymentRow(
+                            amount:
+                                "$currency ${_formatAmount(effectivePriceSummary.netExcTax ?? orderDetailsModelData?.cart?.priceSummary?.netExcTax)}",
+                            title: 'sales_order_details.label_net_total_exc_tax'
+                                .tr,
+                            color: ColorManager.textColor,
+                          ),
+                          BuildPaymentRow(
+                            amount:
+                                "$currency ${_formatAmount(effectivePriceSummary.discount)}",
+                            title: 'sales_order_details.label_discount'.tr,
+                            color: ColorManager.textColor,
+                          ),
+                          BuildPaymentRow(
+                            amount:
+                                "$currency ${_formatAmount(effectivePriceSummary.totalTax)}",
+                            title: (effectivePriceSummary.discount ?? 0) > 0
+                                ? 'sales_order_details.label_tax_after_discount'
+                                    .tr
+                                : 'sales_order_details.label_tax_amount'.tr,
+                            color: ColorManager.textColor,
+                          ),
+                          const Divider(thickness: 2),
+                          BuildPaymentRow(
+                            amount:
+                                "$currency ${_formatAmount(effectivePriceSummary.netPayable)}",
+                            title: 'sales_order_details.label_payable'.tr,
+                            secondRowTextStyle: buildCustomStyle(
+                              FontWeightManager.bold,
+                              FontSize.s15,
+                              0.23,
+                              ColorManager.kButtonGreen,
+                            ),
+                            firstRowTextStyle: buildCustomStyle(
+                              FontWeightManager.bold,
+                              FontSize.s15,
+                              0.23,
+                              ColorManager.kButtonGreen,
+                            ),
+                            color: ColorManager.kButtonGreen,
+                          ),
+                          BuildPaymentRow(
+                            amount:
+                                "$currency ${_balanceAmount(effectivePriceSummary).toStringAsFixed(2)}",
+                            title:
+                                'sales_order_details.label_balance_amount'.tr,
+                            secondRowTextStyle: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s12,
+                              0.18,
+                              ColorManager.textColorRed,
+                            ),
+                            firstRowTextStyle: buildCustomStyle(
+                              FontWeightManager.bold,
+                              FontSize.s15,
+                              0.23,
+                              ColorManager.textColorRed,
+                            ),
+                            color: ColorManager.textColorRed,
+                          ),
+                          const SizedBox(height: 5),
+                        ],
+                      ),
                     ),
                   ),
+                  const SizedBox(height: 15),
+                ],
+              ),
+            ),
 
-                  // Order Status Section (BELOW the main card)
-                  if (orderDetailsModelData?.orderStatus != null)
-                    _buildSectionCard(
-                      context: context,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'sales_order_details.title_order_status'.tr,
-                            style: _sectionTitleStyle(context),
-                          ),
-                          const SizedBox(height: 8),
-                          _buildStatusChips(context),
-                        ],
-                      ),
+            // Order Status Section (BELOW the main card)
+            if (orderDetailsModelData?.orderStatus != null)
+              _buildSectionCard(
+                context: context,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'sales_order_details.title_order_status'.tr,
+                      style: _sectionTitleStyle(context),
                     ),
+                    const SizedBox(height: 8),
+                    _buildStatusChips(context),
+                  ],
+                ),
+              ),
 
-                  // Store & Delivery Info Section
-                  if (orderDetailsModelData?.storeName != null ||
-                      orderDetailsModelData?.deliveryMethodName != null)
-                    _buildSectionCard(
-                      context: context,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'sales_order_details.title_store_delivery'.tr,
-                            style: _sectionTitleStyle(context),
-                          ),
-                          const SizedBox(height: 8),
-                          if (orderDetailsModelData?.storeName != null)
-                            _buildInfoRow(context, 'sales_order_details.label_store'.tr,
-                                orderDetailsModelData?.storeName ?? ''),
-                          if (orderDetailsModelData?.deliveryMethodName != null)
-                            _buildInfoRow(
-                                context,
-                                'sales_order_details.label_delivery_method'.tr,
-                                orderDetailsModelData?.deliveryMethodName ??
-                                    ''),
-                          if (orderDetailsModelData?.deliveryDate != null &&
-                              orderDetailsModelData!.deliveryDate!.isNotEmpty)
-                            _buildInfoRow(
-                                context,
-                                'sales_order_details.label_delivery_date_value'
-                                    .tr,
-                                // Formatted here rather than left to
-                                // _formatOrderPropertyValue, which dispatches on
-                                // the English label and so would pass the raw
-                                // ISO date straight through in Arabic.
-                                DateHelper.formatISODate(
-                                    orderDetailsModelData?.deliveryDate ?? '')),
-                          if (orderDetailsModelData?.deliveryTime != null &&
-                              orderDetailsModelData!.deliveryTime!.isNotEmpty)
-                            _buildInfoRow(
-                                context,
-                                'sales_order_details.label_delivery_time_value'.tr,
-                                orderDetailsModelData?.deliveryTime ?? ''),
-                          if (orderDetailsModelData?.deliveryCharge != null)
-                            _buildInfoRow(
-                                context,
-                                'sales_order_details.label_delivery_charge'.tr,
-                                '$currency ${_formatAmount(orderDetailsModelData?.deliveryCharge)}'),
-                        ],
-                      ),
+            // Store & Delivery Info Section
+            if (orderDetailsModelData?.storeName != null ||
+                orderDetailsModelData?.deliveryMethodName != null)
+              _buildSectionCard(
+                context: context,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'sales_order_details.title_store_delivery'.tr,
+                      style: _sectionTitleStyle(context),
                     ),
+                    const SizedBox(height: 8),
+                    if (orderDetailsModelData?.storeName != null)
+                      _buildInfoRow(
+                          context,
+                          'sales_order_details.label_store'.tr,
+                          orderDetailsModelData?.storeName ?? ''),
+                    if (orderDetailsModelData?.deliveryMethodName != null)
+                      _buildInfoRow(
+                          context,
+                          'sales_order_details.label_delivery_method'.tr,
+                          orderDetailsModelData?.deliveryMethodName ?? ''),
+                    if (orderDetailsModelData?.deliveryDate != null &&
+                        orderDetailsModelData!.deliveryDate!.isNotEmpty)
+                      _buildInfoRow(
+                          context,
+                          'sales_order_details.label_delivery_date_value'.tr,
+                          // Formatted here rather than left to
+                          // _formatOrderPropertyValue, which dispatches on
+                          // the English label and so would pass the raw
+                          // ISO date straight through in Arabic.
+                          DateHelper.formatISODate(
+                              orderDetailsModelData?.deliveryDate ?? '')),
+                    if (orderDetailsModelData?.deliveryTime != null &&
+                        orderDetailsModelData!.deliveryTime!.isNotEmpty)
+                      _buildInfoRow(
+                          context,
+                          'sales_order_details.label_delivery_time_value'.tr,
+                          orderDetailsModelData?.deliveryTime ?? ''),
+                    if (orderDetailsModelData?.deliveryCharge != null)
+                      _buildInfoRow(
+                          context,
+                          'sales_order_details.label_delivery_charge'.tr,
+                          '$currency ${_formatAmount(orderDetailsModelData?.deliveryCharge)}'),
+                  ],
+                ),
+              ),
 
-                  // Payment Details Section
-                  if (orderDetailsModelData?.paymentDetails != null)
-                    _buildSectionCard(
-                      context: context,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'sales_order_details.title_payment_details'.tr,
-                            style: _sectionTitleStyle(context),
-                          ),
-                          const SizedBox(height: 8),
-                          if (orderDetailsModelData
-                                  ?.paymentDetails?.paymentMethod !=
-                              null)
-                            _buildInfoRow(
-                                context,
-                                'sales_order_details.label_payment_method'.tr,
-                                orderDetailsModelData
-                                        ?.paymentDetails?.paymentMethod ??
-                                    ''),
-                          if (orderDetailsModelData
-                                  ?.paymentDetails?.transactionId !=
-                              null)
-                            _buildInfoRow(
-                                context,
-                                'sales_order_details.label_transaction_id'.tr,
-                                orderDetailsModelData
-                                        ?.paymentDetails?.transactionId
-                                        ?.toString() ??
-                                    ''),
-                          if (orderDetailsModelData
-                                  ?.paymentDetails?.paymentId !=
-                              null)
-                            _buildInfoRow(
-                                context,
-                                'sales_order_details.label_payment_id'.tr,
-                                orderDetailsModelData
-                                        ?.paymentDetails?.paymentId ??
-                                    ''),
+            // Payment Details Section
+            if (orderDetailsModelData?.paymentDetails != null)
+              _buildSectionCard(
+                context: context,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'sales_order_details.title_payment_details'.tr,
+                      style: _sectionTitleStyle(context),
+                    ),
+                    const SizedBox(height: 8),
+                    if (orderDetailsModelData?.paymentDetails?.paymentMethod !=
+                        null)
+                      _buildInfoRow(
+                          context,
+                          'sales_order_details.label_payment_method'.tr,
+                          orderDetailsModelData
+                                  ?.paymentDetails?.paymentMethod ??
+                              ''),
+                    if (orderDetailsModelData?.paymentDetails?.transactionId !=
+                        null)
+                      _buildInfoRow(
+                          context,
+                          'sales_order_details.label_transaction_id'.tr,
+                          orderDetailsModelData?.paymentDetails?.transactionId
+                                  ?.toString() ??
+                              ''),
+                    if (orderDetailsModelData?.paymentDetails?.paymentId !=
+                        null)
+                      _buildInfoRow(
+                          context,
+                          'sales_order_details.label_payment_id'.tr,
+                          orderDetailsModelData?.paymentDetails?.paymentId ??
+                              ''),
 
-                          // Add payment breakdown
-                          if (orderDetailsModelData?.payments != null &&
-                              (orderDetailsModelData?.payments?.isNotEmpty ??
-                                  false)) ...[
-                            const SizedBox(height: 8),
+                    // Add payment breakdown
+                    if (orderDetailsModelData?.payments != null &&
+                        (orderDetailsModelData?.payments?.isNotEmpty ??
+                            false)) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        "${'sales_order_details.label_payment_breakdown'.tr}:",
+                        style: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s12,
+                          0.18,
+                          ColorManager.textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      ...(orderDetailsModelData?.payments?.entries
+                              .map(
+                                (entry) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 2),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          entry.key,
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s11,
+                                            0.16,
+                                            ColorManager.textColor,
+                                          ),
+                                        ),
+                                      ),
+                                      Text(
+                                        '$currency ${entry.value}',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.semiBold,
+                                          FontSize.s11,
+                                          0.16,
+                                          ColorManager.kPrimaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                              ?.toList() ??
+                          []),
+
+                      // Add total payment amount
+                      if ((orderDetailsModelData?.payments?.isNotEmpty ??
+                          false)) ...[
+                        const Divider(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
                             Text(
-                              "${'sales_order_details.label_payment_breakdown'.tr}:",
+                              "${'sales_order_details.label_total_paid'.tr}:",
                               style: buildCustomStyle(
-                                FontWeightManager.medium,
+                                FontWeightManager.semiBold,
                                 FontSize.s12,
                                 0.18,
                                 ColorManager.textColor,
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            ...(orderDetailsModelData?.payments?.entries
-                                    .map(
-                                      (entry) => Padding(
-                                        padding:
-                                            const EdgeInsets.only(bottom: 2),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                entry.key,
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s11,
-                                                  0.16,
-                                                  ColorManager.textColor,
-                                                ),
-                                              ),
-                                            ),
-                                            Text(
-                                              '$currency ${entry.value}',
-                                              style: buildCustomStyle(
-                                                FontWeightManager.semiBold,
-                                                FontSize.s11,
-                                                0.16,
-                                                ColorManager.kPrimaryColor,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    )
-                                    ?.toList() ??
-                                []),
-
-                            // Add total payment amount
-                            if ((orderDetailsModelData?.payments?.isNotEmpty ??
-                                false)) ...[
-                              const Divider(height: 8),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    "${'sales_order_details.label_total_paid'.tr}:",
-                                    style: buildCustomStyle(
-                                      FontWeightManager.semiBold,
-                                      FontSize.s12,
-                                      0.18,
-                                      ColorManager.textColor,
-                                    ),
-                                  ),
-                                  Text(
-                                    '$currency ${_calculateTotalPayments(orderDetailsModelData?.payments ?? {})}',
-                                    style: buildCustomStyle(
-                                      FontWeightManager.bold,
-                                      FontSize.s12,
-                                      0.18,
-                                      ColorManager.kPrimaryColor,
-                                    ),
-                                  ),
-                                ],
+                            Text(
+                              '$currency ${_calculateTotalPayments(orderDetailsModelData?.payments ?? {})}',
+                              style: buildCustomStyle(
+                                FontWeightManager.bold,
+                                FontSize.s12,
+                                0.18,
+                                ColorManager.kPrimaryColor,
                               ),
-                            ],
+                            ),
                           ],
-                        ],
-                      ),
+                        ),
+                      ],
+                    ],
+                  ],
+                ),
+              ),
+
+            // Customer Extended Info Section
+            if (customerDetails?.email != null ||
+                customerDetails?.alternatePhone != null ||
+                (orderDetailsModelData?.getCustomerAddressFromProps() ?? '')
+                    .isNotEmpty ||
+                (customerDetails?.address != null &&
+                    (customerDetails?.address?.isNotEmpty ?? false)))
+              _buildSectionCard(
+                context: context,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'sales_order_details.title_customer_information'.tr,
+                      style: _sectionTitleStyle(context),
                     ),
+                    const SizedBox(height: 8),
+                    if (customerDetails?.email != null)
+                      _buildInfoRow(
+                          context,
+                          'sales_order_details.label_email'.tr,
+                          customerDetails?.email ?? ''),
+                    if (customerDetails?.alternatePhone != null &&
+                        customerDetails!.alternatePhone!.isNotEmpty)
+                      _buildInfoRow(
+                          context,
+                          'sales_order_details.label_alternate_phone'.tr,
+                          customerDetails?.alternatePhone ?? ''),
+                    if ((orderDetailsModelData?.getCustomerAddressFromProps() ??
+                            '')
+                        .isNotEmpty)
+                      _buildInfoRow(
+                          context,
+                          'sales_order_details.label_address'.tr,
+                          orderDetailsModelData
+                                  ?.getCustomerAddressFromProps() ??
+                              ''),
+                    if (customerDetails?.address != null &&
+                        (customerDetails?.address?.isNotEmpty ?? false) &&
+                        (orderDetailsModelData?.getCustomerAddressFromProps() ??
+                                '')
+                            .isEmpty)
+                      _buildInfoRow(
+                          context,
+                          'sales_order_details.label_address'.tr,
+                          _formatCustomerAddressList(customerDetails?.address)),
+                  ],
+                ),
+              ),
 
-                  // Customer Extended Info Section
-                  if (customerDetails?.email != null ||
-                      customerDetails?.alternatePhone != null ||
-                      (orderDetailsModelData?.getCustomerAddressFromProps() ??
-                              '')
-                          .isNotEmpty ||
-                      (customerDetails?.address != null &&
-                          (customerDetails?.address?.isNotEmpty ?? false)))
-                    _buildSectionCard(
-                      context: context,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'sales_order_details.title_customer_information'.tr,
-                            style: _sectionTitleStyle(context),
-                          ),
-                          const SizedBox(height: 8),
-                          if (customerDetails?.email != null)
-                            _buildInfoRow(
-                                context, 'sales_order_details.label_email'.tr, customerDetails?.email ?? ''),
-                          if (customerDetails?.alternatePhone != null &&
-                              customerDetails!.alternatePhone!.isNotEmpty)
-                            _buildInfoRow(
-                                context,
-                                'sales_order_details.label_alternate_phone'.tr,
-                                customerDetails?.alternatePhone ?? ''),
-                          if ((orderDetailsModelData
-                                      ?.getCustomerAddressFromProps() ??
-                                  '')
-                              .isNotEmpty)
-                            _buildInfoRow(
-                                context,
-                                'sales_order_details.label_address'.tr,
-                                orderDetailsModelData
-                                        ?.getCustomerAddressFromProps() ??
-                                    ''),
-                          if (customerDetails?.address != null &&
-                              (customerDetails?.address?.isNotEmpty ?? false) &&
-                              (orderDetailsModelData
-                                          ?.getCustomerAddressFromProps() ??
-                                      '')
-                                  .isEmpty)
-                            _buildInfoRow(
-                                context,
-                                'sales_order_details.label_address'.tr,
-                                _formatCustomerAddressList(
-                                    customerDetails?.address)),
-                        ],
-                      ),
+            if (orderDetailsModelData?.kycInfo?.crNumber != null ||
+                orderDetailsModelData?.kycInfo?.vatNumber != null)
+              _buildSectionCard(
+                context: context,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'sales_order_details.title_kyc_information'.tr,
+                      style: _sectionTitleStyle(context),
                     ),
+                    const SizedBox(height: 8),
+                    if (orderDetailsModelData?.kycInfo?.crNumber != null)
+                      _buildInfoRow(
+                          context,
+                          'sales_order_details.label_cr_number'.tr,
+                          orderDetailsModelData?.kycInfo?.crNumber ?? ''),
+                    if (orderDetailsModelData?.kycInfo?.vatNumber != null)
+                      _buildInfoRow(
+                          context,
+                          'sales_order_details.label_vat_number'.tr,
+                          orderDetailsModelData?.kycInfo?.vatNumber ?? ''),
+                  ],
+                ),
+              ),
 
-                  if (orderDetailsModelData?.kycInfo?.crNumber != null ||
-                      orderDetailsModelData?.kycInfo?.vatNumber != null)
-                    _buildSectionCard(
-                      context: context,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'sales_order_details.title_kyc_information'.tr,
-                            style: _sectionTitleStyle(context),
-                          ),
-                          const SizedBox(height: 8),
-                          if (orderDetailsModelData?.kycInfo?.crNumber != null)
-                            _buildInfoRow(
+            // Always show Shipping Details and Packing. An empty model
+            // lets their existing row placeholders render when the API
+            // has not supplied either record yet.
+            _buildShippingSection(
+              context,
+              orderDetailsModelData?.deliveryAddress ??
+                  OrderDetailsModelDataDeliveryAddress(),
+            ),
+
+            _buildPackingSection(
+              context,
+              orderDetailsModelData?.packing ?? OrderDetailsModelDataPacking(),
+            ),
+
+            // Order Documents Section
+            if ((orderDetailsModelData?.orderNumber ?? '').isNotEmpty)
+              OrderDocumentsSection(
+                orderNumber: orderDetailsModelData!.orderNumber!,
+              ),
+
+            if (orderDetailsModelData?.tokenNumber != null ||
+                orderDetailsModelData?.invoiceHash != null)
+              _ExpandableSection(
+                title: 'sales_order_details.title_order_metadata'.tr,
+                titleStyle: _sectionTitleStyle(context),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (orderDetailsModelData?.tokenNumber != null)
+                      _buildInfoRow(
+                          context,
+                          'sales_order_details.label_token_number'.tr,
+                          orderDetailsModelData?.tokenNumber ?? ''),
+                    if (orderDetailsModelData?.invoiceHash != null)
+                      _buildInfoRow(
+                          context,
+                          'sales_order_details.label_invoice_hash'.tr,
+                          orderDetailsModelData?.invoiceHash ?? ''),
+                  ],
+                ),
+              ),
+
+            // Order Properties Section (Custom Fields)
+            if (orderDetailsModelData?.orderProps != null &&
+                (orderDetailsModelData?.orderProps?.isNotEmpty ?? false))
+              _ExpandableSection(
+                title: 'sales_order_details.title_order_properties'.tr,
+                titleStyle: _sectionTitleStyle(context),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ...(orderDetailsModelData?.orderProps
+                            ?.map((prop) => _buildInfoRow(
                                 context,
-                                'sales_order_details.label_cr_number'.tr,
-                                orderDetailsModelData?.kycInfo?.crNumber ?? ''),
-                          if (orderDetailsModelData?.kycInfo?.vatNumber != null)
-                            _buildInfoRow(
-                                context,
-                                'sales_order_details.label_vat_number'.tr,
-                                orderDetailsModelData?.kycInfo?.vatNumber ??
-                                    ''),
-                        ],
-                      ),
-                    ),
-
-                  // Packing Section — hidden when the order has no packing
-                  // record, matching every other section on this screen.
-                  if (orderDetailsModelData?.packing?.hasDetails ?? false)
-                    _buildPackingSection(
-                        context, orderDetailsModelData!.packing!),
-
-                  // Shipping Details Section — hidden when there is no
-                  // shipping address. Delivery Method alone doesn't justify
-                  // the card; it is already shown under Store & Delivery.
-                  if (orderDetailsModelData?.deliveryAddress?.hasDetails ??
-                      false)
-                    _buildShippingSection(
-                        context, orderDetailsModelData!.deliveryAddress!),
-
-                  // Order Documents Section
-                  if ((orderDetailsModelData?.orderNumber ?? '').isNotEmpty)
-                    OrderDocumentsSection(
-                      orderNumber: orderDetailsModelData!.orderNumber!,
-                    ),
-
-                  if (orderDetailsModelData?.tokenNumber != null ||
-                      orderDetailsModelData?.invoiceHash != null)
-                    _ExpandableSection(
-                      title: 'sales_order_details.title_order_metadata'.tr,
-                      titleStyle: _sectionTitleStyle(context),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (orderDetailsModelData?.tokenNumber != null)
-                            _buildInfoRow(
-                                context,
-                                'sales_order_details.label_token_number'.tr,
-                                orderDetailsModelData?.tokenNumber ?? ''),
-                          if (orderDetailsModelData?.invoiceHash != null)
-                            _buildInfoRow(
-                                context,
-                                'sales_order_details.label_invoice_hash'.tr,
-                                orderDetailsModelData?.invoiceHash ?? ''),
-                        ],
-                      ),
-                    ),
-
-                  // Order Properties Section (Custom Fields)
-                  if (orderDetailsModelData?.orderProps != null &&
-                      (orderDetailsModelData?.orderProps?.isNotEmpty ?? false))
-                    _ExpandableSection(
-                      title: 'sales_order_details.title_order_properties'.tr,
-                      titleStyle: _sectionTitleStyle(context),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ...(orderDetailsModelData?.orderProps
-                                  ?.map((prop) => _buildInfoRow(
-                                      context,
-                                      StringHelper.formatPropCode(
-                                          prop.propsCode ?? ''),
-                                      prop.propsValue ?? ''))
-                                  ?.toList() ??
-                              []),
-                        ],
-                      ),
-                    ),
-                ],
-              );
+                                StringHelper.formatPropCode(
+                                    prop.propsCode ?? ''),
+                                prop.propsValue ?? ''))
+                            ?.toList() ??
+                        []),
+                  ],
+                ),
+              ),
+          ],
+        );
       },
     );
   }
@@ -629,15 +626,9 @@ class OrderDetailWidget extends StatelessWidget {
   Widget _buildCustomerHeader(BuildContext context) {
     final isMobile = ResponsiveWidget.isMobile(context);
     final nameStyle = isMobile
-        ? buildCustomStyle(
-            FontWeightManager.semiBold,
-            FontSize.s14,
-            0.30,
+        ? buildCustomStyle(FontWeightManager.semiBold, FontSize.s14, 0.30,
             ColorManager.textColor)
-        : buildCustomStyle(
-            FontWeightManager.semiBold,
-            FontSize.s24,
-            0.35,
+        : buildCustomStyle(FontWeightManager.semiBold, FontSize.s24, 0.35,
             ColorManager.textColor);
     final dateStyle = buildCustomStyle(
       FontWeightManager.medium,
@@ -862,6 +853,8 @@ class OrderDetailWidget extends StatelessWidget {
     final photos = packing?.photosForDisplay ?? const <String>[];
     final video = packing?.packingVideo ?? '';
     final packedAt = packing?.packedAt ?? '';
+    final packingStatus =
+        (packing?.hasDetails ?? false) ? packing!.isPackedResolved : null;
     // The web view keeps these two apart: `packed_by` is the resolved staff
     // user, `packed_by_name` is the free-text name typed by whoever packed.
     final packedByStaff = packing?.packedByUserName ?? '';
@@ -872,16 +865,26 @@ class OrderDetailWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'sales_order_details.title_packing'.tr,
-            style: _sectionTitleStyle(context),
+          _buildFulfillmentSectionHeader(
+            context,
+            title: 'sales_order_details.title_packing'.tr,
+            action: OrderFulfillmentActionButton(
+              action: OrderFulfillmentAction.packing,
+              orderNumber: orderDetailsModelData?.orderNumber ?? '',
+              orderStatus: orderDetailsModelData?.orderStatus,
+              packing: packing,
+              onSaved: onFulfillmentUpdated,
+            ),
           ),
           const SizedBox(height: 8),
           _buildInfoRow(
             context,
             'sales_order_details.label_packing_status'.tr,
-            (packing?.isPackedResolved ?? false) ? 'sales_order_details.value_packed'.tr
-                : 'sales_order_details.value_not_packed'.tr,
+            packingStatus == null
+                ? _emptyValue
+                : packingStatus
+                    ? 'sales_order_details.value_packed'.tr
+                    : 'sales_order_details.value_not_packed'.tr,
           ),
           _buildInfoRow(
             context,
@@ -903,18 +906,13 @@ class OrderDetailWidget extends StatelessWidget {
             packedByOther.isEmpty ? _emptyValue : packedByOther,
           ),
           if (photos.isEmpty)
-            _buildInfoRow(context, 'sales_order_details.label_packing_photos'.tr, _emptyValue)
+            _buildInfoRow(context,
+                'sales_order_details.label_packing_photos'.tr, _emptyValue)
           else
-            _buildTappableRow(
-              context,
-              'sales_order_details.label_packing_photos'.tr,
-              photos.length == 1
-                  ? 'sales_order_details.value_photo_one'.tr
-                  : "${photos.length} ${'sales_order_details.value_photo_many'.tr}",
-              () => _showPhotoViewer(context, photos),
-            ),
+            _buildPackingPhotoRow(context, photos),
           if (video.isEmpty)
-            _buildInfoRow(context, 'sales_order_details.label_packing_video'.tr, _emptyValue)
+            _buildInfoRow(context, 'sales_order_details.label_packing_video'.tr,
+                _emptyValue)
           else
             _buildTappableRow(
               context,
@@ -933,30 +931,274 @@ class OrderDetailWidget extends StatelessWidget {
       OrderDetailsModelDataDeliveryAddress deliveryAddress) {
     String orEmpty(String? value) =>
         (value == null || value.isEmpty) ? _emptyValue : value;
+    final externalDelivery = orderDetailsModelData?.externalDeliveryJob;
 
     return _buildSectionCard(
       context: context,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'sales_order_details.title_shipping_details'.tr,
-            style: _sectionTitleStyle(context),
+          _buildFulfillmentSectionHeader(
+            context,
+            title: 'sales_order_details.title_shipping_details'.tr,
+            action: externalDelivery?.hasDetails == true
+                ? null
+                : OrderFulfillmentActionButton(
+                    action: OrderFulfillmentAction.externalDelivery,
+                    orderNumber: orderDetailsModelData?.orderNumber ?? '',
+                    orderStatus: orderDetailsModelData?.orderStatus,
+                    onSaved: onFulfillmentUpdated,
+                  ),
           ),
           const SizedBox(height: 8),
           _buildInfoRow(context, 'sales_order_details.label_delivery_method'.tr,
               orEmpty(orderDetailsModelData?.deliveryMethodName)),
+          _buildInfoRow(context, 'sales_order_details.label_address_type'.tr,
+              orEmpty(deliveryAddress.addressType)),
           _buildInfoRow(
-              context, 'sales_order_details.label_address_type'.tr, orEmpty(deliveryAddress.addressType)),
-          _buildInfoRow(context, 'sales_order_details.label_shipping_address'.tr,
+              context,
+              'sales_order_details.label_shipping_address'.tr,
               orEmpty(deliveryAddress.address)),
-          _buildInfoRow(context, 'sales_order_details.label_pincode'.tr, orEmpty(deliveryAddress.pincode)),
-          _buildInfoRow(
-              context, 'sales_order_details.label_district'.tr, orEmpty(deliveryAddress.district)),
-          _buildInfoRow(context, 'sales_order_details.label_state'.tr, orEmpty(deliveryAddress.state)),
-          _buildInfoRow(context, 'sales_order_details.label_city'.tr, orEmpty(deliveryAddress.city)),
-          _buildInfoRow(
-              context, 'sales_order_details.label_landmark'.tr, orEmpty(deliveryAddress.landmark)),
+          _buildInfoRow(context, 'sales_order_details.label_pincode'.tr,
+              orEmpty(deliveryAddress.pincode)),
+          _buildInfoRow(context, 'sales_order_details.label_district'.tr,
+              orEmpty(deliveryAddress.district)),
+          _buildInfoRow(context, 'sales_order_details.label_state'.tr,
+              orEmpty(deliveryAddress.state)),
+          _buildInfoRow(context, 'sales_order_details.label_city'.tr,
+              orEmpty(deliveryAddress.city)),
+          _buildInfoRow(context, 'sales_order_details.label_landmark'.tr,
+              orEmpty(deliveryAddress.landmark)),
+          if (externalDelivery?.hasDetails == true) ...[
+            const Divider(height: 24),
+            _buildInfoRow(
+              context,
+              'sales_order_details.label_shipping_partner'.tr,
+              orEmpty(externalDelivery?.externalLogisticName),
+            ),
+            _buildInfoRow(
+              context,
+              'sales_order_details.label_shipping_method'.tr,
+              orEmpty(externalDelivery?.shippingService),
+            ),
+            _buildInfoRow(
+              context,
+              'sales_order_details.label_transport_mode'.tr,
+              orEmpty(externalDelivery?.transportMode),
+            ),
+            _buildInfoRow(
+              context,
+              'sales_order_details.label_pickup_warehouse'.tr,
+              orEmpty(externalDelivery?.warehouseName),
+            ),
+            _buildInfoRow(
+              context,
+              'sales_order_details.label_delivery_job_status'.tr,
+              orEmpty(externalDelivery?.status),
+            ),
+            _buildInfoRow(
+              context,
+              'sales_order_details.label_payment_mode'.tr,
+              orEmpty(externalDelivery?.paymentMode),
+            ),
+            if ((externalDelivery?.codAmount ?? '').isNotEmpty)
+              _buildInfoRow(
+                context,
+                'sales_order_details.label_cod_amount'.tr,
+                externalDelivery!.codAmount!,
+              ),
+            if ((externalDelivery?.packageCount ?? 0) > 0)
+              _buildInfoRow(
+                context,
+                'sales_order_details.label_package_count'.tr,
+                externalDelivery!.packageCount.toString(),
+              ),
+            if ((externalDelivery?.weight ?? '').isNotEmpty)
+              _buildInfoRow(
+                context,
+                'sales_order_details.label_weight_kg'.tr,
+                externalDelivery!.weight!,
+              ),
+            if ((externalDelivery?.length ?? '').isNotEmpty)
+              _buildInfoRow(
+                context,
+                'sales_order_details.label_length_cm'.tr,
+                externalDelivery!.length!,
+              ),
+            if ((externalDelivery?.breadth ?? '').isNotEmpty)
+              _buildInfoRow(
+                context,
+                'sales_order_details.label_breadth_cm'.tr,
+                externalDelivery!.breadth!,
+              ),
+            if ((externalDelivery?.height ?? '').isNotEmpty)
+              _buildInfoRow(
+                context,
+                'sales_order_details.label_height_cm'.tr,
+                externalDelivery!.height!,
+              ),
+            if ((externalDelivery?.shippingCharge ?? '').isNotEmpty)
+              _buildInfoRow(
+                context,
+                'sales_order_details.label_shipping_charge'.tr,
+                externalDelivery!.shippingCharge!,
+              ),
+            if ((externalDelivery?.externalShipmentId ?? '').isNotEmpty)
+              _buildInfoRow(
+                context,
+                'sales_order_details.label_awb_number'.tr,
+                externalDelivery!.externalShipmentId!,
+              ),
+            if ((externalDelivery?.trackingUrl ?? '').isNotEmpty)
+              _buildTappableRow(
+                context,
+                'sales_order_details.label_tracking_url'.tr,
+                externalDelivery!.trackingUrl!,
+                () => _openExternal(
+                  context,
+                  externalDelivery.trackingUrl!,
+                  failureMessageKey:
+                      'sales_order_details.msg_tracking_open_failed',
+                ),
+              ),
+            if ((externalDelivery?.dispatchDate ?? '').isNotEmpty)
+              _buildInfoRow(
+                context,
+                'sales_order_details.label_dispatch_date'.tr,
+                DateHelper.formatISODate(externalDelivery!.dispatchDate!),
+              ),
+            if ((externalDelivery?.expectedDeliveryAt ?? '').isNotEmpty)
+              _buildInfoRow(
+                context,
+                'sales_order_details.label_expected_delivery'.tr,
+                DateHelper.formatISODateToIST(
+                    externalDelivery!.expectedDeliveryAt!),
+              ),
+            if ((externalDelivery?.remarks ?? '').isNotEmpty)
+              _buildInfoRow(
+                context,
+                'sales_order_details.label_remarks'.tr,
+                externalDelivery!.remarks!,
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFulfillmentSectionHeader(
+    BuildContext context, {
+    required String title,
+    Widget? action,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(title, style: _sectionTitleStyle(context)),
+        ),
+        if (action != null) action,
+      ],
+    );
+  }
+
+  /// Shows compact previews in the summary and keeps the existing full-size
+  /// swipable viewer when any preview is tapped.
+  Widget _buildPackingPhotoRow(BuildContext context, List<String> photos) {
+    final isMobile = ResponsiveWidget.isMobile(context);
+    final label = 'sales_order_details.label_packing_photos'.tr;
+    final labelStyle = buildCustomStyle(
+      FontWeightManager.medium,
+      isMobile ? FontSize.s12 : FontSize.s13,
+      isMobile ? 0.18 : 0.20,
+      ColorManager.blackWithOpacity50,
+    );
+    const previewLimit = 4;
+    final previews = <Widget>[
+      ...photos.take(previewLimit).map<Widget>(
+            (photo) => Tooltip(
+              message: 'sales_order_details.tooltip_view_packing_photos'.tr,
+              child: InkWell(
+                onTap: () => _showPhotoViewer(context, photos),
+                borderRadius: BorderRadius.circular(6),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: SizedBox(
+                    height: 48,
+                    width: 48,
+                    child: Image.network(
+                      photo,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return const Center(
+                          child: SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: Colors.grey.shade100,
+                        child: const Icon(Icons.image_not_supported_outlined),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+    ];
+
+    if (photos.length > previewLimit) {
+      previews.add(
+        InkWell(
+          onTap: () => _showPhotoViewer(context, photos),
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            height: 48,
+            width: 48,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: ColorManager.kPrimaryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              '+${photos.length - previewLimit}',
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s12,
+                0.18,
+                ColorManager.kPrimaryColor,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final previewGrid = Wrap(spacing: 8, runSpacing: 8, children: previews);
+    if (isMobile) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('$label:', style: labelStyle),
+            const SizedBox(height: 6),
+            previewGrid,
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 150, child: Text('$label:', style: labelStyle)),
+          Expanded(child: previewGrid),
         ],
       ),
     );
@@ -1027,7 +1269,11 @@ class OrderDetailWidget extends StatelessWidget {
     );
   }
 
-  Future<void> _openExternal(BuildContext context, String url) async {
+  Future<void> _openExternal(
+    BuildContext context,
+    String url, {
+    String failureMessageKey = 'sales_order_details.msg_video_open_failed',
+  }) async {
     final uri = Uri.tryParse(url);
     bool launched = false;
     if (uri != null) {
@@ -1041,7 +1287,7 @@ class OrderDetailWidget extends StatelessWidget {
     }
     if (!launched && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('sales_order_details.msg_video_open_failed'.tr)),
+        SnackBar(content: Text(failureMessageKey.tr)),
       );
     }
   }
@@ -1226,24 +1472,28 @@ class OrderDetailWidget extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          _buildMobileDetailChip('sales_order_details.th_qty'.tr, _fmtQty(item.quantity)),
+          _buildMobileDetailChip(
+              'sales_order_details.th_qty'.tr, _fmtQty(item.quantity)),
           const SizedBox(height: 6),
-          _buildMobileDetailChip('sales_order_details.th_unit'.tr, _unitText(item)),
+          _buildMobileDetailChip(
+              'sales_order_details.th_unit'.tr, _unitText(item)),
           const SizedBox(height: 6),
           Row(
             children: [
               Expanded(
-                child: _buildMobileDetailChip('sales_order_details.th_mrp'.tr, '$currency ${_fmt(item.mrp)}'),
+                child: _buildMobileDetailChip('sales_order_details.th_mrp'.tr,
+                    '$currency ${_fmt(item.mrp)}'),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _buildMobileDetailChip(
-                    'sales_order_details.th_rate'.tr, '$currency ${_fmt(item.unitPrice)}'),
+                child: _buildMobileDetailChip('sales_order_details.th_rate'.tr,
+                    '$currency ${_fmt(item.unitPrice)}'),
               ),
             ],
           ),
           const SizedBox(height: 6),
-          _buildMobileDetailChip('sales_order_details.th_tax'.tr, '$currency ${_fmt(item.taxAmount)}'),
+          _buildMobileDetailChip('sales_order_details.th_tax'.tr,
+              '$currency ${_fmt(item.taxAmount)}'),
         ],
       ),
     );
@@ -1279,63 +1529,69 @@ class OrderDetailWidget extends StatelessWidget {
 
   Widget _buildDesktopCartItemsTable(String currency) {
     return Table(
-        columnWidths: const {
-          0: FlexColumnWidth(0.5),
-          1: FlexColumnWidth(2.7),
-          2: FlexColumnWidth(1.0),
-          3: FlexColumnWidth(0.6),
-          4: FlexColumnWidth(0.8),
-          5: FlexColumnWidth(1.1),
-          6: FlexColumnWidth(1.0),
-          7: FlexColumnWidth(1.2),
-        },
-        children: [
-          // Header Row
-          TableRow(
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-            ),
-            children: [
-              _buildTableCell('Sl#', isHeader: true),
-              _buildTableCell('DESCRIPTION', isHeader: true),
-              _buildTableCell('sales_order_details.th_mrp'.tr, isHeader: true, align: TextAlign.right),
-              _buildTableCell('sales_order_details.th_qty'.tr, isHeader: true, align: TextAlign.center),
-              _buildTableCell('sales_order_details.th_unit'.tr, isHeader: true, align: TextAlign.center),
-              _buildTableCell('sales_order_details.th_rate'.tr, isHeader: true, align: TextAlign.right),
-              _buildTableCell('sales_order_details.th_tax'.tr, isHeader: true, align: TextAlign.right),
-              _buildTableCell('sales_order_details.th_amount'.tr, isHeader: true, align: TextAlign.right),
-            ],
+      columnWidths: const {
+        0: FlexColumnWidth(0.5),
+        1: FlexColumnWidth(2.7),
+        2: FlexColumnWidth(1.0),
+        3: FlexColumnWidth(0.6),
+        4: FlexColumnWidth(0.8),
+        5: FlexColumnWidth(1.1),
+        6: FlexColumnWidth(1.0),
+        7: FlexColumnWidth(1.2),
+      },
+      children: [
+        // Header Row
+        TableRow(
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
           ),
-          // Data Rows
-          ...List.generate(
-            cartItem?.length ?? 0,
-            (index) {
-              final item = cartItem![index];
-              return TableRow(
-                decoration: BoxDecoration(
-                  color: index.isEven ? Colors.white : Colors.grey.shade50,
-                ),
-                children: [
-                  _buildTableCell('${index + 1}', align: TextAlign.center),
-                  _buildTableCell(item.formattedVariantAttributes.isEmpty
-                      ? (item.productName ?? 'sales_order_details.value_na'.tr)
-                      : '${item.productName ?? 'sales_order_details.value_na'.tr}\n${item.formattedVariantAttributes}'),
-                  _buildTableCell('$currency ${_fmt(item.mrp)}',
-                      align: TextAlign.right),
-                  _buildTableCell('${_fmtQty(item.quantity)}',
-                      align: TextAlign.center),
-                  _buildTableCell(_unitText(item), align: TextAlign.center),
-                  _buildTableCell('$currency ${_fmt(item.unitPrice)}',
-                      align: TextAlign.right),
-                  _buildTableCell('$currency ${_fmt(item.taxAmount)}',
-                      align: TextAlign.right),
-                  _buildTableCell('$currency ${_fmt(item.totalPrice)}',
-                      align: TextAlign.right),
-                ],
-              );
-            },
-          ),
-        ],
+          children: [
+            _buildTableCell('Sl#', isHeader: true),
+            _buildTableCell('DESCRIPTION', isHeader: true),
+            _buildTableCell('sales_order_details.th_mrp'.tr,
+                isHeader: true, align: TextAlign.right),
+            _buildTableCell('sales_order_details.th_qty'.tr,
+                isHeader: true, align: TextAlign.center),
+            _buildTableCell('sales_order_details.th_unit'.tr,
+                isHeader: true, align: TextAlign.center),
+            _buildTableCell('sales_order_details.th_rate'.tr,
+                isHeader: true, align: TextAlign.right),
+            _buildTableCell('sales_order_details.th_tax'.tr,
+                isHeader: true, align: TextAlign.right),
+            _buildTableCell('sales_order_details.th_amount'.tr,
+                isHeader: true, align: TextAlign.right),
+          ],
+        ),
+        // Data Rows
+        ...List.generate(
+          cartItem?.length ?? 0,
+          (index) {
+            final item = cartItem![index];
+            return TableRow(
+              decoration: BoxDecoration(
+                color: index.isEven ? Colors.white : Colors.grey.shade50,
+              ),
+              children: [
+                _buildTableCell('${index + 1}', align: TextAlign.center),
+                _buildTableCell(item.formattedVariantAttributes.isEmpty
+                    ? (item.productName ?? 'sales_order_details.value_na'.tr)
+                    : '${item.productName ?? 'sales_order_details.value_na'.tr}\n${item.formattedVariantAttributes}'),
+                _buildTableCell('$currency ${_fmt(item.mrp)}',
+                    align: TextAlign.right),
+                _buildTableCell('${_fmtQty(item.quantity)}',
+                    align: TextAlign.center),
+                _buildTableCell(_unitText(item), align: TextAlign.center),
+                _buildTableCell('$currency ${_fmt(item.unitPrice)}',
+                    align: TextAlign.right),
+                _buildTableCell('$currency ${_fmt(item.taxAmount)}',
+                    align: TextAlign.right),
+                _buildTableCell('$currency ${_fmt(item.totalPrice)}',
+                    align: TextAlign.right),
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 
