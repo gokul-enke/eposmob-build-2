@@ -245,7 +245,7 @@ class _CartBadge extends StatelessWidget {
     final horizontalPadding = count > 9 ? 5.0 : 6.0;
 
     return Semantics(
-      label: '$count items in cart',
+      label: 'billing.items_in_cart'.trParams({'count': '$count'}),
       child: AnimatedContainer(
         duration: MobileBottomNav._animationDuration,
         curve: MobileBottomNav._animationCurve,

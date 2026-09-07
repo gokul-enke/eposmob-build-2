@@ -114,7 +114,7 @@ class _AddProductImageOrVideoScreenState
                                   BuildTextTile(
                                     isStarRed: true,
                                     isTextField: true,
-                                    title: "Title",
+                                    title: 'product_media.title'.tr,
                                     textStyle: buildCustomStyle(
                                       FontWeightManager.regular,
                                       FontSize.s14,
@@ -151,7 +151,7 @@ class _AddProductImageOrVideoScreenState
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   BuildTextTile(
-                                    title: "alt",
+                                    title: 'product_media.alt'.tr,
                                     isStarRed: true,
                                     isTextField: true,
                                     textStyle: buildCustomStyle(
@@ -195,7 +195,7 @@ class _AddProductImageOrVideoScreenState
                                   BuildTextTile(
                                     isStarRed: true,
                                     isTextField: true,
-                                    title: "File",
+                                    title: 'product_media.file'.tr,
                                     textStyle: buildCustomStyle(
                                       FontWeightManager.regular,
                                       FontSize.s14,
@@ -236,7 +236,7 @@ class _AddProductImageOrVideoScreenState
                                       BuildTextTile(
                                         isStarRed: true,
                                         isTextField: true,
-                                        title: "is Primary",
+                                        title: 'product_media.is_primary'.tr,
                                         textStyle: buildCustomStyle(
                                           FontWeightManager.regular,
                                           FontSize.s14,
@@ -260,7 +260,7 @@ class _AddProductImageOrVideoScreenState
                                   Padding(
                                     padding: const EdgeInsets.only(left: 20.0),
                                     child: CustomRoundButton(
-                                      title: "Select Image",
+                                      title: 'general.select_image'.tr,
                                       fct: () async {
                                         showDialogFunctionForProductDetailsAnimated(
                                             context, 0, imageFiles ?? [], size);
@@ -294,7 +294,7 @@ class _AddProductImageOrVideoScreenState
                               Padding(
                                 padding: const EdgeInsets.only(left: 10.0),
                                 child: CustomRoundButton(
-                                  title: "Add More",
+                                  title: 'general.add_more'.tr,
                                   boxColor: Colors.white,
                                   textColor: ColorManager.kPrimaryColor,
                                   fct: () async {
@@ -365,7 +365,7 @@ class _AddProductImageOrVideoScreenState
                                 Padding(
                                   padding: const EdgeInsets.only(left: 10.0),
                                   child: CustomRoundButton(
-                                    title: "Prev",
+                                    title: 'general.previous'.tr,
                                     boxColor: Colors.white,
                                     textColor: ColorManager.kPrimaryColor,
                                     fct: () async {
@@ -380,14 +380,14 @@ class _AddProductImageOrVideoScreenState
                                 Padding(
                                   padding: const EdgeInsets.only(left: 10.0),
                                   child: CustomRoundButton(
-                                    title: "Submit",
+                                    title: 'general.submit'.tr,
                                     fct: () async {
                                       int? productId =
                                           gridSelectionProvider.getProductId;
                                       if (productId == null) {
                                         showScaffold(
                                           context: context,
-                                          message: 'Failed',
+                                          message: 'general.failed'.tr,
                                         );
                                         // sideBarController.index.value = 14;
                                       } else {
@@ -499,7 +499,7 @@ class _AddProductImageOrVideoScreenState
       bool selectedCheckbox) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       BuildTextTile(
-        title: "Attachment $count",
+        title: '${'product_media.attachment'.tr} $count',
         textStyle: buildCustomStyle(
           FontWeightManager.regular,
           FontSize.s14,
@@ -516,7 +516,7 @@ class _AddProductImageOrVideoScreenState
               BuildTextTile(
                 isStarRed: true,
                 isTextField: true,
-                title: "Title",
+                title: 'product_media.title'.tr,
                 textStyle: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s14,
@@ -552,7 +552,7 @@ class _AddProductImageOrVideoScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               BuildTextTile(
-                title: "alt",
+                title: 'product_media.alt'.tr,
                 isStarRed: true,
                 isTextField: true,
                 textStyle: buildCustomStyle(
@@ -596,7 +596,7 @@ class _AddProductImageOrVideoScreenState
               BuildTextTile(
                 isStarRed: true,
                 isTextField: true,
-                title: "File",
+                    title: 'product_media.file'.tr,
                 textStyle: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s14,
@@ -636,7 +636,7 @@ class _AddProductImageOrVideoScreenState
                   BuildTextTile(
                     isStarRed: true,
                     isTextField: true,
-                    title: "is Primary",
+                    title: 'product_media.is_primary'.tr,
                     textStyle: buildCustomStyle(
                       FontWeightManager.regular,
                       FontSize.s14,
@@ -660,7 +660,7 @@ class _AddProductImageOrVideoScreenState
               Padding(
                 padding: const EdgeInsets.only(left: 20.0),
                 child: CustomRoundButton(
-                  title: "Select Image",
+                  title: 'general.select_image'.tr,
                   fct: () async {
                     showDialogFunctionForProductDetailsAnimatedAddMore(
                         context,
@@ -958,7 +958,7 @@ class _AddProductImageOrVideoScreenState
                                       padding:
                                           const EdgeInsets.only(left: 10.0),
                                       child: CustomRoundButton(
-                                        title: "Cancel",
+                                        title: 'general.cancel'.tr,
                                         boxColor: Colors.white,
                                         textColor: ColorManager.kPrimaryColor,
                                         fct: () async {
@@ -973,7 +973,7 @@ class _AddProductImageOrVideoScreenState
                                       padding:
                                           const EdgeInsets.only(left: 10.0),
                                       child: CustomRoundButton(
-                                        title: "Choose",
+                                        title: 'general.choose'.tr,
                                         boxColor: Colors.white,
                                         textColor: ColorManager.kPrimaryColor,
                                         fct: () async {
@@ -1276,7 +1276,7 @@ class _AddProductImageOrVideoScreenState
                                       padding:
                                           const EdgeInsets.only(left: 10.0),
                                       child: CustomRoundButton(
-                                        title: "Cancel",
+                                        title: 'general.cancel'.tr,
                                         boxColor: Colors.white,
                                         textColor: ColorManager.kPrimaryColor,
                                         fct: () async {
@@ -1291,7 +1291,7 @@ class _AddProductImageOrVideoScreenState
                                       padding:
                                           const EdgeInsets.only(left: 10.0),
                                       child: CustomRoundButton(
-                                        title: "Choose",
+                                        title: 'general.choose'.tr,
                                         boxColor: Colors.white,
                                         textColor: ColorManager.kPrimaryColor,
                                         fct: () async {

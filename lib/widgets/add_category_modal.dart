@@ -1,24 +1,16 @@
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:http/http.dart' as http;
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/language.dart';
 import 'package:pos_machine/newcomponents/custom_container_box.dart';
 import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
-import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/language_provider.dart';
-import 'package:pos_machine/resources/app_url.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/screens/category/category_form_mixin.dart';
 
 class AddCategoryModal extends StatefulWidget {
@@ -56,7 +48,7 @@ class _AddCategoryModalState extends State<AddCategoryModal> with CategoryFormMi
     if (!_formKey.currentState!.validate()) {
       showScaffoldError(
         context: context,
-        message: 'Please fill required fields.',
+        message: 'general.fill_required_fields'.tr,
       );
       return;
     }
@@ -78,7 +70,7 @@ class _AddCategoryModalState extends State<AddCategoryModal> with CategoryFormMi
       if (propertyText.isNotEmpty && productProperty == null) {
         showScaffoldError(
           context: context,
-          message: 'Product Property must be a number.',
+          message: 'category.product_property_number'.tr,
         );
         return;
       }
@@ -108,7 +100,8 @@ class _AddCategoryModalState extends State<AddCategoryModal> with CategoryFormMi
       if (response is Map<String, dynamic> && response['status'] == 'success') {
         showScaffold(
           context: context,
-          message: response['message']?.toString() ?? 'Category added successfully',
+          message: response['message']?.toString() ??
+              'general.category_added_successfully'.tr,
         );
 
         await categoryProvider.refreshManagementCategories();
@@ -120,14 +113,15 @@ class _AddCategoryModalState extends State<AddCategoryModal> with CategoryFormMi
         showScaffoldError(
           context: context,
           message: response is Map<String, dynamic>
-              ? (response['message']?.toString() ?? 'Failed to add category')
-              : 'Failed to add category',
+              ? (response['message']?.toString() ??
+                  'general.failed_to_add_category'.tr)
+              : 'general.failed_to_add_category'.tr,
         );
       }
     } catch (e) {
       showScaffoldError(
         context: context,
-        message: 'Error adding category: ${e.toString()}',
+        message: '${'general.error_prefix'.tr} ${e.toString()}',
       );
     } finally {
       if (mounted) {
@@ -221,7 +215,7 @@ class _AddCategoryModalState extends State<AddCategoryModal> with CategoryFormMi
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Category Name (${language.name})',
+          'category.field_lang_name_prefix'.tr + ' (${language.name})',
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s12,
@@ -263,7 +257,7 @@ class _AddCategoryModalState extends State<AddCategoryModal> with CategoryFormMi
               height: 44,
               width: 44,
               child: Tooltip(
-                message: 'Translate',
+                message: 'general.translate'.tr,
                 child: ElevatedButton(
                   onPressed: languageTranslating[language.id] == true
                       ? null
@@ -304,7 +298,7 @@ class _AddCategoryModalState extends State<AddCategoryModal> with CategoryFormMi
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Select Taxes',
+          'category.select_taxes'.tr,
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s12,
@@ -326,7 +320,7 @@ class _AddCategoryModalState extends State<AddCategoryModal> with CategoryFormMi
           )
         else if (availableTaxes.isEmpty)
           Text(
-            'No taxes available',
+            'category.no_taxes_available'.tr,
             style: buildCustomStyle(
               FontWeightManager.regular,
               FontSize.s11,
@@ -387,7 +381,7 @@ class _AddCategoryModalState extends State<AddCategoryModal> with CategoryFormMi
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Parent Category',
+          'category.parent_category'.tr,
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s12,
@@ -398,7 +392,7 @@ class _AddCategoryModalState extends State<AddCategoryModal> with CategoryFormMi
         const SizedBox(height: 4),
         CustomDropDownWithSearch<Category>(
           title: '',
-          hintText: 'Select Parent Category (optional)',
+          hintText: 'category.select_parent_optional'.tr,
           value: _selectedParent,
           height: 44,
           margin: EdgeInsets.zero,
@@ -473,7 +467,7 @@ class _AddCategoryModalState extends State<AddCategoryModal> with CategoryFormMi
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Create New Category',
+                      'category.new_category'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         FontSize.s16,
@@ -492,13 +486,13 @@ class _AddCategoryModalState extends State<AddCategoryModal> with CategoryFormMi
                 const SizedBox(height: 10),
                 _buildTwoColumnRow(
                   left: _buildTextField(
-                    'Name',
+                    'category.name'.tr,
                     categoryNameController,
                     isRequired: true,
                     onChanged: handleNameChanged,
                   ),
                   right: _buildTextField(
-                    'Slug',
+                    'category.slug'.tr,
                     categorySlugController,
                     isRequired: true,
                     readOnly: true,
@@ -517,7 +511,7 @@ class _AddCategoryModalState extends State<AddCategoryModal> with CategoryFormMi
                 */
                 _buildTwoColumnRow(
                   left: _buildTextField(
-                    'Description',
+                    'category.description'.tr,
                     descriptionController,
                     maxLines: 2,
                   ),
@@ -571,7 +565,7 @@ class _AddCategoryModalState extends State<AddCategoryModal> with CategoryFormMi
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Sellable',
+                        'category.label_sellable'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.regular,
                           FontSize.s12,
@@ -590,7 +584,7 @@ class _AddCategoryModalState extends State<AddCategoryModal> with CategoryFormMi
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Purchasable',
+                        'category.label_purchasable'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.regular,
                           FontSize.s12,

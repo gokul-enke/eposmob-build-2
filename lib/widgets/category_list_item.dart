@@ -1,6 +1,7 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:drag_select_grid_view/drag_select_grid_view.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_category_container.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -112,7 +113,7 @@ class CategoryListItem extends StatelessWidget {
                       // ),
                       labelStyle: buildCustomStyle(FontWeightManager.regular,
                           FontSize.s10, 0.10, ColorManager.textColor),
-                      hintText: 'Search category',
+                      hintText: 'common.search_category'.tr,
                       hintStyle: buildCustomStyle(FontWeightManager.regular,
                           FontSize.s10, 0.13, ColorManager.textColor1),
                     ),
@@ -250,8 +251,10 @@ class CategoryListItem extends StatelessWidget {
                         FontSize.s15, 0.23, Colors.black),
                     children: <TextSpan>[
                       TextSpan(
-                        text:
-                            '(${Provider.of<GridSelectionProvider>(context, listen: true).productList!.length}) items',
+                        text: 'common.items_count'.trParams({
+                          'count':
+                              '${Provider.of<GridSelectionProvider>(context, listen: true).productList!.length}',
+                        }),
                         //  text: '(${categoryProvider.categoryCount}) items',
                         style: buildCustomStyle(FontWeightManager.regular,
                             FontSize.s10, 0.12, Colors.black),
@@ -288,7 +291,7 @@ class CategoryListItem extends StatelessWidget {
                         // ),
                         labelStyle: buildCustomStyle(FontWeightManager.regular,
                             FontSize.s10, 0.10, ColorManager.textColor),
-                        hintText: 'Search Product',
+                        hintText: 'common.search_product'.tr,
                         hintStyle: buildCustomStyle(FontWeightManager.regular,
                             FontSize.s10, 0.13, ColorManager.textColor1),
                       ),
@@ -567,7 +570,7 @@ showDialogFunctionForProductDetails(
                     ),
                     const SizedBox(height: 8),
                     CustomRoundButton(
-                      title: "Add To Cart",
+                      title: 'billing.add_to_cart'.tr,
                       fct: () {
                         String? accessToken =
                             Provider.of<AuthModel>(context, listen: false)
@@ -586,13 +589,14 @@ showDialogFunctionForProductDetails(
                             showScaffold(
                               context: context,
                               message:
-                                  addToCartModel.message ?? "Added To Cart",
+                                  addToCartModel.message ??
+                                      'billing.added_to_cart'.tr,
                             ); //  'Order Placed Successfully',
                           } else {
                             showScaffoldError(
                               context: context,
                               message: addToCartModel.message ??
-                                  "Error Occured !Try Again !", //  'Added To Cart',
+                                  'general.error_occurred_try_again'.tr,
                             );
                           }
                         });
@@ -748,7 +752,7 @@ showDialogFunctionForProductDetailsAnimated(
                           ),
                           const SizedBox(height: 8),
                           CustomRoundButton(
-                            title: "Add To Cart",
+                            title: 'billing.add_to_cart'.tr,
                             fct: () {
                               String? accessToken =
                                   Provider.of<AuthModel>(context, listen: false)
@@ -768,13 +772,13 @@ showDialogFunctionForProductDetailsAnimated(
                                   showScaffold(
                                     context: context,
                                     message: addToCartModel.message ??
-                                        "Added To Cart !", //  'Order Placed Successfully',
+                                        'billing.added_to_cart'.tr,
                                   );
                                 } else {
                                   showScaffoldError(
                                     context: context,
                                     message: addToCartModel.message ??
-                                        "Error Occured !Try Again !", //  'Added To Cart',
+                                        'general.error_occurred_try_again'.tr,
                                   );
                                 }
                               });

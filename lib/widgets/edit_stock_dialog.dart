@@ -253,7 +253,7 @@ Future<bool> showEditStockDialog({
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           CustomRoundButton(
-                            title: 'Cancel',
+                            title: 'general.cancel'.tr,
                             boxColor: Colors.white,
                             textColor: ColorManager.kPrimaryColor,
                             borderColor: ColorManager.kPrimaryColor,
@@ -266,7 +266,7 @@ Future<bool> showEditStockDialog({
                           ),
                           const SizedBox(width: 12),
                           CustomRoundButton(
-                            title: 'Update',
+                            title: 'general.update'.tr,
                             boxColor: ColorManager.kPrimaryColor,
                             textColor: Colors.white,
                             isLoading: isSubmitting,
@@ -283,7 +283,7 @@ Future<bool> showEditStockDialog({
                               if (accessToken == null || accessToken.isEmpty) {
                                 showScaffoldError(
                                   context: parentContext,
-                                  message: 'Authentication token is missing',
+                                  message: 'general.auth_token_missing'.tr,
                                 );
                                 return;
                               }
@@ -420,7 +420,7 @@ Future<bool> showEditStockDialog({
                                 if (parentContext.mounted) {
                                   showScaffold(
                                     context: parentContext,
-                                    message: 'Stock updated successfully',
+                                    message: 'stock.updated_successfully'.tr,
                                   );
                                 }
                                 debugPrint(
@@ -433,7 +433,7 @@ Future<bool> showEditStockDialog({
 
                               showScaffoldError(
                                 context: parentContext,
-                                message: 'Failed to update stock',
+                                message: 'stock.update_failed'.tr,
                               );
 
                               if (dialogContext.mounted) {
@@ -495,7 +495,7 @@ Widget _buildEditableField(String label, TextEditingController controller) {
               FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
             ],
             decoration: InputDecoration(
-              hintText: 'Enter $label',
+              hintText: 'stock.enter_value'.trParams({'label': label}),
               hintStyle: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s12,

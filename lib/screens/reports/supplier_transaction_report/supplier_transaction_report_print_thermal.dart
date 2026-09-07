@@ -1,5 +1,6 @@
 ﻿import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
@@ -94,7 +95,7 @@ class SupplierTransactionReportThermalPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: "Document configurations not loaded. Please wait.",
+          message: 'voucher_print.document_config_missing'.tr,
         );
       }
       return;
@@ -226,7 +227,7 @@ class SupplierTransactionReportThermalPrinter {
       debugPrint("Print job sent successfully");
 
       if (context.mounted) {
-        showScaffold(context: context, message: "Print job sent successfully");
+        showScaffold(context: context, message: 'voucher_print.print_job_sent'.tr);
         Navigator.pop(context);
       }
     } catch (e) {
@@ -234,7 +235,8 @@ class SupplierTransactionReportThermalPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: "Error printing: ${e.toString()}",
+          message: 'voucher_print.error_printing'
+              .trParams({'error': e.toString()}),
         );
       }
     } finally {

@@ -1,9 +1,7 @@
-import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -550,7 +548,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
                 size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 16),
             Text(
-              'No confirmed orders found',
+              'confirmed_orders.no_orders_found'.tr,
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s18,
                   0.0, Colors.grey.shade600),
             ),
@@ -689,7 +687,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
                                         color: ColorManager.successGreen),
                                     const SizedBox(width: 4),
                                     Text(
-                                      'Delivery: ${_formatDateTime(order.deliveryDate!)}',
+                                      'confirmed_orders.delivery_date_prefix'.tr +
+                                          _formatDateTime(order.deliveryDate!),
                                       style: buildCustomStyle(
                                         FontWeightManager.medium,
                                         FontSize.s10,
@@ -712,7 +711,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    '${order.items.length} items',
+                                    'confirmed_orders.items_prefix'.tr +
+                                        order.items.length.toString(),
                                     style: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,
@@ -883,7 +883,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
                                           ),
                                         ),
                                         Text(
-                                          'Qty: ${item.quantity}',
+                                          'confirmed_orders.quantity_prefix'.tr +
+                                              item.quantity.toString(),
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -912,7 +913,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Total Amount',
+                          'confirmed_orders.total_amount'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.bold,
                             FontSize.s18,
@@ -960,7 +961,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Delete Order?',
+                  'confirmed_orders.delete_title'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.bold,
                     FontSize.s20,
@@ -970,7 +971,9 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Are you sure you want to delete ${order.orderNumber}?',
+                  'confirmed_orders.delete_message'.trParams(
+                    {'number': order.orderNumber},
+                  ),
                   textAlign: TextAlign.center,
                   style: buildCustomStyle(
                     FontWeightManager.medium,
@@ -1035,7 +1038,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Confirmed Orders",
+              'confirmed_orders.title'.tr,
               style: buildCustomStyle(
                 FontWeightManager.bold,
                 FontSize.s24,
@@ -1044,7 +1047,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
               ),
             ),
             Text(
-              "Manage and track your confirmed orders",
+              'confirmed_orders.subtitle'.tr,
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s14,
@@ -1055,7 +1058,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
           ],
         ),
         CustomRoundButton(
-          title: "Sync with Database",
+          title: 'confirmed_orders.sync_btn'.tr,
           fct: () => _syncConfirmedOrders(),
           fontSize: 14,
           height: 48,
@@ -1107,7 +1110,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  "Syncing Orders",
+                  'confirmed_orders.syncing_title'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.bold,
                     FontSize.s24,
@@ -1117,7 +1120,9 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  "Uploading ${confirmedOrders.length} confirmed orders to the server. Please wait...",
+                  'confirmed_orders.uploading_orders'.trParams(
+                    {'count': confirmedOrders.length.toString()},
+                  ),
                   textAlign: TextAlign.center,
                   style: buildCustomStyle(
                     FontWeightManager.medium,
@@ -1133,7 +1138,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Please wait while we sync your data...',
+                  'confirmed_orders.sync_wait'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.medium,
                     FontSize.s12,
@@ -1153,8 +1158,11 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text("Successfully synced ${confirmedOrders.length} orders!"),
+          content: Text(
+            'confirmed_orders.successfully_synced'.trParams(
+              {'count': confirmedOrders.length.toString()},
+            ),
+          ),
           backgroundColor: ColorManager.successGreen,
           behavior: SnackBarBehavior.floating,
           shape:

@@ -9,7 +9,6 @@ import 'package:pos_machine/providers/location_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
-import 'package:collection/collection.dart';
 import 'package:pos_machine/widgets/customer/location_picker_dialog.dart';
 
 import '../newcomponents/custom_container_box.dart';
@@ -1174,7 +1173,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
       return Padding(
         padding: const EdgeInsets.only(left: 10.0),
         child: CustomRoundButtonAdvanced(
-          title: "Submit",
+          title: 'general.submit'.tr,
           fct: () => _submitForm(locationProvider, accessToken),
           height: 50,
           width: MediaQuery.of(context).size.width * 0.19,

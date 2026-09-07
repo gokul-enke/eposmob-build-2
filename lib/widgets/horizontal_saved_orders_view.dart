@@ -256,7 +256,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                   provider.saveCurrentCartAsOrder();
                   showScaffold(
                     context: context,
-                    message: "Order Saved Successfully",
+                    message: 'billing.order_saved_success'.tr,
                   );
                 } catch (e) {
                   debugPrint("Error saving order: $e");
@@ -282,7 +282,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
 
               showScaffold(
                 context: context,
-                message: "New Order - Reset to default sales executive",
+                message: 'billing.new_order_reset'.tr,
               );
             } else {
               debugPrint("⚠️ BillingPageState not found, manual rebuild");
@@ -501,9 +501,9 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
   ) async {
     final confirmed = await DeleteConfirmationDialog.show(
       context: context,
-      title: "Delete Order",
+      title: 'order_list.dialog_title_delete'.tr,
       itemName: order.orderNumber,
-      message: "This order will be permanently removed from your saved orders.",
+      message: 'order_list.dialog_message_delete'.tr,
       warningIcon: Icons.receipt_long_outlined,
       onDelete: () {},
     );
@@ -520,7 +520,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
     provider.deleteSavedOrder(order.id);
     showScaffold(
       context: context,
-      message: "Order deleted successfully",
+      message: 'order_list.success_order_deleted'.tr,
     );
   }
 }

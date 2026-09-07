@@ -302,7 +302,8 @@ class _SupplierVoucherPrintPageState extends State<SupplierVoucherPrintPage> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Error loading document configurations: ${e.toString()}",
+          message: 'voucher_print.error_loading_document_config'
+              .trParams({'error': e.toString()}),
         );
       }
     }
@@ -319,7 +320,7 @@ class _SupplierVoucherPrintPageState extends State<SupplierVoucherPrintPage> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Document configuration not loaded. Please try again.",
+          message: 'voucher_print.document_config_not_loaded_retry'.tr,
         );
       }
       return;

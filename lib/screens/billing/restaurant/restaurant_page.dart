@@ -2178,7 +2178,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 color:
                     fontProvider.fontSizeLevel > 0 ? const Color(0xFF2563EB) : Colors.grey.shade600,
               ),
-              tooltip: '${'restaurant.font_prefix'.tr}${fontProvider.fontSizeLevelName}',
+              tooltip:
+                  '${'billing.font_prefix'.tr}${fontProvider.fontSizeLevelName}',
               onPressed: fontProvider.cycleFontSize,
             );
           },

@@ -1997,14 +1997,14 @@ class BillingMobilePaymentController {
       return MobilePaymentReadyResult(
         isValid: false,
         message: bp.paymentValidationError ??
-            'Please configure payment before confirm',
+            'billing.configure_payment_before_confirm'.tr,
       );
     }
 
     if (!paymentStepVisited && !bp.paymentStepVisited) {
-      return const MobilePaymentReadyResult(
+      return MobilePaymentReadyResult(
         isValid: false,
-        message: 'Please configure payment before confirm',
+        message: 'billing.configure_payment_before_confirm'.tr,
       );
     }
 

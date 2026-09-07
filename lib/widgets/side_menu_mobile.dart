@@ -184,7 +184,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const _MobileSectionHeader(title: 'Main'),
+            _MobileSectionHeader(title: 'nav.section_main'.tr),
             if (hasHome)
               Obx(
                 () => _MobileDrawerTile(
@@ -289,7 +289,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _MobileSectionDivider(),
-            const _MobileSectionHeader(title: 'Sales'),
+            _MobileSectionHeader(title: 'nav.section_sales'.tr),
             if (hasSalesGroup)
               Obx(
                 () => _MobileDrawerExpandableTile(
@@ -397,7 +397,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _MobileSectionDivider(),
-            const _MobileSectionHeader(title: 'Inventory'),
+            _MobileSectionHeader(title: 'nav.section_inventory'.tr),
             if (hasCategory)
               Obx(
                 () => _MobileDrawerTile(
@@ -503,7 +503,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _MobileSectionDivider(),
-            const _MobileSectionHeader(title: 'Reports'),
+            _MobileSectionHeader(title: 'nav.section_reports'.tr),
             Obx(
               () => _MobileDrawerExpandableTile(
                 icon: Icons.analytics_rounded,
@@ -606,7 +606,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _MobileSectionDivider(),
-            const _MobileSectionHeader(title: 'Accounts'),
+            _MobileSectionHeader(title: 'nav.section_accounts'.tr),
             if (hasTransactions)
               Obx(
                 () => _MobileDrawerExpandableTile(
@@ -715,7 +715,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _MobileSectionDivider(),
-            const _MobileSectionHeader(title: 'Directory'),
+            _MobileSectionHeader(title: 'nav.section_directory'.tr),
             if (hasCustomers)
               Obx(
                 () => _MobileDrawerTile(
@@ -780,7 +780,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _MobileSectionDivider(),
-            const _MobileSectionHeader(title: 'Settings'),
+            _MobileSectionHeader(title: 'nav.section_settings'.tr),
             if (hasPrinter)
               Obx(
                 () => _MobileDrawerTile(

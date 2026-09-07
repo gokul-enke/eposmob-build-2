@@ -590,7 +590,7 @@ class BillingMobileController {
         if (matchedSaleUnit != null && !multiSaleUnitEnabled) {
           showScaffoldError(
             context: context,
-            message: 'Multi sale units are disabled for this store.',
+            message: 'billing.error_multi_sale_disabled'.tr,
           );
           return;
         }
@@ -1474,8 +1474,8 @@ class BillingMobileController {
           context: context,
           title: 'general.print_customer_copy'.tr,
           message: 'general.print_customer_copy_prompt'.tr,
-          confirmText: 'Yes, print',
-          cancelText: 'No',
+          confirmText: 'general.yes_print'.tr,
+          cancelText: 'general.no'.tr,
         ) ??
         false;
     if (!shouldPrintCustomerCopy || !context.mounted) return;

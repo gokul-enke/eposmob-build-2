@@ -1692,7 +1692,8 @@ class OrderPanelState extends State<OrderPanel> {
         if (mounted) {
           showScaffoldError(
             context: context,
-            message: 'Failed to mark items as served: ${response['message']}',
+          message: 'restaurant.failed_mark_served'.trParams(
+              {'message': '${response['message']}'}),
           );
         }
         return false;
@@ -1702,7 +1703,8 @@ class OrderPanelState extends State<OrderPanel> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error marking items as served: $e',
+          message: 'restaurant.error_mark_served'.trParams(
+              {'error': '$e'}),
         );
       }
       return false;
@@ -3562,7 +3564,9 @@ class OrderPanelState extends State<OrderPanel> {
         return _buildSavedOrdersList();
       }
       // For other errors, show the error message
-      return Center(child: Text('Error: $_error'));
+      return Center(
+        child: Text("${'general.error_prefix'.tr}$_error"),
+      );
     }
 
     if (_selectedOrder != null) {
@@ -6689,7 +6693,8 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Error updating cart item: ${e.toString()}');
       showScaffoldError(
         context: context,
-        message: 'Failed to update cart item: ${e.toString()}',
+          message: 'restaurant.failed_update_cart_item'
+              .trParams({'error': e.toString()}),
       );
     }
   }
@@ -6742,7 +6747,7 @@ class OrderPanelState extends State<OrderPanel> {
         // Success - optimistic update was correct, just show success message
         showScaffold(
           context: context,
-          message: 'Item removed successfully',
+          message: 'billing.item_removed_successfully'.tr,
         );
 
         // Only refresh the saved orders list in the background to update totals
@@ -6766,7 +6771,8 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Error removing cart item: ${e.toString()}');
       showScaffoldError(
         context: context,
-        message: 'Failed to remove item: ${e.toString()}',
+          message: 'restaurant.failed_remove_item'
+              .trParams({'error': e.toString()}),
       );
     }
   }
@@ -6891,8 +6897,8 @@ class OrderPanelState extends State<OrderPanel> {
           context: context,
           title: 'general.print_customer_copy'.tr,
           message: 'general.print_customer_copy_prompt'.tr,
-          confirmText: 'Yes, print',
-          cancelText: 'No',
+          confirmText: 'general.yes_print'.tr,
+          cancelText: 'general.no'.tr,
         )) ??
         false;
   }
@@ -7168,7 +7174,8 @@ class OrderPanelState extends State<OrderPanel> {
       } catch (e) {
         debugPrint("ÃƒÂ¢Ã‚ÂÃ…â€™ Error printing bill: $e");
         showScaffoldError(
-            context: context, message: "Failed to print bill: $e");
+          context: context,
+          message: 'restaurant.failed_print_bill'.trParams({'error': '$e'}));
 
         // Even if print fails, the order was confirmed, so cleanup
         if (mounted) {
@@ -7873,7 +7880,8 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint('Error saving offline order: $e');
       showScaffoldError(
         context: context,
-        message: 'Failed to save offline order: ${e.toString()}',
+        message: 'restaurant.failed_save_offline_order'
+            .trParams({'error': e.toString()}),
       );
       return false;
     } finally {
@@ -8028,7 +8036,8 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint('Error confirming counter order: $e');
       showScaffoldError(
         context: context,
-        message: 'Failed to confirm counter order: ${e.toString()}',
+        message: 'restaurant.failed_confirm_counter_order'
+            .trParams({'error': e.toString()}),
       );
       return false;
     } finally {
@@ -8336,7 +8345,8 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Error confirming order: ${e.toString()}');
       showScaffoldError(
         context: context,
-        message: 'Failed to confirm order: ${e.toString()}',
+        message: 'restaurant.failed_confirm_order'
+            .trParams({'error': e.toString()}),
       );
       return false;
     } finally {
@@ -8734,7 +8744,8 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint('Error printing order summary: $e');
       showScaffoldError(
         context: context,
-        message: 'Failed to print order summary: ${e.toString()}',
+        message: 'restaurant.failed_print_order_summary'
+            .trParams({'error': e.toString()}),
       );
       return false;
     }

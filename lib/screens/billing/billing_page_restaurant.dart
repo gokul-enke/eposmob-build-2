@@ -6904,8 +6904,8 @@ class BillingPageState extends State<BillingPageRestaurant>
           context: context,
           title: 'general.print_customer_copy'.tr,
           message: 'general.print_customer_copy_prompt'.tr,
-          confirmText: 'Yes, print',
-          cancelText: 'No',
+          confirmText: 'general.yes_print'.tr,
+          cancelText: 'general.no'.tr,
         )) ??
         false;
   }

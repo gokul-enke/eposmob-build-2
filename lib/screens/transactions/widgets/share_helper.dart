@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:get/get.dart';
-import 'package:open_file/open_file.dart';
 
 import '../../../providers/auth_model.dart';
 import '../../../providers/app_settings_provider.dart';
@@ -13,7 +12,6 @@ import '../../../providers/document_config_provider.dart';
 import '../../../providers/invoice_provider.dart';
 import '../../../providers/whatsapp_provider.dart';
 import '../../../providers/store_session_provider.dart';
-import '../../../resources/color_manager.dart';
 import '../../../resources/app_url.dart';
 import '../../../components/build_dialog_box.dart';
 import '../../../controllers/sidebar_controller.dart';
@@ -169,7 +167,7 @@ class ShareHelper {
       if (token == null || token.isEmpty) {
         Navigator.of(context, rootNavigator: true).pop();
         showScaffoldError(
-            context: context, message: 'Missing authentication token');
+            context: context, message: 'share_helper.msg_missing_token'.tr);
         return;
       }
 
@@ -194,7 +192,7 @@ class ShareHelper {
         Navigator.of(context, rootNavigator: true).pop();
         showScaffoldError(
             context: context,
-            message: 'Invoice template not found. Check Document Templates settings.');
+            message: 'share_helper.msg_invoice_template_not_found'.tr);
         return;
       }
 
@@ -212,7 +210,7 @@ class ShareHelper {
       if (details == null) {
         Navigator.of(context, rootNavigator: true).pop();
         showScaffoldError(
-            context: context, message: 'Failed to load invoice details.');
+            context: context, message: 'share_helper.msg_failed_load_invoice'.tr);
         return;
       }
 
@@ -245,7 +243,7 @@ class ShareHelper {
         if (context.mounted) {
           showScaffoldError(
               context: context,
-              message: 'Failed to generate Invoice PDF.');
+              message: 'share_helper.msg_failed_invoice_pdf'.tr);
         }
         return;
       }
@@ -270,7 +268,8 @@ class ShareHelper {
           } else if (result.status == ShareResultStatus.dismissed) {
             if (context.mounted) {
               showScaffold(
-                  context: context, message: 'Sharing cancelled by user.');
+                  context: context,
+                  message: 'share_helper.msg_sharing_cancelled'.tr);
             }
             return;
           } else {
@@ -297,7 +296,7 @@ class ShareHelper {
 
       if (context.mounted) {
         showScaffold(
-            context: context, message: 'Invoice PDF shared successfully!');
+            context: context, message: 'share_helper.msg_invoice_shared'.tr);
       }
     } catch (e) {
       if (Navigator.canPop(context)) {
@@ -307,7 +306,7 @@ class ShareHelper {
       if (context.mounted) {
         showScaffoldError(
             context: context,
-            message: 'Error generating Invoice PDF. Please try again.');
+            message: 'share_helper.msg_error_invoice_pdf'.tr);
       }
     }
   }
@@ -391,7 +390,7 @@ class ShareHelper {
                 if (context.mounted) {
                   showScaffold(
                       context: context,
-                      message: 'File path copied to clipboard!');
+                      message: 'share_helper.msg_path_copied'.tr);
                 }
               } catch (e) {
                 debugPrint('Error copying to clipboard: $e');
@@ -432,7 +431,7 @@ class ShareHelper {
       if (context.mounted) {
         showScaffoldError(
             context: context,
-            message: 'No email app found to share the invoice.');
+            message: 'share_helper.msg_no_email_app_invoice'.tr);
       }
     }
   }
@@ -488,7 +487,7 @@ class ShareHelper {
       if (customerPhone == null || customerPhone.isEmpty) {
         showScaffoldError(
             context: context,
-            message: 'Customer phone number not available.');
+            message: 'share_helper.msg_no_phone'.tr);
         return;
       }
 
@@ -523,7 +522,7 @@ class ShareHelper {
       if (context.mounted) {
         showScaffoldError(
             context: context,
-            message: 'Error sending WhatsApp message. Please try again.');
+            message: 'share_helper.msg_wa_error'.tr);
       }
     }
   }
@@ -644,7 +643,7 @@ class ShareHelper {
       if (token == null || token.isEmpty) {
         Navigator.of(context, rootNavigator: true).pop();
         showScaffoldError(
-            context: context, message: 'Missing authentication token');
+            context: context, message: 'share_helper.msg_missing_token'.tr);
         return;
       }
 
@@ -669,7 +668,7 @@ class ShareHelper {
         Navigator.of(context, rootNavigator: true).pop();
         showScaffoldError(
             context: context,
-            message: 'Receipt template not found. Check Document Templates settings.');
+            message: 'share_helper.msg_receipt_template_not_found'.tr);
         return;
       }
 
@@ -706,7 +705,7 @@ class ShareHelper {
         if (context.mounted) {
           showScaffoldError(
               context: context,
-              message: 'Failed to generate Receipt PDF.');
+            message: 'share_helper.msg_failed_receipt_pdf'.tr);
         }
         return;
       }
@@ -731,7 +730,8 @@ class ShareHelper {
           } else if (result.status == ShareResultStatus.dismissed) {
             if (context.mounted) {
               showScaffold(
-                  context: context, message: 'Sharing cancelled by user.');
+                  context: context,
+                  message: 'share_helper.msg_sharing_cancelled'.tr);
             }
             return;
           } else {
@@ -796,13 +796,16 @@ class ShareHelper {
         await launchUrl(mailtoUri);
       } else {
         if (context.mounted) {
-          showScaffoldError(context: context, message: 'Could not launch email app.');
+          showScaffoldError(
+              context: context, message: 'share_helper.msg_no_email_app'.tr);
         }
       }
     } catch (e) {
       debugPrint('Error launching email: $e');
       if (context.mounted) {
-        showScaffoldError(context: context, message: 'Failed to share receipt via Email.');
+        showScaffoldError(
+            context: context,
+            message: 'share_helper.msg_failed_share_receipt_email'.tr);
       }
     }
   }
@@ -853,7 +856,7 @@ class ShareHelper {
       if (customerPhone.isEmpty) {
         showScaffoldError(
             context: context,
-            message: 'Customer phone number not available.');
+            message: 'share_helper.msg_no_phone'.tr);
         return;
       }
 
@@ -869,7 +872,7 @@ class ShareHelper {
       if (token == null || token.isEmpty) {
         Navigator.of(context, rootNavigator: true).pop();
         showScaffoldError(
-            context: context, message: 'Missing authentication token');
+            context: context, message: 'share_helper.msg_missing_token'.tr);
         return;
       }
 
@@ -890,7 +893,7 @@ class ShareHelper {
         Navigator.of(context, rootNavigator: true).pop();
         showScaffoldError(
             context: context,
-            message: 'Receipt template not found.');
+            message: 'share_helper.msg_receipt_template_not_found'.tr);
         return;
       }
 
@@ -955,7 +958,7 @@ class ShareHelper {
       if (context.mounted) {
         showScaffoldError(
             context: context,
-            message: 'Error sending WhatsApp message. Please try again.');
+            message: 'share_helper.msg_wa_error'.tr);
       }
     }
   }
@@ -1046,7 +1049,9 @@ class ShareHelper {
                       await launchUrl(Uri.parse(mailtoUrl));
                     } catch (e) {
                       if (context.mounted) {
-                        showScaffoldError(context: context, message: 'Could not launch email app');
+                        showScaffoldError(
+                            context: context,
+                            message: 'share_helper.msg_no_email_app'.tr);
                       }
                     }
                   },
@@ -1111,7 +1116,9 @@ class ShareHelper {
           if (Navigator.canPop(context)) {
             Navigator.of(context, rootNavigator: true).pop();
           }
-          showScaffoldError(context: context, message: 'Voucher template config not found.');
+          showScaffoldError(
+              context: context,
+              message: 'share_helper.msg_voucher_template_not_found'.tr);
         }
         return;
       }
@@ -1143,7 +1150,8 @@ class ShareHelper {
 
       if (pdfFile == null) {
         if (context.mounted) {
-          showScaffoldError(context: context, message: 'Failed to generate PDF document.');
+          showScaffoldError(
+              context: context, message: 'share_helper.msg_failed_pdf'.tr);
         }
         return;
       }
@@ -1165,7 +1173,8 @@ class ShareHelper {
           } else if (result.status == ShareResultStatus.dismissed) {
             if (context.mounted) {
               showScaffold(
-                  context: context, message: 'Sharing cancelled by user.');
+                  context: context,
+                  message: 'share_helper.msg_sharing_cancelled'.tr);
             }
             return;
           } else {
@@ -1212,7 +1221,8 @@ class ShareHelper {
     try {
       final String customerPhone = voucher.customer.user.phone.trim();
       if (customerPhone.isEmpty) {
-        showScaffoldError(context: context, message: 'Customer phone number is empty.');
+        showScaffoldError(
+            context: context, message: 'share_helper.msg_no_phone_customer'.tr);
         return;
       }
 
@@ -1241,7 +1251,9 @@ class ShareHelper {
           if (Navigator.canPop(context)) {
             Navigator.of(context, rootNavigator: true).pop();
           }
-          showScaffoldError(context: context, message: 'Voucher template config not found.');
+          showScaffoldError(
+              context: context,
+              message: 'share_helper.msg_voucher_template_not_found'.tr);
         }
         return;
       }
@@ -1273,7 +1285,8 @@ class ShareHelper {
 
       if (pdfFile == null) {
         if (context.mounted) {
-          showScaffoldError(context: context, message: 'Failed to generate PDF document.');
+          showScaffoldError(
+              context: context, message: 'share_helper.msg_failed_pdf'.tr);
         }
         return;
       }
@@ -1311,7 +1324,8 @@ class ShareHelper {
         if (Navigator.canPop(context)) {
           Navigator.of(context, rootNavigator: true).pop();
         }
-        showScaffoldError(context: context, message: 'Error sending WhatsApp message. Please try again.');
+        showScaffoldError(
+            context: context, message: 'share_helper.msg_wa_error'.tr);
       }
     }
   }
@@ -1402,7 +1416,9 @@ class ShareHelper {
                       await launchUrl(Uri.parse(mailtoUrl));
                     } catch (e) {
                       if (context.mounted) {
-                        showScaffoldError(context: context, message: 'Could not launch email app');
+                        showScaffoldError(
+                            context: context,
+                            message: 'share_helper.msg_no_email_app'.tr);
                       }
                     }
                   },
@@ -1465,7 +1481,10 @@ class ShareHelper {
           if (Navigator.canPop(context)) {
             Navigator.of(context, rootNavigator: true).pop();
           }
-          showScaffoldError(context: context, message: 'Supplier Voucher template config not found.');
+          showScaffoldError(
+              context: context,
+              message: 'share_helper.msg_supplier_voucher_template_not_found'
+                  .tr);
         }
         return;
       }
@@ -1497,7 +1516,8 @@ class ShareHelper {
 
       if (pdfFile == null) {
         if (context.mounted) {
-          showScaffoldError(context: context, message: 'Failed to generate PDF document.');
+          showScaffoldError(
+              context: context, message: 'share_helper.msg_failed_pdf'.tr);
         }
         return;
       }
@@ -1519,7 +1539,8 @@ class ShareHelper {
           } else if (result.status == ShareResultStatus.dismissed) {
             if (context.mounted) {
               showScaffold(
-                  context: context, message: 'Sharing cancelled by user.');
+                  context: context,
+                  message: 'share_helper.msg_sharing_cancelled'.tr);
             }
             return;
           } else {
@@ -1593,7 +1614,10 @@ class ShareHelper {
           if (Navigator.canPop(context)) {
             Navigator.of(context, rootNavigator: true).pop();
           }
-          showScaffoldError(context: context, message: 'Supplier Voucher template config not found.');
+          showScaffoldError(
+              context: context,
+              message: 'share_helper.msg_supplier_voucher_template_not_found'
+                  .tr);
         }
         return;
       }
@@ -1625,7 +1649,8 @@ class ShareHelper {
 
       if (pdfFile == null) {
         if (context.mounted) {
-          showScaffoldError(context: context, message: 'Failed to generate PDF document.');
+          showScaffoldError(
+              context: context, message: 'share_helper.msg_failed_pdf'.tr);
         }
         return;
       }
@@ -1663,7 +1688,8 @@ class ShareHelper {
         if (Navigator.canPop(context)) {
           Navigator.of(context, rootNavigator: true).pop();
         }
-        showScaffoldError(context: context, message: 'Error sending WhatsApp message. Please try again.');
+          showScaffoldError(
+              context: context, message: 'share_helper.msg_wa_error'.tr);
       }
     }
   }

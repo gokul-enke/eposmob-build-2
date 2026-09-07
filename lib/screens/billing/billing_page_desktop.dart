@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -718,7 +719,7 @@ class BillingPageState extends State<BillingPage>
         if (matchedSaleUnit != null && !multiSaleUnitEnabled) {
           showScaffoldError(
             context: context,
-            message: 'Multi sale units are disabled for this store.',
+            message: 'billing.error_multi_sale_disabled'.tr,
           );
           return;
         }
@@ -1054,7 +1055,7 @@ class BillingPageState extends State<BillingPage>
       });
       showScaffold(
         context: context,
-        message: "Cart Cleared Succesfully",
+        message: 'billing.cart_cleared'.tr,
       );
       resetAutocomplete(
           shouldFetchCustomers:
@@ -1069,7 +1070,7 @@ class BillingPageState extends State<BillingPage>
       // );
       showScaffoldError(
         context: context,
-        message: "Failed to clear cart. Please try again.",
+        message: 'billing.clear_cart_failed'.tr,
       );
     } finally {
       billingProvider.setLoadingClearCart(false);
@@ -1123,12 +1124,12 @@ class BillingPageState extends State<BillingPage>
 
       showScaffold(
         context: context,
-        message: "Order loaded for editing",
+        message: 'billing.order_loaded_editing'.tr,
       );
     } catch (error) {
       debugPrint("Error loading order: $error");
       showScaffoldError(
-          context: context, message: "Failed to load order. Please try again.");
+          context: context, message: 'billing.failed_load_order'.tr);
     }
   }
 
@@ -1156,7 +1157,7 @@ class BillingPageState extends State<BillingPage>
     if (selectedPaymentMethods.isEmpty) {
       showScaffoldError(
         context: context,
-        message: "Please select a payment method",
+        message: 'sales.select_payment_method'.tr,
       );
       PaymentCoordinator.showPaymentMethodModal(context);
       return;

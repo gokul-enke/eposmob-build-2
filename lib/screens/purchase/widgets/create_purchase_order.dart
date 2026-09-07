@@ -1340,7 +1340,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
   }
 
   String? _validateReceiveItemFields(PurchaseOrderItem item) {
-    final itemName = item.productData?.productName ?? 'Selected item';
+    final itemName =
+        item.productData?.productName ?? 'purchase_order.selected_item'.tr;
     if ((double.tryParse(item.retailPrice) ?? 0) <= 0) {
       return '$itemName: ${'purchase_order.error_retail_price_required'.tr}';
     }
@@ -1354,7 +1355,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
   }
 
   String? _validatePurchaseItemFields(PurchaseOrderItem item) {
-    final itemName = item.productData?.productName ?? 'Selected item';
+    final itemName =
+        item.productData?.productName ?? 'purchase_order.selected_item'.tr;
     if ((double.tryParse(item.quantity) ?? 0) <= 0) {
       return '$itemName: ${'purchase_order.error_quantity_zero'.tr}';
     }

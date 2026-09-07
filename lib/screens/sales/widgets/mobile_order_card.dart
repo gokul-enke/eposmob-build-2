@@ -3,12 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
-import 'package:pos_machine/components/build_dialog_box.dart'
-    hide
-        showScaffold,
-        showScaffoldError,
-        showLoadingOverlay,
-        hideLoadingOverlay;
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
@@ -237,7 +231,7 @@ class MobileOrderCard extends StatelessWidget {
                             if (context.mounted) {
                               showScaffold(
                                 context: context,
-                                message: "Order cancelled successfully",
+                                message: 'sales.order_cancelled_success'.tr,
                               );
                               salesProvider.fetchOrders(
                                 accessToken: authModel.token ?? "",
@@ -248,7 +242,8 @@ class MobileOrderCard extends StatelessWidget {
                             if (context.mounted) {
                               showScaffoldError(
                                 context: context,
-                                message: "Failed to cancel order: $e",
+                                message: 'sales.failed_cancel_order'
+                                    .trParams({'error': '$e'}),
                               );
                             }
                           }
@@ -271,7 +266,7 @@ class MobileOrderCard extends StatelessWidget {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'Invoice not available for sharing.',
+          message: 'sales.invoice_not_available_sharing'.tr,
         );
       }
       return;
@@ -324,7 +319,9 @@ class MobileOrderCard extends StatelessWidget {
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: 'Preparing return for order #${order.orderNumber}',
+          message: 'sales.preparing_return'.trParams({
+            'number': '${order.orderNumber}',
+          }),
         );
       }
     } catch (error) {
@@ -332,7 +329,7 @@ class MobileOrderCard extends StatelessWidget {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error preparing order return. Please try again.',
+          message: 'sales.error_preparing_return'.tr,
         );
       }
     }
@@ -511,7 +508,7 @@ class MobileOrderCard extends StatelessWidget {
                                   ClipboardData(text: order.orderNumber!));
                               showScaffold(
                                 context: context,
-                                message: 'Order number copied to clipboard',
+                                message: 'sales.order_number_copied'.tr,
                               );
                             },
                             child: const Icon(

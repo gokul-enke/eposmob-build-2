@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/models/sales_executive.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -130,7 +131,7 @@ class _UserSwitcherState extends State<UserSwitcher> {
                         controller: _passwordController,
                         obscureText: _obscureText,
                         decoration: InputDecoration(
-                          labelText: 'Password',
+                          labelText: 'general.password'.tr,
                           border: const OutlineInputBorder(),
                           suffixIcon: IconButton(
                             icon: Icon(
@@ -154,7 +155,7 @@ class _UserSwitcherState extends State<UserSwitcher> {
                         children: [
                           Expanded(
                             child: CustomRoundButton(
-                              title: "Cancel",
+                              title: 'general.cancel'.tr,
                               isLoading: false,
                               fontSize: FontSize.s12,
                               height: MediaQuery.of(context).size.height * .05,
@@ -170,7 +171,7 @@ class _UserSwitcherState extends State<UserSwitcher> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: CustomRoundButton(
-                              title: "Switch",
+                              title: 'general.switch'.tr,
                               isLoading: _isLoading,
                               fontSize: FontSize.s12,
                               height: MediaQuery.of(context).size.height * .05,
@@ -179,7 +180,7 @@ class _UserSwitcherState extends State<UserSwitcher> {
                                 if (_passwordController.text.isEmpty) {
                                   showScaffoldError(
                                     context: context,
-                                    message: 'Please enter password',
+                                    message: 'general.enter_password'.tr,
                                   );
                                   return;
                                 }
@@ -226,7 +227,9 @@ class _UserSwitcherState extends State<UserSwitcher> {
                                         showScaffoldError(
                                           context: context,
                                           message:
-                                              '${executive.name} doesn\'t have access to current store. Please logout and try.',
+                                              'general.no_current_store_access'.trParams({
+                                                'name': executive.name,
+                                              }),
                                         );
                                         return;
                                       } else if (!hasAccessToCurrentStore &&
@@ -235,7 +238,9 @@ class _UserSwitcherState extends State<UserSwitcher> {
                                         showScaffoldError(
                                           context: context,
                                           message:
-                                              '${executive.name} has no permission to any store. Please contact your administrator.',
+                                              'general.no_store_permission'.trParams({
+                                                'name': executive.name,
+                                              }),
                                         );
                                         return;
                                       }
@@ -288,7 +293,9 @@ class _UserSwitcherState extends State<UserSwitcher> {
                                         showScaffold(
                                           context: context,
                                           message:
-                                              'Successfully switched to ${executive.name}',
+                                              'general.switched_successfully'.trParams({
+                                                'name': executive.name,
+                                              }),
                                         );
                                       }
                                     }
@@ -296,13 +303,13 @@ class _UserSwitcherState extends State<UserSwitcher> {
                                     showScaffoldError(
                                       context: context,
                                       message: result["message"] ??
-                                          'Authentication failed',
+                                          'general.authentication_failed'.tr,
                                     );
                                   }
                                 } catch (e) {
                                   showScaffoldError(
                                     context: context,
-                                    message: 'Error: ${e.toString()}',
+                                    message: '${'general.error_prefix'.tr} ${e.toString()}',
                                   );
                                 } finally {
                                   setState(() {

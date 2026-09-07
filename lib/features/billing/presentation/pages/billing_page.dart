@@ -1419,7 +1419,7 @@ class BillingPageState extends State<BillingPage>
     if (!billingProvider.hasInternet) {
       showScaffoldError(
         context: context,
-        message: 'No internet connection available for sync.',
+        message: 'billing.no_internet_sync'.tr,
       );
       return;
     }
@@ -1543,7 +1543,7 @@ class BillingPageState extends State<BillingPage>
         if (matchedSaleUnit != null && !multiSaleUnitEnabled) {
           showScaffoldError(
             context: context,
-            message: 'Multi sale units are disabled for this store.',
+            message: 'billing.error_multi_sale_disabled'.tr,
           );
           return;
         }
@@ -2209,7 +2209,7 @@ class BillingPageState extends State<BillingPage>
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Please wait while products are being loaded.',
+                    'billing.products_loading'.tr,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 11,
@@ -3225,7 +3225,7 @@ class BillingPageState extends State<BillingPage>
       if (!changed) {
         showScaffoldError(
           context: context,
-          message: 'Unable to change unit for this cart item.',
+          message: 'billing.unable_change_cart_unit'.tr,
         );
       }
       return;
@@ -3274,7 +3274,7 @@ class BillingPageState extends State<BillingPage>
     if (!changed) {
       showScaffoldError(
         context: context,
-        message: 'Unable to change unit for this cart item.',
+        message: 'billing.unable_change_cart_unit'.tr,
       );
     }
   }
@@ -3712,13 +3712,13 @@ class BillingPageState extends State<BillingPage>
                                                   const SizedBox(width: 6),
                                                   Tooltip(
                                                     message: isOutOfStock
-                                                        ? 'Out of stock'
+                                                        ? 'billing.out_of_stock'.tr
                                                         : isLowStock
-                                                            ? 'Low stock'
+                                                            ? 'billing.low_stock'.tr
                                                             : canViewBillingProductDetails
                                                                 ? 'billing.view_details'
                                                                     .tr
-                                                                : 'No permission to view product details',
+                                                                : 'product_detail.no_permission_view_details'.tr,
                                                     waitDuration:
                                                         const Duration(
                                                             milliseconds: 400),
@@ -3749,7 +3749,7 @@ class BillingPageState extends State<BillingPage>
                                                     const SizedBox(width: 6),
                                                     Tooltip(
                                                       message:
-                                                          'Customer purchase history',
+                                                          'billing.customer_purchase_history'.tr,
                                                       waitDuration:
                                                           const Duration(
                                                               milliseconds:
@@ -4523,7 +4523,7 @@ class BillingPageState extends State<BillingPage>
         true) {
       showScaffoldError(
         context: context,
-        message: 'Customer purchase history is disabled',
+        message: 'billing.purchase_history_disabled'.tr,
       );
       return;
     }
@@ -4533,7 +4533,7 @@ class BillingPageState extends State<BillingPage>
     if (customerSelectionProvider.isDefaultCustomer) {
       showScaffoldError(
         context: context,
-        message: 'Purchase history is not shown for the default customer',
+        message: 'billing.purchase_history_default_customer'.tr,
       );
       return;
     }
@@ -4548,7 +4548,7 @@ class BillingPageState extends State<BillingPage>
     if (customerId == null || productId == null || customerName == null) {
       showScaffoldError(
         context: context,
-        message: 'Select a customer to view purchase history',
+        message: 'billing.select_customer_purchase_history'.tr,
       );
       return;
     }
@@ -4557,7 +4557,7 @@ class BillingPageState extends State<BillingPage>
     if (token == null || token.isEmpty) {
       showScaffoldError(
         context: context,
-        message: 'Unable to load purchase history',
+        message: 'billing.purchase_history_load_failed'.tr,
       );
       return;
     }
@@ -4577,7 +4577,7 @@ class BillingPageState extends State<BillingPage>
           purchaseHistory.data.isEmpty) {
         showScaffoldError(
           context: context,
-          message: 'No purchase history found for this product',
+          message: 'billing.no_purchase_history'.tr,
         );
         return;
       }
@@ -4632,7 +4632,7 @@ class BillingPageState extends State<BillingPage>
       if (!mounted) return;
       showScaffoldError(
         context: context,
-        message: 'Unable to load purchase history',
+        message: 'billing.purchase_history_load_failed'.tr,
       );
     }
   }
@@ -7810,7 +7810,7 @@ class BillingPageState extends State<BillingPage>
       builder: (dialogContext) {
         return CheckoutModal(
           mode: mode,
-          title: title ?? 'Finalize Order',
+          title: title ?? 'billing.finalize_order'.tr,
           initialStep: initialStep,
           cartTotal: localProductProvider.priceSummary?.subTotal ??
               localProductProvider.cartTotal,
@@ -8169,7 +8169,7 @@ class BillingPageState extends State<BillingPage>
     if (localProductProvider.cartItems.isEmpty) {
       showScaffoldError(
         context: context,
-        message: 'Please add items to quote first.',
+        message: 'billing.add_items_to_quote_first'.tr,
       );
       setState(() {
         isLoadingSaveOrder = false;
@@ -8196,7 +8196,7 @@ class BillingPageState extends State<BillingPage>
     if (!hasExistingCustomer && !hasInlineCustomer) {
       showScaffoldError(
         context: context,
-        message: 'Please select or enter a customer before creating quotation.',
+        message: 'billing.select_or_enter_customer_quote'.tr,
       );
       setState(() {
         isLoadingSaveOrder = false;
@@ -8207,7 +8207,7 @@ class BillingPageState extends State<BillingPage>
     if (_quotationExpiryDate.isBefore(_quotationDate)) {
       showScaffoldError(
         context: context,
-        message: 'Expiry date cannot be before quotation date.',
+        message: 'billing.expiry_before_quotation'.tr,
       );
       setState(() {
         isLoadingSaveOrder = false;
@@ -8272,7 +8272,7 @@ class BillingPageState extends State<BillingPage>
         if (response['success'] == true || response['status'] == 'success') {
           showScaffold(
             context: context,
-            message: 'Quotation created successfully!',
+            message: 'billing.quotation_created'.tr,
           );
           final now = DateTime.now();
           _quotationDate = now;
@@ -8285,7 +8285,7 @@ class BillingPageState extends State<BillingPage>
               showScaffoldError(
                 context: context,
                 message:
-                    'Quotation created, but print failed because the API response did not include quotation id.',
+                    'billing.quotation_print_missing_id'.tr,
               );
             } else {
               final details = await quotationsProvider.fetchQuotationDetails(
@@ -8299,7 +8299,7 @@ class BillingPageState extends State<BillingPage>
                 showScaffoldError(
                   context: context,
                   message:
-                      'Quotation created, but details could not be loaded for printing.',
+                    'billing.quotation_print_details_failed'.tr,
                 );
               } else {
                 Future<bool> printOnce() => _printQuotationDetails(details);
@@ -8315,7 +8315,8 @@ class BillingPageState extends State<BillingPage>
         } else {
           showScaffoldError(
             context: context,
-            message: response['message'] ?? 'Failed to create quotation',
+            message: response['message'] ??
+                'billing.quotation_create_failed'.tr,
           );
         }
       }
@@ -8323,7 +8324,7 @@ class BillingPageState extends State<BillingPage>
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Failed to create quotation',
+          message: 'billing.quotation_create_failed'.tr,
         );
       }
     } finally {
@@ -9255,7 +9256,7 @@ class BillingPageState extends State<BillingPage>
     if (localProductProvider.priceSummary == null) {
       showScaffoldError(
         context: context,
-        message: 'Cart is empty or data not available',
+        message: 'billing.cart_empty_or_data_unavailable'.tr,
       );
       return;
     }
@@ -9361,8 +9362,8 @@ class BillingPageState extends State<BillingPage>
           context: context,
           title: 'general.print_customer_copy'.tr,
           message: 'general.print_customer_copy_prompt'.tr,
-          confirmText: 'Yes, print',
-          cancelText: 'No',
+          confirmText: 'general.yes_print'.tr,
+          cancelText: 'general.no'.tr,
         )) ??
         false;
   }

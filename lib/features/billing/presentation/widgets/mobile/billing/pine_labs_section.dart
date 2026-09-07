@@ -1,5 +1,6 @@
 import 'package:pos_machine/features/billing/domain/billing_debug_log.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -24,14 +25,14 @@ class PineLabsSection extends StatelessWidget {
             '[PineLabs] success=${billingProvider.pineLabsPaymentSuccess} | online=${billingProvider.isOnlineSelected}');
 
         return Semantics(
-          label: 'Pay with Pine Labs',
+          label: 'billing.pay_with_pine_labs'.tr,
           button: true,
           child: CustomRoundButton(
             title: terminalProvider.isProcessing
-                ? 'Processing...'
+                ? 'billing.processing'.tr
                 : billingProvider.pineLabsPaymentSuccess
-                    ? 'Paid with Pinelabs  ✓'
-                    : 'Pay with Pine Labs',
+                    ? 'billing.paid_with_pine_labs'.tr
+                    : 'billing.pay_with_pine_labs'.tr,
             fct: () => _payWithPineLabs(context, terminalProvider, billingProvider),
             fontSize: 14,
             height: 48,

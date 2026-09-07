@@ -1,5 +1,6 @@
 ﻿import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/document_configurations.dart';
@@ -312,7 +313,7 @@ class SupplierVoucherThermalPrinter {
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: 'Supplier Voucher printed successfully',
+          message: 'voucher_print.supplier_voucher_printed'.tr,
         );
       }
     } catch (e) {
@@ -320,7 +321,8 @@ class SupplierVoucherThermalPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error printing: $e',
+          message: 'voucher_print.error_printing'
+              .trParams({'error': e.toString()}),
         );
       }
     }

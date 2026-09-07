@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_dynamic_payment_selector.dart';
 import 'package:pos_machine/models/master_data.dart';
@@ -449,7 +450,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                 SizedBox(
                   width: 30,
                   child: Text(
-                    'No',
+                    'general.no'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s11,
@@ -461,7 +462,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                 Expanded(
                   flex: 3,
                   child: Text(
-                    'Product',
+                    'product.product'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s11,

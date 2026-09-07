@@ -166,7 +166,7 @@ class StandardPrinter {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: "Document configurations not loaded. Please wait.",
+            message: 'voucher_print.document_config_missing'.tr,
           );
         }
         return;
@@ -205,7 +205,7 @@ class StandardPrinter {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: "No Printer Selected",
+            message: 'voucher_print.select_printer_first'.tr,
           );
         }
         return;
@@ -232,7 +232,8 @@ class StandardPrinter {
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: "Preparing $selectedPaperSize document for printing...",
+          message: 'voucher_print.preparing_document'.trParams(
+              {'paperSize': selectedPaperSize}),
         );
       }
 
@@ -949,7 +950,8 @@ class StandardPrinter {
             } else {
               if (context.mounted) {
                 showScaffold(
-                    context: context, message: "PDF created successfully");
+                    context: context,
+                    message: 'voucher_print.pdf_created_successfully'.tr);
                 // Note: Navigation is now handled by the caller
                 // PrintPage has its own back button, auto-print doesn't need navigation
               }
@@ -957,7 +959,8 @@ class StandardPrinter {
           } else {
             if (context.mounted) {
               showScaffold(
-                  context: context, message: "PDF opened for printing");
+                  context: context,
+                  message: 'voucher_print.pdf_opened_for_printing'.tr);
               // Note: Navigation is now handled by the caller
               // PrintPage has its own back button, auto-print doesn't need navigation
             }
@@ -969,7 +972,8 @@ class StandardPrinter {
           } else {
             if (context.mounted) {
               showScaffold(
-                  context: context, message: "PDF created successfully");
+                  context: context,
+                  message: 'voucher_print.pdf_created_successfully'.tr);
               // Note: Navigation is now handled by the caller
               // PrintPage has its own back button, auto-print doesn't need navigation
             }
@@ -981,7 +985,8 @@ class StandardPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: "Error generating PDF: ${e.toString()}",
+          message: 'voucher_print.error_generating_pdf'
+              .trParams({'error': e.toString()}),
         );
       }
       if (selectedPrinter?.isDevelopment == true) {
@@ -998,7 +1003,9 @@ class StandardPrinter {
 
       // Always show success message
       if (context.mounted) {
-        showScaffold(context: context, message: "PDF created successfully");
+        showScaffold(
+            context: context,
+            message: 'voucher_print.pdf_created_successfully'.tr);
         // Note: Navigation is now handled by the caller
         // PrintPage has its own back button, auto-print doesn't need navigation
       }
@@ -1006,7 +1013,9 @@ class StandardPrinter {
       debugPrint("Windows PDF handling error: $e");
       // Still show success on error
       if (context.mounted) {
-        showScaffold(context: context, message: "PDF created successfully");
+        showScaffold(
+            context: context,
+            message: 'voucher_print.pdf_created_successfully'.tr);
         // Note: Navigation is now handled by the caller
         // PrintPage has its own back button, auto-print doesn't need navigation
       }
@@ -1036,7 +1045,8 @@ class StandardPrinter {
 
         if (context.mounted) {
           showScaffold(
-              context: context, message: "PDF shared. Please open it to print");
+              context: context,
+              message: 'voucher_print.pdf_shared_open_to_print'.tr);
           // Note: Navigation is now handled by the caller
           // PrintPage has its own back button, auto-print doesn't need navigation
         }

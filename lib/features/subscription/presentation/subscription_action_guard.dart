@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -124,13 +125,13 @@ class SubscriptionActionGuard {
       barrierColor: Colors.black.withValues(alpha: 0.58),
       builder: (dialogContext) => SubscriptionStatusDialog(
         variant: SubscriptionDialogVariant.unavailable,
-        title: 'Unable to verify subscription',
+        title: 'subscription.unable_verify'.tr,
         message: provider.errorMessage ??
-            'The subscription status could not be verified. Check your connection and try again.',
+            'subscription.status_unverified'.tr,
         companyName: branding.companyName,
         logoFilePath: branding.logoFilePath,
         logoUrl: branding.logoUrl,
-        primaryLabel: 'Retry',
+        primaryLabel: 'general.retry'.tr,
         onPrimaryPressed: () => Navigator.of(dialogContext).pop(true),
       ),
     );

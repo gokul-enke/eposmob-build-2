@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
@@ -111,7 +112,7 @@ class TransactionReportStandardPrinter {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: "Document configurations not loaded. Please wait.",
+            message: 'voucher_print.document_config_missing'.tr,
           );
         }
         return;
@@ -201,7 +202,8 @@ class TransactionReportStandardPrinter {
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: "Preparing $selectedPaperSize document for printing...",
+          message: 'voucher_print.preparing_document'.trParams(
+              {'paperSize': selectedPaperSize}),
         );
       }
 
@@ -489,14 +491,16 @@ class TransactionReportStandardPrinter {
             } else {
               if (context.mounted) {
                 showScaffold(
-                    context: context, message: "PDF created successfully");
+                    context: context,
+                    message: 'voucher_print.pdf_created_successfully'.tr);
                 // Navigation is handled by the parent TransactionReportPrintPage
               }
             }
           } else {
             if (context.mounted) {
               showScaffold(
-                  context: context, message: "PDF opened for printing");
+                  context: context,
+                  message: 'voucher_print.pdf_opened_for_printing'.tr);
               // Navigation is handled by the parent TransactionReportPrintPage
             }
           }
@@ -507,7 +511,8 @@ class TransactionReportStandardPrinter {
           } else {
             if (context.mounted) {
               showScaffold(
-                  context: context, message: "PDF created successfully");
+                  context: context,
+                  message: 'voucher_print.pdf_created_successfully'.tr);
               // Navigation is handled by the parent TransactionReportPrintPage
             }
           }
@@ -518,7 +523,8 @@ class TransactionReportStandardPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: "Error generating PDF: ${e.toString()}",
+          message: 'voucher_print.error_generating_pdf'
+              .trParams({'error': e.toString()}),
         );
       }
     }
@@ -532,14 +538,18 @@ class TransactionReportStandardPrinter {
 
       // Always show success message on Windows, regardless of result
       if (context.mounted) {
-        showScaffold(context: context, message: "PDF created successfully");
+        showScaffold(
+            context: context,
+            message: 'voucher_print.pdf_created_successfully'.tr);
         // Navigation is handled by the parent TransactionReportPrintPage
       }
     } catch (e) {
       debugPrint("Windows PDF handling error: $e");
       // Still show success message on error
       if (context.mounted) {
-        showScaffold(context: context, message: "PDF created successfully");
+        showScaffold(
+            context: context,
+            message: 'voucher_print.pdf_created_successfully'.tr);
         // Navigation is handled by the parent TransactionReportPrintPage
       }
     }
@@ -549,7 +559,9 @@ class TransactionReportStandardPrinter {
   void _showFileLocationInfo(File file) {
     if (context.mounted) {
       // Navigation is handled by the parent TransactionReportPrintPage
-      showScaffold(context: context, message: "PDF created successfully");
+      showScaffold(
+          context: context,
+          message: 'voucher_print.pdf_created_successfully'.tr);
     }
   }
 
@@ -568,7 +580,8 @@ class TransactionReportStandardPrinter {
 
         if (context.mounted) {
           showScaffold(
-              context: context, message: "PDF shared. Please open it to print");
+              context: context,
+              message: 'voucher_print.pdf_shared_open_to_print'.tr);
           // Navigation is handled by the parent TransactionReportPrintPage
         }
       } else {

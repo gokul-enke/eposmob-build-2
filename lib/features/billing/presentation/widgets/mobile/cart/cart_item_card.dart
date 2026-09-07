@@ -420,20 +420,20 @@ Future<void> _showCustomerPurchaseHistoryForCartItem(
         true) {
       showScaffoldError(
         context: context,
-        message: 'Customer purchase history is disabled',
+        message: 'billing.purchase_history_disabled'.tr,
       );
       return;
     }
     if (customerSelectionProvider.isDefaultCustomer) {
       showScaffoldError(
         context: context,
-        message: 'Purchase history is not shown for the default customer',
+        message: 'billing.purchase_history_default_customer'.tr,
       );
       return;
     }
     showScaffoldError(
       context: context,
-      message: 'Select a customer to view purchase history',
+      message: 'billing.select_customer_purchase_history'.tr,
     );
     return;
   }
@@ -445,7 +445,7 @@ Future<void> _showCustomerPurchaseHistoryForCartItem(
   if (customerId == null || productId == null || customerName == null) {
     showScaffoldError(
       context: context,
-      message: 'Select a customer to view purchase history',
+      message: 'billing.select_customer_purchase_history'.tr,
     );
     return;
   }
@@ -455,7 +455,7 @@ Future<void> _showCustomerPurchaseHistoryForCartItem(
   if (token == null) {
     showScaffoldError(
       context: context,
-      message: 'Unable to load purchase history',
+      message: 'billing.purchase_history_load_failed'.tr,
     );
     return;
   }
@@ -475,7 +475,7 @@ Future<void> _showCustomerPurchaseHistoryForCartItem(
         purchaseHistory.data.isEmpty) {
       showScaffoldError(
         context: context,
-        message: 'No purchase history found for this product',
+        message: 'billing.no_purchase_history'.tr,
       );
       return;
     }
@@ -532,7 +532,7 @@ Future<void> _showCustomerPurchaseHistoryForCartItem(
     if (!context.mounted) return;
     showScaffoldError(
       context: context,
-      message: 'Unable to load purchase history',
+      message: 'billing.purchase_history_load_failed'.tr,
     );
   }
 }

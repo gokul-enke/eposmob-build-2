@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
-import 'package:intl/intl.dart';
 
 class ReceiptPreviewWidget extends StatelessWidget {
   final double paperWidth;
@@ -81,7 +80,7 @@ class ReceiptPreviewWidget extends StatelessWidget {
         onPressed: () {
           // TODO: Implement actual printing logic
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Printing...')),
+            SnackBar(content: Text('voucher_print.printing'.tr)),
           );
         },
       ),

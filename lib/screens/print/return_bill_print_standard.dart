@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
@@ -38,7 +39,7 @@ class ReturnBillStandardPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'Document configurations not loaded. Please wait.',
+          message: 'voucher_print.document_config_missing'.tr,
         );
       }
       return;
@@ -49,7 +50,7 @@ class ReturnBillStandardPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'No Printer Selected',
+          message: 'voucher_print.select_printer_first'.tr,
         );
       }
       return;
@@ -60,7 +61,8 @@ class ReturnBillStandardPrinter {
         showScaffold(
           context: context,
           message:
-              'Preparing $selectedPaperSize Return Bill document for printing...',
+              'voucher_print.preparing_return_document'.trParams(
+                  {'paperSize': selectedPaperSize}),
         );
       }
 
@@ -90,7 +92,7 @@ class ReturnBillStandardPrinter {
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: 'Return Bill PDF generated successfully',
+          message: 'voucher_print.return_bill_pdf_generated'.tr,
         );
         Navigator.pop(context);
       }
@@ -99,7 +101,7 @@ class ReturnBillStandardPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error generating PDF: $e',
+          message: 'voucher_print.error_generating_pdf'.trParams({'error': '$e'}),
         );
       }
     }

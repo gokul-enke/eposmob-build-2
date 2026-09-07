@@ -1,10 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 
 import 'package:get/get.dart';
-import 'package:http/http.dart' as http;
 import 'package:pos_machine/components/build_back_button.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_err_view.dart';
@@ -12,7 +10,6 @@ import 'package:pos_machine/models/product_list_file.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../components/build_container_box.dart';
 import '../../components/build_round_button.dart';
@@ -20,13 +17,11 @@ import '../../components/build_text_fields.dart';
 import '../../components/build_title.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../models/category_list.dart';
-import '../../models/language.dart';
 
 import '../../providers/auth_model.dart';
 import '../../providers/category_providers.dart';
 import '../../providers/category_list_scope.dart';
 import '../../providers/language_provider.dart';
-import '../../resources/app_url.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
@@ -655,7 +650,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                       SizedBox(
                                         width: size.width / 3,
                                         child: BuildTextTile(
-                                          title: "Category Image : ",
+                                          title: 'category.category_image'.tr,
                                           textStyle: buildCustomStyle(
                                             FontWeightManager.regular,
                                             FontSize.s14,
@@ -668,7 +663,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                         padding:
                                             const EdgeInsets.only(left: 0.0),
                                         child: CustomRoundButton(
-                                          title: "Select Image",
+                                          title: 'general.select_image'.tr,
                                           fct: () async {
                                             showDialogFunctionForCategoryImageDetails(
                                                 context,
@@ -724,7 +719,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                             const EdgeInsets.only(left: 10),
                                         width: size.width / 3,
                                         child: BuildTextTile(
-                                          title: "Category Icon : ",
+                                          title: 'category.category_icon'.tr,
                                           textStyle: buildCustomStyle(
                                             FontWeightManager.regular,
                                             FontSize.s14,
@@ -737,7 +732,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> with Cate
                                         padding:
                                             const EdgeInsets.only(left: 20.0),
                                         child: CustomRoundButton(
-                                          title: "Select Icon",
+                                          title: 'general.select_icon'.tr,
                                           fct: () async {
                                             showDialogFunctionForCategoryIconDetails(
                                                 context,

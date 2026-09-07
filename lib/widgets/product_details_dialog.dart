@@ -2575,8 +2575,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             children: [
               Expanded(
                 child: CustomDropDownWithSearch<String>(
-                  title: 'Sale Unit *',
-                  hintText: 'Select unit',
+                  title: 'product_sale_unit.sale_unit_star'.tr,
+                  hintText: 'product_sale_unit.select_unit_hint'.tr,
                   value: row.selectedUnitId,
                   height: MediaQuery.sizeOf(context).height * 0.048,
                   margin: EdgeInsets.zero,
@@ -2594,7 +2594,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                 ),
               ),
               IconButton(
-                tooltip: 'Remove sale unit',
+                tooltip: 'product_sale_unit.remove_sale_unit'.tr,
                 onPressed: () => setState(() {
                   _saleUnitsTouched = true;
                   final removed = _saleUnitRows.removeAt(index);
@@ -3128,7 +3128,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     showEditStockDialog(
       context: context,
       stockId: stock.id!,
-      title: 'Edit Stock',
+      title: 'stock.edit_stock'.tr,
       initialRetailPrice: stock.price ?? '',
       initialMrp: stock.mrp ?? '',
       showMrp: !widget.useBillingProductPermissions ||

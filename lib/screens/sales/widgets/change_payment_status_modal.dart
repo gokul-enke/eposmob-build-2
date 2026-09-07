@@ -34,9 +34,6 @@ class _ChangePaymentStatusModalState extends State<ChangePaymentStatusModal> {
   String? _selectedStatus;
   late final TextEditingController _amountController;
 
-  double? get _balance =>
-      double.tryParse(widget.grandTotal.replaceAll(',', '').trim());
-
   @override
   void initState() {
     super.initState();
@@ -86,7 +83,7 @@ class _ChangePaymentStatusModalState extends State<ChangePaymentStatusModal> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "Update Payment Status",
+                    'change_payment_status.title'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s20,
@@ -111,8 +108,8 @@ class _ChangePaymentStatusModalState extends State<ChangePaymentStatusModal> {
                     0.27,
                     ColorManager.textColor,
                   ),
-                  children: const [
-                    TextSpan(text: 'Status'),
+                    children: [
+                    TextSpan(text: 'change_payment_status.status'.tr),
                     TextSpan(
                       text: '*',
                       style: TextStyle(color: Colors.red),
@@ -159,8 +156,8 @@ class _ChangePaymentStatusModalState extends State<ChangePaymentStatusModal> {
                     0.27,
                     ColorManager.textColor,
                   ),
-                  children: const [
-                    TextSpan(text: 'Amount'),
+                    children: [
+                    TextSpan(text: 'change_payment_status.amount'.tr),
                     TextSpan(
                       text: '*',
                       style: TextStyle(color: Colors.red),
@@ -197,7 +194,9 @@ class _ChangePaymentStatusModalState extends State<ChangePaymentStatusModal> {
               ),
               const SizedBox(height: 12),
               Text(
-                "Order Total: ${widget.grandTotal}",
+                'change_payment_status.order_total'.trParams({
+                  'amount': widget.grandTotal,
+                }),
                 style: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s12,
@@ -219,14 +218,14 @@ class _ChangePaymentStatusModalState extends State<ChangePaymentStatusModal> {
                       if (_selectedStatus == null) {
                         showScaffoldError(
                           context: context,
-                          message: "Please select a payment status",
+                          message: 'sales.select_payment_status'.tr,
                         );
                         return;
                       }
                       if (amountRaw.isEmpty || amount == null || amount < 0) {
                         showScaffoldError(
                           context: context,
-                          message: "Please enter a valid amount (minimum 0)",
+                          message: 'sales.valid_amount_minimum_zero'.tr,
                         );
                         return;
                       }
@@ -244,7 +243,7 @@ class _ChangePaymentStatusModalState extends State<ChangePaymentStatusModal> {
                       elevation: 0,
                     ),
                     child: Text(
-                      "Update Payment",
+                      'change_payment_status.update_payment'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         FontSize.s14,
@@ -264,7 +263,7 @@ class _ChangePaymentStatusModalState extends State<ChangePaymentStatusModal> {
                       ),
                     ),
                     child: Text(
-                      "Cancel",
+                      'general.cancel'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         FontSize.s14,

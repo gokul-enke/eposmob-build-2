@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
@@ -228,7 +229,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
             children: [
               Expanded(
                 child: _buildTextField(
-                  "First Name",
+                  'add_customer.label_first_name'.tr,
                   firstNameTextController,
                   TextInputType.text,
                   size,
@@ -237,7 +238,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
               const SizedBox(width: 10),
               Expanded(
                 child: _buildTextField(
-                  "Last Name",
+                  'add_customer.label_last_name'.tr,
                   lastNameTextController,
                   TextInputType.text,
                   size,
@@ -247,7 +248,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: _buildTextField(
-                    "Email Address",
+                    'add_customer.label_email'.tr,
                     emailTextController,
                     TextInputType.emailAddress,
                     size,
@@ -264,7 +265,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
             children: [
               Expanded(
                 child: _buildTextField(
-                  "Phone Number",
+                  'add_customer.label_phone'.tr,
                   phoneNumberController,
                   TextInputType.number,
                   size,
@@ -276,7 +277,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
               const SizedBox(width: 10),
               Expanded(
                 child: _buildTextField(
-                  "Building / Apartment",
+                  'add_customer.label_building'.tr,
                   addressTextController,
                   TextInputType.text,
                   size,
@@ -286,14 +287,14 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
               Expanded(
                 child: widget.isModal
                     ? _buildTextField(
-                        "Email Address",
+                        'add_customer.label_email'.tr,
                         emailTextController,
                         TextInputType.emailAddress,
                         size,
                         validator: validateEmail,
                       )
                     : _buildTextField(
-                        "Country",
+                        'add_customer.label_country'.tr,
                         countryTextController,
                         TextInputType.text,
                         size,
@@ -304,13 +305,13 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
           const SizedBox(height: 15),
 
           _buildTextField(
-            "Street Address",
+            'add_customer.label_street_address'.tr,
             streetAddressTextController,
             TextInputType.streetAddress,
             size,
             maxLines: 2,
             minLines: 2,
-            hintText: "Street name, area, locality",
+            hintText: 'customer.hint_street_address'.tr,
           ),
           const SizedBox(height: 15),
 
@@ -333,7 +334,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
               Expanded(
                 child: widget.isModal
                     ? _buildTextField(
-                        "Country",
+                        'add_customer.label_country'.tr,
                         countryTextController,
                         TextInputType.text,
                         size,
@@ -349,7 +350,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
             children: [
               Expanded(
                 child: _buildTextField(
-                  "Balance",
+                  'add_customer.label_balance'.tr,
                   balanceTextController,
                   TextInputType.number,
                   size,
@@ -458,8 +459,8 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
       children: [
         BuildDropDownWithSearch<String>(
           key: stateDropdownKey,
-          title: "States / Provinces",
-          hintText: "Select State",
+          title: 'customer.states_provinces'.tr,
+          hintText: 'customer.select_state'.tr,
           value: selectedStateId,
           margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
           items: locationProvider.stateList.map((state) => state.key).toList(),
@@ -481,7 +482,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
             return state.value;
           },
           searchController: stateSearchController,
-          searchHintText: "Search State...",
+          searchHintText: 'customer.search_state'.tr,
         ),
       ],
     );
@@ -494,9 +495,9 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
       children: [
         BuildDropDownWithSearch<String>(
           key: districtDropdownKey,
-          title: "District / City",
+          title: 'customer.district_city'.tr,
           margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
-          hintText: "Select District",
+          hintText: 'customer.select_district'.tr,
           value: selectedDistrictId,
           items: locationProvider.districtList
               .map((district) => district.key)
@@ -514,7 +515,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
             return district.value;
           },
           searchController: districtSearchController,
-          searchHintText: "Search District...",
+          searchHintText: 'customer.search_district'.tr,
         ),
       ],
     );
@@ -526,7 +527,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         BuildTextTile(
-          title: "States / Provinces",
+          title: 'customer.label_states'.tr,
           textStyle: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s14,
@@ -546,7 +547,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
             isExpanded: true,
             value: selectedStateId,
             hint: Text(
-              "Select State",
+              'customer.hint_select_state'.tr,
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s12,
@@ -612,7 +613,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         BuildTextTile(
-          title: "District / City",
+          title: 'customer.label_district'.tr,
           textStyle: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s14,
@@ -644,10 +645,10 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
                   value: selectedDistrictId,
                   hint: Text(
                     selectedStateId == null
-                        ? "Select State First"
+                        ? 'customer.hint_select_state_first'.tr
                         : locationProvider.districtList.isEmpty
-                            ? "No districts available"
-                            : "Select District",
+                            ? 'customer.hint_no_districts'.tr
+                            : 'customer.hint_select_district'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.regular,
                       FontSize.s12,
@@ -721,7 +722,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         BuildTextTile(
-          title: "Pincode",
+          title: 'customer.label_pincode'.tr,
           textStyle: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s14,
@@ -753,10 +754,10 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
                   value: selectedPincodeId,
                   hint: Text(
                     selectedDistrictId == null
-                        ? "Select District First"
+                        ? 'customer.hint_select_district_first'.tr
                         : locationProvider.pincodeList.isEmpty
-                            ? "No pincodes available"
-                            : "Select Pincode",
+                            ? 'customer.hint_no_pincodes'.tr
+                            : 'customer.hint_select_pincode'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.regular,
                       FontSize.s12,
@@ -807,7 +808,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
         Row(
           children: [
             BuildTextTile(
-              title: "Payment Type",
+              title: 'customer.payment_type'.tr,
               textStyle: buildCustomStyle(FontWeightManager.regular,
                   FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
             ),
@@ -828,9 +829,10 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
           width: size.width,
           child: Row(
             children: [
-              _buildRadioOption("To Pay", PaymentType.toPay),
+              _buildRadioOption('customer.to_pay'.tr, PaymentType.toPay),
               const SizedBox(width: 24),
-              _buildRadioOption("To Receive", PaymentType.toReceive),
+              _buildRadioOption(
+                  'customer.to_receive'.tr, PaymentType.toReceive),
             ],
           ),
         ),
@@ -870,7 +872,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
           children: [
             // Close Button
             CustomRoundButton(
-              title: "Close",
+              title: 'general.close'.tr,
               fct: () {
                 if (widget.onCancel != null) {
                   widget.onCancel!();
@@ -888,7 +890,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
             const SizedBox(width: 10),
             // Submit Button
             CustomRoundButton(
-              title: "Submit",
+              title: 'general.submit'.tr,
               fct: () => _submitForm(locationProvider, accessToken),
               height: 50,
               width: 120,
@@ -901,7 +903,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
       return Padding(
         padding: const EdgeInsets.only(left: 10.0),
         child: CustomRoundButton(
-          title: "Submit",
+          title: 'general.submit'.tr,
           fct: () => _submitForm(locationProvider, accessToken),
           height: 50,
           width: MediaQuery.of(context).size.width * 0.19,
@@ -917,7 +919,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
       // Validate payment type
       if (selectedPaymentType == PaymentType.none) {
         showScaffoldError(
-            context: context, message: "Please select a payment type");
+            context: context, message: 'customer.select_payment_type'.tr);
         return;
       }
 
@@ -1022,14 +1024,18 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
             ? errorResponse.values.map((error) {
                 return error is List ? error.join(', ') : error.toString();
               }).join('\n')
-            : value['message']?.toString() ?? "An unknown error occurred";
+            : value['message']?.toString() ??
+                'general.unknown_error_occurred'.tr;
 
         showScaffoldError(context: context, message: errorMessage);
         Navigator.pop(context);
       } catch (error) {
         if (!mounted) return;
         Navigator.pop(context);
-        showScaffoldError(context: context, message: 'Error: $error');
+        showScaffoldError(
+          context: context,
+          message: '${'general.error_prefix'.tr} $error',
+        );
       }
     }
   }

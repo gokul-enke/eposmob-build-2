@@ -216,7 +216,7 @@ class BillingSidebarFooter extends StatelessWidget {
               onCustomerChanged(value);
             },
             decoration: InputDecoration(
-              hintText: 'Search customer...',
+              hintText: 'common.search_customer'.tr,
               hintStyle: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s12,
@@ -308,7 +308,7 @@ class BillingSidebarFooter extends StatelessWidget {
       children: [
         _buildQuickIconButton(
           icon: Icons.local_offer_outlined,
-          label: 'Discount',
+          label: 'billing.discount_tab'.tr,
           color: ColorManager.kButtonYellow,
           onTap: onDiscountTap,
           isSelected: isDiscountSelected,
@@ -317,7 +317,7 @@ class BillingSidebarFooter extends StatelessWidget {
         const SizedBox(width: 8),
         _buildQuickIconButton(
           icon: Icons.delivery_dining_outlined,
-          label: 'Delivery',
+          label: 'billing.delivery'.tr,
           color: ColorManager.kButtonGreen,
           onTap: onDeliveryTap,
           isSelected: isDeliverySelected,
@@ -326,7 +326,7 @@ class BillingSidebarFooter extends StatelessWidget {
         const SizedBox(width: 8),
         _buildQuickIconButton(
           icon: Icons.payment_outlined,
-          label: 'Payment',
+          label: 'billing.payment_tab'.tr,
           color: ColorManager.kButtonBlue,
           onTap: onPaymentTap,
           isSelected: isPaymentSelected,
@@ -415,7 +415,7 @@ class BillingSidebarFooter extends StatelessWidget {
       child: Column(
         children: [
           BuildPaymentRow(
-            title: 'Net Amount',
+            title: 'billing.net_amount'.tr,
             amount: '$currency ${AmountHelper.formatAmount(priceSummary!.netTotal ?? 0)}',
             color: ColorManager.textColor,
             padding: EdgeInsets.zero,
@@ -423,7 +423,7 @@ class BillingSidebarFooter extends StatelessWidget {
           if (discount > 0) ...[
             const SizedBox(height: 6),
             BuildPaymentRow(
-              title: 'Discount',
+              title: 'billing.discount_label'.tr,
               amount: '-$currency ${AmountHelper.formatAmount(discount)}',
               color: ColorManager.kButtonRed,
               padding: EdgeInsets.zero,
@@ -433,7 +433,7 @@ class BillingSidebarFooter extends StatelessWidget {
           GestureDetector(
             onTap: onTaxTap,
             child: BuildPaymentRow(
-              title: 'Tax',
+            title: 'billing.tax'.tr,
               amount: '$currency ${AmountHelper.formatAmount(priceSummary!.totalTax ?? 0)}',
               color: ColorManager.kGreyColor,
               padding: EdgeInsets.zero,
@@ -443,7 +443,7 @@ class BillingSidebarFooter extends StatelessWidget {
           const Divider(height: 1),
           const SizedBox(height: 8),
           BuildPaymentRow(
-            title: 'Total Payable',
+            title: 'billing.total_payable_label'.tr,
             amount: '$currency ${AmountHelper.formatAmount(priceSummary!.netPayable ?? 0)}',
             color: ColorManager.kPrimaryColor,
             padding: EdgeInsets.zero,
@@ -462,14 +462,14 @@ class BillingSidebarFooter extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           BuildPaymentRow(
-            title: 'Total Paid',
+            title: 'billing.total_paid'.tr,
             amount: '$currency ${AmountHelper.formatAmount(totalPaid)}',
             color: ColorManager.textColor,
             padding: EdgeInsets.zero,
           ),
           const SizedBox(height: 6),
           BuildPaymentRow(
-            title: 'Balance',
+            title: 'billing.balance'.tr,
             amount: '$currency ${AmountHelper.formatAmount(balance)}',
             color: balance > 0 ? ColorManager.kButtonRed : ColorManager.kButtonGreen,
             padding: EdgeInsets.zero,
@@ -484,7 +484,7 @@ class BillingSidebarFooter extends StatelessWidget {
       children: [
         Expanded(
           child: CustomRoundButton(
-            title: 'Clear Cart',
+            title: 'billing.clear_cart_button'.tr,
             fct: onClearCart,
             height: 38,
             width: double.infinity,
@@ -497,7 +497,7 @@ class BillingSidebarFooter extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: CustomRoundButton(
-            title: 'Save Order',
+            title: 'billing.save_order'.tr,
             fct: onSaveOrder,
             height: 38,
             width: double.infinity,

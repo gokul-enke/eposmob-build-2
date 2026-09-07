@@ -4,12 +4,6 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
 import 'dart:ui';
-import 'package:pos_machine/components/build_dialog_box.dart'
-    hide
-        showScaffold,
-        showScaffoldError,
-        showLoadingOverlay,
-        hideLoadingOverlay;
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/models/list_invoice.dart';
@@ -1446,7 +1440,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
                   0.18, ColorManager.textColor),
               decoration: decoration.copyWith(
-                hintText: "Email",
+                hintText: 'invoice.search_email_hint'.tr,
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor),
                 prefixIconColor: Colors.black,
@@ -2833,7 +2827,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                               ClipboardData(text: invoice.invoiceNumber));
                           showScaffold(
                             context: context,
-                            message: 'Invoice number copied to clipboard',
+                            message: 'invoice.number_copied'.tr,
                           );
                         },
                         child: Icon(

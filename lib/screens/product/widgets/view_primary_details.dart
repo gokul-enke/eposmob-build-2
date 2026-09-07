@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import 'package:provider/provider.dart';
 
@@ -98,7 +99,7 @@ class ViewPrimaryDetailsScreen extends StatelessWidget {
                         Padding(
                           padding: const EdgeInsets.only(left: 10.0),
                           child: CustomRoundButton(
-                            title: "Next",
+                            title: 'general.next'.tr,
                             boxColor: Colors.white,
                             textColor: ColorManager.kPrimaryColor,
                             fct: () async {

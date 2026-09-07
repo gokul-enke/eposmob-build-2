@@ -515,7 +515,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                       SizedBox(
                                         width: size.width / 3,
                                         child: BuildTextTile(
-                                          title: "Category Image : ",
+                                          title: 'category.category_image'.tr,
                                           textStyle: buildCustomStyle(
                                             FontWeightManager.regular,
                                             FontSize.s14,
@@ -528,7 +528,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                         padding:
                                             const EdgeInsets.only(left: 20.0),
                                         child: CustomRoundButton(
-                                          title: "Select Image",
+                                          title: 'general.select_image'.tr,
                                           fct: () async {
                                             showDialogFunctionForCategoryImageDetails(
                                                 context,
@@ -573,7 +573,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                             const EdgeInsets.only(left: 10),
                                         width: size.width / 3,
                                         child: BuildTextTile(
-                                          title: "Category Icon : ",
+                                          title: 'category.category_icon'.tr,
                                           textStyle: buildCustomStyle(
                                             FontWeightManager.regular,
                                             FontSize.s14,
@@ -586,7 +586,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                         padding:
                                             const EdgeInsets.only(left: 20.0),
                                         child: CustomRoundButton(
-                                          title: "Select Icon",
+                                          title: 'general.select_icon'.tr,
                                           fct: () async {
                                             showDialogFunctionForCategoryIconDetails(
                                                 context,

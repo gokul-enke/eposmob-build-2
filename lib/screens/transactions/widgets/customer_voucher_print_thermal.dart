@@ -1,5 +1,6 @@
 ﻿import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/document_configurations.dart';
@@ -61,7 +62,7 @@ class CustomerVoucherThermalPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: "Document configurations not loaded. Please wait.",
+          message: 'voucher_print.document_config_missing'.tr,
         );
       }
       return const SizedBox.shrink();
@@ -77,7 +78,7 @@ class CustomerVoucherThermalPrinter {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: 'Please select a printer',
+            message: 'voucher_print.select_printer'.tr,
           );
         }
         return const SizedBox.shrink();
@@ -366,7 +367,7 @@ class CustomerVoucherThermalPrinter {
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: 'Customer Voucher printed successfully',
+          message: 'voucher_print.customer_voucher_printed'.tr,
         );
       }
     } catch (e) {
@@ -374,7 +375,8 @@ class CustomerVoucherThermalPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error printing: $e',
+          message: 'voucher_print.error_printing'
+              .trParams({'error': e.toString()}),
         );
       }
     }

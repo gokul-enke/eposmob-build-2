@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:geolocator/geolocator.dart';
@@ -100,7 +101,9 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
       debugPrint("LocationPickerDialog: Error loading template asset: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Error: Location picker asset template missing.")),
+          SnackBar(
+          content: Text('common.location_picker_asset_missing'.tr),
+          ),
         );
         Navigator.of(context).pop();
       }
@@ -275,8 +278,8 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    "Pick Customer Location",
+                  Text(
+                    'common.pick_customer_location'.tr,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -303,13 +306,13 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                     _buildAndroidWebView(),
 
                   if (_isMapLoading)
-                    const Center(
+                    Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           CircularProgressIndicator(color: Colors.blue),
                           SizedBox(height: 12),
-                          Text("Loading map picker..."),
+                          Text('common.loading_map_picker'.tr),
                         ],
                       ),
                     ),
@@ -340,7 +343,7 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                           child: Text(
                             _locationResult != null && _locationResult!.formattedAddress.isNotEmpty
                                 ? _locationResult!.formattedAddress
-                                : "No location selected yet. Search an address or tap/drag the map pin.",
+                                : 'common.no_location_selected'.tr,
                             style: TextStyle(
                               fontSize: 13,
                               color: _locationResult != null ? Colors.green.shade900 : Colors.grey.shade600,
@@ -359,7 +362,8 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                     children: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+                        child: Text('general.cancel'.tr,
+                            style: const TextStyle(color: Colors.grey)),
                       ),
                       const SizedBox(width: 12),
                       ElevatedButton(
@@ -373,7 +377,7 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
-                        child: const Text("Confirm Location"),
+                        child: Text('common.confirm_location'.tr),
                       ),
                     ],
                   ),

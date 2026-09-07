@@ -128,8 +128,7 @@ class _SupplierTransactionReportPrintState
       context: context,
       builder: (context) => AlertDialog(
         title: Text('ui_codes.permissions_required'.tr),
-        content: const Text(
-            'This app needs Bluetooth and Location permissions to scan for printers.'),
+        content: Text('voucher_print.printer_permissions_required'.tr),
         actions: [
           TextButton(
             child: Text('general.ok'.tr),
@@ -327,7 +326,7 @@ class _SupplierTransactionReportPrintState
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Document configuration not loaded. Please try again.",
+          message: 'voucher_print.document_config_not_loaded_retry'.tr,
         );
       }
       return;
@@ -400,7 +399,7 @@ class _SupplierTransactionReportPrintState
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Document configuration not loaded. Please try again.",
+          message: 'voucher_print.document_config_not_loaded_retry'.tr,
         );
       }
       return;
@@ -503,8 +502,8 @@ class _SupplierTransactionReportPrintState
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'Print Supplier Transaction Report',
+        title: Text(
+          'supplier_transaction_report.print_supplier_transaction_report'.tr,
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -540,8 +539,8 @@ class _SupplierTransactionReportPrintState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Paper Size',
+                    Text(
+                      'voucher_print.paper_size'.tr,
                       style: TextStyle(
                         color: textPrimaryColor,
                         fontSize: 20,
@@ -589,8 +588,8 @@ class _SupplierTransactionReportPrintState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Available Printers',
+                    Text(
+                      'voucher_print.available_printers'.tr,
                       style: TextStyle(
                         color: textPrimaryColor,
                         fontSize: 20,
@@ -600,8 +599,9 @@ class _SupplierTransactionReportPrintState
                     const SizedBox(height: 8),
                     Text(
                       _isScanning
-                          ? 'Scanning...'
-                          : '${devices.length} devices found',
+                          ? 'voucher_print.scanning'.tr
+                          : 'voucher_print.info_devices_found'.trParams(
+                              {'count': devices.length.toString()}),
                       style: const TextStyle(
                         color: textSecondaryColor,
                         fontSize: 14,
@@ -624,8 +624,8 @@ class _SupplierTransactionReportPrintState
                             color: textSecondaryColor,
                           ),
                           const SizedBox(height: 16),
-                          const Text(
-                            'No printers found',
+                          Text(
+                            'voucher_print.no_printers_found'.tr,
                             style: TextStyle(
                               color: textSecondaryColor,
                               fontSize: 16,
@@ -634,7 +634,7 @@ class _SupplierTransactionReportPrintState
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Tap the refresh button to scan for printers',
+                            'voucher_print.tap_refresh_to_scan'.tr,
                             style: TextStyle(
                               color: textSecondaryColor.withOpacity(0.8),
                               fontSize: 14,
@@ -668,7 +668,8 @@ class _SupplierTransactionReportPrintState
                                 size: 28,
                               ),
                               title: Text(
-                                printer.deviceName ?? 'Unknown device',
+                                printer.deviceName ??
+                                    'voucher_print.unknown_device'.tr,
                                 style: TextStyle(
                                   color: textPrimaryColor,
                                   fontWeight: isSelected
@@ -703,7 +704,9 @@ class _SupplierTransactionReportPrintState
                                 ),
                                 onPressed: () => selectPrinter(printer),
                                 child: Text(
-                                  isSelected ? 'Selected' : 'Select',
+                                  isSelected
+                                      ? 'voucher_print.selected'.tr
+                                      : 'voucher_print.select'.tr,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -731,7 +734,7 @@ class _SupplierTransactionReportPrintState
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Loading document configuration...',
+                        'voucher_print.loading_document_config'.tr,
                         style: TextStyle(
                           color: Colors.orange[700],
                           fontSize: 14,
@@ -748,7 +751,7 @@ class _SupplierTransactionReportPrintState
                         }
                       },
                       child: Text(
-                        'Retry',
+                        'general.retry'.tr,
                         style: TextStyle(
                           color: Colors.orange[700],
                           fontWeight: FontWeight.bold,
@@ -763,15 +766,14 @@ class _SupplierTransactionReportPrintState
                 if (selectedPrinter == null) {
                   showScaffoldError(
                     context: context,
-                    message: "Please select a printer first",
+                    message: 'voucher_print.select_printer_first'.tr,
                   );
                   return;
                 }
                 if (_supplierStatementDocumentConfig == null) {
                   showScaffoldError(
                     context: context,
-                    message:
-                        "Document configuration not loaded. Please wait or try again.",
+                    message: 'voucher_print.document_config_missing'.tr,
                   );
                   return;
                 }
@@ -779,8 +781,8 @@ class _SupplierTransactionReportPrintState
                     appSettings.customerCareEmail);
               },
               icon: const Icon(Icons.receipt_long),
-              label: const Text(
-                'Print Supplier Transaction Report',
+              label: Text(
+                'supplier_transaction_report.print_supplier_transaction_report'.tr,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -802,8 +804,7 @@ class _SupplierTransactionReportPrintState
                 if (_supplierStatementDocumentConfig == null) {
                   showScaffoldError(
                     context: context,
-                    message:
-                        "Document configuration not loaded. Please wait or try again.",
+                    message: 'voucher_print.document_config_missing'.tr,
                   );
                   return;
                 }
@@ -811,8 +812,8 @@ class _SupplierTransactionReportPrintState
                     appSettings.customerCareEmail);
               },
               icon: const Icon(Icons.share),
-              label: const Text(
-                'Share Supplier Transaction Report',
+              label: Text(
+                'supplier_transaction_report.share_supplier_transaction_report'.tr,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -833,7 +834,7 @@ class _SupplierTransactionReportPrintState
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _isScanning ? null : _checkPermissions,
-        tooltip: 'Scan for printers',
+        tooltip: 'voucher_print.scan_for_printers'.tr,
         backgroundColor: _isScanning ? textSecondaryColor : primaryColor,
         elevation: 4,
         child: _isScanning

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
@@ -292,7 +293,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
             contentPadding:
                 const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
             border: InputBorder.none,
-            hintText: 'Price',
+            hintText: 'product_detail.price'.tr,
             hintStyle: TextStyle(
               color: Colors.grey,
               fontSize: fontProvider.billingTableInputSize,
@@ -439,7 +440,7 @@ class _MrpTextFieldState extends State<MrpTextField> {
             contentPadding:
                 const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
             border: InputBorder.none,
-            hintText: 'MRP',
+            hintText: 'product_detail.mrp'.tr,
             hintStyle: TextStyle(
               color: Colors.grey,
               fontSize: fontProvider.billingTableInputSize,
@@ -541,7 +542,7 @@ class TaxTextField extends StatelessWidget {
             contentPadding:
                 const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
             border: InputBorder.none,
-            hintText: 'Tax',
+            hintText: 'billing.tax'.tr,
             hintStyle: TextStyle(
               color: Colors.black,
               fontSize: fontProvider.billingTableInputSize,

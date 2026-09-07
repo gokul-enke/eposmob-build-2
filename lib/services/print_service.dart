@@ -108,7 +108,7 @@ class PrintService {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'Unable to prepare this order for printing: $error',
+          message: '${'general.unable_prepare_print'.tr}: $error',
         );
       }
       return false;

@@ -288,9 +288,9 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                 children: [
                   Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          'Duplicate Barcode Found',
+                          'product_detail.duplicate_barcode_title'.tr,
                           style: TextStyle(
                             fontFamily: 'Poppins',
                             fontSize: 18,
@@ -314,8 +314,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Select a product to copy its details into the form.',
+                  Text(
+                    'product_detail.select_product_copy_hint'.tr,
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 13),
                   ),
                   const SizedBox(height: 16),
@@ -402,7 +402,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                             side: BorderSide(color: ColorManager.kPrimaryColor),
                           ),
                           child: Text(
-                            'Cancel',
+                            'general.cancel'.tr,
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               color: ColorManager.kPrimaryColor,
@@ -419,8 +419,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                             backgroundColor: ColorManager.kPrimaryColor,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
-                          child: const Text(
-                            'Continue',
+                          child: Text(
+                            'product_detail.continue_btn'.tr,
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               color: Colors.white,
@@ -535,7 +535,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
       if (token == null || token.isEmpty) {
         showScaffoldError(
           context: context,
-          message: 'Authentication token not found. Please log in again.',
+        message: 'product_detail.auth_token_missing_login'.tr,
         );
         return;
       }
@@ -580,13 +580,13 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
       } else {
         showScaffoldError(
           context: context,
-          message: result?['message'] ?? 'Failed to generate barcode',
+          message: result?['message'] ?? 'product_detail.failed_generate_barcode'.tr,
         );
       }
     } catch (e) {
       showScaffoldError(
         context: context,
-        message: 'Error generating barcode: $e',
+        message: '${'product_detail.error_generating_barcode'.tr}: $e',
       );
     } finally {
       onLoadingChanged?.call(false);
@@ -605,7 +605,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
     if (baseText.isEmpty) {
       showScaffoldError(
         context: context,
-        message: 'Please enter Product Name before translating.',
+        message: 'product_detail.enter_name_before_translating'.tr,
       );
       return;
     }
@@ -632,12 +632,12 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
       _languageNameControllers[language.id]?.text = translated;
       showScaffold(
         context: context,
-        message: 'Translated to ${language.name}',
+        message: 'product_detail.translated_to'.trParams({'language': language.name}),
       );
     } else {
       showScaffoldError(
         context: context,
-        message: 'Translation failed. Please try again.',
+        message: 'product_detail.translation_failed'.tr,
       );
     }
 
@@ -691,12 +691,12 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
         if (!isCategoryValid) {
           showScaffoldError(
             context: context,
-            message: 'Please select a Product Category.',
+            message: 'product_detail.select_product_category'.tr,
           );
         } else {
           showScaffoldError(
             context: context,
-            message: 'Please fill all required fields correctly',
+            message: 'product_detail.fill_required_fields'.tr,
           );
         }
         return;
@@ -726,7 +726,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
     if (!isFormValid || !isUnitValid || !isCategoryValid) {
       showScaffoldError(
         context: context,
-        message: 'Please fill all required fields correctly',
+        message: 'product_detail.fill_required_fields'.tr,
       );
       return;
     }
@@ -762,7 +762,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
       if (baseRate.isEmpty) {
         showScaffoldError(
           context: context,
-          message: 'Base unit conversion rate is required.',
+          message: 'product_detail.base_conversion_rate_required'.tr,
         );
         return;
       }
@@ -770,7 +770,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
       if (parsedRate == null || parsedRate <= 0) {
         showScaffoldError(
           context: context,
-          message: 'Base unit conversion rate must be greater than 0.',
+          message: 'product_detail.base_conversion_rate_must_be_positive'.tr,
         );
         return;
       }
@@ -884,7 +884,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           _resetFormFields();
         }
 
-        showScaffold(context: context, message: 'Product added successfully');
+        showScaffold(context: context, message: 'product_detail.product_added_success'.tr);
       } else {
         showScaffoldError(
           context: context,
@@ -894,7 +894,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
     } catch (e) {
       showScaffoldError(
         context: context,
-        message: 'Error adding product: $e',
+        message: '${'product_detail.error_adding_product'.tr}: $e',
       );
     } finally {
       if (mounted) {
@@ -1128,8 +1128,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.black87),
           onPressed: isBusy ? null : () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Add New Product',
+        title: Text(
+          'product_detail.add_new_product'.tr,
           style: TextStyle(
             fontFamily: 'Poppins',
             color: Colors.black87,
@@ -1178,11 +1178,11 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                         ],
                         Row(
                           children: [
-                            _buildStepIndicator(1, 'Basic Info'),
+                            _buildStepIndicator(1, 'product_detail.basic_info'.tr),
                             _buildStepDivider(),
-                            _buildStepIndicator(2, 'Localization'),
+                            _buildStepIndicator(2, 'product_detail.localization'.tr),
                             _buildStepDivider(),
-                            _buildStepIndicator(3, 'Pricing'),
+                            _buildStepIndicator(3, 'product_detail.pricing'.tr),
                           ],
                         ),
                         const SizedBox(height: 28),
@@ -1255,18 +1255,19 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionHeader(Icons.info, 'Basic Information'),
+          _buildSectionHeader(
+              Icons.info, 'product_detail.basic_information'.tr),
           const SizedBox(height: 20),
           _buildInputField(
-            label: 'Product Name',
-            hintText: 'e.g. Premium Coffee Beans',
+            label: 'product_detail.product_name'.tr,
+            hintText: 'product_detail.product_name_hint'.tr,
             controller: _productNameController,
             isRequired: true,
           ),
           const SizedBox(height: 18),
           _buildInputField(
-            label: 'Barcode',
-            hintText: 'Scan or enter barcode',
+            label: 'product_detail.barcode'.tr,
+            hintText: 'product_detail.scan_or_enter_barcode'.tr,
             controller: _barcodeController,
             focusNode: _barcodeFocusNode,
             isRequired: true,
@@ -1290,11 +1291,11 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text.rich(
+              Text.rich(
                 TextSpan(
                   children: [
                     TextSpan(
-                      text: 'Product Category',
+                      text: 'product_detail.category'.tr,
                       style: TextStyle(
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.w500,
@@ -1317,7 +1318,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                 builder: (context, categoryProvider, _) {
                   final categories = categoryProvider.category ?? [];
                   return CustomDropDownWithSearch<Category>(
-                    hintText: 'Select Category...',
+                    hintText: 'product_detail.select_category_hint'.tr,
                     value: _selectedCategory,
                     items: categories,
                     searchController: _categorySearchController,
@@ -1332,7 +1333,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
-                    'Required',
+                    'general.required'.tr,
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       color: Colors.red[700],
@@ -1390,13 +1391,14 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionHeader(Icons.translate, 'Other Language Names'),
+              _buildSectionHeader(
+                  Icons.translate, 'product_detail.other_language_names'.tr),
               const SizedBox(height: 20),
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(vertical: 24),
                 child: Center(
                   child: Text(
-                    'No other languages available.',
+                    'product_detail.no_other_languages'.tr,
                     style: TextStyle(fontFamily: 'Poppins', color: Colors.grey),
                   ),
                 ),
@@ -1408,15 +1410,18 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionHeader(Icons.translate, 'Other Language Names'),
+            _buildSectionHeader(
+                Icons.translate, 'product_detail.other_language_names'.tr),
             const SizedBox(height: 20),
             ...otherLanguages.map((language) {
               final isTranslating = _languageTranslating[language.id] == true;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 18),
                 child: _buildInputField(
-                  label: 'Product Name (${language.name})',
-                  hintText: 'Enter name in ${language.name}',
+                  label: 'product_detail.product_name_in_language'.trParams(
+                      {'language': language.name}),
+                  hintText: 'product_detail.enter_name_in_language'.trParams(
+                      {'language': language.name}),
                   controller: _languageNameControllers[language.id]!,
                   suffixIcon: _buildSquareActionButton(
                     isLoading: isTranslating,
@@ -1452,7 +1457,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
               Expanded(
                 child: _buildSectionHeader(
                   Icons.account_balance_wallet,
-                  'Pricing & Stock',
+                  'product_detail.pricing_and_stock'.tr,
                 ),
               ),
               if (multiSaleUnitEnabled)
@@ -1460,7 +1465,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Advanced',
+                      'product_detail.advanced'.tr,
                       style: TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 13,
@@ -1480,11 +1485,11 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text.rich(
+              Text.rich(
                 TextSpan(
                   children: [
                     TextSpan(
-                      text: 'Product Unit',
+                      text: 'product_detail.product_unit'.tr,
                       style: TextStyle(
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.w500,
@@ -1508,7 +1513,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                   final unitList =
                       purchaseProvider.getUnitList ?? const <String, String>{};
                   return CustomDropDownWithSearch<String>(
-                    hintText: 'Select Unit...',
+                    hintText: 'product_detail.select_unit_hint'.tr,
                     value: _selectedUnit,
                     items: unitList.keys.toList(),
                     searchController: _unitSearchController,
@@ -1521,7 +1526,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
-                    'Required',
+                    'general.required'.tr,
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       color: Colors.red[700],
@@ -1534,7 +1539,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           const SizedBox(height: 18),
           if (canViewPurchasePrice)
             _buildInputField(
-              label: 'Purchase Price',
+              label: 'product_detail.purchase_price'.tr,
               hintText: '0.00',
               controller: _purchasePriceController,
               isRequired: true,
@@ -1544,15 +1549,15 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
             ),
           const SizedBox(height: 18),
           _buildInputField(
-            label: 'Max Sale Price / MRP',
-            hintText: 'Optional',
+            label: 'product_detail.max_sale_price_mrp'.tr,
+            hintText: 'general.optional'.tr,
             controller: _mrpController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [_decimalInputFormatter],
           ),
           const SizedBox(height: 18),
           _buildInputField(
-            label: 'Selling Price',
+            label: 'product_detail.selling_price'.tr,
             hintText: '0.00',
             controller: _sellingPriceController,
             isRequired: true,
@@ -1561,7 +1566,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           ),
           const SizedBox(height: 18),
           _buildInputField(
-            label: 'Quantity',
+            label: 'product_detail.quantity'.tr,
             hintText: '0',
             controller: _quantityController,
             isRequired: true,
@@ -1577,7 +1582,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
               return Column(
                 children: [
                   _buildInputField(
-                    label: 'Item Code',
+                    label: 'product_detail.item_code'.tr,
                     hintText: 'PROD-12345',
                     controller: _itemCodeController,
                   ),
@@ -1587,16 +1592,16 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
             },
           ),
           _buildInputField(
-            label: 'Max Discount Percentage',
-            hintText: 'Optional',
+            label: 'product_detail.max_discount_percentage'.tr,
+            hintText: 'general.optional'.tr,
             controller: _minMarginController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [_decimalInputFormatter],
           ),
           const SizedBox(height: 18),
           _buildInputField(
-            label: 'Max Discount Amount',
-            hintText: 'Optional',
+            label: 'product_detail.max_discount_amount'.tr,
+            hintText: 'general.optional'.tr,
             controller: _minMarginPriceController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [_decimalInputFormatter],
@@ -1654,8 +1659,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Multi Sale Unit',
+              Text(
+                'product_detail.multi_sale_unit'.tr,
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontWeight: FontWeight.w600,
@@ -1664,7 +1669,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Base unit is required before adding additional sale units.',
+                'product_detail.base_unit_required'.tr,
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 12,
@@ -1682,7 +1687,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                     border: Border.all(color: Colors.orange.withOpacity(0.35)),
                   ),
                   child: Text(
-                    'Select the product unit first to activate this section.',
+                    'product_detail.select_unit_first'.tr,
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 12,
@@ -1739,7 +1744,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${AddProductFormHelpers.resolveUnitLabel(_selectedUnit, unitList)} (Base Unit)',
+            '${AddProductFormHelpers.resolveUnitLabel(_selectedUnit, unitList)} '
+                '(${ 'product_detail.base_unit'.tr})',
             style: const TextStyle(
               fontFamily: 'Poppins',
               fontWeight: FontWeight.w600,
@@ -1748,7 +1754,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           ),
           const SizedBox(height: 12),
           _buildInputField(
-            label: 'Conversion Rate',
+            label: 'product_detail.conversion_rate'.tr,
             hintText: '1',
             controller: _baseConversionRateController,
             isRequired: true,
@@ -1764,8 +1770,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Barcode',
+                  Text(
+                    'product_detail.barcode'.tr,
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       fontWeight: FontWeight.w500,
@@ -1836,7 +1842,9 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           Row(
             children: [
               Text(
-                'Sale Unit ${index + 1}',
+                '${'product_detail.sale_unit_index'.trParams({
+                  'n': '${index + 1}',
+                })}',
                 style: const TextStyle(
                   fontFamily: 'Poppins',
                   fontWeight: FontWeight.w600,
@@ -1854,11 +1862,11 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text.rich(
+              Text.rich(
                 TextSpan(
                   children: [
                     TextSpan(
-                      text: 'Sale Unit',
+                      text: 'product_detail.sale_unit'.tr,
                       style: TextStyle(
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.w500,
@@ -1874,7 +1882,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
               ),
               const SizedBox(height: 8),
               CustomDropDownWithSearch<String>(
-                hintText: 'Select unit',
+                hintText: 'product_detail.select_unit_hint'.tr,
                 value: row.selectedUnitId,
                 items: availableUnits,
                 searchController: row.searchController,
@@ -1887,7 +1895,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           ),
           const SizedBox(height: 12),
           _buildInputField(
-            label: 'Conversion Rate',
+            label: 'product_detail.conversion_rate'.tr,
             hintText: '1',
             controller: row.conversionRateController,
             isRequired: true,
@@ -1896,8 +1904,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           ),
           const SizedBox(height: 12),
           _buildInputField(
-            label: 'Barcode',
-            hintText: 'Enter or generate',
+            label: 'product_detail.barcode'.tr,
+            hintText: 'product_detail.enter_or_generate_barcode'.tr,
             controller: row.barcodeController,
             isRequired: true,
             suffixIcon: _buildSquareActionButton(
@@ -1916,7 +1924,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           ),
           const SizedBox(height: 12),
           _buildInputField(
-            label: 'Price',
+            label: 'product_detail.price'.tr,
             hintText: '0.00',
             controller: row.priceController,
             isRequired: true,
@@ -1964,11 +1972,11 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
             elevation: 0,
           ),
           onPressed: _goToNextStep,
-          child: const Row(
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'Next',
+                'general.next'.tr,
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 16,
@@ -2020,11 +2028,11 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                 elevation: 0,
               ),
               onPressed: _goToNextStep,
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Next',
+                    'general.next'.tr,
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 16,
@@ -2058,7 +2066,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                 ),
                 onPressed: () => setState(() => _currentStep = 2),
                 child: Text(
-                  'Back',
+                  'general.back'.tr,
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 16,
@@ -2093,7 +2101,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                         ),
                       )
                     : Text(
-                        'Save & Add Another',
+                        'product_detail.save_add_another'.tr,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'Poppins',
@@ -2130,8 +2138,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   )
-                : const Text(
-                    'Save Product',
+                : Text(
+                    'product_detail.save_product'.tr,
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 16,

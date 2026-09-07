@@ -297,8 +297,8 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
             const SizedBox(height: 16),
 
             // Transaction Reference Input
-            const Text(
-              'Transaction Reference',
+              Text(
+                'billing.transaction_reference'.tr,
               style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
@@ -308,7 +308,7 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
             TextField(
               controller: bp.transactionNumberController,
               decoration: InputDecoration(
-                hintText: 'Enter transaction reference number',
+                hintText: 'billing.enter_transaction_reference'.tr,
                 filled: true,
                 fillColor: const Color(0xFFF8FAFC),
                 contentPadding:
@@ -476,9 +476,9 @@ class _ToCustomerCreditSection extends StatelessWidget {
                     size: 20,
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'To Customer Credit',
+                      'billing.to_customer_credit'.tr,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -529,7 +529,7 @@ class _ToCustomerCreditSection extends StatelessWidget {
                     color: Color(0xFF0066CC),
                   ),
                   decoration: InputDecoration(
-                    hintText: 'Enter amount to add as customer credit',
+                    hintText: 'billing.enter_customer_credit_amount'.tr,
                     filled: true,
                     fillColor: const Color(0xFFF8FAFC),
                     contentPadding: const EdgeInsets.symmetric(

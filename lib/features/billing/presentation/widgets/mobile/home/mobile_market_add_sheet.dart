@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
@@ -191,7 +192,7 @@ class _MobileMarketAddSheetState extends State<_MobileMarketAddSheet> {
           const SizedBox(height: 16),
           if (canChangeUnit) ...[
             InputDecorator(
-              decoration: _fieldDecoration(label: 'Sale unit'),
+              decoration: _fieldDecoration(label: 'billing.sale_unit'.tr),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   isExpanded: true,
@@ -224,7 +225,7 @@ class _MobileMarketAddSheetState extends State<_MobileMarketAddSheet> {
                 child: _SelectAllNumberField(
                   controller: _quantityController,
                   focusNode: _quantityFocus,
-                  label: 'Quantity',
+                  label: 'billing.quantity_hint'.tr,
                   onTap: () => _selectAll(_quantityController),
                 ),
               ),
@@ -233,7 +234,7 @@ class _MobileMarketAddSheetState extends State<_MobileMarketAddSheet> {
                 child: _SelectAllNumberField(
                   controller: _priceController,
                   focusNode: _priceFocus,
-                  label: 'Unit price',
+                  label: 'billing.unit_price_hint'.tr,
                   onTap: () => _selectAll(_priceController),
                 ),
               ),
@@ -244,13 +245,13 @@ class _MobileMarketAddSheetState extends State<_MobileMarketAddSheet> {
             _SelectAllNumberField(
               controller: _mrpController,
               focusNode: _mrpFocus,
-              label: 'MRP',
+              label: 'product_detail.mrp'.tr,
               onTap: () => _selectAll(_mrpController),
             ),
           ],
           const SizedBox(height: 20),
           Semantics(
-            label: 'Add product to cart',
+            label: 'billing.add_product_to_cart'.tr,
             button: true,
             child: FilledButton(
               onPressed: _submit,

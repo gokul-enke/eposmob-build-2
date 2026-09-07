@@ -94,7 +94,7 @@ class TaxDetailsDialog extends StatelessWidget {
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
-                child: const Text("Close"),
+                child: Text('general.close'.tr),
               ),
             ),
           ],

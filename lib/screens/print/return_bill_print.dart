@@ -819,7 +819,7 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
                 if (selectedPrinter == null) {
                   showScaffoldError(
                     context: context,
-                    message: "Please select a printer first",
+                    message: 'voucher_print.select_printer_first'.tr,
                   );
                   return;
                 }
@@ -857,7 +857,7 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _isScanning ? null : _checkPermissions,
-        tooltip: 'Scan for printers',
+        tooltip: 'voucher_print.scan_for_printers'.tr,
         backgroundColor: _isScanning ? textSecondaryColor : primaryColor,
         elevation: 4,
         shape: RoundedRectangleBorder(

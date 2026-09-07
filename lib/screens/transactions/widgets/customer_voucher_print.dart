@@ -325,7 +325,7 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
     if (voucherDocConfig == null) {
       showScaffoldError(
         context: context,
-        message: 'Failed to load voucher document configuration',
+        message: 'voucher_print.load_document_config_failed'.tr,
       );
       return;
     }

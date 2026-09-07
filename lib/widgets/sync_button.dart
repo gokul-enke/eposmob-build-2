@@ -153,7 +153,7 @@ class SyncButton extends StatelessWidget {
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: 'Data synced successfully!',
+          message: 'general.data_synced_successfully'.tr,
         );
         
         // Call completion callback if provided
@@ -164,7 +164,7 @@ class SyncButton extends StatelessWidget {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'Sync failed: ${e.toString()}',
+          message: '${'general.sync_failed'.tr}: ${e.toString()}',
         );
         
         // Call error callback if provided
@@ -244,7 +244,7 @@ class FloatingSyncButton extends StatelessWidget {
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: 'Data synced successfully!',
+          message: 'general.data_synced_successfully'.tr,
         );
         
         // Call completion callback if provided
@@ -255,7 +255,7 @@ class FloatingSyncButton extends StatelessWidget {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'Sync failed: ${e.toString()}',
+          message: '${'general.sync_failed'.tr}: ${e.toString()}',
         );
         
         // Call error callback if provided

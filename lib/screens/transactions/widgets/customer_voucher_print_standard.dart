@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -52,7 +53,7 @@ class CustomerVoucherStandardPrinter {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: "Document configurations not loaded. Please wait.",
+            message: 'voucher_print.document_config_missing'.tr,
           );
         }
         return;
@@ -61,7 +62,8 @@ class CustomerVoucherStandardPrinter {
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: "Preparing $selectedPaperSize document for printing...",
+          message: 'voucher_print.preparing_document'.trParams(
+              {'paperSize': selectedPaperSize}),
         );
       }
 
@@ -80,7 +82,8 @@ class CustomerVoucherStandardPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: "Error generating PDF: ${e.toString()}",
+          message: 'voucher_print.error_generating_pdf'
+              .trParams({'error': e.toString()}),
         );
       }
     }
@@ -347,7 +350,8 @@ class CustomerVoucherStandardPrinter {
           if (context.mounted) {
             showScaffold(
               context: context,
-              message: 'Voucher sent to ${selectedPrinter.deviceName}',
+              message: 'voucher_print.voucher_sent_to_printer'
+                  .trParams({'printer': selectedPrinter.deviceName ?? ''}),
             );
           }
           return;
@@ -369,13 +373,15 @@ class CustomerVoucherStandardPrinter {
             } else {
               if (context.mounted) {
                 showScaffold(
-                    context: context, message: "PDF created successfully");
+                    context: context,
+                    message: 'voucher_print.pdf_created_successfully'.tr);
               }
             }
           } else {
             if (context.mounted) {
               showScaffold(
-                  context: context, message: "PDF opened for printing");
+                  context: context,
+                  message: 'voucher_print.pdf_opened_for_printing'.tr);
             }
           }
         } catch (e) {
@@ -385,7 +391,8 @@ class CustomerVoucherStandardPrinter {
           } else {
             if (context.mounted) {
               showScaffold(
-                  context: context, message: "PDF created successfully");
+                  context: context,
+                  message: 'voucher_print.pdf_created_successfully'.tr);
             }
           }
         }
@@ -395,7 +402,7 @@ class CustomerVoucherStandardPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error generating PDF: $e',
+          message: 'voucher_print.error_generating_pdf'.trParams({'error': '$e'}),
         );
       }
     }
@@ -409,13 +416,17 @@ class CustomerVoucherStandardPrinter {
 
       // Always show success message on Windows, regardless of result
       if (context.mounted) {
-        showScaffold(context: context, message: "PDF created successfully");
+        showScaffold(
+            context: context,
+            message: 'voucher_print.pdf_created_successfully'.tr);
       }
     } catch (e) {
       debugPrint("Windows PDF handling error: $e");
       // Still show success message on error
       if (context.mounted) {
-        showScaffold(context: context, message: "PDF created successfully");
+        showScaffold(
+            context: context,
+            message: 'voucher_print.pdf_created_successfully'.tr);
       }
     }
   }
@@ -435,7 +446,8 @@ class CustomerVoucherStandardPrinter {
 
         if (context.mounted) {
           showScaffold(
-              context: context, message: "PDF shared. Please open it to print");
+              context: context,
+              message: 'voucher_print.pdf_shared_open_to_print'.tr);
         }
       }
     } catch (e) {
@@ -443,7 +455,8 @@ class CustomerVoucherStandardPrinter {
       if (context.mounted) {
         if (Platform.isWindows) {
           showScaffold(
-              context: context, message: "PDF created successfully");
+              context: context,
+              message: 'voucher_print.pdf_created_successfully'.tr);
         } else {
           showScaffoldError(
             context: context,

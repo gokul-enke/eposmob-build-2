@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/models/add_to_cart.dart';
@@ -150,7 +151,7 @@ class _HorizontalProductViewState extends State<HorizontalProductView> {
                               if (value["status"] == "success") {
                                 showScaffold(
                                   context: context,
-                                  message: "Added to Cart",
+                                  message: 'billing.added_to_cart'.tr,
                                 );
                               } else {
                                 showScaffoldError(
@@ -161,7 +162,7 @@ class _HorizontalProductViewState extends State<HorizontalProductView> {
                               }
                             });
                           },
-                          title: "Add",
+                          title: 'billing.add'.tr,
                           fontSize: 9,
                           height: 25,
                           width: 40,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 // import 'package:get/get_core/src/get_main.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -179,7 +180,7 @@ class _OrderListState extends State<OrderList> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'New Order',
+                      'general.new_order'.tr,
                       style: buildCustomStyle(FontWeightManager.semiBold,
                           FontSize.s20, 0.30, ColorManager.textColor),
                     ),
@@ -204,13 +205,13 @@ class _OrderListState extends State<OrderList> {
                   ],
                 ),
                 Text(
-                  'Order No #00000',
+                  'general.order_no'.tr + ' #00000',
                   style: buildCustomStyle(FontWeightManager.regular,
                       FontSize.s12, 0.18, ColorManager.textColor),
                 ),
                 const Divider(thickness: 1),
                 Text(
-                  'Enter mobile number',
+                  'general.enter_mobile_number'.tr,
                   style: buildCustomStyle(FontWeightManager.regular,
                       FontSize.s10, 0.16, ColorManager.textColor),
                 ),
@@ -324,7 +325,7 @@ class _OrderListState extends State<OrderList> {
                                   controller: mobileNumberTextController,
                                   focusNode: focusNode,
                                   decoration: InputDecoration(
-                                    hintText: 'Enter mobile number',
+                                    hintText: 'billing.enter_mobile_number'.tr,
                                     hintStyle: buildCustomStyle(
                                       FontWeight.w500,
                                       12,
@@ -739,7 +740,9 @@ class _OrderListState extends State<OrderList> {
                                       ));
                                 });
                           } else if (snapshot.hasError) {
-                            return Text('Error: ${snapshot.error}');
+                            return Text(
+                              "${'general.error_prefix'.tr}${snapshot.error}",
+                            );
                           } else {
                             // cartProvider.fetchCartData(customerId: 1);
                             return const BuildOrderListDesign();
@@ -995,7 +998,7 @@ class _OrderListState extends State<OrderList> {
                                     fit: BoxFit.none,
                                   ),
                                   Text(
-                                    'Cash',
+                                    'billing.cash'.tr,
                                     style: buildCustomStyle(
                                         FontWeightManager.medium,
                                         FontSize.s8,
@@ -1031,7 +1034,7 @@ class _OrderListState extends State<OrderList> {
                                     fit: BoxFit.none,
                                   ),
                                   Text(
-                                    'Card',
+                                    'billing.card'.tr,
                                     style: buildCustomStyle(
                                         FontWeightManager.medium,
                                         FontSize.s8,
@@ -1067,7 +1070,7 @@ class _OrderListState extends State<OrderList> {
                                     fit: BoxFit.none,
                                   ),
                                   Text(
-                                    'Upi',
+                                    'billing.upi'.tr,
                                     style: buildCustomStyle(
                                         FontWeightManager.medium,
                                         FontSize.s8,
@@ -1090,8 +1093,8 @@ class _OrderListState extends State<OrderList> {
                                     ? TextFormField(
                                         controller:
                                             _transactionNumberController,
-                                        decoration: const InputDecoration(
-                                          hintText: 'Transaction Reference No:',
+                                        decoration: InputDecoration(
+                                          hintText: 'billing.transaction_reference_no'.tr,
                                         ),
                                       )
                                     : TextFormField(
@@ -1099,8 +1102,8 @@ class _OrderListState extends State<OrderList> {
                                         onChanged: (value) {
                                           _getBalanceAmount();
                                         },
-                                        decoration: const InputDecoration(
-                                          hintText: 'Enter Paid Amount Here:',
+                                        decoration: InputDecoration(
+                                          hintText: 'billing.enter_paid_amount'.tr,
                                         ),
                                       ),
                               ),
@@ -1111,7 +1114,7 @@ class _OrderListState extends State<OrderList> {
                       if (iconColor == 1)
                         BuildPaymentRow(
                           amount: _balanceAmount.toStringAsFixed(2),
-                          title: "Balance amount",
+                          title: 'billing.balance_amount'.tr,
                           secondRowTextStyle: buildCustomStyle(
                             FontWeightManager.medium,
                             FontSize.s15,
@@ -1291,7 +1294,7 @@ class _OrderListState extends State<OrderList> {
                                           fit: BoxFit.none,
                                         ),
                                         Text(
-                                          'Print',
+                                          'general.print'.tr,
                                           style: buildCustomStyle(
                                               FontWeightManager.medium,
                                               FontSize.s10,

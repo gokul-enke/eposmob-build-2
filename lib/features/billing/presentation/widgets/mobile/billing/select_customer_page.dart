@@ -590,8 +590,8 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text(
-                'Close',
+              child: Text(
+                'general.close'.tr,
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,

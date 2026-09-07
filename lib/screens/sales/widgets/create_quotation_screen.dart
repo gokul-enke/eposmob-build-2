@@ -261,7 +261,8 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
       debugPrint('💥 QUOTATION ERROR: $e');
       if (mounted)
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+            .showSnackBar(SnackBar(
+                content: Text('${'general.error_prefix'.tr} $e')));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }

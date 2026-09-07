@@ -842,7 +842,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
       SnackBar(
         content: Text(BillingMobileErrorMessages.printRetryPrompt),
         action: SnackBarAction(
-          label: 'Retry',
+          label: 'general.retry'.tr,
           onPressed: () => _retryPendingPrint(),
         ),
         duration: const Duration(seconds: 12),

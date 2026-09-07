@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/providers/keyboard_focus_highlight_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -469,31 +470,31 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
                       _buildSectionsSheet(
                         [
                           _ShortcutSection(
-                            title: 'Global',
+                            title: 'keyboard.global'.tr,
                             items: globalShortcuts,
                           ),
                           _ShortcutSection(
                             title: mode == KeyboardShortcutsHelpMode.restaurant
-                                ? 'Billing (Restaurant)'
-                                : 'Billing (Standard)',
+                                ? 'keyboard.billing_restaurant'.tr
+                                : 'keyboard.billing_standard'.tr,
                             items: billingShortcuts,
                           ),
                           _ShortcutSection(
                             title: mode == KeyboardShortcutsHelpMode.restaurant
-                                ? 'Cart (Restaurant)'
-                                : 'Cart (Standard)',
+                                ? 'keyboard.cart_restaurant'.tr
+                                : 'keyboard.cart_standard'.tr,
                             items: cartShortcuts,
                           ),
-                          const _ShortcutSection(
-                            title: 'Shared',
+                          _ShortcutSection(
+                            title: 'keyboard.shared'.tr,
                             items: _sharedShortcuts,
                           ),
-                          const _ShortcutSection(
-                            title: 'Checkout Modal',
+                          _ShortcutSection(
+                            title: 'keyboard.checkout_modal'.tr,
                             items: _finalizeModalShortcuts,
                           ),
-                          const _ShortcutSection(
-                            title: 'Add Product Modal',
+                          _ShortcutSection(
+                            title: 'keyboard.add_product_modal'.tr,
                             items: _addProductModalShortcuts,
                           ),
                         ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/responsive.dart';
 import 'package:provider/provider.dart';
 import '../../../components/build_container_box.dart';
@@ -80,8 +81,8 @@ class OrderReturnsWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (orderReturns == null) {
-      return const Center(
-        child: Text('No order returns available.'),
+      return Center(
+        child: Text('sales_return.no_items_available'.tr),
       );
     }
 

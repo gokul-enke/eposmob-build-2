@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:virtual_keyboard_custom_layout/virtual_keyboard_custom_layout.dart';
@@ -230,13 +231,13 @@ class _VirtualKeyboardWidgetState extends State<VirtualKeyboardWidget> {
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 8),
                                     ),
-                                    child: const Row(
+                                    child: Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       children: [
                                         Icon(Icons.clear, size: 16),
                                         SizedBox(width: 4),
-                                        Text('Clear',
+                                        Text('general.clear'.tr,
                                             style: TextStyle(fontSize: 12)),
                                       ],
                                     ),
@@ -263,13 +264,13 @@ class _VirtualKeyboardWidgetState extends State<VirtualKeyboardWidget> {
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 8),
                                     ),
-                                    child: const Row(
+                                    child: Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       children: [
                                         Icon(Icons.check, size: 16),
                                         SizedBox(width: 4),
-                                        Text('Confirm',
+                                        Text('general.confirm'.tr,
                                             style: TextStyle(fontSize: 12)),
                                       ],
                                     ),

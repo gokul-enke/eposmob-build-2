@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
@@ -262,7 +263,7 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
               autofocus: widget.autofocus,
               size: widget.size,
               width: double.infinity,
-              hintText: 'Search Product',
+              hintText: 'common.search_product'.tr,
               useSystemKeyboard: !suppressSystemKeyboard,
               onSubmitted: (_) => onFieldSubmitted(),
               onTap: () {

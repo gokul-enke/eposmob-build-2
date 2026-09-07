@@ -773,13 +773,14 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
       if (result.changed) {
         showScaffold(
           context: context,
-          message: 'Item quantity updated successfully',
+          message: 'billing.item_quantity_updated'.tr,
         );
       }
     } catch (e) {
       showScaffoldError(
         context: context,
-        message: 'Failed to update quantity: ${e.toString()}',
+        message: 'restaurant.failed_update_quantity'
+            .trParams({'error': e.toString()}),
       );
     }
   }
@@ -810,12 +811,13 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
 
       showScaffold(
         context: context,
-        message: 'Item removed successfully',
+            message: 'billing.item_removed_successfully'.tr,
       );
     } catch (e) {
       showScaffoldError(
         context: context,
-        message: 'Failed to remove item: ${e.toString()}',
+        message: 'restaurant.failed_remove_item'
+            .trParams({'error': e.toString()}),
       );
     }
   }
@@ -845,13 +847,14 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
 
         showScaffold(
           context: context,
-          message: 'Cart cleared successfully',
+          message: 'billing.cart_cleared'.tr,
         );
       }
     } catch (e) {
       showScaffoldError(
         context: context,
-        message: 'Failed to clear cart: ${e.toString()}',
+        message: 'restaurant.failed_clear_cart'
+            .trParams({'error': e.toString()}),
       );
     }
   }
@@ -874,7 +877,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
 
       if (localProductProvider.cartItems.isEmpty) {
         showScaffoldError(
-            context: context, message: 'No items in cart to save');
+            context: context, message: 'billing.no_items_in_cart_to_save'.tr);
         return;
       }
 
@@ -922,7 +925,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
           customerCrNumber: selectedCustomerCrNumberForDraft,
           customerType: selectedCustomerTypeForDraft,
         );
-        showScaffold(context: context, message: 'Updated local draft');
+        showScaffold(context: context, message: 'billing.updated_local_draft'.tr);
       } else {
         debugPrint('📝 Creating new local draft');
         final saved = localProductProvider.saveCurrentCartAsOrder(
@@ -953,7 +956,8 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
         );
         showScaffold(
             context: context,
-            message: 'Saved local draft ${saved.orderNumber}');
+            message: 'restaurant.saved_local_draft'
+                .trParams({'orderNumber': '${saved.orderNumber}'}));
       }
 
       // Clear cart and refresh local drafts
@@ -973,7 +977,8 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
     } catch (e) {
       showScaffoldError(
           context: context,
-          message: 'Failed to save local draft: ${e.toString()}');
+          message: 'restaurant.failed_save_local_draft'
+              .trParams({'error': e.toString()}));
     }
   }
 
