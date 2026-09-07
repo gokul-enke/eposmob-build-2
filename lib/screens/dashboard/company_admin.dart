@@ -18,6 +18,7 @@ import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import 'widgets/dashboard_responsive.dart';
+import 'widgets/zatca_failed_alert.dart';
 
 class CompanyAdminDashboard extends StatefulWidget {
   const CompanyAdminDashboard({super.key});
@@ -446,6 +447,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                   children: [
                     _buildHeader(size),
                     const SizedBox(height: 20),
+                    const ZatcaFailedAlert(),
                     _buildTodaysSales(),
                     _buildSalesCards(),
                     const SizedBox(height: 20),

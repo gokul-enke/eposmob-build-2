@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/string_helper.dart';
 import '../../../components/build_container_box.dart';
@@ -11,8 +13,8 @@ import '../../../resources/color_manager.dart';
 import '../../../resources/font_manager.dart';
 import '../../../resources/style_manager.dart';
 import '../../../responsive.dart';
-import 'package:get/get.dart';
 import 'package:pos_machine/helpers/ui_code_labels.dart';
+import 'order_documents_section.dart';
 
 class OrderDetailWidget extends StatelessWidget {
   final OrderDetailsModelData? orderDetailsModelData;
@@ -137,8 +139,8 @@ class OrderDetailWidget extends StatelessWidget {
     if (customerDetails == null ||
         cartItem == null ||
         effectivePriceSummary == null) {
-      return const Center(
-        child: Text('Order details are not available.'),
+      return Center(
+        child: Text('sales_order_details.msg_details_unavailable'.tr),
       );
     }
 
@@ -175,7 +177,7 @@ class OrderDetailWidget extends StatelessWidget {
                                 BuildPaymentRow(
                                   amount:
                                       "$currency ${_formatAmount(effectivePriceSummary.netTotal)}",
-                                  title: "Net Total (Inc Tax)",
+                                  title: 'sales_order_details.label_net_total_inc_tax'.tr,
                                   color: ColorManager.textColor,
                                   firstRowTextStyle: buildCustomStyle(
                                     FontWeightManager.semiBold,
@@ -193,28 +195,28 @@ class OrderDetailWidget extends StatelessWidget {
                                 BuildPaymentRow(
                                   amount:
                                       "$currency ${_formatAmount(effectivePriceSummary.netExcTax ?? orderDetailsModelData?.cart?.priceSummary?.netExcTax)}",
-                                  title: "Net Total (Without Tax)",
+                                  title: 'sales_order_details.label_net_total_exc_tax'.tr,
                                   color: ColorManager.textColor,
                                 ),
                                 BuildPaymentRow(
                                   amount:
                                       "$currency ${_formatAmount(effectivePriceSummary.discount)}",
-                                  title: "Discount",
+                                  title: 'sales_order_details.label_discount'.tr,
                                   color: ColorManager.textColor,
                                 ),
                                 BuildPaymentRow(
                                   amount:
                                       "$currency ${_formatAmount(effectivePriceSummary.totalTax)}",
                                   title: (effectivePriceSummary.discount ?? 0) > 0
-                                      ? "Tax Amount After Discount"
-                                      : "Tax Amount",
+                                      ? 'sales_order_details.label_tax_after_discount'.tr
+                                      : 'sales_order_details.label_tax_amount'.tr,
                                   color: ColorManager.textColor,
                                 ),
                                 const Divider(thickness: 2),
                                 BuildPaymentRow(
                                   amount:
                                       "$currency ${_formatAmount(effectivePriceSummary.netPayable)}",
-                                  title: "Payable",
+                                  title: 'sales_order_details.label_payable'.tr,
                                   secondRowTextStyle: buildCustomStyle(
                                     FontWeightManager.bold,
                                     FontSize.s15,
@@ -232,7 +234,7 @@ class OrderDetailWidget extends StatelessWidget {
                                 BuildPaymentRow(
                                   amount:
                                       "$currency ${_balanceAmount(effectivePriceSummary).toStringAsFixed(2)}",
-                                  title: "Balance amount",
+                                  title: 'sales_order_details.label_balance_amount'.tr,
                                   secondRowTextStyle: buildCustomStyle(
                                     FontWeightManager.medium,
                                     FontSize.s12,
@@ -265,7 +267,7 @@ class OrderDetailWidget extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Order Status',
+                            'sales_order_details.title_order_status'.tr,
                             style: _sectionTitleStyle(context),
                           ),
                           const SizedBox(height: 8),
@@ -283,35 +285,41 @@ class OrderDetailWidget extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Store & Delivery',
+                            'sales_order_details.title_store_delivery'.tr,
                             style: _sectionTitleStyle(context),
                           ),
                           const SizedBox(height: 8),
                           if (orderDetailsModelData?.storeName != null)
-                            _buildInfoRow(context, 'Store',
+                            _buildInfoRow(context, 'sales_order_details.label_store'.tr,
                                 orderDetailsModelData?.storeName ?? ''),
                           if (orderDetailsModelData?.deliveryMethodName != null)
                             _buildInfoRow(
                                 context,
-                                'Delivery Method',
+                                'sales_order_details.label_delivery_method'.tr,
                                 orderDetailsModelData?.deliveryMethodName ??
                                     ''),
                           if (orderDetailsModelData?.deliveryDate != null &&
                               orderDetailsModelData!.deliveryDate!.isNotEmpty)
                             _buildInfoRow(
                                 context,
-                                'Delivery Date',
-                                orderDetailsModelData?.deliveryDate ?? ''),
+                                'sales_order_details.label_delivery_date_value'
+                                    .tr,
+                                // Formatted here rather than left to
+                                // _formatOrderPropertyValue, which dispatches on
+                                // the English label and so would pass the raw
+                                // ISO date straight through in Arabic.
+                                DateHelper.formatISODate(
+                                    orderDetailsModelData?.deliveryDate ?? '')),
                           if (orderDetailsModelData?.deliveryTime != null &&
                               orderDetailsModelData!.deliveryTime!.isNotEmpty)
                             _buildInfoRow(
                                 context,
-                                'Delivery Time',
+                                'sales_order_details.label_delivery_time_value'.tr,
                                 orderDetailsModelData?.deliveryTime ?? ''),
                           if (orderDetailsModelData?.deliveryCharge != null)
                             _buildInfoRow(
                                 context,
-                                'Delivery Charge',
+                                'sales_order_details.label_delivery_charge'.tr,
                                 '$currency ${_formatAmount(orderDetailsModelData?.deliveryCharge)}'),
                         ],
                       ),
@@ -325,7 +333,7 @@ class OrderDetailWidget extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Payment Details',
+                            'sales_order_details.title_payment_details'.tr,
                             style: _sectionTitleStyle(context),
                           ),
                           const SizedBox(height: 8),
@@ -334,7 +342,7 @@ class OrderDetailWidget extends StatelessWidget {
                               null)
                             _buildInfoRow(
                                 context,
-                                'Payment Method',
+                                'sales_order_details.label_payment_method'.tr,
                                 orderDetailsModelData
                                         ?.paymentDetails?.paymentMethod ??
                                     ''),
@@ -343,7 +351,7 @@ class OrderDetailWidget extends StatelessWidget {
                               null)
                             _buildInfoRow(
                                 context,
-                                'Transaction ID',
+                                'sales_order_details.label_transaction_id'.tr,
                                 orderDetailsModelData
                                         ?.paymentDetails?.transactionId
                                         ?.toString() ??
@@ -353,7 +361,7 @@ class OrderDetailWidget extends StatelessWidget {
                               null)
                             _buildInfoRow(
                                 context,
-                                'Payment ID',
+                                'sales_order_details.label_payment_id'.tr,
                                 orderDetailsModelData
                                         ?.paymentDetails?.paymentId ??
                                     ''),
@@ -364,7 +372,7 @@ class OrderDetailWidget extends StatelessWidget {
                                   false)) ...[
                             const SizedBox(height: 8),
                             Text(
-                              'Payment Breakdown:',
+                              "${'sales_order_details.label_payment_breakdown'.tr}:",
                               style: buildCustomStyle(
                                 FontWeightManager.medium,
                                 FontSize.s12,
@@ -418,7 +426,7 @@ class OrderDetailWidget extends StatelessWidget {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Total Paid:',
+                                    "${'sales_order_details.label_total_paid'.tr}:",
                                     style: buildCustomStyle(
                                       FontWeightManager.semiBold,
                                       FontSize.s12,
@@ -457,18 +465,18 @@ class OrderDetailWidget extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Customer Information',
+                            'sales_order_details.title_customer_information'.tr,
                             style: _sectionTitleStyle(context),
                           ),
                           const SizedBox(height: 8),
                           if (customerDetails?.email != null)
                             _buildInfoRow(
-                                context, 'Email', customerDetails?.email ?? ''),
+                                context, 'sales_order_details.label_email'.tr, customerDetails?.email ?? ''),
                           if (customerDetails?.alternatePhone != null &&
                               customerDetails!.alternatePhone!.isNotEmpty)
                             _buildInfoRow(
                                 context,
-                                'Alternate Phone',
+                                'sales_order_details.label_alternate_phone'.tr,
                                 customerDetails?.alternatePhone ?? ''),
                           if ((orderDetailsModelData
                                       ?.getCustomerAddressFromProps() ??
@@ -476,7 +484,7 @@ class OrderDetailWidget extends StatelessWidget {
                               .isNotEmpty)
                             _buildInfoRow(
                                 context,
-                                'Address',
+                                'sales_order_details.label_address'.tr,
                                 orderDetailsModelData
                                         ?.getCustomerAddressFromProps() ??
                                     ''),
@@ -488,7 +496,7 @@ class OrderDetailWidget extends StatelessWidget {
                                   .isEmpty)
                             _buildInfoRow(
                                 context,
-                                'Address',
+                                'sales_order_details.label_address'.tr,
                                 _formatCustomerAddressList(
                                     customerDetails?.address)),
                         ],
@@ -503,46 +511,62 @@ class OrderDetailWidget extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'KYC Information',
+                            'sales_order_details.title_kyc_information'.tr,
                             style: _sectionTitleStyle(context),
                           ),
                           const SizedBox(height: 8),
                           if (orderDetailsModelData?.kycInfo?.crNumber != null)
                             _buildInfoRow(
                                 context,
-                                'CR Number',
+                                'sales_order_details.label_cr_number'.tr,
                                 orderDetailsModelData?.kycInfo?.crNumber ?? ''),
                           if (orderDetailsModelData?.kycInfo?.vatNumber != null)
                             _buildInfoRow(
                                 context,
-                                'VAT Number',
+                                'sales_order_details.label_vat_number'.tr,
                                 orderDetailsModelData?.kycInfo?.vatNumber ??
                                     ''),
                         ],
                       ),
                     ),
 
+                  // Packing Section — hidden when the order has no packing
+                  // record, matching every other section on this screen.
+                  if (orderDetailsModelData?.packing?.hasDetails ?? false)
+                    _buildPackingSection(
+                        context, orderDetailsModelData!.packing!),
+
+                  // Shipping Details Section — hidden when there is no
+                  // shipping address. Delivery Method alone doesn't justify
+                  // the card; it is already shown under Store & Delivery.
+                  if (orderDetailsModelData?.deliveryAddress?.hasDetails ??
+                      false)
+                    _buildShippingSection(
+                        context, orderDetailsModelData!.deliveryAddress!),
+
+                  // Order Documents Section
+                  if ((orderDetailsModelData?.orderNumber ?? '').isNotEmpty)
+                    OrderDocumentsSection(
+                      orderNumber: orderDetailsModelData!.orderNumber!,
+                    ),
+
                   if (orderDetailsModelData?.tokenNumber != null ||
                       orderDetailsModelData?.invoiceHash != null)
-                    _buildSectionCard(
-                      context: context,
+                    _ExpandableSection(
+                      title: 'sales_order_details.title_order_metadata'.tr,
+                      titleStyle: _sectionTitleStyle(context),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Order Metadata',
-                            style: _sectionTitleStyle(context),
-                          ),
-                          const SizedBox(height: 8),
                           if (orderDetailsModelData?.tokenNumber != null)
                             _buildInfoRow(
                                 context,
-                                'Token Number',
+                                'sales_order_details.label_token_number'.tr,
                                 orderDetailsModelData?.tokenNumber ?? ''),
                           if (orderDetailsModelData?.invoiceHash != null)
                             _buildInfoRow(
                                 context,
-                                'Invoice Hash',
+                                'sales_order_details.label_invoice_hash'.tr,
                                 orderDetailsModelData?.invoiceHash ?? ''),
                         ],
                       ),
@@ -551,16 +575,12 @@ class OrderDetailWidget extends StatelessWidget {
                   // Order Properties Section (Custom Fields)
                   if (orderDetailsModelData?.orderProps != null &&
                       (orderDetailsModelData?.orderProps?.isNotEmpty ?? false))
-                    _buildSectionCard(
-                      context: context,
+                    _ExpandableSection(
+                      title: 'sales_order_details.title_order_properties'.tr,
+                      titleStyle: _sectionTitleStyle(context),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Order Properties',
-                            style: _sectionTitleStyle(context),
-                          ),
-                          const SizedBox(height: 8),
                           ...(orderDetailsModelData?.orderProps
                                   ?.map((prop) => _buildInfoRow(
                                       context,
@@ -834,6 +854,198 @@ class OrderDetailWidget extends StatelessWidget {
     );
   }
 
+  /// Placeholder shown for empty packing fields, matching the web Order View.
+  static const String _emptyValue = '—';
+
+  Widget _buildPackingSection(
+      BuildContext context, OrderDetailsModelDataPacking? packing) {
+    final photos = packing?.photosForDisplay ?? const <String>[];
+    final video = packing?.packingVideo ?? '';
+    final packedAt = packing?.packedAt ?? '';
+    // The web view keeps these two apart: `packed_by` is the resolved staff
+    // user, `packed_by_name` is the free-text name typed by whoever packed.
+    final packedByStaff = packing?.packedByUserName ?? '';
+    final packedByOther = packing?.packedByName ?? '';
+
+    return _buildSectionCard(
+      context: context,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'sales_order_details.title_packing'.tr,
+            style: _sectionTitleStyle(context),
+          ),
+          const SizedBox(height: 8),
+          _buildInfoRow(
+            context,
+            'sales_order_details.label_packing_status'.tr,
+            (packing?.isPackedResolved ?? false) ? 'sales_order_details.value_packed'.tr
+                : 'sales_order_details.value_not_packed'.tr,
+          ),
+          _buildInfoRow(
+            context,
+            'sales_order_details.label_packed_at'.tr,
+            // packed_at arrives as UTC ("...Z"), so it must go through the
+            // timezone-aware formatter, not formatInputToDisplay.
+            packedAt.isEmpty
+                ? _emptyValue
+                : DateHelper.formatISODateToIST(packedAt),
+          ),
+          _buildInfoRow(
+            context,
+            'sales_order_details.label_packed_by_staff'.tr,
+            packedByStaff.isEmpty ? _emptyValue : packedByStaff,
+          ),
+          _buildInfoRow(
+            context,
+            'sales_order_details.label_packed_by_other'.tr,
+            packedByOther.isEmpty ? _emptyValue : packedByOther,
+          ),
+          if (photos.isEmpty)
+            _buildInfoRow(context, 'sales_order_details.label_packing_photos'.tr, _emptyValue)
+          else
+            _buildTappableRow(
+              context,
+              'sales_order_details.label_packing_photos'.tr,
+              photos.length == 1
+                  ? 'sales_order_details.value_photo_one'.tr
+                  : "${photos.length} ${'sales_order_details.value_photo_many'.tr}",
+              () => _showPhotoViewer(context, photos),
+            ),
+          if (video.isEmpty)
+            _buildInfoRow(context, 'sales_order_details.label_packing_video'.tr, _emptyValue)
+          else
+            _buildTappableRow(
+              context,
+              'sales_order_details.label_packing_video'.tr,
+              'sales_order_details.btn_play_video'.tr,
+              () => _openExternal(context, video),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Mirrors the Shipping Details tab of the web Order View. Every row is
+  /// always rendered, with [_emptyValue] where the backend sent nothing.
+  Widget _buildShippingSection(BuildContext context,
+      OrderDetailsModelDataDeliveryAddress deliveryAddress) {
+    String orEmpty(String? value) =>
+        (value == null || value.isEmpty) ? _emptyValue : value;
+
+    return _buildSectionCard(
+      context: context,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'sales_order_details.title_shipping_details'.tr,
+            style: _sectionTitleStyle(context),
+          ),
+          const SizedBox(height: 8),
+          _buildInfoRow(context, 'sales_order_details.label_delivery_method'.tr,
+              orEmpty(orderDetailsModelData?.deliveryMethodName)),
+          _buildInfoRow(
+              context, 'sales_order_details.label_address_type'.tr, orEmpty(deliveryAddress.addressType)),
+          _buildInfoRow(context, 'sales_order_details.label_shipping_address'.tr,
+              orEmpty(deliveryAddress.address)),
+          _buildInfoRow(context, 'sales_order_details.label_pincode'.tr, orEmpty(deliveryAddress.pincode)),
+          _buildInfoRow(
+              context, 'sales_order_details.label_district'.tr, orEmpty(deliveryAddress.district)),
+          _buildInfoRow(context, 'sales_order_details.label_state'.tr, orEmpty(deliveryAddress.state)),
+          _buildInfoRow(context, 'sales_order_details.label_city'.tr, orEmpty(deliveryAddress.city)),
+          _buildInfoRow(
+              context, 'sales_order_details.label_landmark'.tr, orEmpty(deliveryAddress.landmark)),
+        ],
+      ),
+    );
+  }
+
+  /// Same shape as [_buildInfoRow] but the value is a tappable link.
+  Widget _buildTappableRow(
+    BuildContext context,
+    String label,
+    String value,
+    VoidCallback onTap,
+  ) {
+    final isMobile = ResponsiveWidget.isMobile(context);
+    final labelStyle = buildCustomStyle(
+      FontWeightManager.medium,
+      isMobile ? FontSize.s12 : FontSize.s13,
+      isMobile ? 0.18 : 0.20,
+      ColorManager.blackWithOpacity50,
+    );
+    final linkStyle = buildCustomStyle(
+      FontWeightManager.medium,
+      isMobile ? FontSize.s12 : FontSize.s13,
+      isMobile ? 0.18 : 0.20,
+      ColorManager.kPrimaryColor,
+    );
+
+    final link = InkWell(
+      onTap: onTap,
+      child: Text(
+        value,
+        style: linkStyle.copyWith(decoration: TextDecoration.underline),
+      ),
+    );
+
+    if (isMobile) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('$label:', style: labelStyle),
+            const SizedBox(height: 2),
+            link,
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 150,
+            child: Text('$label:', style: labelStyle),
+          ),
+          Expanded(child: Align(alignment: Alignment.centerLeft, child: link)),
+        ],
+      ),
+    );
+  }
+
+  void _showPhotoViewer(BuildContext context, List<String> photos) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => _PackingPhotoViewer(photos: photos),
+    );
+  }
+
+  Future<void> _openExternal(BuildContext context, String url) async {
+    final uri = Uri.tryParse(url);
+    bool launched = false;
+    if (uri != null) {
+      // launchUrl throws (not just returns false) when no handler is
+      // registered for the scheme, so both paths must be covered.
+      try {
+        launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } catch (e) {
+        debugPrint('Error opening packing video: $e');
+      }
+    }
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('sales_order_details.msg_video_open_failed'.tr)),
+      );
+    }
+  }
+
   String _formatOrderPropertyValue(
       String label, String value, String currency) {
     // Format specific order properties
@@ -974,7 +1186,7 @@ class OrderDetailWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.productName ?? 'N/A',
+                      item.productName ?? 'sales_order_details.value_na'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         FontSize.s12,
@@ -1014,24 +1226,24 @@ class OrderDetailWidget extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          _buildMobileDetailChip('Qty', _fmtQty(item.quantity)),
+          _buildMobileDetailChip('sales_order_details.th_qty'.tr, _fmtQty(item.quantity)),
           const SizedBox(height: 6),
-          _buildMobileDetailChip('Unit', _unitText(item)),
+          _buildMobileDetailChip('sales_order_details.th_unit'.tr, _unitText(item)),
           const SizedBox(height: 6),
           Row(
             children: [
               Expanded(
-                child: _buildMobileDetailChip('MRP', '$currency ${_fmt(item.mrp)}'),
+                child: _buildMobileDetailChip('sales_order_details.th_mrp'.tr, '$currency ${_fmt(item.mrp)}'),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: _buildMobileDetailChip(
-                    'Rate', '$currency ${_fmt(item.unitPrice)}'),
+                    'sales_order_details.th_rate'.tr, '$currency ${_fmt(item.unitPrice)}'),
               ),
             ],
           ),
           const SizedBox(height: 6),
-          _buildMobileDetailChip('Tax', '$currency ${_fmt(item.taxAmount)}'),
+          _buildMobileDetailChip('sales_order_details.th_tax'.tr, '$currency ${_fmt(item.taxAmount)}'),
         ],
       ),
     );
@@ -1086,12 +1298,12 @@ class OrderDetailWidget extends StatelessWidget {
             children: [
               _buildTableCell('Sl#', isHeader: true),
               _buildTableCell('DESCRIPTION', isHeader: true),
-              _buildTableCell('MRP', isHeader: true, align: TextAlign.right),
-              _buildTableCell('QTY', isHeader: true, align: TextAlign.center),
-              _buildTableCell('UNIT', isHeader: true, align: TextAlign.center),
-              _buildTableCell('RATE', isHeader: true, align: TextAlign.right),
-              _buildTableCell('TAX', isHeader: true, align: TextAlign.right),
-              _buildTableCell('AMOUNT', isHeader: true, align: TextAlign.right),
+              _buildTableCell('sales_order_details.th_mrp'.tr, isHeader: true, align: TextAlign.right),
+              _buildTableCell('sales_order_details.th_qty'.tr, isHeader: true, align: TextAlign.center),
+              _buildTableCell('sales_order_details.th_unit'.tr, isHeader: true, align: TextAlign.center),
+              _buildTableCell('sales_order_details.th_rate'.tr, isHeader: true, align: TextAlign.right),
+              _buildTableCell('sales_order_details.th_tax'.tr, isHeader: true, align: TextAlign.right),
+              _buildTableCell('sales_order_details.th_amount'.tr, isHeader: true, align: TextAlign.right),
             ],
           ),
           // Data Rows
@@ -1106,8 +1318,8 @@ class OrderDetailWidget extends StatelessWidget {
                 children: [
                   _buildTableCell('${index + 1}', align: TextAlign.center),
                   _buildTableCell(item.formattedVariantAttributes.isEmpty
-                      ? (item.productName ?? 'N/A')
-                      : '${item.productName ?? 'N/A'}\n${item.formattedVariantAttributes}'),
+                      ? (item.productName ?? 'sales_order_details.value_na'.tr)
+                      : '${item.productName ?? 'sales_order_details.value_na'.tr}\n${item.formattedVariantAttributes}'),
                   _buildTableCell('$currency ${_fmt(item.mrp)}',
                       align: TextAlign.right),
                   _buildTableCell('${_fmtQty(item.quantity)}',
@@ -1174,6 +1386,158 @@ class OrderDetailWidget extends StatelessWidget {
           0.18,
           isHeader ? ColorManager.textColor : Colors.black87,
         ),
+      ),
+    );
+  }
+}
+
+/// Full-screen-ish viewer for the packing photos, with swipe between
+/// images and a counter. Uses the URLs returned by the API directly.
+class _PackingPhotoViewer extends StatefulWidget {
+  final List<String> photos;
+
+  const _PackingPhotoViewer({required this.photos});
+
+  @override
+  State<_PackingPhotoViewer> createState() => _PackingPhotoViewerState();
+}
+
+class _PackingPhotoViewerState extends State<_PackingPhotoViewer> {
+  late final PageController _controller = PageController();
+  int _index = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
+    return Dialog(
+      backgroundColor: Colors.black87,
+      insetPadding: const EdgeInsets.all(16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: SizedBox(
+        width: size.width * 0.9,
+        height: size.height * 0.8,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      "${'sales_order_details.label_packing_photos'.tr}  ${_index + 1}/${widget.photos.length}",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: PageView.builder(
+                controller: _controller,
+                itemCount: widget.photos.length,
+                onPageChanged: (i) => setState(() => _index = i),
+                itemBuilder: (context, i) => InteractiveViewer(
+                  minScale: 1,
+                  maxScale: 4,
+                  child: Image.network(
+                    widget.photos[i],
+                    fit: BoxFit.contain,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return const Center(
+                        child: CircularProgressIndicator.adaptive(),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) => Center(
+                      child: Text(
+                        'sales_order_details.msg_photo_load_failed'.tr,
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Collapsible section card used for low-frequency sections
+/// (Order Metadata, Order Properties). Keeps the same look as
+/// [_buildSectionCard] with a tappable header and a chevron.
+class _ExpandableSection extends StatefulWidget {
+  final String title;
+  final TextStyle titleStyle;
+  final Widget child;
+
+  const _ExpandableSection({
+    required this.title,
+    required this.titleStyle,
+    required this.child,
+  });
+
+  @override
+  State<_ExpandableSection> createState() => _ExpandableSectionState();
+}
+
+class _ExpandableSectionState extends State<_ExpandableSection> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isMobile = ResponsiveWidget.isMobile(context);
+    return BuildBoxShadowContainer(
+      circleRadius: 7,
+      padding: EdgeInsets.all(isMobile ? 12 : 16),
+      margin: EdgeInsets.only(
+        top: 8.0,
+        left: isMobile ? 0 : 8,
+        right: isMobile ? 0 : 8,
+      ),
+      offsetValue: const Offset(1, 1),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(widget.title, style: widget.titleStyle),
+                ),
+                Icon(
+                  _expanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  color: ColorManager.kPrimaryColor,
+                ),
+              ],
+            ),
+          ),
+          if (_expanded) ...[
+            const SizedBox(height: 8),
+            widget.child,
+          ],
+        ],
       ),
     );
   }

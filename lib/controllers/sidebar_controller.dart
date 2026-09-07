@@ -101,6 +101,11 @@ import 'package:pos_machine/screens/sales/quotations_list.dart';
 class SideBarController extends GetxController {
   static const int billingScreenIndex = 0;
 
+  /// Position of [InvoiceListScreen] in [screens]. Named because more than one
+  /// caller navigates to it, and the list is positional — inserting a screen
+  /// above it would otherwise silently point those callers elsewhere.
+  static const int invoiceListScreenIndex = 21;
+
   RxInt index =
       0.obs; // Default to HomeNew, will be set based on user role during login
   RxBool isExpanded = false.obs;
@@ -141,7 +146,7 @@ class SideBarController extends GetxController {
     AddProductStockScreen(), //18
     PurchaseScreen(), //19
     AddPurchaseScreen(), //20
-    InvoiceListScreen(), //21
+    InvoiceListScreen(), // invoiceListScreenIndex
     VoucherListScreen(), //22
     CustomerTransactionListScreen(), //23
     CreateNewInvoiceScreen(), //24

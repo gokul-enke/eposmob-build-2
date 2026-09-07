@@ -56,6 +56,8 @@ class OrderDetailsModelData {
   final dynamic points;
   final Map<String, dynamic>? payments;
   final String? invoiceHash;
+  final OrderDetailsModelDataPacking? packing;
+  final OrderDetailsModelDataDeliveryAddress? deliveryAddress;
 
   OrderDetailsModelData({
     this.ordersId,
@@ -83,6 +85,8 @@ class OrderDetailsModelData {
     this.points,
     this.payments,
     this.invoiceHash,
+    this.packing,
+    this.deliveryAddress,
   });
 
   factory OrderDetailsModelData.fromJson(Map<String, dynamic> json) =>
@@ -136,6 +140,12 @@ class OrderDetailsModelData {
             ? Map<String, dynamic>.from(json["payments"])
             : null,
         invoiceHash: json["invoice_hash"]?.toString(),
+        packing: json["packing"] == null
+            ? null
+            : OrderDetailsModelDataPacking.fromJson(
+                Map<String, dynamic>.from(json["packing"])),
+        deliveryAddress:
+            OrderDetailsModelDataDeliveryAddress.fromOrderJson(json),
       );
 
   // Helper method to handle order_returns which can be null, empty List, or Map
@@ -412,6 +422,8 @@ class OrderDetailsModelData {
         "points": points,
         "payments": payments,
         "invoice_hash": invoiceHash,
+        "packing": packing?.toJson(),
+        "delivery_address": deliveryAddress?.toJson(),
       };
 }
 
@@ -814,14 +826,33 @@ class OrderDetailsModelDataCustomerDetails {
         email: json["email"],
         phone: json["phone"],
         customerId: json["customer_id"], // Keep as int? if it's an int
-        address:
-            json["address"] == null ? [] : List<dynamic>.from(json["address"]),
+        address: _parseAddressList(json["address"]),
         customerType: json["customer_type"]?.toString(),
         alternatePhone: json["alternate_phone"],
         customerBalance: json["customer_balance"] == null
             ? null
             : (json["customer_balance"] as num).toDouble(),
       );
+
+  static List<dynamic> _parseAddressList(dynamic value) {
+    if (value == null) return [];
+    if (value is List) return List<dynamic>.from(value);
+    if (value is Map) return [value];
+
+    if (value is String) {
+      try {
+        final decoded = json.decode(value);
+        if (decoded is List) return List<dynamic>.from(decoded);
+        if (decoded is Map) return [decoded];
+      } catch (_) {
+        // Keep a loose map string as one entry; the shipping parser decodes it
+        // below. Plain text remains harmless and is ignored there.
+      }
+      return [value];
+    }
+
+    return [];
+  }
 
   Map<String, dynamic> toJson() => {
         "name": name,
@@ -853,6 +884,304 @@ class OrderDetailsModelDataKycInfo {
   Map<String, dynamic> toJson() => {
         "cr_number": crNumber,
         "vat_number": vatNumber,
+      };
+}
+
+/// Packing record attached to an order. Delivered inline on the
+/// order-details payload; `null` when the order was never packed.
+class OrderDetailsModelDataPacking {
+  final int? id;
+  final int? packedByUserId;
+  final String? packedByName;
+  final String? packedByUserName;
+  final String? packedAt;
+  final List<String>? packingPhotoPaths;
+  final List<String>? packingPhotos;
+  final String? packingVideo;
+  final bool? isPacked;
+
+  OrderDetailsModelDataPacking({
+    this.id,
+    this.packedByUserId,
+    this.packedByName,
+    this.packedByUserName,
+    this.packedAt,
+    this.packingPhotoPaths,
+    this.packingPhotos,
+    this.packingVideo,
+    this.isPacked,
+  });
+
+  /// Prefers the free-text packer name, falling back to the linked user.
+  String? get packerName {
+    if (packedByName != null && packedByName!.isNotEmpty) return packedByName;
+    if (packedByUserName != null && packedByUserName!.isNotEmpty) {
+      return packedByUserName;
+    }
+    return null;
+  }
+
+  /// True when there is at least one real packing detail to render.
+  /// Guards against the backend returning an empty `packing: {}` object,
+  /// which would otherwise draw an empty section card.
+  bool get hasDetails =>
+      (packedAt != null && packedAt!.isNotEmpty) ||
+      packerName != null ||
+      photosForDisplay.isNotEmpty ||
+      (packingVideo != null && packingVideo!.isNotEmpty) ||
+      isPacked == true;
+
+  /// The API has used both `packing_photos` and `packing_photo_paths` for the
+  /// same set of image URLs. Keep both forms available to the UI, preserving
+  /// order and removing duplicates when a response contains both.
+  List<String> get photosForDisplay {
+    final result = <String>[];
+    for (final photos in [packingPhotos, packingPhotoPaths]) {
+      for (final photo in photos ?? const <String>[]) {
+        if (photo.trim().isNotEmpty && !result.contains(photo)) {
+          result.add(photo);
+        }
+      }
+    }
+    return result;
+  }
+
+  /// Backend rule: packed when `packed_at` plus a packer is present.
+  bool get isPackedResolved {
+    if (isPacked != null) return isPacked!;
+    return (packedAt != null && packedAt!.isNotEmpty) && packerName != null;
+  }
+
+  static int? _parseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    return int.tryParse(value.toString());
+  }
+
+  static List<String>? _parseStringList(dynamic value) {
+    if (value is! List || value.isEmpty) return null;
+    return value
+        .map((e) => e?.toString() ?? '')
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+
+  factory OrderDetailsModelDataPacking.fromJson(Map<String, dynamic> json) {
+    final packedBy = json["packed_by"];
+    return OrderDetailsModelDataPacking(
+      id: _parseInt(json["id"]),
+      packedByUserId: _parseInt(json["packed_by_user_id"]),
+      packedByName: json["packed_by_name"]?.toString(),
+      packedByUserName: packedBy is Map ? packedBy["name"]?.toString() : null,
+      packedAt: json["packed_at"]?.toString(),
+      packingPhotoPaths: _parseStringList(json["packing_photo_paths"]),
+      packingPhotos: _parseStringList(json["packing_photos"]),
+      packingVideo: json["packing_video"]?.toString(),
+      isPacked: json["is_packed"] is bool ? json["is_packed"] as bool : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "packed_by_user_id": packedByUserId,
+        "packed_by_name": packedByName,
+        "packed_by": packedByUserName == null
+            ? null
+            : {"id": packedByUserId, "name": packedByUserName},
+        "packed_at": packedAt,
+        "packing_photo_paths": packingPhotoPaths,
+        "packing_photos": packingPhotos,
+        "packing_video": packingVideo,
+        "is_packed": isPacked,
+      };
+}
+
+/// Shipping/delivery address broken into the individual fields the web
+/// Order View shows. Sourced from the DELIVERY_ADDRESS order prop (which
+/// arrives as a nested object) and falls back to the customer's saved
+/// address.
+///
+/// Note: the backend currently returns some of these as raw lookup IDs
+/// (e.g. city "897") rather than names. [_resolve] handles both the flat
+/// value and the nested `{"id": .., "name": ..}` shape.
+class OrderDetailsModelDataDeliveryAddress {
+  final String? addressType;
+  final String? address;
+  final String? pincode;
+  final String? district;
+  final String? state;
+  final String? city;
+  final String? landmark;
+
+  OrderDetailsModelDataDeliveryAddress({
+    this.addressType,
+    this.address,
+    this.pincode,
+    this.district,
+    this.state,
+    this.city,
+    this.landmark,
+  });
+
+  bool get hasDetails =>
+      addressType != null ||
+      address != null ||
+      pincode != null ||
+      district != null ||
+      state != null ||
+      city != null ||
+      landmark != null;
+
+  static String? _str(dynamic value) {
+    if (value == null) return null;
+    final text = value.toString().trim();
+    if (text.isEmpty || text == 'null') return null;
+    return text;
+  }
+
+  /// Lookup fields may arrive flat ("897") or nested
+  /// ({"id": 10, "name": "Kerala"} / {"pin_code": "673572"}).
+  ///
+  /// Routed through [_asMap] so a nested object is understood whether it comes
+  /// as a real map, JSON, or the stringified form — otherwise the raw
+  /// "{id: 10, name: Kerala}" would be shown to the user.
+  static String? _resolve(dynamic value) {
+    final nested = _asMap(value);
+    if (nested != null) {
+      return _str(nested["name"] ?? nested["pin_code"] ?? nested["value"]);
+    }
+    return _str(value);
+  }
+
+  /// `props_value` reaches us in three shapes depending on the endpoint and
+  /// backend version: a real object, a JSON string, or Dart's own
+  /// `Map.toString()` output (`{city: 897, name: Test, ...}`) after the
+  /// order-prop model stringifies it. All three must be understood, because
+  /// falling through to the customer's first saved address would show the
+  /// wrong destination for an order delivered to a secondary address.
+  static Map? _asMap(dynamic value) {
+    if (value is Map) return value;
+    if (value is! String) return null;
+
+    final raw = value.trim();
+    if (!raw.startsWith('{')) return null;
+
+    try {
+      final decoded = json.decode(raw);
+      if (decoded is Map) return decoded;
+      return null;
+    } catch (_) {
+      return _parseLooseMap(raw);
+    }
+  }
+
+  /// Recovers the address fields from `Map.toString()` output, which is not
+  /// valid JSON.
+  ///
+  /// Splits at a comma only when it is outside any nested `{...}` and is
+  /// followed by another `key:` pair. Both conditions are needed: street
+  /// addresses contain commas that are not separators, and lookup fields can
+  /// arrive as nested objects (`state: {id: 10, name: Kerala}`) whose inner
+  /// commas must not split the field either.
+  static Map<String, String>? _parseLooseMap(String raw) {
+    final body = raw.trim();
+    if (!body.startsWith('{') || !body.endsWith('}')) return null;
+    final inner = body.substring(1, body.length - 1);
+    final fieldStart = RegExp(r'^\s*[A-Za-z_][A-Za-z0-9_]*\s*:');
+
+    final segments = <String>[];
+    var depth = 0;
+    var start = 0;
+    for (var i = 0; i < inner.length; i++) {
+      final char = inner[i];
+      if (char == '{' || char == '[') {
+        depth++;
+      } else if (char == '}' || char == ']') {
+        if (depth > 0) depth--;
+      } else if (char == ',' &&
+          depth == 0 &&
+          fieldStart.hasMatch(inner.substring(i + 1))) {
+        segments.add(inner.substring(start, i));
+        start = i + 1;
+      }
+    }
+    segments.add(inner.substring(start));
+
+    final result = <String, String>{};
+    for (final segment in segments) {
+      final separator = segment.indexOf(':');
+      if (separator <= 0) continue;
+      final key = segment.substring(0, separator).trim();
+      final value = segment.substring(separator + 1).trim();
+      if (key.isEmpty || value.isEmpty) continue;
+      result[key] = value;
+    }
+    return result.isEmpty ? null : result;
+  }
+
+  /// Builds from the whole order-details `data` object, since the pieces
+  /// live in two different places in the payload.
+  static OrderDetailsModelDataDeliveryAddress? fromOrderJson(
+      Map<String, dynamic> json) {
+    Map? deliveryProp;
+    final props = json["order_props"];
+    if (props is List) {
+      for (final prop in props) {
+        if (prop is! Map) continue;
+        if (prop["props_code"]?.toString().toUpperCase() !=
+            'DELIVERY_ADDRESS') {
+          continue;
+        }
+        final parsed = _asMap(prop["props_value"]);
+        if (parsed != null) {
+          deliveryProp = parsed;
+          break;
+        }
+      }
+    }
+
+    Map? savedAddress;
+    final details = json["customer_details"];
+    if (details is Map) {
+      final addresses = OrderDetailsModelDataCustomerDetails._parseAddressList(
+          details["address"]);
+      if (addresses.isNotEmpty) {
+        final first = addresses.first;
+        savedAddress = _asMap(first);
+      }
+    }
+
+    // One source or the other, never a mix. Filling gaps in the order's
+    // delivery address from the customer's saved address would pair an office
+    // street with a home pincode and label it "Home" — a plausible-looking
+    // destination that is not where anything was sent.
+    final source = deliveryProp ?? savedAddress;
+    if (source == null) return null;
+
+    final result = OrderDetailsModelDataDeliveryAddress(
+      // Only saved addresses carry a type. A delivery prop has none, and
+      // borrowing one would mislabel the destination.
+      addressType: _resolve(source["type"]),
+      address: _str(source["address"]),
+      // Saved addresses name these fields with an _id suffix.
+      pincode: _resolve(source["pincode"] ?? source["pincode_id"]),
+      district: _resolve(source["district"] ?? source["district_id"]),
+      state: _resolve(source["state"] ?? source["state_id"]),
+      city: _resolve(source["city"]),
+      landmark: _resolve(source["landmark"]),
+    );
+
+    return result.hasDetails ? result : null;
+  }
+
+  Map<String, dynamic> toJson() => {
+        "address_type": addressType,
+        "address": address,
+        "pincode": pincode,
+        "district": district,
+        "state": state,
+        "city": city,
+        "landmark": landmark,
       };
 }
 
