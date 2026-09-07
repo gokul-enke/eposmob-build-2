@@ -86,6 +86,7 @@ here with exact source locations so they are not lost between passes:
 - The second route-level fix batch was hot-restarted successfully in Malayalam. The running app exposed the expected Malayalam keyboard tooltip after restart.
 - The coupon, invoice-list, variant-stock, and POS security-key static labels were localized and lint-checked successfully. Dynamic coupon names, invoice values/statuses, variant IDs/SKUs, and security-key action text remain runtime data/context.
 - A further source sweep found additional mobile billing labels and localized the bottom navigation, cart actions, coupon section, quotation customer fields, and product-card action semantics. These changes were lint-checked successfully.
+- The latest mobile-component pass localized dining selection labels, cart price/tax labels, variant-picker copy, coupon-sheet title, product-grid/cart action semantics, and corresponding Malayalam keys. These changes were hot-restart verified below.
 - Remaining source-sweep items are separated below: API/error payloads, account/product names, printer/device values, and print-document labels are dynamic or configuration data and remain review-only.
 
 ### Additional unresolved/dynamic source-sweep items
@@ -98,3 +99,6 @@ here with exact source locations so they are not lost between passes:
 | `lib/features/billing/presentation/pages/billing_page.dart` | 1422, 3228, 3277, 4526-4635, 8172-8326, 9258-9300 | Error/status messages include runtime API/error details and need a dedicated placeholder review. |
 | `lib/screens/print/widgets/receipt_configuration_workspace.dart` | 75-694 | Receipt field/language/configuration labels may intentionally remain configuration identifiers; verify product requirements before changing. |
 | `lib/screens/invoice/invoice_pdf.dart` | 138-273 | Printed document template labels and company/customer placeholders are document-output content, not app chrome; review separately. |
+| `lib/features/billing/presentation/widgets/mobile/home/mobile_product_details_sheet.dart` | 263-964, 1496-1724 | Mixed static/API/device text; dynamic barcode, language, exception, stock, and tax/product values require placeholder-based review. |
+| `lib/features/billing/presentation/widgets/mobile/billing/payment_methods_section.dart` | 311, 532 | Input hints overlap the shared payment flow and should be kept aligned with its translation keys. |
+| `lib/features/billing/presentation/widgets/mobile/cart/cart_item_card.dart` | 422-534 | Purchase-history messages include feature configuration and API/product context; preserve dynamic details while localizing fixed templates. |
