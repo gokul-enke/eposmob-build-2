@@ -167,19 +167,32 @@ class _PortraitWelcome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const Expanded(flex: 5, child: _ProductMosaic()),
-        const SizedBox(height: 26),
-        Expanded(
-          flex: 4,
-          child: _WelcomeMessage(
-            storeName: storeName,
-            onStart: onStart,
-            centered: true,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final mosaicHeight = (constraints.maxHeight * 0.42).clamp(220.0, 420.0);
+
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  height: mosaicHeight,
+                  child: const _ProductMosaic(),
+                ),
+                const SizedBox(height: 26),
+                _WelcomeMessage(
+                  storeName: storeName,
+                  onStart: onStart,
+                  centered: true,
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }

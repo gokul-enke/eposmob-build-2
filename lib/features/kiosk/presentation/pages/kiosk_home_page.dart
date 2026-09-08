@@ -85,24 +85,27 @@ class _KioskHomePageState extends State<KioskHomePage> {
   }
 
   void _showCartSheet({
-    required List<LocalCartItem> items,
     required String currency,
   }) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => FractionallySizedBox(
-        heightFactor: 0.88,
-        child: KioskCartPanel(
-          items: items,
-          currency: currency,
-          sheetMode: true,
-          onIncrease: widget.onCartItemIncrease,
-          onDecrease: widget.onCartItemDecrease,
-          onRemove: widget.onCartItemRemove,
-          onCheckout: widget.onCheckout ?? () {},
-        ),
+      builder: (_) => Consumer<LocalProductProvider>(
+        builder: (context, productProvider, child) {
+          return FractionallySizedBox(
+            heightFactor: 0.88,
+            child: KioskCartPanel(
+              items: productProvider.cartItems,
+              currency: currency,
+              sheetMode: true,
+              onIncrease: widget.onCartItemIncrease,
+              onDecrease: widget.onCartItemDecrease,
+              onRemove: widget.onCartItemRemove,
+              onCheckout: widget.onCheckout ?? () {},
+            ),
+          );
+        },
       ),
     );
   }
@@ -134,10 +137,7 @@ class _KioskHomePageState extends State<KioskHomePage> {
             final cartQuantity = _cartQuantity(cartItems);
             final cartTotal = _cartTotal(cartItems);
 
-            void openCart() => _showCartSheet(
-                  items: cartItems,
-                  currency: currency,
-                );
+            void openCart() => _showCartSheet(currency: currency);
 
             return Column(
               children: [
