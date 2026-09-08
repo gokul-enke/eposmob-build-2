@@ -6,14 +6,23 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:pos_machine/features/subscription/domain/company_subscription.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_provider.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_status_dialog.dart';
+import 'package:pos_machine/models/get_app_settings.dart';
 import 'package:pos_machine/providers/admin_settings_provider.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 
 class SubscriptionActionGuard {
   const SubscriptionActionGuard._();
 
   static Future<bool> ensureOrderSubmissionAllowed(
     BuildContext context, {
-    bool refreshIfStale = true,
+    // Re-verifying here used to run on every order action. With the company
+    // subscription endpoint not live yet, each stale check cost a failed probe
+    // plus a full app-settings refetch - up to 15s with the confirm button
+    // frozen and no spinner. Subscription state is refreshed at app start,
+    // login, store switch and sync instead, and live enforcement stays on the
+    // order response, which [handleBackendResponse] turns into the blocked
+    // dialog. Pass true only from a flow that genuinely needs a fresh probe.
+    bool refreshIfStale = false,
   }) async {
     final provider = context.read<SubscriptionProvider>();
     if (refreshIfStale) {
@@ -30,7 +39,45 @@ class SubscriptionActionGuard {
         await showBlocked(context, provider.subscription!);
         return false;
       case CompanySubscriptionStatus.unknown:
-        return _showUnableToVerify(context, provider);
+        return _allowFromAppSettings(context, provider);
+    }
+  }
+
+  /// Resolves subscription state from the already-loaded company app settings,
+  /// without touching the network.
+  ///
+  /// Fails open when the settings are not loaded yet or the tenant has not
+  /// enabled the temporary `COMPANY_SUBSCRIPTION_STATUS` row: enforcement is
+  /// authoritative on the order response, not on this pre-flight check, so a
+  /// cold start or an unconfigured tenant must never block a sale.
+  static Future<bool> _allowFromAppSettings(
+    BuildContext context,
+    SubscriptionProvider provider,
+  ) async {
+    AppSettings? settings;
+    try {
+      settings = context.read<AppSettingsProvider>().appSettings;
+    } catch (_) {
+      // Some isolated widget tests do not register the settings provider.
+      return true;
+    }
+    if (settings == null) return true;
+
+    final resolved =
+        AppSettingsProvider.resolveCompanySubscriptionFallback(settings);
+    // Enforcement is explicitly enabled but the value did not parse, so the
+    // state is genuinely unverifiable rather than simply unconfigured.
+    if (resolved == null) return _showUnableToVerify(context, provider);
+
+    switch (resolved.status) {
+      case CompanySubscriptionStatus.warning:
+        return _showWarning(context, resolved);
+      case CompanySubscriptionStatus.blocked:
+        await showBlocked(context, resolved);
+        return false;
+      case CompanySubscriptionStatus.active:
+      case CompanySubscriptionStatus.unknown:
+        return true;
     }
   }
 

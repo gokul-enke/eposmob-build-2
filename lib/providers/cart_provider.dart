@@ -28,6 +28,11 @@ Uri buildListCartUri({
 }
 
 class CartProvider with ChangeNotifier {
+  /// Order writes previously ran with no timeout, so a stalled socket left the
+  /// confirm spinner running forever. Bounded here; the timeout path tells the
+  /// cashier to check before re-billing, because the server may still have
+  /// committed the order.
+  static const Duration _orderRequestTimeout = Duration(seconds: 30);
   final StreamController<List<ListCartModelData>> _cartStreamController =
       StreamController<List<ListCartModelData>>.broadcast();
 
@@ -1027,7 +1032,7 @@ class CartProvider with ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
-      });
+      }).timeout(_orderRequestTimeout);
 
       debugPrint('📥 Response status code: ${response.statusCode}');
       debugPrint('📥 Response body: ${response.body}');
@@ -1066,6 +1071,16 @@ class CartProvider with ChangeNotifier {
           "http_status": response.statusCode,
         };
       }
+    } on TimeoutException {
+      debugPrint(
+          'Order request timed out after ${_orderRequestTimeout.inSeconds}s');
+      return {
+        "status": "error",
+        "timed_out": true,
+        "message":
+            "The request timed out. The order may still have been created - "
+                "check the order list before billing it again.",
+      };
     } catch (e) {
       debugPrint('❌ Exception during API call: $e');
       return {"status": "error", "message": e.toString()};
@@ -1197,7 +1212,7 @@ class CartProvider with ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
-      });
+      }).timeout(_orderRequestTimeout);
 
       debugPrint('📥 Response status code: ${response.statusCode}');
       debugPrint('📥 Response body: ${response.body}');
@@ -1228,6 +1243,16 @@ class CartProvider with ChangeNotifier {
           "http_status": response.statusCode,
         };
       }
+    } on TimeoutException {
+      debugPrint(
+          'Order request timed out after ${_orderRequestTimeout.inSeconds}s');
+      return {
+        "status": "error",
+        "timed_out": true,
+        "message":
+            "The request timed out. The order may still have been created - "
+                "check the order list before billing it again.",
+      };
     } catch (e) {
       debugPrint('❌ Exception during API call: $e');
       return {"status": "error", "message": e.toString()};
@@ -1328,7 +1353,7 @@ class CartProvider with ChangeNotifier {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
-      });
+      }).timeout(_orderRequestTimeout);
 
       debugPrint('📥 Response status code: ${response.statusCode}');
       debugPrint('📥 Response body: ${response.body}');
@@ -1357,6 +1382,16 @@ class CartProvider with ChangeNotifier {
           "http_status": response.statusCode,
         };
       }
+    } on TimeoutException {
+      debugPrint(
+          'Order request timed out after ${_orderRequestTimeout.inSeconds}s');
+      return {
+        "status": "error",
+        "timed_out": true,
+        "message":
+            "The request timed out. The order may still have been created - "
+                "check the order list before billing it again.",
+      };
     } catch (e) {
       debugPrint('❌ Exception during API call: $e');
       return {"status": "error", "message": e.toString()};

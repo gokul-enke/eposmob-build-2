@@ -131,15 +131,20 @@ class CheckoutService {
       );
       return false;
     }
-    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
-      return false;
-    }
-
     billingDebugCheckout('confirmOrder', 'started');
 
     bool orderConfirmed = false;
+    // The spinner is raised before the subscription guard so the button always
+    // reflects the tap; the guard runs inside the try so `finally` clears it on
+    // every exit path.
     billingProvider.setLoadingConfirmOrder(true);
     try {
+      if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(
+        context,
+      )) {
+        return false;
+      }
+
       List<String> selectedPaymentMethods =
           billingProvider.getSelectedPaymentMethodsForApi();
 
@@ -337,15 +342,17 @@ class CheckoutService {
       );
       return null;
     }
-    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
-      return null;
-    }
-
     billingDebugCheckout('createOrderAndPrint', 'started');
 
     billingProvider.setLoadingCreateOrder(true);
     String? createdOrderNumber;
     try {
+      if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(
+        context,
+      )) {
+        return null;
+      }
+
       final selectedPaymentMethods =
           billingProvider.getSelectedPaymentMethodsForApi();
 
@@ -645,12 +652,14 @@ class CheckoutService {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
 
-    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
-      return null;
-    }
-
     billingProvider.setLoadingSaveOrderAndPrint(true);
     try {
+      if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(
+        context,
+      )) {
+        return null;
+      }
+
       if (localProductProvider.cartItems.isEmpty) {
         showScaffoldError(
             context: context, message: BillingMobileErrorMessages.emptyCart);
