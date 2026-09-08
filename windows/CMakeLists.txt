@@ -124,6 +124,14 @@ cloudpos_ensure_jni_jdk()
 # package:jni 0.14.2 Windows CMake uses unset ${TARGET_NAME} for /DELAYLOAD.
 set(TARGET_NAME jni)
 
+# printing's PDFiumConfig uses find_file() without NO_DEFAULT_PATH. A leftover
+# CMAKE_INSTALL_PREFIX of "C:/Program Files/cloudpos" can cache PDFium_LIBRARY
+# as the installed copy, and INSTALL then tries to copy from Program Files.
+if(PDFium_LIBRARY MATCHES "[Pp]rogram [Ff]iles")
+  unset(PDFium_LIBRARY CACHE)
+  unset(PDFium_IMPLIB CACHE)
+endif()
+
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
 include(flutter/generated_plugins.cmake)
@@ -136,9 +144,10 @@ include(flutter/generated_plugins.cmake)
 set(BUILD_BUNDLE_DIR "$<TARGET_FILE_DIR:${BINARY_NAME}>")
 # Make the "install" step default, as it's required to run.
 set(CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD 1)
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  set(CMAKE_INSTALL_PREFIX "${BUILD_BUNDLE_DIR}" CACHE PATH "..." FORCE)
-endif()
+# Always install next to the executable. A leftover CMake cache (or a
+# configure run outside `flutter build`) can leave CMAKE_INSTALL_PREFIX at
+# "C:/Program Files/cloudpos", which makes INSTALL.vcxproj fail without admin.
+set(CMAKE_INSTALL_PREFIX "${BUILD_BUNDLE_DIR}" CACHE PATH "..." FORCE)
 
 set(INSTALL_BUNDLE_DATA_DIR "${CMAKE_INSTALL_PREFIX}/data")
 set(INSTALL_BUNDLE_LIB_DIR "${CMAKE_INSTALL_PREFIX}")
