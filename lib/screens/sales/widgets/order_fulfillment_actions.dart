@@ -766,10 +766,9 @@ class _PackingDialogState extends State<_PackingDialog> {
                           itemLabel: (person) => person.name,
                           onChanged: (staff) {
                             setState(() {
+                              // `packed_by_name` is reserved for a manually
+                              // entered alternate packer, not the staff label.
                               _selectedStaffId = staff?.id;
-                              if (staff != null) {
-                                _packerName.text = staff.name;
-                              }
                             });
                           },
                         ),
@@ -1004,29 +1003,55 @@ class _DialogActions extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          CustomRoundButton(
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, constraints) {
+          const gap = 12.0;
+          const cancelWidth = 110.0;
+          const submitWidth = 160.0;
+          final stackButtons =
+              constraints.maxWidth < cancelWidth + gap + submitWidth;
+          final buttonWidth = stackButtons ? constraints.maxWidth : null;
+
+          final cancelButton = CustomRoundButton(
             title: 'sales_order_details.btn_cancel'.tr,
             fct: submitting ? () {} : () => Navigator.of(context).pop(),
             height: 40,
-            width: 110,
+            width: buttonWidth ?? cancelWidth,
             fontSize: FontSize.s12,
             boxColor: Colors.white,
             borderColor: ColorManager.kPrimaryColor,
             textColor: ColorManager.kPrimaryColor,
-          ),
-          const SizedBox(width: 12),
-          CustomRoundButton(
+          );
+          final submitButton = CustomRoundButton(
             title: submitLabel,
             fct: onSubmit,
             height: 40,
-            width: 160,
+            width: buttonWidth ?? submitWidth,
             fontSize: FontSize.s12,
             isLoading: submitting,
-          ),
-        ],
+          );
+
+          if (stackButtons) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                cancelButton,
+                const SizedBox(height: gap),
+                submitButton,
+              ],
+            );
+          }
+
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              cancelButton,
+              const SizedBox(width: gap),
+              submitButton,
+            ],
+          );
+        },
       );
 }
 
