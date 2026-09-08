@@ -506,3 +506,11 @@ here with exact source locations so they are not lost between passes:
 | `lib/screens/reports/customer_transactions_reports/transaction_report_print.dart` | 250 | Printer-selection snackbar now uses `voucher_print.printer_selected`; printer name remains device data. |
 | `lib/screens/reports/supplier_transaction_report/supplier_transaction_report_print.dart` | 244 | Printer-selection snackbar now uses `voucher_print.printer_selected`; printer name remains device data. |
 | `lib/screens/transactions/widgets/share_helper.dart` | 103-126, 610, 1048-1086, 1425-1463, 1330-1341, 1710-1721 | Invoice, receipt, customer-voucher, and supplier-voucher share labels/result messages now use `share_helper.*`; email, phone, voucher, supplier, and provider error values remain dynamic. |
+| `lib/screens/kiosk/kiosk_order_page.dart` | 410-418, 448-455 | Kiosk cart success/error messages now use translation keys; API-provided response messages remain dynamic when present. |
+| `lib/screens/billing/billing_page_restaurant.dart` | 6837-6843 | Restaurant billing coupon success/failure fallbacks now use translation keys; backend response messages remain dynamic. |
+| `lib/screens/reports/customer_transactions_reports/transaction_report_print_standard.dart` | 471-473 | Printer name is dynamic; static report-send status now uses `voucher_print.report_sent_to`. |
+| `lib/screens/reports/supplier_transaction_report/supplier_transaction_report_print_standard.dart` | 413-415 | Printer name is dynamic; static report-send status now uses `voucher_print.report_sent_to`. |
+| `lib/screens/print/daily_close_standard_printer.dart` | 463-466 | Printer name is dynamic; static daily-close send status now uses `daily_sales_close.sent_to_printer`. |
+| `lib/screens/print/kot_standard_printer.dart` | 557-560 | Printer name is dynamic; static KOT send status now uses `daily_sales_close.kot_sent_to_printer`. |
+| `lib/screens/print/print_standard.dart` | 913-916 | Generated file path is dynamic; development PDF status now uses `print.pdf_saved`. |
+| `lib/screens/kiosk/kiosk_order_page.dart` | 410-418, 448-455 | Kiosk cart success/error fallbacks now use translation keys; API-provided response messages remain dynamic when present. |

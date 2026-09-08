@@ -461,7 +461,9 @@ class DailyCloseStandardPrinter {
         if (context.mounted) {
           showScaffold(
             context: context,
-            message: 'Daily Close sent to ${selectedPrinter.deviceName}',
+            message: 'daily_sales_close.sent_to_printer'.trParams({
+              'printer': selectedPrinter.deviceName!,
+            })!,
           );
         }
         return;

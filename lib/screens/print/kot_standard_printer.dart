@@ -555,7 +555,9 @@ class KotStandardPrinter {
         if (context.mounted) {
           showScaffold(
             context: context,
-            message: 'KOT sent to ${selectedPrinter.deviceName}',
+            message: 'daily_sales_close.kot_sent_to_printer'.trParams({
+              'printer': selectedPrinter.deviceName!,
+            })!,
           );
         }
         return;

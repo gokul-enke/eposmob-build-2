@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';
@@ -52,7 +53,7 @@ class RestrictedPaymentData {
 /// - UPI only ✅
 /// - Card + UPI ❌ (Not allowed)
 class BuildRestrictedPaymentSelector extends StatefulWidget {
-  final String title;
+  final String? title;
   final List<RestrictedPaymentType> availableMethods;
   final Function(RestrictedPaymentData) onPaymentChanged;
   final RestrictedPaymentData? initialData;
@@ -63,7 +64,7 @@ class BuildRestrictedPaymentSelector extends StatefulWidget {
 
   const BuildRestrictedPaymentSelector({
     Key? key,
-    this.title = "Select Payment Method",
+    this.title = '',
     this.availableMethods = const [
       RestrictedPaymentType.cash,
       RestrictedPaymentType.card,
@@ -73,7 +74,7 @@ class BuildRestrictedPaymentSelector extends StatefulWidget {
     this.initialData,
     this.showTotalAmount = false,
     this.expectedAmount,
-    this.restrictionMessage = "Card and UPI cannot be used together",
+    this.restrictionMessage,
     this.showRestrictionInfo = false, // Default to not showing the info box
   }) : super(key: key);
 
@@ -116,9 +117,9 @@ class _BuildRestrictedPaymentSelectorState
   String _getMethodName(RestrictedPaymentType method) {
     switch (method) {
       case RestrictedPaymentType.cash:
-        return 'Cash';
+        return 'general.cash'.tr;
       case RestrictedPaymentType.card:
-        return 'Card';
+        return 'general.card'.tr;
       case RestrictedPaymentType.upi:
         return 'UPI';
     }
@@ -232,7 +233,8 @@ class _BuildRestrictedPaymentSelectorState
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          widget.restrictionMessage ?? "Card and UPI cannot be used together",
+          widget.restrictionMessage ??
+              'general.card_upi_not_allowed_together'.tr,
           style: buildCustomStyle(
             FontWeightManager.medium,
             FontSize.s12,
@@ -274,7 +276,7 @@ class _BuildRestrictedPaymentSelectorState
         children: [
           // Title
           Text(
-            widget.title,
+            widget.title ?? 'general.select_payment_method'.tr,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s16,
@@ -408,7 +410,9 @@ class _BuildRestrictedPaymentSelectorState
                       method: primaryMethod!,
                       controller: primaryAmountController,
                       placeholder:
-                          'Enter ${_getMethodName(primaryMethod!)} Amount',
+                          'general.enter_payment_amount'.trParams({
+                            'method': _getMethodName(primaryMethod!)
+                          }),
                       focusNode: _primaryAmountFocusNode,
                     ),
                   ),
@@ -420,7 +424,9 @@ class _BuildRestrictedPaymentSelectorState
                       method: secondaryMethod!,
                       controller: secondaryAmountController,
                       placeholder:
-                          'Enter ${_getMethodName(secondaryMethod!)} Amount',
+                          'general.enter_payment_amount'.trParams({
+                            'method': _getMethodName(secondaryMethod!)
+                          }),
                       focusNode: _secondaryAmountFocusNode,
                     ),
                   ),
@@ -506,7 +512,7 @@ class _BuildRestrictedPaymentSelectorState
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Total: ${total.toStringAsFixed(2)}',
+            '${'general.total'.tr}: ${total.toStringAsFixed(2)}',
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s14,
@@ -516,7 +522,8 @@ class _BuildRestrictedPaymentSelectorState
           ),
           if (widget.expectedAmount != null) ...[
             Text(
-              'Expected: ${widget.expectedAmount!.toStringAsFixed(2)}',
+              '${'general.expected'.tr}: '
+              '${widget.expectedAmount!.toStringAsFixed(2)}',
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s12,

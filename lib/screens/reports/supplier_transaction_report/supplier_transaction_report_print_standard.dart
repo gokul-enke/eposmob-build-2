@@ -411,7 +411,9 @@ class SupplierTransactionReportStandardPrinter {
           if (context.mounted) {
             showScaffold(
               context: context,
-              message: 'Report sent to ${selectedPrinter.deviceName}',
+              message: 'voucher_print.report_sent_to'.trParams({
+                'printer': selectedPrinter.deviceName!,
+              })!,
             );
           }
           return;

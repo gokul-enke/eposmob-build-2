@@ -101,7 +101,7 @@ class _HorizontalProductViewState extends State<HorizontalProductView> {
                         height: 15,
                         alignment: Alignment.center,
                         child: Text(
-                          product.productName ?? 'Product Name',
+                          product.productName ?? 'general.product_name'.tr,
                           style: const TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w500,

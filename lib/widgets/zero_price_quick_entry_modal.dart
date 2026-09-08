@@ -154,19 +154,20 @@ class _ZeroPriceQuickEntryModalState extends State<ZeroPriceQuickEntryModal> {
     final num quantity = _currentQuantity();
 
     if (price == null || price <= 0) {
-      setState(() => _errorText = 'Enter a valid price');
+      setState(() => _errorText = 'general.valid_price_required'.tr);
       _focusPriceField();
       return;
     }
     final double? minPrice = widget.minimumPrice;
     if (minPrice != null && price < minPrice - 0.001) {
-      setState(() => _errorText =
-          'Price is below the minimum sale price of ${minPrice.toStringAsFixed(2)}');
+      setState(() => _errorText = 'general.price_below_minimum'.trParams({
+            'price': minPrice.toStringAsFixed(2),
+          }));
       _focusPriceField();
       return;
     }
     if (quantity <= 0) {
-      setState(() => _errorText = 'Enter a valid quantity');
+      setState(() => _errorText = 'general.valid_quantity_required'.tr);
       _quantityFocusNode.requestFocus();
       _bindKeyboard(_quantityController);
       return;

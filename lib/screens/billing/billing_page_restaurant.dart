@@ -6834,13 +6834,13 @@ class BillingPageState extends State<BillingPageRestaurant>
 
           showScaffold(
             context: context,
-            message: result['message'] ?? 'Coupon Applied Successfully',
+            message: result['message'] ?? 'billing.coupon_applied'.tr,
           );
         } else {
           // Handle failure to apply coupon
           showScaffoldError(
             context: context,
-            message: result['message'] ?? 'Failed to Apply Coupon',
+            message: result['message'] ?? 'billing.coupon_apply_failed'.tr,
           );
         }
       } else {

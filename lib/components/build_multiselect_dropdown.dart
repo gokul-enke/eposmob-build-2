@@ -820,7 +820,7 @@ class _MultiSelectDropdownOverlayState<T>
                             widget.onClearAll();
                           },
                           child: Text(
-                            "Clear all",
+                            'general.clear_all'.tr,
                             style: TextStyle(
                               fontSize: 11,
                               color: Colors.blue.shade600,

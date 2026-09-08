@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
@@ -83,7 +84,7 @@ class BuildCategoryContainerDummy extends StatelessWidget {
             height: 5,
           ),
           Text(
-            'New Category',
+            'category.new_category'.tr,
             style: buildCustomStyle(
                 FontWeightManager.regular, FontSize.s11, 0.17, Colors.black),
           ),

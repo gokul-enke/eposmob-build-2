@@ -887,7 +887,7 @@ Future<DateTime?> showAutoDismissDatePicker({
                             Navigator.of(context).pop();
                           },
                           child: Text(
-                            'Cancel',
+                            'general.cancel'.tr,
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontWeight: FontWeight.w600,

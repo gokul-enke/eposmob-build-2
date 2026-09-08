@@ -911,7 +911,7 @@ class StandardPrinter {
         if (context.mounted) {
           showScaffold(
             context: context,
-            message: 'Development PDF saved to ${savedFile.path}',
+            message: 'print.pdf_saved'.trParams({'path': savedFile.path}),
           );
         }
         return;
