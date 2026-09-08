@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/master_data.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/models/order_fulfillment.dart';
@@ -82,6 +83,7 @@ class _OrderFulfillmentActionButtonState
 
     final saved = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (dialogContext) =>
           widget.action == OrderFulfillmentAction.externalDelivery
               ? _ExternalDeliveryDialog(
@@ -95,15 +97,13 @@ class _OrderFulfillmentActionButtonState
                 ),
     );
     if (saved == true && mounted) {
+      _showMessage(
+        context,
+        widget.action == OrderFulfillmentAction.externalDelivery
+            ? 'sales_order_details.msg_delivery_created'.tr
+            : 'sales_order_details.msg_packing_saved'.tr,
+      );
       await widget.onSaved?.call();
-      if (mounted) {
-        _showMessage(
-          context,
-          widget.action == OrderFulfillmentAction.externalDelivery
-              ? 'sales_order_details.msg_delivery_created'.tr
-              : 'sales_order_details.msg_packing_saved'.tr,
-        );
-      }
     }
   }
 
@@ -178,8 +178,11 @@ class _ExternalDeliveryDialogState extends State<_ExternalDeliveryDialog> {
   List<MasterDataValue> _shippingMethods = const [];
   List<MasterDataValue> _transportModes = const [];
   List<MasterDataValue> _paymentModes = const [];
+  List<ExternalLogisticWarehouse> _warehouses = const [];
   ExternalLogistic? _selectedLogistic;
   ExternalLogisticWarehouse? _selectedWarehouse;
+  bool _loadingWarehouses = false;
+  int _warehouseRequestId = 0;
   String? _shippingService;
   String? _transportMode;
   String? _paymentMode;
@@ -265,10 +268,14 @@ class _ExternalDeliveryDialogState extends State<_ExternalDeliveryDialog> {
             .toList();
   }
 
-  void _selectLogistic(ExternalLogistic? logistic) {
+  Future<void> _selectLogistic(ExternalLogistic? logistic) async {
+    final requestId = ++_warehouseRequestId;
+    final embeddedWarehouses = logistic?.warehouses ?? const [];
     setState(() {
       _selectedLogistic = logistic;
       _selectedWarehouse = null;
+      _warehouses = embeddedWarehouses;
+      _loadingWarehouses = logistic != null && embeddedWarehouses.isEmpty;
       if (!_availableShippingMethods
           .any((item) => item.value == _shippingService)) {
         _shippingService = null;
@@ -277,11 +284,39 @@ class _ExternalDeliveryDialogState extends State<_ExternalDeliveryDialog> {
           .any((item) => item.value == _transportMode)) {
         _transportMode = null;
       }
-      if (_trackingUrl.text.trim().isEmpty &&
-          (logistic?.trackingUrl?.trim().isNotEmpty ?? false)) {
-        _trackingUrl.text = logistic!.trackingUrl!;
-      }
+      final trackingUrl = logistic?.trackingUrl?.trim();
+      _trackingUrl.text =
+          trackingUrl == null || trackingUrl.isEmpty ? '' : trackingUrl;
     });
+
+    if (logistic == null || embeddedWarehouses.isNotEmpty) return;
+
+    try {
+      final warehouses = await _api.fetchWarehouses(
+        accessToken: widget.accessToken,
+        externalLogisticId: logistic.id,
+      );
+      if (!mounted ||
+          requestId != _warehouseRequestId ||
+          _selectedLogistic?.id != logistic.id) {
+        return;
+      }
+      setState(() {
+        _warehouses = warehouses;
+        _loadingWarehouses = false;
+      });
+    } catch (error) {
+      if (!mounted ||
+          requestId != _warehouseRequestId ||
+          _selectedLogistic?.id != logistic.id) {
+        return;
+      }
+      setState(() {
+        _warehouses = const [];
+        _loadingWarehouses = false;
+      });
+      _showMessage(context, error.toString(), isError: true);
+    }
   }
 
   Future<void> _pickDate(TextEditingController controller) async {
@@ -362,6 +397,7 @@ class _ExternalDeliveryDialogState extends State<_ExternalDeliveryDialog> {
   Widget build(BuildContext context) {
     return _FulfillmentDialogFrame(
       title: 'sales_order_details.title_create_delivery'.tr,
+      canDismiss: !_submitting,
       footer: _loading || _loadError != null
           ? null
           : _DialogActions(
@@ -417,10 +453,12 @@ class _ExternalDeliveryDialogState extends State<_ExternalDeliveryDialog> {
                           label:
                               'sales_order_details.label_pickup_warehouse'.tr,
                           value: _selectedWarehouse,
-                          items: _selectedLogistic?.warehouses ?? const [],
+                          items: _warehouses,
                           itemLabel: (item) => item.name,
                           onChanged: (value) =>
                               setState(() => _selectedWarehouse = value),
+                          enabled:
+                              _selectedLogistic != null && !_loadingWarehouses,
                         ),
                         _textField(
                           controller: _weight,
@@ -548,6 +586,8 @@ class _PackingDialogState extends State<_PackingDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _packerName;
   late final TextEditingController _packedAt;
+  late final String? _originalPackedAt;
+  bool _packedAtChanged = false;
   List<PackingStaff> _staff = const [];
   int? _selectedStaffId;
   List<PlatformFile> _newPhotos = [];
@@ -562,8 +602,9 @@ class _PackingDialogState extends State<_PackingDialog> {
     super.initState();
     _packerName =
         TextEditingController(text: widget.packing?.packedByName ?? '');
+    _originalPackedAt = widget.packing?.packedAt?.trim();
     _packedAt =
-        TextEditingController(text: _dateTimeDisplay(widget.packing?.packedAt));
+        TextEditingController(text: _dateTimeDisplay(_originalPackedAt));
     _selectedStaffId = widget.packing?.packedByUserId;
     _loadStaff();
   }
@@ -598,7 +639,8 @@ class _PackingDialogState extends State<_PackingDialog> {
   }
 
   Future<void> _pickPackedAt() async {
-    final existing = _parsePackedAt(_packedAt.text) ?? DateTime.now();
+    final existing =
+        _parsePackedAt(_packedAt.text) ?? DateHelper.nowInConfiguredTimeZone();
     final date = await showDatePicker(
       context: context,
       initialDate: existing,
@@ -613,7 +655,10 @@ class _PackingDialogState extends State<_PackingDialog> {
     if (time == null || !mounted) return;
     final result =
         DateTime(date.year, date.month, date.day, time.hour, time.minute);
-    setState(() => _packedAt.text = _dateTimeDisplay(result.toIso8601String()));
+    setState(() {
+      _packedAt.text = _dateTimeInput(result);
+      _packedAtChanged = true;
+    });
   }
 
   Future<void> _choosePhotos() async {
@@ -649,8 +694,13 @@ class _PackingDialogState extends State<_PackingDialog> {
 
   Future<void> _submit() async {
     if (_submitting || !_formKey.currentState!.validate()) return;
-    final packedAt = _parsePackedAt(_packedAt.text);
-    if (packedAt == null) {
+    final packedAtInput = _parsePackedAt(_packedAt.text);
+    final packedAt = !_packedAtChanged &&
+            _originalPackedAt != null &&
+            _originalPackedAt!.isNotEmpty
+        ? _originalPackedAt
+        : DateHelper.configuredDateTimeToUtcIso(_packedAt.text);
+    if (packedAtInput == null || packedAt == null) {
       _showMessage(context, 'sales_order_details.msg_packed_at_required'.tr,
           isError: true);
       return;
@@ -668,7 +718,7 @@ class _PackingDialogState extends State<_PackingDialog> {
         orderNumber: widget.orderNumber,
         packedByUserId: _selectedStaffId,
         packedByName: _packerName.text,
-        packedAt: packedAt.toIso8601String(),
+        packedAt: packedAt,
         photos: _newPhotos,
         video: _newVideo,
         photosToDelete: _photosToDelete.toList(),
@@ -686,6 +736,7 @@ class _PackingDialogState extends State<_PackingDialog> {
   Widget build(BuildContext context) {
     return _FulfillmentDialogFrame(
       title: 'sales_order_details.title_packing'.tr,
+      canDismiss: !_submitting,
       footer: _loading || _loadError != null
           ? null
           : _DialogActions(
@@ -716,8 +767,7 @@ class _PackingDialogState extends State<_PackingDialog> {
                           onChanged: (staff) {
                             setState(() {
                               _selectedStaffId = staff?.id;
-                              if (staff != null &&
-                                  _packerName.text.trim().isEmpty) {
+                              if (staff != null) {
                                 _packerName.text = staff.name;
                               }
                             });
@@ -808,73 +858,80 @@ class _FulfillmentDialogFrame extends StatelessWidget {
   final String title;
   final Widget child;
   final Widget? footer;
+  final bool canDismiss;
 
   const _FulfillmentDialogFrame({
     required this.title,
     required this.child,
     this.footer,
+    this.canDismiss = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
     final isMobile = screenSize.width < 600;
-    return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: isMobile ? screenSize.width - 48 : 920,
-          maxHeight: screenSize.height - 48,
-        ),
-        child: BuildBoxShadowContainer(
-          circleRadius: 16,
-          padding: EdgeInsets.zero,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 20, 12, 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s20,
-                          0.27,
-                          ColorManager.textColor,
+    return PopScope(
+      canPop: canDismiss,
+      child: Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: isMobile ? screenSize.width - 48 : 920,
+            maxHeight: screenSize.height - 48,
+          ),
+          child: BuildBoxShadowContainer(
+            circleRadius: 16,
+            padding: EdgeInsets.zero,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 20, 12, 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: buildCustomStyle(
+                            FontWeightManager.semiBold,
+                            FontSize.s20,
+                            0.27,
+                            ColorManager.textColor,
+                          ),
                         ),
                       ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close, color: Colors.grey),
-                      tooltip:
-                          MaterialLocalizations.of(context).closeButtonTooltip,
-                    ),
-                  ],
+                      IconButton(
+                        onPressed: canDismiss
+                            ? () => Navigator.of(context).pop()
+                            : null,
+                        icon: const Icon(Icons.close, color: Colors.grey),
+                        tooltip: MaterialLocalizations.of(context)
+                            .closeButtonTooltip,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const Divider(height: 1),
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: child,
-                ),
-              ),
-              if (footer != null) ...[
                 const Divider(height: 1),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
-                  child: footer!,
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: child,
+                  ),
                 ),
+                if (footer != null) ...[
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
+                    child: footer!,
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -980,6 +1037,7 @@ Widget _dropdown<T>({
   required String Function(T) itemLabel,
   required ValueChanged<T?> onChanged,
   bool required = false,
+  bool enabled = true,
 }) =>
     _LabeledField(
       label: label,
@@ -1005,7 +1063,7 @@ Widget _dropdown<T>({
                         Text(itemLabel(item), overflow: TextOverflow.ellipsis),
                   ))
               .toList(),
-          onChanged: items.isEmpty ? null : onChanged,
+          onChanged: !enabled || items.isEmpty ? null : onChanged,
           validator: required
               ? (selected) => selected == null
                   ? 'sales_order_details.msg_required_field'.tr
@@ -1277,11 +1335,12 @@ String _dateOnly(DateTime date) =>
     '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
 String _dateTimeDisplay(String? value) {
-  final parsed = value == null ? null : DateTime.tryParse(value);
-  if (parsed == null) return '';
-  final local = parsed.toLocal();
-  return '${_dateOnly(local)} ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+  if (value == null || value.trim().isEmpty) return '';
+  return DateHelper.formatISODateTimeForInput(value);
 }
+
+String _dateTimeInput(DateTime date) =>
+    '${_dateOnly(date)} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
 
 DateTime? _parsePackedAt(String value) {
   final normalized = value.trim().replaceFirst(' ', 'T');
