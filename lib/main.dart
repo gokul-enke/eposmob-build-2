@@ -111,7 +111,6 @@ void main() async {
   await _initializeBaseUrlFromPreferences();
   await _initializeNotificationPosition();
   SentryConfig.setAppUrl(APPUrl.baseURL);
-  await SentryConfig.sendDebugTestExceptionOnce();
 
   if (kIsWeb) {
     // Browsers do not provide a native application-support directory.
@@ -172,6 +171,9 @@ void main() async {
         "main: .env not found or failed to load, continuing without it: $e");
   }
   runApp(SentryWidget(child: const MyApp()));
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    SentryConfig.sendDebugTestExceptionOnce();
+  });
 }
 
 Future<void> _initializeNotificationPosition() async {
