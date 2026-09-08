@@ -889,6 +889,7 @@
   "general": {
     "items_count": "Items: @count",
     "resume": "Resume",
+    "continue_label": "Continue",
     "remove": "Remove",
     "order_number_hash": "Order #",
     "date": "Date",
@@ -1043,6 +1044,7 @@
     "invalid_pricing_before_save": "Please ensure all items have valid prices before saving",
     "no_internet_confirm": "No internet connection. Cannot confirm order online.",
     "no_internet_create_order": "No internet connection. Cannot create order online.",
+    "order_request_timed_out": "The request timed out. The order may still have been created — check the order list before billing it again.",
     "quotation_create_failed": "Failed to create quotation",
     "quotation_print_missing_id": "Quotation created, but print failed because the API response did not include quotation id.",
     "quotation_print_details_failed": "Quotation created, but details could not be loaded for printing.",
@@ -3472,7 +3474,10 @@
   },
   "subscription": {
     "unable_verify": "Unable to verify subscription",
-    "status_unverified": "The subscription status could not be verified. Check your connection and try again."
+    "status_unverified": "The subscription status could not be verified. Check your connection and try again.",
+    "blocked_default": "Your company subscription is blocked.",
+    "manage_subscription": "Manage Subscription",
+    "contact_administrator": "Contact Administrator"
   },
   "invoice": {
     "selected_count": "@count selected",

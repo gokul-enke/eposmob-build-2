@@ -843,6 +843,7 @@
   },
   "general": {
     "ok": "حسنا",
+    "continue_label": "متابعة",
     "cancel": "إلغاء",
     "save": "حفظ",
     "print": "طباعة",
@@ -885,6 +886,7 @@
     "invalid_pricing_before_save": "يرجى التأكد من أن جميع العناصر لها أسعار صحيحة قبل الحفظ",
     "no_internet_confirm": "لا توجد اتصال بالإنترنت. لا يمكن تأكيد الطلب عبر الإنترنت.",
     "no_internet_create_order": "لا توجد اتصال بالإنترنت. لا يمكن إنشاء طلب عبر الإنترنت.",
+    "order_request_timed_out": "انتهت مهلة الطلب. قد يكون الطلب قد أُنشئ بالفعل — تحقق من قائمة الطلبات قبل إعادة إصدار الفاتورة.",
     "quotation_create_failed": "فشل إنشاء الفاتورة",
     "quotation_print_missing_id": "تم إنشاء الفاتورة، لكن فشلت الطباعة لأن استجابة API لم تتضمن معرف الفاتورة.",
     "quotation_print_details_failed": "تم إنشاء الفاتورة، لكن لم يتمكن من تحميل التفاصيل للطباعة.",
@@ -2883,6 +2885,13 @@
   "common_details_dialog": {
     "close": "إغلاق",
     "na": "غير متوفر"
+  },
+  "subscription": {
+    "unable_verify": "تعذر التحقق من الاشتراك",
+    "status_unverified": "تعذر التحقق من حالة الاشتراك. تحقق من اتصالك وحاول مرة أخرى.",
+    "blocked_default": "اشتراك شركتك محظور.",
+    "manage_subscription": "إدارة الاشتراك",
+    "contact_administrator": "اتصل بالمسؤول"
   },
   "invoice": {
     "all_status": "جميع الحالات",

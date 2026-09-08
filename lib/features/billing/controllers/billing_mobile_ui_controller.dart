@@ -49,6 +49,8 @@ class BillingMobileErrorMessages {
       'billing_mobile_errors.no_internet_confirm'.tr;
   static String get noInternetCreateOrder =>
       'billing_mobile_errors.no_internet_create_order'.tr;
+  static String get orderRequestTimedOut =>
+      'billing_mobile_errors.order_request_timed_out'.tr;
 
   // Quotation
   static String get quotationCreateFailed => 'billing_mobile_errors.quotation_create_failed'.tr;
@@ -158,6 +160,10 @@ class BillingMobileErrorMessages {
     Map<dynamic, dynamic> response, {
     String? fallback,
   }) {
+    // The order providers mark timeouts explicitly. Their raw message is an
+    // untranslated fallback for logs, so surface the localised copy instead.
+    if (response['timed_out'] == true) return orderRequestTimedOut;
+
     final message = response['message'];
     if (message is String && message.trim().isNotEmpty) {
       return userFacingException(message, fallback: fallback ?? confirmOrderFailed);

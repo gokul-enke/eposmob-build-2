@@ -8,6 +8,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   geolocator_windows
   permission_handler_windows
   printing
+  sentry_flutter
   share_plus
   url_launcher_windows
   webview_windows
