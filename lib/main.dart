@@ -80,6 +80,8 @@ import 'package:pos_machine/features/realtime_sync/presentation/realtime_sync_li
 import 'package:pos_machine/features/realtime_sync/presentation/realtime_sync_provider.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_lifecycle.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_provider.dart';
+import 'package:pos_machine/config/sentry_config.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 void main() async {
   if (kDebugMode) {
@@ -97,11 +99,19 @@ void main() async {
       originalDebugPrint(message, wrapWidth: wrapWidth);
     };
   } else {
-    WidgetsFlutterBinding.ensureInitialized();
+    SentryWidgetsFlutterBinding.ensureInitialized();
+  }
+
+  try {
+    await SentryConfig.init();
+  } catch (e, stackTrace) {
+    debugPrint('Sentry init failed: $e\n$stackTrace');
   }
 
   await _initializeBaseUrlFromPreferences();
   await _initializeNotificationPosition();
+  SentryConfig.setAppUrl(APPUrl.baseURL);
+  await SentryConfig.sendDebugTestExceptionOnce();
 
   if (kIsWeb) {
     // Browsers do not provide a native application-support directory.
@@ -161,7 +171,7 @@ void main() async {
     debugPrint(
         "main: .env not found or failed to load, continuing without it: $e");
   }
-  runApp(const MyApp());
+  runApp(SentryWidget(child: const MyApp()));
 }
 
 Future<void> _initializeNotificationPosition() async {
@@ -445,6 +455,9 @@ class MyApp extends StatelessWidget {
                 builder: (context, focusHighlightProvider, child) {
                   return GetMaterialApp(
                     debugShowCheckedModeBanner: false,
+                    navigatorObservers: [
+                      SentryNavigatorObserver(),
+                    ],
                     title: 'CLOUDPOS',
                     theme: _buildAppTheme(focusHighlightProvider.enabled),
                     translations:
