@@ -298,7 +298,7 @@ class CustomerPaginationBar extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               _CustomerPageButton(
-                tooltip: 'pagination.previous'.tr,
+                tooltip: 'pagination.previous_page'.tr,
                 icon: Icons.chevron_left_rounded,
                 onPressed: currentPage > 1
                     ? () => onPageChanged(currentPage - 1)
@@ -319,7 +319,7 @@ class CustomerPaginationBar extends StatelessWidget {
                 ),
               ),
               _CustomerPageButton(
-                tooltip: 'pagination.next'.tr,
+                tooltip: 'pagination.next_page'.tr,
                 icon: Icons.chevron_right_rounded,
                 onPressed: currentPage < totalPages
                     ? () => onPageChanged(currentPage + 1)

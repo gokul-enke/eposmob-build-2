@@ -885,7 +885,9 @@
     "next": "അടുത്തത്",
     "page": "പേജ്",
     "of": "ൽ",
-    "page_of": "പേജ് @current @total"
+    "page_of": "പേജ് @current @total",
+    "previous_page": "മുമ്പത്തെ പേജ്",
+    "next_page": "അടുത്ത പേജ്"
   },
   "general": {
     "items_count": "ഇനങ്ങൾ: @count",
@@ -2500,7 +2502,7 @@
     "loading_product_details": "ലോഡ് ചെയ്യുന്നു ഉൽപ്പന്ന വിവരങ്ങൾ...",
     "product_not_found": "ഉൽപ്പന്നം ഇല്ല കണ്ടെത്തി",
     "retry": "വീണ്ടും ശ്രമിക്ക്",
-    "status_out_of_stock": "  സ്റ്റോക്ക്",
+    "status_out_of_stock": "സ്റ്റോക്ക് തീർന്നു",
     "status_at_reorder_level": "റീഓർഡർ ലെവലിൽ",
     "status_low_stock": "കുറവ് സ്റ്റോക്ക്",
     "offer_price": "ഓഫർ വില",
@@ -2743,7 +2745,7 @@
     "details_no_properties": "പ്രോപ്പർട്ടികൾ ലഭ്യമല്ല",
     "error_loading_stocks": "സ്റ്റോക്കുകൾ: @error ലോഡ് ചെയ്യുന്നതിൽ പിഴവ്",
     "edit_stock_title": "സ്റ്റോക്ക്: @productName എഡിറ്റ്",
-    "status_out_of_stock": "  സ്റ്റോക്ക്",
+    "status_out_of_stock": "സ്റ്റോക്ക് തീർന്നു",
     "status_low_stock": "കുറവ് സ്റ്റോക്ക്",
     "status_at_reorder_level": "റീഓർഡർ ലെവലിൽ",
     "status_available": "ലഭ്യം",

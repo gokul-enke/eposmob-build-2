@@ -49,8 +49,15 @@ void main() {
       ),
     );
 
-    expect(find.text('Receipt Setup & Live Preview'), findsOneWidget);
-    expect(find.text('Common visibility preview'), findsOneWidget);
+    expect(find.text('Receipt layout & preview'), findsOneWidget);
+
+    // The workspace is a collapsed disclosure card by default so the expensive
+    // receipt render is deferred until asked for. Open it before asserting on
+    // anything inside.
+    await tester.tap(find.text('Receipt layout & preview'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Live preview'), findsOneWidget);
     expect(
       find.textContaining('Classic is selected.'),
       findsOneWidget,

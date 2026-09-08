@@ -885,7 +885,9 @@
     "next": "Next",
     "page": "Page",
     "of": "of",
-    "page_of": "Page @current of @total"
+    "page_of": "Page @current of @total",
+    "previous_page": "Previous page",
+    "next_page": "Next page"
   },
   "general": {
     "items_count": "Items: @count",
@@ -1108,7 +1110,7 @@
     "add_to_cart": "Add To Cart",
     "added_to_cart": "Added To Cart",
     "confirm_order": "Confirm Order",
-    "save_and_print": "Save and Print",
+    "save_and_print": "Save & Print",
     "clear_cart": "Clear Cart",
     "apply_save_print": "Apply & Save and Print",
     "apply_confirm": "Apply & Confirm Order",

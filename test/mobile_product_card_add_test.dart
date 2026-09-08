@@ -198,7 +198,7 @@ void main() {
         ),
       ));
 
-      expect(find.text('Out Of Stock'), findsOneWidget,
+      expect(find.text('Out of Stock'), findsOneWidget,
           reason: 'StockBadge must stay as a visual indicator');
     });
   });

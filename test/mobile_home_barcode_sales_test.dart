@@ -156,7 +156,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(_hintTextField('Barcode'), findsOneWidget);
-      expect(_hintTextField('Search Product'), findsNothing);
+      expect(_hintTextField('Search product'), findsNothing);
     });
 
     testWidgets('submitting barcode calls onProcessBarcode', (tester) async {
@@ -195,7 +195,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(_hintTextField('Search Product'), findsOneWidget);
+      expect(_hintTextField('Search product'), findsOneWidget);
       expect(_hintTextField('Barcode'), findsNothing);
     });
   });
