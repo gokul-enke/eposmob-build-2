@@ -31,13 +31,14 @@ class SentryConfig {
       options.tracesSampleRate = kDebugMode ? 1.0 : 0.2;
       options.sendDefaultPii = false;
       options.attachScreenshot = true;
-      // Accessing privacy enables screenshot masking in sentry_flutter 8.x.
-      options.experimental.privacy.maskAllText = true;
-      options.experimental.privacy.maskAllImages = true;
-      options.experimental.privacy.mask<Pinput>();
-      options.experimental.privacy.mask<WebViewWidget>();
-      options.experimental.privacy.mask<Webview>();
-      options.experimental.privacy.mask<PrettyQrView>();
+      // Screenshot masking. `maskAllText`/`maskAllImages` default to true in
+      // sentry_flutter 9.x; kept explicit so the intent survives upgrades.
+      options.privacy.maskAllText = true;
+      options.privacy.maskAllImages = true;
+      options.privacy.mask<Pinput>();
+      options.privacy.mask<WebViewWidget>();
+      options.privacy.mask<Webview>();
+      options.privacy.mask<PrettyQrView>();
     });
   }
 

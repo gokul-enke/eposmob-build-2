@@ -16,7 +16,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.63+73
+version: 1.0.64+74
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -108,13 +108,13 @@ dependencies:
   flutter_dotenv: ^5.1.0
   geolocator: ^13.0.0
   marionette_flutter: 0.6.0
-  sentry_flutter: ^8.14.2
+  sentry_flutter: ^9.3.0
 msix_config:
   display_name: CLOUDPOS - Billing App
   publisher_display_name: enkeconsulting
   publisher: CN=DBDFAF94-3386-4A19-8AC8-1B8336E3BBFC
   identity_name: enkeconsulting.CLOUDPOS-BillingApp
-  msix_version: 1.0.63.73
+  msix_version: 1.0.64.74
   logo_path: windows/runner/resources/app_icon.ico
   capabilities: internetClient, bluetooth, location
   output_name: cloudpos
