@@ -8,6 +8,7 @@ import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos_machine/services/order_submission_coordinator.dart';
 
 import 'test_support/hive_test_teardown.dart';
 
@@ -47,6 +48,7 @@ void main() {
     await Hive.openBox<HiveLocalCartItem>('cart_items');
     await Hive.openBox<HiveSavedOrder>('saved_orders');
     await Hive.openBox<HiveSavedOrder>('confirmed_orders');
+    await Hive.openBox('order_submissions');
   });
 
   setUp(() async {
@@ -58,6 +60,7 @@ void main() {
     await Hive.box<HiveLocalCartItem>('cart_items').clear();
     await Hive.box<HiveSavedOrder>('saved_orders').clear();
     await Hive.box<HiveSavedOrder>('confirmed_orders').clear();
+    await Hive.box('order_submissions').clear();
   });
 
   tearDown(awaitPendingHiveBoxWrites);
@@ -90,6 +93,33 @@ void main() {
       taxes: const <ProductTax>[],
     );
   }
+
+  test(
+      'cart identity changes only for a new sale and survives provider restart',
+      () async {
+    final first = LocalProductProvider();
+    await first.hydrated;
+    final original = first.cartSessionId;
+    first.addToCart(product: makeProduct(902), quantity: 1);
+    await first.flushPersistence();
+    expect(first.cartSessionId, original);
+    first.dispose();
+    final restored = LocalProductProvider();
+    await restored.hydrated;
+    expect(restored.cartSessionId, original);
+    expect(restored.cartItems.length, 1);
+    restored.clearCartAfterOrder();
+    await restored.flushPersistence();
+    final freshId = restored.cartSessionId;
+    expect(freshId, isNot(original));
+    restored.dispose();
+    final fresh = LocalProductProvider();
+    await fresh.hydrated;
+    expect(fresh.cartSessionId, freshId);
+    expect(fresh.cartItems, isEmpty);
+    expect(await HiveSubmissionStore().readAll(), isEmpty);
+    fresh.dispose();
+  });
 
   /// A row exactly as older builds wrote it (the key is chosen by the caller).
   HiveProduct rowFor(GetProduct product) {
@@ -142,8 +172,8 @@ void main() {
     test('a cart stock change persists only the touched product', () async {
       final provider = LocalProductProvider();
       provider.setStockEnabled(true);
-      provider.initializeProducts(
-          [makeProduct(1), makeProduct(2), makeProduct(3)]);
+      provider
+          .initializeProducts([makeProduct(1), makeProduct(2), makeProduct(3)]);
       await provider.flushPersistence();
       final untouchedBefore = productsBox().get(2)!.serializedData.value;
 
@@ -171,8 +201,8 @@ void main() {
     test('a full rewrite upserts then prunes and never clears the box',
         () async {
       final provider = LocalProductProvider();
-      provider.initializeProducts(
-          [makeProduct(1), makeProduct(2), makeProduct(3)]);
+      provider
+          .initializeProducts([makeProduct(1), makeProduct(2), makeProduct(3)]);
       await provider.flushPersistence();
 
       final events = <BoxEvent>[];
@@ -198,8 +228,7 @@ void main() {
   });
 
   group('hydration', () {
-    test('legacy auto-increment rows are migrated and de-duplicated',
-        () async {
+    test('legacy auto-increment rows are migrated and de-duplicated', () async {
       // Older builds appended with auto-increment keys, and a product could
       // end up stored twice. The latest row must win.
       await productsBox().addAll([
@@ -211,7 +240,8 @@ void main() {
 
       final provider = LocalProductProvider();
       await provider.hydrated;
-      expect(provider.products.map((p) => p.productId), unorderedEquals([7, 8]));
+      expect(
+          provider.products.map((p) => p.productId), unorderedEquals([7, 8]));
       expect(provider.getProductById(7)!.stock!.first.quantity, 5);
 
       await provider.flushPersistence();
@@ -219,8 +249,7 @@ void main() {
       expect(storedStockQuantity(7), 5);
     });
 
-    test('an unreadable row is skipped and dropped by the migration',
-        () async {
+    test('an unreadable row is skipped and dropped by the migration', () async {
       await productsBox().put(5, rowFor(makeProduct(5)));
       await productsBox().put(
         6,

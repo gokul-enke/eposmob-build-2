@@ -6629,9 +6629,6 @@ class BillingPageState extends State<BillingPage>
     if (!_ensureAuthoritativeAppSettings()) {
       return;
     }
-    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
-      return;
-    }
     // Check for internet connection before proceeding
     if (!_hasInternet) {
       showScaffoldError(
@@ -6640,8 +6637,6 @@ class BillingPageState extends State<BillingPage>
       );
       return; // Stop execution if no internet
     }
-    debugPrint("Create Order and Print pressed");
-    debugPrint("🚀 API REQUEST STARTING - Create Order and Print");
 
     // Require valid payment before creating order
     if (!_ensurePaymentReadyForConfirm(_createOrderAndPrint)) {
@@ -6656,6 +6651,9 @@ class BillingPageState extends State<BillingPage>
       isLoadingCreateOrder = true;
     });
     try {
+      if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(
+              context) ||
+          !mounted) return;
       final hasCustomer = selectedCustomerID != null ||
           (mobileNumberText?.isNotEmpty == true) ||
           (salesExecutivemobileNumberText?.isNotEmpty == true);
@@ -6691,8 +6689,6 @@ class BillingPageState extends State<BillingPage>
       // debugPrint("accessToken From AuthModel $accessToken");
       final provider = Provider.of<CartProvider>(context, listen: false);
       int? cartId = provider.getCartIDForOrder;
-      debugPrint("📦 Cart ID for order: $cartId");
-      debugPrint("💰 Payment methods: $selectedPaymentMethods");
 
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
@@ -6722,26 +6718,14 @@ class BillingPageState extends State<BillingPage>
 
       final items = localProductProvider.buildOrderItemsPayload();
 
-      for (final item in items) {
-        debugPrint("📦 Order Item Payload: $item");
-      }
-
-      debugPrint("📋 Order Items: ${items.length} products");
-      debugPrint(
-          "💵 Total Price: ${localProductProvider.priceSummary!.netTotal}");
-      debugPrint("👤 Customer ID: $selectedCustomerID");
-      debugPrint(
-          "📱 Customer Phone: ${selectedCustomerPhone ?? mobileNumberText}");
-      debugPrint(
-          "💳 Payment Details - Paid: ${_paidAmountController.text}, Balance: $_balanceAmount");
-      debugPrint("🚚 Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
-
       final priceSummary = localProductProvider.priceSummary!;
-      debugPrint(
-          "🏷️ Discount Data - Flat: ${priceSummary.flatDiscount}, Percentage: ${priceSummary.percentageDiscount}, Total: ${priceSummary.discount}");
 
+      await localProductProvider.flushPersistence();
       await Provider.of<CartProvider>(context, listen: false)
           .addToOrderAPI(
+        protectSubmission: true,
+        localDraftId: localProductProvider.currentOrder?.id,
+        cartSessionId: localProductProvider.cartSessionId,
         items: items,
         cartIds: cartId ?? 0,
         accessToken: accessToken ?? "",
@@ -6772,8 +6756,8 @@ class BillingPageState extends State<BillingPage>
         quotationId: localProductProvider.currentOrder?.quotationId,
       )
           .then((response) async {
-        debugPrint(
-            "✅ API RESPONSE - Create Order and Print: ${json.encode(response)}");
+        if (!mounted) return;
+
         if (await SubscriptionActionGuard.handleBackendResponse(
           context,
           response,
@@ -6795,17 +6779,18 @@ class BillingPageState extends State<BillingPage>
 
           // Clear cart without restoring stock (order is confirmed)
           localProductProvider.clearCartAfterOrder();
+          unawaited(Provider.of<CartProvider>(context, listen: false)
+              .submissions
+              .completeLocalCleanup(
+                  response, localProductProvider.flushPersistence));
 
           try {
             String ordersId = response["order_number"].toString();
             String? accessToken =
                 Provider.of<AuthModel>(context, listen: false).token;
 
-            debugPrint(
-                "🔍 Fetching order details for print - Order #$ordersId");
             final OrderDetailsresponse = await SalesProvider()
                 .listOrderDetails(context, ordersId, accessToken ?? "");
-            debugPrint("✅ Order details received for printing");
 
             OrderDetailsModel orderDetails =
                 OrderDetailsModel.fromJson(OrderDetailsresponse);
@@ -6828,12 +6813,6 @@ class BillingPageState extends State<BillingPage>
             // Extract payment breakdown (method -> amount mapping from API)
             Map<String, dynamic>? paymentBreakdown =
                 orderDetails.data?.payments;
-
-            debugPrint('[BillingPrint] Order number: ${ordersId}');
-            debugPrint('[BillingPrint] Payment method: $paymentMethod');
-            debugPrint('[BillingPrint] Payment breakdown: $paymentBreakdown');
-            debugPrint(
-                '[BillingPrint] Payment breakdown keys: ${paymentBreakdown?.keys.toList()}');
 
             String? orderComment;
             if (orderDetails.data?.orderProps != null) {
@@ -6875,8 +6854,6 @@ class BillingPageState extends State<BillingPage>
                         ? value.toDouble()
                         : double.tryParse(value.toString()) ?? 0.0);
               });
-              debugPrint(
-                  '[BillingPrint] Derived total paid from payment breakdown: $totalPaid');
             }
             double? currentBalance =
                 orderDetails.data?.customerDetails?.customerBalance;
@@ -6893,18 +6870,7 @@ class BillingPageState extends State<BillingPage>
             // local computation, leave it null rather than print a value we
             // can't trust.
 
-            debugPrint(
-                "🖨️ Attempting auto-print for order #${orderDetails.data!.orderNumber}");
-            debugPrint(
-                "💰 Customer Old Balanceance: $oldBalance, Paid: $totalPaid, Current Balance: $currentBalance");
-
             Future<bool> printOnce() {
-              debugPrint(
-                  '[BillingPrint] Sending payment method to PrintPage: $paymentMethod');
-              debugPrint(
-                  '[BillingPrint] Sending payment breakdown to PrintPage: $paymentBreakdown');
-              debugPrint(
-                  '[BillingPrint] Sending paid amount to PrintPage: ${totalPaid > 0 ? totalPaid : null}');
               return _printOrderDetailsWithFallback(
                 storeName: storeName,
                 cartItems: orderDetails.data!.cart!.cartItems!,
@@ -6946,9 +6912,7 @@ class BillingPageState extends State<BillingPage>
               canPrompt: autoPrintSuccess,
               printAction: printOnce,
             );
-          } catch (error) {
-            debugPrint("❌ Error fetching order details for print: $error");
-          }
+          } catch (error) {}
 
           // Clear the mobile number after successful save
           setState(() {
@@ -7000,31 +6964,32 @@ class BillingPageState extends State<BillingPage>
             providerCartAlreadyCleared: true,
           );
         } else {
-          debugPrint("❌ API ERROR - Create Order and Print failed");
           showScaffoldError(
             context: context,
-            message: "billing.failed_save_order_api".tr,
+            message: response["message"]?.toString() ??
+                "billing.failed_save_order_api".tr,
             // message: "${addToOrderModel.message}",
           );
         }
       });
     } catch (error) {
-      debugPrint("❌ EXCEPTION in _createOrderAndPrint: $error");
+      if (mounted)
+        showScaffoldError(
+            context: context,
+            message:
+                'We couldn’t complete the checkout screen. Review the order status before billing again.');
     } finally {
       // Set loading to false at the end of the function
-      setState(() {
-        isLoadingCreateOrder = false; // Indicate that loading has finished
-      });
+      if (mounted)
+        setState(() {
+          isLoadingCreateOrder = false; // Indicate that loading has finished
+        });
       _endOrderAction();
-      debugPrint("🏁 Create Order and Print process completed");
     }
   }
 
   Future<void> _confirmOrder() async {
     if (!_ensureAuthoritativeAppSettings()) {
-      return;
-    }
-    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
       return;
     }
     // Check for internet connection before proceeding
@@ -7035,8 +7000,6 @@ class BillingPageState extends State<BillingPage>
       );
       return; // Stop execution if no internet
     }
-    debugPrint("Confirm Order pressed");
-    debugPrint("🚀 API REQUEST STARTING - Confirm Order");
 
     // Require valid payment before confirming order
     if (!_ensurePaymentReadyForConfirm(_confirmOrder)) {
@@ -7051,6 +7014,9 @@ class BillingPageState extends State<BillingPage>
       isLoadingConfirmOrder = true;
     });
     try {
+      if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(
+              context) ||
+          !mounted) return;
       final hasCustomer = selectedCustomerID != null ||
           (mobileNumberText?.isNotEmpty == true) ||
           (salesExecutivemobileNumberText?.isNotEmpty == true);
@@ -7086,8 +7052,6 @@ class BillingPageState extends State<BillingPage>
       // debugPrint("accessToken From AuthModel $accessToken");
       final provider = Provider.of<CartProvider>(context, listen: false);
       int? cartId = provider.getCartIDForOrder;
-      debugPrint("📦 Cart ID for order: $cartId");
-      debugPrint("💰 Payment methods: $selectedPaymentMethods");
 
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
@@ -7117,22 +7081,12 @@ class BillingPageState extends State<BillingPage>
 
       final items = localProductProvider.buildOrderItemsPayload();
 
-      for (final item in items) {
-        debugPrint("📦 Order Item Payload: $item");
-      }
-
-      debugPrint("📋 Order Items: ${items.length} products");
-      debugPrint(
-          "💵 Total Price: ${localProductProvider.priceSummary!.netTotal}");
-      debugPrint("👤 Customer ID: $selectedCustomerID");
-      debugPrint(
-          "📱 Customer Phone: ${selectedCustomerPhone ?? mobileNumberText}");
-      debugPrint(
-          "💳 Payment Details - Paid: ${_paidAmountController.text}, Balance: $_balanceAmount");
-      debugPrint("🚚 Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
-
+      await localProductProvider.flushPersistence();
       await Provider.of<CartProvider>(context, listen: false)
           .addToOrderAPI(
+        protectSubmission: true,
+        localDraftId: localProductProvider.currentOrder?.id,
+        cartSessionId: localProductProvider.cartSessionId,
         items: items,
         cartIds: cartId ?? 0,
         accessToken: accessToken ?? "",
@@ -7164,7 +7118,8 @@ class BillingPageState extends State<BillingPage>
         quotationId: localProductProvider.currentOrder?.quotationId,
       )
           .then((response) async {
-        debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
+        if (!mounted) return;
+
         if (await SubscriptionActionGuard.handleBackendResponse(
           context,
           response,
@@ -7186,6 +7141,10 @@ class BillingPageState extends State<BillingPage>
 
           // Clear cart without restoring stock (order is confirmed)
           localProductProvider.clearCartAfterOrder();
+          unawaited(Provider.of<CartProvider>(context, listen: false)
+              .submissions
+              .completeLocalCleanup(
+                  response, localProductProvider.flushPersistence));
 
           // Clear the mobile number after successful save
           setState(() {
@@ -7231,25 +7190,29 @@ class BillingPageState extends State<BillingPage>
               shouldFetchCustomers:
                   false); // Preserve customer selection after confirming
 
-          _clearCart();
+          localProductProvider.clearCurrentOrder();
         } else {
-          debugPrint("❌ API ERROR - Confirm Order failed");
           showScaffoldError(
             context: context,
-            message: "billing.order_failed".tr,
+            message:
+                response["message"]?.toString() ?? "billing.order_failed".tr,
           );
         }
       });
       _focusTextField();
     } catch (error) {
-      debugPrint("❌ EXCEPTION in _confirmOrder: $error");
+      if (mounted)
+        showScaffoldError(
+            context: context,
+            message:
+                'We couldn’t complete the checkout screen. Review the order status before billing again.');
     } finally {
       // Set loading to false at the end of the function
-      setState(() {
-        isLoadingConfirmOrder = false; // Indicate that loading has finished
-      });
+      if (mounted)
+        setState(() {
+          isLoadingConfirmOrder = false; // Indicate that loading has finished
+        });
       _endOrderAction();
-      debugPrint("🏁 Confirm Order process completed");
     }
   }
 

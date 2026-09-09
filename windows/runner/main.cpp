@@ -8,6 +8,7 @@
 
 #include "flutter_window.h"
 #include "utils.h"
+#include "startup_window.h"
 
 namespace {
 
@@ -41,12 +42,17 @@ struct ExistingWindowSearch {
 
 BOOL CALLBACK FindExistingInstanceWindow(HWND hwnd, LPARAM lparam) {
   auto* search = reinterpret_cast<ExistingWindowSearch*>(lparam);
+  // During engine startup the real runner exists but has not painted. Focus
+  // the visible splash instead; never reveal a blank runner prematurely.
+  if (!::IsWindowVisible(hwnd) &&
+      ::GetPropW(hwnd, L"CLOUDPOS.ReadyWindow") == nullptr) return TRUE;
 
   wchar_t class_name[256];
   if (::GetClassNameW(hwnd, class_name, ARRAYSIZE(class_name)) == 0) {
     return TRUE;
   }
-  if (::wcscmp(class_name, kFlutterWindowClassName) != 0) {
+  const bool cloudpos_window = ::GetPropW(hwnd, L"CLOUDPOS.ApplicationWindow") != nullptr;
+  if (!cloudpos_window && ::wcscmp(class_name, kFlutterWindowClassName) != 0) {
     return TRUE;
   }
 
@@ -63,8 +69,8 @@ BOOL CALLBACK FindExistingInstanceWindow(HWND hwnd, LPARAM lparam) {
   std::wstring image = GetImagePathForProcess(process);
   ::CloseHandle(process);
 
-  if (!image.empty() && !search->own_image.empty() &&
-      ::_wcsicmp(image.c_str(), search->own_image.c_str()) == 0) {
+  if (cloudpos_window || (!image.empty() && !search->own_image.empty() &&
+      ::_wcsicmp(image.c_str(), search->own_image.c_str()) == 0)) {
     search->found = hwnd;
     return FALSE;  // Stop enumerating.
   }
@@ -73,14 +79,14 @@ BOOL CALLBACK FindExistingInstanceWindow(HWND hwnd, LPARAM lparam) {
 
 // Brings the already-running copy to the front, so the double-click the user
 // just made still feels like it did something.
-void FocusRunningInstance() {
+bool FocusRunningInstance() {
   ExistingWindowSearch search;
   search.own_pid = ::GetCurrentProcessId();
   search.own_image = GetImagePathForProcess(::GetCurrentProcess());
 
   ::EnumWindows(FindExistingInstanceWindow, reinterpret_cast<LPARAM>(&search));
   if (search.found == nullptr) {
-    return;
+    return false;
   }
 
   if (::IsIconic(search.found)) {
@@ -88,7 +94,12 @@ void FocusRunningInstance() {
   } else {
     ::ShowWindow(search.found, SW_SHOW);
   }
+  // The second process may itself have been launched with SW_HIDE. Explicitly
+  // show the existing window instead of letting that startup flag hide it.
+  if (!::SetWindowPos(search.found, HWND_TOP, 0, 0, 0, 0,
+      SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW | SWP_ASYNCWINDOWPOS)) return false;
   ::SetForegroundWindow(search.found);
+  return true;
 }
 
 bool HasFlag(const std::vector<std::string>& arguments, const char* flag) {
@@ -153,12 +164,23 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
         ::CreateMutexW(nullptr, TRUE, kSingleInstanceMutexName);
     if (single_instance_mutex != nullptr &&
         ::GetLastError() == ERROR_ALREADY_EXISTS) {
-      FocusRunningInstance();
+      bool focused = false;
+      for (int attempt = 0; attempt < 30 && !focused; ++attempt) {
+        focused = FocusRunningInstance();
+        if (!focused) ::Sleep(100);
+      }
+      if (!focused) {
+        MessageBoxW(nullptr, L"CloudPOS is already starting or running.\n\n"
+            L"We couldn't bring its window forward. Wait a moment and try "
+            L"opening CloudPOS again. If this continues, contact support.",
+            L"CLOUDPOS", MB_OK | MB_ICONINFORMATION);
+      }
       ::CloseHandle(single_instance_mutex);
       return EXIT_SUCCESS;
     }
   }
 
+  StartupWindow startup;
   // Attach to console when present (e.g., 'flutter run') or create a
   // new console when running with a debugger.
   if (!::AttachConsole(ATTACH_PARENT_PROCESS) && ::IsDebuggerPresent()) {
@@ -173,13 +195,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
-  FlutterWindow window(project);
+  FlutterWindow window(project, &startup);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
   if (!window.Create(L"CLOUDPOS", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);
+  if (startup.cancelled()) return EXIT_SUCCESS;
 
   ::MSG msg;
   while (::GetMessage(&msg, nullptr, 0, 0)) {

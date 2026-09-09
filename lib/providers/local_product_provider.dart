@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
+import 'package:uuid/uuid.dart';
+import 'package:pos_machine/services/order_submission_coordinator.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
@@ -339,6 +341,12 @@ class PriceSummary {
 /// a filtered list and a selected product for details, similar to GridSelectionProvider.
 /// Additionally, it manages a separate offline cart state.
 class LocalProductProvider extends ChangeNotifier {
+  String _cartSessionId = Hive.isBoxOpen('order_submissions')
+      ? (Hive.box('order_submissions').get('_active_cart_session') as String? ??
+          'legacy')
+      : 'legacy';
+  String get cartSessionId => _cartSessionId;
+
   static bool _cachedStockEnabled = false;
 
   static void cacheStockEnabled(bool enabled) {
@@ -1875,7 +1883,8 @@ class LocalProductProvider extends ChangeNotifier {
           } catch (error) {
             // One damaged row must not take the whole catalog down.
             unreadableRows++;
-            debugPrint('⚠️ [Hive] Skipping unreadable product row $key: $error');
+            debugPrint(
+                '⚠️ [Hive] Skipping unreadable product row $key: $error');
             continue;
           }
 
@@ -2146,6 +2155,7 @@ class LocalProductProvider extends ChangeNotifier {
 
   // Save cart items to Hive
   void _saveCartToHive() {
+    final sessionId = _cartSessionId;
     final snapshots = <String, HiveLocalCartItem>{
       for (final item in _cartItems) item.lineId: _buildHiveCartItem(item),
     };
@@ -2158,6 +2168,14 @@ class LocalProductProvider extends ChangeNotifier {
           .toList(growable: false);
       if (staleKeys.isNotEmpty) {
         await _cartItemsBox.deleteAll(staleKeys);
+      }
+      // Persist the cart first: an interrupted handoff must never associate
+      // the previous sale's items with a newly generated identity.
+      await _cartItemsBox.flush();
+      if (Hive.isBoxOpen('order_submissions')) {
+        final recovery = Hive.box('order_submissions');
+        await recovery.put('_active_cart_session', sessionId);
+        await recovery.flush();
       }
     });
   }
@@ -4008,8 +4026,11 @@ class LocalProductProvider extends ChangeNotifier {
     debugPrint("Cart items count: ${_cartItems.length}");
     debugPrint("Stock Management Enabled: $isStockEnabled");
 
-    // STOCK RESTORATION: Restore only the actually-deducted amounts
-    if (isStockEnabled) {
+    // An unresolved sale may already have committed. Keep its reservation
+    // while moving to a new cart instead of making that stock sellable twice.
+    if (isStockEnabled &&
+        !OrderSubmissionCoordinator.instance
+            .isCartAwaitingReview(_cartSessionId)) {
       for (var cartItem in _cartItems) {
         if (cartItem.stockDeducted > 0) {
           _restoreStockReservations(
@@ -4020,6 +4041,7 @@ class LocalProductProvider extends ChangeNotifier {
     }
 
     _cartItems.clear();
+    _cartSessionId = const Uuid().v4();
     _saveCartToHive();
     clearDiscount(); // Also clear discounts when cart is cleared
     notifyListeners();
@@ -4037,6 +4059,7 @@ class LocalProductProvider extends ChangeNotifier {
 
     // Do NOT restore stock - the items are sold
     _cartItems.clear();
+    _cartSessionId = const Uuid().v4();
     _saveCartToHive();
     clearDiscount(); // Also clear discounts when cart is cleared
     notifyListeners();
@@ -4687,6 +4710,7 @@ class LocalProductProvider extends ChangeNotifier {
 
       // Set current order
       _currentOrder = order;
+      _cartSessionId = 'draft:${order.id}';
 
       _saveCartToHive();
       notifyListeners();
@@ -4720,6 +4744,7 @@ class LocalProductProvider extends ChangeNotifier {
       _cartItems.clear();
       _cartItems.addAll(draft.items.map(_cloneLocalCartItem));
       _currentOrder = draft;
+      _cartSessionId = 'draft:${draft.id}';
 
       cartTotal;
       _saveCartToHive();
@@ -5324,6 +5349,9 @@ class LocalProductProvider extends ChangeNotifier {
       _products.clear();
       _filteredProducts.clear();
       _cartItems.clear();
+      _cartSessionId = const Uuid().v4();
+      _saveCartToHive();
+      await flushPersistence();
       _savedOrders.clear();
       _confirmedOrders.clear();
 

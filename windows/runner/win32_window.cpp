@@ -150,7 +150,9 @@ bool Win32Window::Create(const std::wstring& title,
 }
 
 bool Win32Window::Show() {
-  return ShowWindow(window_handle_, SW_SHOWNORMAL);
+  ShowWindow(window_handle_, SW_SHOWNORMAL);
+  return SetWindowPos(window_handle_, HWND_TOP, 0, 0, 0, 0,
+      SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
 }
 
 // static

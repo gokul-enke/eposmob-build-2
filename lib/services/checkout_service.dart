@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -217,8 +218,12 @@ class CheckoutService {
       final deliveryCharge = resolveDeliveryCharge(context);
       final orderTotal = netTotal + deliveryCharge;
 
+      await localProductProvider.flushPersistence();
       await Provider.of<CartProvider>(context, listen: false)
           .addToOrderAPI(
+        protectSubmission: true,
+        localDraftId: localProductProvider.currentOrder?.id,
+        cartSessionId: localProductProvider.cartSessionId,
         items: items,
         cartIds: cartId ?? 0,
         accessToken: accessToken ?? "",
@@ -258,6 +263,7 @@ class CheckoutService {
         deliveryCharge: deliveryCharge,
       )
           .then((response) async {
+        if (!context.mounted) return;
         if (await SubscriptionActionGuard.handleBackendResponse(
           context,
           response,
@@ -282,6 +288,10 @@ class CheckoutService {
                 .deleteSavedOrder(localProductProvider.currentOrder!.id);
           }
           localProductProvider.clearCartAfterOrder();
+          unawaited(Provider.of<CartProvider>(context, listen: false)
+              .submissions
+              .completeLocalCleanup(
+                  response, localProductProvider.flushPersistence));
 
           // Clear the mobile number after successful save
           billingProvider.setMobileNumberText("");
@@ -320,10 +330,8 @@ class CheckoutService {
       );
       showScaffoldError(
         context: context,
-        message: BillingMobileErrorMessages.checkoutException(
-          error,
-          operation: 'confirm order',
-        ),
+        message:
+            'We couldn’t complete the checkout screen. Review the order status before billing again.',
       );
     } finally {
       billingProvider.setLoadingConfirmOrder(false);
@@ -421,8 +429,12 @@ class CheckoutService {
       final deliveryCharge = resolveDeliveryCharge(context);
       final orderTotal = priceSummary.netTotal + deliveryCharge;
 
+      await localProductProvider.flushPersistence();
       await Provider.of<CartProvider>(context, listen: false)
           .addToOrderAPI(
+        protectSubmission: true,
+        localDraftId: localProductProvider.currentOrder?.id,
+        cartSessionId: localProductProvider.cartSessionId,
         items: items,
         cartIds: cartId ?? 0,
         accessToken: accessToken ?? "",
@@ -462,6 +474,7 @@ class CheckoutService {
         deliveryCharge: deliveryCharge,
       )
           .then((response) async {
+        if (!context.mounted) return;
         if (await SubscriptionActionGuard.handleBackendResponse(
           context,
           response,
@@ -483,6 +496,10 @@ class CheckoutService {
                 .deleteSavedOrder(localProductProvider.currentOrder!.id);
           }
           localProductProvider.clearCartAfterOrder();
+          unawaited(Provider.of<CartProvider>(context, listen: false)
+              .submissions
+              .completeLocalCleanup(
+                  response, localProductProvider.flushPersistence));
 
           try {
             createdOrderNumber = response["order_number"]?.toString();
@@ -532,10 +549,8 @@ class CheckoutService {
       );
       showScaffoldError(
         context: context,
-        message: BillingMobileErrorMessages.checkoutException(
-          error,
-          operation: 'create order',
-        ),
+        message:
+            'We couldn’t complete the checkout screen. Review the order status before billing again.',
       );
     } finally {
       billingProvider.setLoadingCreateOrder(false);

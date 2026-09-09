@@ -9,6 +9,9 @@ import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/virtual_keyboard_widget.dart';
+import 'package:pos_machine/components/startup_gate.dart';
+import 'package:pos_machine/services/order_submission_coordinator.dart';
+import 'package:pos_machine/components/order_submission_status.dart';
 import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/admin_settings_provider.dart';
@@ -88,14 +91,9 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 // ---------------------------------------------------------------------------
 // Startup
 //
-// The Windows runner creates its window hidden and only calls Show() from
-// Flutter's first-frame callback (windows/runner/flutter_window.cpp). Anything
-// that throws — or simply blocks — before runApp() therefore leaves the user
-// with no window and no error at all: from the outside the app "does not
-// open", while cloudpos.exe sits in Task Manager doing nothing.
-//
-// So every step below is guarded and time-boxed individually, and a failure we
-// cannot recover from still puts a window on screen saying what went wrong.
+// The native runner shows a splash before engine creation. StartupGate paints
+// the first Flutter frame before initialization, then mounts providers once
+// their required storage and product hydration are ready.
 // ---------------------------------------------------------------------------
 
 /// Longest any single startup step may take before we give up on it.
@@ -154,41 +152,46 @@ String? _hiveDirectoryPath;
 
 /// Non-fatal problems collected during startup, surfaced on the failure screen.
 final List<String> _startupWarnings = <String>[];
+ValueChanged<String>? _reportStartupStage;
 
-void main() async {
+void main() {
   _initializeBinding();
+  runApp(StartupGate(initialize: _bootstrap, onClose: () => exit(1)));
+}
 
-  // Sentry first, so every failure below is reportable. Time-boxed like every
-  // other step: nothing that runs before the window is shown may wait forever.
+Future<Widget> _bootstrap(ValueChanged<String> reportStage) async {
+  _reportStartupStage = reportStage;
+  final clock = Stopwatch()..start();
+  reportStage('Preparing CloudPOS…');
   try {
     await SentryConfig.init().timeout(_defaultStepTimeout);
   } catch (e, stackTrace) {
     debugPrint('Sentry init failed: $e\n$stackTrace');
   }
 
-  Object? fatalError;
-  StackTrace? fatalStackTrace;
   try {
     await _initializeApp().timeout(_startupBudget);
+    await OrderSubmissionCoordinator.instance.hydrate();
+    reportStage('Loading products and saved orders…');
+    final localProducts = LocalProductProvider();
+    try {
+      await localProducts.hydrated.timeout(_maxBoxOpenTimeout);
+    } catch (_) {
+      // timeout does not cancel hydration. Dispose only after its source has
+      // stopped notifying, without mounting this failed startup attempt.
+      unawaited(localProducts.hydrated.then((_) => localProducts.dispose(),
+          onError: (Object _, StackTrace __) => localProducts.dispose()));
+      rethrow;
+    }
+    debugPrint('[Startup] ready elapsed_ms=${clock.elapsedMilliseconds}');
+    return SentryWidget(child: MyApp(localProducts: localProducts));
   } catch (error, stackTrace) {
-    fatalError = error;
-    fatalStackTrace = stackTrace;
+    debugPrint('[Startup] failed elapsed_ms=${clock.elapsedMilliseconds}');
+    unawaited(_reportStartupFailure(error, stackTrace));
+    rethrow;
+  } finally {
+    _reportStartupStage = null;
   }
-
-  if (fatalError != null) {
-    debugPrint('💥 Startup aborted: $fatalError\n$fatalStackTrace');
-    unawaited(_reportStartupFailure(fatalError, fatalStackTrace));
-    runApp(StartupFailureApp(
-      error: fatalError,
-      warnings: List<String>.unmodifiable(_startupWarnings),
-    ));
-    return;
-  }
-
-  runApp(SentryWidget(child: const MyApp()));
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    SentryConfig.sendDebugTestExceptionOnce();
-  });
 }
 
 void _initializeBinding() {
@@ -229,6 +232,9 @@ Future<void> _initializeApp() async {
   );
   _startupStepSync('register storage adapters', _registerHiveAdapters);
   await _initializeHiveBoxes();
+  await _requiredStartupStep('open order recovery storage', () async {
+    await Hive.openBox('order_submissions');
+  });
 
   _startupStepSync('load time zones', tz.initializeTimeZones);
   await _startupStep('load translations', LocalizationService.init);
@@ -258,11 +264,24 @@ Future<void> _startupStep(
   Future<void> Function() step, {
   Duration timeout = _defaultStepTimeout,
 }) async {
+  _reportStartupStage?.call(_startupStageText(stage));
+  final clock = Stopwatch()..start();
   try {
     await step().timeout(timeout);
   } catch (error, stackTrace) {
     _recordStartupWarning(stage, error, stackTrace);
+  } finally {
+    debugPrint(
+        '[Startup] stage=$stage elapsed_ms=${clock.elapsedMilliseconds}');
   }
+}
+
+String _startupStageText(String stage) {
+  if (stage.contains('storage') || stage.contains('cache')) {
+    return 'Opening your saved data…';
+  }
+  if (stage.contains('translation')) return 'Loading language settings…';
+  return 'Loading your settings…';
 }
 
 void _startupStepSync(String stage, void Function() step) {
@@ -280,11 +299,16 @@ Future<void> _requiredStartupStep(
   Future<void> Function() step, {
   Duration timeout = _defaultStepTimeout,
 }) async {
+  _reportStartupStage?.call(_startupStageText(stage));
+  final clock = Stopwatch()..start();
   try {
     await step().timeout(timeout);
   } catch (error, stackTrace) {
     debugPrint('💥 Required startup step "$stage" failed: $error\n$stackTrace');
     Error.throwWithStackTrace(StartupStepException(stage, error), stackTrace);
+  } finally {
+    debugPrint(
+        '[Startup] stage=$stage elapsed_ms=${clock.elapsedMilliseconds}');
   }
 }
 
@@ -418,7 +442,8 @@ Future<void> _initializeHiveBoxes() async {
         recreateIfUnreadable: boxName == 'products',
       ),
       // Three opens plus the retry pauses and the lock-conflict window.
-      timeout: budget * 3 + _lockConflictRetryWindow + const Duration(seconds: 5),
+      timeout:
+          budget * 3 + _lockConflictRetryWindow + const Duration(seconds: 5),
     );
   }
 
@@ -431,7 +456,8 @@ Future<void> _initializeHiveBoxes() async {
         budget: budget,
         recreateIfUnreadable: true,
       ),
-      timeout: budget * 3 + _lockConflictRetryWindow + const Duration(seconds: 5),
+      timeout:
+          budget * 3 + _lockConflictRetryWindow + const Duration(seconds: 5),
     );
   }
 }
@@ -724,8 +750,8 @@ class StartupFailureApp extends StatelessWidget {
                     ),
                     child: SelectableText(
                       _details,
-                      style:
-                          const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                      style: const TextStyle(
+                          fontFamily: 'monospace', fontSize: 12),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -764,7 +790,8 @@ class MyHttpOverrides extends HttpOverrides {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, this.localProducts});
+  final LocalProductProvider? localProducts;
 
   @override
   Widget build(BuildContext context) {
@@ -792,7 +819,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AdminSettingsProvider()),
         ChangeNotifierProvider(create: (_) => DiscountProvider()),
         ChangeNotifierProvider(create: (_) => DeliveryMethodsProvider()),
-        ChangeNotifierProvider(create: (_) => LocalProductProvider()),
+        ChangeNotifierProvider(
+            create: (_) => localProducts ?? LocalProductProvider()),
         ChangeNotifierProvider(create: (_) => PaymentGatewaysProvider()),
         ChangeNotifierProvider(create: (_) => BankProvider()),
         ChangeNotifierProvider(create: (_) => SupplierProvider()),
@@ -888,6 +916,8 @@ class MyApp extends StatelessWidget {
                       GlobalCupertinoLocalizations.delegate,
                     ],
                     builder: (context, child) {
+                      final content = OrderSubmissionStatus(
+                          child: child ?? const SizedBox.shrink());
                       final screenSize = MediaQuery.of(context).size;
                       final platform = Theme.of(context).platform;
 
@@ -900,7 +930,7 @@ class MyApp extends StatelessWidget {
                       if (isPhone) {
                         return Column(
                           children: [
-                            Expanded(child: child ?? const SizedBox.shrink()),
+                            Expanded(child: content),
                             const GlobalVirtualKeyboard(),
                           ],
                         );
@@ -908,7 +938,7 @@ class MyApp extends StatelessWidget {
 
                       return Stack(
                         children: [
-                          child ?? const SizedBox.shrink(),
+                          content,
                           const GlobalVirtualKeyboard(),
                         ],
                       );

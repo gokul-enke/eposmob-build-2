@@ -4,8 +4,8 @@
 
 #include "flutter/generated_plugin_registrant.h"
 
-FlutterWindow::FlutterWindow(const flutter::DartProject& project)
-    : project_(project) {}
+FlutterWindow::FlutterWindow(const flutter::DartProject& project, StartupWindow* startup)
+    : project_(project), startup_(startup) {}
 
 FlutterWindow::~FlutterWindow() {}
 
@@ -13,6 +13,7 @@ bool FlutterWindow::OnCreate() {
   if (!Win32Window::OnCreate()) {
     return false;
   }
+  SetPropW(GetHandle(), L"CLOUDPOS.ApplicationWindow", reinterpret_cast<HANDLE>(1));
 
   RECT frame = GetClientArea();
 
@@ -28,7 +29,9 @@ bool FlutterWindow::OnCreate() {
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
-    this->Show();
+    SetPropW(GetHandle(), L"CLOUDPOS.ReadyWindow", reinterpret_cast<HANDLE>(1));
+    if (!startup_ || !startup_->cancelled()) this->Show();
+    if (startup_) startup_->Close();
   });
 
   // Flutter can complete the first frame before the "show window" callback is
@@ -40,6 +43,8 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  RemovePropW(GetHandle(), L"CLOUDPOS.ReadyWindow");
+  RemovePropW(GetHandle(), L"CLOUDPOS.ApplicationWindow");
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
