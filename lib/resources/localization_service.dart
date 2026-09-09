@@ -19,21 +19,25 @@ class LocalizationService {
   static Map<String, Map<String, String>> get translations => _translations;
 
   static Future<void> init() async {
-    await _loadSavedLocale();
+    // Translations first. They are what makes the UI readable, they depend on
+    // nothing but the asset bundle, and init() runs inside a bounded startup
+    // step — so anything that reads the preference store must come after them
+    // or it can starve them of that budget and leave every screen showing raw
+    // keys like "login.title".
     await _loadTranslations();
+    await _loadSavedLocale();
   }
 
-  /// The saved locale is a preference, not a prerequisite.
+  /// The saved locale is a preference, not a prerequisite: guarded, bounded,
+  /// and always falls back to [fallbackLocale].
   ///
-  /// This used to be the first thing init() awaited, with no guard, so a
-  /// SharedPreferences store that fails to read — a truncated
-  /// shared_preferences.json after a power cut, say — threw before a single
-  /// translation file had been loaded. Every screen then rendered raw keys
-  /// ("login.title" instead of "Login"). Falling back to the default locale
-  /// is always better than losing the translations entirely.
+  /// The timeout matters as much as the catch. A store that throws is easy;
+  /// one that simply never answers would otherwise hang here for the whole
+  /// startup budget.
   static Future<void> _loadSavedLocale() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = await SharedPreferences.getInstance()
+          .timeout(const Duration(seconds: 3));
       final savedCode = prefs.getString(_prefsKey);
       if (savedCode == null || savedCode.isEmpty) {
         return;
