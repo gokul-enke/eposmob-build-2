@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:marionette_flutter/marionette_flutter.dart';
 import 'package:get/get.dart';
@@ -83,7 +85,70 @@ import 'package:pos_machine/features/subscription/presentation/subscription_prov
 import 'package:pos_machine/config/sentry_config.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
+// ---------------------------------------------------------------------------
+// Startup
+//
+// The Windows runner creates its window hidden and only calls Show() from
+// Flutter's first-frame callback (windows/runner/flutter_window.cpp). Anything
+// that throws — or simply blocks — before runApp() therefore leaves the user
+// with no window and no error at all: from the outside the app "does not
+// open", while cloudpos.exe sits in Task Manager doing nothing.
+//
+// So every step below is guarded and time-boxed individually, and a failure we
+// cannot recover from still puts a window on screen saying what went wrong.
+// ---------------------------------------------------------------------------
+
+/// Longest any single startup step may take before we give up on it.
+const Duration _defaultStepTimeout = Duration(seconds: 10);
+
+/// Longest we wait on one Hive box. Hive takes a *blocking* exclusive lock on
+/// `<box>.lock` with no timeout of its own, so without this a lock held by
+/// another process stalls main() forever.
+const Duration _boxOpenTimeout = Duration(seconds: 8);
+
+/// Hard ceiling for the whole sequence. Past this we show the failure screen
+/// rather than leave the user staring at an empty desktop.
+const Duration _startupBudget = Duration(seconds: 60);
+
+/// Non-fatal problems collected during startup, surfaced on the failure screen.
+final List<String> _startupWarnings = <String>[];
+
 void main() async {
+  _initializeBinding();
+
+  // Sentry first, so every failure below is reportable.
+  try {
+    await SentryConfig.init();
+  } catch (e, stackTrace) {
+    debugPrint('Sentry init failed: $e\n$stackTrace');
+  }
+
+  Object? fatalError;
+  StackTrace? fatalStackTrace;
+  try {
+    await _initializeApp().timeout(_startupBudget);
+  } catch (error, stackTrace) {
+    fatalError = error;
+    fatalStackTrace = stackTrace;
+  }
+
+  if (fatalError != null) {
+    debugPrint('💥 Startup aborted: $fatalError\n$fatalStackTrace');
+    unawaited(_reportStartupFailure(fatalError, fatalStackTrace));
+    runApp(StartupFailureApp(
+      error: fatalError,
+      warnings: List<String>.unmodifiable(_startupWarnings),
+    ));
+    return;
+  }
+
+  runApp(SentryWidget(child: const MyApp()));
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    SentryConfig.sendDebugTestExceptionOnce();
+  });
+}
+
+void _initializeBinding() {
   if (kDebugMode) {
     final logCollector = PrintLogCollector();
 
@@ -101,35 +166,147 @@ void main() async {
   } else {
     SentryWidgetsFlutterBinding.ensureInitialized();
   }
+}
 
+Future<void> _initializeApp() async {
+  await _startupStep(
+      'read saved server URL', _initializeBaseUrlFromPreferences);
+  await _startupStep(
+      'read notification position', _initializeNotificationPosition);
+  _startupStepSync(
+      'tag Sentry with app URL', () => SentryConfig.setAppUrl(APPUrl.baseURL));
+
+  // Local storage is not optional for a till — without it there is nothing to
+  // sell from — so a failure here is fatal and reported on screen instead of
+  // letting the app limp on and break somewhere deeper.
+  await _requiredStartupStep(
+    'open the local storage folder',
+    _initializeHiveStorage,
+    timeout: const Duration(seconds: 20),
+  );
+  _startupStepSync('register storage adapters', _registerHiveAdapters);
+  await _initializeHiveBoxes();
+
+  _startupStepSync('load time zones', tz.initializeTimeZones);
+  await _startupStep('load translations', LocalizationService.init);
+  await _startupStep('load date settings', DateHelper.init);
+
+  _startupStepSync('start controllers', () {
+    Get.put(SideBarController());
+
+    if (!kIsWeb && Platform.isMacOS) {
+      debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;
+    }
+
+    Get.put(CategoryProvider());
+    HttpOverrides.global = MyHttpOverrides();
+  });
+
+  await _startupStep(
+    'load .env configuration',
+    () => dotenv.load(fileName: '.env'),
+  );
+}
+
+/// Runs one optional startup step. A failure is recorded and startup carries
+/// on — the app is more useful degraded than invisible.
+Future<void> _startupStep(
+  String stage,
+  Future<void> Function() step, {
+  Duration timeout = _defaultStepTimeout,
+}) async {
   try {
-    await SentryConfig.init();
-  } catch (e, stackTrace) {
-    debugPrint('Sentry init failed: $e\n$stackTrace');
+    await step().timeout(timeout);
+  } catch (error, stackTrace) {
+    _recordStartupWarning(stage, error, stackTrace);
   }
+}
 
-  await _initializeBaseUrlFromPreferences();
-  await _initializeNotificationPosition();
-  SentryConfig.setAppUrl(APPUrl.baseURL);
+void _startupStepSync(String stage, void Function() step) {
+  try {
+    step();
+  } catch (error, stackTrace) {
+    _recordStartupWarning(stage, error, stackTrace);
+  }
+}
 
+/// Runs a step the app genuinely cannot start without. Failures are rethrown
+/// with the stage attached so the failure screen can name what broke.
+Future<void> _requiredStartupStep(
+  String stage,
+  Future<void> Function() step, {
+  Duration timeout = _defaultStepTimeout,
+}) async {
+  try {
+    await step().timeout(timeout);
+  } catch (error, stackTrace) {
+    debugPrint('💥 Required startup step "$stage" failed: $error\n$stackTrace');
+    Error.throwWithStackTrace(StartupStepException(stage, error), stackTrace);
+  }
+}
+
+void _recordStartupWarning(String stage, Object error, StackTrace stackTrace) {
+  _startupWarnings.add('$stage — $error');
+  debugPrint('⚠️ Startup step "$stage" failed: $error\n$stackTrace');
+  unawaited(
+    _reportStartupFailure(StartupStepException(stage, error), stackTrace),
+  );
+}
+
+Future<void> _reportStartupFailure(Object error, StackTrace? stackTrace) async {
+  try {
+    await Sentry.captureException(error, stackTrace: stackTrace);
+  } catch (_) {
+    // Sentry may not have initialized; the on-screen report is the fallback.
+  }
+}
+
+class StartupStepException implements Exception {
+  StartupStepException(this.stage, this.cause);
+
+  final String stage;
+  final Object cause;
+
+  @override
+  String toString() => 'Could not $stage: $cause';
+}
+
+Future<void> _initializeNotificationPosition() async {
+  final prefs = SharedPreferenceProvider();
+  final position = await prefs.getNotificationPosition();
+  dialog_box.setNotificationPosition(position);
+  custom_dialog_box.setNotificationPosition(position);
+}
+
+Future<void> _initializeBaseUrlFromPreferences() async {
+  final prefs = await sp.SharedPreferences.getInstance();
+  final savedAppUrl = prefs.getString('app_url');
+  if (savedAppUrl != null && savedAppUrl.trim().isNotEmpty) {
+    APPUrl.updateBaseURL(savedAppUrl);
+  }
+}
+
+Future<void> _initializeHiveStorage() async {
   if (kIsWeb) {
     // Browsers do not provide a native application-support directory.
     // Hive's web adapter stores boxes in browser storage instead.
     await Hive.initFlutter();
-  } else {
-    // Initialize Hive in a dedicated ApplicationSupport/epos/hive_data folder
-    // Safer than Documents (less likely to be deleted by user)
-    final supportDir = await getApplicationSupportDirectory();
-    final hiveBaseDir = Directory('${supportDir.path}/epos/hive_data');
-    if (!await hiveBaseDir.exists()) {
-      await hiveBaseDir.create(recursive: true);
-    }
-
-    Hive.init(hiveBaseDir.path);
-    debugPrint('📁 Hive directory: ${hiveBaseDir.path}');
+    return;
   }
 
-  // Register adapters
+  // Initialize Hive in a dedicated ApplicationSupport/epos/hive_data folder
+  // Safer than Documents (less likely to be deleted by user)
+  final supportDir = await getApplicationSupportDirectory();
+  final hiveBaseDir = Directory('${supportDir.path}/epos/hive_data');
+  if (!await hiveBaseDir.exists()) {
+    await hiveBaseDir.create(recursive: true);
+  }
+
+  Hive.init(hiveBaseDir.path);
+  debugPrint('📁 Hive directory: ${hiveBaseDir.path}');
+}
+
+void _registerHiveAdapters() {
   Hive.registerAdapter(HiveStringValueAdapter());
   Hive.registerAdapter(HiveLocalCartItemAdapter());
   Hive.registerAdapter(HiveSavedOrderAdapter());
@@ -146,82 +323,23 @@ void main() async {
   Hive.registerAdapter(HiveProductTaxAdapter());
   // Register document config adapter
   Hive.registerAdapter(HiveDocumentConfigAdapter());
-
-  // Open boxes with error handling and retry logic
-  await _initializeHiveBoxes();
-
-  tz.initializeTimeZones();
-  await LocalizationService.init();
-  await DateHelper.init();
-
-  Get.put(SideBarController());
-
-  if (!kIsWeb) {
-    if (Platform.isMacOS) {
-      debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;
-    }
-  }
-
-  Get.put(CategoryProvider());
-  HttpOverrides.global = MyHttpOverrides();
-  try {
-    await dotenv.load(fileName: ".env");
-  } catch (e) {
-    debugPrint(
-        "main: .env not found or failed to load, continuing without it: $e");
-  }
-  runApp(SentryWidget(child: const MyApp()));
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    SentryConfig.sendDebugTestExceptionOnce();
-  });
-}
-
-Future<void> _initializeNotificationPosition() async {
-  final prefs = SharedPreferenceProvider();
-  final position = await prefs.getNotificationPosition();
-  dialog_box.setNotificationPosition(position);
-  custom_dialog_box.setNotificationPosition(position);
-}
-
-Future<void> _initializeBaseUrlFromPreferences() async {
-  try {
-    final prefs = await sp.SharedPreferences.getInstance();
-    final savedAppUrl = prefs.getString('app_url');
-    if (savedAppUrl != null && savedAppUrl.trim().isNotEmpty) {
-      APPUrl.updateBaseURL(savedAppUrl);
-    }
-  } catch (_) {}
 }
 
 Future<void> _initializeHiveBoxes() async {
-  const maxRetries = 3;
-  const retryDelay = Duration(seconds: 2);
+  // Two quick attempts. The previous 3 attempts x 2s of dead time sat in front
+  // of a window that is still hidden, which is exactly what made a slow start
+  // look like a failed one.
+  const maxRetries = 2;
+  const retryDelay = Duration(milliseconds: 400);
 
   const boxesToResetBeforeInit = ['categories'];
 
   for (final boxName in boxesToResetBeforeInit) {
-    try {
-      if (Hive.isBoxOpen(boxName)) {
-        final box = Hive.box(boxName);
-        debugPrint(
-            '⚠️ Box $boxName was open during initialization. Clearing and closing before reset.');
-        await box.clear();
-        await box.close();
-      }
-
-      final exists = await Hive.boxExists(boxName);
-
-      if (exists) {
-        debugPrint(
-            '🧹 Clearing existing data for $boxName box before initialization');
-        await Hive.deleteBoxFromDisk(boxName);
-        debugPrint('✅ Cleared $boxName box from disk');
-      } else {
-        debugPrint('ℹ️ No existing data found for $boxName box to clear');
-      }
-    } catch (e) {
-      debugPrint('⚠️ Unable to clear $boxName box before initialization: $e');
-    }
+    await _startupStep(
+      'reset the "$boxName" cache',
+      () => _resetBoxOnDisk(boxName),
+      timeout: _boxOpenTimeout,
+    );
   }
 
   final boxNames = [
@@ -252,30 +370,18 @@ Future<void> _initializeHiveBoxes() async {
           continue;
         }
 
-        // Try to open the box based on its type
-        switch (boxName) {
-          case 'products':
-            await Hive.openBox<HiveProduct>(boxName);
-            break;
-          case 'cart_items':
-            await Hive.openBox<HiveLocalCartItem>(boxName);
-            break;
-          case 'saved_orders':
-          case 'confirmed_orders':
-            await Hive.openBox<HiveSavedOrder>(boxName);
-            break;
-          case 'categories':
-          case 'categories_all':
-          case 'categories_purchasable':
-            await Hive.openBox<HiveCategory>(boxName);
-            break;
-          case 'document_configs':
-            await Hive.openBox<HiveDocumentConfig>(boxName);
-            break;
-        }
+        await _openTypedBox(boxName).timeout(_boxOpenTimeout);
 
         debugPrint('✅ Successfully opened $boxName box');
         success = true;
+      } on TimeoutException catch (error, stackTrace) {
+        // Almost always another process holding the box lock. Do not retry: a
+        // second concurrent open would queue behind the same lock, and the
+        // first one may still complete underneath us.
+        debugPrint(
+            '⏱️ Timed out opening $boxName box — is another copy of CLOUDPOS running?');
+        _recordStartupWarning('open "$boxName" storage', error, stackTrace);
+        break;
       } catch (e) {
         debugPrint('❌ Failed to open $boxName box (attempt $attempts): $e');
 
@@ -286,26 +392,14 @@ Future<void> _initializeHiveBoxes() async {
 
           // Final attempt after cleanup
           try {
-            switch (boxName) {
-              case 'products':
-                await Hive.openBox<HiveProduct>(boxName);
-                break;
-              case 'cart_items':
-                await Hive.openBox<HiveLocalCartItem>(boxName);
-                break;
-              case 'saved_orders':
-              case 'confirmed_orders':
-                await Hive.openBox<HiveSavedOrder>(boxName);
-                break;
-              case 'categories':
-                await Hive.openBox<HiveCategory>(boxName);
-                break;
-            }
+            await _openTypedBox(boxName).timeout(_boxOpenTimeout);
             debugPrint('✅ Successfully opened $boxName box after cleanup');
             success = true;
-          } catch (finalError) {
+          } catch (finalError, stackTrace) {
             debugPrint(
                 '💥 Critical error: Cannot open $boxName box even after cleanup: $finalError');
+            _recordStartupWarning(
+                'open "$boxName" storage', finalError, stackTrace);
             // Continue with other boxes instead of crashing the app
           }
         } else {
@@ -314,6 +408,56 @@ Future<void> _initializeHiveBoxes() async {
         }
       }
     }
+  }
+}
+
+Future<void> _resetBoxOnDisk(String boxName) async {
+  if (Hive.isBoxOpen(boxName)) {
+    final box = Hive.box(boxName);
+    debugPrint(
+        '⚠️ Box $boxName was open during initialization. Clearing and closing before reset.');
+    await box.clear();
+    await box.close();
+  }
+
+  final exists = await Hive.boxExists(boxName);
+
+  if (exists) {
+    debugPrint(
+        '🧹 Clearing existing data for $boxName box before initialization');
+    await Hive.deleteBoxFromDisk(boxName);
+    debugPrint('✅ Cleared $boxName box from disk');
+  } else {
+    debugPrint('ℹ️ No existing data found for $boxName box to clear');
+  }
+}
+
+/// Single source of truth for a box's element type. The retry-after-cleanup
+/// path used to carry its own copy of this switch and had silently dropped
+/// `categories_all`, `categories_purchasable` and `document_configs`, so those
+/// boxes were never reopened after a cleanup.
+Future<void> _openTypedBox(String boxName) async {
+  switch (boxName) {
+    case 'products':
+      await Hive.openBox<HiveProduct>(boxName);
+      break;
+    case 'cart_items':
+      await Hive.openBox<HiveLocalCartItem>(boxName);
+      break;
+    case 'saved_orders':
+    case 'confirmed_orders':
+      await Hive.openBox<HiveSavedOrder>(boxName);
+      break;
+    case 'categories':
+    case 'categories_all':
+    case 'categories_purchasable':
+      await Hive.openBox<HiveCategory>(boxName);
+      break;
+    case 'document_configs':
+      await Hive.openBox<HiveDocumentConfig>(boxName);
+      break;
+    default:
+      throw ArgumentError('No Hive box type registered for "$boxName"');
   }
 }
 
@@ -336,6 +480,104 @@ Future<void> _cleanupLockFiles(String boxName) async {
     }
   } catch (e) {
     debugPrint('⚠️ Could not cleanup lock file for $boxName: $e');
+  }
+}
+
+/// Shown instead of a hidden window when startup cannot complete, so the user
+/// gets something they can read and send to support.
+class StartupFailureApp extends StatelessWidget {
+  const StartupFailureApp({
+    super.key,
+    required this.error,
+    required this.warnings,
+  });
+
+  final Object error;
+  final List<String> warnings;
+
+  String get _details {
+    final buffer = StringBuffer()
+      ..writeln('CLOUDPOS failed to start.')
+      ..writeln()
+      ..writeln('Error: $error');
+    if (warnings.isNotEmpty) {
+      buffer
+        ..writeln()
+        ..writeln('Other problems during startup:');
+      for (final warning in warnings) {
+        buffer.writeln('  - $warning');
+      }
+    }
+    return buffer.toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'CLOUDPOS',
+      home: Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.error_outline,
+                      size: 48, color: Colors.redAccent),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'CLOUDPOS could not start',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'If CLOUDPOS is already running, close it — or end the '
+                    'cloudpos.exe task — and open it again. If this keeps '
+                    'happening, send the details below to support.',
+                    style: TextStyle(fontSize: 14, height: 1.4),
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F5F5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: SelectableText(
+                      _details,
+                      style:
+                          const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () =>
+                            Clipboard.setData(ClipboardData(text: _details)),
+                        icon: const Icon(Icons.copy, size: 18),
+                        label: const Text('Copy details'),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: () => exit(1),
+                        child: const Text('Close'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

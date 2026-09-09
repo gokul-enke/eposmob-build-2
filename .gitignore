@@ -75,3 +75,5 @@ Todo.md
 /artifacts
 /project-tracker
 /.tools
+
+/.sentry-native
