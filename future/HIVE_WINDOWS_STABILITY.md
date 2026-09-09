@@ -1,7 +1,7 @@
 # Hive on Windows: what was fixed, what was left, what to decide
 
 Date: 2026-09-09
-Branch: `hotfix/urgent-fix` (uncommitted at time of writing)
+Branch: `hotfix/urgent-fix`, released as 1.0.67+77 (tag `v0.1.0-dev.804`, build repo run 34340822733)
 Scope: Hive local storage on the Windows POS client, catalogs of ~30k products.
 
 This document records the analysis, the fixes applied, the verification, and the
@@ -116,6 +116,8 @@ Two lessons:
   startup steps. A failure goes to the existing failure screen.
 - Box open timeout scales with file size: 8 s base + 1 s per 10 MB, capped at
   90 s. The overall startup budget is 300 s.
+- Lock conflicts (another process holds the box, errno 32/33) are retried for
+  6 s and then raise `StorageLockedException`; they never delete anything.
 - A products box that is genuinely unreadable after three attempts (not a
   timeout) is deleted and recreated, reported to Sentry and listed in the
   startup warnings. Carts and orders are never deleted.
@@ -265,3 +267,88 @@ to match the current workspace widget.
 - If a client's products box is reset by the recovery path, Sentry receives
   `Could not read "products" storage (reset)` and the app performs a full sync
   on next login because the baseline is empty.
+
+---
+
+## 6. Reproduction and acceptance test plan
+
+Run on one Windows machine, ideally with a spinning disk or slow SSD. Reproduce
+each failure on the old build (1.0.62) first so the reproduction is known to
+work, then repeat on 1.0.67 or later. About one hour.
+
+### Setup
+
+- Launch from PowerShell instead of the shortcut so the startup log is visible.
+  The runner attaches to the parent console:
+
+  ```powershell
+  & "C:\Program Files\CLOUDPOS\cloudpos.exe"
+  ```
+
+  Look for the `📦 [Hive]`, `🔄 Opening ... box (budget ...)` and `🔒` lines.
+- Data folder: `%APPDATA%\com.enke\pos_machine\epos\hive_data`.
+- Use a real client `products.hive` (30k products) if possible. Copy it into the
+  data folder while the app is closed.
+- Sentry project `eposmob`, environment `production`.
+
+### Scenario 1: double-click storm (the daily report)
+
+| Step | Old build | 1.0.67+ |
+|---|---|---|
+| Double-click the shortcut 4 or 5 times within a few seconds | Several `cloudpos.exe` in Task Manager, no window, or one window with a blank billing screen. Sentry: `lock failed`, `Box not found` | Exactly one `cloudpos.exe`, one window. Later clicks bring it to the front |
+
+### Scenario 2: a stuck copy holding the lock
+
+1. Open the app normally and log in.
+2. Start a second copy with the escape hatch, which is exactly what the client's
+   extra processes did:
+
+   ```powershell
+   & "C:\Program Files\CLOUDPOS\cloudpos.exe" --allow-multiple-instances
+   ```
+
+3. Expected: after about 6 seconds the second copy shows the failure screen
+   stating that another copy of CLOUDPOS holds the products storage and to end
+   `cloudpos.exe`. No blank billing screen. The first copy keeps working.
+4. Close the first copy, click Close on the failure screen, launch again.
+   Expected: normal start.
+
+### Scenario 3: kill during a write
+
+1. With the large catalog loaded, start a full product sync from settings.
+2. While it runs, end `cloudpos.exe` in Task Manager.
+3. Relaunch. Expected: the console reports a product count close to the full
+   catalog, not zero, and the billing screen shows products. On the old build
+   this often came back empty.
+
+### Scenario 4: the freeze
+
+1. With the 30k catalog and stock management enabled, add items to the cart
+   rapidly for 30 seconds and clear the cart a few times.
+2. Watch the title bar and the Status column in Task Manager.
+3. Expected on 1.0.67+: never "Not Responding". The old build shows it within
+   a few taps.
+
+### Scenario 5: slow first open after reboot
+
+1. Reboot and launch immediately, while Windows is still starting other
+   programs.
+2. Expected: either the app window or the failure screen appears. The console
+   shows the chosen budget, for example `budget 28s` for a 200 MB file.
+3. A long hidden wait is the known gap in 4.3, not a hang.
+
+### Scenario 6: damaged catalog file
+
+1. Close the app. Open `products.hive` in a hex editor, overwrite a few hundred
+   bytes in the middle with zeros, save.
+2. Launch. Expected: the app opens; the console reports the products box was
+   recovered or reset; Sentry receives `Could not read "products" storage
+   (reset)`; the next login performs a full sync.
+
+### What Sentry must show afterwards
+
+- Gone: `lock failed`, `Cannot delete file ... .lock`, `Box not found`,
+  `Tried to read a provider that threw during the creation of its value`.
+- Acceptable, each meaning the user saw an explanatory screen:
+  `StorageLockedException` (scenario 2) and the products reset event
+  (scenario 6).
