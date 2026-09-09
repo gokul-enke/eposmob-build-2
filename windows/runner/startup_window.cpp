@@ -38,7 +38,7 @@ void StartupWindow::Run() {
   RegisterClassW(&wc);
   const UINT dpi = GetDpiForSystem();
   const int width = MulDiv(480, static_cast<int>(dpi), 96);
-  const int height = MulDiv(240, static_cast<int>(dpi), 96);
+  const int height = MulDiv(300, static_cast<int>(dpi), 96);
   HWND window = CreateWindowW(kClass, L"CLOUDPOS", WS_OVERLAPPED | WS_CAPTION |
       WS_SYSMENU | WS_MINIMIZEBOX, (GetSystemMetrics(SM_CXSCREEN) - width) / 2,
       (GetSystemMetrics(SM_CYSCREEN) - height) / 2, width, height,
@@ -77,9 +77,17 @@ LRESULT CALLBACK StartupWindow::WindowProc(HWND window, UINT message,
       HDC dc = BeginPaint(window, &paint);
       RECT rect;
       GetClientRect(window, &rect);
-      rect.top += (rect.bottom - rect.top) / 3;
       SetBkMode(dc, TRANSPARENT);
       const int dpi = static_cast<int>(GetDpiForWindow(window));
+      const int logo_size = MulDiv(112, dpi, 96);
+      HICON logo = static_cast<HICON>(LoadImageW(GetModuleHandle(nullptr),
+          MAKEINTRESOURCE(IDI_APP_ICON), IMAGE_ICON, logo_size, logo_size, 0));
+      if (logo) {
+        DrawIconEx(dc, (rect.right - logo_size) / 2, MulDiv(16, dpi, 96),
+            logo, logo_size, logo_size, 0, nullptr, DI_NORMAL);
+        DestroyIcon(logo);
+      }
+      rect.top = MulDiv(148, dpi, 96);
       HFONT font = CreateFontW(-MulDiv(22, dpi, 96), 0, 0, 0, FW_SEMIBOLD,
           FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
           CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");

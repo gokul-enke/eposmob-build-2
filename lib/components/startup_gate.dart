@@ -88,7 +88,7 @@ class _StartupGateState extends State<StartupGate> {
       debugShowCheckedModeBanner: false,
       title: 'CLOUDPOS',
       home: Scaffold(
-        backgroundColor: const Color(0xFFF7F9FC),
+        backgroundColor: Colors.white,
         body: Directionality(
             textDirection: LocalizationService.locale.languageCode == 'ar'
                 ? TextDirection.rtl
@@ -101,12 +101,11 @@ class _StartupGateState extends State<StartupGate> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.storefront_rounded,
-                          size: 56, color: Color(0xFF1967D2)),
-                      const SizedBox(height: 20),
-                      const Text('CloudPOS',
-                          style: TextStyle(
-                              fontSize: 30, fontWeight: FontWeight.w700)),
+                      Image.asset('assets/logo/cloudpos-icon.png',
+                          width: 128,
+                          height: 128,
+                          fit: BoxFit.contain,
+                          semanticLabel: 'CloudPOS'),
                       const SizedBox(height: 32),
                       if (_error == null) ...[
                         const SizedBox(
