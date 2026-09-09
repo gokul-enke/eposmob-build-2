@@ -162,6 +162,51 @@ to `blocked` with its status enabled, and confirm the guard blocks *before* subm
 
 - [ ] 403 path — [ ] app-settings row (optional) — notes:
 
+## Test 6 — Composite `en_ar` language is hidden
+
+> **Separate change, not part of the confirm-order hotfix.** Lives on `gokul-dev`.
+> File: `lib/providers/language_provider.dart` — `/api/v1/languages` responses are
+> filtered so codes in `hiddenLanguageCodes` (currently just `en_ar`) never reach the
+> UI. Filtering happens once, at parse time in `fetchLanguages`, so it applies to every
+> screen that reads `LanguageProvider.languages`.
+
+The backend returns an `"English + Arabic"` entry (`id: 8`, `code: en_ar`) that is a
+server-side composite, not a real product/category translation target.
+
+1. Confirm the tenant's `/api/v1/languages` response still contains the `en_ar` row —
+   the fix hides it client-side, it does not remove it server-side.
+2. Open each screen that offers per-language text fields and check the list of
+   languages offered:
+
+| Screen | Path | Result |
+|---|---|---|
+| Add product (mobile) | Billing → add product → translations | |
+| Add product (modal/desktop) | Billing → add product dialog | |
+| Product details / edit | Tap a product → edit tab | |
+| Product details dialog | Desktop product details | |
+| Add category | Categories → add | |
+| Edit category | Categories → edit | |
+| Add category modal | Inline "add category" from product form | |
+
+**Pass criteria**
+
+- **"English + Arabic" appears nowhere.** Every other active language still does —
+  English, Arabic, Urdu, tamil, Malayalam on the sample tenant.
+- Saving a product or category still works, and the translations that *are* entered
+  round-trip correctly after reopening.
+- No empty state or "no other languages" message appears on a tenant that has other
+  languages — i.e. the filter removed one entry, not the list.
+
+**Not affected — spot-check these did not change:**
+
+- **Bilingual receipts.** `en_ar` is a legitimate receipt language mode and comes from
+  receipt configuration, not this API. Print an English + Arabic receipt and confirm it
+  still renders bilingually.
+- **Existing `en_ar` translation data** already saved on products still parses; it is
+  simply no longer editable in the app.
+
+- [ ] Language lists — [ ] Save round-trip — [ ] Bilingual receipt unaffected — notes:
+
 ---
 
 ## Regression pass
@@ -201,6 +246,218 @@ should still show the "no internet" message immediately.
   for a hotfix off 1.0.55+67.
 - **`main` is a placeholder** (single "Initial commit" file) and is not a valid PR
   target. This goes to `hotfix/urgent-fix`, then forward to `gokul-dev`.
+
+## Sign-off
+
+| Tester | Build | Date | Result |
+|---|---|---|---|
+| | | | |
+
+---
+---
+
+# QA — Order Details: Payment & Delivery Method Translation
+
+**Branch:** `gokul-dev`
+**Commit:** uncommitted at time of writing
+**Scope:** Sales → Order Details screen only
+
+## What was fixed
+
+The order details page rendered two fields raw while the rest of the app was
+translated:
+
+- **Payment method** showed the machine code — `CARD` instead of *Card* / *بطاقة* /
+  *കാർഡ്* — in the Payment Details row and again in each Payment Breakdown line.
+- **Delivery method** showed `delivery_method_name` exactly as the API returned it
+  (`"Dine In"`), which the backend resolves to the store's default language and ships
+  with no `translations` alongside it.
+
+Both are now resolved on the client from reference data the app already caches. **No
+API change was required**, and the stored data is unchanged — `payment_method` and the
+`payments` map keys remain machine codes, because `PaymentHelper` and several call
+sites branch on them. Translating those keys would silently break every lookup.
+
+Resolution order, payment: loaded method's backend translation → the app's bundled
+string → the raw code. Delivery: `delivery_method_id` → method name → any translation
+→ the raw name.
+
+## Files changed
+
+| File | Change |
+|---|---|
+| `models/payment_method_registry.dart` | **New.** Static snapshot of loaded payment methods, mirroring `DeliveryMethodRegistry`, so the print/details layers can resolve a code with no `BuildContext` |
+| `helpers/payment_method_display.dart` | **New.** `labelFor` (single code) and `labelForCodeList` (the comma-joined `payment_method` field) |
+| `helpers/delivery_method_display.dart` | Added `labelForIdOrName` — resolves by id first, falls back to the name |
+| `providers/master_data_provider.dart` | All four `_paymentMethodModels` assignments routed through one setter that also updates the registry |
+| `screens/sales/widgets/buid_order_details_widget.dart` | Four render sites: delivery method (Store & Delivery, Shipping Details), payment method, payment breakdown key |
+| `test/order_details_method_labels_test.dart` | **New.** 11 tests covering both resolution paths and every fallback |
+
+---
+
+## Setup
+
+Any build works — no console markers needed. You will need:
+
+- A store with **Arabic and Malayalam** enabled, so language can be switched.
+- At least one order **paid by card**, one **split across two methods** (cash + card),
+  and one with a **non-default delivery method** (e.g. Dine In).
+- Language is switched from Settings; the order details page can stay open.
+
+> Reference data matters here. Delivery-method translations come from the backend, so
+> check in the admin panel whether the tenant has actually translated the delivery
+> method under test. If they have not, Test 3 correctly shows English — that is the
+> backend's gap, not an app bug.
+
+---
+
+## Test 1 — Payment method label
+
+1. Open Sales → an order paid by **card** → Order Details.
+2. Read the **Payment Method** row under Payment Details.
+3. Read the label on each line under **Payment Breakdown**.
+4. Switch the app language to Arabic, then Malayalam, returning to this order each time.
+
+**Pass criteria**
+
+| Language | Expected |
+|---|---|
+| English | `Card` |
+| Arabic | `بطاقة` |
+| Malayalam | `കാർഡ്` |
+
+- The raw code `CARD` appears **nowhere** on the screen.
+- The breakdown line and the Payment Method row show the **same** wording.
+- The amount beside each breakdown line is unchanged.
+
+- [ ] Pass — [ ] Fail — notes:
+
+## Test 2 — Split payment
+
+The API returns `payment_method` as an array, which the model joins into one string
+(`"CASH, CARD"`). Each code has to be resolved separately.
+
+1. Open an order paid partly in cash and partly by card.
+2. Read the Payment Method row.
+
+**Pass criteria**
+
+- Both methods are translated and comma-separated — `Cash, Card` / `نقد, بطاقة`.
+- Not one half-translated string, and not the raw `CASH, CARD`.
+- The breakdown below lists both, each translated, with correct amounts.
+
+- [ ] Pass — [ ] Fail — notes:
+
+## Test 3 — Delivery method label
+
+1. Open an order with a non-default delivery method (Dine In, Car Delivery, …).
+2. Read the **Delivery Method** row under Store & Delivery Info.
+3. Scroll to **Shipping Details** and read its Delivery Method row.
+4. Switch language and repeat.
+
+**Pass criteria**
+
+- Both rows show the **same** value.
+- For a method the tenant has translated: the translated name appears.
+- For a method with a known kind (Car Delivery, Store Takeaway, Door Delivery, Third
+  Party Logistics): the app's own bundled translation appears even without a backend
+  translation — e.g. `توصيل بالسيارة`.
+- A numeric id (`199`) must **never** appear. That is a hard fail.
+- An untranslated tenant method (Dine In with no backend translation) staying English
+  is expected — note it, do not fail it.
+
+- [ ] Store & Delivery row — [ ] Shipping Details row — notes:
+
+## Test 4 — Cold start, straight into an order
+
+The riskiest path: the lookup tables are populated during store bootstrap, so this
+checks what happens before they load.
+
+1. Fully close the app.
+2. Relaunch in Arabic, log in, and navigate to Sales → Order Details **as fast as
+   possible**, before any background sync finishes.
+
+**Pass criteria**
+
+- Payment method still shows the translated bundled string for core codes
+  (`بطاقة` for card) — this path does not need the network.
+- Delivery method shows the plain English name, **not** a numeric id.
+- Nothing is blank, and nothing crashes.
+
+- [ ] Pass — [ ] Fail — notes:
+
+## Test 5 — Tenant-defined methods win
+
+Confirms a store's own wording is not overwritten by the app's bundled strings.
+
+1. On a tenant with a custom payment method (loyalty points, wallet, a renamed card
+   entry such as "Card Machine"), open an order paid with it.
+
+**Pass criteria**
+
+- The **tenant's** label is shown, in the tenant's translation for the active language.
+- The app's generic bundled string does not override a renamed method.
+
+- [ ] Pass — [ ] Fail — notes:
+
+## Test 6 — Language switch offline
+
+Labels are resolved at render time from cached data, so this should need no network.
+
+1. Open an order details page and note the labels.
+2. Turn off networking.
+3. Switch the app language and return to the same order.
+
+**Pass criteria**
+
+- Both labels re-render in the new language with no network call and no error.
+
+- [ ] Pass — [ ] Fail — notes:
+
+---
+
+## Regression pass
+
+The payment-method provider now pushes a snapshot on every load path, and the shared
+`UiCodeLabels.payment` helper is reused. Confirm nothing downstream shifted.
+
+| Path | What to check | Result |
+|---|---|---|
+| Billing — payment selector | All methods listed, correct labels, checkout completes | |
+| Billing — split payment | Amounts allocate and reconcile as before | |
+| Credit / "to customer balance" | Still offered even when the backend omits it | |
+| Customer voucher list | Payment method column unchanged | |
+| Supplier transactions / vouchers | Payment mode column unchanged | |
+| Order details — return an order | Return flow still starts from this screen | |
+| Switch store, then open order details | Labels follow the new store's methods | |
+
+**Receipts and PDFs are deliberately out of scope.** The print layouts do their own
+bilingual mapping keyed to the *document* language rather than the app UI language, so
+`sales_order_details.dart` still passes raw values into `PrintPage`. Print one receipt
+and one shared PDF and confirm they are **byte-for-byte what they were before** — any
+change there is a regression, not the fix.
+
+- [ ] Regression pass complete — [ ] Receipt unchanged — [ ] PDF unchanged
+
+---
+
+## Known state going in
+
+- **Automated tests:** 1057 passing, 0 failing, including 11 new tests in
+  `test/order_details_method_labels_test.dart` covering both resolution paths and every
+  fallback (cold registry, deleted method, untranslated backend, unknown code).
+- **Analyzer:** clean on all changed files. The 13 remaining issues in
+  `buid_order_details_widget.dart` are pre-existing and on untouched lines
+  (`withOpacity` deprecations, an unused `_calculateTotalMRP`, two stale null-aware
+  operators). Zero new issues.
+- **Backend follow-up, not a blocker.** Order details would be more robust if it
+  returned `delivery_method_code` alongside the name and honoured `lang` on
+  `delivery_method_name`. That removes the dependency on the lookup tables being warm —
+  the Test 4 fallback. `payment_method` and the `payments` keys must **stay raw codes**.
+- **`lib/providers/language_provider.dart`** is also modified in the working tree
+  (hiding the `en_ar` composite language code). That is a **separate change** with its
+  own coverage — see *Test 6* in the section above. It did not come from this work;
+  keep the two apart when committing.
 
 ## Sign-off
 

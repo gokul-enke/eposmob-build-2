@@ -8,6 +8,13 @@ import 'package:pos_machine/resources/app_url.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LanguageProvider extends ChangeNotifier {
+  /// Language codes returned by the API that must never reach the UI.
+  /// `en_ar` ("English + Arabic") is a composite entry used server-side only.
+  static const Set<String> hiddenLanguageCodes = {'en_ar'};
+
+  static bool _isHidden(Language language) =>
+      hiddenLanguageCodes.contains(language.code.toLowerCase().trim());
+
   List<Language> _languages = [];
   bool _isLoading = false;
   String? _error;
@@ -55,6 +62,7 @@ class LanguageProvider extends ChangeNotifier {
           final List<dynamic> rawList = data['data'];
           _languages = rawList
               .map((item) => Language.fromJson(item as Map<String, dynamic>))
+              .where((language) => !_isHidden(language))
               .toList();
         } else {
           _error = data['message']?.toString() ?? 'Failed to load languages';

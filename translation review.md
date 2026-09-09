@@ -104,6 +104,15 @@ instead of being listed here.
 - Cash-drawer tooltip fallback: `lib/widgets/open_cash_drawer_button.dart:14-18, 54-58`
 - Printer disabled-note: `lib/screens/print/printer_settings.dart:1008-1010`
 - Unsaved quotation-customer notice: `lib/features/billing/presentation/widgets/checkout_modal.dart:1674-1680`
+- Purchase Orders serial column: `lib/screens/purchase/purchase_orders.dart:835` used
+  `purchase_order.sl_col`, which still rendered `SL` in Malayalam. Updated
+  `lib/resources/i18n/ml.json` `purchase_order.sl_col` from `SL` to `ക്രമ നം`; verified
+  live after hot restart on 2026-09-08.
+- Serial-number column header mistranslation: `category.col_no` and 15 other `col_no`
+  keys across `lib/resources/i18n/ml.json` had been translated as `ഇല്ല` (meaning
+  "none/absent") instead of a serial-number label. Updated all `col_no` values from
+  `ഇല്ല` / `ഇല്ല.` to `ക്രമ നം`; verified on Category List after hot reload on
+  2026-09-08.
 
 ## Route-level findings still requiring additional passes
 
@@ -514,3 +523,51 @@ here with exact source locations so they are not lost between passes:
 | `lib/screens/print/kot_standard_printer.dart` | 557-560 | Printer name is dynamic; static KOT send status now uses `daily_sales_close.kot_sent_to_printer`. |
 | `lib/screens/print/print_standard.dart` | 913-916 | Generated file path is dynamic; development PDF status now uses `print.pdf_saved`. |
 | `lib/screens/kiosk/kiosk_order_page.dart` | 410-418, 448-455 | Kiosk cart success/error fallbacks now use translation keys; API-provided response messages remain dynamic when present. |
+| `lib/screens/login/store_selection_screen.dart` | Runtime pre-locale flow | Fresh session before Malayalam selection showed English login/store-sync strings (`Login`, `Remember Me`, `Continue`, `Choose Your Store`, `Select Store`, `Syncing customer directory...`, `Retrieving store details...`). These map to existing `login.*`/`store_*` translation keys and render Malayalam once locale is applied. |
+| `lib/screens/sales/daily_sales_close_list.dart` | Runtime daily-sales-close route | Live Malayalam verification after locale switch showed translated title (`ദിവസ വിൽപ്പന ക്ലോസുകൾ`), date filter, reset, table headings, status/action labels, and filter tooltip. Executive names (`salesexecutiv2`), phone numbers, store names (`متجر النجمة Store`), dates, SAR amounts, and order counts remain account/report data. |
+| `lib/screens/reports/sales_executive_report/sales_executive_report.dart` | Runtime sales-executive report route | Live Malayalam verification after locale switch showed translated title (`എന്റെ സെയിൽസ് റിപ്പോർട്ട്`), date filters, reset, table headings, and action column. Executive names, phone numbers, SAR totals, and order counts remain account/report data. |
+| `lib/screens/settings/settings.dart` | Runtime settings + language switch | Settings dashboard, cards, and language dialog rendered Malayalam after selecting `മലയാളം`. Runtime cache counts, timestamps, `Reverb`, `API`, and `08-09-2026 01:54 PM` remain configuration/runtime values; `English`/`العربية` in the language picker are intentional native language names. |
+
+## Runtime verification — 2026-09-08 (Marionette `ws://127.0.0.1:61413/...`)
+
+Authenticated as `salesexecutive2@funzcart.in`, Malayalam locale persisted from prior session.
+Store selected, day-close prompt dismissed without submitting.
+
+| Route | Malayalam chrome verified | Dynamic English observed (expected) |
+|---|---|---|
+| Login / store selection / day-close prompt | Yes (`ലോഗിൻ`, `തുടരുക`, Malayalam day-close dialog) | Store names/addresses |
+| Home / Billing | Yes | `Test Default`, `Store Takeaway`, product names, SAR |
+| Dashboard | Yes | User identity, SAR KPI values |
+| Restaurant / Attender / Kitchen Master | Yes | Categories, products, order IDs, kitchen notes |
+| Sales → Confirmed Orders / Online Orders | Yes | Customer names, SAR, `SI ഇല്ല` |
+| Sales → Sales Return / Daily Sales Closing | Yes | Order refs, SAR, executive/store names |
+| Purchase → Purchase Orders | Yes (after `sl_col` fix: `ക്രമ നം`) | Supplier/store names, SAR |
+| Purchase → Purchase Returns | Yes | Supplier names, SAR, `PR-*` refs; date placeholders `yyyy-mm-dd` |
+| Quotations (sidebar) | Prior pass + list controls Malayalam | Quotation/customer data |
+| Category List | Yes (after `col_no` fix: `ക്രമ നം`) | Category names/slugs |
+| Product → List / Stock / Barcode | Yes | Product names, units, MRP, barcodes |
+| Reports → Sales Executive / Customer Transactions / Stock Report | Yes | Executive/customer/product names, SAR, `PCS` |
+| Transactions → Invoice / Receipts / Customer Voucher / Supplier Voucher / Proforma / Expense | Yes | Transaction IDs, SAR, account/category names; date placeholders `YYYY-MM-DD HH:MM:SS` |
+| Party Accounts / Customers / Suppliers / Printer | Yes | Names, emails, printer device names, `B2C` |
+| Settings | Yes | Cache counts, timestamps, `Reverb`, `API` |
+| Quotations → New Quotation (index 86) / Quotation List (index 87) | Yes | `പുതിയ ഓർഡർ`, filters, table headers Malayalam; customer/store names dynamic |
+| Sales → Orders List (index 2) | Yes | `ഓർഡറുകൾ ലിസ്റ്റ്`, filters Malayalam; `YYYY-MM-DD HH:MM:SS` placeholders |
+| Reports → Non-Stock Report (index 77) / Consumed Stocks (index 80) | Yes | Titles, filters, `ക്രമ നം` column, status badges Malayalam; product/store names dynamic |
+
+### Routes not exposed to demo role (`salesexecutive2@funzcart.in`)
+
+| Route index | Screen | Reason |
+|---|---|---|
+| 97 | Store Billing (`nav.store`) | Requires `billing.store.access`; menu item hidden for demo role |
+| 84 | Admin Daily Sales Close List | Requires `company_admin` + day-closing permission |
+| 85 | Admin Sales Executive Report | Requires `canViewExecutiveSummary` (not in demo sidebar) |
+
+Supermarket billing (index 90) renders as `ബില്ലിംഗ്` in the sidebar and shares the same billing chrome as Home (index 0); both verified Malayalam in prior passes.
+
+### Date-format placeholders (not translated — format patterns)
+
+| Source pattern | Example locations | Notes |
+|---|---|---|
+| `YYYY-MM-DD HH:MM:SS` | Receipt List, Customer Voucher List date filters | Technical datetime format string in input placeholders |
+| `yyyy-mm-dd` | Purchase Return List date filters | Technical date format string in input placeholders |
+| `തീയതി തിരഞ്ഞെടുക്കുക` | Stock Report, Daily Sales Closing | Malayalam label; selected dates render as `YYYY-MM-DD` numeric data |

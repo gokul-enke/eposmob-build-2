@@ -121,9 +121,17 @@ void main() async {
     // Initialize Hive in a dedicated ApplicationSupport/epos/hive_data folder
     // Safer than Documents (less likely to be deleted by user)
     final supportDir = await getApplicationSupportDirectory();
-    final hiveBaseDir = Directory('${supportDir.path}/epos/hive_data');
+    final eposDir = Directory('${supportDir.path}/epos');
+    final hiveBaseDir = Directory('${eposDir.path}/hive_data');
     if (!await hiveBaseDir.exists()) {
       await hiveBaseDir.create(recursive: true);
+    }
+
+    // A second copy of the app points at this same directory and would fight
+    // the first one for its Hive box locks. Bail out before touching a box.
+    if (await _isAnotherInstanceRunning(eposDir)) {
+      runApp(const _AlreadyRunningApp());
+      return;
     }
 
     Hive.init(hiveBaseDir.path);
@@ -149,7 +157,10 @@ void main() async {
   Hive.registerAdapter(HiveDocumentConfigAdapter());
 
   // Open boxes with error handling and retry logic
-  await _initializeHiveBoxes();
+  if (!await _initializeHiveBoxes()) {
+    runApp(const _AlreadyRunningApp());
+    return;
+  }
 
   tz.initializeTimeZones();
   await LocalizationService.init();
@@ -194,49 +205,45 @@ Future<void> _initializeBaseUrlFromPreferences() async {
   } catch (_) {}
 }
 
-Future<void> _initializeHiveBoxes() async {
+/// Every Hive box the app opens at startup, with its typed opener.
+///
+/// Single source of truth on purpose: the previous switch-based version was
+/// duplicated across the open and recovery paths, and the copies had drifted —
+/// `categories_all`, `categories_purchasable` and `document_configs` were
+/// missing from the second one and could silently never be reopened.
+final Map<String, Future<BoxBase<dynamic>> Function()> _startupBoxOpeners = {
+  'products': () => Hive.openBox<HiveProduct>('products'),
+  'cart_items': () => Hive.openBox<HiveLocalCartItem>('cart_items'),
+  'saved_orders': () => Hive.openBox<HiveSavedOrder>('saved_orders'),
+  'confirmed_orders': () => Hive.openBox<HiveSavedOrder>('confirmed_orders'),
+  'categories': () => Hive.openBox<HiveCategory>('categories'),
+  'categories_all': () => Hive.openBox<HiveCategory>('categories_all'),
+  'categories_purchasable': () =>
+      Hive.openBox<HiveCategory>('categories_purchasable'),
+  'document_configs': () =>
+      Hive.openBox<HiveDocumentConfig>('document_configs'),
+};
+
+/// Opens every box the app needs at startup.
+///
+/// Returns `false` when a box is held by another running copy of the app, in
+/// which case the caller must not continue: two processes appending to the
+/// same box file interleave frames and corrupt it. Any other failure is
+/// logged and tolerated, exactly as before.
+Future<bool> _initializeHiveBoxes() async {
   const maxRetries = 3;
   const retryDelay = Duration(seconds: 2);
 
   const boxesToResetBeforeInit = ['categories'];
 
   for (final boxName in boxesToResetBeforeInit) {
-    try {
-      if (Hive.isBoxOpen(boxName)) {
-        final box = Hive.box(boxName);
-        debugPrint(
-            '⚠️ Box $boxName was open during initialization. Clearing and closing before reset.');
-        await box.clear();
-        await box.close();
-      }
-
-      final exists = await Hive.boxExists(boxName);
-
-      if (exists) {
-        debugPrint(
-            '🧹 Clearing existing data for $boxName box before initialization');
-        await Hive.deleteBoxFromDisk(boxName);
-        debugPrint('✅ Cleared $boxName box from disk');
-      } else {
-        debugPrint('ℹ️ No existing data found for $boxName box to clear');
-      }
-    } catch (e) {
-      debugPrint('⚠️ Unable to clear $boxName box before initialization: $e');
+    if (!await _resetBoxBeforeInit(boxName)) {
+      return false;
     }
   }
 
-  final boxNames = [
-    'products',
-    'cart_items',
-    'saved_orders',
-    'confirmed_orders',
-    'categories',
-    'categories_all',
-    'categories_purchasable',
-    'document_configs'
-  ];
-
-  for (String boxName in boxNames) {
+  for (final entry in _startupBoxOpeners.entries) {
+    final boxName = entry.key;
     int attempts = 0;
     bool success = false;
 
@@ -253,62 +260,26 @@ Future<void> _initializeHiveBoxes() async {
           continue;
         }
 
-        // Try to open the box based on its type
-        switch (boxName) {
-          case 'products':
-            await Hive.openBox<HiveProduct>(boxName);
-            break;
-          case 'cart_items':
-            await Hive.openBox<HiveLocalCartItem>(boxName);
-            break;
-          case 'saved_orders':
-          case 'confirmed_orders':
-            await Hive.openBox<HiveSavedOrder>(boxName);
-            break;
-          case 'categories':
-          case 'categories_all':
-          case 'categories_purchasable':
-            await Hive.openBox<HiveCategory>(boxName);
-            break;
-          case 'document_configs':
-            await Hive.openBox<HiveDocumentConfig>(boxName);
-            break;
-        }
+        await entry.value();
 
         debugPrint('✅ Successfully opened $boxName box');
         success = true;
       } catch (e) {
+        // Retrying a lock we will never win just delays the inevitable, and
+        // forcing past it (which is what deleting the .lock file used to do)
+        // is how two processes end up writing the same file.
+        if (e is FileSystemException && _isLockContention(e)) {
+          debugPrint(
+              '🚫 $boxName box is locked by another running instance of the app.');
+          return false;
+        }
+
         debugPrint('❌ Failed to open $boxName box (attempt $attempts): $e');
 
         if (attempts >= maxRetries) {
           debugPrint(
-              '🚨 Max retries reached for $boxName box. Attempting cleanup...');
-          await _cleanupLockFiles(boxName);
-
-          // Final attempt after cleanup
-          try {
-            switch (boxName) {
-              case 'products':
-                await Hive.openBox<HiveProduct>(boxName);
-                break;
-              case 'cart_items':
-                await Hive.openBox<HiveLocalCartItem>(boxName);
-                break;
-              case 'saved_orders':
-              case 'confirmed_orders':
-                await Hive.openBox<HiveSavedOrder>(boxName);
-                break;
-              case 'categories':
-                await Hive.openBox<HiveCategory>(boxName);
-                break;
-            }
-            debugPrint('✅ Successfully opened $boxName box after cleanup');
-            success = true;
-          } catch (finalError) {
-            debugPrint(
-                '💥 Critical error: Cannot open $boxName box even after cleanup: $finalError');
-            // Continue with other boxes instead of crashing the app
-          }
+              '💥 Critical error: cannot open $boxName box. Continuing without it.');
+          // Continue with other boxes instead of crashing the app
         } else {
           // Wait before retrying
           await Future.delayed(retryDelay);
@@ -316,27 +287,168 @@ Future<void> _initializeHiveBoxes() async {
       }
     }
   }
+
+  return true;
 }
 
-Future<void> _cleanupLockFiles(String boxName) async {
-  if (kIsWeb) {
-    return;
+/// Wipes [boxName] from disk before the app opens it for the first time.
+///
+/// The delete only happens once we have proven nobody else owns the box, by
+/// taking its Hive lock ourselves first — otherwise a second copy of the app
+/// would delete the files the first copy is actively writing to.
+///
+/// Returns `false` when the box belongs to another running instance.
+Future<bool> _resetBoxBeforeInit(String boxName) async {
+  try {
+    if (!await Hive.boxExists(boxName)) {
+      debugPrint('ℹ️ No existing data found for $boxName box to clear');
+      return true;
+    }
+
+    BoxBase<dynamic>? opened;
+    if (!Hive.isBoxOpen(boxName)) {
+      try {
+        opened = await _startupBoxOpeners[boxName]!();
+      } catch (e) {
+        if (e is FileSystemException && _isLockContention(e)) {
+          debugPrint(
+              '🚫 $boxName box is locked by another running instance of the app.');
+          return false;
+        }
+        // Unreadable or corrupt box: deleting it is exactly what this reset
+        // exists to do, so fall through.
+        debugPrint(
+            '⚠️ Could not open $boxName before reset, deleting anyway: $e');
+      }
+    }
+
+    debugPrint(
+        '🧹 Clearing existing data for $boxName box before initialization');
+
+    // Close first so the delete goes through Hive's file manager, which also
+    // removes the .hivec compaction leftover. Deleting an open box would leave
+    // it behind and Hive would restore it as the box's contents on next open.
+    await opened?.close();
+    await Hive.deleteBoxFromDisk(boxName);
+    debugPrint('✅ Cleared $boxName box from disk');
+  } catch (e) {
+    debugPrint('⚠️ Unable to clear $boxName box before initialization: $e');
+  }
+  return true;
+}
+
+/// Held for the lifetime of the process, never closed. Both Windows and POSIX
+/// release the lock when the process exits or crashes, so a leftover lock file
+/// can never keep a user out of their own app.
+RandomAccessFile? _instanceLock;
+
+/// Whether another copy of the app already owns the local data directory.
+///
+/// Fails open: if the lock cannot be evaluated at all (some network shares do
+/// not support file locking) we start as we always have, so a machine that
+/// works today keeps working.
+Future<bool> _isAnotherInstanceRunning(Directory eposDir) async {
+  if (_instanceLock != null) {
+    // We already hold it, so by definition nothing else does.
+    return false;
   }
 
   try {
-    final supportDir = await getApplicationSupportDirectory();
-    final hiveBaseDir = Directory('${supportDir.path}/epos/hive_data');
-    final lockFile = File('${hiveBaseDir.path}/$boxName.lock');
-
-    if (await lockFile.exists()) {
-      debugPrint('🧹 Attempting to remove stale lock file: ${lockFile.path}');
-      await lockFile.delete();
-      debugPrint('✅ Successfully removed lock file');
-    } else {
-      debugPrint('ℹ️ No lock file found for $boxName');
+    final lockFile = File('${eposDir.path}/instance.lock');
+    // `append` rather than `write`: opening must never truncate a file the
+    // other instance is currently holding.
+    final raf = await lockFile.open(mode: FileMode.append);
+    try {
+      // FileLock.exclusive is the non-blocking mode — it throws immediately
+      // instead of waiting for the other instance to quit.
+      await raf.lock();
+    } on FileSystemException catch (e) {
+      await raf.close();
+      if (_isLockContention(e)) {
+        debugPrint('🚫 Another instance already owns ${lockFile.path}');
+        return true;
+      }
+      rethrow;
     }
+    _instanceLock = raf;
+    return false;
   } catch (e) {
-    debugPrint('⚠️ Could not cleanup lock file for $boxName: $e');
+    debugPrint('⚠️ Could not evaluate the single-instance lock, continuing: $e');
+    return false;
+  }
+}
+
+/// Distinguishes "another process holds this lock" from every other IO error,
+/// so that only genuine contention stops the app from starting.
+bool _isLockContention(FileSystemException error) {
+  final code = error.osError?.errorCode;
+  if (code == null) {
+    return false;
+  }
+  if (!kIsWeb && Platform.isWindows) {
+    // ERROR_SHARING_VIOLATION (32) / ERROR_LOCK_VIOLATION (33)
+    return code == 32 || code == 33;
+  }
+  // EAGAIN (11 Linux / 35 macOS) or EACCES (13) from fcntl(F_SETLK).
+  return code == 11 || code == 13 || code == 35;
+}
+
+/// Shown instead of the app when a second copy is started.
+///
+/// Deliberately dependency-free: providers, translations and Hive are all
+/// still uninitialised at this point.
+class _AlreadyRunningApp extends StatelessWidget {
+  const _AlreadyRunningApp();
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.info_outline,
+                      size: 56, color: ColorManager.kPrimaryColor),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'CLOUDPOS is already running',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Only one copy of CLOUDPOS can run at a time, because both '
+                    'copies would use the same local data.\n\n'
+                    'Please switch to the window that is already open.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, height: 1.5),
+                  ),
+                  const SizedBox(height: 28),
+                  ElevatedButton(
+                    onPressed: () => exit(0),
+                    child: const Padding(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      child: Text('Close'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

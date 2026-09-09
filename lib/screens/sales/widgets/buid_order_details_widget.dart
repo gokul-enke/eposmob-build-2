@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/delivery_method_display.dart';
+import 'package:pos_machine/helpers/payment_method_display.dart';
 import 'package:pos_machine/helpers/string_helper.dart';
 import '../../../components/build_container_box.dart';
 import '../../../components/build_payment_row.dart';
@@ -29,6 +31,13 @@ class OrderDetailWidget extends StatelessWidget {
     required this.cartItem,
     required this.customerDetails,
   }) : super(key: key);
+
+  /// Localized delivery method for this order — see
+  /// [DeliveryMethodDisplay.labelForIdOrName] for why the id leads the name.
+  String get _deliveryMethodLabel => DeliveryMethodDisplay.labelForIdOrName(
+        orderDetailsModelData?.deliveryMethodId,
+        orderDetailsModelData?.deliveryMethodName,
+      );
 
   // Calculate total MRP from all cart items
   double _calculateTotalMRP() {
@@ -296,8 +305,7 @@ class OrderDetailWidget extends StatelessWidget {
                             _buildInfoRow(
                                 context,
                                 'sales_order_details.label_delivery_method'.tr,
-                                orderDetailsModelData?.deliveryMethodName ??
-                                    ''),
+                                _deliveryMethodLabel),
                           if (orderDetailsModelData?.deliveryDate != null &&
                               orderDetailsModelData!.deliveryDate!.isNotEmpty)
                             _buildInfoRow(
@@ -343,9 +351,9 @@ class OrderDetailWidget extends StatelessWidget {
                             _buildInfoRow(
                                 context,
                                 'sales_order_details.label_payment_method'.tr,
-                                orderDetailsModelData
-                                        ?.paymentDetails?.paymentMethod ??
-                                    ''),
+                                PaymentMethodDisplay.labelForCodeList(
+                                    orderDetailsModelData
+                                        ?.paymentDetails?.paymentMethod)),
                           if (orderDetailsModelData
                                   ?.paymentDetails?.transactionId !=
                               null)
@@ -392,7 +400,12 @@ class OrderDetailWidget extends StatelessWidget {
                                           children: [
                                             Expanded(
                                               child: Text(
-                                                entry.key,
+                                                // The map key is the stable
+                                                // payment code, kept as-is in
+                                                // the data and localized only
+                                                // for display.
+                                                PaymentMethodDisplay.labelFor(
+                                                    entry.key),
                                                 style: buildCustomStyle(
                                                   FontWeightManager.medium,
                                                   FontSize.s11,
@@ -945,7 +958,7 @@ class OrderDetailWidget extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           _buildInfoRow(context, 'sales_order_details.label_delivery_method'.tr,
-              orEmpty(orderDetailsModelData?.deliveryMethodName)),
+              orEmpty(_deliveryMethodLabel)),
           _buildInfoRow(
               context, 'sales_order_details.label_address_type'.tr, orEmpty(deliveryAddress.addressType)),
           _buildInfoRow(context, 'sales_order_details.label_shipping_address'.tr,
