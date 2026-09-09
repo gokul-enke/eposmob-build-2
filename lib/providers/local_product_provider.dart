@@ -354,6 +354,39 @@ class LocalProductProvider extends ChangeNotifier {
   late Box<HiveSavedOrder> _confirmedOrdersBox;
   bool _isConfirmedBoxInitialized = false;
 
+  /// How many products are JSON-encoded or decoded between yields to the
+  /// event loop. On Windows the Dart UI isolate runs on the platform thread,
+  /// so a multi-second synchronous pass over a 30k catalog stops the Win32
+  /// message pump and the window is flagged "Not Responding". Keeping each
+  /// slice to a few hundred rows keeps every pass well under that threshold.
+  static const int _catalogChunkSize = 300;
+
+  /// Products whose in-memory stock was mutated since the last persist. Cart
+  /// and stock adjustments touch one or two products, so they are written as
+  /// single keyed rows instead of rewriting the whole catalog.
+  final Set<int> _dirtyProductIds = <int>{};
+
+  /// Bumped every time [_products] is replaced wholesale. A hydration that
+  /// started before the bump must not clobber the newer catalog.
+  int _catalogEpoch = 0;
+
+  late final Future<void> _hydration;
+
+  /// Completes once the product catalog has been read from Hive. Small boxes
+  /// hydrate synchronously inside the constructor; large boxes are decoded in
+  /// chunks and callers that need the full baseline should await this.
+  Future<void> get hydrated => _hydration;
+
+  bool _isHydrated = false;
+
+  /// Whether the product catalog has finished loading from Hive.
+  bool get isHydrated => _isHydrated;
+
+  /// Lets timers, platform messages and the Windows message pump run between
+  /// chunks of catalog work.
+  static Future<void> _yieldToEventLoop() =>
+      Future<void>.delayed(Duration.zero);
+
   // Hive mutation methods return Futures. Keep every local rewrite in one
   // ordered queue so a later clear/add cycle cannot overtake an earlier one.
   static Future<void> _persistenceTail = Future<void>.value();
@@ -650,7 +683,7 @@ class LocalProductProvider extends ChangeNotifier {
   // Constructor - Load data from Hive on initialization
   LocalProductProvider() {
     _loadStockEnabledFromPrefs();
-    _loadProductsFromHive();
+    _hydration = _hydrateProductsFromHive();
     _loadCartFromHive();
     _loadSavedOrdersFromHive();
     _initConfirmedOrdersBox();
@@ -1629,20 +1662,50 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
-  // Initialize the confirmed orders box safely
-  Future<void> _initConfirmedOrdersBox() async {
+  /// Binds [_confirmedOrdersBox] synchronously when the box is already open
+  /// (the normal case: main.dart opens it before the app starts).
+  bool _bindConfirmedOrdersBoxIfOpen() {
+    if (_isConfirmedBoxInitialized) return true;
+    if (!Hive.isBoxOpen('confirmed_orders')) return false;
     try {
-      if (!Hive.isBoxOpen('confirmed_orders')) {
-        _confirmedOrdersBox =
-            await Hive.openBox<HiveSavedOrder>('confirmed_orders');
-      } else {
-        _confirmedOrdersBox = Hive.box<HiveSavedOrder>('confirmed_orders');
-      }
+      _confirmedOrdersBox = Hive.box<HiveSavedOrder>('confirmed_orders');
       _isConfirmedBoxInitialized = true;
-      _loadConfirmedOrdersFromHive();
+      return true;
+    } catch (e) {
+      debugPrint("Error binding confirmed orders box: $e");
+      return false;
+    }
+  }
+
+  /// Binds [_confirmedOrdersBox], opening it if needed, without touching the
+  /// in-memory list, so it is safe to call from inside a queued write.
+  Future<bool> _ensureConfirmedOrdersBox() async {
+    if (_bindConfirmedOrdersBoxIfOpen()) return true;
+    try {
+      _confirmedOrdersBox =
+          await Hive.openBox<HiveSavedOrder>('confirmed_orders');
+      _isConfirmedBoxInitialized = true;
+      return true;
     } catch (e) {
       debugPrint("Error initializing confirmed orders box: $e");
       _isConfirmedBoxInitialized = false;
+      return false;
+    }
+  }
+
+  // Initialize the confirmed orders box safely and load what it holds.
+  //
+  // When the box is already open this completes synchronously inside the
+  // constructor. That matters: an order confirmed right after construction
+  // must be appended to a list that already holds the persisted orders, or a
+  // late reload would drop it from memory.
+  Future<void> _initConfirmedOrdersBox() async {
+    if (_bindConfirmedOrdersBoxIfOpen()) {
+      _loadConfirmedOrdersFromHive();
+      return;
+    }
+    if (await _ensureConfirmedOrdersBox()) {
+      _loadConfirmedOrdersFromHive();
     }
   }
 
@@ -1697,21 +1760,18 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
-  // Save confirmed orders to Hive
+  // Save confirmed orders to Hive.
+  //
+  // Keyed by order id and written through the persistence queue: a confirmed
+  // order is an unsynced sale, so there must never be a moment where the box
+  // has been cleared but the rows are not yet back on disk.
   void _saveConfirmedOrdersToHive() {
-    if (!_isConfirmedBoxInitialized) {
-      _initConfirmedOrdersBox().then((_) {
-        _saveConfirmedOrdersToHive();
-      });
-      return;
-    }
-
+    final snapshots = <String, HiveSavedOrder>{};
     try {
-      _confirmedOrdersBox.clear();
       for (var order in _confirmedOrders) {
         final hiveItems = order.items.map(_buildHiveCartItem).toList();
 
-        final hiveSavedOrder = HiveSavedOrder(
+        snapshots[order.id] = HiveSavedOrder(
           id: order.id,
           orderNumber: order.orderNumber,
           items: hiveItems,
@@ -1745,32 +1805,140 @@ class LocalProductProvider extends ChangeNotifier {
           customerCrNumber: order.customerCrNumber,
           customerType: order.customerType,
         );
-
-        _confirmedOrdersBox.add(hiveSavedOrder);
       }
     } catch (e) {
-      debugPrint("Error saving confirmed orders: $e");
+      debugPrint("Error serializing confirmed orders: $e");
+      return;
     }
+
+    _enqueuePersistence('save confirmed orders', () async {
+      if (!await _ensureConfirmedOrdersBox()) {
+        throw StateError('confirmed_orders box is not available');
+      }
+      if (snapshots.isNotEmpty) {
+        await _confirmedOrdersBox.putAll(snapshots);
+      }
+      // Removes deleted orders and any legacy auto-increment rows written by
+      // older builds, which are now superseded by their id-keyed copies.
+      final staleKeys = _confirmedOrdersBox.keys
+          .where((key) => !snapshots.containsKey(key))
+          .toList(growable: false);
+      if (staleKeys.isNotEmpty) {
+        await _confirmedOrdersBox.deleteAll(staleKeys);
+      }
+    });
   }
 
-  // Load products from Hive
-  void _loadProductsFromHive() {
+  // Load products from Hive.
+  //
+  // Decodes the catalog in chunks. The first chunk runs synchronously inside
+  // the constructor, so a small box (tests, tiny tenants) is fully loaded
+  // before the constructor returns, exactly as before. Larger boxes yield to
+  // the event loop between chunks so a 30k catalog cannot freeze the window,
+  // and the finished list is swapped in atomically at the end.
+  Future<void> _hydrateProductsFromHive() async {
+    final startEpoch = _catalogEpoch;
+    final initialList = _products;
+    final decoded = <GetProduct>[];
+    final seenIds = <int, int>{};
+    var legacyKeyedRows = 0;
+    var unreadableRows = 0;
+
     try {
       final boxLen = _productsBox.length;
       debugPrint(
           "📦 [Hive] Loading products from box 'products' (len=$boxLen)...");
-      _products = _productsBox.values.map((hiveProduct) {
-        final jsonData = json.decode(hiveProduct.serializedData.value);
-        return GetProduct.fromJson(jsonData);
-      }).toList();
-      _filteredProducts = List.from(_products);
-      _rebuildBarcodeIndex();
-      debugPrint(
-          "✅ [Hive] Loaded products into provider: total=${_products.length}, filtered=${_filteredProducts.length}");
-      notifyListeners();
+      final keys = _productsBox.keys.toList(growable: false);
+
+      for (var offset = 0; offset < keys.length; offset += _catalogChunkSize) {
+        if (offset > 0) {
+          await _yieldToEventLoop();
+          if (_catalogEpoch != startEpoch) {
+            debugPrint(
+                '📦 [Hive] Catalog replaced during hydration; discarding stale rows');
+            _isHydrated = true;
+            return;
+          }
+        }
+
+        final end = offset + _catalogChunkSize > keys.length
+            ? keys.length
+            : offset + _catalogChunkSize;
+        for (final key in keys.sublist(offset, end)) {
+          final hiveProduct = _productsBox.get(key);
+          if (hiveProduct == null) continue;
+          GetProduct product;
+          try {
+            product = GetProduct.fromJson(
+              json.decode(hiveProduct.serializedData.value),
+            );
+          } catch (error) {
+            // One damaged row must not take the whole catalog down.
+            unreadableRows++;
+            debugPrint('⚠️ [Hive] Skipping unreadable product row $key: $error');
+            continue;
+          }
+
+          final id = product.productId;
+          if (id == null) {
+            decoded.add(product);
+            continue;
+          }
+          if (key != id) {
+            legacyKeyedRows++;
+          }
+          final existingIndex = seenIds[id];
+          if (existingIndex != null) {
+            // Duplicate rows can only come from legacy auto-increment keys.
+            // Prefer the latest row; the id-keyed rewrite below removes the rest.
+            decoded[existingIndex] = product;
+          } else {
+            seenIds[id] = decoded.length;
+            decoded.add(product);
+          }
+        }
+      }
     } catch (e) {
       debugPrint("❌ [Hive] Error loading products from box: $e");
     }
+
+    if (_catalogEpoch != startEpoch) {
+      debugPrint(
+          '📦 [Hive] Catalog replaced during hydration; discarding stale rows');
+      _isHydrated = true;
+      return;
+    }
+
+    // Anything added in place while hydration was in flight (for example a
+    // product created right after launch) must survive the swap.
+    if (identical(_products, initialList) && initialList.isNotEmpty) {
+      for (final product in initialList) {
+        final id = product.productId;
+        final existingIndex = id == null ? null : seenIds[id];
+        if (existingIndex != null) {
+          decoded[existingIndex] = product;
+        } else {
+          decoded.add(product);
+        }
+      }
+    }
+
+    _products = decoded;
+    _filteredProducts = List.from(_products);
+    _rebuildBarcodeIndex();
+    _updatePagination();
+    _isHydrated = true;
+    debugPrint(
+        "✅ [Hive] Loaded products into provider: total=${_products.length}, filtered=${_filteredProducts.length}, legacyKeyed=$legacyKeyedRows, unreadable=$unreadableRows");
+
+    if (legacyKeyedRows > 0 || unreadableRows > 0) {
+      // One-time migration to product-id keys (and cleanup of rows that no
+      // longer decode). Runs through the ordered queue like every other write.
+      debugPrint(
+          '🔁 [Hive] Rewriting products box with product-id keys (legacy rows: $legacyKeyedRows)');
+      _saveProductsToHive();
+    }
+    notifyListeners();
   }
 
   // Load cart items from Hive
@@ -1843,22 +2011,83 @@ class LocalProductProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Save products to Hive
+  // Save the whole catalog to Hive.
+  //
+  // Only wholesale replacements (full sync, realtime apply, key migration,
+  // reset) should call this. Cart and stock adjustments touch one or two
+  // products and go through [_flushDirtyProducts] / [_saveProductToHive],
+  // which write single keyed rows instead of re-encoding 30k products.
   void _saveProductsToHive() {
-    final snapshots = <HiveProduct>[];
-    for (var product in _products) {
-      try {
-        snapshots.add(_buildHiveProduct(product));
-      } catch (e) {
-        debugPrint(
-            "Failed to serialize productId=${product.productId} for Hive: $e");
-      }
-    }
+    _persistProducts(_products, pruneOthers: true);
+  }
 
-    _enqueuePersistence('save products', () async {
-      await _productsBox.clear();
-      if (snapshots.isNotEmpty) {
-        await _productsBox.addAll(snapshots);
+  /// Upserts [products] into the products box keyed by product id and deletes
+  /// [removedIds]. With [pruneOthers] every key not written here is deleted
+  /// too, which turns the call into a full catalog replacement.
+  ///
+  /// The box is never truncated: rows are upserted first and stale keys are
+  /// removed afterwards, so it holds a complete catalog at every instant and a
+  /// process kill mid-write (Task Manager, power loss) cannot leave it empty.
+  /// JSON encoding is chunked with yields so a full rewrite of a large catalog
+  /// cannot block the UI thread long enough for Windows to flag the window.
+  void _persistProducts(
+    List<GetProduct> products, {
+    Iterable<int> removedIds = const <int>[],
+    bool pruneOthers = false,
+  }) {
+    final snapshot = List<GetProduct>.of(products);
+    final removed = removedIds.toList(growable: false);
+    final label = pruneOthers
+        ? 'save products'
+        : 'save ${snapshot.length} product(s), remove ${removed.length}';
+
+    _enqueuePersistence(label, () async {
+      final rows = <dynamic, HiveProduct>{};
+      final unkeyed = <HiveProduct>[];
+
+      for (var offset = 0;
+          offset < snapshot.length;
+          offset += _catalogChunkSize) {
+        if (offset > 0) {
+          await _yieldToEventLoop();
+        }
+        final end = offset + _catalogChunkSize > snapshot.length
+            ? snapshot.length
+            : offset + _catalogChunkSize;
+        for (final product in snapshot.sublist(offset, end)) {
+          try {
+            final row = _buildHiveProduct(product);
+            final id = product.productId;
+            if (id != null) {
+              rows[id] = row;
+            } else if (pruneOthers) {
+              unkeyed.add(row);
+            } else {
+              debugPrint(
+                  'Skipping Hive upsert for a product without an id (${product.productName})');
+            }
+          } catch (e) {
+            debugPrint(
+                "Failed to serialize productId=${product.productId} for Hive: $e");
+          }
+        }
+      }
+
+      if (rows.isNotEmpty) {
+        await _productsBox.putAll(rows);
+      }
+      final keep = <dynamic>{...rows.keys};
+      if (unkeyed.isNotEmpty) {
+        keep.addAll(await _productsBox.addAll(unkeyed));
+      }
+
+      final Iterable<dynamic> stale = pruneOthers
+          ? _productsBox.keys.where((key) => !keep.contains(key))
+          : removed.where(
+              (key) => !keep.contains(key) && _productsBox.containsKey(key));
+      final staleKeys = stale.toList(growable: false);
+      if (staleKeys.isNotEmpty) {
+        await _productsBox.deleteAll(staleKeys);
       }
     });
   }
@@ -1874,33 +2103,45 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   void _saveProductToHive(GetProduct product) {
-    final productId = product.productId;
-    if (productId == null) {
+    if (product.productId == null) {
+      // Cannot be keyed; fall back to a full rewrite so it is not lost.
       _saveProductsToHive();
       return;
     }
+    _persistProducts(<GetProduct>[product]);
+  }
 
-    late final HiveProduct hiveProduct;
-    try {
-      hiveProduct = _buildHiveProduct(product);
-    } catch (e) {
-      debugPrint(
-          "Failed to serialize single productId=$productId for Hive: $e");
-      _saveProductsToHive();
+  void _removeProductFromHive(int productId) {
+    _persistProducts(const <GetProduct>[], removedIds: <int>[productId]);
+  }
+
+  void _markProductDirty(GetProduct? product) {
+    final id = product?.productId;
+    if (id != null) {
+      _dirtyProductIds.add(id);
+    }
+  }
+
+  /// Persists every product whose stock changed since the last flush as a
+  /// single keyed row each. Replaces the old "rewrite the whole catalog after
+  /// every cart tap" behaviour.
+  void _flushDirtyProducts() {
+    if (_dirtyProductIds.isEmpty) {
       return;
     }
+    final ids = _dirtyProductIds.toList(growable: false);
+    _dirtyProductIds.clear();
 
-    _enqueuePersistence('save product $productId', () async {
-      final dynamic existingKey = _productsBox.keys.firstWhere(
-        (key) => _productsBox.get(key)?.productId == productId,
-        orElse: () => null,
-      );
-      if (existingKey == null) {
-        await _productsBox.add(hiveProduct);
-      } else {
-        await _productsBox.put(existingKey, hiveProduct);
+    final changed = <GetProduct>[];
+    for (final id in ids) {
+      final product = getProductById(id);
+      if (product != null) {
+        changed.add(product);
       }
-    });
+    }
+    if (changed.isNotEmpty) {
+      _persistProducts(changed);
+    }
   }
 
   // Save cart items to Hive
@@ -2056,6 +2297,8 @@ class LocalProductProvider extends ChangeNotifier {
   /// This should be called after a successful login and after fetching
   /// all products (possibly from a one-time API call or local cache).
   void initializeProducts(List<GetProduct> products) {
+    _catalogEpoch++;
+    _dirtyProductIds.clear();
     _products = products;
     // Initially, set filtered products same as the full list.
     _filteredProducts = List.from(_products);
@@ -2070,10 +2313,17 @@ class LocalProductProvider extends ChangeNotifier {
   /// Server quantities do not know about local, unconfirmed reservations.
   /// Reapplying them here keeps a later cart removal from restoring stock on
   /// top of an unreduced server snapshot.
+  ///
+  /// When [changedProductIds] is given only those products (plus any whose
+  /// stock was adjusted for cart reservations, plus deletions) are written to
+  /// Hive. Without it the whole catalog is rewritten.
   Future<void> applyRealtimeCatalog(
     List<GetProduct> products, {
     required Set<int> deletedProductIds,
+    Set<int>? changedProductIds,
   }) async {
+    await hydrated;
+    final touchedProductIds = <int>{};
     final authoritative = products
         .where((product) =>
             product.productId == null ||
@@ -2135,6 +2385,8 @@ class LocalProductProvider extends ChangeNotifier {
           stock: stocks,
           variants: variants,
         );
+        final touchedId = product.productId;
+        if (touchedId != null) touchedProductIds.add(touchedId);
       }
     }
 
@@ -2149,11 +2401,38 @@ class LocalProductProvider extends ChangeNotifier {
       }
     }
 
+    _catalogEpoch++;
+    _dirtyProductIds.clear();
     _products = authoritative;
     _filteredProducts = List<GetProduct>.from(_products);
     _rebuildBarcodeIndex();
     _updatePagination();
-    _saveProductsToHive();
+
+    if (changedProductIds == null) {
+      _saveProductsToHive();
+    } else {
+      final byId = <int, GetProduct>{
+        for (final product in _products)
+          if (product.productId != null) product.productId!: product,
+      };
+      final upserts = <GetProduct>[];
+      final removals = <int>[];
+      for (final id in <int>{
+        ...changedProductIds,
+        ...touchedProductIds,
+        ...deletedProductIds,
+      }) {
+        final product = byId[id];
+        if (product != null) {
+          upserts.add(product);
+        } else {
+          removals.add(id);
+        }
+      }
+      if (upserts.isNotEmpty || removals.isNotEmpty) {
+        _persistProducts(upserts, removedIds: removals);
+      }
+    }
     await flushPersistence();
     notifyListeners();
   }
@@ -2165,14 +2444,17 @@ class LocalProductProvider extends ChangeNotifier {
     List<GetProduct> changedProducts, {
     required Set<int> deletedProductIds,
   }) async {
+    await hydrated;
     final merged = List<GetProduct>.from(_products);
     final indexById = <int, int>{};
     for (var i = 0; i < merged.length; i++) {
       final id = merged[i].productId;
       if (id != null) indexById[id] = i;
     }
+    final changedProductIds = <int>{};
     for (final product in changedProducts) {
       final id = product.productId;
+      if (id != null) changedProductIds.add(id);
       final index = id == null ? null : indexById[id];
       if (index == null) {
         merged.add(product);
@@ -2184,6 +2466,7 @@ class LocalProductProvider extends ChangeNotifier {
     await applyRealtimeCatalog(
       merged,
       deletedProductIds: deletedProductIds,
+      changedProductIds: changedProductIds,
     );
   }
 
@@ -2205,6 +2488,9 @@ class LocalProductProvider extends ChangeNotifier {
         : DateHelper.normalizeToApiDateTime(lastSyncRaw);
     final syncEndIso = DateHelper.formatForApiDateTime();
     final requestedDelta = lastSyncIso != null && lastSyncIso.isNotEmpty;
+    // A large box may still be decoding; the baseline decision must not be
+    // taken against a half-loaded catalog.
+    await hydrated;
     final hasLocalBaseline = _products.isNotEmpty;
     final useDelta = requestedDelta && hasLocalBaseline;
     int successResponses = 0;
@@ -2346,6 +2632,8 @@ class LocalProductProvider extends ChangeNotifier {
         }
       }
 
+      _catalogEpoch++;
+      _dirtyProductIds.clear();
       if (useDelta) {
         if (allProducts.isNotEmpty) {
           final updatedProducts = List<GetProduct>.from(_products);
@@ -2389,7 +2677,19 @@ class LocalProductProvider extends ChangeNotifier {
       _filteredProducts = List.from(_products);
       _rebuildBarcodeIndex();
       _updatePagination();
-      _saveProductsToHive();
+      if (useDelta) {
+        // Only the rows the server reported changed or deleted are written.
+        _persistProducts(
+          allProducts
+              .where((p) =>
+                  p.productId == null ||
+                  !deletedProductIds.contains(p.productId))
+              .toList(growable: false),
+          removedIds: deletedProductIds,
+        );
+      } else {
+        _saveProductsToHive();
+      }
       if (successResponses > 0) {
         await prefsProvider.saveLastProductSyncIso(syncEndIso);
       }
@@ -2446,8 +2746,8 @@ class LocalProductProvider extends ChangeNotifier {
           _rebuildBarcodeIndex();
           _updatePagination();
 
-          // Save updated list to Hive
-          _saveProductsToHive();
+          // Drop the row from Hive
+          _removeProductFromHive(productId);
 
           notifyListeners();
           return true;
@@ -2633,7 +2933,7 @@ class LocalProductProvider extends ChangeNotifier {
       _products.insert(0, product);
       _filteredProducts.insert(0, product);
       _rebuildBarcodeIndex();
-      _saveProductsToHive();
+      _saveProductToHive(product);
       notifyListeners();
       debugPrint("✅ Product added to local storage successfully");
     } else {
@@ -2646,7 +2946,7 @@ class LocalProductProvider extends ChangeNotifier {
         _filteredProducts[filteredIndex] = product;
       }
       _rebuildBarcodeIndex();
-      _saveProductsToHive();
+      _saveProductToHive(product);
       notifyListeners();
       debugPrint("✅ Product updated in local storage successfully");
     }
@@ -2705,12 +3005,13 @@ class LocalProductProvider extends ChangeNotifier {
 
             product.stock![i] =
                 currentStock.copyWith(quantity: clampedQuantity);
+            _markProductDirty(product);
 
             debugPrint(
                 "📦 Updated stock in product list: ${product.productName}");
 
             if (persistProducts) {
-              _saveProductsToHive();
+              _flushDirtyProducts();
             }
             if (notify) {
               notifyListeners();
@@ -2747,6 +3048,7 @@ class LocalProductProvider extends ChangeNotifier {
           final raw = previous + delta;
           final clamped = raw < 0 ? 0 : raw;
           variants[i] = variants[i].copyWith(quantity: clamped);
+          _markProductDirty(product);
           return;
         }
       }
@@ -2991,7 +3293,7 @@ class LocalProductProvider extends ChangeNotifier {
 
     resetSelectedProduct();
     if (didMutateStock) {
-      _saveProductsToHive();
+      _flushDirtyProducts();
     }
     _saveCartToHive();
     notifyListeners();
@@ -3149,7 +3451,7 @@ class LocalProductProvider extends ChangeNotifier {
     }
 
     if (didMutateStock) {
-      _saveProductsToHive();
+      _flushDirtyProducts();
     }
     _saveCartToHive();
     notifyListeners();
@@ -3206,7 +3508,7 @@ class LocalProductProvider extends ChangeNotifier {
       if (isStockEnabled && quantityToRestore > 0) {
         _restoreStockReservations(
             cartItem, quantityToRestore, "REMOVE_FROM_CART");
-        _saveProductsToHive();
+        _flushDirtyProducts();
       }
 
       _cartItems.removeAt(index);
@@ -3669,7 +3971,7 @@ class LocalProductProvider extends ChangeNotifier {
             decrementAmount,
             "DECREMENT_CART_ITEM",
           );
-          _saveProductsToHive();
+          _flushDirtyProducts();
         }
 
         _cartItems[index].quantity -= decrementAmount;
@@ -3683,7 +3985,7 @@ class LocalProductProvider extends ChangeNotifier {
             _cartItems[index].stockDeducted,
             "DECREMENT_CART_ITEM_REMOVE",
           );
-          _saveProductsToHive();
+          _flushDirtyProducts();
         }
 
         _cartItems.removeAt(index);
@@ -3714,7 +4016,7 @@ class LocalProductProvider extends ChangeNotifier {
               cartItem, cartItem.stockDeducted, "CLEAR_CART");
         }
       }
-      _saveProductsToHive();
+      _flushDirtyProducts();
     }
 
     _cartItems.clear();
@@ -3751,10 +4053,14 @@ class LocalProductProvider extends ChangeNotifier {
 
   /// Resets the local product list and filtered list.
   void resetProducts() {
+    _catalogEpoch++;
+    _dirtyProductIds.clear();
     _products = [];
     _filteredProducts = [];
     _productsByBarcode.clear();
-    _saveProductsToHive();
+    _enqueuePersistence('clear products', () async {
+      await _productsBox.clear();
+    });
     notifyListeners();
   }
 
@@ -3860,7 +4166,7 @@ class LocalProductProvider extends ChangeNotifier {
       _products[productIndex] = updatedProduct;
 
       // Save to Hive
-      _saveProductsToHive();
+      _saveProductToHive(updatedProduct);
 
       // Update filtered products if needed
       refreshProducts();
@@ -3959,7 +4265,7 @@ class LocalProductProvider extends ChangeNotifier {
           _products[productIndex] = updatedProduct;
 
           // Save to Hive
-          _saveProductsToHive();
+          _saveProductToHive(updatedProduct);
 
           // Refresh products
           refreshProducts();
@@ -3977,7 +4283,8 @@ class LocalProductProvider extends ChangeNotifier {
   /// Removes a product from the local product list.
   void deleteProduct(int productId) {
     _products.removeWhere((p) => p.productId == productId);
-    _saveProductsToHive();
+    _dirtyProductIds.remove(productId);
+    _removeProductFromHive(productId);
     refreshProducts();
   }
 
@@ -4355,7 +4662,7 @@ class LocalProductProvider extends ChangeNotifier {
             );
           }
         }
-        _saveProductsToHive();
+        _flushDirtyProducts();
       }
 
       // Clear current cart
@@ -4375,7 +4682,7 @@ class LocalProductProvider extends ChangeNotifier {
       }
 
       if (isStockEnabled) {
-        _saveProductsToHive();
+        _flushDirtyProducts();
       }
 
       // Set current order
@@ -4407,7 +4714,7 @@ class LocalProductProvider extends ChangeNotifier {
             );
           }
         }
-        _saveProductsToHive();
+        _flushDirtyProducts();
       }
 
       _cartItems.clear();
@@ -4880,7 +5187,7 @@ class LocalProductProvider extends ChangeNotifier {
         }
       }
 
-      _saveProductsToHive();
+      _flushDirtyProducts();
     }
 
     if (newQuantity <= 0) {
@@ -4892,7 +5199,7 @@ class LocalProductProvider extends ChangeNotifier {
           _cartItems[index].stockDeducted,
           "SET_CART_ITEM_QUANTITY_REMOVE",
         );
-        _saveProductsToHive();
+        _flushDirtyProducts();
       }
       _cartItems.removeAt(index);
     } else {
@@ -4992,6 +5299,8 @@ class LocalProductProvider extends ChangeNotifier {
       // Prevent an older tenant's queued rewrite from running after the boxes
       // have been cleared for the new tenant.
       await flushPersistence();
+      _catalogEpoch++;
+      _dirtyProductIds.clear();
       // Clear Hive boxes
       await _productsBox.clear();
       debugPrint("  ✅ Cleared products box");

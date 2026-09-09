@@ -101,14 +101,56 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 /// Longest any single startup step may take before we give up on it.
 const Duration _defaultStepTimeout = Duration(seconds: 10);
 
-/// Longest we wait on one Hive box. Hive takes a *blocking* exclusive lock on
-/// `<box>.lock` with no timeout of its own, so without this a lock held by
-/// another process stalls main() forever.
+/// Base wait for one Hive box. Large boxes get more, see [_boxOpenBudget].
+///
+/// Note that a lock held by another process does *not* make the open wait:
+/// Hive calls `RandomAccessFile.lock()` in non-blocking mode, which on Windows
+/// throws `PathAccessException ... lock failed ... errno = 33` immediately.
+/// Lock conflicts are therefore handled by [_openBoxWithRecovery]'s retry
+/// loop, not by this timeout; the timeout only bounds the file read itself.
 const Duration _boxOpenTimeout = Duration(seconds: 8);
 
+/// How long to keep retrying a box whose lock is held by another process.
+/// Covers a previous copy of the app that is still shutting down. Past this
+/// the only explanation is a second running copy, which needs the user.
+const Duration _lockConflictRetryWindow = Duration(seconds: 6);
+const Duration _lockConflictRetryDelay = Duration(milliseconds: 500);
+
+/// Hive reads a non-lazy box completely into memory before `openBox` returns,
+/// so open time grows with file size. A 30k-product catalog is easily a few
+/// hundred MB on disk; on a spinning disk or behind an antivirus scan that is
+/// far more than 8 s. Every 10 MB buys one more second, up to this ceiling.
+const int _boxOpenBytesPerExtraSecond = 10 * 1024 * 1024;
+const Duration _maxBoxOpenTimeout = Duration(seconds: 90);
+
 /// Hard ceiling for the whole sequence. Past this we show the failure screen
-/// rather than leave the user staring at an empty desktop.
-const Duration _startupBudget = Duration(seconds: 60);
+/// rather than leave the user staring at an empty desktop. Sized so the
+/// worst-case product box wait (three tries at [_maxBoxOpenTimeout]) still
+/// reports its own, more specific error first.
+const Duration _startupBudget = Duration(seconds: 300);
+
+/// Boxes the till cannot run without. `LocalProductProvider` grabs these with
+/// `Hive.box()` in its field initializers, so a box that silently failed to
+/// open here would surface later as a dead billing screen with no message.
+/// A failure on one of these goes to the failure screen instead.
+const List<String> _requiredBoxNames = <String>[
+  'products',
+  'cart_items',
+  'saved_orders',
+  'confirmed_orders',
+];
+
+/// Boxes whose absence only degrades the app. They are re-synced from the
+/// server, so an unreadable file is deleted and recreated.
+const List<String> _optionalBoxNames = <String>[
+  'categories',
+  'categories_all',
+  'categories_purchasable',
+  'document_configs',
+];
+
+/// Where Hive keeps its files on this machine. Set by [_initializeHiveStorage].
+String? _hiveDirectoryPath;
 
 /// Non-fatal problems collected during startup, surfaced on the failure screen.
 final List<String> _startupWarnings = <String>[];
@@ -116,9 +158,10 @@ final List<String> _startupWarnings = <String>[];
 void main() async {
   _initializeBinding();
 
-  // Sentry first, so every failure below is reportable.
+  // Sentry first, so every failure below is reportable. Time-boxed like every
+  // other step: nothing that runs before the window is shown may wait forever.
   try {
-    await SentryConfig.init();
+    await SentryConfig.init().timeout(_defaultStepTimeout);
   } catch (e, stackTrace) {
     debugPrint('Sentry init failed: $e\n$stackTrace');
   }
@@ -303,7 +346,33 @@ Future<void> _initializeHiveStorage() async {
   }
 
   Hive.init(hiveBaseDir.path);
+  _hiveDirectoryPath = hiveBaseDir.path;
   debugPrint('📁 Hive directory: ${hiveBaseDir.path}');
+}
+
+File? _hiveBoxFile(String boxName) {
+  final dir = _hiveDirectoryPath;
+  if (kIsWeb || dir == null) return null;
+  return File('$dir/${boxName.toLowerCase()}.hive');
+}
+
+Future<int> _hiveBoxSizeBytes(String boxName) async {
+  try {
+    final file = _hiveBoxFile(boxName);
+    if (file == null || !await file.exists()) return 0;
+    return await file.length();
+  } catch (_) {
+    return 0;
+  }
+}
+
+/// [_boxOpenTimeout] plus one second per 10 MB on disk, capped at
+/// [_maxBoxOpenTimeout].
+Future<Duration> _boxOpenBudget(String boxName) async {
+  final bytes = await _hiveBoxSizeBytes(boxName);
+  final extraSeconds = (bytes / _boxOpenBytesPerExtraSecond).ceil();
+  final budget = _boxOpenTimeout + Duration(seconds: extraSeconds);
+  return budget > _maxBoxOpenTimeout ? _maxBoxOpenTimeout : budget;
 }
 
 void _registerHiveAdapters() {
@@ -326,12 +395,6 @@ void _registerHiveAdapters() {
 }
 
 Future<void> _initializeHiveBoxes() async {
-  // Two quick attempts. The previous 3 attempts x 2s of dead time sat in front
-  // of a window that is still hidden, which is exactly what made a slow start
-  // look like a failed one.
-  const maxRetries = 2;
-  const retryDelay = Duration(milliseconds: 400);
-
   const boxesToResetBeforeInit = ['categories'];
 
   for (final boxName in boxesToResetBeforeInit) {
@@ -342,73 +405,179 @@ Future<void> _initializeHiveBoxes() async {
     );
   }
 
-  final boxNames = [
-    'products',
-    'cart_items',
-    'saved_orders',
-    'confirmed_orders',
-    'categories',
-    'categories_all',
-    'categories_purchasable',
-    'document_configs'
-  ];
+  for (final boxName in _requiredBoxNames) {
+    final budget = await _boxOpenBudget(boxName);
+    await _requiredStartupStep(
+      'open "$boxName" storage',
+      () => _openBoxWithRecovery(
+        boxName,
+        budget: budget,
+        // The product catalog is a cache and is re-synced from the server, so
+        // an unreadable file is replaced. Carts and orders are unsynced sales
+        // and must never be thrown away silently.
+        recreateIfUnreadable: boxName == 'products',
+      ),
+      // Three opens plus the retry pauses and the lock-conflict window.
+      timeout: budget * 3 + _lockConflictRetryWindow + const Duration(seconds: 5),
+    );
+  }
 
-  for (String boxName in boxNames) {
-    int attempts = 0;
-    bool success = false;
+  for (final boxName in _optionalBoxNames) {
+    final budget = await _boxOpenBudget(boxName);
+    await _startupStep(
+      'open "$boxName" storage',
+      () => _openBoxWithRecovery(
+        boxName,
+        budget: budget,
+        recreateIfUnreadable: true,
+      ),
+      timeout: budget * 3 + _lockConflictRetryWindow + const Duration(seconds: 5),
+    );
+  }
+}
 
-    while (attempts < maxRetries && !success) {
-      try {
-        attempts++;
-        debugPrint(
-            '🔄 Attempting to open $boxName box (attempt $attempts/$maxRetries)');
+/// True when [error] means another process holds the box (or its lock file).
+///
+/// Seen in production as `lock failed ... errno = 33` (lock violation) on
+/// `<box>.lock`, and as `Cannot delete file ... errno = 32` (sharing
+/// violation) when Hive tears down a failed open and cannot remove the lock
+/// file the other process still holds.
+bool _isLockConflict(Object error) {
+  if (error is! FileSystemException) return false;
+  final code = error.osError?.errorCode;
+  if (code == 32 || code == 33) return true;
+  final text = '${error.message} ${error.osError?.message ?? ''}'.toLowerCase();
+  return text.contains('lock') ||
+      text.contains('being used by another process') ||
+      (error.path?.toLowerCase().endsWith('.lock') ?? false);
+}
 
-        // Check if box is already open
-        if (Hive.isBoxOpen(boxName)) {
-          debugPrint('✅ Box $boxName is already open');
-          success = true;
-          continue;
-        }
+/// Thrown when another copy of the app keeps a box locked. Carries the
+/// message the failure screen shows to the user.
+class StorageLockedException implements Exception {
+  StorageLockedException(this.boxName, this.cause);
 
-        await _openTypedBox(boxName).timeout(_boxOpenTimeout);
+  final String boxName;
+  final Object cause;
 
-        debugPrint('✅ Successfully opened $boxName box');
-        success = true;
-      } on TimeoutException catch (error, stackTrace) {
-        // Almost always another process holding the box lock. Do not retry: a
-        // second concurrent open would queue behind the same lock, and the
-        // first one may still complete underneath us.
-        debugPrint(
-            '⏱️ Timed out opening $boxName box — is another copy of CLOUDPOS running?');
-        _recordStartupWarning('open "$boxName" storage', error, stackTrace);
-        break;
-      } catch (e) {
-        debugPrint('❌ Failed to open $boxName box (attempt $attempts): $e');
+  @override
+  String toString() =>
+      'Another copy of CLOUDPOS still has the "$boxName" storage open. '
+      'Close it, or end every cloudpos.exe task in Task Manager, then open '
+      'CLOUDPOS again. ($cause)';
+}
 
-        if (attempts >= maxRetries) {
-          debugPrint(
-              '🚨 Max retries reached for $boxName box. Attempting cleanup...');
-          await _cleanupLockFiles(boxName);
+/// Opens [boxName] with three kinds of recovery:
+///
+///  * **Lock held by another process.** Retried for
+///    [_lockConflictRetryWindow] so a previous copy that is still shutting
+///    down can release it. After that a [StorageLockedException] is thrown.
+///    The box is never deleted or recreated on a lock conflict, and the lock
+///    file is never touched: the other process owns it.
+///  * **Other transient error.** Retried once, then once more after clearing
+///    a stale lock file.
+///  * **Unreadable file** (a row whose adapter cast fails, which Hive's
+///    CRC-based crash recovery does not catch). If [recreateIfUnreadable] is
+///    set the box is deleted and recreated so the app can re-sync instead of
+///    failing on every launch.
+///
+/// A timeout is never retried: the underlying open keeps running and a second
+/// call would only queue behind it.
+Future<void> _openBoxWithRecovery(
+  String boxName, {
+  required Duration budget,
+  required bool recreateIfUnreadable,
+}) async {
+  const retryDelay = Duration(milliseconds: 400);
 
-          // Final attempt after cleanup
-          try {
-            await _openTypedBox(boxName).timeout(_boxOpenTimeout);
-            debugPrint('✅ Successfully opened $boxName box after cleanup');
-            success = true;
-          } catch (finalError, stackTrace) {
-            debugPrint(
-                '💥 Critical error: Cannot open $boxName box even after cleanup: $finalError');
-            _recordStartupWarning(
-                'open "$boxName" storage', finalError, stackTrace);
-            // Continue with other boxes instead of crashing the app
-          }
-        } else {
-          // Wait before retrying
-          await Future.delayed(retryDelay);
-        }
-      }
+  if (Hive.isBoxOpen(boxName)) {
+    debugPrint('✅ Box $boxName is already open');
+    return;
+  }
+
+  Future<void> attemptOpen() async {
+    try {
+      await _openTypedBox(boxName).timeout(budget);
+    } on TimeoutException {
+      final sizeMb = (await _hiveBoxSizeBytes(boxName)) / (1024 * 1024);
+      throw TimeoutException(
+        'The "$boxName" storage did not open within ${budget.inSeconds}s '
+        '(${sizeMb.toStringAsFixed(1)} MB on disk). Either the disk is very '
+        'slow or an antivirus scan is holding the file.',
+      );
     }
   }
+
+  Object? lastError;
+  StackTrace? lastStackTrace;
+  final lockConflictsSince = Stopwatch()..start();
+  var lockConflicts = 0;
+  var otherFailures = 0;
+  var clearedLockFile = false;
+
+  while (true) {
+    debugPrint('🔄 Opening $boxName box (budget ${budget.inSeconds}s, '
+        'lock conflicts $lockConflicts, other failures $otherFailures)');
+    try {
+      await attemptOpen();
+      debugPrint('✅ Successfully opened $boxName box');
+      return;
+    } on TimeoutException {
+      rethrow;
+    } catch (error, stackTrace) {
+      lastError = error;
+      lastStackTrace = stackTrace;
+
+      if (_isLockConflict(error)) {
+        lockConflicts++;
+        if (lockConflictsSince.elapsed >= _lockConflictRetryWindow) {
+          debugPrint('🔒 $boxName box is still locked by another process '
+              'after ${lockConflictsSince.elapsed.inSeconds}s: $error');
+          Error.throwWithStackTrace(
+            StorageLockedException(boxName, error),
+            stackTrace,
+          );
+        }
+        debugPrint('🔒 $boxName box is locked by another process; '
+            'waiting for it to be released');
+        await Future<void>.delayed(_lockConflictRetryDelay);
+        continue;
+      }
+
+      otherFailures++;
+      debugPrint(
+          '❌ Failed to open $boxName box (failure $otherFailures): $error');
+      if (otherFailures == 1) {
+        await Future<void>.delayed(retryDelay);
+        continue;
+      }
+      if (!clearedLockFile) {
+        clearedLockFile = true;
+        debugPrint(
+            '🧹 Clearing a possible stale lock for $boxName and retrying');
+        await _cleanupLockFiles(boxName);
+        continue;
+      }
+      break;
+    }
+  }
+
+  if (!recreateIfUnreadable) {
+    Error.throwWithStackTrace(lastError, lastStackTrace);
+  }
+
+  // The file is unreadable. Report it, then start over with an empty box.
+  debugPrint('🚨 "$boxName" storage is unreadable; deleting and recreating: '
+      '$lastError');
+  _startupWarnings.add(
+      'the "$boxName" cache was unreadable and has been reset — $lastError');
+  unawaited(_reportStartupFailure(
+    StartupStepException('read "$boxName" storage (reset)', lastError),
+    lastStackTrace,
+  ));
+  await Hive.deleteBoxFromDisk(boxName);
+  await attemptOpen();
+  debugPrint('✅ Recreated $boxName box');
 }
 
 Future<void> _resetBoxOnDisk(String boxName) async {
@@ -467,9 +636,11 @@ Future<void> _cleanupLockFiles(String boxName) async {
   }
 
   try {
-    final supportDir = await getApplicationSupportDirectory();
-    final hiveBaseDir = Directory('${supportDir.path}/epos/hive_data');
-    final lockFile = File('${hiveBaseDir.path}/$boxName.lock');
+    final dir = _hiveDirectoryPath;
+    if (dir == null) {
+      return;
+    }
+    final lockFile = File('$dir/${boxName.toLowerCase()}.lock');
 
     if (await lockFile.exists()) {
       debugPrint('🧹 Attempting to remove stale lock file: ${lockFile.path}');
@@ -537,8 +708,10 @@ class StartupFailureApp extends StatelessWidget {
                   const SizedBox(height: 12),
                   const Text(
                     'If CLOUDPOS is already running, close it — or end the '
-                    'cloudpos.exe task — and open it again. If this keeps '
-                    'happening, send the details below to support.',
+                    'cloudpos.exe task — and open it again. If the local '
+                    'storage is large or the disk is slow, wait a minute '
+                    'before retrying. If this keeps happening, send the '
+                    'details below to support.',
                     style: TextStyle(fontSize: 14, height: 1.4),
                   ),
                   const SizedBox(height: 20),
