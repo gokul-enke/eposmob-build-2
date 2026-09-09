@@ -9,6 +9,7 @@
 #include "flutter_window.h"
 #include "utils.h"
 #include "startup_window.h"
+#include "app_restart.h"
 
 namespace {
 
@@ -145,13 +146,17 @@ void PromptVCRuntimeInstall() {
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
+  std::vector<std::string> command_line_arguments = GetCommandLineArguments();
+  int restart_exit_code = EXIT_FAILURE;
+  // Helpers must run before the single-instance gate and Flutter/Hive startup.
+  if (RunCloudPosRestartHelper(command_line_arguments, &restart_exit_code)) {
+    return restart_exit_code;
+  }
   // Check for Visual C++ Redistributable before anything else
   if (!IsVCRuntimeInstalled()) {
     PromptVCRuntimeInstall();
     return EXIT_FAILURE;
   }
-
-  std::vector<std::string> command_line_arguments = GetCommandLineArguments();
 
   // Only one copy may run per Windows session. A second copy points at the
   // same Hive directory and fights the first one for its box locks, which

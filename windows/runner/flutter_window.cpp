@@ -1,6 +1,8 @@
 #include "flutter_window.h"
 
 #include <optional>
+#include <flutter/standard_method_codec.h>
+#include "app_restart.h"
 
 #include "flutter/generated_plugin_registrant.h"
 
@@ -26,6 +28,18 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
+  restart_channel_ = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+      flutter_controller_->engine()->messenger(), "cloudpos/lifecycle",
+      &flutter::StandardMethodCodec::GetInstance());
+  restart_channel_->SetMethodCallHandler([](const auto& call, auto result) {
+    if (call.method_name() != "restart") {
+      result->NotImplemented();
+    } else if (BeginCloudPosRestart()) {
+      result->Success();
+    } else {
+      result->Error("restart_failed", "Windows couldn't start the restart helper.");
+    }
+  });
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
@@ -45,6 +59,7 @@ bool FlutterWindow::OnCreate() {
 void FlutterWindow::OnDestroy() {
   RemovePropW(GetHandle(), L"CLOUDPOS.ReadyWindow");
   RemovePropW(GetHandle(), L"CLOUDPOS.ApplicationWindow");
+  restart_channel_.reset();
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }

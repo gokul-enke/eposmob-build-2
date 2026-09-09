@@ -7,6 +7,10 @@ String recoveryText(String text) =>
         : text;
 
 const _arabic = <String, String>{
+  'Restart CloudPOS': 'إعادة تشغيل CloudPOS',
+  'Restarting CloudPOS…': 'جارٍ إعادة تشغيل CloudPOS…',
+  'Could not restart CloudPOS. Close it and open it again.':
+      'تعذّرت إعادة تشغيل CloudPOS. أغلق التطبيق وافتحه مجددًا.',
   'Order confirmation wasn’t received. You can retry. The earlier attempt is saved in Sales → Orders to review.':
       'لم يصل تأكيد الطلب. يمكنك إعادة المحاولة. المحاولة السابقة محفوظة في المبيعات ← طلبات تحتاج إلى مراجعة.',
   'Remove review log': 'حذف سجل المراجعة',

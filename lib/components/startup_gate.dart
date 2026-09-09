@@ -12,10 +12,12 @@ class StartupGate extends StatefulWidget {
     super.key,
     required this.initialize,
     required this.onClose,
+    this.onRestart,
   });
 
   final Future<Widget> Function(ValueChanged<String> reportStage) initialize;
   final VoidCallback onClose;
+  final Future<void> Function()? onRestart;
 
   @override
   State<StartupGate> createState() => _StartupGateState();
@@ -27,6 +29,28 @@ class _StartupGateState extends State<StartupGate> {
   Widget? _application;
   Timer? _slowTimer;
   bool _slow = false;
+  bool _restarting = false;
+  bool _restartFailed = false;
+
+  Future<void> _restart() async {
+    if (_restarting || widget.onRestart == null) return;
+    setState(() {
+      _restarting = true;
+      _restartFailed = false;
+    });
+    try {
+      await widget.onRestart!();
+      // The native helper closes this process; don't start initialization again
+      // inside a process that may still own partially opened database handles.
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _restarting = false;
+          _restartFailed = true;
+        });
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -129,14 +153,30 @@ class _StartupGateState extends State<StartupGate> {
                           children: [SelectableText('Stage: $_stage\n$_error')],
                         ),
                         const SizedBox(height: 20),
+                        if (_restartFailed) ...[
+                          Text(
+                              recoveryText(
+                                  'Could not restart CloudPOS. Close it and open it again.'),
+                              key: const ValueKey('startup-restart-error'),
+                              textAlign: TextAlign.center),
+                          const SizedBox(height: 12),
+                        ],
                         Wrap(spacing: 12, runSpacing: 12, children: [
+                          if (widget.onRestart != null)
+                            FilledButton.icon(
+                                key: const ValueKey('startup-restart'),
+                                onPressed: _restarting ? null : _restart,
+                                icon: const Icon(Icons.restart_alt),
+                                label: Text(recoveryText(_restarting
+                                    ? 'Restarting CloudPOS…'
+                                    : 'Restart CloudPOS'))),
                           OutlinedButton(
                             onPressed: () => Clipboard.setData(ClipboardData(
                                 text:
                                     'CloudPOS startup\nStage: $_stage\n$_error')),
                             child: Text(recoveryText('Copy error details')),
                           ),
-                          FilledButton(
+                          OutlinedButton(
                               onPressed: widget.onClose,
                               child: Text(recoveryText('Close CloudPOS'))),
                         ]),

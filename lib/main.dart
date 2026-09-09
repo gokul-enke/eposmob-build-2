@@ -156,7 +156,13 @@ ValueChanged<String>? _reportStartupStage;
 
 void main() {
   _initializeBinding();
-  runApp(StartupGate(initialize: _bootstrap, onClose: () => exit(1)));
+  runApp(StartupGate(
+      initialize: _bootstrap,
+      onClose: () => exit(1),
+      onRestart: !kIsWeb && Platform.isWindows
+          ? () => const MethodChannel('cloudpos/lifecycle')
+              .invokeMethod<void>('restart')
+          : null));
 }
 
 Future<Widget> _bootstrap(ValueChanged<String> reportStage) async {

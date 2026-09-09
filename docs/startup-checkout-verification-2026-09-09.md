@@ -2,6 +2,16 @@
 
 Baseline: 1.0.67+77. Implementation remains uncommitted; no version bump, installer publication or client deployment was performed.
 
+## Startup failure: Restart CloudPOS
+
+The Windows startup failure screen now offers **Restart CloudPOS**. A native helper verifies the requesting process's executable path, Windows session and creation time, then closes matching CloudPOS processes from the same installation/session. It requests normal window closure, allows four seconds for shutdown, and force-stops verified processes that remain. It waits for process exit before launching one replacement. It does not delete local data or kill processes based only on their name. Helper errors explain how to reopen manually. Other platforms keep the existing Close action.
+
+Runtime verification used two real QA app processes (9392 and 6496) with the same executable and isolated demo storage. The second failed startup after a genuine products.lock conflict. Marionette clicked the actual restart button. Both old processes exited; a fresh process (19932) had a CLOUDPOS window and Responding=true. A dummy cloudpos.exe under a different path (20516) remained alive and was then explicitly cleaned up. No server orders were created in this test.
+
+The Windows debug build passed. Four startup widget tests passed, including one restart per click sequence and a launch error retaining Close/retry controls. The test also found and fixed the existing UTF-16 conversion retaining its null terminator, which prevented runner command-line flags from matching; the real multi-instance and restart-helper paths now executed successfully. A startup error caused by damaged data or missing dependencies can still recur after restart; this action addresses process state, not data repair. Release packaging/deployment are still pending.
+
+The helper waits after forced termination because that Windows operation is asynchronous ([Microsoft documentation](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminateprocess)).
+
 ## Latest behavior: explicit retries and manual reconciliation
 
 At the user's request, an uncertain result no longer blocks the cashier from pressing Confirm again. Each explicit retry creates its own durable attempt record. The 20-second response deadline and active-request click guard remain. Known confirmed sales still require recovery/cleanup rather than being submitted again. No automatic retry or backend duplicate protection was added.
