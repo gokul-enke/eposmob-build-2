@@ -386,7 +386,9 @@ class OrderSubmissionCoordinator extends ChangeNotifier {
         });
         return {...data, 'http_status': response.statusCode};
       }
-    } catch (_) {
+    } catch (error) {
+      debugPrint('[Checkout] response_unverified type=${error.runtimeType} '
+          'request_ms=${clock.elapsedMilliseconds}');
       // Keep the durable pending record on any inconclusive result.
     }
     if (_activeAttemptId == id && _records.containsKey(id)) {

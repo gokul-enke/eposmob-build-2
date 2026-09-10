@@ -1,4 +1,5 @@
 import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 
 /// Debug-only billing logs. Entirely stripped in release builds.
 void billingDebugLog(String message) {
@@ -17,15 +18,13 @@ void billingDebugCheckout(
   bool? hasPayment,
   String? errorType,
 }) {
-  assert(() {
-    final parts = <String>[
-      '[BillingCheckout] $operation: $phase',
-      if (itemCount != null) 'items=$itemCount',
-      if (hasCustomer != null) 'hasCustomer=$hasCustomer',
-      if (hasPayment != null) 'hasPayment=$hasPayment',
-      if (errorType != null) 'error=$errorType',
-    ];
-    developer.log(parts.join(' | '), name: 'billing');
-    return true;
-  }());
+  final parts = <String>[
+    '[BillingCheckout] $operation: $phase',
+    if (itemCount != null) 'items=$itemCount',
+    if (hasCustomer != null) 'hasCustomer=$hasCustomer',
+    if (hasPayment != null) 'hasPayment=$hasPayment',
+    if (errorType != null) 'error=$errorType',
+  ];
+  // Safe lifecycle fields remain available in release builds for support.
+  debugPrint(parts.join(' | '));
 }

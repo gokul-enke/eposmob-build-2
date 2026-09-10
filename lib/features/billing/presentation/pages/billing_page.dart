@@ -6927,7 +6927,10 @@ class BillingPageState extends State<BillingPage>
               canPrompt: autoPrintSuccess,
               printAction: printOnce,
             );
-          } catch (error) {}
+          } catch (error) {
+            debugPrint(
+                '[BillingPrint] receipt_failed type=${error.runtimeType}');
+          }
 
           // Clear the mobile number after successful save
           setState(() {
