@@ -15,7 +15,7 @@ import 'test_support/memory_submission_store.dart';
 void main() {
   for (final language in ['en', 'ar']) {
     testWidgets(
-        'narrow $language recovery stays readable and holds input only while submitting',
+        'narrow $language recovery stays readable without globally blocking input',
         (tester) async {
       tester.view.physicalSize = const Size(360, 800);
       tester.view.devicePixelRatio = 1;
@@ -61,7 +61,7 @@ void main() {
       await tester.pump();
       expect(coordinator.phase, SubmissionPhase.submitting);
       await tester.tap(find.text('Edit cart'), warnIfMissed: false);
-      expect(edits, 0);
+      expect(edits, 1);
       await tester.pump(const Duration(seconds: 5));
       expect(coordinator.phase, SubmissionPhase.slow);
       expect(find.byKey(const ValueKey('submission-notice')), findsNothing);
@@ -78,7 +78,7 @@ void main() {
       expect(find.byKey(const ValueKey('submission-notice')), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.tap(find.text('Edit cart'));
-      expect(edits, 1);
+      expect(edits, 2);
       response.complete(http.Response('{"order_id":77}', 201));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('submission-notice')), findsNothing);

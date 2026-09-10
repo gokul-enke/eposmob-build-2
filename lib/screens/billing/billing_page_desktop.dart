@@ -1,3 +1,5 @@
+import 'package:pos_machine/services/order_submission_coordinator.dart';
+import 'package:pos_machine/components/order_submission_guard.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -636,6 +638,7 @@ class BillingPageState extends State<BillingPage>
   }
 
   void _handleKeyPress(KeyEvent event) {
+    if (OrderSubmissionCoordinator.instance.isBusy) return;
     if (event is KeyDownEvent) {
       try {
         final billingProvider =
@@ -656,6 +659,7 @@ class BillingPageState extends State<BillingPage>
   }
 
   Future<void> processBarcode(String barcode) async {
+    if (OrderSubmissionCoordinator.instance.isBusy) return;
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
     // If the input is empty, do nothing. Debounce & processing flags are handled by the provider.
@@ -795,7 +799,15 @@ class BillingPageState extends State<BillingPage>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // Required for AutomaticKeepAliveClientMixin
+    super.build(context);
+    return OrderSubmissionGuard(
+        busy: context.watch<BillingProvider>().isLoadingCreateOrder ||
+            context.watch<BillingProvider>().isLoadingConfirmOrder,
+        child: _buildPage(context));
+  }
+
+  Widget _buildPage(BuildContext context) {
+    // Required for AutomaticKeepAliveClientMixin
 
     // Quick fix: if we are editing an order and it hasn't been rehydrated after navigation, rehydrate now
     final currentOrder =

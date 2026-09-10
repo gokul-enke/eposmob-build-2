@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_machine/helpers/keyboard_dispatcher.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
+import 'package:pos_machine/providers/barcode_provider.dart';
+import 'package:pos_machine/services/order_submission_coordinator.dart';
 import 'package:provider/provider.dart';
 
 void main() {
@@ -75,6 +77,69 @@ void main() {
   });
 
   group('KeyboardProvider focus auto-show', () {
+    testWidgets('focused dialog text still accepts keys during checkout',
+        (tester) async {
+      final keyboard = KeyboardProvider(enablePersistence: false)..featureOn();
+      final controller = TextEditingController();
+      final navigator = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(ChangeNotifierProvider<KeyboardProvider>.value(
+        value: keyboard,
+        child: KeyboardDispatcher(
+          child: MaterialApp(
+            navigatorKey: navigator,
+            home: const Scaffold(body: Text('Billing')),
+          ),
+        ),
+      ));
+      final finish = OrderSubmissionCoordinator.instance.holdCheckoutUi();
+      addTearDown(finish);
+      showDialog<void>(
+        context: navigator.currentContext!,
+        builder: (_) => AlertDialog(
+          title: const Text('Receipt details'),
+          content: TextField(autofocus: true, controller: controller),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+      expect(controller.text, 'a');
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.text('Receipt details'), findsNothing);
+      finish();
+      await tester.pumpWidget(const SizedBox());
+      keyboard.dispose();
+      controller.dispose();
+    });
+
+    testWidgets('busy checkout drops scans without replaying a partial prefix',
+        (tester) async {
+      final barcode = BarcodeProvider();
+      final received = <String>[];
+      final subscription = barcode.barcodeStream.listen(received.add);
+      addTearDown(subscription.cancel);
+      await tester.pumpWidget(ChangeNotifierProvider<BarcodeProvider>.value(
+        value: barcode,
+        child: const KeyboardDispatcher(
+          child: MaterialApp(home: Scaffold(body: Text('Billing'))),
+        ),
+      ));
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+      final finish = OrderSubmissionCoordinator.instance.holdCheckoutUi();
+      addTearDown(finish);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyB);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      expect(received, isEmpty);
+      finish();
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      expect(received, ['C']);
+      await tester.pumpWidget(const SizedBox());
+      barcode.dispose();
+    });
+
     testWidgets('covers TextField and TextFormField without per-field wiring',
         (tester) async {
       final keyboardProvider = KeyboardProvider(enablePersistence: false)

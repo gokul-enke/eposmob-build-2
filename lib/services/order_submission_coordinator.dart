@@ -61,6 +61,22 @@ class OrderSubmissionCoordinator extends ChangeNotifier {
   Future<void>? _hydration;
   Future<void>? _recordChanges;
   bool _busy = false;
+  int _uiActions = 0;
+
+  /// Keep billing alive through its success/printing callback, beyond the POST.
+  /// This lease does not count as a second request in submit().
+  VoidCallback holdCheckoutUi() {
+    _uiActions++;
+    notifyListeners();
+    var released = false;
+    return () {
+      if (released) return;
+      released = true;
+      _uiActions--;
+      notifyListeners();
+    };
+  }
+
   String? _scope;
   String? _activeAttemptId;
   final Set<String> _dismissed = {};
@@ -131,7 +147,8 @@ class OrderSubmissionCoordinator extends ChangeNotifier {
         notifyListeners();
       });
 
-  bool get isBusy => _busy;
+  bool get isBusy => _busy || _uiActions > 0;
+
   bool isCartAwaitingReview(String cartId) => _records.values.any((record) =>
       record['scope'] == _scope &&
       record['state'] == 'pending' &&

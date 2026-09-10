@@ -1,3 +1,5 @@
+import 'package:pos_machine/components/order_submission_guard.dart';
+import 'package:pos_machine/services/order_submission_coordinator.dart';
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
@@ -1188,6 +1190,10 @@ class BillingPageState extends State<BillingPage>
       return false;
     }
 
+    // The receipt dialog can remain open while the checkout UI lease is held.
+    // Only suppress billing input after the route above has had ownership.
+    if (OrderSubmissionCoordinator.instance.isBusy) return true;
+
     if (event.logicalKey == LogicalKeyboardKey.tab &&
         !HardwareKeyboard.instance.isAltPressed &&
         _barcodeNode.hasFocus) {
@@ -1429,6 +1435,7 @@ class BillingPageState extends State<BillingPage>
   }
 
   Future<void> processBarcode(String barcode) async {
+    if (OrderSubmissionCoordinator.instance.isBusy) return;
     _enqueueBarcode(barcode);
   }
 
@@ -1684,7 +1691,13 @@ class BillingPageState extends State<BillingPage>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // Required for AutomaticKeepAliveClientMixin
+    super.build(context);
+    return OrderSubmissionGuard(
+        busy: _isOrderActionBusy, child: _buildPage(context));
+  }
+
+  Widget _buildPage(BuildContext context) {
+    // Required for AutomaticKeepAliveClientMixin
     context.watch<BillingProvider>().hasInternet;
 
     // Quick fix: if we are editing an order and it hasn't been rehydrated after navigation, rehydrate now
@@ -6650,6 +6663,8 @@ class BillingPageState extends State<BillingPage>
     setState(() {
       isLoadingCreateOrder = true;
     });
+    final releaseCheckoutUi =
+        OrderSubmissionCoordinator.instance.holdCheckoutUi();
     try {
       if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(
               context) ||
@@ -6979,6 +6994,7 @@ class BillingPageState extends State<BillingPage>
             message:
                 'We couldn’t complete the checkout screen. Review the order status before billing again.');
     } finally {
+      releaseCheckoutUi();
       // Set loading to false at the end of the function
       if (mounted)
         setState(() {
@@ -7013,6 +7029,8 @@ class BillingPageState extends State<BillingPage>
     setState(() {
       isLoadingConfirmOrder = true;
     });
+    final releaseCheckoutUi =
+        OrderSubmissionCoordinator.instance.holdCheckoutUi();
     try {
       if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(
               context) ||
@@ -7207,6 +7225,7 @@ class BillingPageState extends State<BillingPage>
             message:
                 'We couldn’t complete the checkout screen. Review the order status before billing again.');
     } finally {
+      releaseCheckoutUi();
       // Set loading to false at the end of the function
       if (mounted)
         setState(() {

@@ -15,7 +15,7 @@ import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 
-/// Keeps submission scope and protects the active cart during checkout.
+/// Keeps submission scope; input protection belongs to billing.
 /// Billing owns its loading state and snackbar; recovery lives in Sales.
 class OrderSubmissionStatus extends StatefulWidget {
   const OrderSubmissionStatus(
@@ -54,12 +54,7 @@ class _OrderSubmissionStatusState extends State<OrderSubmissionStatus> {
   }
 
   @override
-  Widget build(BuildContext context) => ListenableBuilder(
-      listenable: coordinator,
-      builder: (context, _) => ExcludeFocus(
-          excluding: coordinator.isBusy,
-          child: AbsorbPointer(
-              absorbing: coordinator.isBusy, child: widget.child)));
+  Widget build(BuildContext context) => widget.child;
 }
 
 class OrdersToReviewPage extends StatefulWidget {
