@@ -13,6 +13,7 @@ import '../../../providers/document_config_provider.dart';
 import '../../../providers/invoice_provider.dart';
 import '../../../providers/whatsapp_provider.dart';
 import '../../../providers/store_session_provider.dart';
+import '../../../models/executive.dart';
 import '../../../resources/color_manager.dart';
 import '../../../resources/app_url.dart';
 import '../../../components/build_dialog_box.dart';
@@ -29,6 +30,11 @@ import 'pdf_builders/supplier_voucher_template_pdf_builder.dart';
 
 /// Reusable helper to share invoices and receipts.
 class ShareHelper {
+  static Future<Store?> _resolvedActiveStore(BuildContext context) {
+    return Provider.of<StoreSessionProvider>(context, listen: false)
+        .resolveActiveStore();
+  }
+
   /// Shows the share options bottom sheet.
   ///
   /// Options:
@@ -224,9 +230,8 @@ class ShareHelper {
               'SAR';
 
       // Get company address from store session if available
-      final storeSession =
-          Provider.of<StoreSessionProvider>(context, listen: false);
-      final companyAddress = storeSession.activeStore?.location;
+      final store = await _resolvedActiveStore(context);
+      final companyAddress = store?.location;
 
       // 4. Generate the Invoice template PDF
       final File? pdfFile = await InvoiceTemplatePdfBuilder.generate(
@@ -685,9 +690,8 @@ class ShareHelper {
               'SAR';
 
       // Get company address from store session if available
-      final storeSession =
-          Provider.of<StoreSessionProvider>(context, listen: false);
-      final companyAddress = storeSession.activeStore?.location;
+      final store = await _resolvedActiveStore(context);
+      final companyAddress = store?.location;
 
       // 3. Generate the Receipt template PDF
       final File? pdfFile = await ReceiptTemplatePdfBuilder.generate(
@@ -900,9 +904,8 @@ class ShareHelper {
                   ?.currency ??
               'SAR';
 
-      final storeSession =
-          Provider.of<StoreSessionProvider>(context, listen: false);
-      final companyAddress = storeSession.activeStore?.location;
+      final store = await _resolvedActiveStore(context);
+      final companyAddress = store?.location;
 
       final File? pdfFile = await ReceiptTemplatePdfBuilder.generate(
         details: receipt,
@@ -1122,9 +1125,9 @@ class ShareHelper {
           ?.currency ?? 'SAR';
 
       // 3. Fetch store details for billing
-      final storeSession = Provider.of<StoreSessionProvider>(context, listen: false);
-      final companyName = storeSession.activeStore?.storeName ?? 'Store';
-      final companyAddress = storeSession.activeStore?.location;
+      final store = await _resolvedActiveStore(context);
+      final companyName = store?.storeName ?? 'Store';
+      final companyAddress = store?.location;
 
       // 4. Generate A4 template PDF
       final File? pdfFile = await CustomerVoucherTemplatePdfBuilder.generate(
@@ -1252,9 +1255,9 @@ class ShareHelper {
           ?.currency ?? 'SAR';
 
       // 3. Fetch store details for billing
-      final storeSession = Provider.of<StoreSessionProvider>(context, listen: false);
-      final companyName = storeSession.activeStore?.storeName ?? 'Store';
-      final companyAddress = storeSession.activeStore?.location;
+      final store = await _resolvedActiveStore(context);
+      final companyName = store?.storeName ?? 'Store';
+      final companyAddress = store?.location;
 
       // 4. Generate PDF
       final File? pdfFile = await CustomerVoucherTemplatePdfBuilder.generate(
@@ -1476,9 +1479,9 @@ class ShareHelper {
           ?.currency ?? 'SAR';
 
       // 3. Fetch store details for billing
-      final storeSession = Provider.of<StoreSessionProvider>(context, listen: false);
-      final companyName = storeSession.activeStore?.storeName ?? 'Store';
-      final companyAddress = storeSession.activeStore?.location;
+      final store = await _resolvedActiveStore(context);
+      final companyName = store?.storeName ?? 'Store';
+      final companyAddress = store?.location;
 
       // 4. Generate A4 template PDF
       final File? pdfFile = await SupplierVoucherTemplatePdfBuilder.generate(
@@ -1604,9 +1607,9 @@ class ShareHelper {
           ?.currency ?? 'SAR';
 
       // 3. Fetch store details for billing
-      final storeSession = Provider.of<StoreSessionProvider>(context, listen: false);
-      final companyName = storeSession.activeStore?.storeName ?? 'Store';
-      final companyAddress = storeSession.activeStore?.location;
+      final store = await _resolvedActiveStore(context);
+      final companyName = store?.storeName ?? 'Store';
+      final companyAddress = store?.location;
 
       // 4. Generate PDF
       final File? pdfFile = await SupplierVoucherTemplatePdfBuilder.generate(

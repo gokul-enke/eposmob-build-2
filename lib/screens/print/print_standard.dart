@@ -32,12 +32,37 @@ import 'package:pos_machine/screens/print/print_unit_helper.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 import 'package:pos_machine/screens/print/receipt_customer_segment.dart';
 import 'package:pos_machine/screens/print/pdf_share_settings.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'logo_loader.dart';
 
 class StandardPrinter {
   final BuildContext context;
 
   StandardPrinter(this.context);
+
+  Future<({String? name, String? location, String? phone, String? email})>
+      _contactFromActiveStore({
+    String? storeName,
+    String? storeLocation,
+    String? storePhone,
+    String? storeEmail,
+  }) async {
+    final store =
+        await Provider.of<StoreSessionProvider>(context, listen: false)
+            .resolveActiveStore();
+    String? pick(String? passed, String? saved) {
+      final trimmed = passed?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) return passed;
+      return saved;
+    }
+
+    return (
+      name: pick(storeName, store?.storeName),
+      location: pick(storeLocation, store?.location),
+      phone: pick(storePhone, store?.phone),
+      email: pick(storeEmail, store?.email),
+    );
+  }
 
   // Removed _maskPhone - now using StringHelper.maskStringShowLast4
 
@@ -172,7 +197,14 @@ class StandardPrinter {
         return;
       }
 
-      // Load Logo if enabled
+      final storeContact = await _contactFromActiveStore(
+        storeLocation: storeLocation,
+        storePhone: storePhone,
+        storeEmail: storeEmail,
+      );
+      storeLocation = storeContact.location;
+      storePhone = storeContact.phone;
+      storeEmail = storeContact.email;
       pw.MemoryImage? logoImage;
       if (billDocumentConfig.showLogo == 1) {
         debugPrint(
@@ -2814,6 +2846,12 @@ class StandardPrinter {
       final zatcaCompanyName = await sharedPrefProvider.getZatcaCompanyName();
 
       final bankProvider = Provider.of<BankProvider>(context, listen: false);
+      final storeContact = await _contactFromActiveStore(
+        storeName: storeName,
+        storeLocation: storeLocation,
+        storePhone: storePhone,
+        storeEmail: storeEmail,
+      );
 
       final params = ReceiptLayoutParams(
         context: context,
@@ -2854,10 +2892,10 @@ class StandardPrinter {
         hideDefaultCustomerPhone: hideDefaultCustomerPhone,
         netExcTax: netExcTax,
         bankDetails: bankProvider.banks,
-        storeName: storeName,
-        storeLocation: storeLocation,
-        storePhone: storePhone,
-        storeEmail: storeEmail,
+        storeName: storeContact.name,
+        storeLocation: storeContact.location,
+        storePhone: storeContact.phone,
+        storeEmail: storeContact.email,
       );
 
       // Build the themed PDF via the same factory used by the print flow.
@@ -2931,6 +2969,15 @@ class StandardPrinter {
         debugPrint("ERROR: Bill document configuration not loaded yet.");
         return null;
       }
+
+      final storeContact = await _contactFromActiveStore(
+        storeLocation: storeLocation,
+        storePhone: storePhone,
+        storeEmail: storeEmail,
+      );
+      storeLocation = storeContact.location;
+      storePhone = storeContact.phone;
+      storeEmail = storeContact.email;
 
       final displayConfig = billDocumentConfig.displayConfiguration?.options;
 
