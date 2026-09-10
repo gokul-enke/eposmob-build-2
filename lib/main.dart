@@ -238,9 +238,7 @@ Future<void> _initializeApp() async {
   );
   _startupStepSync('register storage adapters', _registerHiveAdapters);
   await _initializeHiveBoxes();
-  await _requiredStartupStep('open order recovery storage', () async {
-    await Hive.openBox('order_submissions');
-  });
+  await openOrderRecoveryStorage();
 
   _startupStepSync('load time zones', tz.initializeTimeZones);
   await _startupStep('load translations', LocalizationService.init);
@@ -260,6 +258,23 @@ Future<void> _initializeApp() async {
   await _startupStep(
     'load .env configuration',
     () => dotenv.load(fileName: '.env'),
+  );
+}
+
+/// Exercises the production durable recovery open path in disk regression tests.
+@visibleForTesting
+Future<void> openOrderRecoveryStorage() async {
+  const recoveryBox = 'order_submissions';
+  final recoveryBudget = await _boxOpenBudget(recoveryBox);
+  await _requiredStartupStep(
+    'open order recovery storage',
+    () => _openBoxWithRecovery(recoveryBox,
+        budget: recoveryBudget,
+        // Contains uncertain sales and the cart identity, not disposable cache.
+        recreateIfUnreadable: false),
+    timeout: recoveryBudget * 3 +
+        _lockConflictRetryWindow +
+        const Duration(seconds: 5),
   );
 }
 
@@ -639,6 +654,9 @@ Future<void> _resetBoxOnDisk(String boxName) async {
 /// boxes were never reopened after a cleanup.
 Future<void> _openTypedBox(String boxName) async {
   switch (boxName) {
+    case 'order_submissions':
+      await Hive.openBox(boxName);
+      break;
     case 'products':
       await Hive.openBox<HiveProduct>(boxName);
       break;
