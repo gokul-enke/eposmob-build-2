@@ -33,6 +33,38 @@ void main() {
     coordinator = OrderSubmissionCoordinator(store: store);
   });
 
+  test('stock refresh never removes a log, including failure and repeat',
+      () async {
+    await submit(() async => http.Response('unavailable', 503));
+    final id = coordinator.ordersToReview.single['id'] as String;
+    store.failRemovals = true;
+    await expectLater(
+        coordinator.reconcileStock(id, (_) async {
+          throw StateError('disk unavailable');
+        }),
+        throwsStateError);
+    expect(coordinator.isBusy, isFalse);
+    for (var i = 0; i < 2; i++) {
+      await coordinator.reconcileStock(id, (current) async {
+        expect(current(), isTrue);
+        expect(coordinator.isBusy, isTrue);
+      });
+    }
+    expect(store.records.containsKey(id), isTrue);
+  });
+
+  test('stock refresh invalidates its scope check when the store changes',
+      () async {
+    await submit(() async => http.Response('unavailable', 503));
+    final id = coordinator.ordersToReview.single['id'] as String;
+    await coordinator.reconcileStock(id, (current) async {
+      coordinator.selectScope('different-store');
+      expect(current(), isFalse);
+    });
+    expect(store.records.containsKey(id), isTrue);
+    expect(coordinator.isBusy, isFalse);
+  });
+
   testWidgets(
       'persists before POST, returns fast success and awaits durable cleanup before removing record',
       (tester) async {

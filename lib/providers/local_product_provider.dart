@@ -2339,8 +2339,12 @@ class LocalProductProvider extends ChangeNotifier {
     List<GetProduct> products, {
     required Set<int> deletedProductIds,
     Set<int>? changedProductIds,
+    bool Function()? isCurrent,
   }) async {
     await hydrated;
+    if (isCurrent != null && !isCurrent()) {
+      throw StateError('The active store changed before stock could be applied.');
+    }
     final touchedProductIds = <int>{};
     final authoritative = products
         .where((product) =>

@@ -9,8 +9,22 @@ import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/services/order_submission_coordinator.dart';
+import 'package:pos_machine/services/review_stock_reconciliation.dart';
+import 'package:pos_machine/features/realtime_sync/data/realtime_entity_api.dart';
+import 'package:pos_machine/features/realtime_sync/domain/realtime_sync_models.dart';
 
 import 'test_support/hive_test_teardown.dart';
+
+class _ReviewCatalogApi extends RealtimeEntityApi {
+  _ReviewCatalogApi(this.load);
+  final Future<RealtimeCatalogSnapshot> Function() load;
+  @override
+  Future<RealtimeCatalogSnapshot> fetchCatalog(RealtimeSyncSession session,
+          {String? updatedFrom,
+          String? updatedTo,
+          bool allowFullFallback = true}) =>
+      load();
+}
 
 /// Covers the Hive persistence contract of [LocalProductProvider]:
 ///
@@ -165,6 +179,97 @@ void main() {
       provider.deleteProduct(1);
       await provider.flushPersistence();
       expect(productsBox().keys.toSet(), {2});
+    });
+  });
+
+  group('review stock reconciliation', () {
+    const session = RealtimeSyncSession(
+        backendBaseUrl: 'https://example.invalid',
+        companyId: 1,
+        storeId: 1,
+        tenantApiKey: 'test',
+        accessToken: 'test');
+    test(
+        'repeated refresh replaces stale quantities and preserves active reservations',
+        () async {
+      final provider = LocalProductProvider();
+      await provider.hydrated;
+      addTearDown(provider.dispose);
+      provider.setStockEnabled(true);
+      provider.initializeProducts([makeProduct(1)]);
+      final product = provider.getProductById(1)!;
+      expect(
+          provider.addToCart(
+              product: product,
+              quantity: 2,
+              selectedStock: product.stock!.first),
+          isTrue);
+      await provider.flushPersistence();
+      final api = _ReviewCatalogApi(() async => RealtimeCatalogSnapshot(
+          products: [makeProduct(1, stockQuantity: 15)],
+          deletedProductIds: {}));
+      addTearDown(api.close);
+      for (var i = 0; i < 2; i++) {
+        await ReviewStockReconciliation().refresh(
+            session: session,
+            products: provider,
+            isCurrent: () => true,
+            api: api);
+        expect(provider.getProductById(1)!.stock!.first.quantity, 13);
+        expect(storedStockQuantity(1), 13);
+      }
+    });
+
+    test('store change during fetch prevents applying another store stock',
+        () async {
+      final provider = LocalProductProvider();
+      await provider.hydrated;
+      addTearDown(provider.dispose);
+      provider.initializeProducts([makeProduct(1)]);
+      await provider.flushPersistence();
+      var current = true;
+      final api = _ReviewCatalogApi(() async {
+        current = false;
+        return RealtimeCatalogSnapshot(
+            products: [makeProduct(1, stockQuantity: 50)],
+            deletedProductIds: {});
+      });
+      addTearDown(api.close);
+      await expectLater(
+          ReviewStockReconciliation().refresh(
+              session: session,
+              products: provider,
+              isCurrent: () => current,
+              api: api),
+          throwsStateError);
+      expect(storedStockQuantity(1), 10);
+    });
+
+    test('failed fetch keeps stock and releases the sync gate for retry',
+        () async {
+      final provider = LocalProductProvider();
+      await provider.hydrated;
+      addTearDown(provider.dispose);
+      provider.initializeProducts([makeProduct(1)]);
+      await provider.flushPersistence();
+      var fail = true;
+      final api = _ReviewCatalogApi(() async {
+        if (fail) throw StateError('offline');
+        return RealtimeCatalogSnapshot(
+            products: [makeProduct(1, stockQuantity: 12)],
+            deletedProductIds: {});
+      });
+      addTearDown(api.close);
+      Future<void> refresh() => ReviewStockReconciliation().refresh(
+          session: session,
+          products: provider,
+          isCurrent: () => true,
+          api: api);
+      await expectLater(refresh(), throwsStateError);
+      expect(storedStockQuantity(1), 10);
+      fail = false;
+      await refresh();
+      expect(storedStockQuantity(1), 12);
     });
   });
 

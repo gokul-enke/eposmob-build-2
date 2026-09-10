@@ -73,6 +73,13 @@ class RealtimeEntityApi {
         }
         rethrow;
       }
+      // A 200 error envelope is not an authoritative empty catalog. In
+      // particular, review stock refresh must never clear stock on this shape.
+      final rows = json['product'] ?? json['products'] ?? json['data'];
+      if (rows is! List) {
+        throw const RealtimeSyncException(
+            'The server did not return a product catalog.');
+      }
       final model = GetProductModel.fromJson(json);
       products.addAll(model.product ?? const <GetProduct>[]);
       deleted.addAll(model.deletedProductIds ?? const <int>[]);

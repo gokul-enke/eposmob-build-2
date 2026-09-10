@@ -14,6 +14,8 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/features/realtime_sync/domain/realtime_sync_models.dart';
+import 'package:pos_machine/services/review_stock_reconciliation.dart';
 
 /// Keeps submission scope; input protection belongs to billing.
 /// Billing owns its loading state and snackbar; recovery lives in Sales.
@@ -69,6 +71,81 @@ class _OrdersToReviewPageState extends State<OrdersToReviewPage> {
       widget.coordinator ?? OrderSubmissionCoordinator.instance;
   String? _error;
   bool _finishing = false;
+
+  Future<void> _refreshStock(Map<String, dynamic> record) async {
+    if (_finishing || coordinator.isBusy) return;
+    final approved = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => _dialog(
+                dialogContext: dialogContext,
+                title: 'Refresh stock from server',
+                icon: Icons.sync,
+                body: Text(recoveryText(
+                    'Check this sale in the admin panel first. '
+                    'This refreshes stock from the server and keeps reservations for your current cart. '
+                    'It does not verify, cancel or delete an order.')),
+                actions: [
+                  OutlinedButton(
+                      onPressed: () => Navigator.pop(dialogContext, false),
+                      child: Text(recoveryText('Cancel'))),
+                  FilledButton(
+                      key: const ValueKey('review-stock-confirm'),
+                      onPressed: () => Navigator.pop(dialogContext, true),
+                      child: Text(recoveryText('Refresh stock'))),
+                ]));
+    if (approved != true || !mounted || coordinator.isBusy) return;
+    final auth = context.read<AuthModel>();
+    final stores = context.read<StoreSessionProvider>();
+    final products = context.read<LocalProductProvider>();
+    final token = auth.token;
+    final storeId = stores.activeStore?.storeId;
+    final baseUrl = APPUrl.baseURL;
+    setState(() {
+      _finishing = true;
+      _error = null;
+    });
+    try {
+      await coordinator.reconcileStock(record['id'] as String, (current) async {
+        final prefs = await SharedPreferences.getInstance();
+        final tenant = prefs.getString('api_key') ?? '';
+        if (token == null ||
+            token.isEmpty ||
+            storeId == null ||
+            tenant.isEmpty ||
+            record['scope'] !=
+                OrderSubmissionCoordinator.scopeFor(
+                    Uri.parse(APPUrl.addToOrderUrl), tenant, storeId)) {
+          throw StateError('A matching store session is required.');
+        }
+        await ReviewStockReconciliation().refresh(
+            session: RealtimeSyncSession(
+                backendBaseUrl: baseUrl,
+                companyId: prefs.getInt('company_id') ?? 0,
+                storeId: storeId,
+                tenantApiKey: tenant,
+                accessToken: token),
+            products: products,
+            isCurrent: () =>
+                current() &&
+                auth.token == token &&
+                stores.activeStore?.storeId == storeId &&
+                APPUrl.baseURL == baseUrl);
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(recoveryText(
+                'Stock refreshed. The review log has been kept.'))));
+      }
+    } catch (error) {
+      debugPrint('[StockReview] refresh_failed type=${error.runtimeType}');
+      if (mounted) {
+        setState(() => _error = recoveryText(
+            'Could not refresh stock. Check your connection and active store, then try again.'));
+      }
+    } finally {
+      if (mounted) setState(() => _finishing = false);
+    }
+  }
 
   Future<void> _removeReviewLog(Map<String, dynamic> record) async {
     if (_finishing || coordinator.isBusy) return;
@@ -534,6 +611,13 @@ class _OrdersToReviewPageState extends State<OrdersToReviewPage> {
                       onPressed:
                           _finishing ? null : () => _finishConfirmed(record),
                       child: Text(recoveryText('Finish saved order'))),
+                OutlinedButton.icon(
+                    key: ValueKey('review-stock-${record['id']}'),
+                    onPressed: _finishing || coordinator.isBusy
+                        ? null
+                        : () => _refreshStock(record),
+                    icon: const Icon(Icons.sync, size: 18),
+                    label: Text(recoveryText('Refresh stock'))),
                 TextButton.icon(
                     key: ValueKey('review-remove-${record['id']}'),
                     style: TextButton.styleFrom(

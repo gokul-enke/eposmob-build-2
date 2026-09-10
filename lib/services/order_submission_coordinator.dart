@@ -149,6 +149,24 @@ class OrderSubmissionCoordinator extends ChangeNotifier {
 
   bool get isBusy => _busy || _uiActions > 0;
 
+  /// Holds the checkout gate during an explicit authoritative stock refresh.
+  /// No record is removed, so failures and repeated refreshes remain reviewable.
+  Future<void> reconcileStock(String id,
+      Future<void> Function(bool Function() isCurrent) refresh) async {
+    final scope = _scope;
+    if (isBusy || scope == null || _records[id]?['scope'] != scope) {
+      throw StateError('Finish the current operation before refreshing stock.');
+    }
+    _busy = true;
+    notifyListeners();
+    try {
+      await refresh(() => _scope == scope && _records[id]?['scope'] == scope);
+    } finally {
+      _busy = false;
+      notifyListeners();
+    }
+  }
+
   bool isCartAwaitingReview(String cartId) => _records.values.any((record) =>
       record['scope'] == _scope &&
       record['state'] == 'pending' &&

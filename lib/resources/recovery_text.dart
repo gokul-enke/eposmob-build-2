@@ -7,6 +7,14 @@ String recoveryText(String text) =>
         : text;
 
 const _arabic = <String, String>{
+  'Refresh stock from server': 'تحديث المخزون من الخادم',
+  'Refresh stock': 'تحديث المخزون',
+  'Check this sale in the admin panel first. This refreshes stock from the server and keeps reservations for your current cart. It does not verify, cancel or delete an order.':
+      'تحقق من عملية البيع في لوحة الإدارة أولاً. سيتم تحديث المخزون من الخادم مع الاحتفاظ بالكميات المحجوزة لسلتك الحالية. هذا الإجراء لا يتحقق من الطلب ولا يلغيه ولا يحذفه.',
+  'Stock refreshed. The review log has been kept.':
+      'تم تحديث المخزون مع الاحتفاظ بسجل المراجعة.',
+  'Could not refresh stock. Check your connection and active store, then try again.':
+      'تعذر تحديث المخزون. تحقق من الاتصال والمتجر الحالي ثم حاول مرة أخرى.',
   'Restart CloudPOS': 'إعادة تشغيل CloudPOS',
   'Restarting CloudPOS…': 'جارٍ إعادة تشغيل CloudPOS…',
   'Could not restart CloudPOS. Close it and open it again.':

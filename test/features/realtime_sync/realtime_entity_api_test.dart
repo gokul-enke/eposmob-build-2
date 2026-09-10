@@ -19,6 +19,14 @@ void main() {
     accessToken: 'access-token',
   );
 
+  test('catalog error envelope cannot be treated as empty stock', () async {
+    final api = RealtimeEntityApi(
+        client: MockClient((_) async => http.Response(
+            '{"status":"failure","message":"Unavailable"}', 200)));
+    await expectLater(
+        api.fetchCatalog(session), throwsA(isA<RealtimeSyncException>()));
+  });
+
   test('customer delta sends a fixed updated_at_range', () async {
     late http.Request captured;
     final api = RealtimeEntityApi(
