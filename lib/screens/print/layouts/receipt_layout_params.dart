@@ -252,13 +252,18 @@ class ReceiptLayoutParams {
   String get storeAddressValue => storeLocation?.trim() ?? '';
 
   /// Resolves the complete store-address line with one shared contract for all
-  /// thermal themes. This prevents individual layouts from accidentally
+  /// thermal and standard-PDF themes. This prevents individual layouts from accidentally
   /// printing the configured label as though it were the address value.
-  String storeAddressText({bool inlineBilingual = true}) {
+  String storeAddressText({
+    bool inlineBilingual = true,
+    ReceiptLanguageMode? mode,
+  }) {
     if (!isVisible('showStoreAddress') || storeAddressValue.isEmpty) return '';
 
-    final label = labelFor(
-      'showStoreAddress',
+    final label = ReceiptConfigurationContract.label(
+      options: displayConfig,
+      key: 'showStoreAddress',
+      mode: mode ?? receiptLanguageMode,
       englishFallback: 'Address',
       arabicFallback: 'العنوان',
       inlineBilingual: inlineBilingual,

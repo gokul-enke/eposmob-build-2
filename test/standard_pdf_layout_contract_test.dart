@@ -187,6 +187,26 @@ String _standardLayoutSource(String theme) {
   ).readAsStringSync();
 }
 
+String _standardAddressRendererSource(String theme) {
+  // Classic delegates its document body to the shared contract renderer.
+  final file = theme == 'classic'
+      ? 'contract_standard_pdf_layout.dart'
+      : switch (theme) {
+          'simplified_tax_invoice' =>
+            'simplified_tax_invoice_standard_pdf_layout.dart',
+          'centered_simplified_tax_invoice' =>
+            'centered_simplified_tax_invoice_standard_pdf_layout.dart',
+          'bilingual_centered_tax_invoice' =>
+            'bilingual_centered_tax_invoice_standard_pdf_layout.dart',
+          'boxed_bilingual_tax_invoice' =>
+            'boxed_bilingual_tax_invoice_standard_pdf_layout.dart',
+          'boxed_header_tax_invoice' =>
+            'boxed_header_tax_invoice_standard_pdf_layout.dart',
+          _ => throw ArgumentError.value(theme, 'theme'),
+        };
+  return File('lib/screens/print/standard_layouts/$file').readAsStringSync();
+}
+
 void main() {
   test('factory exposes exactly the six standard PDF themes', () {
     expect(StandardPdfLayoutFactory.availableThemes, orderedEquals(_themes));
@@ -311,6 +331,19 @@ void main() {
               reason: '$theme/${language.key}/$paper/header');
         }
       }
+    }
+  });
+
+  test('all six standard themes resolve the active-store address centrally',
+      () {
+    for (final theme in _themes) {
+      final source = _standardAddressRendererSource(theme);
+      expect(source.contains('params.storeAddressText('), isTrue,
+          reason: '$theme/shared address resolver');
+      expect(source.contains("cfgVal('showStoreAddress'"), isFalse,
+          reason: '$theme must not print the configured label as the address');
+      expect(source.contains('sellerAddressOption?.value'), isFalse,
+          reason: '$theme must not print the configured label as seller data');
     }
   });
 

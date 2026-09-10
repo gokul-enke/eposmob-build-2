@@ -370,17 +370,9 @@ class ContractStandardPdfRenderer {
         children.add(_centerText(description, fonts.bodyBold));
       }
     }
-    if (_contains(visibleKeys, 'showStoreAddress') &&
-        _clean(params.storeLocation).isNotEmpty) {
-      children.add(_labelValue(
-        params.labelFor(
-          'showStoreAddress',
-          englishFallback: 'Address',
-          arabicFallback: 'العنوان',
-        ),
-        params.documentText(params.storeLocation),
-        fonts.body,
-      ));
+    final storeAddress = params.storeAddressText();
+    if (storeAddress.isNotEmpty) {
+      children.add(_centerText(storeAddress, fonts.body));
     }
     if (_contains(visibleKeys, 'showFssaiInfo')) {
       final fssai = params.labelFor(

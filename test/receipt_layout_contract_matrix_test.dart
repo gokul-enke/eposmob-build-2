@@ -231,6 +231,11 @@ void main() {
 
       expect(params.storeAddressText(), 'Store Address: 42 Market Road',
           reason: theme);
+      expect(
+        params.storeAddressText(mode: ReceiptLanguageMode.arabic),
+        'العنوان: 42 Market Road',
+        reason: '$theme/Arabic override',
+      );
       expect(params.storeAddressText(), isNot(contains('العنوان: العنوان')),
           reason: '$theme must not treat the label as the value');
     }
@@ -298,6 +303,25 @@ void main() {
       expect(entry.value.contains('params.storeAddressText()'), isTrue,
           reason: '${entry.key}/shared store address resolver');
     }
+  });
+
+  test('Premium 2 Bilingual keeps the shared customer and return contracts',
+      () {
+    final source = File(
+      'lib/screens/print/layouts/premium2_bilingual_receipt_layout.dart',
+    ).readAsStringSync();
+
+    expect(
+      source.contains(
+        "if (!params.isVisible('showCustomerNameAndPhone')) return;",
+      ),
+      isTrue,
+      reason: 'customer master switch must gate the complete section',
+    );
+    expect(source.contains("key: 'showCreditNoteReason'"), isTrue,
+        reason: 'configured credit-note reason label');
+    expect(source.contains('item.reason?.trim()'), isTrue,
+        reason: 'credit-note reason value from returned items');
   });
 
   test('direct legacy layout entry points cannot bypass the contract delegate',
