@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/virtual_keyboard_widget.dart';
 import 'package:pos_machine/components/startup_gate.dart';
 import 'package:pos_machine/services/order_submission_coordinator.dart';
+import 'package:pos_machine/services/startup_work_tracker.dart';
 import 'package:pos_machine/components/order_submission_status.dart';
 import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -153,9 +154,35 @@ String? _hiveDirectoryPath;
 /// Non-fatal problems collected during startup, surfaced on the failure screen.
 final List<String> _startupWarnings = <String>[];
 ValueChanged<String>? _reportStartupStage;
+final _startupWork = StartupWorkTracker();
+LocalProductProvider? _startupProducts;
+bool _appReady = false;
+Future<void>? _restartPreparation;
+const _lifecycleChannel = MethodChannel('cloudpos/lifecycle');
+
+Future<void> _prepareForRestart() => _restartPreparation ??= () async {
+      // The startup screen owns these tasks. A ready till can have independent
+      // network/printer operations: never pretend closing Hive alone drains those.
+      if (_appReady) {
+        throw StateError(
+            'This CloudPOS copy is active. Close it normally first.');
+      }
+      await _startupWork.stopAndDrain();
+      await _startupProducts?.flushPersistence();
+      await Hive.close();
+    }()
+        .onError<Object>((error, stack) {
+      // A transient close failure must not poison every subsequent attempt.
+      _restartPreparation = null;
+      Error.throwWithStackTrace(error, stack);
+    });
 
 void main() {
   _initializeBinding();
+  _lifecycleChannel.setMethodCallHandler((call) async {
+    if (call.method != 'prepareRestart') throw MissingPluginException();
+    await _prepareForRestart();
+  });
   runApp(StartupGate(
       initialize: _bootstrap,
       onClose: () => exit(1),
@@ -176,12 +203,15 @@ Future<Widget> _bootstrap(ValueChanged<String> reportStage) async {
   }
 
   try {
-    await _initializeApp().timeout(_startupBudget);
-    await OrderSubmissionCoordinator.instance.hydrate();
+    await _startupWork.run(_initializeApp).timeout(_startupBudget);
+    await _startupWork.run(OrderSubmissionCoordinator.instance.hydrate);
     reportStage('Loading products and saved orders…');
-    final localProducts = LocalProductProvider();
+    _startupWork.checkRunning();
+    final localProducts = _startupProducts = LocalProductProvider();
     try {
-      await localProducts.hydrated.timeout(_maxBoxOpenTimeout);
+      await _startupWork
+          .run(() => localProducts.hydrated)
+          .timeout(_maxBoxOpenTimeout);
     } catch (_) {
       // timeout does not cancel hydration. Dispose only after its source has
       // stopped notifying, without mounting this failed startup attempt.
@@ -190,6 +220,8 @@ Future<Widget> _bootstrap(ValueChanged<String> reportStage) async {
       rethrow;
     }
     debugPrint('[Startup] ready elapsed_ms=${clock.elapsedMilliseconds}');
+    _startupWork.checkRunning();
+    _appReady = true;
     return SentryWidget(child: MyApp(localProducts: localProducts));
   } catch (error, stackTrace) {
     debugPrint('[Startup] failed elapsed_ms=${clock.elapsedMilliseconds}');
@@ -288,7 +320,7 @@ Future<void> _startupStep(
   _reportStartupStage?.call(_startupStageText(stage));
   final clock = Stopwatch()..start();
   try {
-    await step().timeout(timeout);
+    await _startupWork.run(step).timeout(timeout);
   } catch (error, stackTrace) {
     _recordStartupWarning(stage, error, stackTrace);
   } finally {
@@ -306,6 +338,7 @@ String _startupStageText(String stage) {
 }
 
 void _startupStepSync(String stage, void Function() step) {
+  _startupWork.checkRunning();
   try {
     step();
   } catch (error, stackTrace) {
@@ -323,7 +356,7 @@ Future<void> _requiredStartupStep(
   _reportStartupStage?.call(_startupStageText(stage));
   final clock = Stopwatch()..start();
   try {
-    await step().timeout(timeout);
+    await _startupWork.run(step).timeout(timeout);
   } catch (error, stackTrace) {
     debugPrint('💥 Required startup step "$stage" failed: $error\n$stackTrace');
     Error.throwWithStackTrace(StartupStepException(stage, error), stackTrace);
@@ -544,7 +577,7 @@ Future<void> _openBoxWithRecovery(
 
   Future<void> attemptOpen() async {
     try {
-      await _openTypedBox(boxName).timeout(budget);
+      await _startupWork.run(() => _openTypedBox(boxName)).timeout(budget);
     } on TimeoutException {
       final sizeMb = (await _hiveBoxSizeBytes(boxName)) / (1024 * 1024);
       throw TimeoutException(
@@ -563,6 +596,7 @@ Future<void> _openBoxWithRecovery(
   var clearedLockFile = false;
 
   while (true) {
+    _startupWork.checkRunning();
     debugPrint('🔄 Opening $boxName box (budget ${budget.inSeconds}s, '
         'lock conflicts $lockConflicts, other failures $otherFailures)');
     try {

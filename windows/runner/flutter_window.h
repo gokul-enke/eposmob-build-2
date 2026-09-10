@@ -29,6 +29,9 @@ class FlutterWindow : public Win32Window {
   // The project to run.
   flutter::DartProject project_;
   StartupWindow* startup_;
+  HANDLE restart_helper_ = nullptr;
+  bool preparing_restart_ = false;
+  std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> restart_result_;
 
   // The Flutter instance hosted by this window.
   std::unique_ptr<flutter::FlutterViewController> flutter_controller_;

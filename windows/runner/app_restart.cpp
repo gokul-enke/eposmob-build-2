@@ -8,7 +8,7 @@
 
 namespace {
 constexpr char kHelperFlag[] = "--cloudpos-restart-helper";
-constexpr DWORD kGraceMs = 4000;
+constexpr DWORD kGraceMs = 30000;
 constexpr DWORD kExitMs = 10000;
 
 struct CloseHandleDeleter {
@@ -33,7 +33,8 @@ ULONGLONG CreatedAt(HANDLE process) {
       created.dwLowDateTime;
 }
 
-bool Launch(const std::wstring& path, const std::wstring& arguments) {
+bool Launch(const std::wstring& path, const std::wstring& arguments,
+            HANDLE* child = nullptr) {
   // Explicit application path and no shell: spaces and punctuation are literal.
   std::wstring command = L"\"" + path + L"\"" + arguments;
   STARTUPINFOW startup{};
@@ -46,7 +47,8 @@ bool Launch(const std::wstring& path, const std::wstring& arguments) {
     return false;
   }
   CloseHandle(process.hThread);
-  CloseHandle(process.hProcess);
+  if (child) *child = process.hProcess;
+  else CloseHandle(process.hProcess);
   return true;
 }
 
@@ -62,7 +64,10 @@ BOOL CALLBACK RequestClose(HWND window, LPARAM parameter) {
   for (const auto& target : *targets) {
     if (target.pid == pid &&
         WaitForSingleObject(target.process.get(), 0) == WAIT_TIMEOUT) {
-      PostMessageW(window, WM_CLOSE, 0, 0);
+      // Only the Flutter application window knows how to drain Dart storage.
+      if (GetPropW(window, L"CLOUDPOS.ApplicationWindow")) {
+        PostMessageW(window, CloudPosPrepareRestartMessage(), 0, 0);
+      }
       break;
     }
   }
@@ -125,10 +130,21 @@ int Restart(DWORD parent_pid, ULONGLONG parent_created) {
 
   EnumWindows(RequestClose, reinterpret_cast<LPARAM>(&targets));
   const ULONGLONG deadline = GetTickCount64() + kGraceMs;
+  bool force_approved = false;
   for (const auto& target : targets) {
     const ULONGLONG now = GetTickCount64();
     const DWORD remaining = now < deadline ? static_cast<DWORD>(deadline - now) : 0;
     if (WaitForSingleObject(target.process.get(), remaining) == WAIT_OBJECT_0) continue;
+    if (!force_approved) {
+      const int choice = MessageBoxW(nullptr,
+          L"A CloudPOS copy has not finished closing safely.\n\n"
+          L"Force restarting may lose unsaved changes or interrupt saved data. "
+          L"Choose No to leave it running and close it normally.\n\n"
+          L"Force close the remaining CloudPOS copies and restart?",
+          L"CloudPOS needs attention", MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2);
+      if (choice != IDYES) return EXIT_FAILURE;
+      force_approved = true;
+    }
     // Only a verified CloudPOS executable from this installation/session can
     // reach this fallback. Never kill by a generic process name or child tree.
     if (!TerminateProcess(target.process.get(), EXIT_FAILURE) &&
@@ -153,12 +169,13 @@ bool ParseNumber(const std::string& text, unsigned long long* value) {
 }
 }  // namespace
 
-bool BeginCloudPosRestart() {
+bool BeginCloudPosRestart(HANDLE* helper_process) {
   const auto path = ImagePath(GetCurrentProcess());
   const auto created = CreatedAt(GetCurrentProcess());
   if (path.empty() || created == 0) return false;
   return Launch(path, L" --cloudpos-restart-helper " +
-      std::to_wstring(GetCurrentProcessId()) + L" " + std::to_wstring(created));
+      std::to_wstring(GetCurrentProcessId()) + L" " + std::to_wstring(created),
+      helper_process);
 }
 
 bool RunCloudPosRestartHelper(const std::vector<std::string>& arguments,
