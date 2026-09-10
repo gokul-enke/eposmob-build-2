@@ -46,6 +46,7 @@ class ReturnBillLayoutParamsBuilder {
         Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
     final storeSession =
         Provider.of<StoreSessionProvider>(context, listen: false);
+    final store = await storeSession.resolveActiveStore();
     final bankProvider = Provider.of<BankProvider>(context, listen: false);
 
     final fallbackCartItems =
@@ -96,11 +97,10 @@ class ReturnBillLayoutParamsBuilder {
       netExcTax: totalAmount.toStringAsFixed(2),
       apiTotalTax: 0,
       bankDetails: bankProvider.banks,
-      storeName: returnBillDocumentConfig.header ??
-          storeSession.activeStore?.storeName,
-      storeLocation: storeSession.activeStore?.location,
-      storePhone: storeSession.activeStore?.phone,
-      storeEmail: storeSession.activeStore?.email,
+      storeName: returnBillDocumentConfig.header ?? store?.storeName,
+      storeLocation: store?.location,
+      storePhone: store?.phone,
+      storeEmail: store?.email,
       isReturnOnly: true,
       returnBillDocumentConfig: returnBillDocumentConfig,
     );
