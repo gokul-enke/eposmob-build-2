@@ -2,8 +2,11 @@
 // directory. Never used by the release target lib/main.dart.
 // ignore_for_file: depend_on_referenced_packages, invalid_use_of_visible_for_testing_member
 import 'dart:async';
+import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 import 'package:marionette_flutter/marionette_flutter.dart';
@@ -13,6 +16,9 @@ import 'package:shared_preferences_platform_interface/shared_preferences_platfor
 import 'package:shared_preferences_windows/shared_preferences_windows.dart';
 import 'package:pos_machine/main.dart' as app;
 import 'package:pos_machine/services/order_submission_coordinator.dart';
+import 'package:get/get.dart';
+import 'package:provider/provider.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
 
 class _QaPaths extends PathProviderWindows {
   bool _delayed = false;
@@ -43,8 +49,9 @@ class _QaClient extends http.BaseClient {
       }
       orderRequests++;
       final responseMode = mode;
-      if (responseMode == 'hold')
+      if (responseMode == 'hold') {
         return Completer<http.StreamedResponse>().future;
+      }
       if (responseMode == 'reject') {
         return http.StreamedResponse(
             Stream.value(
@@ -52,10 +59,12 @@ class _QaClient extends http.BaseClient {
                     .codeUnits),
             422);
       }
-      if (responseMode == 'slow')
+      if (responseMode == 'slow') {
         await Future<void>.delayed(const Duration(seconds: 7));
-      if (responseMode == 'late')
+      }
+      if (responseMode == 'late') {
         await Future<void>.delayed(const Duration(seconds: 25));
+      }
       return _client.send(request);
     }
     return _client.send(request);
@@ -74,6 +83,14 @@ void main() {
   final client = _QaClient();
   http.runWithClient(() {
     app.main();
+    // Lets Marionette reconnect after the native helper launches a fresh
+    // process without flutter run's console. Confined to this debug QA target.
+    unawaited(() async {
+      final service = await developer.Service.getInfo();
+      await File('${Directory.current.path}/.tools/safety_vm_$pid.json')
+          .writeAsString(
+              jsonEncode({'pid': pid, 'uri': service.serverUri?.toString()}));
+    }());
     registerMarionetteExtension(
         name: 'cloudposQa.checkout',
         callback: (params) async {
@@ -86,12 +103,34 @@ void main() {
             client.mode = mode;
           }
           final coordinator = OrderSubmissionCoordinator.instance;
+          if (params['restart'] == 'true') {
+            try {
+              await const MethodChannel('cloudpos/lifecycle')
+                  .invokeMethod<void>('restart');
+              return const MarionetteExtensionResult.success(
+                  {'restart': 'completed'});
+            } catch (error) {
+              return MarionetteExtensionResult.success(
+                  {'restart_error': error.runtimeType.toString()});
+            }
+          }
+          final products = Get.context?.read<LocalProductProvider>();
+          final stockId = int.tryParse(params['stock_id'] ?? '');
           return MarionetteExtensionResult.success({
             'mode': client.mode,
             'order_requests': client.orderRequests,
             'phase': coordinator.phase.name,
             'submission_id': coordinator.pending?['id'],
             'order_id': coordinator.pending?['order_id'],
+            'busy': coordinator.isBusy,
+            'review_count': coordinator.ordersToReview.length,
+            'cart_items': products?.cartItems.length,
+            if (stockId != null && products != null)
+              'stock_quantities': [
+                for (final product in products.products)
+                  for (final stock in product.stock ?? [])
+                    if (stock.id == stockId) stock.quantity,
+              ],
           });
         });
   }, () => client);
