@@ -71,6 +71,7 @@ ReceiptLayoutParams _params({
   required String theme,
   required String language,
   required Map<String, DisplayOption> options,
+  String? storeLocation,
 }) {
   return ReceiptLayoutParams(
     context: context,
@@ -88,6 +89,7 @@ ReceiptLayoutParams _params({
     ),
     customerCareNumber: '',
     customerCareEmail: '',
+    storeLocation: storeLocation,
   );
 }
 
@@ -199,6 +201,55 @@ void main() {
     }
   });
 
+  testWidgets(
+      'store address uses the configured label and active-store value for every theme',
+      (tester) async {
+    late BuildContext context;
+    await tester.pumpWidget(
+      Builder(
+        builder: (builderContext) {
+          context = builderContext;
+          return const SizedBox.shrink();
+        },
+      ),
+    );
+
+    for (final theme in _productionThemes) {
+      final params = _params(
+        context: context,
+        theme: theme,
+        language: 'en',
+        options: <String, DisplayOption>{
+          'showStoreAddress': DisplayOption(
+            visible: true,
+            value: 'العنوان',
+            defaultValue: 'Store Address',
+          ),
+        },
+        storeLocation: '42 Market Road',
+      );
+
+      expect(params.storeAddressText(), 'Store Address: 42 Market Road',
+          reason: theme);
+      expect(params.storeAddressText(), isNot(contains('العنوان: العنوان')),
+          reason: '$theme must not treat the label as the value');
+    }
+
+    final hidden = _params(
+      context: context,
+      theme: 'classic',
+      language: 'en',
+      options: <String, DisplayOption>{
+        'showStoreAddress': DisplayOption(
+          visible: false,
+          defaultValue: 'Store Address',
+        ),
+      },
+      storeLocation: '42 Market Road',
+    );
+    expect(hidden.storeAddressText(), isEmpty);
+  });
+
   test('all registered renderer families keep canonical section order', () {
     // These are the calls in printThermal, not merely the order of helper
     // declarations later in each large renderer source file.
@@ -238,9 +289,14 @@ void main() {
       for (final key in ReceiptConfigurationContract.canonicalBillKeys) {
         // B2B title is intentionally merged into showInvoiceTitle by
         // ReceiptLayoutParams so the renderer consumes one canonical switch.
-        if (key == 'showInvoiceTitleB2b') continue;
+        // Store address visibility/label/value handling is also centralized in
+        // ReceiptLayoutParams.storeAddressText so every renderer uses exactly
+        // the same active-store contract.
+        if (key == 'showInvoiceTitleB2b' || key == 'showStoreAddress') continue;
         expect(entry.value.contains(key), isTrue, reason: '${entry.key}/$key');
       }
+      expect(entry.value.contains('params.storeAddressText()'), isTrue,
+          reason: '${entry.key}/shared store address resolver');
     }
   });
 

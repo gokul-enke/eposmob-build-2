@@ -4,6 +4,21 @@ import 'package:pos_machine/screens/print/layouts/receipt_configuration_contract
 import 'package:pos_machine/screens/print/layouts/receipt_layout_factory.dart';
 
 void main() {
+  group('DisplayOption API parsing', () {
+    test('normalizes legacy boolean encodings used by cached configurations',
+        () {
+      for (final value in <dynamic>[true, 1, '1', 'true', 'yes', 'on']) {
+        expect(DisplayOption.fromJson({'visible': value}).visible, isTrue,
+            reason: '$value');
+      }
+      for (final value in <dynamic>[false, 0, '0', 'false', 'no', 'off']) {
+        expect(DisplayOption.fromJson({'visible': value}).visible, isFalse,
+            reason: '$value');
+      }
+      expect(DisplayOption.fromJson({'visible': null}).visible, isNull);
+    });
+  });
+
   group('ReceiptLanguageMode normalization', () {
     test('accepts the mapped English and Arabic settings', () {
       expect(ReceiptConfigurationContract.languageMode('en'),

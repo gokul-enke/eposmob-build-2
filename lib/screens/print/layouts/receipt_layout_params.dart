@@ -247,6 +247,25 @@ class ReceiptLayoutParams {
   bool isVisible(String key) =>
       ReceiptConfigurationContract.isVisible(displayConfig, key);
 
+  /// The printable address always comes from the active store. The document
+  /// configuration owns only its label and visibility switch.
+  String get storeAddressValue => storeLocation?.trim() ?? '';
+
+  /// Resolves the complete store-address line with one shared contract for all
+  /// thermal themes. This prevents individual layouts from accidentally
+  /// printing the configured label as though it were the address value.
+  String storeAddressText({bool inlineBilingual = true}) {
+    if (!isVisible('showStoreAddress') || storeAddressValue.isEmpty) return '';
+
+    final label = labelFor(
+      'showStoreAddress',
+      englishFallback: 'Address',
+      arabicFallback: 'العنوان',
+      inlineBilingual: inlineBilingual,
+    ).trim();
+    return label.isEmpty ? storeAddressValue : '$label: $storeAddressValue';
+  }
+
   String labelFor(
     String key, {
     required String englishFallback,

@@ -410,27 +410,10 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
 
     rows.add(SpacingRow(_itemGap));
 
-    // Address - Clean, smaller text
-    if (displayConfig?['showStoreAddress']?.visible == true) {
-      final configuredAddress = _getModeLabel(
-        displayConfig: displayConfig,
-        key: 'showStoreAddress',
-        isEnglish: isEnglish,
-        isBilingual: isBilingual,
-        english: '',
-        arabic: '',
-      );
-      final address = params.storeLocation ?? '';
-      if (configuredAddress.isNotEmpty) {
-        rows.add(TextRow(configuredAddress, scale: 0.85, isBold: true));
-      } else if (address.isNotEmpty) {
-        final addressLabel = isBilingual
-            ? _getBilingualText(arabic: 'العنوان', english: 'Address')
-            : (isEnglish ? 'Address' : 'العنوان');
-        final storeAddress =
-            _appendValueToModeLabel(addressLabel, ': $address', isBilingual);
-        rows.add(TextRow(storeAddress, scale: 0.85, isBold: true));
-      }
+    // The option supplies visibility/label; the active store supplies value.
+    final storeAddress = params.storeAddressText();
+    if (storeAddress.isNotEmpty) {
+      rows.add(TextRow(storeAddress, scale: 0.85, isBold: true));
     }
 
     // Invoice Title (Moved above Tax/Fssai Info)

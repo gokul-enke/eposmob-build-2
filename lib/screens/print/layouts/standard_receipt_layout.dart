@@ -389,31 +389,10 @@ class StandardReceiptLayout implements ReceiptLayout {
 
     rows.add(SpacingRow(_itemGap));
 
-    // Address - Clean, smaller text
-    if (displayConfig?['showStoreAddress']?.visible == true) {
-      final addressVal = params.storeLocation ?? '';
-      String addressText = '';
-      if (addressVal.isNotEmpty) {
-        if (isDualLanguage) {
-          final arabicLabel =
-              displayConfig?['showStoreAddress']?.value as String? ?? '';
-          final englishLabel =
-              displayConfig?['showStoreAddress']?.defaultValue ?? '';
-          final label =
-              _getBilingualText(arabic: arabicLabel, english: englishLabel);
-          addressText = label.isNotEmpty ? '$label: $addressVal' : addressVal;
-        } else {
-          final label = params.labelFor(
-            'showStoreAddress',
-            englishFallback: 'Address',
-            arabicFallback: 'العنوان',
-          );
-          addressText = label.isNotEmpty ? '$label: $addressVal' : addressVal;
-        }
-      }
-      if (addressText.isNotEmpty) {
-        rows.add(TextRow(addressText, scale: 0.85, isBold: true));
-      }
+    // The option supplies visibility/label; the active store supplies value.
+    final addressText = params.storeAddressText();
+    if (addressText.isNotEmpty) {
+      rows.add(TextRow(addressText, scale: 0.85, isBold: true));
     }
 
     // Invoice Title (Moved above Tax/Fssai Info)
