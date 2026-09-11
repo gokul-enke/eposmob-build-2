@@ -3,6 +3,35 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:pos_machine/utils/arabic_printer_helper.dart';
 
+/// Collapses configured bilingual lines into one visual row with exactly one
+/// visible space between language runs. Isolates preserve each run's natural
+/// direction without adding a visible separator.
+String inlineBilingualLabel(String label) {
+  final parts = label
+      .split(RegExp(r'[\r\n]+'))
+      .map((part) => part.trim())
+      .where((part) => part.isNotEmpty)
+      .toList();
+  if (parts.length <= 1) return label.trim();
+
+  return parts.map((part) {
+    final isArabic = RegExp(r'[؀-ۿ]').hasMatch(part);
+    final isolate = isArabic ? '\u2067' : '\u2066';
+    return '$isolate$part\u2069';
+  }).join(' ');
+}
+
+/// Removes punctuation that is redundant when labels and values already have
+/// separate receipt columns. Each configured language line is cleaned on its
+/// own before it is converted to an inline bilingual label.
+String withoutTrailingLabelColons(String label) {
+  return label
+      .split(RegExp(r'[\r\n]+'))
+      .map((part) => part.trim().replaceFirst(RegExp(r':$'), ''))
+      .where((part) => part.isNotEmpty)
+      .join('\n');
+}
+
 class StandardThinDividerRow extends ReceiptRow {
   @override
   double calculateHeight(
@@ -71,7 +100,35 @@ class StandardBoxedTotalsRow extends ReceiptRow {
       if (item.isSeparator) {
         h += 12;
       } else {
-        h += (fontSize * item.scale) + 8;
+        final itemFontSize = fontSize * item.scale;
+        final contentWidth =
+            (width - (padding * 2)).clamp(0.0, double.infinity).toDouble();
+        final amountColumnWidth = contentWidth * 0.34;
+        final labelColumnWidth = contentWidth * 0.62;
+        final currencyMarkSpace = _currencyMarkSpace(item, itemFontSize);
+        final valueWidth = (amountColumnWidth - currencyMarkSpace)
+            .clamp(0.0, double.infinity)
+            .toDouble();
+        final valuePainter = _createScaledTextPainter(
+          item.value,
+          valueWidth,
+          itemFontSize,
+          item.isBold,
+          TextAlign.left,
+          TextDirection.ltr,
+        );
+        final labelPainter = _createScaledTextPainter(
+          item.label,
+          labelColumnWidth,
+          itemFontSize,
+          item.isBold,
+          TextAlign.right,
+          textDirection,
+        );
+        final contentHeight = valuePainter.height > labelPainter.height
+            ? valuePainter.height
+            : labelPainter.height;
+        h += contentHeight + 8;
       }
     }
     return h;
@@ -116,17 +173,44 @@ class StandardBoxedTotalsRow extends ReceiptRow {
         currentY += 12;
       } else {
         final itemFontSize = fontSize * item.scale;
+        final contentWidth =
+            (width - (padding * 2)).clamp(0.0, double.infinity).toDouble();
+        final amountColumnWidth = contentWidth * 0.34;
+        final labelColumnWidth = contentWidth * 0.62;
 
         double valueOffsetX = padding;
+        final currencyMarkSpace = _currencyMarkSpace(item, itemFontSize);
+        final valueWidth = (amountColumnWidth - currencyMarkSpace)
+            .clamp(0.0, double.infinity)
+            .toDouble();
+        final valuePainter = _createScaledTextPainter(
+          item.value,
+          valueWidth,
+          itemFontSize,
+          item.isBold,
+          TextAlign.left,
+          TextDirection.ltr,
+        );
+        final labelPainter = _createScaledTextPainter(
+          item.label,
+          labelColumnWidth,
+          itemFontSize,
+          item.isBold,
+          TextAlign.right,
+          textDirection,
+        );
+        final contentHeight = valuePainter.height > labelPainter.height
+            ? valuePainter.height
+            : labelPainter.height;
+        final valueY = currentY + ((contentHeight - valuePainter.height) / 2);
+        final labelY = currentY + ((contentHeight - labelPainter.height) / 2);
+
         if (item.icon != null) {
           final double iconSize = itemFontSize * 0.75;
           final src = Rect.fromLTWH(
               0, 0, item.icon!.width.toDouble(), item.icon!.height.toDouble());
-          final dst = Rect.fromLTWH(
-              padding,
-              currentY + (itemFontSize - iconSize) / 2 + (itemFontSize * 0.08),
-              iconSize,
-              iconSize);
+          final dst = Rect.fromLTWH(padding,
+              currentY + ((contentHeight - iconSize) / 2), iconSize, iconSize);
           canvas.drawImageRect(item.icon!, src, dst, Paint());
           valueOffsetX += iconSize + 4;
         } else if (item.currencySymbol != null &&
@@ -138,45 +222,56 @@ class StandardBoxedTotalsRow extends ReceiptRow {
                 color: Colors.black,
                 fontSize: itemFontSize,
                 fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal,
+                fontFamily: ArabicPrinterHelper.fontFamily,
               ),
             ),
             textDirection: TextDirection.ltr,
           )..layout();
-          symbolPainter.paint(canvas, Offset(valueOffsetX, currentY));
+          symbolPainter.paint(
+            canvas,
+            Offset(
+              valueOffsetX,
+              currentY + ((contentHeight - symbolPainter.height) / 2),
+            ),
+          );
           valueOffsetX += symbolPainter.width + 4;
         }
 
-        _drawScaledText(
+        valuePainter.paint(canvas, Offset(valueOffsetX, valueY));
+        labelPainter.paint(
           canvas,
-          item.value,
-          Offset(valueOffsetX, currentY),
-          (width * 0.50) - (valueOffsetX - padding),
-          itemFontSize,
-          item.isBold,
-          TextAlign.left,
-          TextDirection.ltr,
+          Offset(width - padding - labelPainter.width, labelY),
         );
 
-        _drawScaledText(
-          canvas,
-          item.label,
-          Offset(width - padding, currentY),
-          width * 0.70,
-          itemFontSize,
-          item.isBold,
-          TextAlign.right,
-          textDirection,
-        );
-
-        currentY += itemFontSize + 8;
+        currentY += contentHeight + 8;
       }
     }
   }
 
-  void _drawScaledText(
-    Canvas canvas,
+  double _currencyMarkSpace(StandardBoxedLineItem item, double itemFontSize) {
+    if (item.icon != null) {
+      return (itemFontSize * 0.75) + 4;
+    }
+    if (item.currencySymbol == null || item.currencySymbol!.isEmpty) {
+      return 0;
+    }
+    final painter = TextPainter(
+      text: TextSpan(
+        text: item.currencySymbol!,
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: itemFontSize,
+          fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal,
+          fontFamily: ArabicPrinterHelper.fontFamily,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    return painter.width + 4;
+  }
+
+  TextPainter _createScaledTextPainter(
     String text,
-    Offset offset,
     double maxWidth,
     double fontSize,
     bool isBold,
@@ -202,12 +297,7 @@ class StandardBoxedTotalsRow extends ReceiptRow {
       )..layout();
 
       if (painter.width <= maxWidth) {
-        double x = offset.dx;
-        if (align == TextAlign.right) {
-          x -= painter.width;
-        }
-        painter.paint(canvas, Offset(x, offset.dy));
-        return;
+        return painter;
       }
 
       currentFontSize -= 1.0;
@@ -228,12 +318,7 @@ class StandardBoxedTotalsRow extends ReceiptRow {
       maxLines: 1,
       ellipsis: '...',
     )..layout(maxWidth: maxWidth);
-
-    double x = offset.dx;
-    if (align == TextAlign.right) {
-      x -= painter.width;
-    }
-    painter.paint(canvas, Offset(x, offset.dy));
+    return painter;
   }
 }
 
@@ -247,14 +332,14 @@ class StandardBoxedLineItem {
   final String? currencySymbol;
 
   StandardBoxedLineItem({
-    this.label = '',
+    String label = '',
     this.value = '',
     this.isBold = false,
     this.scale = 1.0,
     this.isSeparator = false,
     this.icon,
     this.currencySymbol,
-  });
+  }) : label = inlineBilingualLabel(label);
 }
 
 class MultiLineReceiptTableRow extends ReceiptRow {

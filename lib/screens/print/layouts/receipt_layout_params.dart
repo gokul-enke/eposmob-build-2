@@ -298,14 +298,13 @@ class ReceiptLayoutParams {
     required String arabic,
     bool inlineBilingual = false,
   }) {
-    return ReceiptConfigurationContract.label(
-      options: null,
-      key: '__renderer_text__',
-      mode: receiptLanguageMode,
+    final text = ReceiptConfigurationContract.documentText(
+      null,
+      receiptLanguageMode,
       englishFallback: english,
       arabicFallback: arabic,
-      inlineBilingual: inlineBilingual,
     );
+    return inlineBilingual ? text.replaceAll('\n', ' ') : text;
   }
 
   String documentText(

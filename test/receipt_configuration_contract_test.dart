@@ -216,7 +216,29 @@ void main() {
       );
     });
 
-    test('keeps renderer fallbacks bilingual when configuration is absent', () {
+    test('does not synthesize a bilingual secondary label when value is empty',
+        () {
+      final englishOnlyField = <String, DisplayOption>{
+        'showCustomerName': DisplayOption(
+          visible: true,
+          defaultValue: 'Customer',
+        ),
+      };
+
+      expect(
+        ReceiptConfigurationContract.label(
+          options: englishOnlyField,
+          key: 'showCustomerName',
+          mode: ReceiptLanguageMode.bilingual,
+          englishFallback: 'Fallback customer',
+          arabicFallback: 'العميل',
+        ),
+        'Customer',
+      );
+    });
+
+    test('keeps the primary English fallback when both API labels are empty',
+        () {
       expect(
         ReceiptConfigurationContract.label(
           options: const {},
@@ -224,8 +246,28 @@ void main() {
           mode: ReceiptLanguageMode.bilingual,
           englishFallback: '',
           arabicFallback: 'الضريبة',
+          resolvedArabic: 'ضريبة المبيعات',
         ),
-        'الضريبة\nVAT',
+        'VAT',
+      );
+    });
+
+    test('keeps the secondary label when bilingual value is configured', () {
+      expect(
+        ReceiptConfigurationContract.label(
+          options: {
+            'showCustomerName': DisplayOption(
+              visible: true,
+              value: 'العميل',
+              defaultValue: 'Customer',
+            ),
+          },
+          key: 'showCustomerName',
+          mode: ReceiptLanguageMode.bilingual,
+          englishFallback: 'Fallback customer',
+          arabicFallback: 'اسم العميل',
+        ),
+        'العميل\nCustomer',
       );
     });
   });
@@ -248,6 +290,32 @@ void main() {
       ),
       'عنوان عربي\nEnglish heading',
     );
+  });
+
+  group('invoice number prefix', () {
+    test('preserves the configured prefix literally in bilingual mode', () {
+      expect(
+        ReceiptConfigurationContract.numberPrefix(
+          'ع-',
+          ReceiptLanguageMode.bilingual,
+          englishFallback: 'INV-',
+          arabicFallback: 'رقم الفاتورة: ',
+        ),
+        'ع-',
+      );
+    });
+
+    test('uses only the primary fallback when the prefix is missing', () {
+      expect(
+        ReceiptConfigurationContract.numberPrefix(
+          null,
+          ReceiptLanguageMode.bilingual,
+          englishFallback: 'INV-',
+          arabicFallback: 'رقم الفاتورة: ',
+        ),
+        'INV-',
+      );
+    });
   });
 
   test('every registered thermal theme is routed through a contract layout',
