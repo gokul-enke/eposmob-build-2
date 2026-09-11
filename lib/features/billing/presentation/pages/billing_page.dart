@@ -1325,7 +1325,7 @@ class BillingPageState extends State<BillingPage>
 
       if (event.logicalKey == LogicalKeyboardKey.f1) {
         debugPrint("⌨️ [BillingPage] Handling F1 -> clear cart");
-        _clearCart();
+        _clearCartManually();
       } else if (event.logicalKey == LogicalKeyboardKey.f2) {
         if (!_isQuotationPage && !_showConfirmOrderButton) return;
         debugPrint("⌨️ [BillingPage] Handling F2 -> open checkout confirm");
@@ -5912,7 +5912,7 @@ class BillingPageState extends State<BillingPage>
               child: _buildActionButton(
                 text: 'billing.clear_cart'.tr,
                 color: ColorManager.kButtonRed,
-                onPressed: _clearCart,
+                onPressed: _clearCartManually,
                 isLoading: isLoadingClearCart,
                 isDisabled: disableActions && !isLoadingClearCart,
                 shortcutLabel: 'F1',
@@ -6233,7 +6233,12 @@ class BillingPageState extends State<BillingPage>
     _resetBillingWorkspaceUi(refocus: refocus);
   }
 
-  Future<void> _clearCart() async {
+  /// Clears the cart because the cashier explicitly requested it.
+  ///
+  /// Keep the security-key check at this UI boundary. Successful order and
+  /// quotation flows must use [_clearOrderWorkspace] directly so their
+  /// automatic cleanup is never treated as a manual destructive action.
+  Future<void> _clearCartManually() async {
     if (!await PosSecurityKeyDialog.verify(
       context,
       action: 'clear the cart',
@@ -8301,7 +8306,10 @@ class BillingPageState extends State<BillingPage>
               }
             }
           }
-          _clearCart();
+          _clearOrderWorkspace(
+            localProductProvider: localProductProvider,
+            preserveStockDeduction: false,
+          );
         } else {
           showScaffoldError(
             context: context,

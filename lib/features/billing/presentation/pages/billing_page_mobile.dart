@@ -690,11 +690,14 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
   // Action methods — UI shell only; business logic lives in the controller.
   void clearCart() {
-    unawaited(_clearCartWithSecurityKey());
+    unawaited(_clearCartManually());
   }
 
-  Future<void> _clearCartWithSecurityKey(
-      {bool requireSecurityKey = true}) async {
+  /// Clears the cart because the cashier explicitly requested it.
+  ///
+  /// Automatic cleanup after save/confirm actions is intentionally performed
+  /// by the controller/service paths and must not call this method.
+  Future<void> _clearCartManually() async {
     if (_isClearingCart) return;
 
     final billingProvider =
@@ -704,11 +707,10 @@ class BillingPageMobileState extends State<BillingPageMobile>
     billingProvider.setLoadingClearCart(true);
 
     try {
-      if (requireSecurityKey &&
-          !await PosSecurityKeyDialog.verify(
-            context,
-            action: 'clear the cart',
-          )) {
+      if (!await PosSecurityKeyDialog.verify(
+        context,
+        action: 'clear the cart',
+      )) {
         return;
       }
       if (!mounted) return;
@@ -1061,7 +1063,13 @@ class BillingPageMobileState extends State<BillingPageMobile>
         _quotationInlineNameController.clear();
         _quotationInlinePhoneController.clear();
       });
-      await _clearCartWithSecurityKey(requireSecurityKey: false);
+      setState(() {
+        _controller.clearCartData(context);
+        _lastRehydratedOrderId = null;
+        _autocompleteProductKey = GlobalKey();
+        _autocompletePhoneKey = GlobalKey();
+      });
+      _focusTextField();
     } finally {
       if (mounted) {
         setState(() {
