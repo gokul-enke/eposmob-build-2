@@ -111,7 +111,7 @@ class AppSettings {
     this.skipCheckoutOnConfirmAndPrint = false,
     this.compulsoryDayCloseRegister = false,
     this.productVariantEnabled = false,
-    this.multiSaleUnitEnabled = false,
+    this.multiSaleUnitEnabled = true,
     this.allowOverselling = true,
     this.compulsoryShiftOpen = false,
     this.posAuthenticateClearCart = false,
@@ -239,12 +239,12 @@ class AppSettings {
         'PRODUCT_VARIANT_ENABLED',
         defaultValue: false,
       ),
-      // Fail closed: alternate sale units are unavailable until explicitly
-      // enabled for the tenant/store by the backend.
+      // Preserve sale-unit switching for tenants that have not received this
+      // setting yet. Setting the status to false disables alternate units.
       multiSaleUnitEnabled: _readSettingStatus(
         settingsMap,
         'MULTI_SALE_UNIT_ENABLED',
-        defaultValue: false,
+        defaultValue: true,
       ),
       // Preserve the existing cashier-first behavior for tenants that have
       // not received this setting yet. Setting the status to false enables
