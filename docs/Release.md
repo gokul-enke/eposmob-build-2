@@ -61,3 +61,9 @@ live - souq
 ENKE_SOUQPOINT_S9z2X9Vef2bwrlvBS1befpCVJPxkmFqI
 salesexecutive1@souqpoint.in
 123456
+
+
+
+
+admin@zaviyaalraqi.com	Admin!@1243	EAZY_ZAVIYA_AL_RAQI_Llh0LXAn1iatsjqF09FG9Kje27Xa8xo5	salesexecutive1@zaviyaalraqi.com  123456
+
