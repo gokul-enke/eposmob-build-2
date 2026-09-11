@@ -333,6 +333,7 @@ class _SalesScreenState extends State<SalesScreen> {
       final standardPrinter = StandardPrinter(context);
       final storeSessionForPdfShare1 =
           Provider.of<StoreSessionProvider>(context, listen: false);
+      final storeForPdfShare1 = await storeSessionForPdfShare1.resolveActiveStore();
 
       String? customerAlternatePhone =
           orderData.customerDetails?.alternatePhone;
@@ -380,9 +381,9 @@ class _SalesScreenState extends State<SalesScreen> {
         customerVatNumber: orderData.kycInfo?.vatNumber,
         customerCrNumber: orderData.kycInfo?.crNumber,
         customerType: orderData.customerDetails?.customerType,
-        storeLocation: storeSessionForPdfShare1.activeStore?.location,
-        storePhone: storeSessionForPdfShare1.activeStore?.phone,
-        storeEmail: storeSessionForPdfShare1.activeStore?.email,
+        storeLocation: storeForPdfShare1?.location,
+        storePhone: storeForPdfShare1?.phone,
+        storeEmail: storeForPdfShare1?.email,
       );
 
       // Close loading dialog
@@ -734,6 +735,7 @@ class _SalesScreenState extends State<SalesScreen> {
       final standardPrinter = StandardPrinter(context);
       final storeSessionForPdfShare2 =
           Provider.of<StoreSessionProvider>(context, listen: false);
+      final storeForPdfShare2 = await storeSessionForPdfShare2.resolveActiveStore();
 
       String? customerAlternatePhone =
           orderData.customerDetails?.alternatePhone;
@@ -782,9 +784,9 @@ class _SalesScreenState extends State<SalesScreen> {
         customerVatNumber: orderData.kycInfo?.vatNumber,
         customerCrNumber: orderData.kycInfo?.crNumber,
         customerType: orderData.customerDetails?.customerType,
-        storeLocation: storeSessionForPdfShare2.activeStore?.location,
-        storePhone: storeSessionForPdfShare2.activeStore?.phone,
-        storeEmail: storeSessionForPdfShare2.activeStore?.email,
+        storeLocation: storeForPdfShare2?.location,
+        storePhone: storeForPdfShare2?.phone,
+        storeEmail: storeForPdfShare2?.email,
       );
 
       if (pdfFile == null) {

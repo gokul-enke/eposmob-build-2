@@ -900,6 +900,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
 
       final storeSessionForShare =
           Provider.of<StoreSessionProvider>(context, listen: false);
+      final storeForShare = await storeSessionForShare.resolveActiveStore();
       final File? pdfFile = await standardPrinter.generateThemedPDFForSharing(
         cartItems: orderDetailsModelData!.cart!.cartItems!,
         formattedTotal:
@@ -930,9 +931,9 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         customerVatNumber: orderDetailsModelData?.kycInfo?.vatNumber,
         customerCrNumber: orderDetailsModelData?.kycInfo?.crNumber,
         customerType: orderDetailsModelData?.customerDetails?.customerType,
-        storeLocation: storeSessionForShare.activeStore?.location,
-        storePhone: storeSessionForShare.activeStore?.phone,
-        storeEmail: storeSessionForShare.activeStore?.email,
+        storeLocation: storeForShare?.location,
+        storePhone: storeForShare?.phone,
+        storeEmail: storeForShare?.email,
       );
 
       Navigator.of(context, rootNavigator: true).pop();

@@ -354,19 +354,10 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
     rows.add(SpacingRow(_itemGap));
 
-    // Address - Clean, smaller text
-    if (_isVisible(displayConfig, 'showStoreAddress')) {
-      final label = params.labelFor(
-        'showStoreAddress',
-        englishFallback: 'Address',
-        arabicFallback: 'العنوان',
-        inlineBilingual: true,
-      );
-      final address = params.storeLocation ?? '';
-      if (address.isNotEmpty) {
-        final storeAddress = label.isNotEmpty ? '$label: $address' : address;
-        rows.add(TextRow(storeAddress, scale: 0.85, isBold: true));
-      }
+    // The option supplies visibility/label; the active store supplies value.
+    final storeAddress = params.storeAddressText();
+    if (storeAddress.isNotEmpty) {
+      rows.add(TextRow(storeAddress, scale: 0.85, isBold: true));
     }
 
     // Invoice Title (Moved above Tax/Fssai Info)

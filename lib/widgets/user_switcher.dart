@@ -1,3 +1,4 @@
+import 'package:pos_machine/components/order_submission_guard.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
@@ -335,7 +336,10 @@ class _UserSwitcherState extends State<UserSwitcher> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      OrderSubmissionGuard(busy: false, child: _buildPage(context));
+
+  Widget _buildPage(BuildContext context) {
     debugPrint("🔧 UserSwitcher: build method called");
 
     return Consumer<SalesExecutiveProvider>(

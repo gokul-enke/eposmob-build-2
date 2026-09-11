@@ -1,3 +1,4 @@
+import 'package:pos_machine/services/order_submission_coordinator.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 
@@ -7,6 +8,7 @@ class BarcodeProvider with ChangeNotifier {
   Stream<String> get barcodeStream => _barcodeController.stream;
 
   void addBarcode(String barcode) {
+    if (OrderSubmissionCoordinator.instance.isBusy) return ;
     _barcodeController.add(barcode);
   }
 

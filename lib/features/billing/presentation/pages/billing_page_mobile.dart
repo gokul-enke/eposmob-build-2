@@ -1,3 +1,4 @@
+import 'package:pos_machine/components/order_submission_guard.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1264,7 +1265,15 @@ class BillingPageMobileState extends State<BillingPageMobile>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    return OrderSubmissionGuard(
+        busy: _isConfirmingOrder ||
+            _isConfirmingAndPrinting ||
+            _isSavingOrder ||
+            _isClearingCart,
+        child: _buildPage(context));
+  }
 
+  Widget _buildPage(BuildContext context) {
     return KeyboardListener(
       focusNode: _focusNode,
       onKeyEvent: _handleKeyPress,

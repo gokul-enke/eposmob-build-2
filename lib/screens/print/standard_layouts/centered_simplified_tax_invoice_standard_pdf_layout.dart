@@ -378,8 +378,8 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
     }
 
     // ── Header / store info from config ─────────────────────────────
-    // The centered template intentionally prints these values exactly as
-    // configured. It does not append runtime store address/contact values.
+    // Configuration supplies header labels and visibility. The active store
+    // supplies the address value.
     // FSSAI/VAT and Extra Heading 2 are excluded because they are rendered in
     // the title band below the accent divider.
     const headerConfigKeys = [
@@ -396,6 +396,16 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
       for (final key in headerConfigKeys) {
         final option = dc?[key];
         if (option?.visible != true) continue;
+
+        if (key == 'showStoreAddress') {
+          final address = params.storeAddressText(
+            mode: arabic
+                ? ReceiptLanguageMode.arabic
+                : ReceiptLanguageMode.english,
+          );
+          if (address.isNotEmpty) lines.add(address);
+          continue;
+        }
 
         // Prefer the API's normal language mapping (Arabic in `value`, English
         // in `default`), then fall back to the other slot only when its actual

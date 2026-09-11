@@ -392,8 +392,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     }
 
     // ── Header / store info from config ─────────────────────────────
-    // The centered template intentionally prints these values exactly as
-    // configured. It does not append runtime store address/contact values.
+    // Configuration supplies header labels and visibility. The active store
+    // supplies the address value.
     // FSSAI/VAT and Extra Heading 2 are excluded because they are rendered in
     // the title band below the accent divider.
     const headerConfigKeys = [
@@ -410,6 +410,16 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
       for (final key in headerConfigKeys) {
         final option = dc?[key];
         if (option?.visible != true) continue;
+
+        if (key == 'showStoreAddress') {
+          final address = params.storeAddressText(
+            mode: arabic
+                ? ReceiptLanguageMode.arabic
+                : ReceiptLanguageMode.english,
+          );
+          if (address.isNotEmpty) lines.add(address);
+          continue;
+        }
 
         // Prefer the API's normal language mapping (Arabic in `value`, English
         // in `default`), then fall back to the other slot only when its actual
@@ -565,7 +575,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                     dc, 'showCustomerName', null, 'Customer', isDualLanguage),
                 _labelAr(
                     dc, 'showCustomerName', null, 'العميل', isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             custName,
             infoLabel,
             infoValue));
@@ -577,7 +588,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                     dc, 'showCustomerAddress', null, 'Address', isDualLanguage),
                 _labelAr(
                     dc, 'showCustomerAddress', null, 'العنوان', isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             displayOrBlank(custAddress),
             infoLabel,
             infoValue));
@@ -589,7 +601,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                     isDualLanguage),
                 _labelAr(dc, 'showCustomerVatNumber', null,
                     'الرقم الضريبي للعميل', isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             displayOrBlank(params.customerVatNumber),
             infoLabel,
             infoValue));
@@ -601,7 +614,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                     isDualLanguage),
                 _labelAr(dc, 'showCustomerCrNumber', null,
                     'رقم السجل التجاري للعميل', isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             displayOrBlank(params.customerCrNumber),
             infoLabel,
             infoValue));
@@ -613,7 +627,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                     dc, 'showCustomerPhone', null, 'Phone', isDualLanguage),
                 _labelAr(
                     dc, 'showCustomerPhone', null, 'الهاتف', isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             custPhone,
             infoLabel,
             infoValue));
@@ -635,7 +650,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                     null,
                     isQuotation ? 'رقم عرض السعر' : 'رقم الفاتورة',
                     isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             invoiceNumber,
             infoLabel,
             infoValue),
@@ -644,7 +660,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
             _infoLabel(
                 _labelEn(dc, 'showDate', null, 'Date', isDualLanguage),
                 _labelAr(dc, 'showDate', null, 'التاريخ', isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             '$displayDate${displayTime.isNotEmpty ? ' $displayTime' : ''}',
             infoLabel,
             infoValue),
@@ -655,7 +672,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                     isDualLanguage),
                 _labelAr(
                     dc, paymentConfigKey, null, 'طريقة الدفع', isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             paymentMethodSummary,
             infoLabel,
             infoValue),
@@ -668,7 +686,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                     dc, 'showDeliveryMethod', null, 'Delivery', isDualLanguage),
                 _labelAr(dc, 'showDeliveryMethod', null, 'طريقة التسليم',
                     isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             params.deliveryMethod!,
             infoLabel,
             infoValue),
@@ -1091,8 +1110,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                                 _totalsRow(
                                     _labelEn(dc, 'showDiscount', null,
                                         'DISCOUNT', isDualLanguage),
-                                    _labelAr(dc, 'showDiscount', null,
-                                        'الخصم', isDualLanguage),
+                                    _labelAr(dc, 'showDiscount', null, 'الخصم',
+                                        isDualLanguage),
                                     _formatMoney(currency, discountAmountValue),
                                     totalsLabelEn,
                                     totalsLabelAr,

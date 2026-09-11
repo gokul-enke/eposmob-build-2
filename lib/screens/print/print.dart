@@ -249,6 +249,7 @@ class PrintPage extends StatefulWidget {
       final zatcaCompanyName = await sharedPrefProvider.getZatcaCompanyName();
 
       // Create params
+      final store = await storeSession.resolveActiveStore();
       debugPrint(
           '[PrintPage.autoPrint] Creating ReceiptLayoutParams with ${cartItems.length} cart items');
       debugPrint(
@@ -300,9 +301,9 @@ class PrintPage extends StatefulWidget {
         netExcTax: netExcTax,
         bankDetails: bankProvider.banks,
         storeName: storeName,
-        storeLocation: storeSession.activeStore?.location,
-        storePhone: storeSession.activeStore?.phone,
-        storeEmail: storeSession.activeStore?.email,
+        storeLocation: store?.location,
+        storePhone: store?.phone,
+        storeEmail: store?.email,
         apiTotalTax: apiTotalTax,
         returnBillDocumentConfig: returnBillDocConfig,
       );
@@ -1002,6 +1003,7 @@ class _PrintPageState extends State<PrintPage> {
     final bankProvider = Provider.of<BankProvider>(context, listen: false);
     final storeSession =
         Provider.of<StoreSessionProvider>(context, listen: false);
+    final store = await storeSession.resolveActiveStore();
     final bool hideDefaultCustomerPhone =
         appSettingsProvider.appSettings?.hideDefaultPhone ?? true;
 
@@ -1055,9 +1057,9 @@ class _PrintPageState extends State<PrintPage> {
       netExcTax: widget.netExcTax,
       bankDetails: bankProvider.banks,
       storeName: widget.storeName,
-      storeLocation: storeSession.activeStore?.location,
-      storePhone: storeSession.activeStore?.phone,
-      storeEmail: storeSession.activeStore?.email,
+      storeLocation: store?.location,
+      storePhone: store?.phone,
+      storeEmail: store?.email,
       apiTotalTax: widget.apiTotalTax,
       returnBillDocumentConfig: _returnBillDocumentConfig,
     );
@@ -1123,6 +1125,7 @@ class _PrintPageState extends State<PrintPage> {
     final bankProvider = Provider.of<BankProvider>(context, listen: false);
     final storeSession =
         Provider.of<StoreSessionProvider>(context, listen: false);
+    final store = await storeSession.resolveActiveStore();
     final bool hideDefaultCustomerPhone =
         appSettingsProvider.appSettings?.hideDefaultPhone ?? true;
 
@@ -1169,9 +1172,9 @@ class _PrintPageState extends State<PrintPage> {
       netExcTax: widget.netExcTax,
       bankDetails: bankProvider.banks,
       storeName: widget.storeName,
-      storeLocation: storeSession.activeStore?.location,
-      storePhone: storeSession.activeStore?.phone,
-      storeEmail: storeSession.activeStore?.email,
+      storeLocation: store?.location,
+      storePhone: store?.phone,
+      storeEmail: store?.email,
       apiTotalTax: widget.apiTotalTax,
       returnBillDocumentConfig: _returnBillDocumentConfig,
     );

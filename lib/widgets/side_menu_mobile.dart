@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/resources/recovery_text.dart';
 import 'package:get/get.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -306,8 +307,14 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                     79,
                     84,
                     92,
+                    SideBarController.ordersToReviewIndex,
                   ].contains(sideBarController.index.value),
                   subItems: [
+                    if (hasSalesPermission)
+                      _MobileDrawerSubItem(
+                          title: recoveryText('Orders to review'),
+                          onTap: () =>
+                              navigate(SideBarController.ordersToReviewIndex)),
                     if (hasSalesPermission)
                       _MobileDrawerSubItem(
                         title: 'nav.sales'.tr,
@@ -439,8 +446,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                 () => _MobileDrawerExpandableTile(
                   icon: Icons.shopping_bag_rounded,
                   title: 'nav.purchase'.tr,
-                  selected:
-                      [81, 82, 36, 99, 100].contains(sideBarController.index.value),
+                  selected: [81, 82, 36, 99, 100]
+                      .contains(sideBarController.index.value),
                   subItems: [
                     _MobileDrawerSubItem(
                       title: 'nav.purchase_orders'.tr,

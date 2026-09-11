@@ -381,8 +381,8 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     }
 
     // ── Header / store info from config ─────────────────────────────
-    // The centered template intentionally prints these values exactly as
-    // configured. It does not append runtime store address/contact values.
+    // Configuration supplies header labels and visibility. The active store
+    // supplies the address value.
     // FSSAI/VAT and Extra Heading 2 are excluded because they are rendered in
     // the title band below the accent divider.
     const headerConfigKeys = [
@@ -399,6 +399,16 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       for (final key in headerConfigKeys) {
         final option = dc?[key];
         if (option?.visible != true) continue;
+
+        if (key == 'showStoreAddress') {
+          final address = params.storeAddressText(
+            mode: arabic
+                ? ReceiptLanguageMode.arabic
+                : ReceiptLanguageMode.english,
+          );
+          if (address.isNotEmpty) lines.add(address);
+          continue;
+        }
 
         // Prefer the API's normal language mapping (Arabic in `value`, English
         // in `default`), then fall back to the other slot only when its actual
@@ -553,7 +563,8 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     dc, 'showCustomerName', null, 'Customer', isDualLanguage),
                 _labelAr(
                     dc, 'showCustomerName', null, 'العميل', isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             custName,
             infoLabel,
             infoValue));
@@ -565,7 +576,8 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     dc, 'showCustomerAddress', null, 'Address', isDualLanguage),
                 _labelAr(
                     dc, 'showCustomerAddress', null, 'العنوان', isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             displayOrBlank(custAddress),
             infoLabel,
             infoValue));
@@ -577,7 +589,8 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     isDualLanguage),
                 _labelAr(dc, 'showCustomerVatNumber', null,
                     'الرقم الضريبي للعميل', isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             displayOrBlank(params.customerVatNumber),
             infoLabel,
             infoValue));
@@ -589,7 +602,8 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     isDualLanguage),
                 _labelAr(dc, 'showCustomerCrNumber', null,
                     'رقم السجل التجاري للعميل', isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             displayOrBlank(params.customerCrNumber),
             infoLabel,
             infoValue));
@@ -601,7 +615,8 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     dc, 'showCustomerPhone', null, 'Phone', isDualLanguage),
                 _labelAr(
                     dc, 'showCustomerPhone', null, 'الهاتف', isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             custPhone,
             infoLabel,
             infoValue));
@@ -623,7 +638,8 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     null,
                     isQuotation ? 'رقم عرض السعر' : 'رقم الفاتورة',
                     isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             invoiceNumber,
             infoLabel,
             infoValue),
@@ -632,7 +648,8 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             _infoLabel(
                 _labelEn(dc, 'showDate', null, 'Date', isDualLanguage),
                 _labelAr(dc, 'showDate', null, 'التاريخ', isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             '$displayDate${displayTime.isNotEmpty ? ' $displayTime' : ''}',
             infoLabel,
             infoValue),
@@ -643,7 +660,8 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     isDualLanguage),
                 _labelAr(
                     dc, paymentConfigKey, null, 'طريقة الدفع', isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             paymentMethodSummary,
             infoLabel,
             infoValue),
@@ -656,7 +674,8 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     dc, 'showDeliveryMethod', null, 'Delivery', isDualLanguage),
                 _labelAr(dc, 'showDeliveryMethod', null, 'طريقة التسليم',
                     isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             params.deliveryMethod!,
             infoLabel,
             infoValue),
@@ -671,25 +690,8 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       runtimeSellerName ?? 'Seller',
       isDualLanguage,
     ).join(' / ');
-    final sellerAddressOption = dc?['showStoreAddress'];
-    final localizedSellerAddress =
-        sellerAddressOption?.value?.toString().trim() ?? '';
-    final englishSellerAddress =
-        sellerAddressOption?.defaultValue?.trim() ?? '';
-    final runtimeSellerAddress = params.storeLocation?.trim() ?? '';
-    final referenceSellerAddress =
-        isDualLanguage && englishSellerAddress.isNotEmpty
-            ? englishSellerAddress
-            : (localizedSellerAddress.isNotEmpty
-                ? localizedSellerAddress
-                : (englishSellerAddress.isNotEmpty
-                    ? englishSellerAddress
-                    : runtimeSellerAddress));
-    final referenceSellerAddressSecondary = isDualLanguage &&
-            localizedSellerAddress.isNotEmpty &&
-            localizedSellerAddress != referenceSellerAddress
-        ? localizedSellerAddress
-        : null;
+    final referenceSellerAddress = params.storeAddressValue;
+    const String? referenceSellerAddressSecondary = null;
     final referenceBuyerAddress = params.customerAddress?.trim() ?? '';
     final referenceDueDate = displayDate;
     final referenceGross = netExcTaxValue + discountAmountValue;
@@ -1010,7 +1012,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                         secondaryAddress: referenceSellerAddressSecondary,
                         showName: cfgVisibleDefault('showStoreName'),
                         showVat: true,
-                        showAddress: cfgVisibleDefault('showStoreAddress'),
+                        showAddress: cfgVisible('showStoreAddress'),
                         font: font,
                         fontBold: fontBold,
                         isA5: isA5,
@@ -1580,8 +1582,8 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                                 _totalsRow(
                                     _labelEn(dc, 'showDiscount', null,
                                         'DISCOUNT', isDualLanguage),
-                                    _labelAr(dc, 'showDiscount', null,
-                                        'الخصم', isDualLanguage),
+                                    _labelAr(dc, 'showDiscount', null, 'الخصم',
+                                        isDualLanguage),
                                     _formatMoney(currency, discountAmountValue),
                                     totalsLabelEn,
                                     totalsLabelAr,

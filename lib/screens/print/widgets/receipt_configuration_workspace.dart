@@ -971,7 +971,11 @@ class _CommonReceiptPreviewState extends State<_CommonReceiptPreview> {
     final previewConfig = DocumentConfig.fromJson(configJson);
     final appSettings = context.read<AppSettingsProvider>().appSettings;
     final banks = context.read<BankProvider>().banks;
-    final store = context.read<StoreSessionProvider>().activeStore;
+    // Use the same restored active-store source as real printing. A hardcoded
+    // fallback would make the preview claim an address is available when the
+    // print path has none.
+    final store =
+        await context.read<StoreSessionProvider>().resolveActiveStore();
     final preferences = SharedPreferenceProvider();
     final zatcaVatNumber = await preferences.getZatcaVatNumber();
     final zatcaCrNumber = await preferences.getZatcaCrNumber();
@@ -1035,7 +1039,7 @@ class _CommonReceiptPreviewState extends State<_CommonReceiptPreview> {
       netExcTax: '43.48',
       bankDetails: banks,
       storeName: store?.storeName ?? 'CloudPOS Store',
-      storeLocation: store?.location ?? 'Riyadh, Saudi Arabia',
+      storeLocation: store?.location,
       storePhone: store?.phone ?? '+966 11 000 0000',
       storeEmail: store?.email ?? 'store@example.com',
       apiTotalTax: 6.52,

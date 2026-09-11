@@ -36,6 +36,58 @@ class StoreSessionProvider extends ChangeNotifier {
   String? get statusMessage => _statusMessage;
   List<Store> get availableStores => List.unmodifiable(_availableStores);
 
+  /// In-memory store first; fill missing contact fields from the persisted
+  /// `active_store` snapshot so print still works if this process never
+  /// re-ran store selection.
+  Future<Store?> resolveActiveStore() async {
+    final persistedJson =
+        await SharedPreferenceProvider().getActiveStoreDetails();
+    final saved =
+        persistedJson != null ? Store.fromJson(persistedJson) : null;
+    final current = _activeStore;
+
+    if (current == null && saved == null) return null;
+    if (saved == null) return current;
+
+    if (current == null) {
+      _activeStore = saved;
+      notifyListeners();
+      return saved;
+    }
+
+    final merged = Store(
+      storeId: current.storeId ?? saved.storeId,
+      storeName: _nonEmpty(current.storeName) ?? saved.storeName,
+      code: current.code ?? saved.code,
+      location: _nonEmpty(current.location) ?? saved.location,
+      email: _nonEmpty(current.email) ?? saved.email,
+      phone: _nonEmpty(current.phone) ?? saved.phone,
+      stateId: current.stateId ?? saved.stateId,
+      districtId: current.districtId ?? saved.districtId,
+      pincodeId: current.pincodeId ?? saved.pincodeId,
+      localLocationId: current.localLocationId ?? saved.localLocationId,
+      storeOpenTime: current.storeOpenTime ?? saved.storeOpenTime,
+    );
+
+    final filledMissingContact =
+        (!_hasText(current.location) && _hasText(merged.location)) ||
+            (!_hasText(current.phone) && _hasText(merged.phone)) ||
+            (!_hasText(current.email) && _hasText(merged.email));
+    if (filledMissingContact) {
+      _activeStore = merged;
+      notifyListeners();
+    }
+    return merged;
+  }
+
+  static String? _nonEmpty(String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) return null;
+    return trimmed;
+  }
+
+  static bool _hasText(String? value) => _nonEmpty(value) != null;
+
   void _setStatus(String message) {
     _statusMessage = message;
     notifyListeners();

@@ -385,11 +385,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             ? params.storeName!
             : 'STORE NAME');
     final storeDesc = cfgVal('showDescription', '');
-    final addressLabel = cfgVal('showStoreAddress', '');
-    final addressVal = params.storeLocation ?? '';
-    final storeAddress = addressVal.isNotEmpty
-        ? (addressLabel.isNotEmpty ? '$addressLabel: $addressVal' : addressVal)
-        : '';
+    final storeAddress = params.storeAddressText();
     final storeFssai = cfgVal('showFssaiInfo', '');
     final extraHeading1 = cfgVal('showExtraHeading1', '');
     final extraHeading2 = cfgVal('showExtraHeading2', '');

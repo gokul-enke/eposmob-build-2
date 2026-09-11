@@ -419,27 +419,10 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
 
     rows.add(SpacingRow(_itemGap));
 
-    // Address - Clean, smaller text
-    if (displayConfig?['showStoreAddress']?.visible == true) {
-      final configuredAddress = _getModeLabel(
-        displayConfig: displayConfig,
-        key: 'showStoreAddress',
-        isEnglish: isEnglish,
-        isBilingual: isBilingual,
-        english: '',
-        arabic: '',
-      );
-      final address = params.storeLocation ?? '';
-      if (configuredAddress.isNotEmpty) {
-        rows.add(TextRow(configuredAddress, scale: 0.85, isBold: true));
-      } else if (address.isNotEmpty) {
-        final addressLabel = isBilingual
-            ? _getBilingualText(arabic: 'العنوان', english: 'Address')
-            : (isEnglish ? 'Address' : 'العنوان');
-        final storeAddress =
-            _appendValueToModeLabel(addressLabel, ': $address', isBilingual);
-        rows.add(TextRow(storeAddress, scale: 0.85, isBold: true));
-      }
+    // The option supplies visibility/label; the active store supplies value.
+    final storeAddress = params.storeAddressText();
+    if (storeAddress.isNotEmpty) {
+      rows.add(TextRow(storeAddress, scale: 0.85, isBold: true));
     }
 
     // Invoice Title (Moved above Tax/Fssai Info)
@@ -708,6 +691,11 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
     bool isLtrLayout,
     ui.Image? deliveryIcon,
   ) {
+    // This is the customer-section master switch in the shared receipt
+    // contract. Standard and Premium already stop the entire section here;
+    // Premium 2 Bilingual previously allowed address/payment rows through.
+    if (!params.isVisible('showCustomerNameAndPhone')) return;
+
     // Paper size aware scaling
     final bool is58mm = params.is58mm;
     final double scale = is58mm ? 0.85 : 1.0;
@@ -2570,6 +2558,20 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
     final hasCreditNoteConfig = retLabels?.creditNoteNumber != null ||
         retLabels?.creditNoteDate != null;
 
+    String creditNoteLabel({
+      required String key,
+      required String englishFallback,
+      required String arabicFallback,
+    }) {
+      return ReceiptConfigurationContract.label(
+        options: retDc,
+        key: key,
+        mode: params.receiptLanguageMode,
+        englishFallback: englishFallback,
+        arabicFallback: arabicFallback,
+      );
+    }
+
     rows.add(SpacingRow(_sectionGap));
     rows.add(ThinDividerRow());
     rows.add(SpacingRow(_itemGap));
@@ -2590,33 +2592,24 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
 
     // — Credit Note Details section —
     if (hasCreditNoteConfig) {
-      final detailsHeading = isBilingual
-          ? _getBilingualText(
-              arabic: (retDc?['showCreditNoteOrder']?.value as String?)
-                          ?.isNotEmpty ==
-                      true
-                  ? retDc!['showCreditNoteOrder']!.value as String
-                  : 'تفاصيل إشعار الائتمان',
-              english: (retDc?['showCreditNoteOrder']?.value as String?)
-                          ?.isNotEmpty ==
-                      true
-                  ? retDc!['showCreditNoteOrder']!.value as String
-                  : 'CREDIT NOTE DETAILS')
-          : (isEnglish
-              ? (retLabels?.detailsHeading?.isNotEmpty == true
-                  ? retLabels!.detailsHeading!
-                  : 'CREDIT NOTE DETAILS')
-              : 'تفاصيل إشعار الائتمان');
+      final detailsHeading = creditNoteLabel(
+        key: 'showCreditNoteOrder',
+        englishFallback: retLabels?.detailsHeading?.trim().isNotEmpty == true
+            ? retLabels!.detailsHeading!
+            : 'CREDIT NOTE DETAILS',
+        arabicFallback: 'تفاصيل إشعار الائتمان',
+      );
       rows.add(TextRow(detailsHeading, isBold: true, scale: scale));
       rows.add(SpacingRow(_itemGap));
       if (retLabels?.creditNoteNumber != null) {
-        final cnLabelText = retLabels?.creditNoteNumber?.isNotEmpty == true
-            ? retLabels!.creditNoteNumber!
-            : 'Credit Note No:';
-        final cnLabel = isBilingual
-            ? _getBilingualText(
-                arabic: 'رقم إشعار الائتمان:', english: cnLabelText)
-            : (isEnglish ? cnLabelText : 'رقم إشعار الائتمان:');
+        final cnLabel = creditNoteLabel(
+          key: 'showCreditNoteNumber',
+          englishFallback:
+              retLabels?.creditNoteNumber?.trim().isNotEmpty == true
+                  ? retLabels!.creditNoteNumber!
+                  : 'Credit Note No:',
+          arabicFallback: 'رقم إشعار الائتمان:',
+        );
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(cnLabel,
               weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
@@ -2625,17 +2618,38 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
         ]));
       }
       if (retLabels?.creditNoteDate != null) {
-        final dateLabelText = retLabels?.creditNoteDate?.isNotEmpty == true
-            ? retLabels!.creditNoteDate!
-            : 'Credit Note Date:';
-        final dateLabel = isBilingual
-            ? _getBilingualText(
-                arabic: 'تاريخ إشعار الائتمان:', english: dateLabelText)
-            : (isEnglish ? dateLabelText : 'تاريخ إشعار الائتمان:');
+        final dateLabel = creditNoteLabel(
+          key: 'showCreditNoteDate',
+          englishFallback: retLabels?.creditNoteDate?.trim().isNotEmpty == true
+              ? retLabels!.creditNoteDate!
+              : 'Credit Note Date:',
+          arabicFallback: 'تاريخ إشعار الائتمان:',
+        );
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(dateLabel,
               weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
           ReceiptTableColumn(params.orderDate,
+              weight: 0.55, align: TextAlign.left, scale: scale),
+        ]));
+      }
+      if (retLabels?.creditNoteReason != null) {
+        final reasonLabel = creditNoteLabel(
+          key: 'showCreditNoteReason',
+          englishFallback:
+              retLabels?.creditNoteReason?.trim().isNotEmpty == true
+                  ? retLabels!.creditNoteReason!
+                  : 'Reason:',
+          arabicFallback: 'السبب:',
+        );
+        final reasons = orderReturns.returnItems!
+            .map((item) => item.reason?.trim() ?? '')
+            .where((reason) => reason.isNotEmpty)
+            .toSet()
+            .join(', ');
+        rows.add(ReceiptTableRow([
+          ReceiptTableColumn(reasonLabel,
+              weight: 0.45, align: TextAlign.left, isBold: true, scale: scale),
+          ReceiptTableColumn(reasons.isEmpty ? '-' : reasons,
               weight: 0.55, align: TextAlign.left, scale: scale),
         ]));
       }

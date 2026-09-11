@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/components/order_submission_guard.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/responsive.dart';
 import 'package:pos_machine/widgets/side_menu_mobile.dart';
@@ -50,8 +51,9 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     final isMobile = ResponsiveWidget.isMobile(context);
-    Widget content =
-        Obx(() => sideBarController.screens[sideBarController.index.value]);
+    Widget content = Obx(() => CheckoutNavigationHost(
+        index: sideBarController.index.value,
+        screen: (index) => sideBarController.screens[index]));
 
     final scaffold = Scaffold(
       key: _scaffoldKey,
@@ -65,9 +67,8 @@ class _MainScreenState extends State<MainScreen> {
               centerTitle: true,
               title: Obx(() {
                 final title = sideBarController.billingMobileAppBarTitle.value;
-                final onBilling =
-                    sideBarController.index.value ==
-                        SideBarController.billingScreenIndex;
+                final onBilling = sideBarController.index.value ==
+                    SideBarController.billingScreenIndex;
                 if (onBilling && title != null) {
                   return Text(
                     title,

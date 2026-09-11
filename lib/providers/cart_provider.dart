@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos_machine/services/order_submission_coordinator.dart';
+import 'package:pos_machine/resources/recovery_text.dart';
 
 import '../models/add_to_cart.dart';
 import '../models/list_cart.dart';
@@ -28,6 +30,8 @@ Uri buildListCartUri({
 }
 
 class CartProvider with ChangeNotifier {
+  final OrderSubmissionCoordinator submissions;
+
   /// Order writes previously ran with no timeout, so a stalled socket left the
   /// confirm spinner running forever. Bounded here; the timeout path tells the
   /// cashier to check before re-billing, because the server may still have
@@ -128,17 +132,24 @@ class CartProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  CartProvider() {
+  CartProvider({OrderSubmissionCoordinator? submissionCoordinator})
+      : submissions =
+            submissionCoordinator ?? OrderSubmissionCoordinator.instance {
     getData();
     // Initialize your stream or add any initial data here if needed.
   }
-  getData() async {
+  Future<void> getData() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     int? customerId = prefs.getInt('customerId');
     // sample data
     // int? customerId = 1;
     String? token = prefs.getString('access_token');
-    fetchCartDataFromApi(customerId: customerId!, accessToken: token ?? "");
+    if (customerId == null || token == null || token.isEmpty) return;
+    try {
+      await fetchCartDataFromApi(customerId: customerId, accessToken: token);
+    } catch (_) {
+      debugPrint('[Cart] Background refresh failed');
+    }
   }
 
   // Dispose the stream controller when done
@@ -864,6 +875,9 @@ class CartProvider with ChangeNotifier {
   //          *********************** ADD TO ORDER API ***************************************************
 
   Future<dynamic> addToOrderAPI({
+    bool protectSubmission = false,
+    String? localDraftId,
+    String? cartSessionId,
     List<Map<String, dynamic>>? items,
     required int cartIds,
     required String accessToken,
@@ -898,27 +912,6 @@ class CartProvider with ChangeNotifier {
     final subscriptionRejection =
         SubscriptionAccessRegistry.rejectedOrderResponse();
     if (subscriptionRejection != null) return subscriptionRejection;
-    debugPrint("📤 ADD TO ORDER API - Starting request");
-    debugPrint("📦 Order items count: ${items?.length ?? 0}");
-    debugPrint("🛒 Cart ID: $cartIds");
-    debugPrint("👤 Customer ID: $customerId");
-    debugPrint("📱 Customer Phone: $customerPhone");
-    debugPrint("💰 Payment Method: $paymentMethod");
-    debugPrint("💰 Payment Methods: $paymentMethods");
-    debugPrint("💰 Paid Methods: $paidMethods");
-    debugPrint("💵 Total Price: $totalPrice");
-    debugPrint("💳 Transaction ID: $transactionId");
-    debugPrint("💸 Paid Amount: $paidAmount");
-    debugPrint("🔄 Balance Amount: $balanceAmount");
-    debugPrint("🎫 Coupon ID: $couponId");
-    debugPrint("💬 Comment: $comment");
-    debugPrint("🚚 Delivery Method ID: $deliveryMethodId");
-    debugPrint("🚗 Car Number: $carNumber");
-    debugPrint("📊 Status: $status");
-    debugPrint("🏷️ Flat Discount: $flatDiscount");
-    debugPrint("📊 Percentage Discount: $percentageDiscount");
-    debugPrint("💰 Discount Amount: $discountAmount");
-    debugPrint("🚚 Delivery Charge: ${deliveryCharge ?? 0.0}");
 
     DateTime now = DateHelper.now();
 
@@ -935,9 +928,6 @@ class CartProvider with ChangeNotifier {
     List<Map<String, dynamic>>? finalPaidMethods = paidMethods != null
         ? List<Map<String, dynamic>>.from(paidMethods)
         : null;
-
-    debugPrint("paymentMethods $paymentMethods");
-    debugPrint("paidMethods $finalPaidMethods");
 
     // Use multi-payment format if available, otherwise fall back to single payment
     if (paymentMethods != null &&
@@ -1009,86 +999,70 @@ class CartProvider with ChangeNotifier {
     final String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
 
-    debugPrint("🏬 Active Store ID: $activeStoreId");
-
     if (activeStoreId != null) {
       apiBodyData["store_id"] = activeStoreId;
     }
 
-    debugPrint("📝 API Request Body: ${json.encode(apiBodyData)}");
-
     final url = Uri.parse(APPUrl.addToOrderUrl);
-    debugPrint("🌐 API URL: ${url.toString()}");
-
-    debugPrint("apiKey is xxx $apiKey");
 
     if (apiKey == null || apiKey.isEmpty) {
-      throw const HttpException("API key not found. Please restart the app.");
+      return {
+        'status': 'validation_error',
+        'message': 'API key not found. Sign in again. Nothing was sent.'
+      };
     }
-    try {
-      debugPrint("🔄 Sending POST request to server...");
-      final response =
-          await http.post(url, body: json.encode(apiBodyData), headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $accessToken',
-        'X-Tenant': apiKey,
-      }).timeout(_orderRequestTimeout);
-
-      debugPrint('📥 Response status code: ${response.statusCode}');
-      debugPrint('📥 Response body: ${response.body}');
-
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        debugPrint(
-            '✅ Order created successfully (status ${response.statusCode})');
-
-        final jsonData = json.decode(response.body);
-        debugPrint('📊 Order ID: ${jsonData["order_id"]}');
-        debugPrint('📊 Order Number: ${jsonData["order_number"]}');
-
-        getData();
-        return jsonData;
-      } else {
-        debugPrint('❌ Failed to create order (status ${response.statusCode})');
-        // Preserve structured backend conflict/validation details so checkout
-        // can show the cashier the real stock or concurrency error. The old
-        // generic response discarded useful 409/422 messages.
-        try {
-          final decoded = json.decode(response.body);
-          if (decoded is Map) {
-            return <String, dynamic>{
-              ...decoded.map(
-                (key, value) => MapEntry(key.toString(), value),
-              ),
-              'http_status': response.statusCode,
-            };
-          }
-        } catch (_) {
-          // Fall through to a stable generic shape for non-JSON responses.
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $accessToken',
+      'X-Tenant': apiKey,
+    };
+    // Other order workflows retain their existing API contract. Only the
+    // supermarket callers participate in durable recovery and cleanup.
+    if (!protectSubmission) {
+      try {
+        final response = await http
+            .post(url, body: json.encode(apiBodyData), headers: headers)
+            .timeout(_orderRequestTimeout);
+        final decoded = json.decode(response.body);
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          unawaited(getData());
+          return decoded;
         }
+        return decoded is Map
+            ? {...decoded, 'http_status': response.statusCode}
+            : {'status': 'failure', 'message': 'Could not confirm order.'};
+      } on TimeoutException {
         return {
-          "status": "failure",
-          "message": "Failed to add order",
-          "http_status": response.statusCode,
+          'status': 'unknown',
+          'timed_out': true,
+          'message':
+              'The order may already be saved. Check your orders before billing it again.'
+        };
+      } catch (_) {
+        return {
+          'status': 'error',
+          'message':
+              'Could not verify the order. Check your orders before billing it again.'
         };
       }
-    } on TimeoutException {
-      debugPrint(
-          'Order request timed out after ${_orderRequestTimeout.inSeconds}s');
-      return {
-        "status": "error",
-        "timed_out": true,
-        "message":
-            "The request timed out. The order may still have been created - "
-                "check the order list before billing it again.",
-      };
-    } catch (e) {
-      debugPrint('❌ Exception during API call: $e');
-      return {"status": "error", "message": e.toString()};
-    } finally {
-      debugPrint("🏁 ADD TO ORDER API - Request completed");
     }
+    final result = await submissions.submit(
+      endpoint: url,
+      payload: apiBodyData,
+      headers: headers,
+      localDraftId: localDraftId,
+      cartSessionId: cartSessionId,
+      saleTotal: totalPrice,
+      scope: OrderSubmissionCoordinator.scopeFor(url, apiKey, activeStoreId),
+      send: () =>
+          http.post(url, body: json.encode(apiBodyData), headers: headers),
+    );
+    if (result['order_id'] != null) unawaited(getData());
+    if (result['message'] is String) {
+      result['message'] = recoveryText(result['message'] as String);
+    }
+    return result;
   }
-
   // Update Order Api
 
   Future<dynamic> updateOrderAPI({

@@ -20,31 +20,65 @@ class LocalizationService {
   static Map<String, Map<String, String>> get translations => _translations;
 
   static Future<void> init() async {
-    // Load saved locale
-    final prefs = await SharedPreferences.getInstance();
-    final savedCode = prefs.getString(_prefsKey);
-    if (savedCode != null && savedCode.isNotEmpty) {
+    // Translations first. They are what makes the UI readable, they depend on
+    // nothing but the asset bundle, and init() runs inside a bounded startup
+    // step — so anything that reads the preference store must come after them
+    // or it can starve them of that budget and leave every screen showing raw
+    // keys like "login.title".
+    await _loadTranslations();
+    await _loadSavedLocale();
+  }
+
+  /// The saved locale is a preference, not a prerequisite: guarded, bounded,
+  /// and always falls back to [fallbackLocale].
+  ///
+  /// The timeout matters as much as the catch. A store that throws is easy;
+  /// one that simply never answers would otherwise hang here for the whole
+  /// startup budget.
+  static Future<void> _loadSavedLocale() async {
+    try {
+      final prefs = await SharedPreferences.getInstance()
+          .timeout(const Duration(seconds: 3));
+      final savedCode = prefs.getString(_prefsKey);
+      if (savedCode == null || savedCode.isEmpty) {
+        return;
+      }
+
       final savedLocale = _localeFromCode(savedCode);
       _locale = savedLocale ?? fallbackLocale;
       if (savedLocale == null) {
         await prefs.setString(_prefsKey, _codeFromLocale(fallbackLocale));
       }
+    } catch (e) {
+      _locale = fallbackLocale;
+      debugPrint(
+          'LocalizationService: could not read the saved locale, falling back '
+          'to ${fallbackLocale.languageCode}: $e');
     }
+  }
 
-    // Preload all supported locale JSON files
+  /// Preloads every supported locale. Individual files degrade to an empty
+  /// map inside _loadJsonMap, so one bad file cannot take the others down.
+  static Future<void> _loadTranslations() async {
     final Map<String, Map<String, String>> loaded = {};
     for (final loc in supportedLocales) {
       final code = _codeFromLocale(loc);
-      final map = await _loadJsonMap('lib/resources/i18n/$code.json');
-      loaded[code] = map;
+      loaded[code] = await _loadJsonMap('lib/resources/i18n/$code.json');
     }
     _translations = loaded;
   }
 
   static Future<void> updateLocale(Locale newLocale) async {
     _locale = _localeFromCode(newLocale.languageCode) ?? fallbackLocale;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, _codeFromLocale(_locale));
+
+    // Switching language in the running app must work even when the store
+    // cannot be written; the choice simply will not survive a restart.
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefsKey, _codeFromLocale(_locale));
+    } catch (e) {
+      debugPrint('LocalizationService: could not persist the locale: $e');
+    }
   }
 
   static String _codeFromLocale(Locale l) => l.languageCode;

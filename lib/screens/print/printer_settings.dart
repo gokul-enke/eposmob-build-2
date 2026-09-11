@@ -7,9 +7,6 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'dart:convert';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:hive/hive.dart';
-import 'package:pos_machine/models/local_models.dart';
-import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'dart:async';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
@@ -689,48 +686,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     }
   }
 
-  Future<void> clearAllHiveData() async {
-    try {
-      // Close all open boxes
-      if (Hive.isBoxOpen('products')) {
-        await Hive.box<HiveProduct>('products').close();
-      }
-      if (Hive.isBoxOpen('cart_items')) {
-        await Hive.box<HiveLocalCartItem>('cart_items').close();
-      }
-      if (Hive.isBoxOpen('saved_orders')) {
-        await Hive.box<HiveSavedOrder>('saved_orders').close();
-      }
-      if (Hive.isBoxOpen('confirmed_orders')) {
-        await Hive.box<HiveSavedOrder>('confirmed_orders').close();
-      }
-      if (Hive.isBoxOpen('categories')) {
-        await Hive.box<HiveCategory>('categories').close();
-      }
-
-      // Delete all Hive files
-      final appDir = await getApplicationDocumentsDirectory();
-      final hiveDir = Directory('${appDir.path}/hive');
-      if (await hiveDir.exists()) {
-        await hiveDir.delete(recursive: true);
-      }
-
-      if (mounted) {
-        showScaffold(
-          context: context,
-          message: "printer_settings.toast_hive_cleared".tr,
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        showScaffoldError(
-          context: context,
-          message: "printer_settings.error_clear_hive_reason"
-              .trParams({'error': e.toString()}),
-        );
-      }
-    }
-  }
+  // NOTE: the former `clearAllHiveData` helper was removed. It closed the
+  // boxes that `LocalProductProvider` holds references to (every cart action
+  // would then throw "Box has already been closed" until restart) and deleted
+  // a Documents/hive folder that has never been the Hive location. Offline
+  // data is cleared through `OfflineCacheClearService` instead.
 
   @override
   Widget build(BuildContext context) {
