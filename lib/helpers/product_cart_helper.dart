@@ -374,9 +374,11 @@ class ProductCartHelper {
         // All stock entries have qty=0 OR no store-matching entries → base price
         debugPrint(
             "⚠️ No available stock (qty>0) found - fallback to product base pricing");
-        finalPrice =
-            finalPrice ?? double.tryParse(product.price?.price ?? "0") ?? 0;
-        finalMrp = finalMrp ?? double.tryParse(product.mrp ?? "0") ?? 0;
+        finalPrice = finalPrice ??
+            double.tryParse(product.price?.price?.toString() ?? "0") ??
+            0;
+        finalMrp =
+            finalMrp ?? double.tryParse(product.mrp?.toString() ?? "0") ?? 0;
       } else {
         // Group stocks by pricing BEFORE deciding whether to show modal
         final activeGroupingFields =
@@ -519,9 +521,11 @@ class ProductCartHelper {
     } else if (!stockEnabled) {
       debugPrint("📦 Stock management disabled - using product base pricing");
 
-      finalPrice =
-          finalPrice ?? double.tryParse(product.price?.price ?? "0") ?? 0;
-      finalMrp = finalMrp ?? double.tryParse(product.mrp ?? "0") ?? 0;
+      finalPrice = finalPrice ??
+          double.tryParse(product.price?.price?.toString() ?? "0") ??
+          0;
+      finalMrp =
+          finalMrp ?? double.tryParse(product.mrp?.toString() ?? "0") ?? 0;
     } else {
       debugPrint(
           "📦 Product has no stock entries, using basic product info...");
@@ -540,9 +544,11 @@ class ProductCartHelper {
           return;
         }
       }
-      finalPrice =
-          finalPrice ?? double.tryParse(product.price?.price ?? "0") ?? 0;
-      finalMrp = finalMrp ?? double.tryParse(product.mrp ?? "0") ?? 0;
+      finalPrice = finalPrice ??
+          double.tryParse(product.price?.price?.toString() ?? "0") ??
+          0;
+      finalMrp =
+          finalMrp ?? double.tryParse(product.mrp?.toString() ?? "0") ?? 0;
 
       debugPrint("💰 Product base pricing (No Stock):");
       debugPrint("  - Final Price: $finalPrice");

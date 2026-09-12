@@ -352,9 +352,10 @@ class _HomeWidgetState extends State<HomeWidget> {
                     defaultPrice =
                         double.tryParse(selectedStock.price ?? "0") ?? 0.0;
                   } else {
-                    defaultPrice =
-                        double.tryParse(selectedProduct.price?.price ?? "0") ??
-                            0.0;
+                    defaultPrice = double.tryParse(
+                            selectedProduct.price?.price?.toString() ??
+                                "0") ??
+                        0.0;
                   }
 
                   billingProvider.selectedProductIdController.text =

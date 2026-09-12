@@ -397,11 +397,11 @@ class BillingMobileMarketController {
   String defaultQuantityText() => '1';
 
   double defaultUnitPrice(GetProduct product) {
-    return double.tryParse(product.price?.price ?? '0') ?? 0;
+    return double.tryParse(product.price?.price?.toString() ?? '0') ?? 0;
   }
 
   double defaultMrp(GetProduct product) {
-    return double.tryParse(product.mrp ?? '0') ?? 0;
+    return double.tryParse(product.mrp?.toString() ?? '0') ?? 0;
   }
 
   String formatAddFieldPrice(double value) =>
