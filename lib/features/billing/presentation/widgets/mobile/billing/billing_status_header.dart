@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/live_time_display.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
+import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/widgets/open_cash_drawer_button.dart';
 import 'package:pos_machine/widgets/sync_button.dart';
 
@@ -14,12 +17,12 @@ class BillingStatusHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final localProvider = context.watch<LocalProductProvider>();
     final billingProvider = context.watch<BillingProvider>();
+    final keyboardProvider = context.watch<KeyboardProvider>();
 
     final currentOrder = localProvider.currentOrder;
     final isEditingOrder = currentOrder != null;
-    final orderLabel = isEditingOrder
-        ? 'Edit #${currentOrder.orderNumber}'
-        : 'New order';
+    final orderLabel =
+        isEditingOrder ? 'Edit #${currentOrder.orderNumber}' : 'New order';
 
     return Container(
       width: double.infinity,
@@ -63,6 +66,30 @@ class BillingStatusHeader extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    IconButton(
+                      key: const ValueKey('mobile_keyboard_toggle'),
+                      icon: Icon(
+                        keyboardProvider.showKeyboardFeature
+                            ? Icons.keyboard_hide
+                            : Icons.keyboard,
+                        color: keyboardProvider.showKeyboardFeature
+                            ? ColorManager.kPrimaryColor
+                            : Colors.grey.shade600,
+                        size: 24,
+                      ),
+                      tooltip: keyboardProvider.showKeyboardFeature
+                          ? 'billing.keyboard_hide'.tr
+                          : 'billing.keyboard_show'.tr,
+                      onPressed: () {
+                        if (keyboardProvider.showKeyboardFeature) {
+                          keyboardProvider.featureOff();
+                          keyboardProvider.clear();
+                        } else {
+                          keyboardProvider.featureOn();
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 5),
                     const SyncButton(
                       showTooltip: true,
                       showText: false,

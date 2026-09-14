@@ -91,8 +91,7 @@ class _FakeGeneralSettingsProvider extends GeneralSettingsProvider {
   Future<void> fetchGeneralSettings() async {}
 
   @override
-  GeneralSettings? get generalSettings =>
-      GeneralSettings(stockEnabled: false);
+  GeneralSettings? get generalSettings => GeneralSettings(stockEnabled: false);
 }
 
 class _FakeCartProvider extends CartProvider {
@@ -190,7 +189,7 @@ void main() {
     addTearDown(() => FlutterError.onError = original);
   }
 
-  Widget wrap() {
+  Widget wrap({KeyboardProvider? keyboardProvider}) {
     final auth = AuthModel()..login('test-token', 1);
     return MultiProvider(
       providers: [
@@ -214,8 +213,13 @@ void main() {
             create: (_) => CustomerSelectionProvider()),
         ChangeNotifierProvider<DeliveryMethodsProvider>(
             create: (_) => DeliveryMethodsProvider()),
-        ChangeNotifierProvider<KeyboardProvider>(
-            create: (_) => KeyboardProvider()),
+        if (keyboardProvider != null)
+          ChangeNotifierProvider<KeyboardProvider>.value(
+            value: keyboardProvider,
+          )
+        else
+          ChangeNotifierProvider<KeyboardProvider>(
+              create: (_) => KeyboardProvider()),
         ChangeNotifierProvider<SyncProvider>(create: (_) => SyncProvider()),
         ChangeNotifierProvider<PineLabsTerminalProvider>(
             create: (_) => PineLabsTerminalProvider()),
@@ -271,5 +275,33 @@ void main() {
 
     // If we got here, switching across all four tabs built without throwing.
     expect(find.byType(BillingPageMobile), findsOneWidget);
+  });
+
+  testWidgets('mobile header toggles the virtual keyboard feature',
+      (tester) async {
+    tolerateHomeTabOverflow();
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final keyboardProvider = KeyboardProvider(enablePersistence: false)
+      ..featureOn();
+    addTearDown(keyboardProvider.dispose);
+
+    await tester.pumpWidget(wrap(keyboardProvider: keyboardProvider));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    final toggle = find.byKey(const ValueKey('mobile_keyboard_toggle'));
+    expect(toggle, findsOneWidget);
+    expect(
+        find.descendant(of: toggle, matching: find.byIcon(Icons.keyboard_hide)),
+        findsOneWidget);
+
+    await tester.tap(toggle);
+    await tester.pump();
+
+    expect(keyboardProvider.showKeyboardFeature, isFalse);
+    expect(find.descendant(of: toggle, matching: find.byIcon(Icons.keyboard)),
+        findsOneWidget);
   });
 }

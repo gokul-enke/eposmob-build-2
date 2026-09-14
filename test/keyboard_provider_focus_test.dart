@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pos_machine/components/virtual_keyboard_widget.dart';
 import 'package:pos_machine/helpers/keyboard_dispatcher.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/services/order_submission_coordinator.dart';
 import 'package:provider/provider.dart';
+import 'package:virtual_keyboard_custom_layout/virtual_keyboard_custom_layout.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -73,6 +75,277 @@ void main() {
 
       controller.dispose();
       keyboardProvider.dispose();
+    });
+
+    testWidgets('Back dismisses the virtual keyboard before navigation',
+        (tester) async {
+      final keyboardProvider = KeyboardProvider(enablePersistence: false);
+      final controller = TextEditingController(text: '1');
+      final focusNode = FocusNode();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextField(controller: controller, focusNode: focusNode),
+          ),
+        ),
+      );
+      focusNode.requestFocus();
+      await tester.pump();
+      keyboardProvider.show('number', controller);
+
+      expect(keyboardProvider.dismissForBack(), isTrue);
+      await tester.pump();
+      expect(keyboardProvider.showKeyboard, isFalse);
+      expect(keyboardProvider.controller, isNull);
+      expect(focusNode.hasFocus, isFalse);
+      expect(keyboardProvider.dismissForBack(), isFalse,
+          reason: 'a second Back action must remain available to navigation');
+
+      keyboardProvider.dispose();
+      controller.dispose();
+      focusNode.dispose();
+    });
+
+    testWidgets('close button allows the same field to reopen the keyboard',
+        (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final keyboardProvider = KeyboardProvider(enablePersistence: false)
+        ..featureOn();
+      final controller = TextEditingController();
+      final focusNode = FocusNode();
+      const fieldKey = Key('reopen-field');
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<KeyboardProvider>.value(
+          value: keyboardProvider,
+          child: MaterialApp(
+            theme: ThemeData(platform: TargetPlatform.android),
+            home: Scaffold(
+              body: Stack(
+                children: [
+                  TextField(
+                    key: fieldKey,
+                    controller: controller,
+                    focusNode: focusNode,
+                  ),
+                  const Align(
+                    alignment: Alignment.bottomCenter,
+                    child: GlobalVirtualKeyboard(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(fieldKey));
+      await tester.pump();
+      await tester.pump();
+      expect(keyboardProvider.showKeyboard, isTrue);
+      expect(focusNode.hasFocus, isTrue);
+
+      await tester.tap(find.descendant(
+        of: find.byType(GlobalVirtualKeyboard),
+        matching: find.byIcon(Icons.close),
+      ));
+      await tester.pump();
+      await tester.pump();
+      expect(keyboardProvider.showKeyboard, isFalse);
+      expect(focusNode.hasFocus, isFalse);
+
+      await tester.tap(find.byKey(fieldKey));
+      await tester.pump();
+      await tester.pump();
+      expect(keyboardProvider.showKeyboard, isTrue);
+      expect(identical(keyboardProvider.controller, controller), isTrue);
+
+      await tester.pumpWidget(const SizedBox());
+      keyboardProvider.dispose();
+      controller.dispose();
+      focusNode.dispose();
+    });
+  });
+
+  group('VirtualKeyboardWidget editing contract', () {
+    testWidgets('typing replaces a reversed selected range', (tester) async {
+      final controller = TextEditingController(text: '110110');
+      final focusNode = FocusNode();
+      final changes = <String>[];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  onChanged: changes.add,
+                ),
+                Expanded(
+                  child: VirtualKeyboardWidget(
+                    controller: controller,
+                    keyboardType: VirtualKeyboardType.Numeric,
+                    height: 400,
+                    width: 600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      focusNode.requestFocus();
+      await tester.pump();
+      controller.selection = const TextSelection(
+        baseOffset: 6,
+        extentOffset: 0,
+      );
+      await tester.pump();
+
+      await tester.tap(find.descendant(
+        of: find.byType(VirtualKeyboardWidget),
+        matching: find.text('1'),
+      ));
+      await tester.pump();
+
+      expect(controller.text, '1');
+      expect(controller.selection, const TextSelection.collapsed(offset: 1));
+      expect(changes, ['1']);
+
+      controller.dispose();
+      focusNode.dispose();
+    });
+
+    testWidgets('applies field formatters and calls onChanged exactly once',
+        (tester) async {
+      final controller = TextEditingController();
+      final changes = <String>[];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                TextField(
+                  controller: controller,
+                  inputFormatters: [LengthLimitingTextInputFormatter(1)],
+                  onChanged: changes.add,
+                ),
+                Expanded(
+                  child: VirtualKeyboardWidget(
+                    controller: controller,
+                    keyboardType: VirtualKeyboardType.Alphanumeric,
+                    height: 400,
+                    width: 600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(TextField));
+      final qKey = find.descendant(
+        of: find.byType(VirtualKeyboardWidget),
+        matching: find.text('q'),
+      );
+      await tester.tap(qKey);
+      await tester.pump();
+      await tester.tap(qKey);
+      await tester.pump();
+
+      expect(controller.text, 'q');
+      expect(changes, ['q']);
+
+      controller.dispose();
+    });
+
+    testWidgets('replace-on-first-input reports the replacement value',
+        (tester) async {
+      final controller = TextEditingController(text: 'old');
+      final changes = <String>[];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                TextField(controller: controller, onChanged: changes.add),
+                Expanded(
+                  child: VirtualKeyboardWidget(
+                    controller: controller,
+                    keyboardType: VirtualKeyboardType.Alphanumeric,
+                    height: 400,
+                    width: 600,
+                    shouldReplaceOnFirstInput: true,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(TextField));
+      await tester.tap(find.descendant(
+        of: find.byType(VirtualKeyboardWidget),
+        matching: find.text('q'),
+      ));
+      await tester.pump();
+
+      expect(controller.text, 'q');
+      expect(changes, ['q']);
+
+      controller.dispose();
+    });
+
+    testWidgets('Return submits without inserting a newline', (tester) async {
+      final controller = TextEditingController(text: 'query');
+      final submissions = <String>[];
+      var editingCompleteCount = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                TextField(
+                  controller: controller,
+                  onSubmitted: submissions.add,
+                  onEditingComplete: () => editingCompleteCount++,
+                ),
+                Expanded(
+                  child: VirtualKeyboardWidget(
+                    controller: controller,
+                    keyboardType: VirtualKeyboardType.Alphanumeric,
+                    height: 400,
+                    width: 600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(TextField));
+      await tester.tap(find.byIcon(Icons.keyboard_return));
+      await tester.pump();
+
+      expect(controller.text, 'query');
+      expect(submissions, ['query']);
+      expect(editingCompleteCount, 1);
+
+      controller.dispose();
     });
   });
 

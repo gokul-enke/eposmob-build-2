@@ -75,6 +75,7 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
       await localProductProvider.fetchProductsFromAPI(refresh: true);
 
       if (localProductProvider.sellableProducts.isEmpty) {
+        if (!mounted) return;
         await syncProvider.syncAllData(context);
       }
 
@@ -388,8 +389,8 @@ class _EmptyCatalogLoading extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               resyncing
-                              ? 'billing.products_loading'.tr
-                              : 'billing.please_wait'.tr,
+                  ? 'billing.products_loading'.tr
+                  : 'billing.please_wait'.tr,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Poppins',
@@ -581,7 +582,7 @@ class _MobileBarcodeField extends StatelessWidget {
         color: Colors.black87,
       ),
       decoration: _entryDecoration(
-                hintText: 'billing.barcode'.tr,
+        hintText: 'billing.barcode'.tr,
         prefixIcon: Icon(
           Icons.qr_code_scanner,
           color: Colors.blueGrey.shade400,

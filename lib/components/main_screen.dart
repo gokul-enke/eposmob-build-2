@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/order_submission_guard.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/responsive.dart';
 import 'package:pos_machine/widgets/side_menu_mobile.dart';
+import 'package:provider/provider.dart';
 
 import '../controllers/sidebar_controller.dart';
 import '../resources/color_manager.dart';
@@ -11,7 +13,7 @@ import '../widgets/user_switcher.dart';
 import '../widgets/side_menu.dart';
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({Key? key}) : super(key: key);
+  const MainScreen({super.key});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -27,10 +29,20 @@ class _MainScreenState extends State<MainScreen> {
     sideBarController = Get.find();
   }
 
-  /// On mobile, Android's left-edge back gesture overlaps the drawer drag zone.
-  /// Intercept root back: close drawer if open, otherwise open drawer (POS-safe).
+  /// Handles mobile Back in platform order: dismiss an open keyboard first,
+  /// then navigate or toggle the root drawer on a subsequent Back action.
   void _handleMobileBack(bool didPop, Object? result) {
     if (didPop) return;
+
+    final keyboardProvider = context.read<KeyboardProvider>();
+    if (keyboardProvider.dismissForBack()) return;
+
+    // The native IME normally consumes Back itself. Keep this fallback for
+    // devices/embedders that still forward the action while it is visible.
+    if (MediaQuery.viewInsetsOf(context).bottom > 0) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      return;
+    }
 
     final navigator = Navigator.of(context);
     if (navigator.canPop()) {
