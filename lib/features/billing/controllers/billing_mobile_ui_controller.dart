@@ -33,18 +33,23 @@ class BillingMobileErrorMessages {
   static String get configurePaymentBeforeConfirm =>
       'billing.configure_payment_before_confirm'.tr;
   static String get emptyCart => 'billing_mobile_errors.empty_cart'.tr;
-  static String get clearCartFailed => 'billing_mobile_errors.clear_cart_failed'.tr;
-  static String get saveOrderFailed => 'billing_mobile_errors.save_order_failed'.tr;
+  static String get clearCartFailed =>
+      'billing_mobile_errors.clear_cart_failed'.tr;
+  static String get saveOrderFailed =>
+      'billing_mobile_errors.save_order_failed'.tr;
   static String get confirmOrderFailed =>
       'billing_mobile_errors.confirm_order_failed'.tr;
   static String get createOrderFailed =>
       'billing_mobile_errors.create_order_failed'.tr;
-  static String get loadOrderFailed => 'billing_mobile_errors.load_order_failed'.tr;
+  static String get loadOrderFailed =>
+      'billing_mobile_errors.load_order_failed'.tr;
   static String get invalidPricingBeforeConfirm =>
       'billing_mobile_errors.invalid_pricing_before_confirm'.tr;
   static String get invalidPricingBeforeSave =>
       'billing_mobile_errors.invalid_pricing_before_save'.tr;
   static String get enterCarNumber => 'billing.enter_car_number'.tr;
+  static String get enterDeliveryPincode =>
+      'checkout_modal.msg_pincode_required'.tr;
   static String get noInternetConfirm =>
       'billing_mobile_errors.no_internet_confirm'.tr;
   static String get noInternetCreateOrder =>
@@ -53,7 +58,8 @@ class BillingMobileErrorMessages {
       'billing_mobile_errors.order_request_timed_out'.tr;
 
   // Quotation
-  static String get quotationCreateFailed => 'billing_mobile_errors.quotation_create_failed'.tr;
+  static String get quotationCreateFailed =>
+      'billing_mobile_errors.quotation_create_failed'.tr;
   static String get quotationPrintMissingId =>
       'billing_mobile_errors.quotation_print_missing_id'.tr;
   static String get quotationPrintDetailsFailed =>
@@ -66,10 +72,12 @@ class BillingMobileErrorMessages {
       'billing_mobile_errors.print_retry_prompt'.tr;
   static String get printRetryFailedAgain =>
       'billing_mobile_errors.print_retry_failed_again'.tr;
-  static String get printRetrySuccess => 'billing_mobile_errors.print_retry_success'.tr;
+  static String get printRetrySuccess =>
+      'billing_mobile_errors.print_retry_success'.tr;
 
   // Barcode / product add
-  static String get invalidBarcode => 'billing_mobile_errors.invalid_barcode'.tr;
+  static String get invalidBarcode =>
+      'billing_mobile_errors.invalid_barcode'.tr;
   static String get addToCartFailed =>
       'billing_mobile_errors.add_to_cart_failed'.tr;
 
@@ -111,12 +119,16 @@ class BillingMobileErrorMessages {
       );
 
   // Coupon / discount
-  static String get emptyCartDiscount => 'billing_mobile_errors.empty_cart_discount'.tr;
-  static String get discountNegative => 'billing_mobile_errors.discount_negative'.tr;
-  static String get discountPercentMax => 'billing_mobile_errors.discount_percent_max'.tr;
+  static String get emptyCartDiscount =>
+      'billing_mobile_errors.empty_cart_discount'.tr;
+  static String get discountNegative =>
+      'billing_mobile_errors.discount_negative'.tr;
+  static String get discountPercentMax =>
+      'billing_mobile_errors.discount_percent_max'.tr;
   static String get discountFlatExceedsTotal =>
       'billing_mobile_errors.discount_flat_exceeds_total'.tr;
-  static String get applyCouponFailed => 'billing_mobile_errors.apply_coupon_failed'.tr;
+  static String get applyCouponFailed =>
+      'billing_mobile_errors.apply_coupon_failed'.tr;
   static String get loadDiscountsFailed =>
       'billing_mobile_errors.load_discounts_failed'.tr;
 
@@ -126,12 +138,14 @@ class BillingMobileErrorMessages {
   // Customer
   static String get loadCustomersFailed =>
       'billing_mobile_errors.load_customers_failed'.tr;
-  static String get addCustomerFailed => 'billing_mobile_errors.add_customer_failed'.tr;
+  static String get addCustomerFailed =>
+      'billing_mobile_errors.add_customer_failed'.tr;
   static String get customersUnavailable =>
       'billing_mobile_errors.customers_unavailable'.tr;
 
   // Pine Labs
-  static String get pineLabsInvalidAmount => 'billing_mobile_errors.pine_labs_invalid_amount'.tr;
+  static String get pineLabsInvalidAmount =>
+      'billing_mobile_errors.pine_labs_invalid_amount'.tr;
 
   static String pineLabsPaymentFailed([String? terminalMessage]) {
     final detail = terminalMessage?.trim().isNotEmpty == true
@@ -166,7 +180,8 @@ class BillingMobileErrorMessages {
 
     final message = response['message'];
     if (message is String && message.trim().isNotEmpty) {
-      return userFacingException(message, fallback: fallback ?? confirmOrderFailed);
+      return userFacingException(message,
+          fallback: fallback ?? confirmOrderFailed);
     }
     return fallback ?? confirmOrderFailed;
   }
@@ -358,7 +373,8 @@ class BillingMobileSettingsController {
 class BillingMobileMarketController {
   const BillingMobileMarketController();
 
-  static String get allProductsCategory => 'billing_mobile_errors.all_products'.tr;
+  static String get allProductsCategory =>
+      'billing_mobile_errors.all_products'.tr;
 
   List<GetProduct> visibleProducts({
     required List<GetProduct> products,

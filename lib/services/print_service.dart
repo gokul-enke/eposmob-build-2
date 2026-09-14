@@ -21,6 +21,16 @@ enum PrintMode { salesOnly, returnOnly, combined }
 class PrintService {
   const PrintService();
 
+  String? _savedOrderAddress(SavedOrder order) {
+    final address = order.address?.trim() ?? '';
+    final pincode = order.pincode?.trim() ?? '';
+    if (pincode.isEmpty || address.contains(pincode)) {
+      return address.isEmpty ? null : address;
+    }
+    if (address.isEmpty) return pincode;
+    return '$address, $pincode';
+  }
+
   double _calculateSavedOrderDiscountAmount(SavedOrder savedOrder) {
     final subtotal = savedOrder.items.fold<double>(
       0.0,
@@ -201,8 +211,7 @@ class PrintService {
                 ListTile(
                   leading: const Icon(Icons.receipt_long),
                   title: Text('ui_chrome.print_sales'.tr),
-                  subtitle:
-                      Text('ui_chrome.print_sales_sub'.tr),
+                  subtitle: Text('ui_chrome.print_sales_sub'.tr),
                   onTap: () {
                     debugPrint('[PrintService] Print Sales tapped');
                     Navigator.pop(sheetContext, PrintMode.salesOnly);
@@ -547,7 +556,11 @@ class PrintService {
 
   /// Print a locally saved order (offline/confirmed in local storage)
   Future<bool> printSavedOrder(
-      BuildContext context, SavedOrder savedOrder) async {
+    BuildContext context,
+    SavedOrder savedOrder, {
+    double? customerOldBalance,
+    double? customerCurrentBalance,
+  }) async {
     try {
       {
         final cartItems = <Map<String, dynamic>>[];
@@ -611,6 +624,7 @@ class PrintService {
             (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
                 ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
                 : null;
+        final customerAddress = _savedOrderAddress(savedOrder);
 
         final autoPrintSuccess = await PrintPage.autoPrint(
           context,
@@ -624,7 +638,7 @@ class PrintService {
           isFromLocalStorage: true,
           customerName: savedOrder.customerName,
           customerPhone: savedOrder.customerPhone,
-          customerAddress: savedOrder.address,
+          customerAddress: customerAddress,
           paymentMethod: displayPaymentMethod,
           paymentBreakdown: paymentBreakdown,
           customerAlternatePhone: savedOrder.alternatePhone,
@@ -634,6 +648,8 @@ class PrintService {
           orderComment: savedOrder.comment,
           deliveryMethod: savedOrder.deliveryMethod,
           paidAmount: paidAmount,
+          customerOldBalance: customerOldBalance,
+          customerCurrentBalance: customerCurrentBalance,
           isDefaultCustomer:
               _isDefaultCustomerPhone(context, savedOrder.customerPhone),
           netExcTax: netExcTax.toString(),
@@ -654,7 +670,7 @@ class PrintService {
                 isFromLocalStorage: true,
                 customerName: savedOrder.customerName,
                 customerPhone: savedOrder.customerPhone,
-                customerAddress: savedOrder.address,
+                customerAddress: customerAddress,
                 paymentMethod: displayPaymentMethod,
                 paymentBreakdown: paymentBreakdown,
                 customerAlternatePhone: savedOrder.alternatePhone,
@@ -664,6 +680,8 @@ class PrintService {
                 orderComment: savedOrder.comment,
                 deliveryMethod: savedOrder.deliveryMethod,
                 paidAmount: paidAmount,
+                customerOldBalance: customerOldBalance,
+                customerCurrentBalance: customerCurrentBalance,
                 isDefaultCustomer:
                     _isDefaultCustomerPhone(context, savedOrder.customerPhone),
                 netExcTax: netExcTax.toString(),

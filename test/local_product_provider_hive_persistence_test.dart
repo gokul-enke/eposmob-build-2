@@ -441,6 +441,33 @@ void main() {
   });
 
   group('confirmed orders', () {
+    test('checkout metadata survives confirmed-order persistence', () async {
+      final provider = LocalProductProvider();
+      provider.initializeProducts([makeProduct(1)]);
+      provider.addToCart(product: provider.getProductById(1)!, quantity: 1);
+
+      final sale = provider.saveCurrentCartAsConfirmedOrder(
+        address: 'Main road',
+        addressId: 81,
+        pincode: '682001',
+        quotationId: 91,
+        quotationNumber: 'QT-91',
+        alternatePhone: '9000000001',
+        customerVatNumber: 'VAT-1',
+        customerCrNumber: 'CR-1',
+      );
+      await provider.flushPersistence();
+
+      final row = confirmedBox().get(sale.id)!;
+      expect(row.addressId, 81);
+      expect(row.pincode, '682001');
+      expect(row.quotationId, 91);
+      expect(row.quotationNumber, 'QT-91');
+      expect(row.alternatePhone, '9000000001');
+      expect(row.customerVatNumber, 'VAT-1');
+      expect(row.customerCrNumber, 'CR-1');
+    });
+
     test('rows are keyed by order id and legacy rows are pruned', () async {
       // A row as older builds wrote it, with an auto-increment key.
       await confirmedBox().add(HiveSavedOrder(

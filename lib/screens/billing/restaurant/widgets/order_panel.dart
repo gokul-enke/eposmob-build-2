@@ -19,6 +19,7 @@ import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/cart_item_status.dart';
 import 'package:pos_machine/models/master_data.dart';
+import 'package:pos_machine/models/order_submission_payload.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
@@ -35,6 +36,7 @@ import '../../../../features/billing/presentation/widgets/payment_method_modal.d
 import '../../../../providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/models/delivery_method.dart';
+import 'package:pos_machine/models/delivery_method_registry.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/checkout_modal.dart';
 import 'package:pos_machine/screens/print/print_kot.dart';
@@ -44,6 +46,10 @@ import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/screens/billing/restaurant/utils/restaurant_helpers.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/pos_security_key_dialog.dart';
+import 'package:pos_machine/features/billing/domain/receipt_customer_balance.dart';
+import 'package:pos_machine/resources/app_url.dart';
+import 'package:pos_machine/services/local_first_sale_coordinator.dart';
+import 'package:pos_machine/services/local_sale_sync_service.dart';
 
 part 'order_panel_current_cart.dart';
 part 'order_panel_saved_order_item.dart';
@@ -216,6 +222,8 @@ class OrderPanelState extends State<OrderPanel> {
   String _deliveryMethod = "";
   String _deliveryMethodId = "";
   String _deliveryAddress = "";
+  int? _deliveryAddressId;
+  String _deliveryPincode = "";
   String _carNumber = "";
   String? _deliveryDate;
   String? _deliveryTime;
@@ -240,6 +248,9 @@ class OrderPanelState extends State<OrderPanel> {
   String? get deliveryTimeForDraft => _deliveryTime;
   String? get deliveryAddressForDraft =>
       _deliveryAddress.isNotEmpty ? _deliveryAddress : null;
+  int? get deliveryAddressIdForDraft => _deliveryAddressId;
+  String? get deliveryPincodeForDraft =>
+      _deliveryPincode.trim().isEmpty ? null : _deliveryPincode.trim();
   String? get carNumberForDraft =>
       _carNumber.trim().isNotEmpty ? _carNumber.trim() : null;
   double get deliveryChargeForDraft => _getDeliveryChargeForOrder();
@@ -1224,6 +1235,8 @@ class OrderPanelState extends State<OrderPanel> {
       _deliveryMethodId =
           order.deliveryMethodId ?? _getDefaultDeliveryMethodId();
       _deliveryAddress = order.address ?? '';
+      _deliveryAddressId = order.addressId;
+      _deliveryPincode = order.pincode ?? '';
       _carNumber = order.carNumber ?? '';
       _deliveryDate = order.deliveryDate;
       _deliveryTime = order.deliveryTime;
@@ -1692,8 +1705,8 @@ class OrderPanelState extends State<OrderPanel> {
         if (mounted) {
           showScaffoldError(
             context: context,
-          message: 'restaurant.failed_mark_served'.trParams(
-              {'message': '${response['message']}'}),
+            message: 'restaurant.failed_mark_served'
+                .trParams({'message': '${response['message']}'}),
           );
         }
         return false;
@@ -1703,8 +1716,7 @@ class OrderPanelState extends State<OrderPanel> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'restaurant.error_mark_served'.trParams(
-              {'error': '$e'}),
+          message: 'restaurant.error_mark_served'.trParams({'error': '$e'}),
         );
       }
       return false;
@@ -2261,6 +2273,8 @@ class OrderPanelState extends State<OrderPanel> {
       _deliveryMethod = "";
       _deliveryMethodId = "";
       _deliveryAddress = "";
+      _deliveryAddressId = null;
+      _deliveryPincode = "";
       _carNumber = "";
       _deliveryDate = null;
       _deliveryTime = null;
@@ -2307,6 +2321,8 @@ class OrderPanelState extends State<OrderPanel> {
     _deliveryMethod = "";
     _deliveryMethodId = "";
     _deliveryAddress = "";
+    _deliveryAddressId = null;
+    _deliveryPincode = "";
     _carNumber = "";
     _deliveryDate = null;
     _deliveryTime = null;
@@ -2485,6 +2501,18 @@ class OrderPanelState extends State<OrderPanel> {
       final loadedDeliveryDate = order['delivery_date']?.toString();
       final loadedDeliveryTime = order['delivery_time']?.toString();
       final loadedDeliveryAddress = _extractOrderCustomerAddress(order) ?? '';
+      final loadedDeliveryAddressId = _parseOrderInt(_firstNonEmptyString([
+        _readOrderPath(order, ['address_id']),
+        _readOrderPath(order, ['address', 'id']),
+        _readOrderPath(order, ['customer_address', 'id']),
+      ]));
+      final loadedDeliveryPincode = _firstNonEmptyString([
+            _readOrderPath(order, ['pincode']),
+            _readOrderPath(order, ['pin_code']),
+            _readOrderPath(order, ['address', 'pincode']),
+            _readOrderPath(order, ['address', 'pin_code']),
+          ]) ??
+          '';
       final loadedCarNumber = order['car_number']?.toString() ?? '';
       final loadedDeliveryCharge =
           double.tryParse(order['delivery_charge']?.toString() ?? '');
@@ -2495,6 +2523,8 @@ class OrderPanelState extends State<OrderPanel> {
         _deliveryDate = loadedDeliveryDate;
         _deliveryTime = loadedDeliveryTime;
         _deliveryAddress = loadedDeliveryAddress;
+        _deliveryAddressId = loadedDeliveryAddressId;
+        _deliveryPincode = loadedDeliveryPincode;
         _carNumber = loadedCarNumber;
         _selectedDeliveryCharge = loadedDeliveryCharge;
       });
@@ -3956,7 +3986,7 @@ class OrderPanelState extends State<OrderPanel> {
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                'order_panel.add_products_to_start'.tr,
+                                        'order_panel.add_products_to_start'.tr,
                                         textAlign: TextAlign.center,
                                         style: buildCustomStyle(
                                             FontWeightManager.medium,
@@ -5141,7 +5171,7 @@ class OrderPanelState extends State<OrderPanel> {
       ),
       child: Column(
         children: [
-            _buildPanelHeader(
+          _buildPanelHeader(
             _selectedOrder['order_number'] != null
                 ? '${'order_panel.edit_order'.tr} - ${_selectedOrder['order_number']}'
                 : 'order_panel.edit_order'.tr,
@@ -5987,10 +6017,9 @@ class OrderPanelState extends State<OrderPanel> {
           selectedCustomer: _selectedCustomer,
           hasOpenedPaymentModalOnce: _hasOpenedPaymentModalOnce,
           confirmButtonTitle: offlineSaveAndPrint ? 'Save' : 'Confirm',
-          printButtonTitle:
-              offlineSaveAndPrint
-                  ? 'order_panel.save_and_print'.tr
-                  : 'general.confirm_and_print'.tr,
+          printButtonTitle: offlineSaveAndPrint
+              ? 'order_panel.save_and_print'.tr
+              : 'general.confirm_and_print'.tr,
 
           // Delivery State
           enableDelivery: deliveryEnabled,
@@ -5998,6 +6027,8 @@ class OrderPanelState extends State<OrderPanel> {
           deliveryMethodId: modalDeliveryMethodId,
           deliveryComment: _orderComment,
           deliveryAddress: _deliveryAddress,
+          deliveryAddressId: _deliveryAddressId,
+          deliveryPincode: _deliveryPincode,
           deliveryDate: _deliveryDate,
           deliveryTime: _deliveryTime,
           carNumber: _carNumber,
@@ -6017,6 +6048,12 @@ class OrderPanelState extends State<OrderPanel> {
           onDeliveryChargeUpdated: (deliveryCharge) {
             setState(() {
               _selectedDeliveryCharge = deliveryCharge;
+            });
+          },
+          onDeliveryAddressDetailsUpdated: (addressId, pincode) {
+            setState(() {
+              _deliveryAddressId = addressId;
+              _deliveryPincode = pincode;
             });
           },
 
@@ -6693,8 +6730,8 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Error updating cart item: ${e.toString()}');
       showScaffoldError(
         context: context,
-          message: 'restaurant.failed_update_cart_item'
-              .trParams({'error': e.toString()}),
+        message: 'restaurant.failed_update_cart_item'
+            .trParams({'error': e.toString()}),
       );
     }
   }
@@ -6771,8 +6808,8 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Error removing cart item: ${e.toString()}');
       showScaffoldError(
         context: context,
-          message: 'restaurant.failed_remove_item'
-              .trParams({'error': e.toString()}),
+        message:
+            'restaurant.failed_remove_item'.trParams({'error': e.toString()}),
       );
     }
   }
@@ -7027,166 +7064,7 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   Future<void> _confirmOrderAndPrintBill() async {
-    if (_selectedOrder == null) return;
-
-    if (!_hasOpenedPaymentModalOnce) {
-      _showPaymentMethodModal(onAfterApply: _confirmOrderAndPrintBill);
-      return;
-    }
-
-    // Capture order data before confirmation (in case it cleans up)
-    final capturedOrder = _selectedOrder;
-
-    // Confirm the order first, but don't close the view yet
-    final success = await _confirmOrder(closeOnSuccess: false);
-
-    if (success) {
-      try {
-        final orderNumber = capturedOrder['order_number']?.toString();
-        if (orderNumber == null) {
-          throw Exception("Order number not found");
-        }
-
-        final authModel = Provider.of<AuthModel>(context, listen: false);
-        final accessToken = authModel.token;
-
-        debugPrint(
-            "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Fetching order details for bill print - Order $orderNumber");
-        final response = await SalesProvider().listOrderDetails(
-          context,
-          orderNumber,
-          accessToken ?? "",
-        );
-
-        if (response != null) {
-          OrderDetailsModel orderDetails = OrderDetailsModel.fromJson(response);
-
-          String? formattedTotal =
-              orderDetails.data?.cart?.priceSummary?.netPayable?.toString() ??
-                  orderDetails.data?.cart?.priceSummary?.netTotal.toString();
-          String? savedTotal =
-              orderDetails.data?.cart?.priceSummary?.savedTotal.toString();
-
-          String storeName = orderDetails.data!.cart!.storeName ?? "";
-          String orderDate = orderDetails.data!.orderDate ?? "";
-
-          // Extract customer details
-          String? customerName = _resolveCustomerName(
-            order: capturedOrder,
-            orderDetails: orderDetails.data,
-          );
-          String? customerPhone = _resolveCustomerPhone(
-            order: capturedOrder,
-            orderDetails: orderDetails.data,
-          );
-          String? customerEmail = orderDetails.data?.customerDetails?.email;
-          String? customerAddress =
-              orderDetails.data?.getCustomerAddressForDisplay();
-
-          String? customerAlternatePhone = _resolveCustomerAlternatePhone(
-            orderDetails: orderDetails.data,
-          );
-          String? paymentMethod =
-              orderDetails.data?.paymentDetails?.paymentMethod;
-
-          // Extract payment breakdown (method -> amount mapping from API)
-          Map<String, dynamic>? paymentBreakdown = orderDetails.data?.payments;
-
-          String? orderComment;
-          if (orderDetails.data?.orderProps != null) {
-            try {
-              final commentProp = orderDetails.data!.orderProps!.firstWhere(
-                (prop) => prop.propsCode == "COMMENT",
-                orElse: () => OrderDetailsModelDataOrderProp(),
-              );
-              orderComment = commentProp.propsValue;
-            } catch (e) {
-              // ignore
-            }
-          }
-
-          // Calculate customer balance for print
-          final isDefaultCustomer = _isDefaultCustomer(_selectedCustomer);
-          double? oldBalance =
-              isDefaultCustomer ? null : _selectedCustomer?.balance;
-          double totalPaid = 0.0;
-          if (_isCashSelected) totalPaid += double.tryParse(_cashAmount) ?? 0.0;
-          if (_isCardSelected) totalPaid += double.tryParse(_cardAmount) ?? 0.0;
-          if (_isUpiSelected) totalPaid += double.tryParse(_upiAmount) ?? 0.0;
-
-          double? currentBalance;
-          if (oldBalance != null) {
-            double cartTotal = double.tryParse(formattedTotal!) ?? 0.0;
-            currentBalance = oldBalance - (cartTotal - totalPaid);
-          }
-
-          if (mounted) {
-            debugPrint(
-                "ÃƒÂ°Ã…Â¸Ã¢â‚¬â€œÃ‚Â¨ÃƒÂ¯Ã‚Â¸Ã‚Â Attempting auto-print for order #$orderNumber");
-
-            Future<bool> printOnce() {
-              return _printOrderDetailsWithFallback(
-                storeName: storeName,
-                cartItems: orderDetails.data!.cart!.cartItems!,
-                formattedTotal: formattedTotal!,
-                savedTotal: savedTotal,
-                discountAmount:
-                    orderDetails.data!.priceSummary?.discount?.toString() ??
-                        "0.00",
-                orderDate: orderDate,
-                orderNumber: orderDetails.data!.orderNumber ?? "",
-                tokenNumber: orderDetails.data?.tokenNumber,
-                customerName: customerName,
-                customerPhone: customerPhone,
-                customerEmail: customerEmail,
-                customerAddress: customerAddress,
-                customerOldBalance: oldBalance,
-                customerCurrentBalance: currentBalance,
-                paidAmount: totalPaid > 0 ? totalPaid : null,
-                customerAlternatePhone: customerAlternatePhone,
-                paymentMethod: paymentMethod,
-                paymentBreakdown: paymentBreakdown,
-                orderComment: orderComment,
-                deliveryMethod: orderDetails.data?.deliveryMethodName,
-                isDefaultCustomer:
-                    isDefaultCustomer || _isDefaultCustomerPhone(customerPhone),
-                netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax
-                    ?.toString(),
-              );
-            }
-
-            final autoPrintSuccess = await printOnce();
-            await _maybePrintCustomerCopy(
-              canPrompt: autoPrintSuccess,
-              printAction: printOnce,
-            );
-
-            // After returning from print or successful auto-print, cleanup
-            if (mounted) {
-              setState(() {
-                _blockReselectAfterPlace = true;
-                _selectedOrder = null;
-              });
-              widget.onOrderSelected(null);
-            }
-          }
-        }
-      } catch (e) {
-        debugPrint("ÃƒÂ¢Ã‚ÂÃ…â€™ Error printing bill: $e");
-        showScaffoldError(
-          context: context,
-          message: 'restaurant.failed_print_bill'.trParams({'error': '$e'}));
-
-        // Even if print fails, the order was confirmed, so cleanup
-        if (mounted) {
-          setState(() {
-            _blockReselectAfterPlace = true;
-            _selectedOrder = null;
-          });
-          widget.onOrderSelected(null);
-        }
-      }
-    }
+    await _confirmOrder(printBill: true);
   }
 
   Future<void> _refreshSelectedOrderAfterCartUpdate() async {
@@ -7400,170 +7278,11 @@ class OrderPanelState extends State<OrderPanel> {
     return cashBalance > 0 ? cashBalance : 0.0;
   }
 
-  Map<String, dynamic> _orderResponseData(dynamic response) {
-    if (response is Map<String, dynamic>) {
-      final rawData = response['data'];
-      if (rawData is Map) {
-        return Map<String, dynamic>.from(rawData);
-      }
-      return Map<String, dynamic>.from(response);
-    }
-    if (response is Map) {
-      final rawData = response['data'];
-      if (rawData is Map) {
-        return Map<String, dynamic>.from(rawData);
-      }
-      return Map<String, dynamic>.from(response);
-    }
-    return <String, dynamic>{};
-  }
-
-  Future<void> _printCurrentCartKot(
-    String orderNumber,
-    List<LocalCartItem> cartItems, {
-    String? tokenNumber,
+  Future<void> _printOfflineSavedOrderBill(
+    SavedOrder savedOrder, {
+    double? customerOldBalance,
+    double? customerCurrentBalance,
   }) async {
-    final printItems = cartItems.map((item) {
-      return {
-        'productName': item.displayName,
-        'product_variant_id': item.variantId,
-        'variant_attributes': item.variantAttributes,
-        'quantity': item.quantity.toString(),
-        'unitPrice': item.price?.toStringAsFixed(2) ?? '0.00',
-        'totalPrice': ((item.price ?? 0) * item.quantity).toStringAsFixed(2),
-        'mrp': item.mrp?.toStringAsFixed(2) ??
-            item.price?.toStringAsFixed(2) ??
-            '0.00',
-        if (item.comment != null && item.comment!.isNotEmpty)
-          'notes': item.comment,
-      };
-    }).toList();
-
-    final orderTime = DateHelper.getCurrentFormattedTimeWithAMPM();
-    final tableName = _deliveryMethod.isNotEmpty
-        ? _deliveryMethod
-        : (widget.preselectedDeliveryMethodName ??
-            _getDefaultDeliveryMethod().name);
-
-    final success = await KotPrintPage.autoPrint(
-      context,
-      orderNumber: orderNumber,
-      tokenNumber: tokenNumber,
-      tableName: tableName,
-      showTableLabel: false,
-      orderTime: orderTime,
-      items: printItems,
-      comment: _orderComment.isNotEmpty ? _orderComment : null,
-    );
-
-    if (!success && mounted) {
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => KotPrintPage(
-            orderNumber: orderNumber,
-            tokenNumber: tokenNumber,
-            tableName: tableName,
-            showTableLabel: false,
-            orderTime: orderTime,
-            items: printItems,
-            comment: _orderComment.isNotEmpty ? _orderComment : null,
-          ),
-        ),
-      );
-    }
-  }
-
-  Future<String?> _printConfirmedCurrentCartBill(dynamic response) async {
-    final responseData = _orderResponseData(response);
-    final orderLookup = (responseData['order_number'] ??
-            responseData['order_id'] ??
-            responseData['orders_id'] ??
-            (response is Map ? response['order_number'] : null) ??
-            (response is Map ? response['order_id'] : null))
-        ?.toString();
-
-    if (orderLookup == null || orderLookup.isEmpty) {
-      throw Exception('Order number not found for printing');
-    }
-
-    final authModel = Provider.of<AuthModel>(context, listen: false);
-    final detailsResponse = await SalesProvider().listOrderDetails(
-      context,
-      orderLookup,
-      authModel.token ?? '',
-    );
-    final orderDetails = OrderDetailsModel.fromJson(detailsResponse);
-    final detailsData = orderDetails.data;
-    final cart = detailsData?.cart;
-
-    final formattedTotal = cart?.priceSummary?.netPayable?.toString() ??
-        cart?.priceSummary?.netTotal.toString() ??
-        _getEffectiveOrderTotal().toStringAsFixed(2);
-    final savedTotal = cart?.priceSummary?.savedTotal.toString();
-    var totalPaid = _getTotalPaidAmountFromState();
-    if (totalPaid <= 0 && detailsData?.payments != null) {
-      totalPaid = _sumPaymentBreakdown(detailsData!.payments!);
-      debugPrint(
-          '[RestaurantPrint] Derived total paid from payment breakdown: $totalPaid');
-    }
-    final isDefaultCustomer = _isDefaultCustomer(_selectedCustomer);
-    final oldBalance = isDefaultCustomer ? null : _selectedCustomer?.balance;
-    double? currentBalance;
-    final apiBalance = _orderBalanceFromProps(detailsData?.orderProps);
-    if (apiBalance != null) {
-      currentBalance = apiBalance;
-    } else if (oldBalance != null) {
-      final cartTotal = double.tryParse(formattedTotal) ?? 0.0;
-      currentBalance = oldBalance - (cartTotal - totalPaid);
-    }
-
-    Future<bool> printOnce() {
-      return _printOrderDetailsWithFallback(
-        storeName: cart?.storeName ?? '',
-        cartItems: cart?.cartItems ?? const [],
-        formattedTotal: formattedTotal,
-        savedTotal: savedTotal,
-        discountAmount: detailsData?.priceSummary?.discount?.toString() ??
-            (detailsData?.cart?.priceSummary?.discount?.toString() ?? '0.00'),
-        orderDate: detailsData?.orderDate ?? '',
-        orderNumber: detailsData?.orderNumber?.toString() ?? orderLookup,
-        tokenNumber: detailsData?.tokenNumber,
-        customerName:
-            detailsData?.customerDetails?.name ?? _selectedCustomer?.name,
-        customerPhone:
-            detailsData?.customerDetails?.phone ?? _selectedCustomerPhone,
-        customerEmail: detailsData?.customerDetails?.email,
-        customerAddress: detailsData?.getCustomerAddressForDisplay(),
-        customerOldBalance: oldBalance,
-        customerCurrentBalance: currentBalance,
-        paidAmount: totalPaid > 0 ? totalPaid : null,
-        customerAlternatePhone: detailsData?.customerDetails?.alternatePhone,
-        customerVatNumber: detailsData?.kycInfo?.vatNumber,
-        customerCrNumber: detailsData?.kycInfo?.crNumber,
-        customerType: _selectedCustomer?.customerType,
-        paymentMethod: detailsData?.paymentDetails?.paymentMethod,
-        paymentBreakdown: detailsData?.payments,
-        orderComment: _orderComment.isNotEmpty ? _orderComment : null,
-        deliveryMethod: detailsData?.deliveryMethodName ?? _deliveryMethod,
-        isDefaultCustomer: isDefaultCustomer ||
-            _isDefaultCustomerPhone(
-              detailsData?.customerDetails?.phone ?? _selectedCustomerPhone,
-            ),
-        netExcTax: cart?.priceSummary?.netExcTax?.toString(),
-      );
-    }
-
-    final autoPrintSuccess = await printOnce();
-    await _maybePrintCustomerCopy(
-      canPrompt: autoPrintSuccess,
-      printAction: printOnce,
-    );
-
-    return detailsData?.tokenNumber;
-  }
-
-  Future<void> _printOfflineSavedOrderBill(SavedOrder savedOrder) async {
     final cartItems = <Map<String, dynamic>>[];
     double totalMrp = 0.0;
     double netTotal = 0.0;
@@ -7601,6 +7320,14 @@ class OrderPanelState extends State<OrderPanel> {
     final parsedPayment =
         PaymentHelper.parseLocalMultiPayment(context, savedOrder.paymentMethod);
     final paidAmount = double.tryParse(savedOrder.paidAmount ?? '0') ?? 0.0;
+    final savedAddress = savedOrder.address?.trim() ?? '';
+    final savedPincode = savedOrder.pincode?.trim() ?? '';
+    final printableAddress =
+        savedPincode.isEmpty || savedAddress.contains(savedPincode)
+            ? (savedAddress.isEmpty ? null : savedAddress)
+            : (savedAddress.isEmpty
+                ? savedPincode
+                : '$savedAddress, $savedPincode');
 
     Future<bool> printOnce() {
       return _printOrderDetailsWithFallback(
@@ -7620,7 +7347,9 @@ class OrderPanelState extends State<OrderPanel> {
         isFromLocalStorage: true,
         customerName: savedOrder.customerName,
         customerPhone: savedOrder.customerPhone,
-        customerAddress: savedOrder.address,
+        customerAddress: printableAddress,
+        customerOldBalance: customerOldBalance,
+        customerCurrentBalance: customerCurrentBalance,
         paymentMethod:
             parsedPayment?.paymentMethodDisplay ?? savedOrder.paymentMethod,
         paymentBreakdown: parsedPayment?.paymentBreakdown,
@@ -7814,11 +7543,15 @@ class OrderPanelState extends State<OrderPanel> {
           context: context,
           tableId: widget.tableId,
           address: deliveryAddressForDraft,
+          addressId: deliveryAddressIdForDraft,
+          pincode: deliveryPincodeForDraft,
           deliveryCharge: deliveryChargeForDraft,
           alternatePhone: selectedCustomerAlternatePhoneForDraft,
           customerVatNumber: selectedCustomerVatNumberForDraft,
           customerCrNumber: selectedCustomerCrNumberForDraft,
           customerType: selectedCustomerTypeForDraft,
+          quotationId: localProductProvider.currentOrder?.quotationId,
+          quotationNumber: localProductProvider.currentOrder?.quotationNumber,
         );
         orderToUse =
             localProductProvider.moveToConfirmedOrders(_loadedLocalDraftId!);
@@ -7844,11 +7577,15 @@ class OrderPanelState extends State<OrderPanel> {
         context: context,
         tableId: widget.tableId,
         address: deliveryAddressForDraft,
+        addressId: deliveryAddressIdForDraft,
+        pincode: deliveryPincodeForDraft,
         deliveryCharge: deliveryChargeForDraft,
         alternatePhone: selectedCustomerAlternatePhoneForDraft,
         customerVatNumber: selectedCustomerVatNumberForDraft,
         customerCrNumber: selectedCustomerCrNumberForDraft,
         customerType: selectedCustomerTypeForDraft,
+        quotationId: localProductProvider.currentOrder?.quotationId,
+        quotationNumber: localProductProvider.currentOrder?.quotationNumber,
       );
 
       if (printBill) {
@@ -7893,6 +7630,89 @@ class OrderPanelState extends State<OrderPanel> {
     }
   }
 
+  OrderSubmissionPayload _buildRestaurantConfirmedPayload(
+    LocalProductProvider localProducts, {
+    String? existingOrderId,
+  }) {
+    localProducts.cartTotal;
+    final priceSummary = localProducts.priceSummary;
+    final storeId = Provider.of<StoreSessionProvider>(context, listen: false)
+        .activeStore
+        ?.storeId;
+    final resolvedDeliveryMethodId = _deliveryMethodId.isNotEmpty
+        ? _deliveryMethodId
+        : (widget.preselectedDeliveryMethodId?.isNotEmpty == true
+            ? widget.preselectedDeliveryMethodId
+            : _getDefaultDeliveryMethodId());
+
+    return OrderSubmissionPayload(
+      items: localProducts.buildOrderItemsPayload(),
+      customerId: _selectedCustomer?.id ?? _selectedCustomerID,
+      customerPhone: _selectedCustomer?.phone ?? _selectedCustomerPhone,
+      transactionNumber: _transactionNumber,
+      paymentMethods: _getSelectedPaymentMethodsForApi(),
+      paidMethods: _getPaidMethodsForApi(),
+      balanceAmount: _balanceAmount.toString(),
+      couponId: _isCouponApplied && _couponCode.isNotEmpty ? _couponCode : null,
+      orderId: existingOrderId,
+      comment: _orderComment.trim().isNotEmpty ? _orderComment.trim() : null,
+      deliveryMethodId: widget.tableId == null ? resolvedDeliveryMethodId : '',
+      tableId: widget.tableId,
+      carNumber: _carNumber.trim().isNotEmpty ? _carNumber.trim() : null,
+      status: 'confirmed',
+      deliveryDate: _deliveryDate,
+      deliveryTime: _deliveryTime,
+      flatDiscount: priceSummary?.flatDiscount ?? _flatDiscount,
+      percentageDiscount:
+          priceSummary?.percentageDiscount ?? _percentageDiscount,
+      discountAmount: priceSummary?.discount,
+      toCustomerCredit: _toCustomerCreditEnabled,
+      address:
+          _deliveryAddress.trim().isNotEmpty ? _deliveryAddress.trim() : null,
+      addressId: _deliveryAddressId,
+      pincode: _deliveryPincode,
+      quotationId: localProducts.currentOrder?.quotationId,
+      deliveryCharge: _getDeliveryChargeForOrder(),
+      storeId: storeId,
+    );
+  }
+
+  SavedOrder _persistRestaurantConfirmedSnapshot(
+    LocalProductProvider localProducts,
+  ) {
+    final paymentData = _getLocalDraftPaymentData();
+    return localProducts.saveCurrentCartAsConfirmedOrder(
+      customerName: selectedCustomerNameForDraft,
+      customerPhone: selectedCustomerPhoneForDraft,
+      comment: _orderComment.trim().isNotEmpty ? _orderComment.trim() : null,
+      deliveryMethod: deliveryMethodForDraft,
+      customerId: selectedCustomerIdForDraft,
+      paymentMethod: paymentData['paymentMethod'],
+      paidAmount: paymentData['paidAmount'],
+      balanceAmount: _balanceAmount.toString(),
+      transactionId: transactionNumberForDraft,
+      couponId: couponIdForDraft,
+      deliveryMethodId: deliveryMethodIdForDraft,
+      carNumber: carNumberForDraft,
+      status: 'confirmed',
+      deliveryDate: deliveryDateForDraft,
+      deliveryTime: deliveryTimeForDraft,
+      toCustomerCredit: toCustomerCreditForDraft,
+      context: context,
+      tableId: widget.tableId,
+      address: deliveryAddressForDraft,
+      addressId: deliveryAddressIdForDraft,
+      pincode: deliveryPincodeForDraft,
+      deliveryCharge: deliveryChargeForDraft,
+      alternatePhone: selectedCustomerAlternatePhoneForDraft,
+      customerVatNumber: selectedCustomerVatNumberForDraft,
+      customerCrNumber: selectedCustomerCrNumberForDraft,
+      customerType: selectedCustomerTypeForDraft,
+      quotationId: localProducts.currentOrder?.quotationId,
+      quotationNumber: localProducts.currentOrder?.quotationNumber,
+    );
+  }
+
   Future<bool> _confirmCurrentCart({required bool printBill}) async {
     if (!widget.allowCounterBilling || !widget.isCounterBillingMode) {
       showScaffoldError(
@@ -7925,111 +7745,106 @@ class OrderPanelState extends State<OrderPanel> {
     });
 
     try {
-      localProductProvider.cartTotal; // Recalculate priceSummary.
-      final priceSummary = localProductProvider.priceSummary;
-      final netTotal = priceSummary?.netTotal ?? localProductProvider.cartTotal;
-      final deliveryCharge = _getDeliveryChargeForOrder();
-      _balanceAmount = _calculateBalanceAmount();
-      final paymentMethods = _getSelectedPaymentMethodsForApi();
-      final paidMethods = _getPaidMethodsForApi();
-
-      final items = cartItems.map((item) {
-        return {
-          'product_id': item.product.productId,
-          'quantity': item.quantity,
-          'price': item.price,
-          'mrp': item.mrp,
-          'stock_id': item.selectedStock?.id,
-          if (item.comment != null && item.comment!.isNotEmpty)
-            'comment': item.comment,
-        };
-      }).toList();
-
-      final authModel = Provider.of<AuthModel>(context, listen: false);
-      final cartProvider = Provider.of<CartProvider>(context, listen: false);
-      final deliveryMethodId = _deliveryMethodId.isNotEmpty
-          ? _deliveryMethodId
-          : (widget.preselectedDeliveryMethodId?.isNotEmpty == true
-              ? widget.preselectedDeliveryMethodId
-              : _getDefaultDeliveryMethodId());
-
-      final response = await cartProvider.addToOrderAPI(
-        items: items,
-        cartIds: 0,
-        accessToken: authModel.token ?? '',
-        transactionId: _transactionNumber,
-        totalPrice: netTotal.toStringAsFixed(2),
-        customerId: _selectedCustomer?.id ?? _selectedCustomerID,
-        customerPhone: customerPhone,
-        paymentMethod: null,
-        paidAmount: null,
-        paymentMethods: paymentMethods,
-        paidMethods: paidMethods,
-        balanceAmount: _balanceAmount.toString(),
-        couponId:
-            _isCouponApplied && _couponCode.isNotEmpty ? _couponCode : null,
-        comment: _orderComment.trim().isNotEmpty ? _orderComment.trim() : null,
-        deliveryMethodId: deliveryMethodId,
-        status: 'confirmed',
-        deliveryDate: _deliveryDate,
-        deliveryTime: _deliveryTime,
-        flatDiscount: priceSummary?.flatDiscount,
-        percentageDiscount: priceSummary?.percentageDiscount,
-        discountAmount: priceSummary?.discount,
-        toCustomerCredit: _toCustomerCreditEnabled,
-        address: _deliveryAddress.isNotEmpty ? _deliveryAddress : null,
-        deliveryCharge: deliveryCharge,
-      );
-
-      final responseData = _orderResponseData(response);
-      final orderId = responseData['order_id'] ??
-          responseData['orders_id'] ??
-          (response is Map ? response['order_id'] : null);
-      if (orderId == null && !isApiSuccess(response)) {
+      final ecommerceEnabled =
+          Provider.of<AppSettingsProvider>(context, listen: false)
+              .ecommerceEnabled;
+      if (ecommerceEnabled &&
+          DeliveryMethodRegistry.requiresAddress(deliveryMethodForDraft) &&
+          _deliveryPincode.trim().isEmpty) {
         showScaffoldError(
           context: context,
-          message: response is Map
-              ? (response['message']?.toString() ??
-                  'restaurant.failed_kot_bill'.tr)
-              : 'restaurant.failed_kot_bill'.tr,
+          message: 'checkout_modal.msg_pincode_required'.tr,
         );
         return false;
       }
 
-      String? tokenNumber;
-      if (printBill) {
-        tokenNumber = await _printConfirmedCurrentCartBill(response);
-      }
-
+      localProductProvider.cartTotal;
+      _balanceAmount = _calculateBalanceAmount();
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final customerProvider =
+          Provider.of<CustomerProvider>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      final accessToken = authModel.token ?? '';
+      final previousDraftId =
+          _loadedLocalDraftId ?? localProductProvider.currentOrder?.id;
+      final sourceCartSessionId = localProductProvider.cartSessionId;
+      final payload = _buildRestaurantConfirmedPayload(localProductProvider);
+      final receiptBalance = ReceiptCustomerBalance.compute(
+        isDefaultCustomer: _isDefaultCustomer(_selectedCustomer),
+        customerBalance: _selectedCustomer?.balance,
+        cartTotal: localProductProvider.priceSummary!.netTotal +
+            _getDeliveryChargeForOrder(),
+        totalPaid: _getTotalPaidAmountFromState(),
+      );
       final appSettingsProvider =
           Provider.of<AppSettingsProvider>(context, listen: false);
-      if (printBill &&
-          (appSettingsProvider.appSettings?.enableKOTPrint ?? true)) {
-        final orderNumber = (responseData['order_number'] ??
-                (response is Map ? response['order_number'] : null) ??
-                'ORD-$orderId')
-            .toString();
-        await _printCurrentCartKot(
-          orderNumber,
-          cartItems,
-          tokenNumber: tokenNumber ?? _extractTokenNumber(responseData),
-        );
-      }
 
-      _refreshCustomersInBackgroundAfterSale();
-      this.deleteLoadedDraftIfAny();
-      localProductProvider.clearCartAfterOrder();
-      _resetCurrentCartCheckoutState();
-      _refreshLocalDrafts();
-      if (_usesCounterOrderTabs) {
-        resetActiveOrderContext();
-        widget.onLocalDraftSaved?.call();
-      }
+      final result = await LocalFirstSaleCoordinator(
+        LocalSaleSyncService.instance,
+      ).confirm<SavedOrder>(
+        surface: LocalSaleSurface.restaurant,
+        sourceCartSessionId: sourceCartSessionId,
+        payload: payload,
+        accessToken: accessToken,
+        persistLocalSale: () {
+          final sale =
+              _persistRestaurantConfirmedSnapshot(localProductProvider);
+          return LocalSaleIdentity(
+            value: sale,
+            localOrderId: sale.id,
+            localOrderNumber: sale.orderNumber,
+          );
+        },
+        flushLocalPersistence: localProductProvider.flushPersistence,
+        rollbackLocalSale: (sale) =>
+            localProductProvider.deleteConfirmedOrder(sale.id),
+        commitLocalWorkspace: (_) {
+          if (previousDraftId != null) {
+            localProductProvider.deleteSavedOrder(previousDraftId);
+          }
+          localProductProvider.clearCartAfterOrder();
+          localProductProvider.clearCurrentOrder();
+          _resetCurrentCartCheckoutState();
+          _refreshLocalDrafts();
+          if (_usesCounterOrderTabs) {
+            resetActiveOrderContext();
+            widget.onLocalDraftSaved?.call();
+          }
+        },
+        printLocalReceipt: printBill
+            ? (sale) async {
+                await _printOfflineSavedOrderBill(
+                  sale,
+                  customerOldBalance: receiptBalance.oldBalance,
+                  customerCurrentBalance: receiptBalance.currentBalance,
+                );
+                if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
+                  await _printOfflineSavedOrderKot(sale);
+                }
+              }
+            : null,
+        onSyncFinished: (record) async {
+          if (record.state != LocalSaleSyncState.synced ||
+              accessToken.isEmpty) {
+            return;
+          }
+          try {
+            await customerProvider.fetchCustomers(
+              accessToken: accessToken,
+              listAll: true,
+            );
+            await cartProvider.getData();
+          } catch (_) {
+            // Post-sync caches are best effort; the durable sync state is final.
+          }
+        },
+      );
+
       showScaffold(
         context: context,
-        message: printBill
-            ? 'restaurant.counter_order_confirmed_printed'.tr
-            : 'restaurant.counter_order_confirmed'.tr,
+        message: result.printSucceeded
+            ? 'Order confirmed locally. Server sync continues in the background.'
+            : 'Order confirmed locally, but printing failed. Server sync continues in the background.',
       );
       return true;
     } catch (e) {
@@ -8049,7 +7864,7 @@ class OrderPanelState extends State<OrderPanel> {
     }
   }
 
-  Future<bool> _confirmOrder({bool closeOnSuccess = true}) async {
+  Future<bool> _confirmOrder({bool printBill = false}) async {
     if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
       return false;
     }
@@ -8060,302 +7875,150 @@ class OrderPanelState extends State<OrderPanel> {
       );
       return false;
     }
-
     if (!_hasOpenedPaymentModalOnce) {
       _showPaymentMethodModal(
-          onAfterApply: () => _confirmOrder(closeOnSuccess: closeOnSuccess));
+        onAfterApply: () => _confirmOrder(printBill: printBill),
+      );
       return false;
     }
 
-    // Set loading state
-    setState(() {
-      _isLoadingConfirm = true;
-    });
-
-    try {
-      final authModel = Provider.of<AuthModel>(context, listen: false);
-      final cartProvider = Provider.of<CartProvider>(context, listen: false);
-
-      // Get order details
-      final orderId = _selectedOrder['id'] ?? _selectedOrder['order_id'];
-      final orderNumber = _selectedOrder['order_number'];
-
-      debugPrint(
-          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Confirming order: $orderNumber (ID: $orderId)');
-
-      // Get order details for API call
-      final customerId = _selectedCustomer?.id ??
-          _selectedOrder['customer_id'] ??
-          authModel.userId ??
-          1;
-      final customerPhone = _resolveCustomerPhone(order: _selectedOrder) ?? '';
-      // Get order items to calculate subtotal
-      final List<dynamic> cartItems = _getCartItemsFromOrder(_selectedOrder);
-
-      double rawOrderTotal = 0.0;
-      for (var item in cartItems) {
-        final quantity =
-            double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
-        final unitPrice = double.tryParse(item['unit_price']?.toString() ??
-                item['price']?.toString() ??
-                item['product_price']?.toString() ??
-                '0') ??
-            0.0;
-        rawOrderTotal += quantity * unitPrice;
-      }
-
-      // Fallback to grand_total if items calculation is 0
-      if (rawOrderTotal == 0.0) {
-        rawOrderTotal =
-            double.tryParse(_selectedOrder['grand_total']?.toString() ?? '0') ??
-                0.0;
-      }
-
-      final flatDiscountAmount = _flatDiscount;
-      final percentageDiscountAmount =
-          (rawOrderTotal * _percentageDiscount / 100);
-      final totalDiscountAmount = flatDiscountAmount + percentageDiscountAmount;
-      final finalOrderTotal =
-          (rawOrderTotal - totalDiscountAmount) + _getDeliveryChargeForOrder();
-
-      final totalPrice = finalOrderTotal.toString();
-      final transactionId = _transactionNumber.isNotEmpty
-          ? _transactionNumber
-          : (_selectedOrder['transaction_number'] ?? '');
-      final currentComment = _orderComment.trim();
-      final selectedOrderComment =
-          (_selectedOrder['comment']?.toString() ?? '').trim();
-      final comment = currentComment.isNotEmpty
-          ? currentComment
-          : (selectedOrderComment.isNotEmpty ? selectedOrderComment : null);
-
-      // Validate customer selection (mandatory)
-      if ((_selectedCustomerID == null) &&
-          (_selectedCustomer == null) &&
-          (_selectedCustomerPhone == null ||
-              _selectedCustomerPhone!.toString().isEmpty)) {
-        showScaffoldError(
-          context: context,
-          message: 'restaurant.select_customer'.tr,
-        );
-        if (mounted) {
-          setState(() {
-            _isLoadingConfirm = false;
-          });
-        }
-        return false;
-      }
-
-      // Payment method selection is optional - no validation required
-      // Just prepare the payment data if methods are selected
-
-      // Prepare payment method data
-      String? paymentMethod;
-      String? paidAmount;
-      List<String> paymentMethods = [];
-      List<Map<String, dynamic>> paidMethods = [];
-
-      if (_hasPaymentMethod()) {
-        // Get payment method IDs from BillingProvider
-        final billingProvider =
-            Provider.of<BillingProvider>(context, listen: false);
-        final cashId = billingProvider.cashPaymentMethodId ?? 'CASH';
-        final cardId = billingProvider.cardPaymentMethodId ?? 'CARD';
-        final upiId = billingProvider.upiPaymentMethodId ?? 'UPI';
-        final codId = billingProvider.codPaymentMethodId ?? 'COD';
-
-        // Multi-payment handling with dynamic IDs (always send in multi format)
-        List<String> selectedMethods = [];
-        final cashAmountVal = double.tryParse(_cashAmount) ?? 0;
-        final cardAmountVal = double.tryParse(_cardAmount) ?? 0;
-        final upiAmountVal = double.tryParse(_upiAmount) ?? 0;
-        final codAmountVal = double.tryParse(_codAmount) ?? 0;
-
-        if (_isCashSelected && cashAmountVal > 0) selectedMethods.add(cashId);
-        if (_isCardSelected && cardAmountVal > 0) selectedMethods.add(cardId);
-        if (_isUpiSelected && upiAmountVal > 0) selectedMethods.add(upiId);
-        if (_isCodSelected && codAmountVal > 0) selectedMethods.add(codId);
-
-        if (selectedMethods.isNotEmpty) {
-          paymentMethods = selectedMethods;
-
-          final totalPaid =
-              cashAmountVal + cardAmountVal + upiAmountVal + codAmountVal;
-          paidAmount = totalPaid.toString();
-          _balanceAmount = _calculateBalanceAmount();
-
-          // Prepare raw paid methods, then normalize balance/change once.
-          if (_isCashSelected && cashAmountVal > 0) {
-            paidMethods.add({"method": cashId, "amount": cashAmountVal});
-          }
-          if (_isCardSelected && cardAmountVal > 0) {
-            paidMethods.add({"method": cardId, "amount": cardAmountVal});
-          }
-          if (_isUpiSelected && upiAmountVal > 0) {
-            paidMethods.add({"method": upiId, "amount": upiAmountVal});
-          }
-          if (_isCodSelected && codAmountVal > 0) {
-            paidMethods.add({"method": codId, "amount": codAmountVal});
-          }
-
-          paidMethods = PaymentHelper.normalizePaidMethodsForApi(
-            paidMethods: paidMethods,
-            balanceAmount: _balanceAmount,
-            cashMethodId: cashId,
-            codMethodId: codId,
-          );
-
-          // Keep for logs only; API will use paymentMethods/paidMethods format
-          paymentMethod =
-              selectedMethods.length == 1 ? selectedMethods.first : null;
-        }
-      }
-
-      // Calculate balance amount
-      _balanceAmount = _calculateBalanceAmount();
-      final balanceAmount = _balanceAmount.toString();
-
-      debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ Order details for confirmation:');
-      debugPrint('   - Customer ID: $customerId');
-      debugPrint('   - Customer Phone: $customerPhone');
-      debugPrint('   - Total Price: $totalPrice');
-      debugPrint('   - Transaction ID: $transactionId');
-      debugPrint('   - Payment Method: $paymentMethod');
-      debugPrint('   - Paid Amount: $paidAmount');
-      debugPrint('   - Balance Amount: $balanceAmount');
-      debugPrint('ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â« Discount details for confirmation:');
-      debugPrint(
-          '   - Flat Discount: ${flatDiscountAmount.toStringAsFixed(2)}');
-      debugPrint(
-          '   - Percentage Discount: ${_percentageDiscount.toStringAsFixed(1)}%');
-      debugPrint(
-          '   - Total Discount Amount: ${totalDiscountAmount.toStringAsFixed(2)}');
-      debugPrint('   - Coupon Code: $_couponCode');
-      debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§ Payment Methods Details:');
-      debugPrint('   - Payment Methods Array: $paymentMethods');
-      debugPrint('   - Paid Methods Array: $paidMethods');
-      debugPrint(
-          '   - Is Cash Selected: $_isCashSelected (Amount: $_cashAmount)');
-      debugPrint(
-          '   - Is Card Selected: $_isCardSelected (Amount: $_cardAmount)');
-      debugPrint('   - Is UPI Selected: $_isUpiSelected (Amount: $_upiAmount)');
-      debugPrint(
-          '\nÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ CALLING updateOrderAPI with these parameters:');
-      debugPrint('   orderId: ${orderId.toString()}');
-      debugPrint(
-          '   accessToken: ${authModel.token != null ? "[PROVIDED]" : "[NULL]"}');
-      debugPrint('   transactionId: $transactionId');
-      debugPrint('   totalPrice: $totalPrice');
-      debugPrint('   customerId: ${int.tryParse(customerId.toString())}');
-      debugPrint('   customerPhone: $customerPhone');
-      debugPrint('   paymentMethod: $paymentMethod');
-      debugPrint('   paidAmount: $paidAmount');
-      debugPrint('   balanceAmount: $balanceAmount');
-      debugPrint('   paymentMethods: $paymentMethods');
-      debugPrint('   paidMethods: $paidMethods');
-      debugPrint('   status: "confirmed"');
-      debugPrint('   comment: $comment');
-      debugPrint(
-          '   flatDiscount: ${_flatDiscount > 0 ? _flatDiscount : null}');
-      debugPrint(
-          '   percentageDiscount: ${_percentageDiscount > 0 ? _percentageDiscount : null}');
-      debugPrint(
-          '   discountAmount: ${totalDiscountAmount > 0 ? totalDiscountAmount : null}');
-      debugPrint('\nÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ About to call updateOrderAPI...');
-
-      // Call update order API with status "confirmed" and payment data
-      final response = await cartProvider.updateOrderAPI(
-        orderId: orderId.toString(),
-        accessToken: authModel.token ?? '',
-        transactionId: transactionId,
-        totalPrice: totalPrice,
-        customerId: int.tryParse(customerId.toString()),
-        customerPhone: customerPhone,
-        paymentMethod: paymentMethod,
-        paidAmount: paidAmount,
-        balanceAmount: balanceAmount,
-        paymentMethods: paymentMethods.isNotEmpty ? paymentMethods : null,
-        paidMethods: paidMethods.isNotEmpty ? paidMethods : null,
-        status: 'confirmed',
-        comment: comment,
-        deliveryMethodId: widget.tableId == null
-            ? (_deliveryMethodId.isNotEmpty
-                ? _deliveryMethodId
-                : _getDefaultDeliveryMethodId())
-            : '',
-        tableId: widget.tableId ?? '',
-        address: _deliveryAddress.isNotEmpty ? _deliveryAddress : null,
-        // Add discount parameters
-        flatDiscount: _flatDiscount > 0 ? _flatDiscount : null,
-        percentageDiscount:
-            _percentageDiscount > 0 ? _percentageDiscount : null,
-        discountAmount: totalDiscountAmount > 0 ? totalDiscountAmount : null,
-        toCustomerCredit: _toCustomerCreditEnabled,
-        deliveryCharge: _getDeliveryChargeForOrder(),
-      );
-
-      debugPrint('\nÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥ updateOrderAPI RESPONSE:');
-      debugPrint('   Response: $response');
-      debugPrint('   Response Type: ${response.runtimeType}');
-      if (await SubscriptionActionGuard.handleBackendResponse(
-        context,
-        response,
-      )) {
-        return false;
-      }
-      if (response is Map) {
-        debugPrint('   Status: ${response['status']}');
-        debugPrint('   Message: ${response['message']}');
-        debugPrint('   Data: ${response['data']}');
-      }
-      debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Confirm order response: $response');
-
-      if (isApiSuccess(response)) {
-        _refreshCustomersInBackgroundAfterSale();
-
-        showScaffold(
-          context: context,
-          message:
-              '${'order_panel.msg_order_confirmed_1'.tr} $orderNumber ${'order_panel.msg_order_confirmed_2'.tr}',
-        );
-
-        // Refresh saved orders to show updated status
-        debugPrint(
-            'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Refreshing saved orders after confirming order');
-        await Future.delayed(const Duration(milliseconds: 500));
-        await _fetchSavedOrders();
-
-        // Delete the local draft so it no longer appears in Saved Orders
-        this.deleteLoadedDraftIfAny();
-
-        // Clear the cart to prevent auto-save from recreating a draft on table switch
-        Provider.of<LocalProductProvider>(context, listen: false).clearCart();
-
-        _resetConfirmedEditOrderContext();
-        return true;
-      } else {
-        showScaffoldError(
-          context: context,
-          message:
-              'Failed to confirm order: ${response?['message'] ?? 'Unknown error'}',
-        );
-        return false;
-      }
-    } catch (e) {
-      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Error confirming order: ${e.toString()}');
+    final localProducts =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    if (localProducts.cartItems.isEmpty) {
       showScaffoldError(
         context: context,
-        message: 'restaurant.failed_confirm_order'
-            .trParams({'error': e.toString()}),
+        message: 'restaurant.no_items_cart'.tr,
       );
       return false;
-    } finally {
-      // Clear loading state
-      if (mounted) {
-        setState(() {
-          _isLoadingConfirm = false;
-        });
+    }
+    final customerPhone = _selectedCustomer?.phone ?? _selectedCustomerPhone;
+    if (_selectedCustomerID == null &&
+        _selectedCustomer?.id == null &&
+        (customerPhone == null || customerPhone.isEmpty)) {
+      showScaffoldError(
+        context: context,
+        message: 'restaurant.select_customer'.tr,
+      );
+      return false;
+    }
+    final ecommerceEnabled =
+        Provider.of<AppSettingsProvider>(context, listen: false)
+            .ecommerceEnabled;
+    if (ecommerceEnabled &&
+        DeliveryMethodRegistry.requiresAddress(deliveryMethodForDraft) &&
+        _deliveryPincode.trim().isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'checkout_modal.msg_pincode_required'.tr,
+      );
+      return false;
+    }
+
+    setState(() => _isLoadingConfirm = true);
+    try {
+      localProducts.cartTotal;
+      _balanceAmount = _calculateBalanceAmount();
+      final selectedOrder = _selectedOrder;
+      final existingOrderId =
+          (selectedOrder['id'] ?? selectedOrder['order_id'])?.toString();
+      if (existingOrderId == null || existingOrderId.isEmpty) {
+        throw StateError('The existing order id is missing.');
       }
+
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final customerProvider =
+          Provider.of<CustomerProvider>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      final accessToken = authModel.token ?? '';
+      final previousDraftId =
+          _loadedLocalDraftId ?? localProducts.currentOrder?.id;
+      final payload = _buildRestaurantConfirmedPayload(
+        localProducts,
+        existingOrderId: existingOrderId,
+      );
+      final receiptBalance = ReceiptCustomerBalance.compute(
+        isDefaultCustomer: _isDefaultCustomer(_selectedCustomer),
+        customerBalance: _selectedCustomer?.balance,
+        cartTotal:
+            localProducts.priceSummary!.netTotal + _getDeliveryChargeForOrder(),
+        totalPaid: _getTotalPaidAmountFromState(),
+      );
+
+      final result = await LocalFirstSaleCoordinator(
+        LocalSaleSyncService.instance,
+      ).confirm<SavedOrder>(
+        surface: widget.allowCounterBilling
+            ? LocalSaleSurface.restaurant
+            : LocalSaleSurface.attender,
+        operation: LocalSaleOperation.confirmExistingOrder,
+        sourceCartSessionId: localProducts.cartSessionId,
+        payload: payload,
+        accessToken: accessToken,
+        endpoint: Uri.parse(APPUrl.updateOrderUrl),
+        persistLocalSale: () {
+          final sale = _persistRestaurantConfirmedSnapshot(localProducts);
+          return LocalSaleIdentity(
+            value: sale,
+            localOrderId: sale.id,
+            localOrderNumber: sale.orderNumber,
+          );
+        },
+        flushLocalPersistence: localProducts.flushPersistence,
+        rollbackLocalSale: (sale) =>
+            localProducts.deleteConfirmedOrder(sale.id),
+        commitLocalWorkspace: (_) {
+          if (previousDraftId != null) {
+            localProducts.deleteSavedOrder(previousDraftId);
+          }
+          localProducts.clearCartAfterOrder();
+          localProducts.clearCurrentOrder();
+          _resetConfirmedEditOrderContext();
+          widget.onEditedOrderConfirmed?.call();
+        },
+        printLocalReceipt: printBill
+            ? (sale) => _printOfflineSavedOrderBill(
+                  sale,
+                  customerOldBalance: receiptBalance.oldBalance,
+                  customerCurrentBalance: receiptBalance.currentBalance,
+                )
+            : null,
+        onSyncFinished: (record) async {
+          if (record.state != LocalSaleSyncState.synced ||
+              accessToken.isEmpty) {
+            return;
+          }
+          try {
+            await customerProvider.fetchCustomers(
+              accessToken: accessToken,
+              listAll: true,
+            );
+            await cartProvider.getData();
+          } catch (_) {
+            // Post-sync cache refresh is best effort.
+          }
+        },
+      );
+
+      if (mounted) {
+        showScaffold(
+          context: context,
+          message: result.printSucceeded
+              ? 'Order confirmed locally. Server sync continues in the background.'
+              : 'Order confirmed locally, but printing failed. Server sync continues in the background.',
+        );
+      }
+      return true;
+    } catch (error) {
+      debugPrint('Error confirming restaurant order locally: $error');
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'The order could not be saved locally. Nothing was sent.',
+        );
+      }
+      return false;
+    } finally {
+      if (mounted) setState(() => _isLoadingConfirm = false);
     }
   }
 

@@ -5745,6 +5745,7 @@
     "hint_car_number": "കാർ നമ്പർ:",
     "hint_comment": "കമന്റ്:",
     "hint_address": "വിലാസം:",
+    "label_pincode": "പിൻകോഡ്",
     "hint_choose_an_address": "തിരഞ്ഞെടുക്ക് വിലാസം:",
     "btn_create": "സൃഷ്ടിക്കുക",
     "btn_creating": "സൃഷ്ടിക്കുന്നു…",

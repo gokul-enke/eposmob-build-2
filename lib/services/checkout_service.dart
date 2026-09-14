@@ -1,5 +1,3 @@
-import 'package:pos_machine/services/order_submission_coordinator.dart';
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -7,12 +5,20 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/features/billing/domain/billing_debug_log.dart';
 import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
+import 'package:pos_machine/features/billing/domain/receipt_customer_balance.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 import 'package:pos_machine/helpers/delivery_charge_helper.dart';
 import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
-import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
+import 'package:pos_machine/models/order_submission_payload.dart';
+import 'package:pos_machine/models/delivery_method_registry.dart';
+import 'package:pos_machine/services/local_first_sale_coordinator.dart';
+import 'package:pos_machine/services/local_sale_sync_service.dart';
+import 'package:pos_machine/services/print_service.dart';
 
 /// Result of a [CheckoutService.saveOrder] call.
 ///
@@ -116,454 +122,321 @@ class CheckoutService {
       return false;
     }
 
+    final ecommerceEnabled =
+        Provider.of<AppSettingsProvider>(context, listen: false)
+            .ecommerceEnabled;
+    if (ecommerceEnabled &&
+        DeliveryMethodRegistry.requiresAddress(
+          billingProvider.deliveryMethod,
+        ) &&
+        billingProvider.orderPincode.trim().isEmpty) {
+      if (showErrors) {
+        showScaffoldError(
+          context: context,
+          message: BillingMobileErrorMessages.enterDeliveryPincode,
+        );
+      }
+      return false;
+    }
+
     return true;
   }
 
-  /// Confirms the current order via the API. Returns `true` when the server
-  /// accepted the order (an `order_id` was returned), so callers can run the
-  /// post-confirm workspace reset (default-customer re-apply, etc.).
-  Future<bool> confirmOrder() async {
-    final billingProvider =
-        Provider.of<BillingProvider>(context, listen: false);
-
-    if (!billingProvider.hasInternet) {
-      showScaffoldError(
-        context: context,
-        message: BillingMobileErrorMessages.noInternetConfirm,
-      );
-      return false;
-    }
-    billingDebugCheckout('confirmOrder', 'started');
-
-    bool orderConfirmed = false;
-    // The spinner is raised before the subscription guard so the button always
-    // reflects the tap; the guard runs inside the try so `finally` clears it on
-    // every exit path.
-    billingProvider.setLoadingConfirmOrder(true);
-    final releaseCheckoutUi =
-        OrderSubmissionCoordinator.instance.holdCheckoutUi();
-    try {
-      if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(
-        context,
-      )) {
-        return false;
-      }
-
-      List<String> selectedPaymentMethods =
-          billingProvider.getSelectedPaymentMethodsForApi();
-
-      billingDebugCheckout(
-        'confirmOrder',
-        'validatingPayment',
-        hasPayment: billingProvider.hasAnyPaymentSelected(),
-      );
-
-      if (!_validateFinalCheckout(
-        billingProvider: billingProvider,
-        showErrors: true,
-        requirePaymentVisited: true,
-      )) {
-        billingDebugCheckout(
-          'confirmOrder',
-          'validationFailed',
-          errorType: 'finalCheckout',
-        );
-        return false;
-      }
-
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      final provider = Provider.of<CartProvider>(context, listen: false);
-      int? cartId = provider.getCartIDForOrder;
-
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
-
-      if (localProductProvider.cartItems.isEmpty) {
-        showScaffoldError(
-          context: context,
-          message: BillingMobileErrorMessages.emptyCart,
-        );
-        return false;
-      }
-
-      // Desktop parity: do not block POS order throughput on local price/MRP
-      // validation here. TODO: backend validation should reject invalid
-      // price/MRP later without blocking mobile POS checkout.
-      // final hasInvalidPricing = localProductProvider.cartItems.any((item) =>
-      //     item.price == null ||
-      //     item.price! < 0 ||
-      //     item.mrp == null ||
-      //     item.mrp! < 0);
-      //
-      // if (hasInvalidPricing) {
-      //   showScaffoldError(
-      //     context: context,
-      //     message: BillingMobileErrorMessages.invalidPricingBeforeConfirm,
-      //   );
-      //   return false;
-      // }
-
-      final items = localProductProvider.buildOrderItemsPayload();
-      final paidMethods =
-          Provider.of<BillingProvider>(context, listen: false).getPaidMethods();
-
-      billingDebugCheckout(
-        'confirmOrder',
-        'submitting',
-        itemCount: items.length,
-        hasCustomer: billingProvider.selectedCustomerID != null ||
-            (billingProvider.mobileNumberText?.isNotEmpty ?? false),
-        hasPayment: paidMethods.isNotEmpty,
-      );
-
-      final netTotal = localProductProvider.priceSummary!.netTotal;
-      final deliveryCharge = resolveDeliveryCharge(context);
-      final orderTotal = netTotal + deliveryCharge;
-
-      await localProductProvider.flushPersistence();
-      await Provider.of<CartProvider>(context, listen: false)
-          .addToOrderAPI(
-        protectSubmission: true,
-        localDraftId: localProductProvider.currentOrder?.id,
-        cartSessionId: localProductProvider.cartSessionId,
-        items: items,
-        cartIds: cartId ?? 0,
-        accessToken: accessToken ?? "",
-        transactionId: billingProvider.transactionNumberController.text,
-        totalPrice: orderTotal.toString(),
-        customerId: billingProvider.selectedCustomerID,
-        customerPhone: _phoneForOrder(billingProvider),
-        // Always use multi-payment format
-        paymentMethod: null,
-        paidAmount: null,
-        paymentMethods: selectedPaymentMethods,
-        paidMethods: paidMethods,
-        balanceAmount: Provider.of<BillingProvider>(context, listen: false)
-            .balanceAmount
-            .toString(),
-        couponId:
-            Provider.of<BillingProvider>(context, listen: false).isCouponApplied
-                ? Provider.of<BillingProvider>(context, listen: false)
-                    .coupenCodeTextController
-                    .text
-                : null,
-        comment: billingProvider.commentController.text,
-        deliveryMethodId: billingProvider.deliveryMethodId,
-        carNumber: billingProvider.carNumberController.text,
-        status: "confirmed",
-        deliveryDate: billingProvider.deliveryDate?.toIso8601String(),
-        deliveryTime: billingProvider.deliveryTime,
-        // Include discount data
-        flatDiscount: localProductProvider.priceSummary!.flatDiscount,
-        percentageDiscount:
-            localProductProvider.priceSummary!.percentageDiscount,
-        discountAmount: localProductProvider.priceSummary!.discount,
-        toCustomerCredit: billingProvider.toCustomerCreditEnabled,
-        address: billingProvider.orderAddress.isNotEmpty
-            ? billingProvider.orderAddress
-            : null,
-        deliveryCharge: deliveryCharge,
-      )
-          .then((response) async {
-        if (!context.mounted) return;
-        if (await SubscriptionActionGuard.handleBackendResponse(
-          context,
-          response,
-        )) {
-          return;
-        }
-        billingDebugCheckout(
-          'confirmOrder',
-          response["order_id"] != null ? 'succeeded' : 'apiFailed',
-        );
-        if (response["order_id"] != null) {
-          orderConfirmed = true;
-          showScaffold(
-            context: context,
-            message: "Order Confirmed Successfully",
-          );
-
-          final localProductProvider =
-              Provider.of<LocalProductProvider>(context, listen: false);
-          if (localProductProvider.currentOrder != null) {
-            localProductProvider
-                .deleteSavedOrder(localProductProvider.currentOrder!.id);
-          }
-          localProductProvider.clearCartAfterOrder();
-          unawaited(Provider.of<CartProvider>(context, listen: false)
-              .submissions
-              .completeLocalCleanup(
-                  response, localProductProvider.flushPersistence));
-
-          // Clear the mobile number after successful save
-          billingProvider.setMobileNumberText("");
-          billingProvider.clearSelectedCustomer();
-          billingProvider.mobileNumberTextController.clear();
-          billingProvider.clearProductFields();
-          Provider.of<BillingProvider>(context, listen: false)
-              .coupenCodeTextController
-              .clear();
-          billingProvider.transactionNumberController.clear();
-          billingProvider.paidAmountController.clear();
-          billingProvider.carNumberController.clear();
-          billingProvider.commentController.clear();
-          billingProvider.setDeliveryDate(null);
-          billingProvider.setDeliveryTime(null);
-
-          billingProvider.clearAllPaymentMethods();
-          billingProvider.setPineLabsPaymentSuccess(false);
-
-          // Notify UI hooks that depend on resets (optional)
-        } else {
-          showScaffoldError(
-            context: context,
-            message: BillingMobileErrorMessages.orderApiFailure(
-              Map<dynamic, dynamic>.from(response as Map),
-              fallback: BillingMobileErrorMessages.confirmOrderFailed,
-            ),
-          );
-        }
-      });
-    } catch (error) {
-      billingDebugCheckout(
-        'confirmOrder',
-        'exception',
-        errorType: error.runtimeType.toString(),
-      );
-      showScaffoldError(
-        context: context,
-        message:
-            'We couldn’t complete the checkout screen. Review the order status before billing again.',
-      );
-    } finally {
-      releaseCheckoutUi();
-      billingProvider.setLoadingConfirmOrder(false);
-      billingDebugCheckout('confirmOrder', 'completed');
-    }
-    return orderConfirmed;
+  OrderSubmissionPayload _buildConfirmedSalePayload(
+    BillingProvider billingProvider,
+    LocalProductProvider localProducts,
+  ) {
+    final priceSummary = localProducts.priceSummary!;
+    final storeId = Provider.of<StoreSessionProvider>(context, listen: false)
+        .activeStore
+        ?.storeId;
+    return OrderSubmissionPayload(
+      items: localProducts.buildOrderItemsPayload(),
+      customerId: billingProvider.selectedCustomerID,
+      customerPhone: _phoneForOrder(billingProvider),
+      transactionNumber: billingProvider.transactionNumberController.text,
+      paymentMethods: billingProvider.getSelectedPaymentMethodsForApi(),
+      paidMethods: billingProvider.getPaidMethods(),
+      balanceAmount: billingProvider.balanceAmount.toString(),
+      couponId: billingProvider.isCouponApplied &&
+              billingProvider.coupenCodeTextController.text.trim().isNotEmpty
+          ? billingProvider.coupenCodeTextController.text.trim()
+          : null,
+      comment: billingProvider.commentController.text.trim().isNotEmpty
+          ? billingProvider.commentController.text.trim()
+          : null,
+      deliveryMethodId: billingProvider.deliveryMethodId.isNotEmpty
+          ? billingProvider.deliveryMethodId
+          : null,
+      carNumber: billingProvider.carNumberController.text.trim().isNotEmpty
+          ? billingProvider.carNumberController.text.trim()
+          : null,
+      status: 'confirmed',
+      deliveryDate: billingProvider.deliveryDate?.toIso8601String(),
+      deliveryTime: billingProvider.deliveryTime,
+      flatDiscount: priceSummary.flatDiscount,
+      percentageDiscount: priceSummary.percentageDiscount,
+      discountAmount: priceSummary.discount,
+      toCustomerCredit: billingProvider.toCustomerCreditEnabled,
+      address: billingProvider.orderAddress.trim().isNotEmpty
+          ? billingProvider.orderAddress.trim()
+          : null,
+      addressId: billingProvider.orderAddressId,
+      pincode: billingProvider.orderPincode,
+      quotationId: localProducts.currentOrder?.quotationId,
+      deliveryCharge: resolveDeliveryCharge(context),
+      storeId: storeId,
+    );
   }
 
-  Future<String?> createOrderAndPrint() async {
+  String? _selectedCustomerKyc(
+    BillingProvider billingProvider,
+    Set<String> acceptedKeys,
+  ) {
+    for (final item in billingProvider.selectedCustomer?.kyc ?? const []) {
+      final key = item.key?.trim().toUpperCase().replaceAll('_', ' ');
+      final value = item.value?.trim();
+      if (key != null &&
+          acceptedKeys.contains(key) &&
+          value != null &&
+          value.isNotEmpty) {
+        return value;
+      }
+    }
+    return null;
+  }
+
+  SavedOrder _persistConfirmedSale(
+    BillingProvider billingProvider,
+    LocalProductProvider localProducts,
+  ) {
+    final orderData = billingProvider.createOrderData();
+    return localProducts.saveCurrentCartAsConfirmedOrder(
+      customerName: _nameForOrder(billingProvider),
+      customerPhone: _phoneForOrder(billingProvider),
+      comment: billingProvider.commentController.text,
+      deliveryMethod: billingProvider.deliveryMethod,
+      customerId: billingProvider.selectedCustomerID,
+      paymentMethod: orderData['paymentMethod']?.toString() ?? '',
+      paidAmount: orderData['paidAmount']?.toString() ?? '0',
+      balanceAmount: billingProvider.balanceAmount.toString(),
+      transactionId: billingProvider.transactionNumberController.text,
+      couponId: billingProvider.isCouponApplied
+          ? billingProvider.coupenCodeTextController.text.trim()
+          : null,
+      deliveryMethodId: billingProvider.deliveryMethodId,
+      carNumber: billingProvider.carNumberController.text,
+      status: 'confirmed',
+      deliveryDate: billingProvider.deliveryDate?.toIso8601String(),
+      deliveryTime: billingProvider.deliveryTime,
+      toCustomerCredit: billingProvider.toCustomerCreditEnabled,
+      context: context,
+      alternatePhone: billingProvider.selectedCustomer?.altPhone,
+      address: billingProvider.orderAddress.trim().isNotEmpty
+          ? billingProvider.orderAddress.trim()
+          : null,
+      addressId: billingProvider.orderAddressId,
+      pincode: billingProvider.orderPincode,
+      deliveryCharge: resolveDeliveryCharge(context),
+      customerVatNumber:
+          _selectedCustomerKyc(billingProvider, const {'VAT', 'VAT NUMBER'}),
+      customerCrNumber: _selectedCustomerKyc(
+        billingProvider,
+        const {'CR', 'CR NUMBER', 'COMMERCIAL REGISTRATION'},
+      ),
+      customerType: billingProvider.selectedCustomer?.customerType,
+      quotationId: localProducts.currentOrder?.quotationId,
+      quotationNumber: localProducts.currentOrder?.quotationNumber,
+    );
+  }
+
+  void _resetConfirmedCheckoutState(BillingProvider billingProvider) {
+    billingProvider.setMobileNumberText('');
+    billingProvider.clearSelectedCustomer();
+    billingProvider.mobileNumberTextController.clear();
+    billingProvider.clearProductFields();
+    billingProvider.coupenCodeTextController.clear();
+    billingProvider.transactionNumberController.clear();
+    billingProvider.paidAmountController.clear();
+    billingProvider.carNumberController.clear();
+    billingProvider.commentController.clear();
+    billingProvider.setDeliveryDate(null);
+    billingProvider.setDeliveryTime(null);
+    billingProvider.setOrderAddress('');
+    billingProvider.setOrderAddressDetails();
+    billingProvider.clearAllPaymentMethods();
+    billingProvider.setPineLabsPaymentSuccess(false);
+  }
+
+  Future<LocalFirstSaleResult<SavedOrder>?> _confirmLocalFirst({
+    required bool printReceipt,
+  }) async {
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
-    if (!billingProvider.hasInternet) {
+    final localProducts =
+        Provider.of<LocalProductProvider>(context, listen: false);
+
+    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
+      return null;
+    }
+    if (!_validateFinalCheckout(
+      billingProvider: billingProvider,
+      showErrors: true,
+      requirePaymentVisited: true,
+    )) {
+      return null;
+    }
+    if (localProducts.cartItems.isEmpty) {
       showScaffoldError(
         context: context,
-        message: BillingMobileErrorMessages.noInternetCreateOrder,
+        message: BillingMobileErrorMessages.emptyCart,
       );
       return null;
     }
-    billingDebugCheckout('createOrderAndPrint', 'started');
 
-    billingProvider.setLoadingCreateOrder(true);
-    String? createdOrderNumber;
-    final releaseCheckoutUi =
-        OrderSubmissionCoordinator.instance.holdCheckoutUi();
-    try {
-      if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(
-        context,
-      )) {
-        return null;
-      }
+    final accessToken =
+        Provider.of<AuthModel>(context, listen: false).token ?? '';
+    final customers = Provider.of<CustomerProvider>(context, listen: false);
+    final payload = _buildConfirmedSalePayload(billingProvider, localProducts);
+    final previousDraftId = localProducts.currentOrder?.id;
+    final sourceCartSessionId = localProducts.cartSessionId;
+    final customer = billingProvider.selectedCustomer;
+    final configuredDefaultPhone =
+        Provider.of<AppSettingsProvider>(context, listen: false)
+                .appSettings
+                ?.autoAssignDefaultCustomerPhone
+                .trim() ??
+            '';
+    final orderPhone = _phoneForOrder(billingProvider)?.trim() ?? '';
+    final isDefaultCustomer = configuredDefaultPhone.isNotEmpty &&
+        configuredDefaultPhone == orderPhone;
+    final receiptBalance = ReceiptCustomerBalance.compute(
+      isDefaultCustomer: isDefaultCustomer,
+      customerBalance: customer?.balance,
+      cartTotal:
+          localProducts.priceSummary!.netTotal + resolveDeliveryCharge(context),
+      totalPaid: billingProvider.getTotalPaidAmount(),
+    );
 
-      final selectedPaymentMethods =
-          billingProvider.getSelectedPaymentMethodsForApi();
-
-      billingDebugCheckout(
-        'createOrderAndPrint',
-        'validatingPayment',
-        hasPayment: billingProvider.hasAnyPaymentSelected(),
-      );
-
-      if (!_validateFinalCheckout(
-        billingProvider: billingProvider,
-        showErrors: true,
-        requirePaymentVisited: true,
-      )) {
-        billingDebugCheckout(
-          'createOrderAndPrint',
-          'validationFailed',
-          errorType: 'finalCheckout',
+    final result = await LocalFirstSaleCoordinator(
+      LocalSaleSyncService.instance,
+    ).confirm<SavedOrder>(
+      surface: LocalSaleSurface.mobileBilling,
+      sourceCartSessionId: sourceCartSessionId,
+      payload: payload,
+      accessToken: accessToken,
+      persistLocalSale: () {
+        final sale = _persistConfirmedSale(billingProvider, localProducts);
+        return LocalSaleIdentity(
+          value: sale,
+          localOrderId: sale.id,
+          localOrderNumber: sale.orderNumber,
         );
-        return null;
-      }
-
-      final accessToken = Provider.of<AuthModel>(context, listen: false).token;
-      final provider = Provider.of<CartProvider>(context, listen: false);
-      final cartId = provider.getCartIDForOrder;
-
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
-
-      if (localProductProvider.cartItems.isEmpty) {
-        showScaffoldError(
-          context: context,
-          message: BillingMobileErrorMessages.emptyCart,
-        );
-        return null;
-      }
-
-      // Desktop parity: do not block POS order throughput on local price/MRP
-      // validation here. TODO: backend validation should reject invalid
-      // price/MRP later without blocking mobile POS checkout.
-      // final hasInvalidPricing = localProductProvider.cartItems.any((item) =>
-      //     item.price == null ||
-      //     item.price! < 0 ||
-      //     item.mrp == null ||
-      //     item.mrp! < 0);
-      // if (hasInvalidPricing) {
-      //   showScaffoldError(
-      //     context: context,
-      //     message: BillingMobileErrorMessages.invalidPricingBeforeConfirm,
-      //   );
-      //   return null;
-      // }
-
-      final items = localProductProvider.buildOrderItemsPayload();
-
-      final priceSummary = localProductProvider.priceSummary!;
-      billingDebugCheckout(
-        'createOrderAndPrint',
-        'submitting',
-        itemCount: items.length,
-        hasCustomer: billingProvider.selectedCustomerID != null ||
-            (billingProvider.mobileNumberText?.isNotEmpty ?? false),
-        hasPayment: billingProvider.hasAnyPaymentSelected(),
-      );
-
-      final deliveryCharge = resolveDeliveryCharge(context);
-      final orderTotal = priceSummary.netTotal + deliveryCharge;
-
-      await localProductProvider.flushPersistence();
-      await Provider.of<CartProvider>(context, listen: false)
-          .addToOrderAPI(
-        protectSubmission: true,
-        localDraftId: localProductProvider.currentOrder?.id,
-        cartSessionId: localProductProvider.cartSessionId,
-        items: items,
-        cartIds: cartId ?? 0,
-        accessToken: accessToken ?? "",
-        transactionId: billingProvider.transactionNumberController.text,
-        totalPrice: orderTotal.toString(),
-        customerId: billingProvider.selectedCustomerID,
-        customerPhone: _phoneForOrder(billingProvider),
-        // Always use multi-payment format
-        paymentMethod: null,
-        paidAmount: null,
-        paymentMethods: selectedPaymentMethods,
-        paidMethods: Provider.of<BillingProvider>(context, listen: false)
-            .getPaidMethods(),
-        balanceAmount: Provider.of<BillingProvider>(context, listen: false)
-            .balanceAmount
-            .toString(),
-        couponId:
-            Provider.of<BillingProvider>(context, listen: false).isCouponApplied
-                ? Provider.of<BillingProvider>(context, listen: false)
-                    .coupenCodeTextController
-                    .text
-                : null,
-        comment: billingProvider.commentController.text,
-        deliveryMethodId: billingProvider.deliveryMethodId,
-        carNumber: billingProvider.carNumberController.text,
-        status: "confirmed",
-        deliveryDate: billingProvider.deliveryDate?.toIso8601String(),
-        deliveryTime: billingProvider.deliveryTime,
-        // Include discount data
-        flatDiscount: priceSummary.flatDiscount,
-        percentageDiscount: priceSummary.percentageDiscount,
-        discountAmount: priceSummary.discount,
-        toCustomerCredit: billingProvider.toCustomerCreditEnabled,
-        address: billingProvider.orderAddress.isNotEmpty
-            ? billingProvider.orderAddress
-            : null,
-        deliveryCharge: deliveryCharge,
-      )
-          .then((response) async {
-        if (!context.mounted) return;
-        if (await SubscriptionActionGuard.handleBackendResponse(
-          context,
-          response,
-        )) {
+      },
+      flushLocalPersistence: localProducts.flushPersistence,
+      rollbackLocalSale: (sale) => localProducts.deleteConfirmedOrder(sale.id),
+      commitLocalWorkspace: (_) {
+        if (previousDraftId != null) {
+          localProducts.deleteSavedOrder(previousDraftId);
+        }
+        localProducts.clearCartAfterOrder();
+        localProducts.clearCurrentOrder();
+        _resetConfirmedCheckoutState(billingProvider);
+      },
+      printLocalReceipt: printReceipt
+          ? (sale) async {
+              final printed = await const PrintService().printSavedOrder(
+                context,
+                sale,
+                customerOldBalance: receiptBalance.oldBalance,
+                customerCurrentBalance: receiptBalance.currentBalance,
+              );
+              if (!printed) {
+                throw StateError('The local receipt could not be printed.');
+              }
+            }
+          : null,
+      onSyncFinished: (record) async {
+        if (record.state != LocalSaleSyncState.synced || accessToken.isEmpty) {
           return;
         }
-        billingDebugCheckout(
-          'createOrderAndPrint',
-          response["order_id"] != null ? 'succeeded' : 'apiFailed',
-        );
-        if (response["order_id"] != null) {
-          showScaffold(
-            context: context,
-            message: "Order Saved Successfully",
+        try {
+          await customers.fetchCustomers(
+            accessToken: accessToken,
+            listAll: true,
           );
-
-          if (localProductProvider.currentOrder != null) {
-            localProductProvider
-                .deleteSavedOrder(localProductProvider.currentOrder!.id);
+          final refreshed = customers.allCustomers;
+          if (refreshed != null && refreshed.isNotEmpty) {
+            billingProvider.setCustomerList(List.of(refreshed));
           }
-          localProductProvider.clearCartAfterOrder();
-          unawaited(Provider.of<CartProvider>(context, listen: false)
-              .submissions
-              .completeLocalCleanup(
-                  response, localProductProvider.flushPersistence));
-
-          try {
-            createdOrderNumber = response["order_number"]?.toString();
-          } catch (error) {
-            billingDebugCheckout(
-              'createOrderAndPrint',
-              'printPrepFailed',
-              errorType: error.runtimeType.toString(),
-            );
-          }
-
-          // Reset provider state
-          billingProvider.setMobileNumberText("");
-          billingProvider.clearSelectedCustomer();
-          billingProvider.mobileNumberTextController.clear();
-          billingProvider.clearProductFields();
-          Provider.of<BillingProvider>(context, listen: false)
-              .coupenCodeTextController
-              .clear();
-          billingProvider.transactionNumberController.clear();
-          billingProvider.paidAmountController.clear();
-          billingProvider.carNumberController.clear();
-          billingProvider.commentController.clear();
-          billingProvider.setDeliveryDate(null);
-          billingProvider.setDeliveryTime(null);
-
-          // Match confirmOrder / desktop full reset: clear all payment method
-          // selections, amounts, to-customer-credit and Pine Labs state so the
-          // next sale starts from a clean workspace.
-          billingProvider.clearAllPaymentMethods();
-          billingProvider.setPineLabsPaymentSuccess(false);
-        } else {
-          showScaffoldError(
-            context: context,
-            message: BillingMobileErrorMessages.orderApiFailure(
-              Map<dynamic, dynamic>.from(response as Map),
-              fallback: BillingMobileErrorMessages.createOrderFailed,
-            ),
-          );
+        } catch (_) {
+          // Customer balance/cache refresh is best effort after a synced sale.
         }
-      });
+      },
+    );
+
+    if (context.mounted) {
+      showScaffold(
+        context: context,
+        message:
+            'Order confirmed locally. Server sync continues in the background.',
+      );
+    }
+    return result;
+  }
+
+  /// Returns true once the sale is durable locally. Server sync is observable
+  /// separately in Sales → Confirmed Orders.
+  Future<bool> confirmOrder() async {
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    billingProvider.setLoadingConfirmOrder(true);
+    billingDebugCheckout('confirmOrder', 'started');
+    try {
+      return await _confirmLocalFirst(printReceipt: false) != null;
+    } catch (error) {
+      billingDebugCheckout(
+        'confirmOrder',
+        'exception',
+        errorType: error.runtimeType.toString(),
+      );
+      if (context.mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'The order could not be saved locally. Nothing was sent.',
+        );
+      }
+      return false;
+    } finally {
+      billingProvider.setLoadingConfirmOrder(false);
+      billingDebugCheckout('confirmOrder', 'completed');
+    }
+  }
+
+  Future<LocalFirstSaleResult<SavedOrder>?> createOrderAndPrint() async {
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    billingProvider.setLoadingCreateOrder(true);
+    billingDebugCheckout('createOrderAndPrint', 'started');
+    try {
+      return await _confirmLocalFirst(printReceipt: true);
     } catch (error) {
       billingDebugCheckout(
         'createOrderAndPrint',
         'exception',
         errorType: error.runtimeType.toString(),
       );
-      showScaffoldError(
-        context: context,
-        message:
-            'We couldn’t complete the checkout screen. Review the order status before billing again.',
-      );
+      if (context.mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'The order could not be saved locally. Nothing was sent.',
+        );
+      }
+      return null;
     } finally {
-      releaseCheckoutUi();
       billingProvider.setLoadingCreateOrder(false);
       billingDebugCheckout('createOrderAndPrint', 'completed');
     }
-    return createdOrderNumber;
   }
 
   Future<SaveOrderResult> saveOrder() async {
@@ -616,8 +489,12 @@ class CheckoutService {
           address: billingProvider.orderAddress.isNotEmpty
               ? billingProvider.orderAddress
               : null,
+          addressId: billingProvider.orderAddressId,
+          pincode: billingProvider.orderPincode,
           deliveryCharge: deliveryCharge,
           customerType: customerTypeToSave,
+          quotationId: currentOrder.quotationId,
+          quotationNumber: currentOrder.quotationNumber,
         );
         showScaffold(context: context, message: "Order Updated Successfully");
         return SaveOrderResult.updatedExisting;
@@ -646,6 +523,8 @@ class CheckoutService {
           address: billingProvider.orderAddress.isNotEmpty
               ? billingProvider.orderAddress
               : null,
+          addressId: billingProvider.orderAddressId,
+          pincode: billingProvider.orderPincode,
           deliveryCharge: deliveryCharge,
           customerType: customerTypeToSave,
         );
@@ -733,8 +612,12 @@ class CheckoutService {
           address: billingProvider.orderAddress.isNotEmpty
               ? billingProvider.orderAddress
               : null,
+          addressId: billingProvider.orderAddressId,
+          pincode: billingProvider.orderPincode,
           deliveryCharge: deliveryCharge,
           customerType: customerTypeToSave,
+          quotationId: currentOrder.quotationId,
+          quotationNumber: currentOrder.quotationNumber,
         );
         result = localProductProvider.moveToConfirmedOrders(currentOrderId);
         if (result != null) {
@@ -767,8 +650,12 @@ class CheckoutService {
             address: billingProvider.orderAddress.isNotEmpty
                 ? billingProvider.orderAddress
                 : null,
+            addressId: billingProvider.orderAddressId,
+            pincode: billingProvider.orderPincode,
             deliveryCharge: deliveryCharge,
             customerType: customerTypeToSave,
+            quotationId: currentOrder.quotationId,
+            quotationNumber: currentOrder.quotationNumber,
           );
           showScaffold(
             context: context,
@@ -799,6 +686,8 @@ class CheckoutService {
           address: billingProvider.orderAddress.isNotEmpty
               ? billingProvider.orderAddress
               : null,
+          addressId: billingProvider.orderAddressId,
+          pincode: billingProvider.orderPincode,
           deliveryCharge: deliveryCharge,
           customerType: customerTypeToSave,
         );

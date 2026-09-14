@@ -5,9 +5,7 @@ import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
-import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -16,44 +14,16 @@ import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/services/print_service.dart';
 import 'package:pos_machine/screens/sales/widgets/confirmed_order_detail_modal.dart';
 import 'package:provider/provider.dart';
-import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
-import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/cart_provider.dart';
+import 'package:pos_machine/services/local_sale_sync_service.dart';
 
 class ConfirmedOrdersScreen extends StatefulWidget {
-  const ConfirmedOrdersScreen({Key? key}) : super(key: key);
+  const ConfirmedOrdersScreen({super.key});
 
   @override
   State<ConfirmedOrdersScreen> createState() => _ConfirmedOrdersScreenState();
 }
 
 class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
-  bool isSyncing = false;
-  int currentSyncIndex = 0;
-  int totalOrdersToSync = 0;
-  // Function to update dialog state from outside
-  void Function(void Function())? _dialogSetState;
-
-  double _calculateOrderDiscountAmount(SavedOrder order) {
-    final subtotal = order.items.fold<double>(
-      0.0,
-      (sum, item) =>
-          sum +
-          ((item.price ?? item.product.price?.price ?? 0.0) * item.quantity),
-    );
-
-    final flatDiscount = order.flatDiscount ?? 0.0;
-    final percentageValue = order.percentageDiscount ?? 0.0;
-    final percentageDiscount = subtotal * percentageValue / 100;
-    final totalDiscount = flatDiscount + percentageDiscount;
-
-    if (totalDiscount > subtotal) {
-      return subtotal;
-    }
-
-    return totalDiscount;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -66,8 +36,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           children: [
             _buildHeader(),
             Expanded(
-              child: Consumer<LocalProductProvider>(
-                builder: (context, provider, child) {
+              child: Consumer2<LocalProductProvider, LocalSaleSyncService>(
+                builder: (context, provider, saleSync, child) {
                   final confirmedOrders = provider.confirmedOrders;
 
                   if (confirmedOrders.isEmpty) {
@@ -91,15 +61,16 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                         ),
                         child: GridView.builder(
                           gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 4,
-                            childAspectRatio: 2,
+                              const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 360,
+                            mainAxisExtent: 190,
                             crossAxisSpacing: 10,
                             mainAxisSpacing: 10,
                           ),
                           itemCount: confirmedOrders.length,
                           itemBuilder: (context, index) {
                             final order = confirmedOrders[index];
+                            final syncRecord = saleSync.recordFor(order.id);
                             String formattedDate =
                                 _formatDateTime(order.createdAt);
                             String formattedTime = _formatTime(order.createdAt);
@@ -154,15 +125,22 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                                                 padding: EdgeInsets.zero,
                                                 constraints:
                                                     const BoxConstraints(),
-                                                onPressed: () =>
-                                                    _showDeleteConfirmationDialog(
-                                                        context, order),
+                                                onPressed: syncRecord != null &&
+                                                        syncRecord.state !=
+                                                            LocalSaleSyncState
+                                                                .synced
+                                                    ? null
+                                                    : () =>
+                                                        _showDeleteConfirmationDialog(
+                                                            context, order),
                                                 color: ColorManager.kButtonRed,
                                               ),
                                             ],
                                           ),
                                         ],
                                       ),
+                                      const SizedBox(height: 5),
+                                      _buildSyncBadge(syncRecord),
                                       const SizedBox(height: 5),
                                       Row(
                                         children: [
@@ -230,7 +208,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                                                 size: 12, color: Colors.orange),
                                             const SizedBox(width: 4),
                                             Text(
-                                              'confirmed_orders.discount_applied'.tr,
+                                              'confirmed_orders.discount_applied'
+                                                  .tr,
                                               style: buildCustomStyle(
                                                 FontWeightManager.medium,
                                                 FontSize.s10,
@@ -302,151 +281,15 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
     return DateHelper.formatToISODateFromIST(isoDateString);
   }
 
-  /// Helper method to check if a phone number matches the default customer phone from app settings
-  bool _isDefaultCustomerPhone(String? phone) {
-    if (phone == null || phone.isEmpty) return false;
-    final appSettingsProvider =
-        Provider.of<AppSettingsProvider>(context, listen: false);
-    final defaultPhone =
-        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
-    return defaultPhone.isNotEmpty && phone == defaultPhone;
-  }
-
   void _printOrder(SavedOrder order) async {
     try {
       await const PrintService().printSavedOrder(context, order);
       return;
-/*
-      // Convert SavedOrder items to the format expected by PrintPage
-      List<Map<String, dynamic>> cartItems = [];
-      double totalMRP = 0.0;
-      double netTotal = 0.0;
-      double totalTax = 0.0;
-
-      for (var item in order.items) {
-        // Calculate individual item values
-        double itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
-        double itemPrice = item.price ?? item.product.price?.price ?? 0.0;
-        double itemTotalPrice = itemPrice * item.quantity;
-        double itemTax = (item.taxAmount ?? 0.0) * item.quantity;
-
-        // Add to totals for "You Saved" calculation
-        totalMRP += itemMrp * item.quantity;
-        netTotal += itemTotalPrice;
-        totalTax += itemTax;
-
-        cartItems.add({
-          'productName': item.product.productName ?? 'Unknown',
-          'mrp': itemMrp.toString(),
-          'quantity': item.quantity.toString(),
-          'unitPrice': itemPrice.toString(),
-          'totalPrice': itemTotalPrice.toString(),
-          'tax_amount': itemTax.toString(),
-        });
-      }
-
-      // 🔧 FIX: Calculate "You Saved" using Option 3 approach
-      double youSaved = totalMRP - netTotal;
-      youSaved = youSaved > 0 ? youSaved : 0.0; // Ensure non-negative
-      double netExcTax = netTotal - totalTax;
-
-      debugPrint("🖨️ OFFLINE ORDER PRINT CALCULATION:");
-      debugPrint("  - Total MRP: $totalMRP");
-      debugPrint("  - Net Total: $netTotal");
-      debugPrint("  - Total Tax: $totalTax");
-      debugPrint("  - Net Exc Tax: $netExcTax");
-      debugPrint("  - You Saved: $youSaved");
-
-      // Use the stored total from order (already rounded when saved)
-      double finalTotal = order.total;
-
-      // Get active store name
-      final storeSession =
-          Provider.of<StoreSessionProvider>(context, listen: false);
-      final storeName = storeSession.activeStore?.storeName ?? "Store";
-
-      // Calculate discount amount
-        final double discountAmount = _calculateOrderDiscountAmount(order);
-
-      // Get paid amount
-      double? paidAmount = (double.tryParse(order.paidAmount ?? "0") ?? 0.0) > 0
-          ? (double.tryParse(order.paidAmount ?? "0") ?? 0.0)
-          : null;
-
-      // Parse multi-payment JSON into human-readable names and breakdown
-      final parsedPayment = PaymentHelper.parseLocalMultiPayment(
-          context, order.paymentMethod);
-      final String? displayPaymentMethod = parsedPayment?.paymentMethodDisplay
-          ?? order.paymentMethod;
-      final Map<String, dynamic>? paymentBreakdown =
-          parsedPayment?.paymentBreakdown;
-
-      // Try auto-print with default printer first
-      debugPrint("🖨️ Attempting auto-print for confirmed order #${order.orderNumber}");
-      final autoPrintSuccess = await PrintPage.autoPrint(
-        context,
-        storeName: storeName,
-        cartItems: cartItems,
-        formattedTotal: finalTotal.toString(), // Use order's total
-        savedTotal: youSaved.toString(),
-        discountAmount: discountAmount.toString(),
-        orderDate: order.createdAt,
-        orderNumber: order.orderNumber,
-        isFromLocalStorage: true,
-        customerName: order.customerName,
-        customerPhone: order.customerPhone,
-        paymentMethod: displayPaymentMethod,
-        paymentBreakdown: paymentBreakdown,
-        customerAlternatePhone: order.alternatePhone,
-        customerVatNumber: order.customerVatNumber,
-        customerCrNumber: order.customerCrNumber,
-        customerType: order.customerType,
-        orderComment: order.comment,
-        deliveryMethod: order.deliveryMethod,
-        paidAmount: paidAmount,
-        isDefaultCustomer: _isDefaultCustomerPhone(order.customerPhone),
-        netExcTax: netExcTax.toString(),
-        documentConfigType: 'Bill',
-      );
-
-      // Only show print page if auto-print failed
-      if (!autoPrintSuccess && mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PrintPage(
-              storeName: storeName,
-              cartItems: cartItems,
-              formattedTotal: finalTotal.toString(), // Use order's total
-              savedTotal: youSaved.toString(),
-              discountAmount: discountAmount.toString(),
-              orderDate: order.createdAt,
-              orderNumber: order.orderNumber,
-              isFromLocalStorage: true,
-              customerName: order.customerName,
-              customerPhone: order.customerPhone,
-              paymentMethod: displayPaymentMethod,
-              paymentBreakdown: paymentBreakdown,
-              customerAlternatePhone: order.alternatePhone,
-              customerVatNumber: order.customerVatNumber,
-              customerCrNumber: order.customerCrNumber,
-              customerType: order.customerType,
-              orderComment: order.comment,
-              deliveryMethod: order.deliveryMethod,
-              paidAmount: paidAmount,
-              isDefaultCustomer: _isDefaultCustomerPhone(order.customerPhone),
-              netExcTax: netExcTax.toString(),
-              documentConfigType: 'Bill',
-            ),
-          ),
-        );
-      }
-*/
     } catch (error) {
       debugPrint("Error printing order: ${error.toString()}");
+      if (!mounted) return;
       showScaffoldError(
-          context: context,
-          message: "confirmed_orders.failed_print".tr);
+          context: context, message: "confirmed_orders.failed_print".tr);
     }
   }
 
@@ -464,16 +307,20 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
       context: context,
       title: "confirmed_orders.delete_title".tr,
       itemName: order.orderNumber,
-      message:
-          "confirmed_orders.delete_message".tr,
+      message: "confirmed_orders.delete_message".tr,
       warningIcon: Icons.receipt_long_outlined,
       warningIconColor: ColorManager.kButtonRed,
       deleteButtonText: "confirmed_orders.delete".tr,
-      onDelete: () {
+      onDelete: () async {
         // Delete the confirmed order from local storage
         final provider =
             Provider.of<LocalProductProvider>(context, listen: false);
+        final saleSync =
+            Provider.of<LocalSaleSyncService>(context, listen: false);
+        await saleSync.remove(order.id);
         provider.deleteConfirmedOrder(order.id);
+        await provider.flushPersistence();
+        if (!context.mounted) return;
 
         // Show success message
         showScaffold(
@@ -490,508 +337,111 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            "confirmed_orders.title".tr,
-            style: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s20,
-              0.30,
-              ColorManager.textColor,
+          Expanded(
+            child: Text(
+              "confirmed_orders.title".tr,
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s20,
+                0.30,
+                ColorManager.textColor,
+              ),
             ),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              CustomRoundButton(
-                title: "confirmed_orders.sync_btn".tr,
-                fct: () {
-                  final provider =
-                      Provider.of<LocalProductProvider>(context, listen: false);
-                  if (provider.confirmedOrders.isEmpty) {
-                    showScaffoldError(
-                        context: context,
-                        message: "confirmed_orders.no_orders_to_sync".tr);
-                    return;
-                  }
-                  _syncConfirmedOrders(context);
-                },
-                fontSize: 12,
-                height: 45,
-                width: 200,
+          const SizedBox(width: 12),
+          Consumer<LocalSaleSyncService>(
+            builder: (context, sync, _) => Flexible(
+              child: Text(
+                sync.unresolvedCount == 0
+                    ? 'All recorded sales are synced'
+                    : '${sync.unresolvedCount} sale(s) need sync attention',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.end,
+                style: TextStyle(
+                  color: sync.unresolvedCount == 0
+                      ? const Color(0xFF16764A)
+                      : const Color(0xFF936014),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// Syncs all confirmed orders with the database
-  void _syncConfirmedOrders(BuildContext context) async {
-    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
-      return;
-    }
-    final provider = Provider.of<LocalProductProvider>(context, listen: false);
-
-    // Create a copy of the orders list to avoid modification during iteration
-    final List<SavedOrder> confirmedOrders =
-        List.from(provider.confirmedOrders);
-
-    debugPrint("Starting to sync ${confirmedOrders.length} orders");
-
-    setState(() {
-      isSyncing = true;
-      currentSyncIndex = 0;
-      totalOrdersToSync = confirmedOrders.length;
-    });
-
-    // Show a styled dialog that matches add_product_modal.dart
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            // Store the setState function to update dialog from outside
-            _dialogSetState = setStateDialog;
-
-            return Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-              elevation: 8,
-              backgroundColor: Colors.white,
-              child: Container(
-                width: MediaQuery.of(context).size.width / 3,
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "confirmed_orders.syncing_title".tr,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                        // No close button since we don't want the user to cancel
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'confirmed_orders.uploading_orders'.tr.replaceAll('@count', '${confirmedOrders.length}'),
-                      style:
-                          const TextStyle(fontSize: 16, color: Colors.black54),
-                    ),
-                    const SizedBox(height: 24),
-                    Center(
-                      child: Column(
-                        children: [
-                          const CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                                ColorManager.kPrimaryColor),
-                          ),
-                          const SizedBox(height: 20),
-                          // Display the correct count (current order being processed)
-                          Text(
-                            currentSyncIndex < totalOrdersToSync
-                                ? 'confirmed_orders.saving_orders'.tr.replaceAll('@current', '${currentSyncIndex + 1}').replaceAll('@total', '$totalOrdersToSync')
-                                : 'confirmed_orders.completed_orders'.tr.replaceAll('@current', '$currentSyncIndex').replaceAll('@total', '$totalOrdersToSync'),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          LinearProgressIndicator(
-                            value: totalOrdersToSync > 0
-                                ? currentSyncIndex / totalOrdersToSync
-                                : 0,
-                            backgroundColor: Colors.grey[300],
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                                ColorManager.kPrimaryColor),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                  ],
+  Widget _buildSyncBadge(LocalSaleSyncRecord? record) {
+    final state = record?.state;
+    final (label, color, icon) = switch (state) {
+      LocalSaleSyncState.queued => (
+          'Waiting to send',
+          const Color(0xFF6B7280),
+          Icons.schedule_outlined
+        ),
+      LocalSaleSyncState.sending => (
+          'Sending',
+          const Color(0xFF2563EB),
+          Icons.sync
+        ),
+      LocalSaleSyncState.synced => (
+          record?.serverOrderNumber?.isNotEmpty == true
+              ? 'Synced · ${record!.serverOrderNumber}'
+              : 'Synced',
+          const Color(0xFF16764A),
+          Icons.cloud_done_outlined,
+        ),
+      LocalSaleSyncState.needsReview => (
+          'Needs review',
+          const Color(0xFFB45309),
+          Icons.warning_amber_rounded,
+        ),
+      LocalSaleSyncState.rejected => (
+          'Rejected',
+          const Color(0xFFB42318),
+          Icons.error_outline,
+        ),
+      null => ('Local only', const Color(0xFF6B7280), Icons.cloud_off_outlined),
+    };
+    return Tooltip(
+      message: record?.message ?? 'This legacy local order has no sync record.',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                record == null
+                    ? label
+                    : '${_surfaceLabel(record.surface)} · $label',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            );
-          },
-        );
-      },
+            ),
+          ],
+        ),
+      ),
     );
-
-    // Get auth token
-    final authProvider = Provider.of<AuthModel>(context, listen: false);
-    String? accessToken = authProvider.token;
-
-    if (accessToken == null) {
-      Navigator.of(context).pop(); // Close dialog
-      showScaffoldError(
-          context: context,
-          message: "confirmed_orders.auth_token_not_found".tr);
-      setState(() {
-        isSyncing = false;
-      });
-      return;
-    }
-
-    int successCount = 0;
-    int failureCount = 0;
-
-    // Process each order one by one with proper async handling
-    for (int i = 0; i < confirmedOrders.length; i++) {
-      // Don't increment currentSyncIndex until after the API call completes
-      if (_dialogSetState != null) {
-        _dialogSetState!(() {
-          // Update the display in the dialog but don't change currentSyncIndex yet
-        });
-      }
-
-      final order = confirmedOrders[i];
-
-      debugPrint(
-          "Processing order ${i + 1}/${confirmedOrders.length}: ${order.orderNumber}");
-
-      // Debug: Log the order data being synced
-      debugPrint("💾 SYNC ORDER DATA:");
-      debugPrint("  - Order Number: ${order.orderNumber}");
-      debugPrint("  - Customer ID: ${order.customerId}");
-      debugPrint("  - Customer Phone: ${order.customerPhone}");
-      debugPrint("  - Payment Method: ${order.paymentMethod}");
-      debugPrint("  - Paid Amount: ${order.paidAmount}");
-      debugPrint("  - Balance Amount: ${order.balanceAmount}");
-      debugPrint("  - Transaction ID: ${order.transactionId}");
-      debugPrint("  - Coupon ID: ${order.couponId}");
-      debugPrint("  - Delivery Method ID: ${order.deliveryMethodId}");
-      debugPrint("  - Car Number: ${order.carNumber}");
-      debugPrint("  - Status: ${order.status}");
-      debugPrint("  - Total: ${order.total}");
-      debugPrint("  - Flat Discount: ${order.flatDiscount}");
-      debugPrint("  - Percentage Discount: ${order.percentageDiscount}");
-      debugPrint("  - Coupon ID: ${order.couponId}");
-
-      // Prepare items for API using the same expansion logic as online confirm flow
-      final List<Map<String, dynamic>> items =
-          LocalProductProvider.buildOrderItemsPayloadFrom(order.items);
-
-      bool orderProcessed = false;
-
-      try {
-/*
-        // Build sync payment payload in multi-payment format for consistency.
-        String? paymentMethod;
-        String? paidAmount;
-        List<String>? paymentMethods;
-        List<Map<String, dynamic>>? paidMethods;
-
-        final billingProvider =
-            Provider.of<BillingProvider>(context, listen: false);
-
-        String _normalizePaymentMethodId(String? rawMethod) {
-          if (rawMethod == null) return '';
-          final method = rawMethod.trim();
-          if (method.isEmpty) return '';
-          if (RegExp(r'^\d+$').hasMatch(method)) return method;
-
-          switch (method.toUpperCase()) {
-            case 'CASH':
-              return billingProvider.cashPaymentMethodId ?? 'CASH';
-            case 'CARD':
-              return billingProvider.cardPaymentMethodId ?? 'CARD';
-            case 'UPI':
-              return billingProvider.upiPaymentMethodId ?? 'UPI';
-            case 'COD':
-              return billingProvider.codPaymentMethodId ?? 'COD';
-            case 'DEBIT':
-            case 'BALANCE':
-              // Credit allocation is sent via `to_customer_credit`, not as a paid method.
-              return '';
-            default:
-              return method;
-          }
-        }
-
-        bool _isCreditOnlyMethod(String? methodId) {
-          final method = methodId?.trim().toUpperCase() ?? '';
-          return method == 'DEBIT' || method == 'BALANCE';
-        }
-
-        List<Map<String, dynamic>> _adjustForBalance(
-          List<Map<String, dynamic>> source,
-          double balance,
-        ) {
-          if (balance <= 0 || source.isEmpty) return source;
-
-          final adjusted = List<Map<String, dynamic>>.from(source);
-          final cashMethodId = billingProvider.cashPaymentMethodId;
-          final codMethodId = billingProvider.codPaymentMethodId;
-
-          final adjustmentIndex = adjusted.indexWhere((payment) {
-            final methodId = payment['method']?.toString();
-            return methodId == cashMethodId ||
-                methodId == codMethodId ||
-                methodId == 'CASH' ||
-                methodId == 'COD';
-          });
-
-          if (adjustmentIndex != -1) {
-            final adjustedAmount =
-                (adjusted[adjustmentIndex]['amount'] as num).toDouble() -
-                    balance;
-            adjusted[adjustmentIndex] = {
-              'method': adjusted[adjustmentIndex]['method'],
-              'amount': adjustedAmount > 0 ? adjustedAmount : 0.0,
-            };
-          }
-
-          return adjusted
-              .where((payment) =>
-                  ((payment['amount'] as num?)?.toDouble() ?? 0.0) > 0)
-              .toList();
-        }
-
-        final balanceAmountValue =
-            double.tryParse(order.balanceAmount ?? '0') ?? 0.0;
-
-        final rawStoredPaymentMethod = order.paymentMethod;
-        final bool hasStructuredPaymentData =
-            rawStoredPaymentMethod != null &&
-                rawStoredPaymentMethod.trim().startsWith('{');
-        if (rawStoredPaymentMethod != null &&
-            rawStoredPaymentMethod.trim().startsWith('{')) {
-          try {
-            final Map<String, dynamic> multiPaymentData =
-                json.decode(rawStoredPaymentMethod);
-
-            if (multiPaymentData['isMultiPayment'] == true) {
-              final selectedMethods =
-                  List<String>.from(multiPaymentData['methods'] ?? []);
-              final amounts =
-                  Map<String, dynamic>.from(multiPaymentData['amounts'] ?? {});
-
-              final normalizedMethods = <String>[];
-              for (final method in selectedMethods) {
-                final normalized = _normalizePaymentMethodId(method);
-                if (normalized.isNotEmpty &&
-                    !_isCreditOnlyMethod(normalized) &&
-                    !normalizedMethods.contains(normalized)) {
-                  normalizedMethods.add(normalized);
-                }
-              }
-
-              final normalizedAmounts = <String, double>{};
-              for (final entry in amounts.entries) {
-                final normalizedKey = _normalizePaymentMethodId(entry.key);
-                final amount = double.tryParse(entry.value.toString()) ?? 0.0;
-                if (normalizedKey.isNotEmpty &&
-                    !_isCreditOnlyMethod(normalizedKey) &&
-                    amount > 0) {
-                  normalizedAmounts[normalizedKey] = amount;
-                  if (!normalizedMethods.contains(normalizedKey)) {
-                    normalizedMethods.add(normalizedKey);
-                  }
-                }
-              }
-
-              paymentMethods = normalizedMethods
-                  .where((methodId) =>
-                      (normalizedAmounts[methodId] ?? 0.0) > 0)
-                  .toList();
-
-              paidMethods = paymentMethods
-                  .map((methodId) => {
-                        'method': methodId,
-                        'amount': normalizedAmounts[methodId] ?? 0.0,
-                      })
-                  .where((payment) =>
-                      ((payment['amount'] as num?)?.toDouble() ?? 0.0) > 0)
-                  .toList();
-            }
-          } catch (e) {
-            debugPrint("Error parsing multi-payment data during sync: $e");
-          }
-        }
-
-        // Legacy/invalid storage fallback: convert single method to multi format.
-        if (paymentMethods == null ||
-            paidMethods == null ||
-            paymentMethods.isEmpty ||
-            paidMethods.isEmpty) {
-          final normalizedMethod =
-              _normalizePaymentMethodId(order.paymentMethod ?? '');
-          final legacyAmount =
-              double.tryParse(order.paidAmount ?? '') ?? order.total;
-
-          if (normalizedMethod.isNotEmpty && legacyAmount > 0) {
-            paymentMethods = [normalizedMethod];
-            paidMethods = [
-              {
-                'method': normalizedMethod,
-                'amount': legacyAmount,
-              }
-            ];
-          }
-        }
-
-        if (paidMethods != null && paidMethods.isNotEmpty) {
-          paidMethods = _adjustForBalance(paidMethods, balanceAmountValue);
-          paymentMethods = paidMethods
-              .map((payment) => payment['method'].toString())
-              .toSet()
-              .toList();
-        }
-
-        if (paymentMethods != null &&
-            paidMethods != null &&
-            paymentMethods.isNotEmpty &&
-            paidMethods.isNotEmpty) {
-          paymentMethod = null;
-          paidAmount = null;
-          debugPrint("✅ Using multi-payment format for sync");
-          debugPrint("  - Payment Methods: $paymentMethods");
-          debugPrint("  - Paid Methods: $paidMethods");
-        } else {
-          if (hasStructuredPaymentData) {
-            // Credit-only or filtered structured payment: keep payment empty, like online.
-            paymentMethod = null;
-            paidAmount = null;
-          } else {
-            paymentMethod = order.paymentMethod ?? 'CASH';
-            paidAmount = order.paidAmount ?? order.total.toString();
-          }
-          paymentMethods = null;
-          paidMethods = null;
-          debugPrint("⚠️ Falling back to single-payment format for sync");
-          debugPrint("  - Payment Method: $paymentMethod");
-          debugPrint("  - Paid Amount: $paidAmount");
-        }
-
-*/
-        final paymentPayload = PaymentHelper.buildApiPaymentPayloadFromLocal(
-          context: context,
-          storedPaymentMethod: order.paymentMethod,
-          storedPaidAmount: order.paidAmount,
-          storedBalanceAmount: order.balanceAmount,
-        );
-
-        debugPrint("Normalized sync payment payload for ${order.orderNumber}:");
-        debugPrint("  - paymentMethod: ${paymentPayload.paymentMethod}");
-        debugPrint("  - paidAmount: ${paymentPayload.paidAmount}");
-        debugPrint("  - paymentMethods: ${paymentPayload.paymentMethods}");
-        debugPrint("  - paidMethods: ${paymentPayload.paidMethods}");
-
-        // Call API to add order and WAIT for completion
-        final cartProvider = Provider.of<CartProvider>(context, listen: false);
-        final response = await cartProvider.addToOrderAPI(
-          items: items,
-          cartIds: 0, // Not used in API, but required parameter
-          accessToken: accessToken,
-          // Use stored data from local order, with fallbacks if needed
-          transactionId: order.transactionId ?? '',
-          totalPrice: order.total.toString(),
-          customerId: order.customerId,
-          customerPhone: order.customerPhone ?? "",
-          paymentMethod: paymentPayload.paymentMethod,
-          paidAmount: paymentPayload.paidAmount,
-          paymentMethods: paymentPayload.paymentMethods,
-          paidMethods: paymentPayload.paidMethods,
-          balanceAmount: order.balanceAmount ?? "0.0",
-          couponId: order.couponId,
-          comment: order.comment,
-          deliveryMethodId: order.deliveryMethodId,
-          carNumber: order.carNumber,
-          status:
-              "confirmed", // ✅ Always use "confirmed" for syncing (not "saved")
-          deliveryDate: order.deliveryDate,
-          deliveryTime: order.deliveryTime,
-          tableId: order.tableId,
-          // Include discount data from saved order
-          flatDiscount: order.flatDiscount,
-          percentageDiscount: order.percentageDiscount,
-          discountAmount: _calculateOrderDiscountAmount(order),
-          toCustomerCredit: order.toCustomerCredit,
-          address: order.address,
-          deliveryCharge: order.deliveryCharge,
-        );
-
-        if (await SubscriptionActionGuard.handleBackendResponse(
-          context,
-          response,
-        )) {
-          failureCount += confirmedOrders.length - i;
-          break;
-        }
-
-        // AFTER the API call completes, update the index
-        setState(() {
-          currentSyncIndex = i + 1; // Increment to next index AFTER processing
-        });
-
-        if (_dialogSetState != null) {
-          _dialogSetState!(() {});
-        }
-
-        if (response != null && response["order_id"] != null) {
-          // Order synced successfully, now delete it from local storage
-          provider.deleteConfirmedOrder(order.id);
-          successCount++;
-          orderProcessed = true;
-          debugPrint("Successfully synced order ${order.orderNumber}");
-        } else {
-          debugPrint("API error syncing order ${order.orderNumber}");
-          failureCount++;
-        }
-      } catch (e) {
-        // AFTER the API call fails, update the index
-        setState(() {
-          currentSyncIndex = i + 1; // Increment to next index even after error
-        });
-
-        if (_dialogSetState != null) {
-          _dialogSetState!(() {});
-        }
-
-        debugPrint("Exception syncing order ${order.orderNumber}: $e");
-        failureCount++;
-      }
-
-      // Log progress for debugging
-      debugPrint(
-          "Processed order ${i + 1}/${confirmedOrders.length}: ${orderProcessed ? 'SUCCESS' : 'FAILED'}");
-
-      // Small delay to avoid overwhelming the API but AFTER the current order is processed
-      await Future.delayed(const Duration(milliseconds: 300));
-    }
-
-    // Show remaining orders count in the logs (should be zero if all were processed)
-    debugPrint(
-        "After processing, remaining confirmed orders: ${provider.confirmedOrders.length}");
-
-    // Wait a moment to show the completed status
-    await Future.delayed(const Duration(seconds: 1));
-
-    // Only now close the dialog
-    if (mounted) {
-      Navigator.of(context).pop();
-
-      showScaffold(
-          context: context,
-          message:
-              'confirmed_orders.sync_success'.tr.replaceAll('@count', '$successCount') + (failureCount > 0 ? 'confirmed_orders.sync_failed_part'.tr.replaceAll('@count', '$failureCount') : ''));
-    }
-
-    setState(() {
-      isSyncing = false;
-      _dialogSetState = null;
-    });
   }
+
+  String _surfaceLabel(LocalSaleSurface surface) => switch (surface) {
+        LocalSaleSurface.supermarketDesktop => 'Desktop',
+        LocalSaleSurface.mobileBilling => 'Mobile',
+        LocalSaleSurface.restaurant => 'Restaurant',
+        LocalSaleSurface.attender => 'Attender',
+        LocalSaleSurface.kiosk => 'Kiosk',
+        LocalSaleSurface.legacy => 'Legacy',
+      };
 }

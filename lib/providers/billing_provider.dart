@@ -72,9 +72,23 @@ class BillingProvider extends ChangeNotifier {
   // Delivery Address
   String _orderAddress = "";
   String get orderAddress => _orderAddress;
+  int? _orderAddressId;
+  int? get orderAddressId => _orderAddressId;
+  String _orderPincode = "";
+  String get orderPincode => _orderPincode;
 
   void setOrderAddress(String address) {
+    if (_orderAddress != address) {
+      _orderAddressId = null;
+      _orderPincode = '';
+    }
     _orderAddress = address;
+    notifyListeners();
+  }
+
+  void setOrderAddressDetails({int? addressId, String? pincode}) {
+    _orderAddressId = addressId;
+    _orderPincode = pincode?.trim() ?? '';
     notifyListeners();
   }
 
@@ -705,14 +719,16 @@ class BillingProvider extends ChangeNotifier {
       final customMRP = _customMRPs[i];
 
       if (customPrice != null && customPrice <= 0) {
-        _cartValidationError = 'billing.invalid_price_item'.trParams({'name': item.productName ?? ''});
+        _cartValidationError = 'billing.invalid_price_item'
+            .trParams({'name': item.productName ?? ''});
         _isCartValid = false;
         notifyListeners();
         return false;
       }
 
       if (customMRP != null && customMRP <= 0) {
-        _cartValidationError = 'billing.invalid_mrp_item'.trParams({'name': item.productName ?? ''});
+        _cartValidationError = 'billing.invalid_mrp_item'
+            .trParams({'name': item.productName ?? ''});
         _isCartValid = false;
         notifyListeners();
         return false;
@@ -1922,6 +1938,8 @@ class BillingProvider extends ChangeNotifier {
       'cartItems': _cartProductItems,
       'taxNames': _taxNames,
       'address': _orderAddress,
+      'addressId': _orderAddressId,
+      'pincode': _orderPincode,
     };
   }
 
@@ -2129,6 +2147,10 @@ class BillingProvider extends ChangeNotifier {
       }
       _deliveryTime = order['deliveryTime'];
       _orderAddress = order['address'] ?? '';
+      _orderAddressId = order['addressId'] is int
+          ? order['addressId'] as int
+          : int.tryParse(order['addressId']?.toString() ?? '');
+      _orderPincode = order['pincode']?.toString() ?? '';
 
       // Restore other fields
       transactionNumberController.text = order['transactionId'] ?? '';
@@ -2161,6 +2183,8 @@ class BillingProvider extends ChangeNotifier {
     _carNumber = "";
     _orderComment = "";
     _orderAddress = "";
+    _orderAddressId = null;
+    _orderPincode = "";
 
     // Clear controllers
     transactionNumberController.clear();
@@ -3128,7 +3152,8 @@ class BillingProvider extends ChangeNotifier {
     if (methods.contains("CARD")) activeMethods.add('billing.card'.tr);
     if (methods.contains("UPI")) activeMethods.add('billing.upi'.tr);
     if (methods.contains("COD")) activeMethods.add('billing.cod'.tr);
-    if (methods.contains("ONLINE")) activeMethods.add('billing.payment_online'.tr);
+    if (methods.contains("ONLINE"))
+      activeMethods.add('billing.payment_online'.tr);
     // DEBIT is not shown in label for collected payments
 
     if (activeMethods.isEmpty) {

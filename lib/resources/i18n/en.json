@@ -5745,6 +5745,7 @@
     "hint_car_number": "Car Number:",
     "hint_comment": "Comment:",
     "hint_address": "Address:",
+    "label_pincode": "Pincode",
     "hint_choose_an_address": "Choose an address:",
     "btn_create": "Create",
     "btn_creating": "Creating...",

@@ -5558,6 +5558,7 @@
     "hint_car_number": "رقم السيارة:",
     "hint_comment": "التعليق:",
     "hint_address": "العنوان:",
+    "label_pincode": "الرمز البريدي",
     "hint_choose_an_address": "اختر عنوان:",
     "btn_create": "إنشاء",
     "btn_creating": "جاري الإنشاء...",

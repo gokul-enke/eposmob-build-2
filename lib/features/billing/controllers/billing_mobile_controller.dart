@@ -836,33 +836,8 @@ class BillingMobileController {
 
   Future<CreateOrderAndPrintResult> createOrderAndPrint(
       BuildContext context) async {
-    final billingProvider =
-        Provider.of<BillingProvider>(context, listen: false);
-    final customerSelectionProvider =
-        Provider.of<CustomerSelectionProvider>(context, listen: false);
-    final appSettings =
-        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
-    final selectedCustomer = customerSelectionProvider.selectedCustomer ??
-        billingProvider.selectedCustomer;
-    final configuredDefaultPhone =
-        appSettings?.autoAssignDefaultCustomerPhone ?? '';
-    final isDefaultCustomer = _customerController.isDefaultCustomer(
-          customer: selectedCustomer,
-          customerSelectionProvider: customerSelectionProvider,
-          defaultCustomerPhone: configuredDefaultPhone,
-        ) ||
-        _customerController.isDefaultCustomerPhone(
-          billingProvider.selectedCustomerPhone ??
-              billingProvider.mobileNumberText,
-          configuredDefaultPhone,
-        );
-    final checkoutOldBalance =
-        isDefaultCustomer ? null : selectedCustomer?.balance;
-    final checkoutTotalPaid = billingProvider.getTotalPaidAmount();
-
-    final createdOrderNumber =
-        await CheckoutService(context).createOrderAndPrint();
-    if (createdOrderNumber == null || createdOrderNumber.isEmpty) {
+    final checkoutResult = await CheckoutService(context).createOrderAndPrint();
+    if (checkoutResult == null) {
       return const CreateOrderAndPrintResult(
         orderCreated: false,
         orderNumber: null,
@@ -870,46 +845,36 @@ class BillingMobileController {
       );
     }
 
-    Future<bool> printOnce() => const PrintService().printOrderByIdWithOptions(
-          context,
-          createdOrderNumber,
-          useCheckoutBalanceFields: true,
-          checkoutOldBalance: checkoutOldBalance,
-          checkoutTotalPaid: checkoutTotalPaid,
-          checkoutIsDefaultCustomer: isDefaultCustomer,
-        );
-
-    try {
-      final printSucceeded = await printOnce();
-      if (context.mounted) {
+    final sale = checkoutResult.localSale;
+    if (checkoutResult.printSucceeded && context.mounted) {
+      try {
+        Future<bool> printOnce() =>
+            const PrintService().printSavedOrder(context, sale);
         await maybePrintCustomerCopy(
           context: context,
-          canPrompt: printSucceeded,
+          canPrompt: true,
           printAction: printOnce,
         );
+      } catch (_) {
+        // The cashier copy was already printed; a customer-copy failure does
+        // not change the locally confirmed sale.
       }
-      return CreateOrderAndPrintResult(
-        orderCreated: true,
-        orderNumber: createdOrderNumber,
-        printSucceeded: printSucceeded,
-      );
-    } catch (error) {
-      billingDebugCheckout(
-        'createOrderAndPrint',
-        'printFailed',
-        errorType: error.runtimeType.toString(),
-      );
-      return CreateOrderAndPrintResult(
-        orderCreated: true,
-        orderNumber: createdOrderNumber,
-        printSucceeded: false,
-        printError: error.toString(),
-      );
     }
+    return CreateOrderAndPrintResult(
+      orderCreated: true,
+      orderNumber: sale.orderNumber,
+      printSucceeded: checkoutResult.printSucceeded,
+      printError: checkoutResult.printError?.toString(),
+    );
   }
 
   Future<bool> retryPrintOrder(BuildContext context, String orderNumber) async {
-    return const PrintService().printOrderByIdWithOptions(context, orderNumber);
+    final localProducts =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final matches = localProducts.confirmedOrders
+        .where((order) => order.orderNumber == orderNumber);
+    if (matches.isEmpty) return false;
+    return const PrintService().printSavedOrder(context, matches.first);
   }
 
   Future<void> printSavedOrder(
