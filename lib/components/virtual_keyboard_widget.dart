@@ -32,22 +32,194 @@ class VirtualKeyboardWidget extends StatefulWidget {
 
 class _VirtualKeyboardWidgetState extends State<VirtualKeyboardWidget> {
   bool _isFirstInput = true;
+  late final TextEditingController _keyboardController;
+  bool _isSynchronizingControllers = false;
 
   @override
   void initState() {
     super.initState();
     _isFirstInput = widget.shouldReplaceOnFirstInput;
+    _keyboardController =
+        TextEditingController.fromValue(widget.controller.value);
+    widget.controller.addListener(_syncFromTargetController);
   }
 
   @override
   void didUpdateWidget(covariant VirtualKeyboardWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
 
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_syncFromTargetController);
+      widget.controller.addListener(_syncFromTargetController);
+      _syncFromTargetController();
+    }
+
     if (oldWidget.controller != widget.controller ||
         oldWidget.shouldReplaceOnFirstInput !=
             widget.shouldReplaceOnFirstInput) {
       _isFirstInput = widget.shouldReplaceOnFirstInput;
     }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_syncFromTargetController);
+    _keyboardController.dispose();
+    super.dispose();
+  }
+
+  void _syncFromTargetController() {
+    if (_isSynchronizingControllers ||
+        _keyboardController.value == widget.controller.value) {
+      return;
+    }
+    _isSynchronizingControllers = true;
+    _keyboardController.value = widget.controller.value;
+    _isSynchronizingControllers = false;
+  }
+
+  EditableText? _focusedEditableText() {
+    final focusContext = FocusManager.instance.primaryFocus?.context;
+    if (focusContext == null) return null;
+
+    EditableText? editable;
+    if (focusContext.widget is EditableText) {
+      editable = focusContext.widget as EditableText;
+    }
+    editable ??= focusContext.findAncestorWidgetOfExactType<EditableText>();
+    return editable != null && identical(editable.controller, widget.controller)
+        ? editable
+        : null;
+  }
+
+  String _insertedText(String before, String after) {
+    var prefix = 0;
+    while (prefix < before.length &&
+        prefix < after.length &&
+        before.codeUnitAt(prefix) == after.codeUnitAt(prefix)) {
+      prefix++;
+    }
+
+    var beforeSuffix = before.length;
+    var afterSuffix = after.length;
+    while (beforeSuffix > prefix &&
+        afterSuffix > prefix &&
+        before.codeUnitAt(beforeSuffix - 1) ==
+            after.codeUnitAt(afterSuffix - 1)) {
+      beforeSuffix--;
+      afterSuffix--;
+    }
+    return after.substring(prefix, afterSuffix);
+  }
+
+  TextSelection _usableSelection(TextEditingValue value) {
+    final selection = value.selection;
+    if (!selection.isValid ||
+        selection.start < 0 ||
+        selection.end > value.text.length) {
+      return TextSelection.collapsed(offset: value.text.length);
+    }
+    return selection;
+  }
+
+  TextEditingValue _replaceSelection(
+    TextEditingValue oldValue,
+    String insertedText, {
+    bool replaceAll = false,
+  }) {
+    final selection = replaceAll
+        ? TextSelection(baseOffset: 0, extentOffset: oldValue.text.length)
+        : _usableSelection(oldValue);
+    final start = selection.start;
+    final end = selection.end;
+    final text = oldValue.text.replaceRange(start, end, insertedText);
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: start + insertedText.length),
+    );
+  }
+
+  TextEditingValue _deleteSelectionOrPreviousCharacter(
+    TextEditingValue oldValue,
+  ) {
+    final selection = _usableSelection(oldValue);
+    if (!selection.isCollapsed) {
+      return _replaceSelection(oldValue, '');
+    }
+
+    final cursor = selection.extentOffset;
+    if (cursor <= 0) return oldValue;
+    final text = oldValue.text.replaceRange(cursor - 1, cursor, '');
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: cursor - 1),
+    );
+  }
+
+  void _applyVirtualKey(VirtualKeyboardKey key) {
+    if (key.keyType == VirtualKeyboardKeyType.Action &&
+        key.action == VirtualKeyboardKeyAction.Return) {
+      // The package appends a newline before invoking this callback. A Return
+      // key on the app keyboard means confirm, matching TextInputAction.done.
+      _syncKeyboardControllerTo(widget.controller.value);
+      final editable = _focusedEditableText();
+      editable?.onEditingComplete?.call();
+      editable?.onSubmitted?.call(widget.controller.text);
+      if (widget.onConfirm != null) {
+        widget.onConfirm!();
+      } else {
+        widget.onClose?.call();
+      }
+      return;
+    }
+
+    final oldValue = widget.controller.value;
+    final packageValue = _keyboardController.value;
+    var newValue = oldValue;
+
+    final insertsText = key.keyType == VirtualKeyboardKeyType.String ||
+        (key.keyType == VirtualKeyboardKeyType.Action &&
+            key.action == VirtualKeyboardKeyAction.Space);
+    if (insertsText) {
+      final insertedText = _insertedText(oldValue.text, packageValue.text);
+      newValue = _replaceSelection(
+        oldValue,
+        insertedText,
+        replaceAll: _isFirstInput && widget.shouldReplaceOnFirstInput,
+      );
+      _isFirstInput = false;
+    } else if (key.keyType == VirtualKeyboardKeyType.Action &&
+        key.action == VirtualKeyboardKeyAction.Backspace) {
+      newValue = _deleteSelectionOrPreviousCharacter(oldValue);
+      _isFirstInput = false;
+    }
+
+    final editable = _focusedEditableText();
+    if (editable != null) {
+      for (final formatter in editable.inputFormatters ?? const []) {
+        newValue = formatter.formatEditUpdate(oldValue, newValue);
+      }
+    }
+
+    if (newValue == oldValue) {
+      _syncKeyboardControllerTo(oldValue);
+      return;
+    }
+
+    _isSynchronizingControllers = true;
+    widget.controller.value = newValue;
+    _keyboardController.value = newValue;
+    _isSynchronizingControllers = false;
+
+    if (newValue.text != oldValue.text) {
+      editable?.onChanged?.call(newValue.text);
+    }
+  }
+
+  void _syncKeyboardControllerTo(TextEditingValue value) {
+    _isSynchronizingControllers = true;
+    _keyboardController.value = value;
+    _isSynchronizingControllers = false;
   }
 
   @override
@@ -166,37 +338,12 @@ class _VirtualKeyboardWidgetState extends State<VirtualKeyboardWidget> {
                                     textColor: widget.textColor,
                                     fontSize: 18,
                                     type: widget.keyboardType,
-                                    textController: widget.controller,
-                                    onKeyPress: (key) {
-                                      if (key.keyType ==
-                                          VirtualKeyboardKeyType.String) {
-                                        if (_isFirstInput &&
-                                            widget.shouldReplaceOnFirstInput) {
-                                          widget.controller.text = key.text;
-                                          widget.controller.selection =
-                                              TextSelection.fromPosition(
-                                            TextPosition(
-                                                offset: widget
-                                                    .controller.text.length),
-                                          );
-                                          _isFirstInput = false;
-                                        }
-                                      } else if (key.keyType ==
-                                          VirtualKeyboardKeyType.Action) {
-                                        if (key.action ==
-                                            VirtualKeyboardKeyAction
-                                                .Backspace) {
-                                          _isFirstInput = false;
-                                        } else if (key.action ==
-                                            VirtualKeyboardKeyAction.Return) {
-                                          if (widget.onConfirm != null) {
-                                            widget.onConfirm!();
-                                          } else if (widget.onClose != null) {
-                                            widget.onClose!();
-                                          }
-                                        }
-                                      }
-                                    },
+                                    // The package edits this proxy controller.
+                                    // [_applyVirtualKey] then forwards the edit
+                                    // through the focused field's formatter and
+                                    // onChanged contract.
+                                    textController: _keyboardController,
+                                    onKeyPress: _applyVirtualKey,
                                   ),
                                 );
                               },
@@ -407,8 +554,8 @@ class _GlobalVirtualKeyboardState extends State<GlobalVirtualKeyboard> {
                       // Clamp to screen boundaries
                       newX =
                           newX.clamp(0, screenSize.width - currentSize.width);
-                      newY = newY.clamp(
-                          0, screenSize.height - currentSize.height);
+                      newY =
+                          newY.clamp(0, screenSize.height - currentSize.height);
 
                       _position = Offset(newX, newY);
                       // Persist clamped position
@@ -466,8 +613,7 @@ class _GlobalVirtualKeyboardState extends State<GlobalVirtualKeyboard> {
                     },
                     onPanUpdate: (details) {
                       setState(() {
-                        double newWidth =
-                            currentSize.width + details.delta.dx;
+                        double newWidth = currentSize.width + details.delta.dx;
                         double newHeight =
                             currentSize.height + details.delta.dy;
 
@@ -492,8 +638,7 @@ class _GlobalVirtualKeyboardState extends State<GlobalVirtualKeyboard> {
                         Size finalSize =
                             keyboardProvider.getKeyboardSize(keyboardType);
 
-                        if (_position.dx + finalSize.width >
-                            screenSize.width) {
+                        if (_position.dx + finalSize.width > screenSize.width) {
                           newX = screenSize.width - finalSize.width;
                         }
                         if (_position.dy + finalSize.height >
