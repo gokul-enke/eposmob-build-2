@@ -33,6 +33,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
   DashBoardModelData? dashBoardModelData;
   TotalSales? totalSales;
   String value = 'today';
+  bool _initialDashboardLoadStarted = false;
   bool isLoading = false;
   List<GraphData> graphData = [];
   List<GraphData> chartData = [];
@@ -60,10 +61,25 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
   void initState() {
     super.initState();
     debugPrint('=== SalesExecutiveDashboard initState called ===');
-    debugPrint('Starting initial data fetching...');
-    fetchDataForPeriod(
-        'month'); // Fetch data for month by default to show some data
-    debugPrint('=== Initial data fetching initiated ===');
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialDashboardLoadStarted) return;
+
+    final settingsProvider = Provider.of<AppSettingsProvider>(context);
+    if (settingsProvider.loading) {
+      return;
+    }
+
+    _initialDashboardLoadStarted = true;
+    final initialPeriod =
+        settingsProvider.appSettings?.defaultDashboardPeriod ?? 'today';
+    value = initialPeriod;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) fetchDataForPeriod(initialPeriod);
+    });
   }
 
   Future<void> fetchDataForPeriod(String period) async {
@@ -178,16 +194,16 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
           debugPrint('Sales stats failed: $e');
         }
 
-        // Fetch graph data for the period
+        // The customer stats API uses `day`, while the graph API uses `today`.
         String apiPeriod = 'week';
         if (period == 'today') apiPeriod = 'day';
         if (period == 'week') apiPeriod = 'week';
         if (period == 'month') apiPeriod = 'month';
+        if (period == 'year') apiPeriod = 'year';
 
         try {
           graph = await dashboardProvider
-              .fetchExecutiveSalesGraph(
-                  accessToken, apiPeriod, startDate, endDate)
+              .fetchExecutiveSalesGraph(accessToken, salesGraphPeriod)
               .timeout(const Duration(seconds: 15));
         } catch (e) {
           debugPrint('Executive sales graph failed: $e');
@@ -1856,37 +1872,9 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
           Provider.of<AuthModel>(context, listen: false).token;
       if (accessToken == null) return;
 
-      // Get date range based on the period
-      final DateTime now = DateTime.now();
-      String startDate;
-      String endDate = DateFormat('yyyy-MM-dd').format(now);
-
-      switch (period) {
-        case "today":
-          startDate = DateFormat('yyyy-MM-dd').format(now);
-          break;
-        case "week":
-          startDate = DateFormat('yyyy-MM-dd')
-              .format(now.subtract(const Duration(days: 7)));
-          break;
-        case "month":
-          startDate =
-              DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month, 1));
-          break;
-        default:
-          startDate = DateFormat('yyyy-MM-dd')
-              .format(now.subtract(const Duration(days: 7)));
-      }
-
-      // Map UI period to API period parameter
-      String apiPeriod = 'week';
-      if (period == 'today') apiPeriod = 'day';
-      if (period == 'week') apiPeriod = 'week';
-      if (period == 'month') apiPeriod = 'month';
-
       final dashboardProvider = DashboardProvider();
-      final graph = await dashboardProvider.fetchExecutiveSalesGraph(
-          accessToken, apiPeriod, startDate, endDate);
+      final graph =
+          await dashboardProvider.fetchExecutiveSalesGraph(accessToken, period);
 
       setState(() {
         this.executiveSalesGraph = graph;

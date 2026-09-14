@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../resources/app_url.dart';
 import '../models/dashboard_api.dart';
@@ -328,21 +329,37 @@ class DashboardProvider {
     }
   }
 
-  Future<SalesGraph> fetchExecutiveSalesGraph(String accessToken, String period,
-      String startDate, String endDate) async {
+  static Map<String, String> executiveSalesGraphQuery(
+    String period, {
+    DateTime? now,
+  }) {
+    final normalizedPeriod = period.trim().toLowerCase();
+    if (normalizedPeriod == 'today' ||
+        normalizedPeriod == 'week' ||
+        normalizedPeriod == 'month') {
+      return {'period': normalizedPeriod};
+    }
+
+    if (normalizedPeriod == 'year') {
+      final currentDate = now ?? DateTime.now();
+      final formatter = DateFormat('dd-MM-yyyy');
+      return {
+        'start_date': formatter.format(DateTime(currentDate.year, 1, 1)),
+        'end_date': formatter.format(currentDate),
+      };
+    }
+
+    throw ArgumentError.value(period, 'period', 'Unsupported graph period');
+  }
+
+  Future<SalesGraph> fetchExecutiveSalesGraph(
+      String accessToken, String period) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
-    final int? activeStoreId = prefs.getInt('active_store_id');
 
-    final Map<String, String> queryParameters = {'period': period};
-    if (period != 'today' && period != 'week') {
-      queryParameters['start_date'] = startDate;
-      queryParameters['end_date'] = endDate;
-    }
-    if (activeStoreId != null) {
-      queryParameters['store_id'] = activeStoreId.toString();
-    }
-    final url = Uri.parse(APPUrl.salesGraph).replace(queryParameters: queryParameters);
+    final queryParameters = executiveSalesGraphQuery(period);
+    final url =
+        Uri.parse(APPUrl.salesGraph).replace(queryParameters: queryParameters);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");

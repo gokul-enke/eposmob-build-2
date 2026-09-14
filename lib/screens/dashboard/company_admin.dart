@@ -32,6 +32,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
   DashBoardModelData? dashBoardModelData;
   TotalSales? totalSales;
   String value = 'today';
+  bool _initialDashboardLoadStarted = false;
   bool isLoading = false;
   List<GraphData> graphData = [];
   List<GraphData> chartData = [];
@@ -72,9 +73,32 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
   @override
   void initState() {
     super.initState();
-    getDashBoardDetails();
-    fetchGraphData();
-    fetchNewDashboardData(); // Added to fetch new API data
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialDashboardLoadStarted) return;
+
+    final settingsProvider = Provider.of<AppSettingsProvider>(context);
+    if (settingsProvider.loading) {
+      return;
+    }
+
+    _initialDashboardLoadStarted = true;
+    value = settingsProvider.appSettings?.defaultDashboardPeriod ?? 'today';
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadDashboard();
+    });
+  }
+
+  Future<void> _loadDashboard() async {
+    await Future.wait<void>([
+      getDashBoardDetails(),
+      fetchGraphData(),
+      fetchNewDashboardData(),
+    ]);
+    if (mounted) await fetchGraphDataForPeriod(value);
   }
 
   Future<void> fetchNewDashboardData() async {
@@ -98,7 +122,6 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
       OrdersPerMonth? ordersPerMonth;
       CustomersPerMonth? customersPerMonth;
       ExecutivesOverview? executives;
-      SalesGraph? executiveSalesGraph;
       SalesStats? stats;
       CustomerStats? customerStats;
       ProductStats? productStats;
@@ -125,13 +148,6 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
             accessToken, startDate, endDate);
       } catch (e) {
         debugPrint('Executives overview failed: $e');
-      }
-
-      try {
-        executiveSalesGraph = await dashboardProvider.fetchExecutiveSalesGraph(
-            accessToken, 'week', startDate, endDate);
-      } catch (e) {
-        debugPrint('Executive sales graph failed: $e');
       }
 
       try {
@@ -167,8 +183,6 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
           if (customersPerMonth != null)
             customersPerMonthData = customersPerMonth;
           if (executives != null) executivesOverview = executives;
-          if (executiveSalesGraph != null)
-            this.executiveSalesGraph = executiveSalesGraph;
           if (stats != null) this.salesStats = stats;
           if (customerStats != null) this.customerStats = customerStats;
           if (productStats != null) this.productStats = productStats;
@@ -187,37 +201,9 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
           Provider.of<AuthModel>(context, listen: false).token;
       if (accessToken == null) return;
 
-      // Get date range based on the period
-      final DateTime now = DateTime.now();
-      String startDate;
-      String endDate = DateFormat('yyyy-MM-dd').format(now);
-
-      switch (period) {
-        case "today":
-          startDate = DateFormat('yyyy-MM-dd').format(now);
-          break;
-        case "week":
-          startDate = DateFormat('yyyy-MM-dd')
-              .format(now.subtract(const Duration(days: 7)));
-          break;
-        case "month":
-          startDate =
-              DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month, 1));
-          break;
-        default:
-          startDate = DateFormat('yyyy-MM-dd')
-              .format(now.subtract(const Duration(days: 7))); // Default to week
-      }
-
-      // Map UI period to API period parameter
-      String apiPeriod = 'week';
-      if (period == 'today') apiPeriod = 'day';
-      if (period == 'week') apiPeriod = 'week';
-      if (period == 'month') apiPeriod = 'month';
-
       final dashboardProvider = DashboardProvider();
       final executiveSalesGraph = await dashboardProvider
-          .fetchExecutiveSalesGraph(accessToken, apiPeriod, startDate, endDate);
+          .fetchExecutiveSalesGraph(accessToken, period);
 
       setState(() {
         this.executiveSalesGraph = executiveSalesGraph;
@@ -510,11 +496,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
       padding: const EdgeInsets.all(8),
       circleRadius: 10,
       child: InkWell(
-        onTap: () {
-          getDashBoardDetails();
-          fetchNewDashboardData();
-          fetchGraphData();
-        },
+        onTap: _loadDashboard,
         borderRadius: BorderRadius.circular(10),
         child: const Icon(
           Icons.refresh_rounded,
