@@ -107,6 +107,122 @@ void main() {
       focusNode.dispose();
     });
 
+    testWidgets('system Back on a pushed route dismisses keyboard before pop',
+        (tester) async {
+      final keyboardProvider = KeyboardProvider(enablePersistence: false)
+        ..featureOn();
+      final navigatorKey = GlobalKey<NavigatorState>();
+      final controller = TextEditingController();
+      final focusNode = FocusNode();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorKey: navigatorKey,
+          home: const Scaffold(body: Text('Home page')),
+        ),
+      );
+      navigatorKey.currentState!.push<void>(MaterialPageRoute<void>(
+        builder: (_) => Scaffold(
+          body: TextField(controller: controller, focusNode: focusNode),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      focusNode.requestFocus();
+      await tester.pump();
+      keyboardProvider.show('text', controller);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Home page'), findsNothing,
+          reason: 'the first Back must be consumed by the keyboard');
+      expect(keyboardProvider.showKeyboard, isFalse);
+      expect(focusNode.hasFocus, isFalse);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Home page'), findsOneWidget,
+          reason: 'the second Back may pop the pushed form route');
+
+      keyboardProvider.dispose();
+      controller.dispose();
+      focusNode.dispose();
+    });
+
+    testWidgets('mobile tap outside dismisses the app keyboard',
+        (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final keyboardProvider = KeyboardProvider(enablePersistence: false)
+        ..featureOn();
+      final controller = TextEditingController();
+      final focusNode = FocusNode();
+      const fieldKey = Key('tap-outside-field');
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<KeyboardProvider>.value(
+          value: keyboardProvider,
+          child: MaterialApp(
+            theme: ThemeData(platform: TargetPlatform.android),
+            builder: (context, child) => Column(
+              children: [
+                Expanded(
+                  child: GlobalKeyboardDismissRegion(
+                    child: child ?? const SizedBox.shrink(),
+                  ),
+                ),
+                const GlobalVirtualKeyboard(),
+              ],
+            ),
+            home: Scaffold(
+              body: Column(
+                children: [
+                  TextField(
+                    key: fieldKey,
+                    controller: controller,
+                    focusNode: focusNode,
+                  ),
+                  const Expanded(
+                    child: ColoredBox(
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(fieldKey));
+      await tester.pump();
+      await tester.pump();
+      expect(keyboardProvider.showKeyboard, isTrue);
+
+      await tester.tap(find.descendant(
+        of: find.byType(GlobalVirtualKeyboard),
+        matching: find.text('q'),
+      ));
+      await tester.pump();
+      expect(controller.text, 'q');
+      expect(keyboardProvider.showKeyboard, isTrue,
+          reason: 'keyboard keys are part of the active field tap region');
+
+      await tester.tapAt(const Offset(200, 100));
+      await tester.pump();
+      await tester.pump();
+      expect(keyboardProvider.showKeyboard, isFalse);
+      expect(focusNode.hasFocus, isFalse);
+
+      await tester.pumpWidget(const SizedBox());
+      keyboardProvider.dispose();
+      controller.dispose();
+      focusNode.dispose();
+    });
+
     testWidgets('close button allows the same field to reopen the keyboard',
         (tester) async {
       tester.view.physicalSize = const Size(400, 800);

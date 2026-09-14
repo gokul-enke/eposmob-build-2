@@ -991,8 +991,11 @@ class MyApp extends StatelessWidget {
                       GlobalCupertinoLocalizations.delegate,
                     ],
                     builder: (context, child) {
-                      final content = OrderSubmissionStatus(
-                          child: child ?? const SizedBox.shrink());
+                      final content = GlobalKeyboardDismissRegion(
+                        child: OrderSubmissionStatus(
+                          child: child ?? const SizedBox.shrink(),
+                        ),
+                      );
                       final screenSize = MediaQuery.of(context).size;
                       final platform = Theme.of(context).platform;
 

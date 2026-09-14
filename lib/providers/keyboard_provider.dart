@@ -438,6 +438,13 @@ class _KeyboardSuppressorObserver extends WidgetsBindingObserver {
   _KeyboardSuppressorObserver(this._provider);
 
   @override
+  Future<bool> didPopRoute() async {
+    // This observer is installed above the app Navigator, so it also sees Back
+    // presses on pushed routes that are outside MainScreen's PopScope.
+    return _provider.dismissForBack();
+  }
+
+  @override
   void didChangeMetrics() {
     if (!_provider._showKeyboardFeature) return;
 

@@ -17,6 +17,7 @@ import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/language_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/helpers/purchase_price_permission.dart';
@@ -535,7 +536,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
       if (token == null || token.isEmpty) {
         showScaffoldError(
           context: context,
-        message: 'product_detail.auth_token_missing_login'.tr,
+          message: 'product_detail.auth_token_missing_login'.tr,
         );
         return;
       }
@@ -580,7 +581,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
       } else {
         showScaffoldError(
           context: context,
-          message: result?['message'] ?? 'product_detail.failed_generate_barcode'.tr,
+          message:
+              result?['message'] ?? 'product_detail.failed_generate_barcode'.tr,
         );
       }
     } catch (e) {
@@ -632,7 +634,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
       _languageNameControllers[language.id]?.text = translated;
       showScaffold(
         context: context,
-        message: 'product_detail.translated_to'.trParams({'language': language.name}),
+        message: 'product_detail.translated_to'
+            .trParams({'language': language.name}),
       );
     } else {
       showScaffoldError(
@@ -884,7 +887,9 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           _resetFormFields();
         }
 
-        showScaffold(context: context, message: 'product_detail.product_added_success'.tr);
+        showScaffold(
+            context: context,
+            message: 'product_detail.product_added_success'.tr);
       } else {
         showScaffoldError(
           context: context,
@@ -1117,123 +1122,141 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
     );
   }
 
+  void _handleNavigationBack() {
+    if (context.read<KeyboardProvider>().dismissForBack()) return;
+    Navigator.maybePop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isBusy = _isLoading || _isSaveAndCreateLoading;
+    final keyboardVisible = context
+        .select<KeyboardProvider, bool>((provider) => provider.showKeyboard);
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: isBusy ? null : () => Navigator.pop(context),
-        ),
-        title: Text(
-          'product_detail.add_new_product'.tr,
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            color: Colors.black87,
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
+    return PopScope(
+      canPop: !keyboardVisible,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) context.read<KeyboardProvider>().dismissForBack();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black87),
+            onPressed: isBusy ? null : _handleNavigationBack,
+          ),
+          title: Text(
+            'product_detail.add_new_product'.tr,
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              color: Colors.black87,
+              fontWeight: FontWeight.w600,
+              fontSize: 18,
+            ),
+          ),
+          centerTitle: true,
+          backgroundColor: Colors.white,
+          elevation: 0,
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(1),
+            child: Container(color: Colors.grey.shade100, height: 1),
           ),
         ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(color: Colors.grey.shade100, height: 1),
-        ),
-      ),
-      body: Stack(
-        children: [
-          SafeArea(
-            top: false,
-            child: Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (widget.barcode != null) ...[
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.shade50,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: Colors.orange.shade200),
-                            ),
-                            child: Text(
-                                  'product_detail.no_product_found_barcode'.trParams(
-                                    {'barcode': widget.barcode!},
-                                  ),
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 13,
-                                color: Colors.orange.shade900,
+        body: Stack(
+          children: [
+            SafeArea(
+              top: false,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (widget.barcode != null) ...[
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade50,
+                                borderRadius: BorderRadius.circular(10),
+                                border:
+                                    Border.all(color: Colors.orange.shade200),
+                              ),
+                              child: Text(
+                                'product_detail.no_product_found_barcode'
+                                    .trParams(
+                                  {'barcode': widget.barcode!},
+                                ),
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 13,
+                                  color: Colors.orange.shade900,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-                        Row(
-                          children: [
-                            _buildStepIndicator(1, 'product_detail.basic_info'.tr),
-                            _buildStepDivider(),
-                            _buildStepIndicator(2, 'product_detail.localization'.tr),
-                            _buildStepDivider(),
-                            _buildStepIndicator(3, 'product_detail.pricing'.tr),
+                            const SizedBox(height: 16),
                           ],
-                        ),
-                        const SizedBox(height: 28),
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.blue.shade50,
-                              width: 1.5,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.shade50,
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
+                          Row(
+                            children: [
+                              _buildStepIndicator(
+                                  1, 'product_detail.basic_info'.tr),
+                              _buildStepDivider(),
+                              _buildStepIndicator(
+                                  2, 'product_detail.localization'.tr),
+                              _buildStepDivider(),
+                              _buildStepIndicator(
+                                  3, 'product_detail.pricing'.tr),
                             ],
                           ),
-                          child: _buildStepContent(),
-                        ),
-                      ],
+                          const SizedBox(height: 28),
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Colors.blue.shade50,
+                                width: 1.5,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.shade50,
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: _buildStepContent(),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border:
-                        Border(top: BorderSide(color: Colors.grey.shade200)),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border:
+                          Border(top: BorderSide(color: Colors.grey.shade200)),
+                    ),
+                    child: _buildBottomActions(),
                   ),
-                  child: _buildBottomActions(),
-                ),
-              ],
-            ),
-          ),
-          if (isBusy)
-            Container(
-              color: Colors.black26,
-              child: const Center(
-                child: CircularProgressIndicator(
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(ColorManager.kPrimaryColor),
-                ),
+                ],
               ),
             ),
-        ],
+            if (isBusy)
+              Container(
+                color: Colors.black26,
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                        ColorManager.kPrimaryColor),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -1420,10 +1443,10 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 18),
                 child: _buildInputField(
-                  label: 'product_detail.product_name_in_language'.trParams(
-                      {'language': language.name}),
-                  hintText: 'product_detail.enter_name_in_language'.trParams(
-                      {'language': language.name}),
+                  label: 'product_detail.product_name_in_language'
+                      .trParams({'language': language.name}),
+                  hintText: 'product_detail.enter_name_in_language'
+                      .trParams({'language': language.name}),
                   controller: _languageNameControllers[language.id]!,
                   suffixIcon: _buildSquareActionButton(
                     isLoading: isTranslating,
@@ -1747,7 +1770,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
         children: [
           Text(
             '${AddProductFormHelpers.resolveUnitLabel(_selectedUnit, unitList)} '
-                '(${ 'product_detail.base_unit'.tr})',
+            '(${'product_detail.base_unit'.tr})',
             style: const TextStyle(
               fontFamily: 'Poppins',
               fontWeight: FontWeight.w600,
@@ -1845,8 +1868,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
             children: [
               Text(
                 '${'product_detail.sale_unit_index'.trParams({
-                  'n': '${index + 1}',
-                })}',
+                      'n': '${index + 1}',
+                    })}',
                 style: const TextStyle(
                   fontFamily: 'Poppins',
                   fontWeight: FontWeight.w600,
@@ -2007,7 +2030,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                 ),
               ),
               onPressed: () => setState(() => _currentStep = 1),
-                  child: Text(
+              child: Text(
                 'general.back'.tr,
                 style: TextStyle(
                   fontFamily: 'Poppins',
