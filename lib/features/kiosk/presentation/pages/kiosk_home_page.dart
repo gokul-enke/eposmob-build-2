@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/kiosk/presentation/models/kiosk_order_draft.dart';
+import 'package:pos_machine/features/kiosk/presentation/theme/kiosk_design_system.dart';
+import 'package:pos_machine/features/kiosk/presentation/pages/kiosk_cart_review_page.dart';
+import 'package:pos_machine/features/kiosk/presentation/pages/kiosk_product_options_page.dart';
 import 'package:pos_machine/features/kiosk/presentation/widgets/kiosk_cart_panel.dart';
 import 'package:pos_machine/features/kiosk/presentation/widgets/kiosk_cart_summary_bar.dart';
 import 'package:pos_machine/features/kiosk/presentation/widgets/kiosk_category_selector.dart';
 import 'package:pos_machine/features/kiosk/presentation/widgets/kiosk_header.dart';
+import 'package:pos_machine/features/kiosk/presentation/widgets/kiosk_inactivity_guard.dart';
 import 'package:pos_machine/features/kiosk/presentation/widgets/kiosk_product_card.dart';
+import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
@@ -38,12 +44,13 @@ class KioskHomePage extends StatefulWidget {
 }
 
 class _KioskHomePageState extends State<KioskHomePage> {
-  static const double _wideLayoutBreakpoint = 1080;
-  static const double _categoryRailBreakpoint = 1260;
+  static const double _wideLayoutBreakpoint = 1120;
+  static const double _categoryRailBreakpoint = 1180;
 
   final TextEditingController _searchController = TextEditingController();
   int? _selectedCategoryId;
   String _query = '';
+  List<LocalCartItem> _draftCartItems = <LocalCartItem>[];
 
   @override
   void dispose() {
@@ -84,30 +91,170 @@ class _KioskHomePageState extends State<KioskHomePage> {
     );
   }
 
-  void _showCartSheet({
+  bool _requiresProductOptions(GetProduct product) {
+    return kioskProductHasOptions(product);
+  }
+
+  List<LocalCartItem> _cartItems(List<LocalCartItem> providerItems) {
+    if (widget.onProductPressed != null || widget.onCheckout != null) {
+      return providerItems;
+    }
+    return _draftCartItems;
+  }
+
+  List<LocalCartItem> _ensureDraftCart(List<LocalCartItem> _) {
+    return _draftCartItems;
+  }
+
+  Future<void> _selectProduct({
+    required GetProduct product,
+    required String currency,
+    required List<LocalCartItem> providerItems,
+  }) async {
+    if (widget.onProductPressed != null) {
+      widget.onProductPressed!(product);
+      return;
+    }
+
+    final LocalCartItem? item;
+    if (_requiresProductOptions(product)) {
+      item = await showKioskProductOptionsModal(
+        context,
+        product: product,
+        currency: currency,
+      );
+    } else {
+      item = createKioskDraftItem(product: product, quantity: 1);
+    }
+    if (!mounted || item == null) return;
+    final selectedItem = item;
+    setState(() {
+      final items = _ensureDraftCart(providerItems);
+      final matchingIndex = items.indexWhere(
+        (row) =>
+            row.product.productId == selectedItem.product.productId &&
+            row.variantId == selectedItem.variantId &&
+            row.saleUnitId == selectedItem.saleUnitId &&
+            row.comment == selectedItem.comment,
+      );
+      if (matchingIndex < 0) {
+        items.add(selectedItem);
+      } else {
+        items[matchingIndex].quantity += selectedItem.quantity;
+      }
+    });
+  }
+
+  void _increaseItem(
+    LocalCartItem item,
+    List<LocalCartItem> providerItems,
+  ) {
+    if (widget.onCartItemIncrease != null) {
+      widget.onCartItemIncrease!(item);
+      return;
+    }
+    setState(() {
+      final items = _ensureDraftCart(providerItems);
+      final index = items.indexWhere((row) => row.lineId == item.lineId);
+      if (index < 0) return;
+      final row = items[index];
+      row.quantity = row.toBaseQuantity(row.displayQuantity + 1);
+    });
+  }
+
+  void _decreaseItem(
+    LocalCartItem item,
+    List<LocalCartItem> providerItems,
+  ) {
+    if (widget.onCartItemDecrease != null) {
+      widget.onCartItemDecrease!(item);
+      return;
+    }
+    setState(() {
+      final items = _ensureDraftCart(providerItems);
+      final index = items.indexWhere((row) => row.lineId == item.lineId);
+      if (index < 0) return;
+      final row = items[index];
+      final next = row.displayQuantity - 1;
+      if (next <= 0) {
+        items.removeAt(index);
+      } else {
+        row.quantity = row.toBaseQuantity(next);
+      }
+    });
+  }
+
+  void _removeItem(
+    LocalCartItem item,
+    List<LocalCartItem> providerItems,
+  ) {
+    if (widget.onCartItemRemove != null) {
+      widget.onCartItemRemove!(item);
+      return;
+    }
+    setState(() {
+      _ensureDraftCart(providerItems)
+          .removeWhere((row) => row.lineId == item.lineId);
+    });
+  }
+
+  void _openCartReview({
+    required List<LocalCartItem> items,
     required String currency,
   }) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => Consumer<LocalProductProvider>(
-        builder: (context, productProvider, child) {
-          return FractionallySizedBox(
-            heightFactor: 0.88,
-            child: KioskCartPanel(
-              items: productProvider.cartItems,
-              currency: currency,
-              sheetMode: true,
-              onIncrease: widget.onCartItemIncrease,
-              onDecrease: widget.onCartItemDecrease,
-              onRemove: widget.onCartItemRemove,
-              onCheckout: widget.onCheckout ?? () {},
-            ),
-          );
-        },
+    if (widget.onCheckout != null) {
+      widget.onCheckout!();
+      return;
+    }
+    final draftItems = _ensureDraftCart(items);
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => KioskCartReviewPage(
+          items: draftItems,
+          currency: currency,
+          onChanged: (updatedItems) {
+            if (!mounted) return;
+            setState(() {
+              _draftCartItems =
+                  updatedItems.map(copyKioskCartItem).toList(growable: true);
+            });
+          },
+        ),
       ),
     );
+  }
+
+  Future<bool> _confirmCancel() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Cancel this order?'),
+        content: const Text(
+          'Your selected products will be removed and this kiosk will return to the welcome screen.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Keep ordering'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Cancel order'),
+          ),
+        ],
+      ),
+    );
+    return confirmed == true;
+  }
+
+  Future<void> _cancelOrder() async {
+    if (_cartItems(context.read<LocalProductProvider>().cartItems).isNotEmpty &&
+        !await _confirmCancel()) {
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _draftCartItems = <LocalCartItem>[]);
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   @override
@@ -118,118 +265,173 @@ class _KioskHomePageState extends State<KioskHomePage> {
     final store = context.watch<StoreSessionProvider>().activeStore;
 
     final products = _filteredProducts(productProvider.sellableProducts);
-    final categories = categoryProvider.sellableCategories;
-    final cartItems = productProvider.cartItems;
+    final configuredCategories = categoryProvider.sellableCategories;
+    final categories = configuredCategories.isNotEmpty
+        ? configuredCategories
+        : _categoriesFromProducts(productProvider.sellableProducts);
+    final providerCartItems = productProvider.cartItems;
+    final cartItems = _cartItems(providerCartItems);
     final currency = appSettings?.currency.trim() ?? '';
     final storeName = store?.storeName?.trim().isNotEmpty == true
         ? store!.storeName!.trim()
         : 'Our store';
 
-    return Scaffold(
-      backgroundColor: ColorManager.kBgLightColor,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= _wideLayoutBreakpoint;
-            final showCategoryRail =
-                constraints.maxWidth >= _categoryRailBreakpoint;
-            final pagePadding = constraints.maxWidth < 700 ? 12.0 : 18.0;
-            final cartQuantity = _cartQuantity(cartItems);
-            final cartTotal = _cartTotal(cartItems);
+    return KioskInactivityGuard(
+      onReset: () {
+        setState(() => _draftCartItems = <LocalCartItem>[]);
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      },
+      child: Scaffold(
+        backgroundColor: ColorManager.kBgLightColor,
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= _wideLayoutBreakpoint;
+              final portrait = constraints.maxHeight > constraints.maxWidth;
+              final showCategoryRail =
+                  constraints.maxWidth >= _categoryRailBreakpoint ||
+                      (portrait && constraints.maxWidth >= 740);
+              final pagePadding = constraints.maxWidth < 700
+                  ? KioskSpacing.sm
+                  : KioskSpacing.lg;
+              final cartQuantity = _cartQuantity(cartItems);
+              final cartTotal = _cartTotal(cartItems);
 
-            void openCart() => _showCartSheet(currency: currency);
-
-            return Column(
-              children: [
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    pagePadding,
-                    pagePadding,
-                    pagePadding,
-                    0,
-                  ),
-                  child: KioskHeader(
-                    storeName: storeName,
-                    cartQuantity: cartQuantity,
-                    onCartPressed: isWide ? null : openCart,
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.all(pagePadding),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (showCategoryRail) ...[
-                          KioskCategorySelector(
-                            categories: categories,
-                            selectedId: _selectedCategoryId,
-                            onSelected: (id) {
-                              setState(() => _selectedCategoryId = id);
-                            },
-                            vertical: true,
+              return Stack(
+                children: [
+                  Column(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          pagePadding,
+                          pagePadding,
+                          pagePadding,
+                          0,
+                        ),
+                        child: KioskHeader(
+                          storeName: storeName,
+                          onCancelPressed: _cancelOrder,
+                        ),
+                      ),
+                      Expanded(
+                        child: AnimatedPadding(
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeOutCubic,
+                          padding: EdgeInsets.fromLTRB(
+                            pagePadding,
+                            pagePadding,
+                            pagePadding,
+                            !isWide && cartQuantity > 0 ? 112 : pagePadding,
                           ),
-                          const SizedBox(width: 16),
-                        ],
-                        Expanded(
-                          child: Column(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              _SearchField(
-                                controller: _searchController,
-                                onChanged: (value) {
-                                  setState(() => _query = value);
-                                },
-                              ),
-                              if (!showCategoryRail) ...[
-                                const SizedBox(height: 14),
+                              if (showCategoryRail) ...[
                                 KioskCategorySelector(
                                   categories: categories,
                                   selectedId: _selectedCategoryId,
                                   onSelected: (id) {
                                     setState(() => _selectedCategoryId = id);
                                   },
-                                  vertical: false,
+                                  vertical: true,
                                 ),
+                                const SizedBox(width: KioskSpacing.md),
                               ],
-                              const SizedBox(height: 16),
                               Expanded(
-                                child: _ProductGrid(
-                                  products: products,
-                                  currency: currency,
-                                  quantityFor: (id) =>
-                                      _productQuantity(cartItems, id),
-                                  onAdd: (product) =>
-                                      widget.onProductPressed?.call(product),
+                                child: Column(
+                                  children: [
+                                    _SearchField(
+                                      controller: _searchController,
+                                      onChanged: (value) {
+                                        setState(() => _query = value);
+                                      },
+                                    ),
+                                    if (!showCategoryRail) ...[
+                                      const SizedBox(height: KioskSpacing.md),
+                                      KioskCategorySelector(
+                                        categories: categories,
+                                        selectedId: _selectedCategoryId,
+                                        onSelected: (id) {
+                                          setState(
+                                              () => _selectedCategoryId = id);
+                                        },
+                                        vertical: false,
+                                      ),
+                                    ],
+                                    const SizedBox(height: KioskSpacing.md),
+                                    Expanded(
+                                      child: _ProductGrid(
+                                        products: products,
+                                        currency: currency,
+                                        quantityFor: (id) =>
+                                            _productQuantity(cartItems, id),
+                                        bottomPadding: 8,
+                                        onAdd: (product) => _selectProduct(
+                                          product: product,
+                                          currency: currency,
+                                          providerItems: providerCartItems,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
+                              if (isWide) ...[
+                                const SizedBox(width: KioskSpacing.md),
+                                KioskCartPanel(
+                                  items: cartItems,
+                                  currency: currency,
+                                  onIncrease: (item) =>
+                                      _increaseItem(item, providerCartItems),
+                                  onDecrease: (item) =>
+                                      _decreaseItem(item, providerCartItems),
+                                  onRemove: (item) =>
+                                      _removeItem(item, providerCartItems),
+                                  onCheckout: () => _openCartReview(
+                                    items: cartItems,
+                                    currency: currency,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
-                        if (isWide) ...[
-                          const SizedBox(width: 16),
-                          KioskCartPanel(
-                            items: cartItems,
-                            currency: currency,
-                            onIncrease: widget.onCartItemIncrease,
-                            onDecrease: widget.onCartItemDecrease,
-                            onRemove: widget.onCartItemRemove,
-                            onCheckout: widget.onCheckout ?? () {},
+                      ),
+                    ],
+                  ),
+                  if (!isWide)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: IgnorePointer(
+                        ignoring: cartQuantity == 0,
+                        child: AnimatedSlide(
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeOutCubic,
+                          offset: cartQuantity > 0
+                              ? Offset.zero
+                              : const Offset(0, 1.15),
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 180),
+                            opacity: cartQuantity > 0 ? 1 : 0,
+                            child: KioskCartSummaryBar(
+                              itemCount: cartQuantity,
+                              total: cartTotal,
+                              currency: currency,
+                              onPressed: () => _openCartReview(
+                                items: cartItems,
+                                currency: currency,
+                              ),
+                            ),
                           ),
-                        ],
-                      ],
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                if (!isWide)
-                  KioskCartSummaryBar(
-                    itemCount: cartQuantity,
-                    total: cartTotal,
-                    currency: currency,
-                    onPressed: openCart,
-                  ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -245,15 +447,21 @@ class _SearchField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 64,
+      height: 68,
       child: TextField(
         controller: controller,
         onChanged: onChanged,
         textInputAction: TextInputAction.search,
-        style: const TextStyle(fontSize: 17),
+        style: KioskType.body.copyWith(
+          color: ColorManager.kTitleTextColor,
+          fontSize: 18,
+        ),
         decoration: InputDecoration(
           hintText: 'Search products',
-          hintStyle: const TextStyle(color: ColorManager.kGreyColor),
+          hintStyle: KioskType.body.copyWith(
+            color: ColorManager.kGreyColor,
+            fontSize: 18,
+          ),
           prefixIcon: const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Icon(
@@ -267,11 +475,11 @@ class _SearchField extends StatelessWidget {
           fillColor: Colors.white,
           contentPadding: const EdgeInsets.symmetric(horizontal: 18),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(KioskRadius.control),
             borderSide: const BorderSide(color: Color(0xFFDDE3EF)),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(KioskRadius.control),
             borderSide: const BorderSide(
               color: ColorManager.kPrimaryColor,
               width: 1.5,
@@ -288,12 +496,14 @@ class _ProductGrid extends StatelessWidget {
   final String currency;
   final num Function(int? productId) quantityFor;
   final ValueChanged<GetProduct> onAdd;
+  final double bottomPadding;
 
   const _ProductGrid({
     required this.products,
     required this.currency,
     required this.quantityFor,
     required this.onAdd,
+    this.bottomPadding = 8,
   });
 
   @override
@@ -324,14 +534,19 @@ class _ProductGrid extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final cardExtent = constraints.maxWidth < 520 ? 210.0 : 235.0;
+        final columns = constraints.maxWidth < 720
+            ? 2
+            : constraints.maxWidth < 860
+                ? 3
+                : 4;
+        final cardHeight = constraints.maxWidth < 520 ? 292.0 : 306.0;
         return GridView.builder(
-          padding: const EdgeInsets.only(bottom: 8),
-          gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: cardExtent,
-            mainAxisExtent: constraints.maxWidth < 520 ? 260 : 285,
-            crossAxisSpacing: 14,
-            mainAxisSpacing: 14,
+          padding: EdgeInsets.only(bottom: bottomPadding),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            mainAxisExtent: cardHeight,
+            crossAxisSpacing: KioskSpacing.md,
+            mainAxisSpacing: KioskSpacing.md,
           ),
           itemCount: products.length,
           itemBuilder: (_, index) {
@@ -340,6 +555,7 @@ class _ProductGrid extends StatelessWidget {
               product: product,
               quantity: quantityFor(product.productId),
               currency: currency,
+              customizable: _productRequiresOptions(product),
               onAdd: () => onAdd(product),
             );
           },
@@ -347,4 +563,30 @@ class _ProductGrid extends StatelessWidget {
       },
     );
   }
+}
+
+bool _productRequiresOptions(GetProduct product) {
+  return kioskProductHasOptions(product);
+}
+
+List<Category> _categoriesFromProducts(List<GetProduct> products) {
+  final categories = <int, Category>{};
+  for (final product in products) {
+    final id = product.categoryId;
+    final name = product.category?.name?.trim();
+    if (id == null || name == null || name.isEmpty) continue;
+    categories.putIfAbsent(
+      id,
+      () => Category(
+        categoryId: id,
+        categoryName: name,
+        categorySlug: product.category?.slug,
+      ),
+    );
+  }
+  final result = categories.values.toList();
+  result.sort(
+    (a, b) => (a.categoryName ?? '').compareTo(b.categoryName ?? ''),
+  );
+  return result;
 }

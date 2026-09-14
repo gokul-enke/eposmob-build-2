@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/models/category_list.dart';
+import 'package:pos_machine/features/kiosk/presentation/theme/kiosk_design_system.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 
 class KioskCategorySelector extends StatelessWidget {
@@ -18,49 +19,80 @@ class KioskCategorySelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final options = <Category?>[null, ...categories];
     if (vertical) {
       return Container(
-        width: 220,
-        padding: const EdgeInsets.all(14),
+        width: 224,
+        padding: const EdgeInsets.all(KioskSpacing.sm),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(KioskRadius.card),
+          border: Border.all(color: const Color(0xFFE2E9F3)),
         ),
-        child: ListView.separated(
-          itemCount: categories.length + 1,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (_, index) => _CategoryButton(
-            category: index == 0 ? null : categories[index - 1],
-            selected: index == 0
-                ? selectedId == null
-                : categories[index - 1].categoryId == selectedId,
-            onPressed: () => onSelected(
-              index == 0 ? null : categories[index - 1].categoryId,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
+                KioskSpacing.sm,
+                KioskSpacing.xs,
+                KioskSpacing.sm,
+                KioskSpacing.md,
+              ),
+              child: Text(
+                'CATEGORIES',
+                style: TextStyle(
+                  color: ColorManager.kGreyColor,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1,
+                ),
+              ),
             ),
-            expanded: true,
-          ),
+            Expanded(
+              child: ListView.separated(
+                itemCount: options.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: KioskSpacing.xs),
+                itemBuilder: (_, index) {
+                  final category = options[index];
+                  return _CategoryButton(
+                    category: category,
+                    selected: _isSelected(category),
+                    onPressed: () => onSelected(category?.categoryId),
+                    expanded: true,
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       );
     }
 
     return SizedBox(
-      height: 64,
+      height: 58,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 2),
-        itemCount: categories.length + 1,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemBuilder: (_, index) => _CategoryButton(
-          category: index == 0 ? null : categories[index - 1],
-          selected: index == 0
-              ? selectedId == null
-              : categories[index - 1].categoryId == selectedId,
-          onPressed: () => onSelected(
-            index == 0 ? null : categories[index - 1].categoryId,
-          ),
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 1),
+        itemCount: options.length,
+        separatorBuilder: (_, __) => const SizedBox(width: KioskSpacing.sm),
+        itemBuilder: (_, index) {
+          final category = options[index];
+          return _CategoryButton(
+            category: category,
+            selected: _isSelected(category),
+            onPressed: () => onSelected(category?.categoryId),
+          );
+        },
       ),
     );
+  }
+
+  bool _isSelected(Category? category) {
+    return category == null
+        ? selectedId == null
+        : category.categoryId == selectedId;
   }
 }
 
@@ -80,39 +112,42 @@ class _CategoryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = selected ? Colors.white : ColorManager.kTitleTextColor;
+    final label = Text(
+      category?.categoryName?.trim().isNotEmpty == true
+          ? category!.categoryName!.trim()
+          : 'All products',
+      maxLines: expanded ? 2 : 1,
+      overflow: TextOverflow.ellipsis,
+      style: KioskType.label.copyWith(
+        color: foreground,
+        fontSize: 15,
+        fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+      ),
+    );
     return SizedBox(
       width: expanded ? double.infinity : null,
-      height: 64,
+      height: expanded ? 68 : 56,
       child: Material(
-        color: selected ? ColorManager.kPrimaryColor : Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: BorderSide(
-            color:
-                selected ? ColorManager.kPrimaryColor : const Color(0xFFDDE3EF),
-          ),
-        ),
+        color: selected ? ColorManager.kPrimaryColor : const Color(0xFFF7F9FC),
+        borderRadius: BorderRadius.circular(KioskRadius.control),
         child: InkWell(
           onTap: onPressed,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(KioskRadius.control),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
+            padding: EdgeInsets.symmetric(horizontal: expanded ? 15 : 17),
             child: Row(
               mainAxisAlignment:
                   expanded ? MainAxisAlignment.start : MainAxisAlignment.center,
               children: [
                 _CategoryIcon(category: category, color: foreground),
-                const SizedBox(width: 12),
-                Text(
-                  category?.categoryName?.trim().isNotEmpty == true
-                      ? category!.categoryName!.trim()
-                      : 'All items',
-                  style: TextStyle(
-                    color: foreground,
-                    fontSize: 16,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                const SizedBox(width: KioskSpacing.sm),
+                if (expanded)
+                  Expanded(child: label)
+                else
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 180),
+                    child: label,
                   ),
-                ),
               ],
             ),
           ),
@@ -130,25 +165,43 @@ class _CategoryIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = category?.categoryIcon?.trim();
+    final imageUrl = _categoryImageUrl(category);
     if (imageUrl != null &&
         (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
-      return Image.network(
-        imageUrl,
-        width: 26,
-        height: 26,
-        color: color,
-        errorBuilder: (_, __, ___) => Icon(
-          Icons.category_outlined,
-          color: color,
-          size: 26,
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(7),
+        child: Image.network(
+          imageUrl,
+          width: 26,
+          height: 26,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Icon(
+            Icons.category_outlined,
+            color: color,
+            size: 24,
+          ),
         ),
       );
     }
     return Icon(
       category == null ? Icons.grid_view_rounded : Icons.category_outlined,
       color: color,
-      size: 26,
+      size: 24,
     );
   }
+}
+
+String? _categoryImageUrl(Category? category) {
+  final candidates = <String?>[
+    category?.categoryImage,
+    category?.categoryIcon,
+  ];
+  for (final candidate in candidates) {
+    final value = candidate?.trim();
+    if (value != null &&
+        (value.startsWith('http://') || value.startsWith('https://'))) {
+      return value;
+    }
+  }
+  return null;
 }

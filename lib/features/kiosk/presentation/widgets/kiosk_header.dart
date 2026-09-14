@@ -1,82 +1,93 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/kiosk/presentation/widgets/kiosk_language_sheet.dart';
+import 'package:pos_machine/features/kiosk/presentation/theme/kiosk_design_system.dart';
 import 'package:pos_machine/resources/color_manager.dart';
+import 'package:pos_machine/resources/localization_service.dart';
 
 class KioskHeader extends StatelessWidget {
   final String storeName;
-  final int cartQuantity;
-  final VoidCallback? onCartPressed;
+  final VoidCallback? onCancelPressed;
 
   const KioskHeader({
     super.key,
     required this.storeName,
-    required this.cartQuantity,
-    this.onCartPressed,
+    this.onCancelPressed,
   });
 
   @override
   Widget build(BuildContext context) {
-    final compact = MediaQuery.sizeOf(context).width < 700;
+    final width = MediaQuery.sizeOf(context).width;
+    final compact = width < 720;
+    final showLabels = width >= 920;
 
     return Container(
-      constraints: const BoxConstraints(minHeight: 88),
+      constraints: const BoxConstraints(minHeight: 84),
       padding: EdgeInsets.symmetric(
-        horizontal: compact ? 18 : 28,
-        vertical: 14,
+        horizontal: compact ? KioskSpacing.md : KioskSpacing.xl,
+        vertical: KioskSpacing.sm,
       ),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0D0F172A),
-            blurRadius: 18,
-            offset: Offset(0, 6),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(KioskRadius.card),
+        border: Border.all(color: const Color(0xFFE2E9F3)),
       ),
       child: Row(
         children: [
           Container(
-            width: compact ? 50 : 58,
-            height: compact ? 50 : 58,
-            decoration: const BoxDecoration(
-              color: ColorManager.kPrimaryColor,
-              shape: BoxShape.circle,
+            width: compact ? 48 : 54,
+            height: compact ? 48 : 54,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF5F9FF),
+              borderRadius: BorderRadius.circular(KioskRadius.control),
             ),
-            child: const Icon(
-              Icons.storefront_rounded,
-              color: Colors.white,
-              size: 30,
-            ),
-          ),
-          SizedBox(width: compact ? 12 : 18),
-          Expanded(
-            child: Text(
-              compact ? storeName : 'Welcome to $storeName',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: ColorManager.kTitleTextColor,
-                fontSize: compact ? 22 : 30,
-                fontWeight: FontWeight.w600,
+            child: Image.asset(
+              'assets/logo/cloudposlogo.png',
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.storefront_rounded,
+                color: ColorManager.kPrimaryColor,
               ),
             ),
           ),
+          SizedBox(width: compact ? KioskSpacing.sm : KioskSpacing.md),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  storeName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: KioskType.pageTitle.copyWith(
+                    fontSize: compact ? 22 : 26,
+                  ),
+                ),
+                if (!compact)
+                  const Text(
+                    'Choose products to build your order',
+                    style: KioskType.supporting,
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: KioskSpacing.sm),
           _HeaderAction(
             icon: Icons.language_rounded,
-            label: compact ? null : 'English',
-            onPressed: () {},
+            label: showLabels
+                ? kioskLanguageLabel(LocalizationService.locale)
+                : null,
+            tooltip: 'Change language',
+            onPressed: () => showKioskLanguageSheet(context),
           ),
-          if (onCartPressed != null) ...[
-            const SizedBox(width: 10),
-            Badge(
-              isLabelVisible: cartQuantity > 0,
-              label: Text('$cartQuantity'),
-              backgroundColor: ColorManager.kPrimaryColor,
-              child: _HeaderAction(
-                icon: Icons.shopping_cart_outlined,
-                onPressed: onCartPressed!,
-              ),
+          if (onCancelPressed != null) ...[
+            const SizedBox(width: KioskSpacing.sm),
+            _HeaderAction(
+              icon: Icons.close_rounded,
+              label: showLabels ? 'Cancel' : null,
+              tooltip: 'Cancel order',
+              onPressed: onCancelPressed,
             ),
           ],
         ],
@@ -88,26 +99,34 @@ class KioskHeader extends StatelessWidget {
 class _HeaderAction extends StatelessWidget {
   final IconData icon;
   final String? label;
-  final VoidCallback onPressed;
+  final String tooltip;
+  final VoidCallback? onPressed;
 
   const _HeaderAction({
     required this.icon,
+    required this.tooltip,
     required this.onPressed,
     this.label,
   });
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 24),
-      label: label == null ? const SizedBox.shrink() : Text(label!),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: ColorManager.kTextColor,
-        minimumSize: Size(label == null ? 56 : 130, 56),
-        padding: EdgeInsets.symmetric(horizontal: label == null ? 14 : 18),
-        side: const BorderSide(color: Color(0xFFDDE3EF)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return Tooltip(
+      message: tooltip,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 23),
+        label: label == null ? const SizedBox.shrink() : Text(label!),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: ColorManager.kTitleTextColor,
+          backgroundColor: Colors.white,
+          minimumSize: Size(label == null ? 56 : 124, 56),
+          padding: EdgeInsets.symmetric(horizontal: label == null ? 13 : 16),
+          side: const BorderSide(color: Color(0xFFDCE5F0)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(KioskRadius.control),
+          ),
+        ),
       ),
     );
   }

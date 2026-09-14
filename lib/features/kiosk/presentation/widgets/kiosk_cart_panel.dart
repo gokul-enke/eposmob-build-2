@@ -124,7 +124,7 @@ class KioskCartPanel extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  'Checkout  ${_formatMoney(currency, total)}',
+                  'Review order  ${_formatMoney(currency, total)}',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
