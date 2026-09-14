@@ -1244,6 +1244,20 @@
   "dashboard": {
     "zatca_failed_title": "പരാജയപ്പെട്ട ZATCA ഇൻവോയ്സ്",
     "zatca_failed_subtitle": "പരിശോധിച്ച് വീണ്ടും അയയ്ക്കാൻ ടാപ്പ് ചെയ്യുക.",
+    "zatca_overview": {
+      "title": "ZATCA അവലോകനം",
+      "success": "വിജയകരമായി അയച്ചു",
+      "success_subtitle": "അംഗീകരിച്ച ഇൻവോയ്സുകൾ",
+      "not_sent": "അയച്ചിട്ടില്ല",
+      "not_sent_subtitle": "അയയ്ക്കാൻ ബാക്കിയുള്ളത്",
+      "failed": "പരാജയപ്പെട്ടു",
+      "failed_subtitle": "ശ്രദ്ധ ആവശ്യമാണ്",
+      "warning": "മുന്നറിയിപ്പ്",
+      "warning_subtitle": "പരിശോധന ആവശ്യമാണ്",
+      "refresh": "ZATCA അവലോകനം പുതുക്കുക",
+      "load_failed": "ZATCA അവലോകനം ലോഡ് ചെയ്യാനായില്ല.",
+      "retry": "വീണ്ടും ശ്രമിക്കുക"
+    },
     "title": {
       "sales_executive": "സെയിൽസ് എക്സിക്യൂട്ടീവ് ഡാഷ്ബോർഡ്",
       "welcome_back": "സ്വാഗതം തിരികെ!",

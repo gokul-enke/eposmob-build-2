@@ -1244,6 +1244,20 @@
   "dashboard": {
     "zatca_failed_title": "فاتورة زاتكا فاشلة",
     "zatca_failed_subtitle": "اضغط للمراجعة وإعادة الإرسال.",
+    "zatca_overview": {
+      "title": "نظرة عامة على زاتكا",
+      "success": "تم الإرسال بنجاح",
+      "success_subtitle": "الفواتير المقبولة",
+      "not_sent": "لم يتم الإرسال",
+      "not_sent_subtitle": "في انتظار الإرسال",
+      "failed": "فشل",
+      "failed_subtitle": "يتطلب الانتباه",
+      "warning": "تحذير",
+      "warning_subtitle": "تتطلب المراجعة",
+      "refresh": "تحديث نظرة زاتكا العامة",
+      "load_failed": "تعذر تحميل نظرة زاتكا العامة.",
+      "retry": "إعادة المحاولة"
+    },
     "title": {
       "sales_executive": "لوحة تحكم مسؤول المبيعات",
       "welcome_back": "مرحباً بك مجدداً!",

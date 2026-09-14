@@ -1244,6 +1244,20 @@
   "dashboard": {
     "zatca_failed_title": "Failed Zatca Invoice",
     "zatca_failed_subtitle": "Tap to review and resend.",
+    "zatca_overview": {
+      "title": "ZATCA Overview",
+      "success": "Successfully sent",
+      "success_subtitle": "Accepted invoices",
+      "not_sent": "Not sent",
+      "not_sent_subtitle": "Pending submission",
+      "failed": "Failed",
+      "failed_subtitle": "Needs attention",
+      "warning": "Warning",
+      "warning_subtitle": "Review required",
+      "refresh": "Refresh ZATCA overview",
+      "load_failed": "Unable to load the ZATCA overview.",
+      "retry": "Retry"
+    },
     "title": {
       "sales_executive": "Sales Executive Dashboard",
       "welcome_back": "Welcome back!",

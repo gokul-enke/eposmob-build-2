@@ -291,6 +291,7 @@ class APPUrl {
       '$baseURL/api/v1/dashboard/executives-overview';
   static String get salesGraph =>
       '$baseURL/api/v1/dashboard/executive-sales-graph';
+  static String get zatcaOverview => '$baseURL/api/v1/dashboard/zatca-overview';
   static String get customerStats => '$baseURL/api/v1/dashboard/customer-stats';
   static String get productsStats => '$baseURL/api/v1/dashboard/products-stats';
 

@@ -403,6 +403,73 @@ class DashboardProvider {
     }
   }
 
+  static Map<String, String> zatcaOverviewQuery(
+    String period, {
+    DateTime? now,
+  }) {
+    final normalizedPeriod = period.trim().toLowerCase();
+    if (const {'today', 'week', 'month'}.contains(normalizedPeriod)) {
+      return {'period': normalizedPeriod};
+    }
+
+    if (normalizedPeriod == 'year') {
+      final currentDate = now ?? DateTime.now();
+      final formatter = DateFormat('dd-MM-yyyy');
+      return {
+        'period': 'custom',
+        'start_date': formatter.format(DateTime(currentDate.year, 1, 1)),
+        'end_date': formatter.format(currentDate),
+      };
+    }
+
+    throw ArgumentError.value(
+      period,
+      'period',
+      'Unsupported ZATCA overview period',
+    );
+  }
+
+  Future<ZatcaOverview> fetchZatcaOverview(
+    String accessToken, {
+    required String period,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    final url = Uri.parse(APPUrl.zatcaOverview).replace(
+      queryParameters: zatcaOverviewQuery(period),
+    );
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      },
+    ).timeout(const Duration(seconds: 15));
+
+    if (response.statusCode != 200) {
+      throw HttpException(
+        'Failed to load ZATCA overview (${response.statusCode})',
+      );
+    }
+
+    final responseData = json.decode(response.body);
+    if (responseData is! Map<String, dynamic> ||
+        responseData['status'] != 'success' ||
+        responseData['data'] is! Map<String, dynamic>) {
+      throw const FormatException('Invalid ZATCA overview response');
+    }
+
+    return ZatcaOverview.fromJson(
+      responseData['data'] as Map<String, dynamic>,
+    );
+  }
+
   Future<Map<String, dynamic>> listCartItnes(BuildContext context) async {
     // debugPrint("dashbaord");
 
