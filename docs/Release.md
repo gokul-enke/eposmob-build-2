@@ -3,8 +3,8 @@
 demo build
 git push build hotfix/urgent-fix
 git push build gokul-dev
-git tag v0.1.0-dev.817
-git push build v0.1.0-dev.817
+git tag v0.1.0-dev.820
+git push build v0.1.0-dev.820
 git push https://govindhansv@github.com/govindhansv/eposmob-buildnew.git gokul-dev 
 
 git tag v0.1.0-dev.468
