@@ -198,7 +198,8 @@
     "btn_saving": "جاري الحفظ...",
     "btn_save_address": "حفظ العنوان",
     "btn_update_address": "تحديث العنوان",
-    "required": "مطلوب"
+    "required": "مطلوب",
+    "pincode_required": "الرمز البريدي مطلوب"
   },
   "notifications": {
     "page_title": "الإشعارات"
@@ -5584,7 +5585,12 @@
     "msg_select_customer_before_confirm": "يرجى اختيار عميل قبل التأكيد",
     "msg_select_customer_for_quotation": "يرجى اختيار عميل قبل إنشاء عرض السعر",
     "msg_unable_to_create_quotation": "تعذر إنشاء عرض السعر",
-    "title_finalize_order": "إنهاء الطلب"
+    "title_finalize_order": "إنهاء الطلب",
+    "btn_add_address": "إضافة عنوان",
+    "tooltip_edit_address": "تعديل العنوان",
+    "hint_pincode": "الرمز البريدي (اختياري):",
+    "hint_pincode_required": "الرمز البريدي (مطلوب):",
+    "msg_pincode_required": "أدخل الرمز البريدي للتوصيل قبل التأكيد"
   },
   "transaction_status_labels": {
     "receipt": "إيصال",

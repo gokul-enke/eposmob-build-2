@@ -72,6 +72,10 @@ class AppSettings {
   /// listing. Only meaningful when stock tracking is enabled for the tenant
   /// (see `GeneralSettings.stockEnabled`).
   final bool posHideNonStockProduct;
+
+  /// Online-store tenants must capture a pincode on address-based deliveries;
+  /// POS-only tenants keep it optional.
+  final bool ecommerceEnabled;
   final bool companySubscriptionFallbackEnabled;
   final String companySubscriptionStatus;
   final String companySubscriptionMessage;
@@ -122,6 +126,7 @@ class AppSettings {
     this.posAuthenticateClearCart = false,
     this.posAuthenticateClearCartKey = '',
     this.posHideNonStockProduct = false,
+    this.ecommerceEnabled = false,
     this.companySubscriptionFallbackEnabled = false,
     this.companySubscriptionStatus = 'active',
     this.companySubscriptionMessage = '',
@@ -279,6 +284,11 @@ class AppSettings {
       posHideNonStockProduct: _readSettingStatus(
         settingsMap,
         'POS_HIDE_NONSTOCK_PRODUCT',
+        defaultValue: false,
+      ),
+      ecommerceEnabled: _readSettingStatus(
+        settingsMap,
+        'ECOMMERCE_ENABLED',
         defaultValue: false,
       ),
       // The row status enables this temporary compatibility source. The
@@ -549,6 +559,12 @@ class AppSettings {
           "code": "POS_HIDE_NONSTOCK_PRODUCT",
           "value": "",
           "status": posHideNonStockProduct.toString(),
+        },
+        {
+          "name": "E-commerce Enabled",
+          "code": "ECOMMERCE_ENABLED",
+          "value": "",
+          "status": ecommerceEnabled.toString(),
         },
         {
           "name": "Company Subscription Status",

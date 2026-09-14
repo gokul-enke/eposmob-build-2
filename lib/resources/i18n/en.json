@@ -198,7 +198,8 @@
     "btn_saving": "Saving...",
     "btn_save_address": "Save Address",
     "btn_update_address": "Update Address",
-    "required": "Required"
+    "required": "Required",
+    "pincode_required": "Pincode is required"
   },
   "notifications": {
     "page_title": "Notifications"
@@ -5763,7 +5764,12 @@
     "msg_no_customers_found": "No customers found",
     "msg_quotation_customer_not_saved": "Quotation customer is not saved",
     "msg_configure_payment_before_confirm": "Please configure payment before confirm",
-    "msg_unable_to_proceed": "Unable to proceed"
+    "msg_unable_to_proceed": "Unable to proceed",
+    "btn_add_address": "Add address",
+    "tooltip_edit_address": "Edit address",
+    "hint_pincode": "Pincode (optional):",
+    "hint_pincode_required": "Pincode (required):",
+    "msg_pincode_required": "Enter the delivery pincode before confirming"
   },
   "transaction_status_labels": {
     "receipt": "Receipt",

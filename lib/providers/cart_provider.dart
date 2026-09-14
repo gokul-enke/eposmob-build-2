@@ -906,6 +906,8 @@ class CartProvider with ChangeNotifier {
     double? discountAmount,
     bool? toCustomerCredit,
     String? address,
+    int? addressId,
+    String? pincode,
     double? deliveryCharge,
     int? quotationId,
   }) async {
@@ -959,6 +961,9 @@ class CartProvider with ChangeNotifier {
         if (discountAmount != null) "discount_amount": discountAmount,
         if (toCustomerCredit != null) 'to_customer_credit': toCustomerCredit,
         if (address != null) "address": address,
+        if (addressId != null) "address_id": addressId,
+        if (pincode != null && pincode.trim().isNotEmpty)
+          "pincode": pincode.trim(),
         if (quotationId != null) "quotation_id": quotationId,
         "delivery_charge": deliveryCharge ?? 0.0,
       };
@@ -990,6 +995,9 @@ class CartProvider with ChangeNotifier {
         if (discountAmount != null) "discount_amount": discountAmount,
         if (toCustomerCredit != null) 'to_customer_credit': toCustomerCredit,
         if (address != null) "address": address,
+        if (addressId != null) "address_id": addressId,
+        if (pincode != null && pincode.trim().isNotEmpty)
+          "pincode": pincode.trim(),
         if (quotationId != null) "quotation_id": quotationId,
         "delivery_charge": deliveryCharge ?? 0.0,
       };

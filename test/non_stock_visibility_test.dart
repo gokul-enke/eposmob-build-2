@@ -146,11 +146,22 @@ void main() {
       expect(NonStockVisibility.isProductVisible(product), isTrue);
     });
 
-    test('keeps products that carry no stock rows at all', () {
-      // No rows means stock was never recorded rather than sold out; the
-      // add-to-cart flow already falls back to base pricing for these.
-      expect(NonStockVisibility.isProductVisible(_product(stock: [])), isTrue);
-      expect(NonStockVisibility.isProductVisible(_product()), isTrue);
+    test('hides products that carry no stock rows at all', () {
+      // The mobile stock badge labels missing/empty stock as out of stock, so
+      // the visibility rule must treat the same products consistently.
+      expect(NonStockVisibility.isProductVisible(_product(stock: [])), isFalse);
+      expect(NonStockVisibility.isProductVisible(_product()), isFalse);
+    });
+
+    test('hides a product with no stock rows for the active store', () {
+      final product = _product(stock: [
+        _stock(id: 1, quantity: 5, storeId: 8),
+      ]);
+
+      expect(
+        NonStockVisibility.isProductVisible(product, activeStoreId: 7),
+        isFalse,
+      );
     });
 
     test('ignores stock held by a different store', () {
@@ -185,6 +196,17 @@ void main() {
         variants: [
           _variant(id: 1, quantity: 0),
           _variant(id: 2, quantity: 0),
+        ],
+      );
+
+      expect(NonStockVisibility.isProductVisible(product), isFalse);
+    });
+
+    test('hides a variant product with no active variants', () {
+      final product = _product(
+        hasVariantsFlag: true,
+        variants: [
+          _variant(id: 1, quantity: 5, active: false),
         ],
       );
 

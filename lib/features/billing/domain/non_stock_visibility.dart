@@ -67,11 +67,10 @@ class NonStockVisibility {
 
   /// Whether [product] should remain visible in POS listings.
   ///
-  /// A product is hidden when it has stock rows but none of them carry
-  /// quantity, or — for variant products — when every active variant is out
-  /// of stock. Products that carry no stock rows at all are left visible:
-  /// that means stock was never recorded for them rather than sold out, and
-  /// the existing add-to-cart flow already falls back to base pricing.
+  /// A product is hidden when it has no available stock. This includes
+  /// missing/empty stock rows, no stock rows for the active store, and — for
+  /// variant products — no active in-stock variants. This matches the mobile
+  /// stock badge, which presents missing/empty stock as out of stock.
   static bool isProductVisible(
     GetProduct product, {
     int? activeStoreId,
@@ -81,14 +80,12 @@ class NonStockVisibility {
         product,
         activeStoreId: activeStoreId,
       );
-      // Variant products with no active variants are already rejected by the
-      // add-to-cart flow; leave that messaging untouched.
-      if (activeVariants.isEmpty) return true;
+      if (activeVariants.isEmpty) return false;
       return visibleVariants(activeVariants).isNotEmpty;
     }
 
     final stocks = product.stock;
-    if (stocks == null || stocks.isEmpty) return true;
+    if (stocks == null || stocks.isEmpty) return false;
 
     // Only judge the rows the active store can actually sell, so stock held
     // by another branch never keeps a sold-out product on screen.
@@ -96,7 +93,7 @@ class NonStockVisibility {
       LocalProductProvider.filterStocksForVariant(stocks, null),
       activeStoreId: activeStoreId,
     );
-    if (scopedStocks.isEmpty) return true;
+    if (scopedStocks.isEmpty) return false;
 
     return visibleStocks(scopedStocks).isNotEmpty;
   }

@@ -279,6 +279,8 @@ class BillingPageState extends State<BillingPage>
   String? deliveryDate;
   String? deliveryTime;
   String? deliveryAddress;
+  int? deliveryAddressId;
+  String? deliveryPincode;
   double? _selectedDeliveryCharge;
   DateTime _quotationDate = DateTime.now();
   DateTime _quotationExpiryDate = DateTime.now().add(const Duration(days: 30));
@@ -970,6 +972,9 @@ class BillingPageState extends State<BillingPage>
         deliveryDate = currentOrder.deliveryDate;
         deliveryTime = currentOrder.deliveryTime;
         deliveryAddress = currentOrder.address; // Restore address
+        // Drafts don't persist these, so never carry them over from another order.
+        deliveryAddressId = null;
+        deliveryPincode = null;
 
         // 5. Restore Coupon State
         if ((currentOrder.couponId != null &&
@@ -6098,6 +6103,18 @@ class BillingPageState extends State<BillingPage>
     );
   }
 
+  bool get _requiresDeliveryAddress =>
+      DeliveryMethodRegistry.requiresAddress(deliveryMethod);
+
+  bool _isDeliveryPincodeMissing() {
+    final ecommerceEnabled =
+        Provider.of<AppSettingsProvider>(context, listen: false)
+            .ecommerceEnabled;
+    return ecommerceEnabled &&
+        _requiresDeliveryAddress &&
+        (deliveryPincode?.trim().isEmpty ?? true);
+  }
+
   SavedOrder _saveCurrentCartAsDraft(
       LocalProductProvider localProductProvider) {
     final paymentData = _getPaymentMethodData();
@@ -6193,6 +6210,8 @@ class BillingPageState extends State<BillingPage>
       deliveryDate = null;
       deliveryTime = null;
       deliveryAddress = null;
+      deliveryAddressId = null;
+      deliveryPincode = null;
       _selectedDeliveryCharge = null;
       _commentController.clear();
       _carNumberController.clear();
@@ -6742,6 +6761,14 @@ class BillingPageState extends State<BillingPage>
         return;
       }
 
+      if (_isDeliveryPincodeMissing()) {
+        showScaffoldError(
+          context: context,
+          message: "checkout_modal.msg_pincode_required".tr,
+        );
+        return;
+      }
+
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
       // debugPrint("accessToken From AuthModel $accessToken");
@@ -6810,6 +6837,8 @@ class BillingPageState extends State<BillingPage>
         discountAmount: priceSummary.discount,
         toCustomerCredit: _toCustomerCreditEnabled,
         address: deliveryAddress,
+        addressId: _requiresDeliveryAddress ? deliveryAddressId : null,
+        pincode: _requiresDeliveryAddress ? deliveryPincode : null,
         deliveryCharge: _getDeliveryChargeForOrder(),
         quotationId: localProductProvider.currentOrder?.quotationId,
       )
@@ -6998,6 +7027,8 @@ class BillingPageState extends State<BillingPage>
             deliveryDate = null;
             deliveryTime = null;
             deliveryAddress = null;
+            deliveryAddressId = null;
+            deliveryPincode = null;
             _isCustomerManuallySelected = false;
             _hasOpenedPaymentModalOnce = false;
             _toCustomerCreditEnabled = false;
@@ -7112,6 +7143,14 @@ class BillingPageState extends State<BillingPage>
         return;
       }
 
+      if (_isDeliveryPincodeMissing()) {
+        showScaffoldError(
+          context: context,
+          message: "checkout_modal.msg_pincode_required".tr,
+        );
+        return;
+      }
+
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
       // debugPrint("accessToken From AuthModel $accessToken");
@@ -7179,6 +7218,8 @@ class BillingPageState extends State<BillingPage>
         discountAmount: localProductProvider.priceSummary!.discount,
         toCustomerCredit: _toCustomerCreditEnabled,
         address: deliveryAddress,
+        addressId: _requiresDeliveryAddress ? deliveryAddressId : null,
+        pincode: _requiresDeliveryAddress ? deliveryPincode : null,
         deliveryCharge: _getDeliveryChargeForOrder(),
         quotationId: localProductProvider.currentOrder?.quotationId,
       )
@@ -7234,6 +7275,8 @@ class BillingPageState extends State<BillingPage>
             deliveryDate = null;
             deliveryTime = null;
             deliveryAddress = null;
+            deliveryAddressId = null;
+            deliveryPincode = null;
             _isCustomerManuallySelected = false;
             _hasOpenedPaymentModalOnce = false;
             _toCustomerCreditEnabled = false;
@@ -7822,6 +7865,8 @@ class BillingPageState extends State<BillingPage>
           carNumber: _carNumberController.text,
           deliveryComment: _commentController.text,
           deliveryAddress: deliveryAddress ?? "",
+          deliveryAddressId: deliveryAddressId,
+          deliveryPincode: deliveryPincode ?? "",
           deliveryDate: deliveryDate,
           deliveryTime: deliveryTime,
           initialDeliveryCharge: _selectedDeliveryCharge ?? 0.0,
@@ -7835,6 +7880,12 @@ class BillingPageState extends State<BillingPage>
               deliveryDate = date;
               deliveryTime = time;
               deliveryAddress = address;
+            });
+          },
+          onDeliveryAddressDetailsUpdated: (addressId, pincode) {
+            setState(() {
+              deliveryAddressId = addressId;
+              deliveryPincode = pincode;
             });
           },
           onDeliveryChargeUpdated: (deliveryCharge) {

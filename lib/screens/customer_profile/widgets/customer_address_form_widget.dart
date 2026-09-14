@@ -20,6 +20,7 @@ class CustomerAddressFormWidget extends StatefulWidget {
   final Address? address; // If null, it's "Add", else "Edit"
   final Function(Address) onSuccess;
   final VoidCallback onCancel;
+  final bool requirePincode;
 
   const CustomerAddressFormWidget({
     super.key,
@@ -28,6 +29,7 @@ class CustomerAddressFormWidget extends StatefulWidget {
     this.address,
     required this.onSuccess,
     required this.onCancel,
+    this.requirePincode = false,
   });
 
   @override
@@ -121,6 +123,13 @@ class _CustomerAddressFormWidgetState extends State<CustomerAddressFormWidget> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (widget.requirePincode && (selectedPincodeId ?? '').isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: "customer_address.pincode_required".tr,
+      );
+      return;
+    }
 
     setState(() => isSubmitting = true);
 
@@ -296,6 +305,7 @@ class _CustomerAddressFormWidgetState extends State<CustomerAddressFormWidget> {
                                 hint: "customer_address.hint_pincode".tr,
                                 value: selectedPincodeId,
                                 items: locationProvider.pincodeList,
+                                isRequired: widget.requirePincode,
                                 onChanged: (id) {
                                   setState(() => selectedPincodeId = id);
                                 },
@@ -439,12 +449,14 @@ class _CustomerAddressFormWidgetState extends State<CustomerAddressFormWidget> {
     required String? value,
     required List<MapEntry<String, String>> items,
     required void Function(String?) onChanged,
+    bool isRequired = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         BuildTextTile(
           title: title,
+          isStarRed: isRequired,
           textStyle: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s14,
@@ -491,4 +503,44 @@ class _CustomerAddressFormWidgetState extends State<CustomerAddressFormWidget> {
       ],
     );
   }
+}
+
+/// Opens [CustomerAddressFormWidget] as a dialog and resolves with the saved
+/// address, or null when cancelled.
+Future<Address?> showCustomerAddressFormDialog({
+  required BuildContext context,
+  required CustomerListModelData customer,
+  Address? address,
+  bool requirePincode = false,
+}) {
+  return showDialog<Address>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) {
+      final size = MediaQuery.of(dialogContext).size;
+      final width = size.width * 0.92 > 820 ? 820.0 : size.width * 0.92;
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        insetPadding: const EdgeInsets.all(12),
+        child: SizedBox(
+          width: width,
+          height: size.height * 0.85,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              CustomerAddressFormWidget(
+                size: size,
+                customer: customer,
+                address: address,
+                requirePincode: requirePincode,
+                onSuccess: (saved) => Navigator.of(dialogContext).pop(saved),
+                onCancel: () => Navigator.of(dialogContext).pop(),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }

@@ -52,6 +52,23 @@ class CustomerSelectionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Keeps address pickers in sync after an add/edit without refetching.
+  void upsertSelectedCustomerAddress(Address address) {
+    final customer = _selectedCustomer;
+    if (customer == null) return;
+    final addresses = List<Address>.from(customer.addresses ?? const []);
+    final index = address.id == null
+        ? -1
+        : addresses.indexWhere((existing) => existing.id == address.id);
+    if (index == -1) {
+      addresses.add(address);
+    } else {
+      addresses[index] = address;
+    }
+    _selectedCustomer = customer.copyWithAddresses(addresses);
+    notifyListeners();
+  }
+
   void reconcileWithCustomers(List<CustomerListModelData> customers) {
     final selectedId = _selectedCustomerID;
     if (selectedId == null) return;

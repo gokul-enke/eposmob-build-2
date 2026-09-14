@@ -198,7 +198,8 @@
     "btn_saving": "സേവ് ചെയ്യുന്നു...",
     "btn_save_address": "സേവ് വിലാസം",
     "btn_update_address": "അപ്ഡേറ്റ് വിലാസം",
-    "required": "നിർബന്ധം"
+    "required": "നിർബന്ധം",
+    "pincode_required": "പിൻകോഡ് നിർബന്ധമാണ്"
   },
   "notifications": {
     "page_title": "അറിയിപ്പുകൾ"
@@ -5763,7 +5764,12 @@
     "msg_no_customers_found": "കസ്റ്റമേഴ്സ് കണ്ടെത്തിയില്ല",
     "msg_quotation_customer_not_saved": "ക്വട്ടേഷൻ കസ്റ്റമർ ഇല്ല സേവ് ചെയ്തു",
     "msg_configure_payment_before_confirm": " കോൺഫിഗർ ചെയ്യുക പേയ്‌മെന്റ് മുമ്പ് സ്ഥിരീകരിക്കുക",
-    "msg_unable_to_proceed": "തുടരാൻ കഴിയില്ല"
+    "msg_unable_to_proceed": "തുടരാൻ കഴിയില്ല",
+    "btn_add_address": "വിലാസം ചേർക്കുക",
+    "tooltip_edit_address": "വിലാസം എഡിറ്റ് ചെയ്യുക",
+    "hint_pincode": "പിൻകോഡ് (ഓപ്ഷണൽ):",
+    "hint_pincode_required": "പിൻകോഡ് (നിർബന്ധം):",
+    "msg_pincode_required": "സ്ഥിരീകരിക്കുന്നതിന് മുമ്പ് ഡെലിവറി പിൻകോഡ് നൽകുക"
   },
   "transaction_status_labels": {
     "receipt": "രസീത്",
