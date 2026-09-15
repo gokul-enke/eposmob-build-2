@@ -1,3 +1,20 @@
+double _parseDouble(dynamic value) {
+  if (value is num) return value.toDouble();
+
+  final text = value?.toString().trim();
+  if (text == null || text.isEmpty) return 0.0;
+  return double.tryParse(text) ?? 0.0;
+}
+
+int _parseInt(dynamic value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+
+  final text = value?.toString().trim();
+  if (text == null || text.isEmpty) return 0;
+  return int.tryParse(text) ?? 0;
+}
+
 class DashboardOverview {
   final BankAccount bankAccount;
   final CashAccount cashAccount;
@@ -325,7 +342,7 @@ class SalesData {
 class SalesGraph {
   final String period;
   final List<GraphDataPoint> salesGraph;
-  final int totalSales;
+  final double totalSales;
 
   SalesGraph({
     required this.period,
@@ -343,7 +360,7 @@ class SalesGraph {
       salesGraph: graphData
           .map((item) => GraphDataPoint.fromJson(item as Map<String, dynamic>))
           .toList(),
-      totalSales: data['total_sales'] as int? ?? 0,
+      totalSales: _parseDouble(data['total_sales']),
     );
   }
 }
@@ -352,7 +369,7 @@ class GraphDataPoint {
   final String? time;
   final String? day;
   final String? date;
-  final int amount;
+  final double amount;
 
   GraphDataPoint({
     this.time,
@@ -369,7 +386,30 @@ class GraphDataPoint {
       time: data['time'] as String?,
       day: data['day'] as String?,
       date: data['date'] as String?,
-      amount: data['amount'] as int? ?? 0,
+      amount: _parseDouble(data['amount']),
+    );
+  }
+}
+
+class ZatcaOverview {
+  final int successZatca;
+  final int notSent;
+  final int failed;
+  final int warning;
+
+  const ZatcaOverview({
+    required this.successZatca,
+    required this.notSent,
+    required this.failed,
+    required this.warning,
+  });
+
+  factory ZatcaOverview.fromJson(Map<String, dynamic> json) {
+    return ZatcaOverview(
+      successZatca: _parseInt(json['success_zatca']),
+      notSent: _parseInt(json['not_sent']),
+      failed: _parseInt(json['failed']),
+      warning: _parseInt(json['warning']),
     );
   }
 }

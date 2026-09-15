@@ -58,6 +58,7 @@ class OrderDetailsModelData {
   final String? invoiceHash;
   final OrderDetailsModelDataPacking? packing;
   final OrderDetailsModelDataDeliveryAddress? deliveryAddress;
+  final OrderDetailsModelDataExternalDeliveryJob? externalDeliveryJob;
 
   OrderDetailsModelData({
     this.ordersId,
@@ -87,6 +88,7 @@ class OrderDetailsModelData {
     this.invoiceHash,
     this.packing,
     this.deliveryAddress,
+    this.externalDeliveryJob,
   });
 
   factory OrderDetailsModelData.fromJson(Map<String, dynamic> json) =>
@@ -146,6 +148,10 @@ class OrderDetailsModelData {
                 Map<String, dynamic>.from(json["packing"])),
         deliveryAddress:
             OrderDetailsModelDataDeliveryAddress.fromOrderJson(json),
+        externalDeliveryJob: json["external_delivery_job"] is Map
+            ? OrderDetailsModelDataExternalDeliveryJob.fromJson(
+                Map<String, dynamic>.from(json["external_delivery_job"]))
+            : null,
       );
 
   // Helper method to handle order_returns which can be null, empty List, or Map
@@ -931,16 +937,19 @@ class OrderDetailsModelDataPacking {
       (packingVideo != null && packingVideo!.isNotEmpty) ||
       isPacked == true;
 
-  /// The API has used both `packing_photos` and `packing_photo_paths` for the
-  /// same set of image URLs. Keep both forms available to the UI, preserving
-  /// order and removing duplicates when a response contains both.
+  /// `packing_photos` contains display URLs, while `packing_photo_paths`
+  /// contains the stored paths the update API expects in `photos_to_delete`.
+  /// Prefer the URLs for viewing, but keep the stored paths separately for
+  /// deletion. Combining the two would render each photo twice and could send
+  /// a public URL where the backend requires a storage path.
   List<String> get photosForDisplay {
+    final source = (packingPhotos?.isNotEmpty ?? false)
+        ? packingPhotos!
+        : (packingPhotoPaths ?? const <String>[]);
     final result = <String>[];
-    for (final photos in [packingPhotos, packingPhotoPaths]) {
-      for (final photo in photos ?? const <String>[]) {
-        if (photo.trim().isNotEmpty && !result.contains(photo)) {
-          result.add(photo);
-        }
+    for (final photo in source) {
+      if (photo.trim().isNotEmpty && !result.contains(photo)) {
+        result.add(photo);
       }
     }
     return result;
@@ -994,6 +1003,103 @@ class OrderDetailsModelDataPacking {
         "packing_video": packingVideo,
         "is_packed": isPacked,
       };
+}
+
+/// External-delivery job attached to an order. The Sales Executive
+/// order-details endpoint returns this as `external_delivery_job` once a
+/// delivery has been created.
+class OrderDetailsModelDataExternalDeliveryJob {
+  final int? id;
+  final int? externalLogisticId;
+  final String? externalLogisticName;
+  final String? shippingService;
+  final String? transportMode;
+  final int? warehouseId;
+  final String? warehouseName;
+  final String? externalShipmentId;
+  final String? trackingUrl;
+  final String? labelUrl;
+  final String? status;
+  final String? paymentMode;
+  final String? codAmount;
+  final int? packageCount;
+  final String? weight;
+  final String? length;
+  final String? breadth;
+  final String? height;
+  final String? shippingCharge;
+  final String? dispatchDate;
+  final String? expectedDeliveryAt;
+  final String? remarks;
+
+  const OrderDetailsModelDataExternalDeliveryJob({
+    this.id,
+    this.externalLogisticId,
+    this.externalLogisticName,
+    this.shippingService,
+    this.transportMode,
+    this.warehouseId,
+    this.warehouseName,
+    this.externalShipmentId,
+    this.trackingUrl,
+    this.labelUrl,
+    this.status,
+    this.paymentMode,
+    this.codAmount,
+    this.packageCount,
+    this.weight,
+    this.length,
+    this.breadth,
+    this.height,
+    this.shippingCharge,
+    this.dispatchDate,
+    this.expectedDeliveryAt,
+    this.remarks,
+  });
+
+  bool get hasDetails => id != null || externalLogisticId != null;
+
+  static int? _parseInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
+  }
+
+  static String? _string(dynamic value) {
+    final result = value?.toString().trim();
+    return result == null || result.isEmpty || result == 'null' ? null : result;
+  }
+
+  factory OrderDetailsModelDataExternalDeliveryJob.fromJson(
+      Map<String, dynamic> json) {
+    final externalLogistic = json['external_logistic'];
+    final warehouse = json['warehouse'];
+    return OrderDetailsModelDataExternalDeliveryJob(
+      id: _parseInt(json['id']),
+      externalLogisticId: _parseInt(json['external_logistic_id']),
+      externalLogisticName:
+          externalLogistic is Map ? _string(externalLogistic['name']) : null,
+      shippingService: _string(json['shipping_service']),
+      transportMode: _string(json['transport_mode']),
+      warehouseId: _parseInt(json['warehouse_id']),
+      warehouseName: warehouse is Map ? _string(warehouse['name']) : null,
+      externalShipmentId: _string(json['external_shipment_id']),
+      trackingUrl: _string(json['tracking_url']),
+      labelUrl: _string(json['label_url']),
+      status: _string(json['status']),
+      paymentMode: _string(json['payment_mode']),
+      codAmount: _string(json['cod_amount']),
+      packageCount: _parseInt(json['package_count']),
+      weight: _string(json['weight']),
+      length: _string(json['length']),
+      breadth: _string(json['breadth']),
+      height: _string(json['height']),
+      shippingCharge: _string(json['shipping_charge']),
+      dispatchDate: _string(json['dispatch_date']),
+      expectedDeliveryAt: _string(json['expected_delivery_at']),
+      remarks: _string(json['remarks']),
+    );
+  }
 }
 
 /// Shipping/delivery address broken into the individual fields the web
