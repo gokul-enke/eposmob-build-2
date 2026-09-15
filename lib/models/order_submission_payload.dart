@@ -16,6 +16,7 @@ class OrderSubmissionPayload {
     this.paidAmount,
     List<String>? paymentMethods,
     List<Map<String, dynamic>>? paidMethods,
+    this.creditSaleAmount,
     this.balanceAmount,
     this.couponId,
     this.orderId,
@@ -51,6 +52,15 @@ class OrderSubmissionPayload {
   final String? paidAmount;
   final List<String>? paymentMethods;
   final List<Map<String, dynamic>>? paidMethods;
+
+  /// Amount intentionally left unpaid on the customer's account.
+  ///
+  /// This is distinct from [toCustomerCredit], which means that an
+  /// overpayment is being added to an existing customer balance. The current
+  /// API has no separate credit-sale field, so this amount is mapped to its
+  /// existing `balance` field while the local snapshot can still retain the
+  /// `DEBIT` metadata for receipts and reconciliation.
+  final double? creditSaleAmount;
   final String? balanceAmount;
   final String? couponId;
   final String? orderId;
@@ -73,8 +83,15 @@ class OrderSubmissionPayload {
   final int? storeId;
   final String sourceType;
 
+  double get _normalizedCreditSaleAmount =>
+      creditSaleAmount != null && creditSaleAmount! > 0 ? creditSaleAmount! : 0;
+
   bool get usesMultiPayment =>
       paymentMethods != null && paidMethods != null && paidMethods!.isNotEmpty;
+
+  String? get _apiBalanceAmount => _normalizedCreditSaleAmount > 0
+      ? _normalizedCreditSaleAmount.toString()
+      : balanceAmount;
 
   /// Produces the exact body accepted by the existing API.
   ///
@@ -94,7 +111,7 @@ class OrderSubmissionPayload {
       else
         'paid_amount': paidAmount,
       'source_type': sourceType,
-      'balance': balanceAmount,
+      'balance': _apiBalanceAmount,
       'coupon_id': couponId,
       if (orderId != null) 'order_id': orderId,
       if (comment != null) 'comment': comment,
@@ -134,7 +151,7 @@ class OrderSubmissionPayload {
       else
         'paid_amount': paidAmount,
       'source_type': sourceType,
-      'balance': balanceAmount,
+      'balance': _apiBalanceAmount,
       'coupon_id': couponId,
       if (orderId != null) 'order_id': orderId,
       if (comment != null) 'comment': comment,

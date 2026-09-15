@@ -937,6 +937,14 @@ class BillingProvider extends ChangeNotifier {
   bool get toCustomerCreditEnabled => _toCustomerCreditEnabled;
   bool get pineLabsPaymentSuccess => _pineLabsPaymentSuccess;
 
+  /// Amount intentionally left unpaid for a credit sale.
+  ///
+  /// A debit amount used by the “to customer credit” flow is an allocation of
+  /// an overpayment and must not be submitted as an unpaid sale balance.
+  double get creditSaleAmount => !_toCustomerCreditEnabled && _isDebitSelected
+      ? double.tryParse(debitAmountController.text) ?? 0.0
+      : 0.0;
+
   // Payment method ID getters
   String? get cashPaymentMethodId => _cashPaymentMethodId;
   String? get cardPaymentMethodId => _cardPaymentMethodId;
@@ -1887,11 +1895,14 @@ class BillingProvider extends ChangeNotifier {
     String paymentMethodValue = "";
     String paidAmountValue = "0";
 
-    if (selectedMethods.isNotEmpty) {
+    final double debitAmount =
+        double.tryParse(debitAmountController.text) ?? 0.0;
+    final hasDebitAmount =
+        (_isDebitSelected || _toCustomerCreditEnabled) && debitAmount > 0;
+
+    if (selectedMethods.isNotEmpty || hasDebitAmount) {
       final methodsForStorage = List<String>.from(selectedMethods);
-      final double debitAmount =
-          double.tryParse(debitAmountController.text) ?? 0.0;
-      if (_toCustomerCreditEnabled && debitAmount > 0) {
+      if (hasDebitAmount) {
         methodsForStorage.add('DEBIT');
       }
 

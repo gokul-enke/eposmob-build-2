@@ -95,6 +95,42 @@ void main() {
     expect(body['store_id'], 3);
   });
 
+  test('credit-only sale uses the existing balance contract', () {
+    final body = OrderSubmissionPayload(
+      items: const [
+        {'product_id': 1, 'quantity': 1}
+      ],
+      transactionNumber: 'TX-CREDIT',
+      paymentMethods: const [],
+      paidMethods: const [],
+      creditSaleAmount: 75.0,
+      balanceAmount: '0',
+    ).toApiJson();
+
+    expect(body['payment_method'], isNull);
+    expect(body['paid_amount'], isNull);
+    expect(body['balance'], '75.0');
+    expect(body.containsKey('paid_methods'), isFalse);
+  });
+
+  test('partial credit maps the unpaid remainder to balance', () {
+    final body = OrderSubmissionPayload(
+      items: const [],
+      transactionNumber: 'TX-PARTIAL-CREDIT',
+      paymentMethods: const ['7973'],
+      paidMethods: const [
+        {'method': '7973', 'amount': 25.0},
+      ],
+      creditSaleAmount: 10.0,
+    ).toApiJson();
+
+    expect(body['payment_method'], ['7973']);
+    expect(body['paid_methods'], [
+      {'method': '7973', 'amount': 25.0},
+    ]);
+    expect(body['balance'], '10.0');
+  });
+
   test('existing restaurant order uses the unchanged update API contract', () {
     final body = OrderSubmissionPayload(
       items: const [

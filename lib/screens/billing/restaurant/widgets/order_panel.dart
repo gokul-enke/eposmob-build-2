@@ -7667,6 +7667,9 @@ class OrderPanelState extends State<OrderPanel> {
           priceSummary?.percentageDiscount ?? _percentageDiscount,
       discountAmount: priceSummary?.discount,
       toCustomerCredit: _toCustomerCreditEnabled,
+      creditSaleAmount: !_toCustomerCreditEnabled && _isDebitSelected
+          ? double.tryParse(_debitAmount) ?? 0.0
+          : 0.0,
       address:
           _deliveryAddress.trim().isNotEmpty ? _deliveryAddress.trim() : null,
       addressId: _deliveryAddressId,

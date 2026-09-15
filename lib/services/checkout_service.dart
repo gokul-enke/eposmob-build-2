@@ -178,6 +178,7 @@ class CheckoutService {
       percentageDiscount: priceSummary.percentageDiscount,
       discountAmount: priceSummary.discount,
       toCustomerCredit: billingProvider.toCustomerCreditEnabled,
+      creditSaleAmount: billingProvider.creditSaleAmount,
       address: billingProvider.orderAddress.trim().isNotEmpty
           ? billingProvider.orderAddress.trim()
           : null,

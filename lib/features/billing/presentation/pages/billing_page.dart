@@ -6728,6 +6728,9 @@ class BillingPageState extends State<BillingPage>
       percentageDiscount: priceSummary.percentageDiscount,
       discountAmount: priceSummary.discount,
       toCustomerCredit: _toCustomerCreditEnabled,
+      creditSaleAmount: !_toCustomerCreditEnabled && _isDebitSelected
+          ? double.tryParse(_debitAmountController.text) ?? 0.0
+          : 0.0,
       address: deliveryAddress,
       addressId: _requiresDeliveryAddress ? deliveryAddressId : null,
       pincode: _requiresDeliveryAddress ? deliveryPincode : null,
@@ -8071,7 +8074,7 @@ class BillingPageState extends State<BillingPage>
 
     final double debitAmount =
         double.tryParse(_debitAmountController.text) ?? 0;
-    if (_toCustomerCreditEnabled && debitAmount > 0) {
+    if ((_toCustomerCreditEnabled || _isDebitSelected) && debitAmount > 0) {
       selectedMethodsForStorage.add(debitId);
     }
 
