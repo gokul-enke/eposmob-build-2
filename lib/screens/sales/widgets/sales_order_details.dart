@@ -345,6 +345,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
       priceSummary: priceSummary,
       cartItem: cartItems,
       customerDetails: customerDetails,
+      onFulfillmentUpdated: getOrderDetails,
     );
   }
 
