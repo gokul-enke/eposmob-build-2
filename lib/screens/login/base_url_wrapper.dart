@@ -1,9 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/resources/app_url.dart';
 import 'package:pos_machine/screens/login/api_key_screen.dart';
-import 'package:pos_machine/services/tenant_domain_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos_machine/services/tenant_startup_resolver.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'login.dart';
 
 class BaseUrlWrapper extends StatefulWidget {
@@ -24,42 +25,16 @@ class _BaseUrlWrapperState extends State<BaseUrlWrapper> {
 
   Future<void> _resolveLoginConfiguration() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final apiKey = prefs.getString('api_key')?.trim() ?? '';
-      if (apiKey.isEmpty) {
-        // Allow the dedicated Play reviewer account to bootstrap its tenant
-        // from the email entered on the login screen. All other accounts are
-        // routed to API-key setup when they attempt to sign in.
-        if (mounted) setState(() => _destination = const SignInScreen());
-        return;
+      final result = await TenantStartupResolver.resolve();
+      if (mounted) {
+        setState(() => _destination = result.needsApiKey
+            ? ApiKeyScreen(initialError: result.error)
+            : const SignInScreen());
       }
-
-      final savedUrl = prefs.getString('app_url')?.trim() ?? '';
-      final usedUnverifiedDefault =
-          prefs.getBool('show_default_domain_warning') ?? false;
-      final isDefaultUrl = savedUrl.isNotEmpty &&
-          APPUrl.normalizeBaseUrl(savedUrl) ==
-              APPUrl.normalizeBaseUrl(APPUrl.defaultBaseURL);
-      final needsRepair =
-          savedUrl.isEmpty || usedUnverifiedDefault || isDefaultUrl;
-
-      if (needsRepair) {
-        try {
-          await TenantDomainService.discoverAndSave(apiKey);
-        } on TenantDomainException catch (e) {
-          if (mounted) {
-            setState(() => _destination = ApiKeyScreen(
-                  initialError: e.message,
-                ));
-          }
-          return;
-        }
-      } else {
-        APPUrl.updateBaseURL(savedUrl);
-      }
-
-      if (mounted) setState(() => _destination = const SignInScreen());
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // The user only sees a generic message; keep the real cause.
+      debugPrint('⚠️ Could not load login configuration: $error\n$stackTrace');
+      unawaited(Sentry.captureException(error, stackTrace: stackTrace));
       if (mounted) {
         setState(() => _destination = ApiKeyScreen(
               initialError: 'base_url_wrapper.error_load_config'.tr,

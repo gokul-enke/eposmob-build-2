@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/virtual_keyboard_widget.dart';
 import 'package:pos_machine/components/startup_gate.dart';
 import 'package:pos_machine/services/order_submission_coordinator.dart';
+import 'package:pos_machine/services/preferences_file_guard.dart';
 import 'package:pos_machine/services/startup_work_tracker.dart';
 import 'package:pos_machine/components/order_submission_status.dart';
 import 'package:pos_machine/models/local_models.dart';
@@ -267,6 +268,10 @@ void _initializeBinding() {
 }
 
 Future<void> _initializeApp() async {
+  // Must run before anything reads SharedPreferences: a damaged file makes
+  // every read throw and strands the till on the API key screen.
+  await _startupStep('check saved settings file',
+      () => PreferencesFileGuard.ensureReadable());
   await _startupStep(
       'read saved server URL', _initializeBaseUrlFromPreferences);
   await _startupStep(

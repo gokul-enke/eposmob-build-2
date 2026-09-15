@@ -114,6 +114,31 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Future<void> _resetApiKey() async {
+    // The button sits right under Continue on touch tills, and a reset
+    // unprovisions the till.
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: Text('login.reset_api_key_confirm_title'.tr),
+        content: Text('login.reset_api_key_confirm_content'.tr),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text('general.cancel'.tr),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(
+              'login.btn_reset_api_key'.tr,
+              style: const TextStyle(color: ColorManager.kButtonRed),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
     try {
       await SessionResetService.resetForApiKeyReset(context);
 

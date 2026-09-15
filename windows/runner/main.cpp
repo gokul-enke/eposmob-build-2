@@ -167,8 +167,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   if (!HasFlag(command_line_arguments, kAllowMultipleInstancesFlag)) {
     single_instance_mutex =
         ::CreateMutexW(nullptr, TRUE, kSingleInstanceMutexName);
-    if (single_instance_mutex != nullptr &&
-        ::GetLastError() == ERROR_ALREADY_EXISTS) {
+    const DWORD mutex_error = ::GetLastError();
+    // A copy running as administrator owns a mutex a normal copy may not
+    // open. Access denied still means CloudPOS is running; letting a second
+    // copy start would have both rewriting the same preferences and Hive files.
+    if ((single_instance_mutex != nullptr &&
+         mutex_error == ERROR_ALREADY_EXISTS) ||
+        (single_instance_mutex == nullptr &&
+         mutex_error == ERROR_ACCESS_DENIED)) {
       bool focused = false;
       for (int attempt = 0; attempt < 30 && !focused; ++attempt) {
         focused = FocusRunningInstance();
@@ -180,7 +186,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
             L"opening CloudPOS again. If this continues, contact support.",
             L"CLOUDPOS", MB_OK | MB_ICONINFORMATION);
       }
-      ::CloseHandle(single_instance_mutex);
+      if (single_instance_mutex != nullptr) {
+        ::CloseHandle(single_instance_mutex);
+      }
       return EXIT_SUCCESS;
     }
   }

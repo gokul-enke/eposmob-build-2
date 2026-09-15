@@ -607,8 +607,12 @@ class LocalProductProvider extends ChangeNotifier {
   void setStockEnabled(bool enabled) {
     _stockEnabled = enabled;
     _cachedStockEnabled = enabled;
+    // Called on every product selection, and on Windows every set rewrites the
+    // whole preferences file; write only a real change.
     SharedPreferences.getInstance().then((prefs) {
-      prefs.setBool('general_stock_enabled', enabled);
+      if (prefs.getBool('general_stock_enabled') != enabled) {
+        prefs.setBool('general_stock_enabled', enabled);
+      }
     });
     debugPrint("📦 Stock management setting updated: $_stockEnabled");
   }

@@ -129,7 +129,11 @@ class DocumentConfigProvider extends ChangeNotifier {
       Map<String, dynamic> snapshotJson) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_docConfigSnapshotKey, json.encode(snapshotJson));
+      final encoded = json.encode(snapshotJson);
+      // Runs on every print and share, and on Windows every set rewrites the
+      // whole preferences file; skip snapshots that have not changed.
+      if (prefs.getString(_docConfigSnapshotKey) == encoded) return;
+      await prefs.setString(_docConfigSnapshotKey, encoded);
       await prefs.setString(
           _docConfigSnapshotUpdatedAtKey, DateTime.now().toIso8601String());
       debugPrint('💾 [DocConfig] Snapshot saved to SharedPreferences backup');
