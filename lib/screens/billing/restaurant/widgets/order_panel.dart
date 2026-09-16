@@ -47,6 +47,7 @@ import 'package:pos_machine/screens/billing/restaurant/utils/restaurant_helpers.
 import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/pos_security_key_dialog.dart';
 import 'package:pos_machine/features/billing/domain/receipt_customer_balance.dart';
+import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:pos_machine/services/local_first_sale_coordinator.dart';
 import 'package:pos_machine/services/local_sale_sync_service.dart';
@@ -7703,7 +7704,12 @@ class OrderPanelState extends State<OrderPanel> {
       toCustomerCredit: toCustomerCreditForDraft,
       context: context,
       tableId: widget.tableId,
-      address: deliveryAddressForDraft,
+      address: OrderCustomerFields.addressForReceipt(
+        customer: _selectedCustomer,
+        orderAddress: deliveryAddressForDraft,
+        orderAddressId: deliveryAddressIdForDraft,
+        orderPincode: deliveryPincodeForDraft,
+      ),
       addressId: deliveryAddressIdForDraft,
       pincode: deliveryPincodeForDraft,
       deliveryCharge: deliveryChargeForDraft,

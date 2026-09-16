@@ -233,9 +233,12 @@ class CheckoutService {
       toCustomerCredit: billingProvider.toCustomerCreditEnabled,
       context: context,
       alternatePhone: billingProvider.selectedCustomer?.altPhone,
-      address: billingProvider.orderAddress.trim().isNotEmpty
-          ? billingProvider.orderAddress.trim()
-          : null,
+      address: OrderCustomerFields.addressForReceipt(
+        customer: billingProvider.selectedCustomer,
+        orderAddress: billingProvider.orderAddress,
+        orderAddressId: billingProvider.orderAddressId,
+        orderPincode: billingProvider.orderPincode,
+      ),
       addressId: billingProvider.orderAddressId,
       pincode: billingProvider.orderPincode,
       deliveryCharge: resolveDeliveryCharge(context),

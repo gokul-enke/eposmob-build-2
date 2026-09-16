@@ -441,6 +441,32 @@ void main() {
   });
 
   group('confirmed orders', () {
+    test('confirmed snapshot uses the same first-added-first order as the API',
+        () async {
+      final provider = LocalProductProvider();
+      provider.initializeProducts([
+        makeProduct(1),
+        makeProduct(2),
+        makeProduct(3),
+      ]);
+
+      provider.addToCart(product: provider.getProductById(1)!, quantity: 1);
+      provider.addToCart(product: provider.getProductById(2)!, quantity: 1);
+      provider.addToCart(product: provider.getProductById(3)!, quantity: 1);
+
+      expect(
+        provider.cartItems.map((item) => item.product.productId),
+        [3, 2, 1],
+      );
+
+      final sale = provider.saveCurrentCartAsConfirmedOrder();
+
+      expect(
+        sale.items.map((item) => item.product.productId),
+        [1, 2, 3],
+      );
+    });
+
     test('checkout metadata survives confirmed-order persistence', () async {
       final provider = LocalProductProvider();
       provider.initializeProducts([makeProduct(1)]);

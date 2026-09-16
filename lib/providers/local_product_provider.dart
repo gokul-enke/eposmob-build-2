@@ -4483,8 +4483,12 @@ class LocalProductProvider extends ChangeNotifier {
     final baseTotal = context != null ? getRoundedTotal(context) : cartTotal;
     double total = baseTotal + (deliveryCharge ?? 0.0);
 
-    // Create a deep copy of cart items to prevent modification
-    final orderItems = _cartItems.map(_cloneLocalCartItem).toList();
+    // The working cart is newest-first for fast cashier interaction, while the
+    // add-to-order API deliberately sends the reverse order. Snapshot confirmed
+    // receipts in that same API order so immediate/offline and server reprints
+    // both show the first scanned item first.
+    final orderItems =
+        _cartItems.reversed.map(_cloneLocalCartItem).toList(growable: false);
 
     // Generate sequential order number - use "CONF-" prefix for confirmed orders
     String orderNumber = generateConfirmedOrderNumber();
@@ -4550,7 +4554,9 @@ class LocalProductProvider extends ChangeNotifier {
         SavedOrder confirmedOrder = SavedOrder(
           id: order.id,
           orderNumber: "CONF-${order.orderNumber.split('-')[1]}",
-          items: order.items,
+          items: order.items.reversed
+              .map(_cloneLocalCartItem)
+              .toList(growable: false),
           customerName: order.customerName,
           customerPhone: order.customerPhone,
           comment: order.comment,

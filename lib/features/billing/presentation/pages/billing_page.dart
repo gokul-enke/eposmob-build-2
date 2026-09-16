@@ -6776,7 +6776,12 @@ class BillingPageState extends State<BillingPage>
       deliveryTime: deliveryTime,
       toCustomerCredit: _toCustomerCreditEnabled,
       context: context,
-      address: deliveryAddress,
+      address: OrderCustomerFields.addressForReceipt(
+        customer: selectedCustomer,
+        orderAddress: deliveryAddress,
+        orderAddressId: deliveryAddressId,
+        orderPincode: deliveryPincode,
+      ),
       addressId: _requiresDeliveryAddress ? deliveryAddressId : null,
       pincode: _requiresDeliveryAddress ? deliveryPincode : null,
       deliveryCharge: _getDeliveryChargeForOrder(),
