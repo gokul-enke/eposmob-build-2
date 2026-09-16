@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:pos_machine/resources/recovery_text.dart';
 import 'package:get/get.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -307,14 +306,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                     79,
                     84,
                     92,
-                    SideBarController.ordersToReviewIndex,
                   ].contains(sideBarController.index.value),
                   subItems: [
-                    if (hasSalesPermission)
-                      _MobileDrawerSubItem(
-                          title: recoveryText('Orders to review'),
-                          onTap: () =>
-                              navigate(SideBarController.ordersToReviewIndex)),
                     if (hasSalesPermission)
                       _MobileDrawerSubItem(
                         title: 'nav.sales'.tr,

@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:pos_machine/resources/recovery_text.dart';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -506,11 +505,6 @@ class _SideMenuState extends State<SideMenu> {
                   listTitle4: 'nav.day_sale_closing'.tr,
                   listTitle5: 'nav.admin_day_sale_records'.tr,
                   listTitle6: 'nav.online_orders'.tr,
-                  listTitle7: recoveryText('Orders to review'),
-                  onTapTitle7: () => sideBarController.index.value =
-                      SideBarController.ordersToReviewIndex,
-                  showTitle7: hasSalesPermission,
-
                   // Permission-based visibility
                   showTitle1: hasSalesPermission,
                   showTitle2: hasConfirmedOrdersPermission,
@@ -540,9 +534,7 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value == 78 ||
                       sideBarController.index.value == 79 ||
                       sideBarController.index.value == 84 ||
-                      sideBarController.index.value == 92 ||
-                      sideBarController.index.value ==
-                          SideBarController.ordersToReviewIndex,
+                      sideBarController.index.value == 92,
                 ),
               );
             },
