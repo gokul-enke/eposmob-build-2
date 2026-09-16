@@ -4651,7 +4651,7 @@
     "unknown_device": "Unknown device",
     "btn_selected": "Selected",
     "btn_select": "Select",
-    "btn_use_open_pdf": "Use Open PDF",
+    "btn_use_open_pdf": "Select",
     "toast_open_pdf_selected": "Open PDF selected. A4/A5 documents will open in your PDF viewer.",
     "toast_dev_printer_selected": "Development Printer selected. Prints will be saved to a folder.",
     "toast_printer_selected": "@device Printer Selected",
