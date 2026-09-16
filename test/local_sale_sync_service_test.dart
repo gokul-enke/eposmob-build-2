@@ -152,6 +152,42 @@ void main() {
     expect(sends, 1);
   });
 
+  test('an operator-verified missing sale can be retried exactly once',
+      () async {
+    var sends = 0;
+    final service = LocalSaleSyncService(
+      store: _MemoryOutbox(),
+      sender: (_, __, ___) async {
+        sends++;
+        return sends == 1
+            ? http.Response('server error', 500)
+            : http.Response('{"order_id":92,"order_number":"INV-92"}', 201);
+      },
+    );
+    await _enqueue(service);
+
+    final first = await service.submitOnce(
+      localOrderId: 'local-1',
+      accessToken: 'token',
+      tenantKey: 'tenant',
+      endpoint: Uri.parse(_endpoint),
+    );
+    expect(first.state, LocalSaleSyncState.needsReview);
+
+    final authorized = await service.authorizeRetryAfterVerification('local-1');
+    expect(authorized.state, LocalSaleSyncState.queued);
+
+    final retry = await service.submitOnce(
+      localOrderId: 'local-1',
+      accessToken: 'token',
+      tenantKey: 'tenant',
+      endpoint: Uri.parse(_endpoint),
+    );
+    expect(retry.state, LocalSaleSyncState.synced);
+    expect(retry.serverOrderNumber, 'INV-92');
+    expect(sends, 2);
+  });
+
   test('a timeout becomes needs-review without a retry', () async {
     var sends = 0;
     final service = LocalSaleSyncService(

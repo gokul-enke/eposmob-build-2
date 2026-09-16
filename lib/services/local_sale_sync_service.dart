@@ -189,9 +189,9 @@ typedef LocalSaleHttpSender = Future<http.Response> Function(
 
 /// Owns the one and only initial server attempt for locally confirmed sales.
 ///
-/// There is deliberately no retry API here. Without backend idempotency a lost
-/// response cannot prove that the sale was not committed, so every ambiguous
-/// result remains visible for human reconciliation.
+/// There is deliberately no automatic retry API here. Without backend
+/// idempotency a lost response cannot prove that the sale was not committed,
+/// so every ambiguous result remains visible for human reconciliation.
 class LocalSaleSyncService extends ChangeNotifier {
   LocalSaleSyncService({
     required LocalSaleOutboxStore store,
@@ -308,6 +308,33 @@ class LocalSaleSyncService extends ChangeNotifier {
         ));
     _submissionTail = result.then<void>((_) {}, onError: (_, __) {});
     return result;
+  }
+
+  /// Reopens an ambiguous sale for exactly one new attempt after an operator
+  /// has verified that it is absent from the backend. This only changes the
+  /// durable state to [LocalSaleSyncState.queued]; callers must then invoke
+  /// [submitOnce] and must not retry automatically.
+  Future<LocalSaleSyncRecord> authorizeRetryAfterVerification(
+    String localOrderId,
+  ) async {
+    await hydrate();
+    final record = _records[localOrderId];
+    if (record == null) {
+      throw StateError('Local sale sync record was not found.');
+    }
+    if (record.state != LocalSaleSyncState.needsReview) {
+      throw StateError(
+        'Only a sale needing review can be retried after verification.',
+      );
+    }
+    return _update(
+      record.copyWith(
+        state: LocalSaleSyncState.queued,
+        updatedAt: DateTime.now().toUtc().toIso8601String(),
+        message: 'Retry authorized after the operator verified that the sale '
+            'is not present in the backend.',
+      ),
+    );
   }
 
   Future<LocalSaleSyncRecord> _submitOnceImpl({

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -39,10 +41,17 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
               child: Consumer2<LocalProductProvider, LocalSaleSyncService>(
                 builder: (context, provider, saleSync, child) {
                   final confirmedOrders = provider.confirmedOrders;
+                  // This screen is an action queue, not a sales history. Sales
+                  // that have a verified server response belong in Sales; keep
+                  // only records that still need an operator's attention here.
+                  final attentionOrders = confirmedOrders.where((order) {
+                    final record = saleSync.recordFor(order.id);
+                    return record?.state != LocalSaleSyncState.synced;
+                  }).toList();
 
-                  if (confirmedOrders.isEmpty) {
-                    return Center(
-                      child: Text('confirmed_orders.no_orders_found'.tr),
+                  if (attentionOrders.isEmpty) {
+                    return const Center(
+                      child: Text('No sales need sync attention.'),
                     );
                   }
 
@@ -67,9 +76,9 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                             crossAxisSpacing: 10,
                             mainAxisSpacing: 10,
                           ),
-                          itemCount: confirmedOrders.length,
+                          itemCount: attentionOrders.length,
                           itemBuilder: (context, index) {
-                            final order = confirmedOrders[index];
+                            final order = attentionOrders[index];
                             final syncRecord = saleSync.recordFor(order.id);
                             String formattedDate =
                                 _formatDateTime(order.createdAt);
@@ -117,6 +126,27 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                                                 color:
                                                     ColorManager.kPrimaryColor,
                                               ),
+                                              if (syncRecord?.state ==
+                                                  LocalSaleSyncState
+                                                      .needsReview) ...[
+                                                const SizedBox(width: 8),
+                                                IconButton(
+                                                  icon: const Icon(Icons.replay,
+                                                      size: 18),
+                                                  tooltip:
+                                                      'Retry after backend check',
+                                                  padding: EdgeInsets.zero,
+                                                  constraints:
+                                                      const BoxConstraints(),
+                                                  onPressed: () =>
+                                                      _confirmAndRetry(
+                                                    context,
+                                                    order,
+                                                  ),
+                                                  color:
+                                                      const Color(0xFFB45309),
+                                                ),
+                                              ],
                                               const SizedBox(width: 8),
                                               IconButton(
                                                 icon: const Icon(
@@ -293,6 +323,66 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
     }
   }
 
+  Future<void> _confirmAndRetry(BuildContext context, SavedOrder order) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Retry saved sale?'),
+        content: Text(
+          'Retry ${order.orderNumber} only if you checked the backend Sales '
+          'list and confirmed that this order was not created. Retrying an '
+          'existing order can create a duplicate sale.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('I verified — Retry'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final accessToken = Provider.of<AuthModel>(context, listen: false).token;
+    if (accessToken == null || accessToken.trim().isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'Please log in again before retrying this sale.',
+      );
+      return;
+    }
+
+    final saleSync = Provider.of<LocalSaleSyncService>(context, listen: false);
+    try {
+      await saleSync.authorizeRetryAfterVerification(order.id);
+      unawaited(
+        saleSync.submitOnce(
+          localOrderId: order.id,
+          accessToken: accessToken,
+        ),
+      );
+      if (!context.mounted) return;
+      showScaffold(
+        context: context,
+        message:
+            'Retry started. This sale will update when the server responds.',
+      );
+    } on StateError catch (error) {
+      if (!context.mounted) return;
+      showScaffoldError(context: context, message: error.message.toString());
+    } catch (_) {
+      if (!context.mounted) return;
+      showScaffoldError(
+        context: context,
+        message: 'Could not start the retry. The sale remains saved locally.',
+      );
+    }
+  }
+
   void _showOrderDetailsModal(BuildContext context, SavedOrder order) {
     showDialog(
       context: context,
@@ -339,7 +429,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
         children: [
           Expanded(
             child: Text(
-              "confirmed_orders.title".tr,
+              'Sync Attention',
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s20,
