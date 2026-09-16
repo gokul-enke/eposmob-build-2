@@ -52,6 +52,15 @@ void main() {
       );
     });
 
+    test('has a separate non-persisted Open PDF sentinel', () {
+      final printer = BluetoothPrinter.openPdf();
+
+      expect(printer.deviceName, BluetoothPrinter.openPdfPrinterName);
+      expect(printer.address, BluetoothPrinter.openPdfPrinterAddress);
+      expect(printer.isOpenPdf, isTrue);
+      expect(printer.isDevelopment, isFalse);
+    });
+
     test('bypasses physical connect, send, and disconnect calls', () async {
       final printer = BluetoothPrinter.development();
       final printerUtils = ThermalPrinterUtils();

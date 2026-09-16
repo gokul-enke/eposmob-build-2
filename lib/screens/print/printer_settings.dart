@@ -27,6 +27,7 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/services/development_printer_service.dart';
 import 'package:pos_machine/services/printer_permission_service.dart';
+import 'package:pos_machine/services/print_output_settings.dart';
 
 class PrinterSettings extends StatefulWidget {
   const PrinterSettings({super.key});
@@ -51,6 +52,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   bool _isScanning = false;
   bool _isResyncingDocConfig = false;
   bool _developerModeEnabled = false;
+  bool _openPdfSelected = false;
   int _settingsLoadVersion = 0;
 
   // List of available paper sizes
@@ -110,7 +112,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   /// Whether the current paper size is for standard PDF (A4/A5)
   bool get _isStandardPdf =>
-      selectedPaperSize == 'A4' || selectedPaperSize == 'A5';
+      PrintOutputSettings.isStandardPdfPaperSize(selectedPaperSize);
 
   bool get _usesReceiptSettings =>
       selectedSettingsType == 'Billing' ||
@@ -119,6 +121,17 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   bool get _supportsDevelopmentPrinter =>
       selectedSettingsType == 'Billing' || selectedSettingsType == 'Quotation';
+
+  bool _supportsOpenPdfOutputFor(String settingsType) =>
+      settingsType == 'Billing' ||
+      settingsType == 'Quotation' ||
+      settingsType == 'Kitchen';
+
+  bool get _supportsOpenPdfOutput =>
+      _supportsOpenPdfOutputFor(selectedSettingsType);
+
+  bool get _canSelectOpenPdf =>
+      !_isPdfSharing && _supportsOpenPdfOutput && _isStandardPdf;
 
   List<BluetoothPrinter> get _displayDevices {
     if (!_developerModeEnabled || !_supportsDevelopmentPrinter) {
@@ -382,10 +395,15 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   Future<void> selectPrinter(BluetoothPrinter printer) async {
     try {
+      if (printer.isDevelopment &&
+          (!_developerModeEnabled || !_supportsDevelopmentPrinter)) {
+        throw StateError('Developer Mode is not enabled for this printer');
+      }
+      await PrintOutputSettings.setOpenPdfForTarget(
+        _printerPrefsKey,
+        selected: false,
+      );
       if (printer.isDevelopment) {
-        if (!_developerModeEnabled || !_supportsDevelopmentPrinter) {
-          throw StateError('Developer Mode is not enabled for this printer');
-        }
         await DevelopmentPrinterService.selectForTarget(
           _printerPrefsKey,
           selected: true,
@@ -398,13 +416,48 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         await _saveDefaultPrinter(printer);
       }
       if (!mounted) return;
-      setState(() => selectedPrinter = printer);
+      setState(() {
+        selectedPrinter = printer;
+        _openPdfSelected = false;
+      });
       showScaffold(
         context: context,
         message: printer.isDevelopment
             ? 'printer_settings.toast_dev_printer_selected'.tr
             : 'printer_settings.toast_printer_selected'
                 .trParams({'device': printer.deviceName.toString()}),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      showScaffoldError(
+        context: context,
+        message: 'printer_settings.error_save_selection_reason'
+            .trParams({'error': error.toString()}),
+      );
+    }
+  }
+
+  Future<void> selectOpenPdf() async {
+    if (!_canSelectOpenPdf) return;
+
+    try {
+      await PrintOutputSettings.setOpenPdfForTarget(
+        _printerPrefsKey,
+        selected: true,
+      );
+      await DevelopmentPrinterService.selectForTarget(
+        _printerPrefsKey,
+        selected: false,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _openPdfSelected = true;
+        selectedPrinter = null;
+      });
+      showScaffold(
+        context: context,
+        message: 'printer_settings.toast_open_pdf_selected'.tr,
       );
     } catch (error) {
       if (!mounted) return;
@@ -433,6 +486,73 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     final saved =
         await prefs.setString(_printerPrefsKey, json.encode(printerData));
     if (!saved) throw StateError('Shared preferences write failed');
+  }
+
+  /// Parses the physical printer saved under [printerKey], dropping the
+  /// preference when it can no longer be decoded.
+  Future<BluetoothPrinter?> _readSavedPrinter(
+    SharedPreferences prefs,
+    String printerKey,
+  ) async {
+    final printerJson = prefs.getString(printerKey);
+    if (printerJson == null) return null;
+
+    try {
+      final printerData = json.decode(printerJson) as Map<String, dynamic>;
+      return BluetoothPrinter(
+        deviceName: printerData['deviceName']?.toString(),
+        address: printerData['address']?.toString(),
+        vendorId: printerData['vendorId']?.toString(),
+        productId: printerData['productId']?.toString(),
+        typePrinter: PrinterType.values.firstWhere(
+          (value) => value.toString() == printerData['typePrinter'],
+          orElse: () => PrinterType.bluetooth,
+        ),
+      );
+    } catch (error) {
+      debugPrint('[PrinterSettings] Invalid saved printer: $error');
+      await prefs.remove(printerKey);
+      return null;
+    }
+  }
+
+  /// Re-resolves the selected output after the paper size changes.
+  ///
+  /// Open PDF only applies to A4/A5, so moving to a thermal size must fall
+  /// back to the still-saved physical (or development) printer instead of
+  /// leaving the card with nothing selected.
+  Future<void> _refreshOutputSelection(SharedPreferences prefs) async {
+    final printerKey = _printerPrefsKey;
+    final developmentPrinterSelected = _developerModeEnabled &&
+        !_isPdfSharing &&
+        _supportsDevelopmentPrinter &&
+        await DevelopmentPrinterService.shouldUseForTarget(
+          printerKey,
+          preferences: prefs,
+        );
+    final openPdfSelected = _canSelectOpenPdf &&
+        !developmentPrinterSelected &&
+        await PrintOutputSettings.shouldOpenPdfForTarget(
+          printerKey,
+          fallbackPrinterPreferenceKey:
+              printerKey == 'default_printer' ? null : 'default_printer',
+          preferences: prefs,
+        );
+
+    BluetoothPrinter? printer;
+    if (openPdfSelected) {
+      printer = null;
+    } else if (developmentPrinterSelected) {
+      printer = BluetoothPrinter.development();
+    } else if (!_isPdfSharing) {
+      printer = await _readSavedPrinter(prefs, printerKey);
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _openPdfSelected = openPdfSelected;
+      selectedPrinter = printer;
+    });
   }
 
   Future<void> _loadSettings() async {
@@ -498,6 +618,16 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         paperSize = isPdfSharing ? PdfShareSettings.defaultPaperSize : '80mm';
       }
 
+      final openPdfSelected = _supportsOpenPdfOutputFor(settingsType) &&
+          PrintOutputSettings.isStandardPdfPaperSize(paperSize) &&
+          !developmentPrinterSelected &&
+          await PrintOutputSettings.shouldOpenPdfForTarget(
+            printerKey,
+            fallbackPrinterPreferenceKey:
+                printerKey == 'default_printer' ? null : 'default_printer',
+            preferences: prefs,
+          );
+
       final fontStyle = fontStyles.contains(defaultFontStyle)
           ? defaultFontStyle!
           : 'Font A (Small & Sharp)';
@@ -509,26 +639,15 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           : 'classic';
 
       BluetoothPrinter? printer;
-      if (developmentPrinterSelected) {
+      if (openPdfSelected) {
+        // Open PDF is an output mode, not a discovered physical device.
+        // Keep the saved physical printer untouched so it can be restored when
+        // the user switches back to printer output.
+        printer = null;
+      } else if (developmentPrinterSelected) {
         printer = BluetoothPrinter.development();
       } else if (defaultPrinterJson != null) {
-        try {
-          final printerData =
-              json.decode(defaultPrinterJson) as Map<String, dynamic>;
-          printer = BluetoothPrinter(
-            deviceName: printerData['deviceName']?.toString(),
-            address: printerData['address']?.toString(),
-            vendorId: printerData['vendorId']?.toString(),
-            productId: printerData['productId']?.toString(),
-            typePrinter: PrinterType.values.firstWhere(
-              (value) => value.toString() == printerData['typePrinter'],
-              orElse: () => PrinterType.bluetooth,
-            ),
-          );
-        } catch (error) {
-          debugPrint('[PrinterSettings] Invalid saved printer: $error');
-          await prefs.remove(printerKey);
-        }
+        printer = await _readSavedPrinter(prefs, printerKey);
       }
 
       if (!mounted || requestVersion != _settingsLoadVersion) return;
@@ -538,6 +657,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         selectedReceiptTheme = receiptTheme;
         selectedPrinter = printer;
         _developerModeEnabled = developerModeEnabled;
+        _openPdfSelected = openPdfSelected;
         isLoading = false;
       });
     } catch (error) {
@@ -556,6 +676,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       final isPdfSharing = _isPdfSharing;
       setState(() {
         selectedPrinter = null;
+        _openPdfSelected = false;
         // Reset local state variables to defaults
         selectedPaperSize =
             isPdfSharing ? PdfShareSettings.defaultPaperSize : '80mm';
@@ -573,6 +694,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         await prefs.remove(
             PrinterSettingsProvider.userSelectedFlagKey(_receiptThemePrefsKey));
       } else {
+        await PrintOutputSettings.clearForTarget(
+          _printerPrefsKey,
+          preferences: prefs,
+        );
         await DevelopmentPrinterService.clearTargetSelection(
           _printerPrefsKey,
           preferences: prefs,
@@ -619,6 +744,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_paperSizePrefsKey, paperSize);
     await PrinterSettingsProvider.markUserSelected(prefs, _paperSizePrefsKey);
+    await _refreshOutputSelection(prefs);
 
     if (mounted) {
       showScaffold(
@@ -1132,6 +1258,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     final cardPadding = printerCardPadding(context);
     final listGap = printerSectionGap(context);
     final displayDevices = _displayDevices;
+    final showOpenPdfOption = _canSelectOpenPdf;
 
     return PrinterSettingsCard(
       padding: cardPadding,
@@ -1141,9 +1268,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           PrinterSectionHeader(
             icon: Icons.devices_rounded,
             title: 'printer_settings.section_printers'.tr,
-            subtitle: _developerModeEnabled && _supportsDevelopmentPrinter
-                ? 'printer_settings.section_printers_sub_dev'.tr
-                : 'printer_settings.section_printers_sub'.tr,
+            subtitle: showOpenPdfOption
+                ? 'printer_settings.section_printers_sub_pdf'.tr
+                : _developerModeEnabled && _supportsDevelopmentPrinter
+                    ? 'printer_settings.section_printers_sub_dev'.tr
+                    : 'printer_settings.section_printers_sub'.tr,
             trailing: CustomRoundButton(
               fct: () => _isScanning ? null : _checkPermissions(),
               title: _isScanning
@@ -1195,10 +1324,38 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             ],
           ],
           SizedBox(height: listGap),
+          if (showOpenPdfOption) ...[
+            _buildPrinterDeviceTile(
+              printer: BluetoothPrinter.openPdf(),
+              isSelected: _openPdfSelected,
+              isCompact: isCompact,
+              isPdfOutput: true,
+              subtitleOverride: 'printer_settings.open_pdf_subtitle'
+                  .trParams({'paperSize': selectedPaperSize}),
+              onSelect: selectOpenPdf,
+            ),
+            if (displayDevices.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text(
+                'printer_settings.physical_printers'.tr,
+                style: buildCustomStyle(
+                  FontWeightManager.semiBold,
+                  FontSize.s12,
+                  0.15,
+                  Colors.grey.shade700,
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ],
           displayDevices.isEmpty
               ? PrinterEmptyState(
-                  title: 'printer_settings.empty_title'.tr,
-                  subtitle: 'printer_settings.empty_subtitle'.tr,
+                  title: showOpenPdfOption
+                      ? 'printer_settings.empty_physical_title'.tr
+                      : 'printer_settings.empty_title'.tr,
+                  subtitle: showOpenPdfOption
+                      ? 'printer_settings.empty_physical_subtitle'.tr
+                      : 'printer_settings.empty_subtitle'.tr,
                 )
               // A plain Column instead of a shrink-wrapped, non-scrolling
               // ListView: same layout, but Column supports intrinsic-height
@@ -1235,12 +1392,19 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     required BluetoothPrinter printer,
     required bool isSelected,
     required bool isCompact,
+    VoidCallback? onSelect,
+    String? subtitleOverride,
+    bool isPdfOutput = false,
   }) {
     final deviceName =
         printer.deviceName ?? 'printer_settings.unknown_device'.tr;
-    final subtitle = printer.isDevelopment
-        ? 'Saves PDFs and thermal receipt images to a local folder'
-        : printer.address ?? printer.typePrinter.name;
+    final subtitle = subtitleOverride ??
+        (printer.isDevelopment
+            ? 'Saves PDFs and thermal receipt images to a local folder'
+            : printer.address ?? printer.typePrinter.name);
+    final selectAction = onSelect ?? () => selectPrinter(printer);
+    final unselectedIcon =
+        isPdfOutput ? Icons.picture_as_pdf_outlined : Icons.print_outlined;
 
     if (isCompact) {
       return Container(
@@ -1273,9 +1437,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                     border: Border.all(color: Colors.grey.shade200),
                   ),
                   child: Icon(
-                    isSelected
-                        ? Icons.check_circle_rounded
-                        : Icons.print_outlined,
+                    isSelected ? Icons.check_circle_rounded : unselectedIcon,
                     color: isSelected
                         ? ColorManager.kPrimaryColor
                         : const Color(0xFF596579),
@@ -1318,10 +1480,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             ),
             const SizedBox(height: 12),
             CustomRoundButton(
-              fct: () => selectPrinter(printer),
+              fct: selectAction,
               title: isSelected
                   ? 'printer_settings.btn_selected'.tr
-                  : 'printer_settings.btn_select'.tr,
+                  : isPdfOutput
+                      ? 'printer_settings.btn_use_open_pdf'.tr
+                      : 'printer_settings.btn_select'.tr,
               height: 44,
               width: double.infinity,
               fontSize: 14,
@@ -1362,7 +1526,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             border: Border.all(color: Colors.grey.shade200),
           ),
           child: Icon(
-            isSelected ? Icons.check_circle_rounded : Icons.print_outlined,
+            isSelected ? Icons.check_circle_rounded : unselectedIcon,
             color: isSelected
                 ? ColorManager.kPrimaryColor
                 : const Color(0xFF596579),
@@ -1390,10 +1554,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           ),
         ),
         trailing: CustomRoundButton(
-          fct: () => selectPrinter(printer),
+          fct: selectAction,
           title: isSelected
               ? 'printer_settings.btn_selected'.tr
-              : 'printer_settings.btn_select'.tr,
+              : isPdfOutput
+                  ? 'printer_settings.btn_use_open_pdf'.tr
+                  : 'printer_settings.btn_select'.tr,
           height: 44,
           width: 108,
           fontSize: 14,

@@ -5,6 +5,8 @@ class BluetoothPrinter {
       'Development Printer (Save to Folder)';
   static const String developmentPrinterAddress =
       'epos-development://local-output';
+  static const String openPdfPrinterName = 'Open PDF';
+  static const String openPdfPrinterAddress = 'epos://open-pdf-output';
 
   String? deviceName;
   String? address;
@@ -32,7 +34,21 @@ class BluetoothPrinter {
     );
   }
 
+  /// Internal output descriptor used by the print pipeline.
+  ///
+  /// It is never written to printer preferences or added to discovery
+  /// results; it only lets existing PDF layouts carry the user's output
+  /// choice without making their printer parameter nullable.
+  factory BluetoothPrinter.openPdf() {
+    return BluetoothPrinter(
+      deviceName: openPdfPrinterName,
+      address: openPdfPrinterAddress,
+      typePrinter: PrinterType.usb,
+    );
+  }
+
   bool get isUSB => typePrinter == PrinterType.usb;
   bool get isBluetooth => typePrinter == PrinterType.bluetooth;
   bool get isDevelopment => address == developmentPrinterAddress;
+  bool get isOpenPdf => address == openPdfPrinterAddress;
 }

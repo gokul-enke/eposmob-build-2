@@ -27,6 +27,7 @@ import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/services/development_printer_service.dart';
 import 'package:pos_machine/services/printer_permission_service.dart';
+import 'package:pos_machine/services/print_output_settings.dart';
 // import 'package:pos_machine/resources/localization_service.dart';
 
 class PrintPage extends StatefulWidget {
@@ -147,41 +148,9 @@ class PrintPage extends StatefulWidget {
       );
       final printerPrefsKey =
           _printerPrefsKeyForDocument(documentConfigType, isB2B: isB2B);
-      final useDevelopmentPrinter =
-          await DevelopmentPrinterService.shouldUseForTarget(
-        printerPrefsKey,
-        fallbackPrinterPreferenceKey:
-            printerPrefsKey == 'default_printer' ? null : 'default_printer',
-        preferences: prefs,
-      );
       // B2B falls back to the legacy B2C printer when not separately configured.
       final defaultPrinterJson = prefs.getString(printerPrefsKey) ??
           prefs.getString('default_printer');
-
-      if (!useDevelopmentPrinter && defaultPrinterJson == null) {
-        debugPrint('[PrintPage] No default printer found');
-        return false;
-      }
-
-      final BluetoothPrinter selectedPrinter;
-      if (useDevelopmentPrinter) {
-        selectedPrinter = BluetoothPrinter.development();
-      } else {
-        final Map<String, dynamic> printerData =
-            json.decode(defaultPrinterJson!);
-        selectedPrinter = BluetoothPrinter(
-          deviceName: printerData['deviceName'],
-          address: printerData['address'],
-          vendorId: printerData['vendorId'],
-          productId: printerData['productId'],
-          typePrinter: PrinterType.values.firstWhere(
-            (e) => e.toString() == printerData['typePrinter'],
-          ),
-        );
-      }
-
-      debugPrint(
-          '[PrintPage] Auto-printing with default printer: ${selectedPrinter.deviceName}');
 
       // Load document config from cache (NO API CALL - instant!)
       final docConfigProvider =
@@ -207,6 +176,53 @@ class PrintPage extends StatefulWidget {
       if (paperSize == 'Thermal') {
         paperSize = '80mm';
       }
+
+      final openPdfOutput =
+          PrintOutputSettings.isStandardPdfPaperSize(paperSize) &&
+              await PrintOutputSettings.shouldOpenPdfForTarget(
+                printerPrefsKey,
+                fallbackPrinterPreferenceKey:
+                    printerPrefsKey == 'default_printer'
+                        ? null
+                        : 'default_printer',
+                preferences: prefs,
+              );
+      final useDevelopmentPrinter = !openPdfOutput &&
+          await DevelopmentPrinterService.shouldUseForTarget(
+            printerPrefsKey,
+            fallbackPrinterPreferenceKey:
+                printerPrefsKey == 'default_printer' ? null : 'default_printer',
+            preferences: prefs,
+          );
+
+      if (!openPdfOutput &&
+          !useDevelopmentPrinter &&
+          defaultPrinterJson == null) {
+        debugPrint('[PrintPage] No default printer found');
+        return false;
+      }
+
+      final BluetoothPrinter selectedPrinter;
+      if (openPdfOutput) {
+        selectedPrinter = BluetoothPrinter.openPdf();
+      } else if (useDevelopmentPrinter) {
+        selectedPrinter = BluetoothPrinter.development();
+      } else {
+        final Map<String, dynamic> printerData =
+            json.decode(defaultPrinterJson!);
+        selectedPrinter = BluetoothPrinter(
+          deviceName: printerData['deviceName'],
+          address: printerData['address'],
+          vendorId: printerData['vendorId'],
+          productId: printerData['productId'],
+          typePrinter: PrinterType.values.firstWhere(
+            (e) => e.toString() == printerData['typePrinter'],
+          ),
+        );
+      }
+
+      debugPrint(
+          '[PrintPage] Auto-printing with output: ${selectedPrinter.deviceName}');
 
       // Determine type based on paper size and orderReturns
       final hasReturns = orderReturns != null &&
@@ -577,17 +593,35 @@ class _PrintPageState extends State<PrintPage> {
       widget.documentConfigType,
       isB2B: _isB2B,
     );
-    final useDevelopmentPrinter =
+    final paperSize = prefs.getString(PrintPage._paperSizePrefsKeyForDocument(
+          widget.documentConfigType,
+          isB2B: _isB2B,
+        )) ??
+        prefs.getString('default_paper_size') ??
+        '80mm';
+    final openPdfOutput =
+        PrintOutputSettings.isStandardPdfPaperSize(paperSize) &&
+            await PrintOutputSettings.shouldOpenPdfForTarget(
+              printerPreferenceKey,
+              fallbackPrinterPreferenceKey:
+                  printerPreferenceKey == 'default_printer'
+                      ? null
+                      : 'default_printer',
+              preferences: prefs,
+            );
+    final useDevelopmentPrinter = !openPdfOutput &&
         await DevelopmentPrinterService.shouldUseForTarget(
-      printerPreferenceKey,
-      fallbackPrinterPreferenceKey:
-          printerPreferenceKey == 'default_printer' ? null : 'default_printer',
-      preferences: prefs,
-    );
+          printerPreferenceKey,
+          fallbackPrinterPreferenceKey:
+              printerPreferenceKey == 'default_printer'
+                  ? null
+                  : 'default_printer',
+          preferences: prefs,
+        );
     if (!mounted) return;
-    if (useDevelopmentPrinter) {
+    if (openPdfOutput || useDevelopmentPrinter) {
       debugPrint(
-        '[PrintPage] Development Printer selected; skipping device scan',
+        '[PrintPage] PDF/development output selected; skipping device scan',
       );
       return;
     }
@@ -731,19 +765,39 @@ class _PrintPageState extends State<PrintPage> {
       widget.documentConfigType,
       isB2B: _isB2B,
     );
-    final useDevelopmentPrinter =
+    final paperSize = prefs.getString(PrintPage._paperSizePrefsKeyForDocument(
+          widget.documentConfigType,
+          isB2B: _isB2B,
+        )) ??
+        prefs.getString('default_paper_size') ??
+        '80mm';
+    final openPdfOutput =
+        PrintOutputSettings.isStandardPdfPaperSize(paperSize) &&
+            await PrintOutputSettings.shouldOpenPdfForTarget(
+              printerPreferenceKey,
+              fallbackPrinterPreferenceKey:
+                  printerPreferenceKey == 'default_printer'
+                      ? null
+                      : 'default_printer',
+              preferences: prefs,
+            );
+    final useDevelopmentPrinter = !openPdfOutput &&
         await DevelopmentPrinterService.shouldUseForTarget(
-      printerPreferenceKey,
-      fallbackPrinterPreferenceKey:
-          printerPreferenceKey == 'default_printer' ? null : 'default_printer',
-      preferences: prefs,
-    );
+          printerPreferenceKey,
+          fallbackPrinterPreferenceKey:
+              printerPreferenceKey == 'default_printer'
+                  ? null
+                  : 'default_printer',
+          preferences: prefs,
+        );
     final defaultPrinterJson = prefs.getString(printerPreferenceKey) ??
         prefs.getString('default_printer');
 
-    if (useDevelopmentPrinter || defaultPrinterJson != null) {
+    if (openPdfOutput || useDevelopmentPrinter || defaultPrinterJson != null) {
       BluetoothPrinter printer;
-      if (useDevelopmentPrinter) {
+      if (openPdfOutput) {
+        printer = BluetoothPrinter.openPdf();
+      } else if (useDevelopmentPrinter) {
         printer = BluetoothPrinter.development();
       } else {
         final Map<String, dynamic> printerData =
@@ -791,6 +845,11 @@ class _PrintPageState extends State<PrintPage> {
       widget.documentConfigType,
       isB2B: _isB2B,
     );
+    await PrintOutputSettings.setOpenPdfForTarget(
+      printerPreferenceKey,
+      selected: false,
+      preferences: prefs,
+    );
     if (printer.isDevelopment) {
       await DevelopmentPrinterService.selectForTarget(
         printerPreferenceKey,
@@ -830,8 +889,8 @@ class _PrintPageState extends State<PrintPage> {
       showScaffold(
         context: context,
         message: '${'voucher_print.printer_selected'.trParams({
-          'name': printer.deviceName.toString(),
-        })}',
+              'name': printer.deviceName.toString(),
+            })}',
       );
     }
   }
@@ -939,7 +998,8 @@ class _PrintPageState extends State<PrintPage> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: '${'voucher_print.error_loading_document_config'.tr}: ${e.toString()}',
+          message:
+              '${'voucher_print.error_loading_document_config'.tr}: ${e.toString()}',
         );
       }
     }
@@ -1518,8 +1578,7 @@ class _PrintPageState extends State<PrintPage> {
                     debugPrint("[LOGO_DEBUG] _billDocumentConfig is null");
                     showScaffoldError(
                       context: context,
-                      message:
-                          'voucher_print.document_config_not_loaded'.tr,
+                      message: 'voucher_print.document_config_not_loaded'.tr,
                     );
                     return;
                   }

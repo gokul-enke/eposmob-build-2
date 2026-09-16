@@ -19,6 +19,7 @@ import 'package:pos_machine/screens/print/kot_thermal_printer.dart';
 import 'package:pos_machine/screens/print/kot_standard_printer.dart';
 import 'package:pos_machine/screens/print/kot_print_helpers.dart';
 import 'package:pos_machine/services/printer_permission_service.dart';
+import 'package:pos_machine/services/print_output_settings.dart';
 
 /// Kitchen Order Ticket Print Page
 /// Supports both thermal (58mm/80mm) and standard (A4/A5) printing
@@ -67,27 +68,45 @@ class KotPrintPage extends StatefulWidget {
       final printableItems = List<Map<String, dynamic>>.from(items.reversed);
 
       final prefs = await SharedPreferences.getInstance();
-      // Try KOT printer first, fallback to default printer
-      String? printerJson = prefs.getString('kot_printer');
-      if (printerJson == null) {
-        printerJson = prefs.getString('default_printer');
+      String paperSize = prefs.getString('kot_paper_size')?.trim() ?? '';
+      if (paperSize.isEmpty) {
+        paperSize = prefs.getString('default_paper_size')?.trim() ?? '80mm';
+      }
+      if (paperSize == 'Thermal') {
+        paperSize = '80mm';
       }
 
-      if (printerJson == null) {
+      final openPdfOutput =
+          PrintOutputSettings.isStandardPdfPaperSize(paperSize) &&
+              await PrintOutputSettings.shouldOpenPdfForTarget(
+                'kot_printer',
+                fallbackPrinterPreferenceKey: 'default_printer',
+                preferences: prefs,
+              );
+      // Try KOT printer first, fallback to default printer
+      String? printerJson = prefs.getString('kot_printer');
+      printerJson ??= prefs.getString('default_printer');
+
+      if (!openPdfOutput && printerJson == null) {
         debugPrint('[KotPrintPage] No default printer found');
         return false;
       }
 
-      final Map<String, dynamic> printerData = json.decode(printerJson);
-      final selectedPrinter = BluetoothPrinter(
-        deviceName: printerData['deviceName'],
-        address: printerData['address'],
-        vendorId: printerData['vendorId'],
-        productId: printerData['productId'],
-        typePrinter: PrinterType.values.firstWhere(
-          (e) => e.toString() == printerData['typePrinter'],
-        ),
-      );
+      final BluetoothPrinter selectedPrinter;
+      if (openPdfOutput) {
+        selectedPrinter = BluetoothPrinter.openPdf();
+      } else {
+        final Map<String, dynamic> printerData = json.decode(printerJson!);
+        selectedPrinter = BluetoothPrinter(
+          deviceName: printerData['deviceName'],
+          address: printerData['address'],
+          vendorId: printerData['vendorId'],
+          productId: printerData['productId'],
+          typePrinter: PrinterType.values.firstWhere(
+            (e) => e.toString() == printerData['typePrinter'],
+          ),
+        );
+      }
 
       debugPrint(
           '[KotPrintPage] Auto-printing KOT with printer: ${selectedPrinter.deviceName}');
@@ -115,15 +134,6 @@ class KotPrintPage extends StatefulWidget {
         }
         await invokeKotPrintSuccessCallback(onPrintSuccess);
         return true;
-      }
-
-      // Get paper size
-      String paperSize = prefs.getString('kot_paper_size')?.trim() ?? '';
-      if (paperSize.isEmpty) {
-        paperSize = prefs.getString('default_paper_size')?.trim() ?? '80mm';
-      }
-      if (paperSize == 'Thermal') {
-        paperSize = '80mm';
       }
 
       // Print
@@ -232,6 +242,21 @@ class _KotPrintPageState extends State<KotPrintPage> {
 
   Future<void> _checkPermissions() async {
     debugPrint('[KotPrintPage] _checkPermissions() called');
+    final prefs = await SharedPreferences.getInstance();
+    final paperSize = prefs.getString('kot_paper_size')?.trim() ??
+        prefs.getString('default_paper_size')?.trim() ??
+        '80mm';
+    final openPdfOutput =
+        PrintOutputSettings.isStandardPdfPaperSize(paperSize) &&
+            await PrintOutputSettings.shouldOpenPdfForTarget(
+              'kot_printer',
+              fallbackPrinterPreferenceKey: 'default_printer',
+              preferences: prefs,
+            );
+    if (openPdfOutput) {
+      debugPrint('[KotPrintPage] Open PDF selected; skipping device scan');
+      return;
+    }
     if (await _requestPermissions()) {
       debugPrint('[KotPrintPage] Permissions granted. Proceeding to scan.');
       _scan();
@@ -352,6 +377,16 @@ class _KotPrintPageState extends State<KotPrintPage> {
     debugPrint(
         '[KotPrintPage] _loadDefaultPrinter() reading from SharedPreferences');
     final prefs = await SharedPreferences.getInstance();
+    final paperSize = prefs.getString('kot_paper_size')?.trim() ??
+        prefs.getString('default_paper_size')?.trim() ??
+        '80mm';
+    final openPdfOutput =
+        PrintOutputSettings.isStandardPdfPaperSize(paperSize) &&
+            await PrintOutputSettings.shouldOpenPdfForTarget(
+              'kot_printer',
+              fallbackPrinterPreferenceKey: 'default_printer',
+              preferences: prefs,
+            );
     // Try to load KOT specific printer first
     String? printerJson = prefs.getString('kot_printer');
 
@@ -362,11 +397,13 @@ class _KotPrintPageState extends State<KotPrintPage> {
       printerJson = prefs.getString('default_printer');
     }
 
-    if (printerJson != null) {
-      final Map<String, dynamic> printerData = json.decode(printerJson);
-
-      setState(() {
-        selectedPrinter = BluetoothPrinter(
+    if (openPdfOutput || printerJson != null) {
+      BluetoothPrinter printer;
+      if (openPdfOutput) {
+        printer = BluetoothPrinter.openPdf();
+      } else {
+        final Map<String, dynamic> printerData = json.decode(printerJson!);
+        printer = BluetoothPrinter(
           deviceName: printerData['deviceName'],
           address: printerData['address'],
           vendorId: printerData['vendorId'],
@@ -375,6 +412,10 @@ class _KotPrintPageState extends State<KotPrintPage> {
             (e) => e.toString() == printerData['typePrinter'],
           ),
         );
+      }
+
+      setState(() {
+        selectedPrinter = printer;
         _isLoading = false;
       });
       debugPrint(
@@ -394,6 +435,11 @@ class _KotPrintPageState extends State<KotPrintPage> {
 
   Future<void> _saveDefaultPrinter(BluetoothPrinter printer) async {
     final prefs = await SharedPreferences.getInstance();
+    await PrintOutputSettings.setOpenPdfForTarget(
+      'kot_printer',
+      selected: false,
+      preferences: prefs,
+    );
     final printerData = {
       'deviceName': printer.deviceName,
       'address': printer.address,
@@ -927,8 +973,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
                 if (_kotDocumentConfig == null) {
                   showScaffoldError(
                     context: context,
-                    message:
-                        'voucher_print.document_config_not_loaded'.tr,
+                    message: 'voucher_print.document_config_not_loaded'.tr,
                   );
                   return;
                 }
