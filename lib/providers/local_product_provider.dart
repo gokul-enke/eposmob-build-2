@@ -4501,7 +4501,9 @@ class LocalProductProvider extends ChangeNotifier {
       customerName: customerName,
       customerPhone: customerPhone,
       comment: comment,
-      createdAt: DateHelper.now().toIso8601String(),
+      // Persist the actual instant. Print and ZATCA layers convert this UTC
+      // value to the configured business timezone where appropriate.
+      createdAt: DateHelper.now().toUtc().toIso8601String(),
       total: total,
       deliveryMethod: deliveryMethod,
       // Include new API-compatible fields
@@ -4711,7 +4713,9 @@ class LocalProductProvider extends ChangeNotifier {
       customerName: customerName,
       customerPhone: customerPhone,
       comment: comment,
-      createdAt: DateHelper.now().toIso8601String(),
+      // Persist the actual instant. Print and ZATCA layers convert this UTC
+      // value to the configured business timezone where appropriate.
+      createdAt: DateHelper.now().toUtc().toIso8601String(),
       total: total,
       deliveryMethod: deliveryMethod,
       // Include new API-compatible fields

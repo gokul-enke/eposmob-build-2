@@ -201,23 +201,31 @@ class DateHelper {
     return formatter.format(localNow);
   }
 
-  // To Print Local to Local Date and Time
+  // Format locally saved invoice timestamps in the configured business
+  // timezone. Older saved orders may contain an unzoned wall-clock value; in
+  // that case, preserve it as-is instead of reinterpreting it as device time.
   static String formatToISODateFromIST(String isoDateString) {
-    final DateTime local = DateTime.parse(isoDateString).toLocal();
+    final DateTime parsed = DateTime.parse(isoDateString);
+    final DateTime local =
+        _hasExplicitTimezone(isoDateString) ? _convertToLocal(parsed) : parsed;
     final DateFormat formatter = DateFormat('dd-MM-yyyy hh:mm a');
     return formatter.format(local);
   }
 
-  // To Print Local to Local Date Only
+  // Format a locally saved invoice date in the configured business timezone.
   static String formatToISODateOnlyFromISO(String isoDateString) {
-    final DateTime local = DateTime.parse(isoDateString).toLocal();
+    final DateTime parsed = DateTime.parse(isoDateString);
+    final DateTime local =
+        _hasExplicitTimezone(isoDateString) ? _convertToLocal(parsed) : parsed;
     final DateFormat formatter = DateFormat('dd-MM-yyyy');
     return formatter.format(local);
   }
 
-  // To Print Local to Local Time Only
+  // Format a locally saved invoice time in the configured business timezone.
   static String formatToISOTimeOnlyFromISO(String isoDateString) {
-    final DateTime local = DateTime.parse(isoDateString).toLocal();
+    final DateTime parsed = DateTime.parse(isoDateString);
+    final DateTime local =
+        _hasExplicitTimezone(isoDateString) ? _convertToLocal(parsed) : parsed;
     final DateFormat formatter = DateFormat('hh:mm a');
     return formatter.format(local);
   }

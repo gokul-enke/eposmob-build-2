@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:convert/convert.dart';
 import 'package:intl/intl.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 
 /// ZATCA Phase 1 QR Code Helper
 ///
@@ -106,19 +106,15 @@ class ZatcaQrHelper {
 
   /// Format DateTime to ZATCA-compliant ISO 8601 format
   ///
-  /// Format: "YYYY-MM-DDTHH:MM:SS+03:00" (Explicit Saudi local time offset)
+  /// Format: "YYYY-MM-DDTHH:MM:SSZ" (the invoice instant in UTC)
   String _formatTimestamp(DateTime dateTime) {
-    // We explicitly append +03:00 (Saudi Arabia offset) because devices generating
-    // the QR code might be in different timezones (e.g. India +05:30).
-    // If we used .toUtc(), an Indian device parsing "20:37" would subtract 5.5 hours.
-    // By appending +03:00, we force validation apps to understand this is exactly
-    // the KSA timezone time matching the printed receipt.
-    return '${dateTime.year.toString().padLeft(4, '0')}-'
-        '${dateTime.month.toString().padLeft(2, '0')}-'
-        '${dateTime.day.toString().padLeft(2, '0')}T'
-        '${dateTime.hour.toString().padLeft(2, '0')}:'
-        '${dateTime.minute.toString().padLeft(2, '0')}:'
-        '${dateTime.second.toString().padLeft(2, '0')}Z';
+    final utc = dateTime.toUtc();
+    return '${utc.year.toString().padLeft(4, '0')}-'
+        '${utc.month.toString().padLeft(2, '0')}-'
+        '${utc.day.toString().padLeft(2, '0')}T'
+        '${utc.hour.toString().padLeft(2, '0')}:'
+        '${utc.minute.toString().padLeft(2, '0')}:'
+        '${utc.second.toString().padLeft(2, '0')}Z';
   }
 
   /// Parse a ZATCA QR code data (for debugging/verification)
@@ -198,9 +194,12 @@ class ZatcaQrHelper {
       return null;
     }
 
-    try {
-      return DateTime.parse(raw);
-    } catch (_) {}
+    // API order dates without an offset are business-local timestamps. Zoned
+    // values (including new offline UTC snapshots) retain their exact instant.
+    final configuredUtc = DateHelper.configuredDateTimeToUtcIso(raw);
+    if (configuredUtc != null) {
+      return DateTime.tryParse(configuredUtc);
+    }
 
     final fallbackFormats = <String>[
       'dd-MM-yyyy hh:mm:ss a',
@@ -212,7 +211,10 @@ class ZatcaQrHelper {
 
     for (final format in fallbackFormats) {
       try {
-        return DateFormat(format).parse(raw);
+        final parsed = DateFormat(format).parseStrict(raw);
+        final normalized = DateFormat('yyyy-MM-dd HH:mm:ss').format(parsed);
+        final fallbackUtc = DateHelper.configuredDateTimeToUtcIso(normalized);
+        if (fallbackUtc != null) return DateTime.tryParse(fallbackUtc);
       } catch (_) {}
     }
 
