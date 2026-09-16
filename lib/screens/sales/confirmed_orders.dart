@@ -71,223 +71,19 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                         child: GridView.builder(
                           gridDelegate:
                               const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 360,
-                            mainAxisExtent: 190,
-                            crossAxisSpacing: 10,
-                            mainAxisSpacing: 10,
+                            maxCrossAxisExtent: 390,
+                            mainAxisExtent: 238,
+                            crossAxisSpacing: 14,
+                            mainAxisSpacing: 14,
                           ),
                           itemCount: attentionOrders.length,
                           itemBuilder: (context, index) {
                             final order = attentionOrders[index];
                             final syncRecord = saleSync.recordFor(order.id);
-                            String formattedDate =
-                                _formatDateTime(order.createdAt);
-                            String formattedTime = _formatTime(order.createdAt);
-
-                            return GestureDetector(
-                              onTap: () {
-                                _showOrderDetailsModal(context, order);
-                              },
-                              child: BuildBoxShadowContainer(
-                                circleRadius: 8,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12.0),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              '${'sales.order_number_short'.tr}${order.orderNumber}',
-                                              style: buildCustomStyle(
-                                                FontWeightManager.bold,
-                                                FontSize.s14,
-                                                0.21,
-                                                ColorManager.kPrimaryColor,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              IconButton(
-                                                icon: const Icon(Icons.print,
-                                                    size: 18),
-                                                padding: EdgeInsets.zero,
-                                                constraints:
-                                                    const BoxConstraints(),
-                                                onPressed: () =>
-                                                    _printOrder(order),
-                                                color:
-                                                    ColorManager.kPrimaryColor,
-                                              ),
-                                              if (syncRecord?.state ==
-                                                  LocalSaleSyncState
-                                                      .needsReview) ...[
-                                                const SizedBox(width: 8),
-                                                IconButton(
-                                                  icon: const Icon(Icons.replay,
-                                                      size: 18),
-                                                  tooltip:
-                                                      'Retry after backend check',
-                                                  padding: EdgeInsets.zero,
-                                                  constraints:
-                                                      const BoxConstraints(),
-                                                  onPressed: () =>
-                                                      _confirmAndRetry(
-                                                    context,
-                                                    order,
-                                                  ),
-                                                  color:
-                                                      const Color(0xFFB45309),
-                                                ),
-                                              ],
-                                              const SizedBox(width: 8),
-                                              IconButton(
-                                                icon: const Icon(
-                                                    Icons.delete_outline,
-                                                    size: 18),
-                                                padding: EdgeInsets.zero,
-                                                constraints:
-                                                    const BoxConstraints(),
-                                                onPressed: syncRecord != null &&
-                                                        syncRecord.state !=
-                                                            LocalSaleSyncState
-                                                                .synced
-                                                    ? null
-                                                    : () =>
-                                                        _showDeleteConfirmationDialog(
-                                                            context, order),
-                                                color: ColorManager.kButtonRed,
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 5),
-                                      _buildSyncBadge(syncRecord),
-                                      const SizedBox(height: 5),
-                                      Row(
-                                        children: [
-                                          Text(
-                                            formattedDate,
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.21,
-                                              Colors.grey,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            formattedTime,
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.21,
-                                              Colors.grey,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      // Display Delivery Date (optional)
-                                      if (order.deliveryDate != null &&
-                                          order.deliveryDate!.isNotEmpty) ...[
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          '${'confirmed_orders.delivery_date_prefix'.tr}${DateHelper.formatToISODateOnlyFromISO(order.deliveryDate!)}',
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s10,
-                                            0.21,
-                                            Colors.grey.shade700,
-                                          ),
-                                        ),
-                                      ],
-                                      // Display Delivery Time (optional)
-                                      if (order.deliveryTime != null &&
-                                          order.deliveryTime!.isNotEmpty) ...[
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          '${'confirmed_orders.delivery_time_prefix'.tr}${order.deliveryTime!}',
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s10,
-                                            0.21,
-                                            Colors.grey.shade700,
-                                          ),
-                                        ),
-                                      ],
-                                      const Spacer(),
-                                      // Show discount info if any discounts applied
-                                      if ((order.flatDiscount != null &&
-                                              order.flatDiscount! > 0) ||
-                                          (order.percentageDiscount != null &&
-                                              order.percentageDiscount! > 0) ||
-                                          (order.couponId != null &&
-                                              order.couponId!.isNotEmpty)) ...[
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          children: [
-                                            const Icon(Icons.local_offer,
-                                                size: 12, color: Colors.orange),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              'confirmed_orders.discount_applied'
-                                                  .tr,
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s10,
-                                                0.21,
-                                                Colors.orange,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            '${'confirmed_orders.items_prefix'.tr}${order.items.length}',
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s12,
-                                              0.21,
-                                              Colors.grey,
-                                            ),
-                                          ),
-                                          Consumer<AppSettingsProvider>(
-                                            builder: (context,
-                                                appSettingsProvider, child) {
-                                              final currency =
-                                                  appSettingsProvider
-                                                          .appSettings
-                                                          ?.currency ??
-                                                      'INR';
-                                              return Text(
-                                                '$currency${order.total.toStringAsFixed(2)}',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 14,
-                                                  color: ColorManager
-                                                      .kPrimaryColor,
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
+                            return _buildAttentionCard(
+                              context: context,
+                              order: order,
+                              syncRecord: syncRecord,
                             );
                           },
                         ),
@@ -298,6 +94,157 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAttentionCard({
+    required BuildContext context,
+    required SavedOrder order,
+    required LocalSaleSyncRecord? syncRecord,
+  }) {
+    final isRetryable = syncRecord?.state == LocalSaleSyncState.needsReview;
+    final currency = Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.currency ??
+        'INR';
+    final guidance = switch (syncRecord?.state) {
+      LocalSaleSyncState.needsReview =>
+        'Check Sales first. Retry only when this order is not there.',
+      LocalSaleSyncState.queued =>
+        'Saved safely on this device. The first server attempt is waiting.',
+      LocalSaleSyncState.sending =>
+        'Saved safely on this device. Waiting for the server response.',
+      LocalSaleSyncState.rejected =>
+        'The server rejected this sale. Open details before taking action.',
+      _ => 'This local sale needs your attention.',
+    };
+
+    return Semantics(
+      button: true,
+      label: 'Review sale ${order.orderNumber}',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => _showOrderDetailsModal(context, order),
+          child: Ink(
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFDFC),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFF4D8A8)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x120F172A),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Order #${order.orderNumber}',
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF0F3D75),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.print_outlined, size: 19),
+                        tooltip: 'Print receipt',
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () => _printOrder(order),
+                        color: ColorManager.kPrimaryColor,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  _buildSyncBadge(syncRecord),
+                  const SizedBox(height: 10),
+                  Text(
+                    guidance,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF6B7280),
+                      fontSize: 12,
+                      height: 1.35,
+                    ),
+                  ),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      const Icon(Icons.schedule_outlined,
+                          size: 14, color: Color(0xFF6B7280)),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          '${_formatDateTime(order.createdAt)} · ${_formatTime(order.createdAt)}',
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF6B7280),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '$currency${order.total.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: ColorManager.kPrimaryColor,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 38,
+                    child: isRetryable
+                        ? FilledButton.icon(
+                            onPressed: () => _confirmAndRetry(context, order),
+                            icon: const Icon(Icons.replay, size: 17),
+                            label: const Text('Review & retry'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFFB45309),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(9),
+                              ),
+                            ),
+                          )
+                        : OutlinedButton.icon(
+                            onPressed: () =>
+                                _showOrderDetailsModal(context, order),
+                            icon:
+                                const Icon(Icons.visibility_outlined, size: 17),
+                            label: const Text('View details'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF334155),
+                              side: const BorderSide(color: Color(0xFFCBD5E1)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(9),
+                              ),
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -327,11 +274,56 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Retry saved sale?'),
-        content: Text(
-          'Retry ${order.orderNumber} only if you checked the backend Sales '
-          'list and confirmed that this order was not created. Retrying an '
-          'existing order can create a duplicate sale.',
+        constraints: const BoxConstraints(maxWidth: 560),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+        contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Color(0xFFB45309)),
+            SizedBox(width: 10),
+            Text('Retry this saved sale?'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Order #${order.orderNumber} will be sent to the server one more time.',
+              style: const TextStyle(
+                color: Color(0xFF334155),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7E8),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFF5D49B)),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, size: 18, color: Color(0xFF9A5B07)),
+                  SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      'First check the backend Sales list. Retry only when this order is not there; otherwise a duplicate sale can be created.',
+                      style: TextStyle(
+                        color: Color(0xFF7C4A03),
+                        fontSize: 13,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -341,6 +333,11 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
             child: const Text('I verified — Retry'),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFB45309),
+              foregroundColor: Colors.white,
+              minimumSize: const Size(150, 44),
+            ),
           ),
         ],
       ),
@@ -423,37 +420,72 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 14),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Text(
-              'Sync Attention',
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s20,
-                0.30,
-                ColorManager.textColor,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Sync attention',
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s20,
+                    0.30,
+                    ColorManager.textColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Review saved sales that did not receive a verified server response.',
+                  style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 20),
           Consumer<LocalSaleSyncService>(
-            builder: (context, sync, _) => Flexible(
-              child: Text(
-                sync.unresolvedCount == 0
-                    ? 'All recorded sales are synced'
-                    : '${sync.unresolvedCount} sale(s) need sync attention',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.end,
-                style: TextStyle(
+            builder: (context, sync, _) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                color: sync.unresolvedCount == 0
+                    ? const Color(0xFFEAF7EF)
+                    : const Color(0xFFFFF3DE),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
                   color: sync.unresolvedCount == 0
-                      ? const Color(0xFF16764A)
-                      : const Color(0xFF936014),
-                  fontWeight: FontWeight.w600,
+                      ? const Color(0xFFB7E4C7)
+                      : const Color(0xFFF5D49B),
                 ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    sync.unresolvedCount == 0
+                        ? Icons.cloud_done_outlined
+                        : Icons.warning_amber_rounded,
+                    size: 17,
+                    color: sync.unresolvedCount == 0
+                        ? const Color(0xFF16764A)
+                        : const Color(0xFF9A5B07),
+                  ),
+                  const SizedBox(width: 7),
+                  Text(
+                    sync.unresolvedCount == 0
+                        ? 'No sales need review'
+                        : '${sync.unresolvedCount} sale${sync.unresolvedCount == 1 ? '' : 's'} need review',
+                    style: TextStyle(
+                      color: sync.unresolvedCount == 0
+                          ? const Color(0xFF16764A)
+                          : const Color(0xFF9A5B07),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
