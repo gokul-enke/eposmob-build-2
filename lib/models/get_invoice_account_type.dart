@@ -25,14 +25,25 @@ class GetInvoiceAccountTypesModel {
       GetInvoiceAccountTypesModel(
         status: json["status"],
         message: json["message"],
-        getInvoiceAccountTypesModelData: Map.from(json["data"]!)
-            .map((k, v) => MapEntry<String, String>(k, v)),
+        getInvoiceAccountTypesModelData: _stringMap(json["data"]),
       );
+
+  static Map<String, String> _stringMap(dynamic raw) {
+    if (raw is! Map) return <String, String>{};
+
+    final result = <String, String>{};
+    raw.forEach((key, value) {
+      if (value == null) return;
+      result[key.toString()] = value.toString();
+    });
+    return result;
+  }
 
   Map<String, dynamic> toJson() => {
         "status": status,
         "message": message,
-        "data": Map.from(getInvoiceAccountTypesModelData!)
-            .map((k, v) => MapEntry<String, dynamic>(k, v)),
+        "data": Map<String, dynamic>.from(
+          getInvoiceAccountTypesModelData ?? const <String, String>{},
+        ),
       };
 }
