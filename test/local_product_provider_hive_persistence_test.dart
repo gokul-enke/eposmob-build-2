@@ -473,6 +473,9 @@ void main() {
       provider.addToCart(product: provider.getProductById(1)!, quantity: 1);
 
       final sale = provider.saveCurrentCartAsConfirmedOrder(
+        clientSaleId: '01995643-7f83-7a21-9a4b-b8c26d9c7b61',
+        receiptNumber: '2-03-260916-0001',
+        issuedAt: '2026-09-16T04:14:00.000Z',
         address: 'Main road',
         addressId: 81,
         pincode: '682001',
@@ -485,6 +488,9 @@ void main() {
       await provider.flushPersistence();
 
       final row = confirmedBox().get(sale.id)!;
+      expect(sale.id, '01995643-7f83-7a21-9a4b-b8c26d9c7b61');
+      expect(row.orderNumber, '2-03-260916-0001');
+      expect(row.createdAt, '2026-09-16T04:14:00.000Z');
       expect(row.addressId, 81);
       expect(row.pincode, '682001');
       expect(row.quotationId, 91);

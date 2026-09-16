@@ -45,6 +45,7 @@ class LocalFirstSaleCoordinator {
     required String sourceCartSessionId,
     required OrderSubmissionPayload payload,
     required String accessToken,
+    bool attemptServerSync = true,
     String? tenantKey,
     Uri? endpoint,
     required FutureOr<LocalSaleIdentity<T>> Function() persistLocalSale,
@@ -99,13 +100,19 @@ class LocalFirstSaleCoordinator {
       }
     }
 
-    final backgroundSync = outbox
-        .submitOnce(
-      localOrderId: identity.localOrderId,
-      accessToken: accessToken,
-      tenantKey: tenantKey,
-      endpoint: endpoint,
-    )
+    final backgroundSync = (attemptServerSync
+            ? outbox.submitOnce(
+                localOrderId: identity.localOrderId,
+                accessToken: accessToken,
+                tenantKey: tenantKey,
+                endpoint: endpoint,
+              )
+            : outbox.markNeedsReviewBeforeSend(
+                identity.localOrderId,
+                message: 'The sale is saved locally and was not sent because '
+                    'Offline Mode is enabled. Verify it is absent from Sales '
+                    'before retrying.',
+              ))
         .then((record) async {
       if (onSyncFinished != null) await onSyncFinished(record);
       return record;

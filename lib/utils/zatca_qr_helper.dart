@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 
 /// ZATCA Phase 1 QR Code Helper
@@ -44,7 +45,9 @@ class ZatcaQrHelper {
 
       // Format amounts to 2 decimal places
       final String totalStr = totalWithVat.toStringAsFixed(2);
-      final String vatStr = vatAmount.toStringAsFixed(2);
+      // Match the backend invoice calculation: discard digits after the
+      // second decimal instead of rounding the VAT value.
+      final String vatStr = AmountHelper.formatTruncatedAmount(vatAmount);
 
       // Build TLV data
       final List<int> tlvData = [];

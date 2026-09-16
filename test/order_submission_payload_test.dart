@@ -8,6 +8,11 @@ void main() {
         {'product_id': 1, 'quantity': 2, 'comment': 'no onion'},
         {'product_id': 2, 'quantity': 1, 'stock_id': 20},
       ],
+      clientSaleId: '01995643-7f83-7a21-9a4b-b8c26d9c7b61',
+      receiptNumber: '6-03-260916-0001',
+      issuedAt: '2026-09-16T04:14:00.000Z',
+      posDeviceId: 'device-1',
+      counterNumber: 3,
       customerId: 31,
       customerPhone: '9999999999',
       transactionNumber: 'TX-9',
@@ -43,6 +48,11 @@ void main() {
         {'product_id': 2, 'quantity': 1, 'stock_id': 20},
         {'product_id': 1, 'quantity': 2, 'comment': 'no onion'},
       ],
+      'client_sale_id': '01995643-7f83-7a21-9a4b-b8c26d9c7b61',
+      'receipt_number': '6-03-260916-0001',
+      'issued_at': '2026-09-16T04:14:00.000Z',
+      'pos_device_id': 'device-1',
+      'counter_number': 3,
       'phone': '9999999999',
       'customer_id': 31,
       'transaction_number': 'TX-9',
@@ -131,11 +141,16 @@ void main() {
     expect(body['balance'], '10.0');
   });
 
-  test('existing restaurant order uses the unchanged update API contract', () {
+  test('existing restaurant order includes its stable receipt identity', () {
     final body = OrderSubmissionPayload(
       items: const [
         {'product_id': 1, 'quantity': 2}
       ],
+      clientSaleId: 'client-existing',
+      receiptNumber: '6-04-260916-0001',
+      issuedAt: '2026-09-16T05:00:00.000Z',
+      posDeviceId: 'device-2',
+      counterNumber: 4,
       customerId: 31,
       customerPhone: '9999999999',
       transactionNumber: 'TX-10',
@@ -163,6 +178,11 @@ void main() {
     ).toUpdateApiJson();
 
     expect(body, {
+      'client_sale_id': 'client-existing',
+      'receipt_number': '6-04-260916-0001',
+      'issued_at': '2026-09-16T05:00:00.000Z',
+      'pos_device_id': 'device-2',
+      'counter_number': 4,
       'phone': '9999999999',
       'transaction_number': 'TX-10',
       'payment_method': ['CASH', 'CARD'],

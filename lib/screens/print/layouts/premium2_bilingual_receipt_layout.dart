@@ -566,10 +566,7 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
     if (showInvoiceNumber) {
       // Extract first significant number sequence (strip leading zeros and non-numeric prefixes)
       // For "ORD-000430", this extracts "430"
-      final regex = RegExp(r'[1-9]\d*');
-      final match = regex.firstMatch(params.orderNumber);
-      final strippedNumber =
-          match != null ? match.group(0)! : params.orderNumber;
+      final strippedNumber = params.printableOrderNumberComponent;
 
       // Prefer the language-specific option label. The document-level prefix
       // remains the fallback for older configurations that expose only
@@ -3449,10 +3446,7 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
 
     if (showFooterInvoice) {
       // Extract number sequence (e.g., "1149" from "INV-1149")
-      final regex = RegExp(r'[1-9]\d*');
-      final match = regex.firstMatch(params.orderNumber);
-      final strippedNumber =
-          match != null ? match.group(0)! : params.orderNumber;
+      final strippedNumber = params.printableOrderNumberComponent;
 
       // Determine prefix and style based on which setting is active
       String prefixKey =

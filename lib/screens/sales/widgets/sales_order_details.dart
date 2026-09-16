@@ -103,7 +103,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                   orderDetailsModelData?.priceSummary ?? cart?.priceSummary;
               customerDetails = orderDetailsModelData?.customerDetails;
               cartItems = cart?.cartItems ?? [];
-              orderNumber = orderDetailsModelData?.orderNumber ?? "";
+              orderNumber = orderDetailsModelData?.customerReceiptNumber ?? "";
               tokenNumber = orderDetailsModelData?.tokenNumber;
 
               // Debug: Check payments data
@@ -206,6 +206,23 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                                 : buildCustomStyle(FontWeightManager.semiBold,
                                     FontSize.s20, 0.30, ColorManager.textColor),
                           ),
+                          if (orderDetailsModelData?.receiptNumber
+                                  ?.trim()
+                                  .isNotEmpty ==
+                              true)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: SelectableText(
+                                '${'sales.backend_order_number'.tr}: '
+                                '${orderDetailsModelData?.orderNumber ?? '-'}',
+                                style: buildCustomStyle(
+                                  FontWeightManager.regular,
+                                  FontSize.s11,
+                                  0.16,
+                                  Colors.black54,
+                                ),
+                              ),
+                            ),
                           // Delivery Date/Time if present
                           if ((orderDetailsModelData?.orderProps != null) ||
                               orderDetailsModelData?.deliveryDate != null ||
@@ -368,376 +385,386 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
     final isMobile = ResponsiveWidget.isMobile(context);
 
     return LayoutBuilder(
-        builder: (context, constraints) {
-          final buttonWidth =
-              isMobile ? (constraints.maxWidth - 10) / 2 : 168.0;
-          final buttonHeight = isMobile ? 40.0 : 40.0;
-          final buttonFontSize = isMobile ? FontSize.s11 : FontSize.s12;
+      builder: (context, constraints) {
+        final buttonWidth = isMobile ? (constraints.maxWidth - 10) / 2 : 168.0;
+        final buttonHeight = isMobile ? 40.0 : 40.0;
+        final buttonFontSize = isMobile ? FontSize.s11 : FontSize.s12;
 
-          return Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            alignment: WrapAlignment.start,
-            children: [
-              CustomRoundButton(
-                title: 'sales_order_details.btn_print'.tr,
-            icon: const Icon(Icons.print_outlined,
-                size: 16, color: ColorManager.kPrimaryColor),
-            boxColor: Colors.white,
-            borderColor: ColorManager.kPrimaryColor,
-            textColor: ColorManager.kPrimaryColor,
-            fct: () async {
-              if (orderDetailsModelData?.cart == null ||
-                  cartItems == null ||
-                  cartItems!.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('sales_order_details.msg_no_print_data'.tr),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-                return;
-              }
-
-              String? formattedTotal = orderDetailsModelData
-                      ?.cart?.priceSummary?.netPayable
-                      ?.toString() ??
-                  orderDetailsModelData?.cart?.priceSummary?.netTotal
-                      ?.toString() ??
-                  "0.00";
-              String? savedTotal = orderDetailsModelData
-                      ?.cart?.priceSummary?.savedTotal
-                      ?.toString() ??
-                  "0.00";
-              String? discountAmount = orderDetailsModelData
-                      ?.cart?.priceSummary?.discount
-                      ?.toString() ??
-                  "0.00";
-              String storeName =
-                  orderDetailsModelData?.cart?.storeName ?? 'sales_order_details.label_store'.tr;
-              String orderDate = orderDetailsModelData?.orderDate ?? "";
-
-              String? customerName = customerDetails?.name;
-              String? customerPhone = customerDetails?.phone;
-              String? customerEmail = customerDetails?.email;
-              String? customerAddress =
-                  orderDetailsModelData?.getCustomerAddressForDisplay();
-              String? customerAlternatePhone = customerDetails?.alternatePhone;
-              String? customerType = customerDetails?.customerType;
-              String? paymentMethod =
-                  orderDetailsModelData?.paymentDetails?.paymentMethod;
-              String? customerVatNumber =
-                  orderDetailsModelData?.kycInfo?.vatNumber;
-              String? customerCrNumber =
-                  orderDetailsModelData?.kycInfo?.crNumber;
-              String? deliveryMethod =
-                  orderDetailsModelData?.deliveryMethodName;
-
-              String? orderComment;
-              if (orderDetailsModelData?.orderProps != null) {
-                try {
-                  final commentProp =
-                      orderDetailsModelData!.orderProps!.firstWhere(
-                    (prop) => prop.propsCode == "COMMENT",
-                    orElse: () => OrderDetailsModelDataOrderProp(),
-                  );
-                  orderComment = commentProp.propsValue;
-                } catch (e) {
-                  debugPrint("Error extracting order comment: $e");
-                }
-              }
-
-              // Calculate Paid Amount from payments map
-              double paidAmount = 0.0;
-              if (orderDetailsModelData?.payments != null) {
-                orderDetailsModelData!.payments!.forEach((key, value) {
-                  paidAmount += double.tryParse(value.toString()) ?? 0.0;
-                });
-              }
-
-              // Calculate Balance from orderProps
-              double? customerCurrentBalance;
-              if (orderDetailsModelData?.orderProps != null) {
-                try {
-                  final balanceProp =
-                      orderDetailsModelData!.orderProps!.firstWhere(
-                    (prop) => prop.propsCode == "BALANCE",
-                    orElse: () => OrderDetailsModelDataOrderProp(),
-                  );
-                  if (balanceProp.propsValue != null) {
-                    customerCurrentBalance =
-                        double.tryParse(balanceProp.propsValue.toString());
-                  }
-                } catch (e) {
-                  debugPrint("Error extracting balance: $e");
-                }
-              }
-
-              // Try auto-print with default printer first
-              final _hasReturns = orderDetailsModelData?.orderReturns != null &&
-                  (orderDetailsModelData
-                          ?.orderReturns?.returnItems?.isNotEmpty ??
-                      false);
-              final autoPrintSuccess = await PrintPage.autoPrint(
-                context,
-                storeName: storeName,
-                cartItems: cartItems ?? [],
-                formattedTotal: formattedTotal,
-                savedTotal: savedTotal,
-                discountAmount: discountAmount,
-                orderDate: orderDate,
-                orderNumber: orderNumber,
-                tokenNumber: tokenNumber,
-                customerName: customerName,
-                customerPhone: customerPhone,
-                customerEmail: customerEmail,
-                customerAddress: customerAddress,
-                customerAlternatePhone: customerAlternatePhone,
-                paymentMethod: paymentMethod,
-                paymentBreakdown: orderDetailsModelData?.payments,
-                customerVatNumber: customerVatNumber,
-                customerCrNumber: customerCrNumber,
-                customerType: customerType,
-                orderComment: orderComment,
-                deliveryMethod: deliveryMethod,
-                orderReturns: orderDetailsModelData?.orderReturns,
-                paidAmount: paidAmount > 0 ? paidAmount : null,
-                customerCurrentBalance: customerCurrentBalance,
-                isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
-                netExcTax: orderDetailsModelData?.cart?.priceSummary?.netExcTax
-                    ?.toString(),
-                documentConfigType:
-                    _hasReturns ? 'Sales and Return Bill' : 'Bill',
-                apiTotalTax:
-                    orderDetailsModelData?.priceSummary?.totalTax?.toDouble(),
-              );
-
-              // Only show print page if auto-print failed
-              if (!autoPrintSuccess && mounted) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PrintPage(
-                      storeName: storeName,
-                      cartItems: cartItems ?? [],
-                      formattedTotal: formattedTotal,
-                      savedTotal: savedTotal,
-                      discountAmount: discountAmount,
-                      orderDate: orderDate,
-                      orderNumber: orderNumber,
-                      tokenNumber: tokenNumber,
-                      customerName: customerName,
-                      customerPhone: customerPhone,
-                      customerEmail: customerEmail,
-                      customerAddress: customerAddress,
-                      customerAlternatePhone: customerAlternatePhone,
-                      paymentMethod: paymentMethod,
-                      paymentBreakdown: orderDetailsModelData?.payments,
-                      customerVatNumber: customerVatNumber,
-                      customerCrNumber: customerCrNumber,
-                      customerType: customerType,
-                      orderComment: orderComment,
-                      deliveryMethod: deliveryMethod,
-                      orderReturns: orderDetailsModelData?.orderReturns,
-                      paidAmount: paidAmount > 0 ? paidAmount : null,
-                      customerCurrentBalance: customerCurrentBalance,
-                      isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
-                      netExcTax: orderDetailsModelData
-                          ?.cart?.priceSummary?.netExcTax
-                          ?.toString(),
-                      documentConfigType:
-                          _hasReturns ? 'Sales and Return Bill' : 'Bill',
-                      apiTotalTax: orderDetailsModelData?.priceSummary?.totalTax
-                          ?.toDouble(),
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          alignment: WrapAlignment.start,
+          children: [
+            CustomRoundButton(
+              title: 'sales_order_details.btn_print'.tr,
+              icon: const Icon(Icons.print_outlined,
+                  size: 16, color: ColorManager.kPrimaryColor),
+              boxColor: Colors.white,
+              borderColor: ColorManager.kPrimaryColor,
+              textColor: ColorManager.kPrimaryColor,
+              fct: () async {
+                if (orderDetailsModelData?.cart == null ||
+                    cartItems == null ||
+                    cartItems!.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('sales_order_details.msg_no_print_data'.tr),
+                      backgroundColor: Colors.red,
                     ),
-                  ),
-                );
-              }
-                },
-                height: buttonHeight,
-                width: buttonWidth,
-                fontSize: buttonFontSize,
-              ),
-              CustomRoundButton(
-                title: 'sales_order_details.btn_share'.tr,
-            icon: const Icon(Icons.share_outlined, size: 16, color: Colors.blue),
-            boxColor: Colors.white,
-            borderColor: Colors.blue,
-            textColor: Colors.blue,
-            fct: () async {
-              await _showShareOptions();
-                },
-                height: buttonHeight,
-                width: buttonWidth,
-                fontSize: buttonFontSize,
-              ),
-              CustomRoundButton(
-                title: 'sales_order_details.btn_return'.tr,
-            icon: const Icon(Icons.assignment_return_outlined,
-                size: 16, color: Color(0xFFE53E3E)),
-            boxColor: Colors.white,
-            borderColor: const Color(0xFFE53E3E),
-            textColor: const Color(0xFFE53E3E),
-            fct: () async {
-              final orderNo = orderDetailsModelData?.orderNumber;
-              if (orderNo == null || orderNo.isEmpty) {
-                showScaffoldError(
-                  context: context,
-                  message: 'sales_order_details.msg_no_order_number'.tr,
-                );
-                return;
-              }
-
-              try {
-                Provider.of<SalesProvider>(context, listen: false)
-                    .setOrderNumber(orderNo);
-
-                final ordersId = orderDetailsModelData?.ordersId;
-                if (ordersId != null) {
-                  Provider.of<SalesProvider>(context, listen: false)
-                      .setOrderId(ordersId.toString());
+                  );
+                  return;
                 }
 
-                final cartId = cart?.id;
-                if (cartId != null) {
-                  Provider.of<CartProvider>(context, listen: false)
-                      .setCartIDForOrder(cartId);
+                String? formattedTotal = orderDetailsModelData
+                        ?.cart?.priceSummary?.netPayable
+                        ?.toString() ??
+                    orderDetailsModelData?.cart?.priceSummary?.netTotal
+                        ?.toString() ??
+                    "0.00";
+                String? savedTotal = orderDetailsModelData
+                        ?.cart?.priceSummary?.savedTotal
+                        ?.toString() ??
+                    "0.00";
+                String? discountAmount = orderDetailsModelData
+                        ?.cart?.priceSummary?.discount
+                        ?.toString() ??
+                    "0.00";
+                String storeName = orderDetailsModelData?.cart?.storeName ??
+                    'sales_order_details.label_store'.tr;
+                String orderDate = orderDetailsModelData?.orderDate ?? "";
+
+                String? customerName = customerDetails?.name;
+                String? customerPhone = customerDetails?.phone;
+                String? customerEmail = customerDetails?.email;
+                String? customerAddress =
+                    orderDetailsModelData?.getCustomerAddressForDisplay();
+                String? customerAlternatePhone =
+                    customerDetails?.alternatePhone;
+                String? customerType = customerDetails?.customerType;
+                String? paymentMethod =
+                    orderDetailsModelData?.paymentDetails?.paymentMethod;
+                String? customerVatNumber =
+                    orderDetailsModelData?.kycInfo?.vatNumber;
+                String? customerCrNumber =
+                    orderDetailsModelData?.kycInfo?.crNumber;
+                String? deliveryMethod =
+                    orderDetailsModelData?.deliveryMethodName;
+
+                String? orderComment;
+                if (orderDetailsModelData?.orderProps != null) {
+                  try {
+                    final commentProp =
+                        orderDetailsModelData!.orderProps!.firstWhere(
+                      (prop) => prop.propsCode == "COMMENT",
+                      orElse: () => OrderDetailsModelDataOrderProp(),
+                    );
+                    orderComment = commentProp.propsValue;
+                  } catch (e) {
+                    debugPrint("Error extracting order comment: $e");
+                  }
                 }
 
-                Get.find<SideBarController>().index.value = 49;
+                // Calculate Paid Amount from payments map
+                double paidAmount = 0.0;
+                if (orderDetailsModelData?.payments != null) {
+                  orderDetailsModelData!.payments!.forEach((key, value) {
+                    paidAmount += double.tryParse(value.toString()) ?? 0.0;
+                  });
+                }
 
-                if (context.mounted) {
-                  showScaffold(
-                    context: context,
-                    message: '${'sales_order_details.msg_preparing_return'.tr} #$orderNo',
+                // Calculate Balance from orderProps
+                double? customerCurrentBalance;
+                if (orderDetailsModelData?.orderProps != null) {
+                  try {
+                    final balanceProp =
+                        orderDetailsModelData!.orderProps!.firstWhere(
+                      (prop) => prop.propsCode == "BALANCE",
+                      orElse: () => OrderDetailsModelDataOrderProp(),
+                    );
+                    if (balanceProp.propsValue != null) {
+                      customerCurrentBalance =
+                          double.tryParse(balanceProp.propsValue.toString());
+                    }
+                  } catch (e) {
+                    debugPrint("Error extracting balance: $e");
+                  }
+                }
+
+                // Try auto-print with default printer first
+                final _hasReturns =
+                    orderDetailsModelData?.orderReturns != null &&
+                        (orderDetailsModelData
+                                ?.orderReturns?.returnItems?.isNotEmpty ??
+                            false);
+                final autoPrintSuccess = await PrintPage.autoPrint(
+                  context,
+                  storeName: storeName,
+                  cartItems: cartItems ?? [],
+                  formattedTotal: formattedTotal,
+                  savedTotal: savedTotal,
+                  discountAmount: discountAmount,
+                  orderDate: orderDate,
+                  orderNumber: orderNumber,
+                  tokenNumber: tokenNumber,
+                  customerName: customerName,
+                  customerPhone: customerPhone,
+                  customerEmail: customerEmail,
+                  customerAddress: customerAddress,
+                  customerAlternatePhone: customerAlternatePhone,
+                  paymentMethod: paymentMethod,
+                  paymentBreakdown: orderDetailsModelData?.payments,
+                  customerVatNumber: customerVatNumber,
+                  customerCrNumber: customerCrNumber,
+                  customerType: customerType,
+                  orderComment: orderComment,
+                  deliveryMethod: deliveryMethod,
+                  orderReturns: orderDetailsModelData?.orderReturns,
+                  paidAmount: paidAmount > 0 ? paidAmount : null,
+                  customerCurrentBalance: customerCurrentBalance,
+                  isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
+                  netExcTax: orderDetailsModelData
+                      ?.cart?.priceSummary?.netExcTax
+                      ?.toString(),
+                  documentConfigType:
+                      _hasReturns ? 'Sales and Return Bill' : 'Bill',
+                  apiTotalTax:
+                      orderDetailsModelData?.priceSummary?.totalTax?.toDouble(),
+                );
+
+                // Only show print page if auto-print failed
+                if (!autoPrintSuccess && mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PrintPage(
+                        storeName: storeName,
+                        cartItems: cartItems ?? [],
+                        formattedTotal: formattedTotal,
+                        savedTotal: savedTotal,
+                        discountAmount: discountAmount,
+                        orderDate: orderDate,
+                        orderNumber: orderNumber,
+                        tokenNumber: tokenNumber,
+                        customerName: customerName,
+                        customerPhone: customerPhone,
+                        customerEmail: customerEmail,
+                        customerAddress: customerAddress,
+                        customerAlternatePhone: customerAlternatePhone,
+                        paymentMethod: paymentMethod,
+                        paymentBreakdown: orderDetailsModelData?.payments,
+                        customerVatNumber: customerVatNumber,
+                        customerCrNumber: customerCrNumber,
+                        customerType: customerType,
+                        orderComment: orderComment,
+                        deliveryMethod: deliveryMethod,
+                        orderReturns: orderDetailsModelData?.orderReturns,
+                        paidAmount: paidAmount > 0 ? paidAmount : null,
+                        customerCurrentBalance: customerCurrentBalance,
+                        isDefaultCustomer:
+                            _isDefaultCustomerPhone(customerPhone),
+                        netExcTax: orderDetailsModelData
+                            ?.cart?.priceSummary?.netExcTax
+                            ?.toString(),
+                        documentConfigType:
+                            _hasReturns ? 'Sales and Return Bill' : 'Bill',
+                        apiTotalTax: orderDetailsModelData
+                            ?.priceSummary?.totalTax
+                            ?.toDouble(),
+                      ),
+                    ),
                   );
                 }
-              } catch (e) {
-                debugPrint('Error preparing order return: $e');
-                if (context.mounted) {
+              },
+              height: buttonHeight,
+              width: buttonWidth,
+              fontSize: buttonFontSize,
+            ),
+            CustomRoundButton(
+              title: 'sales_order_details.btn_share'.tr,
+              icon: const Icon(Icons.share_outlined,
+                  size: 16, color: Colors.blue),
+              boxColor: Colors.white,
+              borderColor: Colors.blue,
+              textColor: Colors.blue,
+              fct: () async {
+                await _showShareOptions();
+              },
+              height: buttonHeight,
+              width: buttonWidth,
+              fontSize: buttonFontSize,
+            ),
+            CustomRoundButton(
+              title: 'sales_order_details.btn_return'.tr,
+              icon: const Icon(Icons.assignment_return_outlined,
+                  size: 16, color: Color(0xFFE53E3E)),
+              boxColor: Colors.white,
+              borderColor: const Color(0xFFE53E3E),
+              textColor: const Color(0xFFE53E3E),
+              fct: () async {
+                final orderNo = orderDetailsModelData?.orderNumber;
+                if (orderNo == null || orderNo.isEmpty) {
                   showScaffoldError(
                     context: context,
-                    message: 'sales_order_details.msg_error_return'.tr,
+                    message: 'sales_order_details.msg_no_order_number'.tr,
                   );
+                  return;
                 }
-              }
-                },
-                height: buttonHeight,
-                width: buttonWidth,
-                fontSize: buttonFontSize,
-              ),
-              CustomRoundButton(
-                title: 'sales_order_details.btn_order_status'.tr,
-            icon: const Icon(Icons.local_shipping_outlined,
-                size: 16, color: Color(0xFF6A1B9A)),
-            boxColor: Colors.white,
-            borderColor: const Color(0xFF6A1B9A),
-            textColor: const Color(0xFF6A1B9A),
-            fct: () {
-              showDialog(
-                context: context,
-                builder: (dialogCtx) => ChangeOrderStatusModal(
-                  currentStatus:
-                      orderDetailsModelData?.orderStatus ?? 'pending',
-                  orderTotal: priceSummary?.netPayable?.toString() ?? '0',
-                  onConfirm: ({
-                    required newStatus,
-                    refundAmount,
-                    paymentMethod,
-                    deliveryChargeRefundable,
-                    deliveryLogistics,
-                  }) async {
-                    try {
-                      final authModel =
-                          Provider.of<AuthModel>(context, listen: false);
-                      final salesProvider =
-                          Provider.of<SalesProvider>(context, listen: false);
-                      await salesProvider.changeOrderStatus(
-                        accessToken: authModel.token ?? '',
-                        orderId:
-                            orderDetailsModelData?.ordersId?.toString() ?? '',
-                        status: newStatus,
-                        refundAmount: refundAmount,
-                        paymentMethod: paymentMethod,
-                        deliveryChargeRefundable: deliveryChargeRefundable,
-                        deliveryLogistics: deliveryLogistics,
-                      );
-                      if (context.mounted) {
-                        showScaffold(
-                          context: context,
-                          message: '${'sales_order_details.msg_status_updated'.tr} $newStatus',
+
+                try {
+                  Provider.of<SalesProvider>(context, listen: false)
+                      .setOrderNumber(orderNo);
+
+                  final ordersId = orderDetailsModelData?.ordersId;
+                  if (ordersId != null) {
+                    Provider.of<SalesProvider>(context, listen: false)
+                        .setOrderId(ordersId.toString());
+                  }
+
+                  final cartId = cart?.id;
+                  if (cartId != null) {
+                    Provider.of<CartProvider>(context, listen: false)
+                        .setCartIDForOrder(cartId);
+                  }
+
+                  Get.find<SideBarController>().index.value = 49;
+
+                  if (context.mounted) {
+                    showScaffold(
+                      context: context,
+                      message:
+                          '${'sales_order_details.msg_preparing_return'.tr} #$orderNo',
+                    );
+                  }
+                } catch (e) {
+                  debugPrint('Error preparing order return: $e');
+                  if (context.mounted) {
+                    showScaffoldError(
+                      context: context,
+                      message: 'sales_order_details.msg_error_return'.tr,
+                    );
+                  }
+                }
+              },
+              height: buttonHeight,
+              width: buttonWidth,
+              fontSize: buttonFontSize,
+            ),
+            CustomRoundButton(
+              title: 'sales_order_details.btn_order_status'.tr,
+              icon: const Icon(Icons.local_shipping_outlined,
+                  size: 16, color: Color(0xFF6A1B9A)),
+              boxColor: Colors.white,
+              borderColor: const Color(0xFF6A1B9A),
+              textColor: const Color(0xFF6A1B9A),
+              fct: () {
+                showDialog(
+                  context: context,
+                  builder: (dialogCtx) => ChangeOrderStatusModal(
+                    currentStatus:
+                        orderDetailsModelData?.orderStatus ?? 'pending',
+                    orderTotal: priceSummary?.netPayable?.toString() ?? '0',
+                    onConfirm: ({
+                      required newStatus,
+                      refundAmount,
+                      paymentMethod,
+                      deliveryChargeRefundable,
+                      deliveryLogistics,
+                    }) async {
+                      try {
+                        final authModel =
+                            Provider.of<AuthModel>(context, listen: false);
+                        final salesProvider =
+                            Provider.of<SalesProvider>(context, listen: false);
+                        await salesProvider.changeOrderStatus(
+                          accessToken: authModel.token ?? '',
+                          orderId:
+                              orderDetailsModelData?.ordersId?.toString() ?? '',
+                          status: newStatus,
+                          refundAmount: refundAmount,
+                          paymentMethod: paymentMethod,
+                          deliveryChargeRefundable: deliveryChargeRefundable,
+                          deliveryLogistics: deliveryLogistics,
                         );
-                        getOrderDetails();
+                        if (context.mounted) {
+                          showScaffold(
+                            context: context,
+                            message:
+                                '${'sales_order_details.msg_status_updated'.tr} $newStatus',
+                          );
+                          getOrderDetails();
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          showScaffoldError(
+                            context: context,
+                            message:
+                                '${'sales_order_details.msg_failed_status'.tr} $e',
+                          );
+                        }
                       }
-                    } catch (e) {
-                      if (context.mounted) {
-                        showScaffoldError(
-                          context: context,
-                          message: '${'sales_order_details.msg_failed_status'.tr} $e',
+                    },
+                  ),
+                );
+              },
+              height: buttonHeight,
+              width: buttonWidth,
+              fontSize: buttonFontSize,
+            ),
+            CustomRoundButton(
+              title: 'sales_order_details.btn_payment_status'.tr,
+              icon: const Icon(Icons.payments_outlined,
+                  size: 16, color: Color(0xFF1E88E5)),
+              boxColor: Colors.white,
+              borderColor: const Color(0xFF1E88E5),
+              textColor: const Color(0xFF1E88E5),
+              fct: () {
+                showDialog(
+                  context: context,
+                  builder: (dialogCtx) => ChangePaymentStatusModal(
+                    currentPaymentStatus:
+                        orderDetailsModelData?.paymentStatus ?? 'unpaid',
+                    grandTotal: priceSummary?.netPayable?.toString() ?? '0',
+                    onConfirm: (newStatus, amount) async {
+                      try {
+                        final authModel =
+                            Provider.of<AuthModel>(context, listen: false);
+                        final salesProvider =
+                            Provider.of<SalesProvider>(context, listen: false);
+                        await salesProvider.changePaymentStatus(
+                          accessToken: authModel.token ?? '',
+                          orderId:
+                              orderDetailsModelData?.ordersId?.toString() ?? '',
+                          status: newStatus,
+                          amount: amount,
                         );
+                        if (context.mounted) {
+                          showScaffold(
+                            context: context,
+                            message:
+                                '${'sales_order_details.msg_payment_updated'.tr} $newStatus',
+                          );
+                          getOrderDetails();
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          showScaffoldError(
+                            context: context,
+                            message:
+                                '${'sales_order_details.msg_failed_payment'.tr} $e',
+                          );
+                        }
                       }
-                    }
-                  },
-                ),
-              );
-                },
-                height: buttonHeight,
-                width: buttonWidth,
-                fontSize: buttonFontSize,
-              ),
-              CustomRoundButton(
-                title: 'sales_order_details.btn_payment_status'.tr,
-            icon: const Icon(Icons.payments_outlined,
-                size: 16, color: Color(0xFF1E88E5)),
-            boxColor: Colors.white,
-            borderColor: const Color(0xFF1E88E5),
-            textColor: const Color(0xFF1E88E5),
-            fct: () {
-              showDialog(
-                context: context,
-                builder: (dialogCtx) => ChangePaymentStatusModal(
-                  currentPaymentStatus:
-                      orderDetailsModelData?.paymentStatus ?? 'unpaid',
-                  grandTotal: priceSummary?.netPayable?.toString() ?? '0',
-                  onConfirm: (newStatus, amount) async {
-                    try {
-                      final authModel =
-                          Provider.of<AuthModel>(context, listen: false);
-                      final salesProvider =
-                          Provider.of<SalesProvider>(context, listen: false);
-                      await salesProvider.changePaymentStatus(
-                        accessToken: authModel.token ?? '',
-                        orderId:
-                            orderDetailsModelData?.ordersId?.toString() ?? '',
-                        status: newStatus,
-                        amount: amount,
-                      );
-                      if (context.mounted) {
-                        showScaffold(
-                          context: context,
-                          message: '${'sales_order_details.msg_payment_updated'.tr} $newStatus',
-                        );
-                        getOrderDetails();
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        showScaffoldError(
-                          context: context,
-                          message: '${'sales_order_details.msg_failed_payment'.tr} $e',
-                        );
-                      }
-                    }
-                  },
-                ),
-              );
-                },
-                height: buttonHeight,
-                width: buttonWidth,
-                fontSize: buttonFontSize,
-              ),
-            ],
-          );
-        },
+                    },
+                  ),
+                );
+              },
+              height: buttonHeight,
+              width: buttonWidth,
+              fontSize: buttonFontSize,
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -774,7 +801,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 ),
                 Text(
                   'sales_order_details.title_share_invoice'.tr,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
                 const Divider(height: 1),
@@ -991,7 +1019,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         );
 
         final params = ShareParams(
-          text: 'sales_order_details.msg_share_pdf_text'.trParams({'orderNumber': orderNumber}),
+          text: 'sales_order_details.msg_share_pdf_text'
+              .trParams({'orderNumber': orderNumber}),
           files: [enhancedXFile],
         );
 
@@ -1037,7 +1066,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
             children: [
               Text('${'sales_order_details.label_invoice'.tr} $orderNumber'),
               const SizedBox(height: 8),
-              Text('${'sales_order_details.label_file'.tr} ${pdfFile.path.split('/').last}'),
+              Text(
+                  '${'sales_order_details.label_file'.tr} ${pdfFile.path.split('/').last}'),
               const SizedBox(height: 16),
               Text(
                 'sales_order_details.label_choose_share'.tr,
@@ -1058,7 +1088,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                   if (context.mounted) {
                     showScaffold(
                       context: context,
-                      message: 'sales_order_details.msg_file_location_opened'.tr,
+                      message:
+                          'sales_order_details.msg_file_location_opened'.tr,
                     );
                   }
                 } catch (e) {
@@ -1127,12 +1158,14 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
       return;
     }
 
-    final message = 'sales_order_details.msg_email_body'.trParams({'invoiceUrl': invoiceUrl});
+    final message = 'sales_order_details.msg_email_body'
+        .trParams({'invoiceUrl': invoiceUrl});
     final uri = Uri(
       scheme: 'mailto',
       path: customerDetails?.email ?? '',
       queryParameters: <String, String>{
-        'subject': 'sales_order_details.msg_email_subject'.trParams({'orderNumber': orderNumber}),
+        'subject': 'sales_order_details.msg_email_subject'
+            .trParams({'orderNumber': orderNumber}),
         'body': message,
       },
     );
@@ -1196,7 +1229,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
       }
 
       final customerPhone = customerDetails!.phone!;
-      final customerName = customerDetails?.name ?? 'sales_order_details.label_default_customer'.tr;
+      final customerName = customerDetails?.name ??
+          'sales_order_details.label_default_customer'.tr;
       final totalAmount =
           orderDetailsModelData?.priceSummary?.netPayable?.toString() ??
               orderDetailsModelData?.priceSummary?.netTotal?.toString() ??
@@ -1218,7 +1252,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         if (success) {
           showScaffold(
             context: context,
-            message: '${'sales_order_details.msg_invoice_sent_wa'.tr} $customerPhone',
+            message:
+                '${'sales_order_details.msg_invoice_sent_wa'.tr} $customerPhone',
           );
         } else {
           showScaffoldError(

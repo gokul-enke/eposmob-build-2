@@ -26,6 +26,16 @@ class ConfirmedOrdersScreen extends StatefulWidget {
 }
 
 class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
+  List<SavedOrder> _attentionOrders(
+    LocalProductProvider provider,
+    LocalSaleSyncService saleSync,
+  ) {
+    return provider.confirmedOrders.where((order) {
+      final record = saleSync.recordFor(order.id);
+      return record?.state != LocalSaleSyncState.synced;
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -40,14 +50,10 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
             Expanded(
               child: Consumer2<LocalProductProvider, LocalSaleSyncService>(
                 builder: (context, provider, saleSync, child) {
-                  final confirmedOrders = provider.confirmedOrders;
                   // This screen is an action queue, not a sales history. Sales
                   // that have a verified server response belong in Sales; keep
                   // only records that still need an operator's attention here.
-                  final attentionOrders = confirmedOrders.where((order) {
-                    final record = saleSync.recordFor(order.id);
-                    return record?.state != LocalSaleSyncState.synced;
-                  }).toList();
+                  final attentionOrders = _attentionOrders(provider, saleSync);
 
                   if (attentionOrders.isEmpty) {
                     return const Center(
@@ -446,48 +452,52 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
             ),
           ),
           const SizedBox(width: 20),
-          Consumer<LocalSaleSyncService>(
-            builder: (context, sync, _) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              decoration: BoxDecoration(
-                color: sync.unresolvedCount == 0
-                    ? const Color(0xFFEAF7EF)
-                    : const Color(0xFFFFF3DE),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: sync.unresolvedCount == 0
-                      ? const Color(0xFFB7E4C7)
-                      : const Color(0xFFF5D49B),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    sync.unresolvedCount == 0
-                        ? Icons.cloud_done_outlined
-                        : Icons.warning_amber_rounded,
-                    size: 17,
-                    color: sync.unresolvedCount == 0
-                        ? const Color(0xFF16764A)
-                        : const Color(0xFF9A5B07),
+          Consumer2<LocalProductProvider, LocalSaleSyncService>(
+            builder: (context, provider, sync, _) {
+              final visibleCount = _attentionOrders(provider, sync).length;
+              return Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                decoration: BoxDecoration(
+                  color: visibleCount == 0
+                      ? const Color(0xFFEAF7EF)
+                      : const Color(0xFFFFF3DE),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: visibleCount == 0
+                        ? const Color(0xFFB7E4C7)
+                        : const Color(0xFFF5D49B),
                   ),
-                  const SizedBox(width: 7),
-                  Text(
-                    sync.unresolvedCount == 0
-                        ? 'No sales need review'
-                        : '${sync.unresolvedCount} sale${sync.unresolvedCount == 1 ? '' : 's'} need review',
-                    style: TextStyle(
-                      color: sync.unresolvedCount == 0
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      visibleCount == 0
+                          ? Icons.cloud_done_outlined
+                          : Icons.warning_amber_rounded,
+                      size: 17,
+                      color: visibleCount == 0
                           ? const Color(0xFF16764A)
                           : const Color(0xFF9A5B07),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
                     ),
-                  ),
-                ],
-              ),
-            ),
+                    const SizedBox(width: 7),
+                    Text(
+                      visibleCount == 0
+                          ? 'No sales need review'
+                          : '$visibleCount sale${visibleCount == 1 ? '' : 's'} need review',
+                      style: TextStyle(
+                        color: visibleCount == 0
+                            ? const Color(0xFF16764A)
+                            : const Color(0xFF9A5B07),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ],
       ),

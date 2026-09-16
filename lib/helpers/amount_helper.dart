@@ -1,6 +1,28 @@
 import 'package:intl/intl.dart';
 
 class AmountHelper {
+  /// Truncates a monetary value to two decimal places without rounding.
+  ///
+  /// A very small correction is applied before truncation so values already
+  /// expressed with two decimals (for example `65.28`) are not accidentally
+  /// reduced to `65.27` by binary floating-point representation.
+  static double truncateToTwoDecimals(num amount) {
+    final value = amount.toDouble();
+    if (!value.isFinite) return value;
+
+    final scaled = value * 100;
+    const floatingPointCorrection = 1e-9;
+    final corrected = scaled >= 0
+        ? scaled + floatingPointCorrection
+        : scaled - floatingPointCorrection;
+    return corrected.truncateToDouble() / 100;
+  }
+
+  /// Formats a value after truncating it to two decimal places.
+  static String formatTruncatedAmount(num amount) {
+    return truncateToTwoDecimals(amount).toStringAsFixed(2);
+  }
+
   static String formatAmount(dynamic amount) {
     // Check if the amount is a string and attempt to parse it
     if (amount is String) {
@@ -21,7 +43,8 @@ class AmountHelper {
   }
 
   // Add this utility function to convert numbers to words
-  String convertNumberToWords(double number, {String currency = 'INR', String language = 'en'}) {
+  String convertNumberToWords(double number,
+      {String currency = 'INR', String language = 'en'}) {
     // Route to language-specific implementations
     if (language.toLowerCase() == 'ar') {
       return _convertNumberToWordsArabic(number, currency: currency);
@@ -31,7 +54,8 @@ class AmountHelper {
   }
 
   // English implementation
-  String _convertNumberToWordsEnglish(double number, {String currency = 'INR'}) {
+  String _convertNumberToWordsEnglish(double number,
+      {String currency = 'INR'}) {
     // Handle 0 case
     if (number == 0) {
       String mainUnit = _getEnglishCurrencyMain(currency, 0);
@@ -98,7 +122,8 @@ class AmountHelper {
 
     // Get currency units
     String mainUnit = _getEnglishCurrencyMain(currency, wholeNumber);
-    String fractionalUnit = _getEnglishCurrencyFractional(currency, decimalPart);
+    String fractionalUnit =
+        _getEnglishCurrencyFractional(currency, decimalPart);
 
     // Append main currency
     if (wholeNumber > 0) {
@@ -123,24 +148,28 @@ class AmountHelper {
   }
 
   // Helper: English Indian numbering system (Lakhs, Crores)
-  String _convertEnglishIndian(int number, List<String> ones, List<String> tens, {bool recursive = false}) {
+  String _convertEnglishIndian(int number, List<String> ones, List<String> tens,
+      {bool recursive = false}) {
     String result = '';
 
     // Crores (10 Million)
     if (number >= 10000000) {
-      result += '${_convertEnglishIndian(number ~/ 10000000, ones, tens, recursive: true)} Crore ';
+      result +=
+          '${_convertEnglishIndian(number ~/ 10000000, ones, tens, recursive: true)} Crore ';
       number %= 10000000;
     }
 
     // Lakhs (100 Thousand)
     if (number >= 100000) {
-      result += '${_convertEnglishIndian(number ~/ 100000, ones, tens, recursive: true)} Lakh ';
+      result +=
+          '${_convertEnglishIndian(number ~/ 100000, ones, tens, recursive: true)} Lakh ';
       number %= 100000;
     }
 
     // Thousands
     if (number >= 1000) {
-      result += '${_convertEnglishIndian(number ~/ 1000, ones, tens, recursive: true)} Thousand ';
+      result +=
+          '${_convertEnglishIndian(number ~/ 1000, ones, tens, recursive: true)} Thousand ';
       number %= 1000;
     }
 
@@ -166,24 +195,29 @@ class AmountHelper {
   }
 
   // Helper: English International numbering system (Millions, Billions)
-  String _convertEnglishInternational(int number, List<String> ones, List<String> tens, {bool recursive = false}) {
+  String _convertEnglishInternational(
+      int number, List<String> ones, List<String> tens,
+      {bool recursive = false}) {
     String result = '';
 
     // Billions
     if (number >= 1000000000) {
-      result += '${_convertEnglishInternational(number ~/ 1000000000, ones, tens, recursive: true)} Billion ';
+      result +=
+          '${_convertEnglishInternational(number ~/ 1000000000, ones, tens, recursive: true)} Billion ';
       number %= 1000000000;
     }
 
     // Millions
     if (number >= 1000000) {
-      result += '${_convertEnglishInternational(number ~/ 1000000, ones, tens, recursive: true)} Million ';
+      result +=
+          '${_convertEnglishInternational(number ~/ 1000000, ones, tens, recursive: true)} Million ';
       number %= 1000000;
     }
 
     // Thousands
     if (number >= 1000) {
-      result += '${_convertEnglishInternational(number ~/ 1000, ones, tens, recursive: true)} Thousand ';
+      result +=
+          '${_convertEnglishInternational(number ~/ 1000, ones, tens, recursive: true)} Thousand ';
       number %= 1000;
     }
 

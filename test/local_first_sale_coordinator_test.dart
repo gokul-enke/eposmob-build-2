@@ -128,6 +128,56 @@ void main() {
     expect(sends, 1);
   });
 
+  test('manual offline mode saves locally without starting an API request',
+      () async {
+    final events = <String>[];
+    var sends = 0;
+    final outbox = LocalSaleSyncService(
+      store: _MemoryOutbox(events),
+      sender: (_, __, ___) async {
+        sends++;
+        return http.Response('{"order_id":5}', 201);
+      },
+    );
+
+    final result = await LocalFirstSaleCoordinator(outbox).confirm<String>(
+      surface: LocalSaleSurface.supermarketDesktop,
+      sourceCartSessionId: 'cart-offline',
+      payload: _payload(),
+      accessToken: 'token',
+      attemptServerSync: false,
+      persistLocalSale: () {
+        events.add('persist');
+        return const LocalSaleIdentity(
+          value: 'sale',
+          localOrderId: 'local-offline-1',
+          localOrderNumber: '2-01-260916-0001',
+        );
+      },
+      flushLocalPersistence: () async => events.add('flush'),
+      commitLocalWorkspace: (_) => events.add('commit'),
+      rollbackLocalSale: (_) => events.add('rollback'),
+      printLocalReceipt: (_) => events.add('print'),
+    );
+
+    final record = await result.backgroundSync;
+    expect(sends, 0);
+    expect(record.state, LocalSaleSyncState.needsReview);
+    expect(record.message, contains('Offline Mode is enabled'));
+    expect(
+      events,
+      [
+        'persist',
+        'flush',
+        'outbox:queued',
+        'commit',
+        'flush',
+        'print',
+        'outbox:needs_review',
+      ],
+    );
+  });
+
   test('existing-order operation enqueues the update body, not create fields',
       () async {
     final store = _MemoryOutbox([]);

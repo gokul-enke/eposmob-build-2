@@ -414,10 +414,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     // (mirrors the thermal layout's showInvoicePrefix resolution).
     final prefix = _getOptionText(dc, 'showInvoicePrefix',
         fallback: config.numberPrefix, defaultValue: 'INV-');
-    final invRegex = RegExp(r'[1-9]\d*');
-    final invMatch = invRegex.firstMatch(params.orderNumber);
-    final strippedOrderNumber =
-        invMatch != null ? invMatch.group(0)! : params.orderNumber;
+    final strippedOrderNumber = params.printableOrderNumberComponent;
     final invoiceNumber = '$prefix$strippedOrderNumber';
 
     // ── Date (ISO/IST aware, matches thermal layouts) ───────────────

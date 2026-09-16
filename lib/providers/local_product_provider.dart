@@ -4443,6 +4443,9 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   SavedOrder saveCurrentCartAsConfirmedOrder({
+    String? clientSaleId,
+    String? receiptNumber,
+    String? issuedAt,
     String? customerName,
     String? customerPhone,
     String? comment,
@@ -4477,7 +4480,9 @@ class LocalProductProvider extends ChangeNotifier {
       throw Exception("Cannot save an empty cart as confirmed order");
     }
 
-    final String orderId = _generateLocalOrderId();
+    final String orderId = clientSaleId?.trim().isNotEmpty == true
+        ? clientSaleId!.trim()
+        : _generateLocalOrderId();
 
     // Calculate total with rounding if enabled
     final baseTotal = context != null ? getRoundedTotal(context) : cartTotal;
@@ -4491,7 +4496,9 @@ class LocalProductProvider extends ChangeNotifier {
         _cartItems.reversed.map(_cloneLocalCartItem).toList(growable: false);
 
     // Generate sequential order number - use "CONF-" prefix for confirmed orders
-    String orderNumber = generateConfirmedOrderNumber();
+    final String orderNumber = receiptNumber?.trim().isNotEmpty == true
+        ? receiptNumber!.trim()
+        : generateConfirmedOrderNumber();
 
     // Create the confirmed order
     final SavedOrder order = SavedOrder(
@@ -4503,7 +4510,9 @@ class LocalProductProvider extends ChangeNotifier {
       comment: comment,
       // Persist the actual instant. Print and ZATCA layers convert this UTC
       // value to the configured business timezone where appropriate.
-      createdAt: DateHelper.now().toUtc().toIso8601String(),
+      createdAt: issuedAt?.trim().isNotEmpty == true
+          ? issuedAt!.trim()
+          : DateHelper.now().toUtc().toIso8601String(),
       total: total,
       deliveryMethod: deliveryMethod,
       // Include new API-compatible fields
@@ -4620,9 +4629,10 @@ class LocalProductProvider extends ChangeNotifier {
     int highestNumber = 0;
 
     for (var order in _confirmedOrders) {
-      // Extract the number part from the orderNumber (e.g., "CONF-5" -> 5)
-      String numPart = order.orderNumber.split('-')[1];
-      int orderNum = int.tryParse(numPart) ?? 0;
+      // New local-first receipts use a stable store/counter/date reference.
+      // Ignore those when allocating the legacy CONF-n fallback sequence.
+      final match = RegExp(r'^CONF-(\d+)$').firstMatch(order.orderNumber);
+      final orderNum = int.tryParse(match?.group(1) ?? '') ?? 0;
 
       if (orderNum > highestNumber) {
         highestNumber = orderNum;

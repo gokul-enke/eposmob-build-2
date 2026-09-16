@@ -65,6 +65,9 @@ class ListOrderModelData {
   final int? cartId;
   final DateTime? orderDate;
   final String? orderNumber;
+  final String? clientSaleId;
+  final String? receiptNumber;
+  final String? issuedAt;
   final String? grantTotal;
   final String? paymentStatus;
   final String? status;
@@ -81,6 +84,9 @@ class ListOrderModelData {
     this.cartId,
     this.orderDate,
     this.orderNumber,
+    this.clientSaleId,
+    this.receiptNumber,
+    this.issuedAt,
     this.grantTotal,
     this.paymentStatus,
     this.status,
@@ -124,6 +130,9 @@ class ListOrderModelData {
             ? null
             : DateTime.tryParse(json["order_date"]),
         orderNumber: json["order_number"],
+        clientSaleId: json["client_sale_id"]?.toString(),
+        receiptNumber: json["receipt_number"]?.toString(),
+        issuedAt: json["issued_at"]?.toString(),
         grantTotal: json["grand_total"],
         paymentStatus: json["payment_status"],
         status: json["status"],
@@ -160,6 +169,9 @@ class ListOrderModelData {
         "cart_id": cartId,
         "order_date": orderDate?.toIso8601String(),
         "order_number": orderNumber,
+        "client_sale_id": clientSaleId,
+        "receipt_number": receiptNumber,
+        "issued_at": issuedAt,
         "grant_total": grantTotal,
         "payment_status": paymentStatus,
         "status": status,
@@ -177,6 +189,13 @@ class ListOrderModelData {
         "invoice_hash": invoiceHash,
         "is_online": isOnline,
       };
+
+  String? get customerReceiptNumber {
+    final receipt = receiptNumber?.trim();
+    if (receipt != null && receipt.isNotEmpty) return receipt;
+    final server = orderNumber?.trim();
+    return server == null || server.isEmpty ? null : server;
+  }
 }
 
 class CartItem {

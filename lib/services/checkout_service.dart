@@ -19,6 +19,7 @@ import 'package:pos_machine/models/delivery_method_registry.dart';
 import 'package:pos_machine/services/local_first_sale_coordinator.dart';
 import 'package:pos_machine/services/local_sale_sync_service.dart';
 import 'package:pos_machine/services/print_service.dart';
+import 'package:pos_machine/services/receipt_identity_service.dart';
 
 /// Result of a [CheckoutService.saveOrder] call.
 ///
@@ -145,6 +146,7 @@ class CheckoutService {
   OrderSubmissionPayload _buildConfirmedSalePayload(
     BillingProvider billingProvider,
     LocalProductProvider localProducts,
+    ReceiptIdentity receiptIdentity,
   ) {
     final priceSummary = localProducts.priceSummary!;
     final storeId = Provider.of<StoreSessionProvider>(context, listen: false)
@@ -152,6 +154,11 @@ class CheckoutService {
         ?.storeId;
     return OrderSubmissionPayload(
       items: localProducts.buildOrderItemsPayload(),
+      clientSaleId: receiptIdentity.clientSaleId,
+      receiptNumber: receiptIdentity.receiptNumber,
+      issuedAt: receiptIdentity.issuedAt,
+      posDeviceId: receiptIdentity.deviceId,
+      counterNumber: receiptIdentity.counterNumber,
       customerId: billingProvider.selectedCustomerID,
       customerPhone: _phoneForOrder(billingProvider),
       transactionNumber: billingProvider.transactionNumberController.text,
@@ -210,9 +217,13 @@ class CheckoutService {
   SavedOrder _persistConfirmedSale(
     BillingProvider billingProvider,
     LocalProductProvider localProducts,
+    ReceiptIdentity receiptIdentity,
   ) {
     final orderData = billingProvider.createOrderData();
     return localProducts.saveCurrentCartAsConfirmedOrder(
+      clientSaleId: receiptIdentity.clientSaleId,
+      receiptNumber: receiptIdentity.receiptNumber,
+      issuedAt: receiptIdentity.issuedAt,
       customerName: _nameForOrder(billingProvider),
       customerPhone: _phoneForOrder(billingProvider),
       comment: billingProvider.commentController.text,
@@ -301,7 +312,23 @@ class CheckoutService {
     final accessToken =
         Provider.of<AuthModel>(context, listen: false).token ?? '';
     final customers = Provider.of<CustomerProvider>(context, listen: false);
-    final payload = _buildConfirmedSalePayload(billingProvider, localProducts);
+    final storeId = Provider.of<StoreSessionProvider>(context, listen: false)
+        .activeStore
+        ?.storeId;
+    if (storeId == null || storeId <= 0) {
+      showScaffoldError(
+        context: context,
+        message: 'Select a valid store before confirming the sale.',
+      );
+      return null;
+    }
+    final receiptIdentity =
+        await ReceiptIdentityService.instance.issue(storeId: storeId);
+    final payload = _buildConfirmedSalePayload(
+      billingProvider,
+      localProducts,
+      receiptIdentity,
+    );
     final previousDraftId = localProducts.currentOrder?.id;
     final sourceCartSessionId = localProducts.cartSessionId;
     final customer = billingProvider.selectedCustomer;
@@ -321,6 +348,7 @@ class CheckoutService {
           localProducts.priceSummary!.netTotal + resolveDeliveryCharge(context),
       totalPaid: billingProvider.getTotalPaidAmount(),
     );
+    final attemptServerSync = billingProvider.hasInternet;
 
     final result = await LocalFirstSaleCoordinator(
       LocalSaleSyncService.instance,
@@ -329,8 +357,13 @@ class CheckoutService {
       sourceCartSessionId: sourceCartSessionId,
       payload: payload,
       accessToken: accessToken,
+      attemptServerSync: attemptServerSync,
       persistLocalSale: () {
-        final sale = _persistConfirmedSale(billingProvider, localProducts);
+        final sale = _persistConfirmedSale(
+          billingProvider,
+          localProducts,
+          receiptIdentity,
+        );
         return LocalSaleIdentity(
           value: sale,
           localOrderId: sale.id,
@@ -382,8 +415,9 @@ class CheckoutService {
     if (context.mounted) {
       showScaffold(
         context: context,
-        message:
-            'Order confirmed locally. Server sync continues in the background.',
+        message: attemptServerSync
+            ? 'Order confirmed locally. Server sync continues in the background.'
+            : 'Order confirmed locally. Offline Mode prevented the server request; review it in Sync attention.',
       );
     }
     return result;

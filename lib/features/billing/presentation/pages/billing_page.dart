@@ -58,6 +58,7 @@ import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
 import 'package:pos_machine/features/billing/domain/receipt_customer_balance.dart';
 import 'package:pos_machine/services/local_sale_sync_service.dart';
 import 'package:pos_machine/services/local_first_sale_coordinator.dart';
+import 'package:pos_machine/services/receipt_identity_service.dart';
 import 'package:pos_machine/models/order_submission_payload.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
@@ -6695,6 +6696,7 @@ class BillingPageState extends State<BillingPage>
 
   OrderSubmissionPayload _buildLocalFirstOrderPayload(
     LocalProductProvider localProducts,
+    ReceiptIdentity receiptIdentity,
   ) {
     final paymentMethods = _getSelectedPaymentMethods();
     final paidMethods = _getPaidMethods();
@@ -6705,6 +6707,11 @@ class BillingPageState extends State<BillingPage>
 
     return OrderSubmissionPayload(
       items: localProducts.buildOrderItemsPayload(),
+      clientSaleId: receiptIdentity.clientSaleId,
+      receiptNumber: receiptIdentity.receiptNumber,
+      issuedAt: receiptIdentity.issuedAt,
+      posDeviceId: receiptIdentity.deviceId,
+      counterNumber: receiptIdentity.counterNumber,
       customerPhone: _customerPhoneForOrder(),
       customerId: selectedCustomerID,
       transactionNumber: _transactionNumberController.text,
@@ -6742,6 +6749,7 @@ class BillingPageState extends State<BillingPage>
 
   SavedOrder _createConfirmedLocalSnapshot(
     LocalProductProvider localProducts,
+    ReceiptIdentity receiptIdentity,
   ) {
     final paymentData = _getPaymentMethodData();
     String? customerKycValue(Set<String> acceptedKeys) {
@@ -6759,6 +6767,9 @@ class BillingPageState extends State<BillingPage>
     }
 
     return localProducts.saveCurrentCartAsConfirmedOrder(
+      clientSaleId: receiptIdentity.clientSaleId,
+      receiptNumber: receiptIdentity.receiptNumber,
+      issuedAt: receiptIdentity.issuedAt,
       customerName: _customerNameForOrder(),
       customerPhone: _customerPhoneForOrder(),
       comment: _commentController.text,
@@ -6858,7 +6869,16 @@ class BillingPageState extends State<BillingPage>
         return;
       }
 
-      final payload = _buildLocalFirstOrderPayload(localProducts);
+      final storeId = Provider.of<StoreSessionProvider>(context, listen: false)
+          .activeStore
+          ?.storeId;
+      if (storeId == null || storeId <= 0) {
+        throw StateError('Select a valid store before confirming the sale.');
+      }
+      final receiptIdentity =
+          await ReceiptIdentityService.instance.issue(storeId: storeId);
+      final payload =
+          _buildLocalFirstOrderPayload(localProducts, receiptIdentity);
       final previousDraftId = localProducts.currentOrder?.id;
       final sourceCartSessionId = localProducts.cartSessionId;
       final receiptBalance = ReceiptCustomerBalance.compute(
@@ -6867,14 +6887,20 @@ class BillingPageState extends State<BillingPage>
         cartTotal: _getEffectiveOrderTotal(),
         totalPaid: _getTotalPaidAmount(),
       );
+      final attemptServerSync =
+          Provider.of<BillingProvider>(context, listen: false).hasInternet;
       final result =
           await LocalFirstSaleCoordinator(outbox).confirm<SavedOrder>(
         surface: LocalSaleSurface.supermarketDesktop,
         sourceCartSessionId: sourceCartSessionId,
         payload: payload,
         accessToken: accessToken,
+        attemptServerSync: attemptServerSync,
         persistLocalSale: () {
-          localOrder = _createConfirmedLocalSnapshot(localProducts);
+          localOrder = _createConfirmedLocalSnapshot(
+            localProducts,
+            receiptIdentity,
+          );
           return LocalSaleIdentity(
             value: localOrder!,
             localOrderId: localOrder!.id,
@@ -6918,8 +6944,9 @@ class BillingPageState extends State<BillingPage>
       if (mounted) {
         showScaffold(
           context: context,
-          message:
-              'Order confirmed locally. Server sync will continue in the background.',
+          message: attemptServerSync
+              ? 'Order confirmed locally. Server sync will continue in the background.'
+              : 'Order confirmed locally. Offline Mode prevented the server request; review it in Sync attention.',
         );
       }
 

@@ -87,6 +87,11 @@ class SessionResetService {
     'kot_receipt_theme',
     'app_locale_code',
     'app_font_size_level',
+    // Receipt identity is device-scoped. Clearing cached tenant data must not
+    // make this physical till reuse an already-issued receipt sequence.
+    'pos_device_id',
+    'pos_counter_numbers_by_store',
+    'pos_receipt_sequences',
   ];
 
   static Future<void> resetAfterLogout(BuildContext context) async {

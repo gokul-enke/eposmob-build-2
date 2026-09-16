@@ -23,8 +23,7 @@ void main() {
     final decoded = helper.parseZatcaQrData(encoded);
     expect(decoded['timestamp'], '2026-09-16T04:14:00Z');
     expect(decoded['totalWithVat'], '428.00');
-    // Preserve the current offline VAT behavior for now.
-    expect(decoded['vatAmount'], '65.29');
+    expect(decoded['vatAmount'], '65.28');
   });
 
   test('preserves an explicitly zoned offline invoice instant', () {

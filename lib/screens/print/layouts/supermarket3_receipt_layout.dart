@@ -198,7 +198,8 @@ class supermarket3ReciptLayout implements ReceiptLayout {
             if (savedFile != null && context.mounted) {
               showScaffold(
                 context: context,
-                message: 'print.development_print_saved'.trParams({'path': savedFile.path}),
+                message: 'print.development_print_saved'
+                    .trParams({'path': savedFile.path}),
               );
             }
             return;
@@ -250,7 +251,8 @@ class supermarket3ReciptLayout implements ReceiptLayout {
       debugPrint("Print job sent successfully.");
 
       if (context.mounted) {
-        showScaffold(context: context, message: 'print.job_sent_successfully'.tr);
+        showScaffold(
+            context: context, message: 'print.job_sent_successfully'.tr);
         // Note: Navigation is now handled by the caller
         // PrintPage has its own back button, auto-print doesn't need navigation
       }
@@ -259,7 +261,8 @@ class supermarket3ReciptLayout implements ReceiptLayout {
       debugPrint("Stacktrace: $stacktrace");
       if (context.mounted) {
         showScaffoldError(
-            context: context, message: 'print.error_printing'.trParams({'error': e.toString()}));
+            context: context,
+            message: 'print.error_printing'.trParams({'error': e.toString()}));
       }
       rethrow;
     } finally {
@@ -605,9 +608,7 @@ class supermarket3ReciptLayout implements ReceiptLayout {
     final String orderTimeStr =
         DateHelper.formatISOTimeOnlyToIST(params.orderDate);
 
-    final regex = RegExp(r'[1-9]\d*');
-    final match = regex.firstMatch(params.orderNumber);
-    final strippedNumber = match != null ? match.group(0)! : params.orderNumber;
+    final strippedNumber = params.printableOrderNumberComponent;
 
     rows.add(ReceiptTableRow([
       ReceiptTableColumn('InvNo: $strippedNumber',
@@ -1965,10 +1966,7 @@ class supermarket3ReciptLayout implements ReceiptLayout {
 
     if (showFooterInvoice) {
       // Extract number sequence (e.g., "1149" from "INV-1149")
-      final regex = RegExp(r'[1-9]\d*');
-      final match = regex.firstMatch(params.orderNumber);
-      final strippedNumber =
-          match != null ? match.group(0)! : params.orderNumber;
+      final strippedNumber = params.printableOrderNumberComponent;
 
       final String lang = params.billDocumentConfig.language ?? 'en';
 

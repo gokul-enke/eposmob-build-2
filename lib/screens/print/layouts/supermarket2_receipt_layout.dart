@@ -612,10 +612,7 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
     if (showInvoiceNumber) {
       // Extract first significant number sequence (strip leading zeros and non-numeric prefixes)
       // For "ORD-000430", this extracts "430"
-      final regex = RegExp(r'[1-9]\d*');
-      final match = regex.firstMatch(params.orderNumber);
-      final strippedNumber =
-          match != null ? match.group(0)! : params.orderNumber;
+      final strippedNumber = params.printableOrderNumberComponent;
 
       // Get prefix from display configuration - use language-specific fallback
       final String lang = params.billDocumentConfig.language ?? 'en';
@@ -1905,10 +1902,7 @@ class Supermarket2ReceiptLayout implements ReceiptLayout {
 
     if (showFooterInvoice) {
       // Extract number sequence (e.g., "1149" from "INV-1149")
-      final regex = RegExp(r'[1-9]\d*');
-      final match = regex.firstMatch(params.orderNumber);
-      final strippedNumber =
-          match != null ? match.group(0)! : params.orderNumber;
+      final strippedNumber = params.printableOrderNumberComponent;
 
       final String lang = params.billDocumentConfig.language ?? 'en';
 

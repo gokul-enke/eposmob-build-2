@@ -738,10 +738,7 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
         displayConfig?['showInvoiceNumber']?.visible == true;
 
     if (showInvoiceNumber) {
-      final regex = RegExp(r'[1-9]\d*');
-      final match = regex.firstMatch(params.orderNumber);
-      final strippedNumber =
-          match != null ? match.group(0)! : params.orderNumber;
+      final strippedNumber = params.printableOrderNumberComponent;
 
       final invoicePrefix = _getModeLabel(
         displayConfig: displayConfig,
@@ -2069,10 +2066,7 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
         displayConfig?['showOrderNumberInFooter']?.visible == true;
 
     if (showFooterInvoice) {
-      final regex = RegExp(r'[1-9]\d*');
-      final match = regex.firstMatch(params.orderNumber);
-      final strippedNumber =
-          match != null ? match.group(0)! : params.orderNumber;
+      final strippedNumber = params.printableOrderNumberComponent;
 
       String prefixKey =
           showFooterInvoice ? 'showOrderNumberInFooter' : 'showInvoiceNumber';

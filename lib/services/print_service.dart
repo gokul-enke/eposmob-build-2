@@ -13,6 +13,7 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/features/billing/domain/receipt_customer_balance.dart';
+import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/services/sales_only_print_helper.dart';
 
@@ -335,7 +336,7 @@ class PrintService {
             returnTotalAmount: orderReturns.returnTotalAmount ?? '0.00',
             storeName: cart.storeName,
             orderDate: orderDetails.data?.orderDate ?? '',
-            orderNumber: orderDetails.data?.orderNumber ?? '',
+            orderNumber: orderDetails.data?.customerReceiptNumber ?? '',
             customerName: orderDetails.data?.customerDetails?.name,
             customerPhone: orderDetails.data?.customerDetails?.phone,
             customerEmail: orderDetails.data?.customerDetails?.email,
@@ -486,7 +487,7 @@ class PrintService {
       discountAmount:
           orderDetails.data!.priceSummary?.discount?.toString() ?? '0.00',
       orderDate: orderDate,
-      orderNumber: orderDetails.data!.orderNumber ?? '',
+      orderNumber: orderDetails.data!.customerReceiptNumber ?? '',
       tokenNumber: orderDetails.data?.tokenNumber,
       customerName: customerName,
       customerPhone: customerPhone,
@@ -523,7 +524,7 @@ class PrintService {
             discountAmount:
                 orderDetails.data!.priceSummary?.discount?.toString() ?? '0.00',
             orderDate: orderDate,
-            orderNumber: orderDetails.data!.orderNumber ?? '',
+            orderNumber: orderDetails.data!.customerReceiptNumber ?? '',
             tokenNumber: orderDetails.data?.tokenNumber,
             customerName: customerName,
             customerPhone: customerPhone,
@@ -595,14 +596,16 @@ class PrintService {
 
         double youSaved = totalMRP - netTotal;
         if (youSaved < 0) youSaved = 0.0;
-        final double netExcTax = netTotal - totalTax;
+        final double displayedTotalTax =
+            AmountHelper.truncateToTwoDecimals(totalTax);
+        final double netExcTax = netTotal - displayedTotalTax;
         final double discountAmount =
             _calculateSavedOrderDiscountAmount(savedOrder);
 
         debugPrint("LOCAL PRINT CALCULATION:");
         debugPrint("  - Total MRP: $totalMRP");
         debugPrint("  - Net Total: $netTotal");
-        debugPrint("  - Total Tax: $totalTax");
+        debugPrint("  - Total Tax: $displayedTotalTax");
         debugPrint("  - Net Exc Tax: $netExcTax");
         debugPrint("  - You Saved: $youSaved");
         if (cartItems.isNotEmpty) {

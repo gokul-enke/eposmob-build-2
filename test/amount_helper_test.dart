@@ -35,6 +35,19 @@ void main() {
     });
   });
 
+  group('AmountHelper VAT truncation', () {
+    test('discards digits after two decimal places without rounding', () {
+      expect(AmountHelper.truncateToTwoDecimals(65.2881356), 65.28);
+      expect(AmountHelper.formatTruncatedAmount(65.2881356), '65.28');
+      expect(AmountHelper.formatTruncatedAmount(1.999), '1.99');
+    });
+
+    test('preserves exact two-decimal and negative values', () {
+      expect(AmountHelper.formatTruncatedAmount(65.28), '65.28');
+      expect(AmountHelper.formatTruncatedAmount(-1.999), '-1.99');
+    });
+  });
+
   group('AmountHelper.roundOffAmount (ties away from zero)', () {
     test('rounds to nearest integer as a double', () {
       expect(AmountHelper.roundOffAmount(2.4), 2.0);

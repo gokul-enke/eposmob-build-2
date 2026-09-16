@@ -51,6 +51,7 @@ import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:pos_machine/services/local_first_sale_coordinator.dart';
 import 'package:pos_machine/services/local_sale_sync_service.dart';
+import 'package:pos_machine/services/receipt_identity_service.dart';
 
 part 'order_panel_current_cart.dart';
 part 'order_panel_saved_order_item.dart';
@@ -7632,7 +7633,8 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   OrderSubmissionPayload _buildRestaurantConfirmedPayload(
-    LocalProductProvider localProducts, {
+    LocalProductProvider localProducts,
+    ReceiptIdentity receiptIdentity, {
     String? existingOrderId,
   }) {
     localProducts.cartTotal;
@@ -7648,6 +7650,11 @@ class OrderPanelState extends State<OrderPanel> {
 
     return OrderSubmissionPayload(
       items: localProducts.buildOrderItemsPayload(),
+      clientSaleId: receiptIdentity.clientSaleId,
+      receiptNumber: receiptIdentity.receiptNumber,
+      issuedAt: receiptIdentity.issuedAt,
+      posDeviceId: receiptIdentity.deviceId,
+      counterNumber: receiptIdentity.counterNumber,
       customerId: _selectedCustomer?.id ?? _selectedCustomerID,
       customerPhone: _selectedCustomer?.phone ?? _selectedCustomerPhone,
       transactionNumber: _transactionNumber,
@@ -7683,9 +7690,13 @@ class OrderPanelState extends State<OrderPanel> {
 
   SavedOrder _persistRestaurantConfirmedSnapshot(
     LocalProductProvider localProducts,
+    ReceiptIdentity receiptIdentity,
   ) {
     final paymentData = _getLocalDraftPaymentData();
     return localProducts.saveCurrentCartAsConfirmedOrder(
+      clientSaleId: receiptIdentity.clientSaleId,
+      receiptNumber: receiptIdentity.receiptNumber,
+      issuedAt: receiptIdentity.issuedAt,
       customerName: selectedCustomerNameForDraft,
       customerPhone: selectedCustomerPhoneForDraft,
       comment: _orderComment.trim().isNotEmpty ? _orderComment.trim() : null,
@@ -7777,7 +7788,18 @@ class OrderPanelState extends State<OrderPanel> {
       final previousDraftId =
           _loadedLocalDraftId ?? localProductProvider.currentOrder?.id;
       final sourceCartSessionId = localProductProvider.cartSessionId;
-      final payload = _buildRestaurantConfirmedPayload(localProductProvider);
+      final storeId = Provider.of<StoreSessionProvider>(context, listen: false)
+          .activeStore
+          ?.storeId;
+      if (storeId == null || storeId <= 0) {
+        throw StateError('Select a valid store before confirming the sale.');
+      }
+      final receiptIdentity =
+          await ReceiptIdentityService.instance.issue(storeId: storeId);
+      final payload = _buildRestaurantConfirmedPayload(
+        localProductProvider,
+        receiptIdentity,
+      );
       final receiptBalance = ReceiptCustomerBalance.compute(
         isDefaultCustomer: _isDefaultCustomer(_selectedCustomer),
         customerBalance: _selectedCustomer?.balance,
@@ -7787,6 +7809,8 @@ class OrderPanelState extends State<OrderPanel> {
       );
       final appSettingsProvider =
           Provider.of<AppSettingsProvider>(context, listen: false);
+      final attemptServerSync =
+          Provider.of<BillingProvider>(context, listen: false).hasInternet;
 
       final result = await LocalFirstSaleCoordinator(
         LocalSaleSyncService.instance,
@@ -7795,9 +7819,12 @@ class OrderPanelState extends State<OrderPanel> {
         sourceCartSessionId: sourceCartSessionId,
         payload: payload,
         accessToken: accessToken,
+        attemptServerSync: attemptServerSync,
         persistLocalSale: () {
-          final sale =
-              _persistRestaurantConfirmedSnapshot(localProductProvider);
+          final sale = _persistRestaurantConfirmedSnapshot(
+            localProductProvider,
+            receiptIdentity,
+          );
           return LocalSaleIdentity(
             value: sale,
             localOrderId: sale.id,
@@ -7851,9 +7878,13 @@ class OrderPanelState extends State<OrderPanel> {
 
       showScaffold(
         context: context,
-        message: result.printSucceeded
-            ? 'Order confirmed locally. Server sync continues in the background.'
-            : 'Order confirmed locally, but printing failed. Server sync continues in the background.',
+        message: !attemptServerSync
+            ? (result.printSucceeded
+                ? 'Order confirmed locally. Offline Mode prevented the server request; review it in Sync attention.'
+                : 'Order confirmed locally, but printing failed. Offline Mode prevented the server request; review it in Sync attention.')
+            : (result.printSucceeded
+                ? 'Order confirmed locally. Server sync continues in the background.'
+                : 'Order confirmed locally, but printing failed. Server sync continues in the background.'),
       );
       return true;
     } catch (e) {
@@ -7941,8 +7972,17 @@ class OrderPanelState extends State<OrderPanel> {
       final accessToken = authModel.token ?? '';
       final previousDraftId =
           _loadedLocalDraftId ?? localProducts.currentOrder?.id;
+      final storeId = Provider.of<StoreSessionProvider>(context, listen: false)
+          .activeStore
+          ?.storeId;
+      if (storeId == null || storeId <= 0) {
+        throw StateError('Select a valid store before confirming the sale.');
+      }
+      final receiptIdentity =
+          await ReceiptIdentityService.instance.issue(storeId: storeId);
       final payload = _buildRestaurantConfirmedPayload(
         localProducts,
+        receiptIdentity,
         existingOrderId: existingOrderId,
       );
       final receiptBalance = ReceiptCustomerBalance.compute(
@@ -7952,6 +7992,8 @@ class OrderPanelState extends State<OrderPanel> {
             localProducts.priceSummary!.netTotal + _getDeliveryChargeForOrder(),
         totalPaid: _getTotalPaidAmountFromState(),
       );
+      final attemptServerSync =
+          Provider.of<BillingProvider>(context, listen: false).hasInternet;
 
       final result = await LocalFirstSaleCoordinator(
         LocalSaleSyncService.instance,
@@ -7963,9 +8005,13 @@ class OrderPanelState extends State<OrderPanel> {
         sourceCartSessionId: localProducts.cartSessionId,
         payload: payload,
         accessToken: accessToken,
+        attemptServerSync: attemptServerSync,
         endpoint: Uri.parse(APPUrl.updateOrderUrl),
         persistLocalSale: () {
-          final sale = _persistRestaurantConfirmedSnapshot(localProducts);
+          final sale = _persistRestaurantConfirmedSnapshot(
+            localProducts,
+            receiptIdentity,
+          );
           return LocalSaleIdentity(
             value: sale,
             localOrderId: sale.id,
@@ -8011,9 +8057,13 @@ class OrderPanelState extends State<OrderPanel> {
       if (mounted) {
         showScaffold(
           context: context,
-          message: result.printSucceeded
-              ? 'Order confirmed locally. Server sync continues in the background.'
-              : 'Order confirmed locally, but printing failed. Server sync continues in the background.',
+          message: !attemptServerSync
+              ? (result.printSucceeded
+                  ? 'Order confirmed locally. Offline Mode prevented the server request; review it in Sync attention.'
+                  : 'Order confirmed locally, but printing failed. Offline Mode prevented the server request; review it in Sync attention.')
+              : (result.printSucceeded
+                  ? 'Order confirmed locally. Server sync continues in the background.'
+                  : 'Order confirmed locally, but printing failed. Server sync continues in the background.'),
         );
       }
       return true;

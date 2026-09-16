@@ -10,6 +10,11 @@ class OrderSubmissionPayload {
   OrderSubmissionPayload({
     required List<Map<String, dynamic>> items,
     required this.transactionNumber,
+    this.clientSaleId,
+    this.receiptNumber,
+    this.issuedAt,
+    this.posDeviceId,
+    this.counterNumber,
     this.customerId,
     this.customerPhone,
     this.paymentMethod,
@@ -45,6 +50,11 @@ class OrderSubmissionPayload {
         paidMethods = paidMethods == null ? null : _copyMaps(paidMethods);
 
   final List<Map<String, dynamic>> items;
+  final String? clientSaleId;
+  final String? receiptNumber;
+  final String? issuedAt;
+  final String? posDeviceId;
+  final int? counterNumber;
   final int? customerId;
   final String? customerPhone;
   final String transactionNumber;
@@ -102,6 +112,11 @@ class OrderSubmissionPayload {
     final normalizedPincode = pincode?.trim();
     final body = <String, dynamic>{
       'items': items.reversed.map(Map<String, dynamic>.from).toList(),
+      if (clientSaleId != null) 'client_sale_id': clientSaleId,
+      if (receiptNumber != null) 'receipt_number': receiptNumber,
+      if (issuedAt != null) 'issued_at': issuedAt,
+      if (posDeviceId != null) 'pos_device_id': posDeviceId,
+      if (counterNumber != null) 'counter_number': counterNumber,
       'phone': customerPhone,
       if (customerId != null) 'customer_id': customerId,
       'transaction_number': transactionNumber,
@@ -143,6 +158,11 @@ class OrderSubmissionPayload {
   /// updates the existing order referenced by [orderId].
   Map<String, dynamic> toUpdateApiJson() {
     final body = <String, dynamic>{
+      if (clientSaleId != null) 'client_sale_id': clientSaleId,
+      if (receiptNumber != null) 'receipt_number': receiptNumber,
+      if (issuedAt != null) 'issued_at': issuedAt,
+      if (posDeviceId != null) 'pos_device_id': posDeviceId,
+      if (counterNumber != null) 'counter_number': counterNumber,
       'phone': customerPhone,
       'transaction_number': transactionNumber,
       'payment_method': usesMultiPayment ? paymentMethods : paymentMethod,
