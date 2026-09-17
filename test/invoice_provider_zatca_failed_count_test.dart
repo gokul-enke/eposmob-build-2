@@ -353,6 +353,64 @@ void main() {
     expect(provider.filteredInvoices, isEmpty);
   });
 
+  test('does not let an older filtered request replace newer invoice results',
+      () async {
+    final provider = InvoiceProvider();
+    final oldStarted = Completer<void>();
+    final newStarted = Completer<void>();
+    final oldResponse = Completer<http.Response>();
+    final newResponse = Completer<http.Response>();
+
+    String responseForInvoice(int id) => '''
+      {"status":"success","message":"ok","data":{
+        "current_page":1,"data":[{
+          "id":$id,"customer_id":1,"invoice_number":"INV-$id",
+          "type":"sale","company_id":1,"amount":"10.00",
+          "invoice_date":"2026-09-07","due_date":"2026-09-07",
+          "status":"paid","created_by":1,
+          "created_at":"2026-09-07T00:00:00Z",
+          "updated_at":"2026-09-07T00:00:00Z",
+          "customer":{"id":1,"user_id":1,
+            "user":{"id":1,"name":"Customer","email":"","phone":""}}
+        }],"first_page_url":"","last_page_url":"",
+        "last_page":1,"total":1,"per_page":20}}
+    ''';
+
+    final oldRequest = provider.listAllInvoices(
+      accessToken: 'token',
+      zatcaStatus: InvoiceProvider.zatcaFailedFilterValue,
+      client: MockClient((_) {
+        oldStarted.complete();
+        return oldResponse.future;
+      }),
+    );
+    await oldStarted.future;
+
+    provider.resetFilters(reload: false, notify: false);
+    final newRequest = provider.listAllInvoices(
+      accessToken: 'token',
+      client: MockClient((_) {
+        newStarted.complete();
+        return newResponse.future;
+      }),
+    );
+    await newStarted.future;
+
+    newResponse.complete(http.Response(responseForInvoice(2), 200));
+    await newRequest;
+    expect(provider.invoiceListDetails?.single.id, 2);
+    expect(provider.isLoading, isFalse);
+
+    oldResponse.complete(http.Response(responseForInvoice(1), 200));
+    final oldResult = await oldRequest;
+
+    expect(oldResult, containsPair('status', 'superseded'));
+    expect(provider.invoiceListDetails?.single.id, 2,
+        reason: 'the older filtered response must not replace newer results');
+    expect(provider.isLoading, isFalse,
+        reason: 'a superseded request must not change the latest loading state');
+  });
+
   group('pending ZATCA status filter', () {
     test('is handed over once and then cleared', () {
       final provider = InvoiceProvider();
