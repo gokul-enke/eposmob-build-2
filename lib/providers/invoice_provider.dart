@@ -1665,6 +1665,56 @@ class InvoiceProvider extends ChangeNotifier {
 
   //          *********************** LIST ALL INVOICE API ***************************************************
 
+  /// Fetches an unfiltered invoice snapshot without changing the invoice-list
+  /// screen's filters, pagination, loading state, or request generation.
+  ///
+  /// Consumers such as the create-receipt modal need their own complete result
+  /// set and must not supersede or overwrite the app-scoped invoice list.
+  Future<List<Invoice>> fetchAllInvoicesSnapshot({
+    required String accessToken,
+    int perPage = 1000,
+    http.Client? client,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final apiKey = prefs.getString('api_key');
+    final activeStoreId = prefs.getInt('active_store_id');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    final queryParams = <String, String>{
+      'page': '1',
+      'per_page': perPage.toString(),
+      if (activeStoreId != null) 'store_id': activeStoreId.toString(),
+    };
+    final uri =
+        Uri.parse(APPUrl.listAllInvoices).replace(queryParameters: queryParams);
+    final headers = {
+      'Authorization': 'Bearer $accessToken',
+      'X-Tenant': apiKey,
+    };
+    final response = await (client == null
+        ? http.get(uri, headers: headers)
+        : client.get(uri, headers: headers));
+
+    if (response.statusCode != 200) {
+      _debugPrintHttpFailure(
+        requestName: 'fetchAllInvoicesSnapshot',
+        uri: uri,
+        response: response,
+      );
+      throw HttpException(
+        'Failed to fetch invoices (${response.statusCode})',
+        uri: uri,
+      );
+    }
+
+    final jsonData = json.decode(response.body);
+    final listInvoiceModel = ListInvoiceModel.fromJson(jsonData);
+    return List<Invoice>.from(listInvoiceModel.data.invoices);
+  }
+
   Future<dynamic> listAllInvoices({
     required String accessToken,
     String? name,

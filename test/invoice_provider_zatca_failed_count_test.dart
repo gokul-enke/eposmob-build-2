@@ -411,6 +411,52 @@ void main() {
         reason: 'a superseded request must not change the latest loading state');
   });
 
+  test('invoice snapshots do not supersede or overwrite list-screen results',
+      () async {
+    final provider = InvoiceProvider();
+    final listStarted = Completer<void>();
+    final listResponse = Completer<http.Response>();
+
+    String responseForInvoice(int id) => '''
+      {"status":"success","message":"ok","data":{
+        "current_page":1,"data":[{
+          "id":$id,"customer_id":1,"invoice_number":"INV-$id",
+          "type":"sale","company_id":1,"amount":"10.00",
+          "invoice_date":"2026-09-07","due_date":"2026-09-07",
+          "status":"paid","created_by":1,
+          "created_at":"2026-09-07T00:00:00Z",
+          "updated_at":"2026-09-07T00:00:00Z",
+          "customer":{"id":1,"user_id":1,
+            "user":{"id":1,"name":"Customer","email":"","phone":""}}
+        }],"first_page_url":"","last_page_url":"",
+        "last_page":1,"total":1,"per_page":20}}
+    ''';
+
+    final listRequest = provider.listAllInvoices(
+      accessToken: 'token',
+      client: MockClient((_) {
+        listStarted.complete();
+        return listResponse.future;
+      }),
+    );
+    await listStarted.future;
+
+    final snapshot = await provider.fetchAllInvoicesSnapshot(
+      accessToken: 'token',
+      client: jsonClient(200, responseForInvoice(2)),
+    );
+    expect(snapshot.single.id, 2);
+    expect(provider.invoiceListDetails, isNull,
+        reason: 'the snapshot must not publish into the shared invoice list');
+
+    listResponse.complete(http.Response(responseForInvoice(1), 200));
+    final listResult = await listRequest;
+
+    expect(listResult, containsPair('status', 'success'),
+        reason: 'the independent snapshot must not supersede the list request');
+    expect(provider.invoiceListDetails?.single.id, 1);
+  });
+
   group('pending ZATCA status filter', () {
     test('is handed over once and then cleared', () {
       final provider = InvoiceProvider();
