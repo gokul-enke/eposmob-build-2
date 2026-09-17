@@ -121,7 +121,8 @@ class _BuildDropDownWithSearchState<T>
     if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
       final items = widget.items;
       if (items.isNotEmpty) {
-        int currentIndex = items.indexOf(widget.value as T);
+        final currentIndex =
+            widget.value == null ? -1 : items.indexOf(widget.value as T);
         int nextIndex = currentIndex + 1;
         if (nextIndex < items.length) {
           widget.onChanged(items[nextIndex]);
@@ -138,7 +139,8 @@ class _BuildDropDownWithSearchState<T>
     if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
       final items = widget.items;
       if (items.isNotEmpty) {
-        int currentIndex = items.indexOf(widget.value as T);
+        final currentIndex =
+            widget.value == null ? -1 : items.indexOf(widget.value as T);
         int prevIndex = currentIndex - 1;
         if (prevIndex >= 0) {
           widget.onChanged(items[prevIndex]);
