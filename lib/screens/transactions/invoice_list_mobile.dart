@@ -23,6 +23,7 @@ import '../../helpers/ui_code_labels.dart';
 class InvoiceMobileView extends StatelessWidget {
   const InvoiceMobileView({
     super.key,
+    required this.showZatcaControls,
     required this.invoices,
     required this.isLoading,
     required this.selectedInvoiceIds,
@@ -61,6 +62,7 @@ class InvoiceMobileView extends StatelessWidget {
   });
 
   // Data
+  final bool showZatcaControls;
   final List<Invoice> invoices;
   final bool isLoading;
   final Set<int> selectedInvoiceIds;
@@ -120,8 +122,10 @@ class InvoiceMobileView extends StatelessWidget {
           const SizedBox(height: 12),
           _buildFiltersPanel(context),
           const SizedBox(height: 8),
-          _buildSelectionBar(),
-          const SizedBox(height: 8),
+          if (showZatcaControls) ...[
+            _buildSelectionBar(),
+            const SizedBox(height: 8),
+          ],
           Expanded(child: _buildList()),
           _buildPagination(),
         ],
@@ -163,8 +167,7 @@ class InvoiceMobileView extends StatelessWidget {
         width: double.infinity,
         child: ExpansionTile(
           tilePadding: const EdgeInsets.symmetric(horizontal: 12),
-          childrenPadding:
-              const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
           title: Text(
             "Filters",
             style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,
@@ -217,27 +220,28 @@ class InvoiceMobileView extends StatelessWidget {
               showName: false,
               hintText: 'invoice.all_status'.tr,
               value: selectedStatus,
-              items:
-                  statusOptions.where((s) => s != "All Status").toList(),
+              items: statusOptions.where((s) => s != "All Status").toList(),
               onChanged: onStatusChanged,
               displayText: (status) => UiCodeLabels.status(status),
               height: 45,
               margin: EdgeInsets.zero,
             ),
-            const SizedBox(height: 10),
-            BuildDropDownWithSearch<String>(
-              title: null,
-              showName: false,
-              hintText: 'invoice.all_zatca_status'.tr,
-              value: selectedZatcaStatus,
-              items: zatcaStatusOptions
-                  .where((s) => s != "All ZATCA Status")
-                  .toList(),
-              onChanged: onZatcaStatusChanged,
-              displayText: (status) => UiCodeLabels.zatca(status),
-              height: 45,
-              margin: EdgeInsets.zero,
-            ),
+            if (showZatcaControls) ...[
+              const SizedBox(height: 10),
+              BuildDropDownWithSearch<String>(
+                title: null,
+                showName: false,
+                hintText: 'invoice.all_zatca_status'.tr,
+                value: selectedZatcaStatus,
+                items: zatcaStatusOptions
+                    .where((s) => s != "All ZATCA Status")
+                    .toList(),
+                onChanged: onZatcaStatusChanged,
+                displayText: (status) => UiCodeLabels.zatca(status),
+                height: 45,
+                margin: EdgeInsets.zero,
+              ),
+            ],
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
@@ -275,8 +279,8 @@ class InvoiceMobileView extends StatelessWidget {
         cursorColor: ColorManager.kPrimaryColor,
         cursorHeight: 13,
         textInputAction: TextInputAction.next,
-        style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
-            0.18, ColorManager.textColor),
+        style: buildCustomStyle(FontWeightManager.medium, FontSize.s12, 0.18,
+            ColorManager.textColor),
         decoration: decoration.copyWith(
           hintText: hint,
           hintStyle: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
@@ -310,8 +314,8 @@ class InvoiceMobileView extends StatelessWidget {
         readOnly: true,
         onTap: () => onSelectDate(isFromDate: isFromDate),
         cursorColor: ColorManager.kPrimaryColor,
-        style: buildCustomStyle(FontWeightManager.medium, FontSize.s11,
-            0.18, ColorManager.textColor),
+        style: buildCustomStyle(FontWeightManager.medium, FontSize.s11, 0.18,
+            ColorManager.textColor),
         decoration: decoration.copyWith(
           hintText: "DD/MM/YYYY",
           hintStyle: buildCustomStyle(FontWeightManager.medium, FontSize.s11,
@@ -390,8 +394,8 @@ class InvoiceMobileView extends StatelessWidget {
                 onTap: onSelectPage,
                 child: Text(
                   "Select Page",
-                  style: buildCustomStyle(FontWeightManager.bold,
-                      FontSize.s11, 0.18, ColorManager.kPrimaryColor),
+                  style: buildCustomStyle(FontWeightManager.bold, FontSize.s11,
+                      0.18, ColorManager.kPrimaryColor),
                 ),
               ),
             const SizedBox(width: 12),
@@ -455,6 +459,7 @@ class InvoiceMobileView extends StatelessWidget {
         final invoice = invoices[index];
         final isSelected = selectedInvoiceIds.contains(invoice.id);
         return _InvoiceCard(
+          showZatcaControls: showZatcaControls,
           invoice: invoice,
           isSelected: isSelected,
           onToggleSelect: (value) => onToggleSelect(invoice.id, value),
@@ -508,6 +513,7 @@ class InvoiceMobileView extends StatelessWidget {
 /// A single invoice rendered as a card, used only on mobile.
 class _InvoiceCard extends StatelessWidget {
   const _InvoiceCard({
+    required this.showZatcaControls,
     required this.invoice,
     required this.isSelected,
     required this.onToggleSelect,
@@ -515,6 +521,7 @@ class _InvoiceCard extends StatelessWidget {
     required this.onShowActions,
   });
 
+  final bool showZatcaControls;
   final Invoice invoice;
   final bool isSelected;
   final void Function(bool selected) onToggleSelect;
@@ -534,15 +541,16 @@ class _InvoiceCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: Checkbox(
-                    value: isSelected,
-                    activeColor: ColorManager.kPrimaryColor,
-                    onChanged: (v) => onToggleSelect(v ?? false),
+                if (showZatcaControls)
+                  SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: Checkbox(
+                      value: isSelected,
+                      activeColor: ColorManager.kPrimaryColor,
+                      onChanged: (v) => onToggleSelect(v ?? false),
+                    ),
                   ),
-                ),
                 Expanded(
                   child: Row(
                     children: [
@@ -578,7 +586,7 @@ class _InvoiceCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Padding(
-              padding: const EdgeInsets.only(left: 32),
+              padding: EdgeInsets.only(left: showZatcaControls ? 32 : 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -631,10 +639,8 @@ class _InvoiceCard extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 32),
-                  child: _zatcaChip(invoice),
-                ),
+                if (showZatcaControls) const SizedBox(width: 32),
+                if (showZatcaControls) _zatcaChip(invoice),
                 const Spacer(),
                 IconButton(
                   icon: Icon(Icons.visibility,
@@ -685,7 +691,8 @@ class _InvoiceCard extends StatelessWidget {
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
+      decoration:
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
       child: Text(
         UiCodeLabels.status(status),
         style: TextStyle(color: fg, fontSize: 9, fontWeight: FontWeight.bold),
@@ -724,7 +731,8 @@ class _InvoiceCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
+      decoration:
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
       child: Text(
         label,
         style: TextStyle(color: fg, fontSize: 9, fontWeight: FontWeight.bold),
