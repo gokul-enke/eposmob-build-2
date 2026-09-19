@@ -11,6 +11,7 @@ import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/screens/print/layouts/premium2_bilingual_receipt_layout.dart';
+import 'package:pos_machine/screens/print/layouts/receipt_configuration_contract.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 import 'package:pos_machine/screens/print/widgets/printer_settings_responsive.dart';
 
@@ -21,6 +22,7 @@ class ReceiptConfigurationWorkspace extends StatefulWidget {
   final String paperSize;
   final String themeName;
   final String themeId;
+  final bool isB2B;
   final VoidCallback onResync;
   final bool isResyncing;
 
@@ -30,6 +32,7 @@ class ReceiptConfigurationWorkspace extends StatefulWidget {
     required this.paperSize,
     required this.themeName,
     required this.themeId,
+    this.isB2B = false,
     required this.onResync,
     required this.isResyncing,
   });
@@ -58,16 +61,14 @@ class _ReceiptConfigurationWorkspaceState
     }
   }
 
-  static _PreviewLanguage _languageFromConfig(String? language) {
-    switch (language?.trim().toLowerCase().replaceAll('-', '_')) {
-      case 'en':
-        return _PreviewLanguage.english;
-      case 'ar':
-        return _PreviewLanguage.arabic;
-      default:
-        return _PreviewLanguage.bilingual;
-    }
-  }
+  // Same normalisation as a real print, so an unset language previews as
+  // English exactly like the receipt it stands for.
+  static _PreviewLanguage _languageFromConfig(String? language) =>
+      switch (ReceiptConfigurationContract.languageMode(language)) {
+        ReceiptLanguageMode.english => _PreviewLanguage.english,
+        ReceiptLanguageMode.arabic => _PreviewLanguage.arabic,
+        ReceiptLanguageMode.bilingual => _PreviewLanguage.bilingual,
+      };
 
   static const _sections = <_ReceiptSection>[
     _ReceiptSection(
@@ -743,6 +744,7 @@ class _ReceiptConfigurationWorkspaceState
                     config: widget.config!,
                     paperSize: widget.paperSize,
                     themeId: widget.themeId,
+                    isB2B: widget.isB2B,
                     options: _options,
                     language: _previewLanguage,
                     section: _selectedSection,
@@ -922,6 +924,7 @@ class _CommonReceiptPreview extends StatefulWidget {
   final DocumentConfig config;
   final String paperSize;
   final String themeId;
+  final bool isB2B;
   final Map<String, DisplayOption> options;
   final _PreviewLanguage language;
   final String section;
@@ -930,6 +933,7 @@ class _CommonReceiptPreview extends StatefulWidget {
     required this.config,
     required this.paperSize,
     required this.themeId,
+    required this.isB2B,
     required this.options,
     required this.language,
     required this.section,
@@ -954,6 +958,7 @@ class _CommonReceiptPreviewState extends State<_CommonReceiptPreview> {
     if (oldWidget.config != widget.config ||
         oldWidget.paperSize != widget.paperSize ||
         oldWidget.themeId != widget.themeId ||
+        oldWidget.isB2B != widget.isB2B ||
         oldWidget.language != widget.language) {
       _previewFuture = _render();
     }
@@ -1032,7 +1037,7 @@ class _CommonReceiptPreviewState extends State<_CommonReceiptPreview> {
       paymentBreakdown: const {'Cash': 30.0, 'Card': 20.0},
       customerVatNumber: '310000000000003',
       customerCrNumber: '1010123456',
-      customerType: 'B2C',
+      customerType: widget.isB2B ? 'B2B' : 'B2C',
       zatcaVatNumber: zatcaVatNumber ?? '310000000000003',
       zatcaCrNumber: zatcaCrNumber ?? '1010123456',
       zatcaCompanyName: zatcaCompanyName ?? 'CloudPOS Store',

@@ -99,6 +99,7 @@ class ReceiptConfigurationContract {
     'showNetTotal': ['showNetAmount'],
     'showPaymentBreakdown': ['showPaymentBreaked'],
     'showCustomerOldBalance': ['showCustomerPrevBalance'],
+    'showCustomerPhoneMasked': ['maskCustomerPhone'],
     'showCustomerCurrentBalance': ['showCustomerBalance'],
     'showPaidAmount': ['showCustomerPaidAmount'],
     'showBankDetails': ['showBankInfo'],

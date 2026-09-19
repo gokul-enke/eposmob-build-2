@@ -8,6 +8,7 @@ import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/bank_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
+import 'package:pos_machine/screens/print/layouts/receipt_configuration_contract.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 
 /// Builds [ReceiptLayoutParams] for return-only bills so they can reuse the
@@ -36,6 +37,7 @@ class ReturnBillLayoutParamsBuilder {
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final zatcaVatNumber = prefs.getString('zatca_vat_number');
+    final zatcaCrNumber = prefs.getString('zatca_cr_number');
     final zatcaCompanyName = prefs.getString('zatca_company_name');
 
     if (!context.mounted) {
@@ -61,6 +63,9 @@ class ReturnBillLayoutParamsBuilder {
       returnTotalAmount: totalAmount.toStringAsFixed(2),
       returnItems: returnItems,
     );
+
+    final defaultCustomerPhone =
+        appSettings?.autoAssignDefaultCustomerPhone ?? '';
 
     double? customerCurrentBalance;
     if (customerBalance != null && customerBalance.trim().isNotEmpty) {
@@ -92,12 +97,17 @@ class ReturnBillLayoutParamsBuilder {
       customerCurrentBalance: customerCurrentBalance,
       documentTitleOverride: documentTitle,
       zatcaVatNumber: zatcaVatNumber,
+      zatcaCrNumber: zatcaCrNumber,
       zatcaCompanyName: zatcaCompanyName,
+      // Same walk-in rule as PrintService for sales receipts.
+      isDefaultCustomer: defaultCustomerPhone.isNotEmpty &&
+          customerPhone == defaultCustomerPhone,
       hideDefaultCustomerPhone: appSettings?.hideDefaultPhone ?? true,
       netExcTax: totalAmount.toStringAsFixed(2),
       apiTotalTax: 0,
       bankDetails: bankProvider.banks,
-      storeName: returnBillDocumentConfig.header ?? store?.storeName,
+      // The layouts already print the document header on its own line.
+      storeName: store?.storeName,
       storeLocation: store?.location,
       storePhone: store?.phone,
       storeEmail: store?.email,
@@ -106,14 +116,21 @@ class ReturnBillLayoutParamsBuilder {
     );
   }
 
-  static String _resolveDocumentTitle(DocumentConfig config) {
-    final configuredTitle =
-        config.displayConfiguration?.options?['showInvoiceTitle']?.value;
-    if (configuredTitle != null &&
-        configuredTitle.toString().trim().isNotEmpty) {
-      return configuredTitle.toString().trim();
-    }
-    return 'Sales Return';
+  /// Supplies a title only when the Credit Note config shows the title but
+  /// left its text empty. A title override forces the title visible and
+  /// replaces the B2B title, so a hidden or configured title must win.
+  static String? _resolveDocumentTitle(DocumentConfig config) {
+    final option = ReceiptConfigurationContract.option(
+      config.displayConfiguration?.options,
+      'showInvoiceTitle',
+    );
+    if (option?.visible != true) return null;
+    final configuredText =
+        '${option?.value ?? ''}${option?.defaultValue ?? ''}'.trim();
+    if (configuredText.isNotEmpty) return null;
+    return ReceiptConfigurationContract.languageMode(config.language).isArabic
+        ? 'مرتجع مبيعات'
+        : 'Sales Return';
   }
 
   static List<OrderDetailsModelDataCartItem> _returnItemsToCartItems(
