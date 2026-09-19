@@ -12,7 +12,6 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
-import 'package:pos_machine/helpers/string_helper.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/payment_gateway.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -43,6 +42,9 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
 
   /// Dark teal accent used for the header/footer rules.
   static const PdfColor _accent = PdfColor.fromInt(0xFF1F6E68);
+
+  /// Language mode of the document being built; read by the label helpers.
+  ReceiptLanguageMode _mode = ReceiptLanguageMode.english;
 
   // ── Font cache ──────────────────────────────────────────────────────
   static pw.Font? _arabicFont;
@@ -157,7 +159,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final config = params.billDocumentConfig;
     // `params.displayConfig` preserves every API option and overlays the
     // B2B/B2C-resolved invoice-title option when required.
-    final dc = params.displayConfig ?? config.displayConfiguration?.options;
+    final dc = params.displayConfig;
     final resolvedLabels = config.resolvedLabels;
     final isA5 = params.selectedPaperSize.toUpperCase() == 'A5';
     final pageFormat = isA5 ? PdfPageFormat.a5 : PdfPageFormat.a4;
@@ -169,21 +171,18 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final bottomFooterReserve = isA5 ? 190.0 : 250.0;
 
     // Resolve B2B/B2C invoice title — params.displayConfig is B2B-aware
-    final resolvedTitleOpt = params.displayConfig?['showInvoiceTitle'];
-    final resolvedTitleVal = resolvedTitleOpt?.value?.toString().trim();
-    final resolvedTitleDefault =
-        resolvedTitleOpt?.defaultValue?.toString().trim();
-    final invoiceTitleText = (resolvedTitleVal?.isNotEmpty == true)
-        ? resolvedTitleVal!
-        : (resolvedTitleDefault?.isNotEmpty == true
-            ? resolvedTitleDefault!
-            : 'Simplified Tax Invoice');
+    final invoiceTitleText = params.isVisible('showInvoiceTitle')
+        ? params.labelFor('showInvoiceTitle',
+            englishFallback: 'Simplified Tax Invoice',
+            arabicFallback: 'فاتورة ضريبية مبسطة')
+        : '';
 
     // ── Fonts & language ────────────────────────────────────────────
     final font = await _loadArabicFont();
     final fontBold = await _loadArabicFontBold();
-    final configLang = config.language;
+    final configLang = params.amountInWordsLanguage;
     final mode = params.receiptLanguageMode;
+    _mode = mode;
     final isDualLanguage = mode == ReceiptLanguageMode.bilingual;
     final isRtl = mode == ReceiptLanguageMode.arabic;
     final isEnglish = mode == ReceiptLanguageMode.english;
@@ -243,13 +242,24 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         pw.TextStyle(font: font, fontBold: fontBold, fontSize: fs(7));
 
     // ── Config helpers ──────────────────────────────────────────────
-    String cfgVal(String key, String fallback) {
-      final v = dc?[key]?.value as String?;
-      return (v != null && v.isNotEmpty) ? v : fallback;
-    }
-
     bool cfgVisible(String key) => dc?[key]?.visible == true;
-    bool cfgVisibleDefault(String key) => dc?[key]?.visible != false;
+    bool cfgVisibleDefault(String key) => params.isVisible(key);
+
+    // Configured text that may be 'Arabic\nEnglish': one Text per line so each
+    // language keeps its own direction on this LTR page.
+    pw.Widget modeText(String text, pw.TextStyle style,
+            [pw.CrossAxisAlignment align = pw.CrossAxisAlignment.center]) =>
+        pw.Column(
+          mainAxisSize: pw.MainAxisSize.min,
+          crossAxisAlignment: align,
+          children: [
+            for (final line in text.split('\n'))
+              pdfText(line, style: style,
+                  textAlign: align == pw.CrossAxisAlignment.center
+                      ? pw.TextAlign.center
+                      : null),
+          ],
+        );
 
     String displayOrBlank(String? value) {
       final trimmed = value?.trim();
@@ -370,6 +380,21 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       'showExtraHeading1',
     ];
 
+    // Label for one header column; a bilingual column never carries the other
+    // column's script.
+    String headerLabel(String key, bool arabic, String en, String ar) {
+      final label = ReceiptConfigurationContract.label(
+        options: dc,
+        key: key,
+        mode: arabic ? ReceiptLanguageMode.arabic : ReceiptLanguageMode.english,
+        englishFallback: en,
+        arabicFallback: ar,
+      );
+      return _withColon(isDualLanguage && pdfHasArabic(label) != arabic
+          ? (arabic ? ar : en)
+          : label);
+    }
+
     List<String> configuredHeaderLines({required bool arabic}) {
       final lines = <String>[];
       for (final key in headerConfigKeys) {
@@ -383,6 +408,26 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 : ReceiptLanguageMode.english,
           );
           if (address.isNotEmpty) lines.add(address);
+          continue;
+        }
+
+        if (key == 'showTel' || key == 'showEmail') {
+          // The shared helper owns visibility + value (store, then customer
+          // care); this column owns the label.
+          final value = params.storeContactText(key).split(': ').last;
+          final isTel = key == 'showTel';
+          if (value.isNotEmpty) {
+            lines.add(
+                '${headerLabel(key, arabic, isTel ? 'Telephone' : 'Email', isTel ? 'الهاتف' : 'البريد الإلكتروني')} $value');
+          }
+          continue;
+        }
+
+        if (!isDualLanguage) {
+          // One language, one column: configured text is never dropped.
+          final text =
+              params.labelFor(key, englishFallback: '', arabicFallback: '');
+          if (text.isNotEmpty) lines.add(text);
           continue;
         }
 
@@ -404,28 +449,30 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       return lines;
     }
 
-    final arabicHeaderLines = configuredHeaderLines(arabic: true);
-    final englishHeaderLines = configuredHeaderLines(arabic: false);
-    final storeFssai = cfgVal('showFssaiInfo', '');
-    final extraHeading2 = cfgVal('showExtraHeading2', '');
-    final savedSellerCrNumber = params.zatcaCrNumber?.trim() ?? '';
-    final configuredSellerCrNumber = cfgVal('showCRNumber', '').trim();
-    final sellerCrNumber = savedSellerCrNumber.isNotEmpty
-        ? savedSellerCrNumber
-        : configuredSellerCrNumber;
-    final savedSellerVatNumber = params.zatcaVatNumber?.trim() ?? '';
-    final configuredSellerVatNumber = cfgVal('showVatNumber', '').trim();
-    final sellerVatNumber = savedSellerVatNumber.isNotEmpty
-        ? savedSellerVatNumber
-        : configuredSellerVatNumber;
-    if (sellerCrNumber.isNotEmpty) {
-      englishHeaderLines.add('CR No: $sellerCrNumber');
-      arabicHeaderLines.add('رقم السجل التجاري: $sellerCrNumber');
+    final arabicHeaderLines =
+        isEnglish ? <String>[] : configuredHeaderLines(arabic: true);
+    final englishHeaderLines =
+        isRtl ? <String>[] : configuredHeaderLines(arabic: false);
+    final storeFssai =
+        params.labelFor('showFssaiInfo', englishFallback: '', arabicFallback: '');
+    final extraHeading2 = params.labelFor('showExtraHeading2',
+        englishFallback: '', arabicFallback: '');
+    // The store owns the CR / VAT numbers; the option text is only the label.
+    void addSellerNumber(String key, String? number, String en, String ar) {
+      final value = number?.trim() ?? '';
+      if (!params.isVisible(key) || value.isEmpty) return;
+      if (!isRtl) {
+        englishHeaderLines.add('${headerLabel(key, false, en, ar)} $value');
+      }
+      if (!isEnglish) {
+        arabicHeaderLines.add('${headerLabel(key, true, en, ar)} $value');
+      }
     }
-    if (sellerVatNumber.isNotEmpty) {
-      englishHeaderLines.add('VAT No: $sellerVatNumber');
-      arabicHeaderLines.add('الرقم الضريبي: $sellerVatNumber');
-    }
+
+    addSellerNumber(
+        'showCRNumber', params.zatcaCrNumber, 'CR No', 'السجل التجاري');
+    addSellerNumber(
+        'showVatNumber', params.zatcaVatNumber, 'VAT No', 'الرقم الضريبي');
     final primaryBank = params.primaryBank;
     final primaryBankAccount = params.primaryBankAccount;
     final ibanValue = primaryBankAccount?.iban ?? '';
@@ -460,16 +507,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         'configuredLineCount=${bankLines.length} '
         'willRender=${bankLines.isNotEmpty}');
 
-    // ── Invoice number (prefix + stripping) ─────────────────────────
-    // Invoice prefix: config value > config default > numberPrefix > 'INV-'
-    // (mirrors the thermal layout's showInvoicePrefix resolution).
-    final prefix = _getOptionText(dc, 'showInvoicePrefix',
-        fallback: config.numberPrefix, defaultValue: 'INV-');
-    final invRegex = RegExp(r'[1-9]\d*');
-    final invMatch = invRegex.firstMatch(params.orderNumber);
-    final strippedOrderNumber =
-        invMatch != null ? invMatch.group(0)! : params.orderNumber;
-    final invoiceNumber = '$prefix$strippedOrderNumber';
+    // ── Invoice number (shared: number_prefix + printable component) ─
+    final invoiceNumber = params.invoiceNumberText;
 
     // ── Date (ISO/IST aware, matches thermal layouts) ───────────────
     String displayDate;
@@ -487,23 +526,13 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     }
 
     // ── Customer info ───────────────────────────────────────────────
-    final bool isDefault = params.isDefaultCustomer;
-    final bool hideDefaultPhone = params.hideDefaultCustomerPhone;
     final custName = params.customerName ?? (isRtl ? 'عميل' : 'GENERAL');
-    final bool maskPhone = dc?['showCustomerPhoneMasked']?.visible ??
-        dc?['maskCustomerPhone']?.visible ??
-        false;
-    String? custPhone;
-    if (params.customerPhone != null &&
-        params.customerPhone!.isNotEmpty &&
-        !(isDefault && hideDefaultPhone)) {
-      custPhone = maskPhone
-          ? StringHelper.maskStringShowLast4(params.customerPhone!)
-          : params.customerPhone!;
-      if (params.customerAlternatePhone != null &&
-          params.customerAlternatePhone!.isNotEmpty) {
-        custPhone = '$custPhone, ${params.customerAlternatePhone}';
-      }
+    // Shared rule: toggle, walk-in default customer and masking.
+    String custPhone = params.customerPhoneText;
+    if (custPhone.isNotEmpty &&
+        params.customerAlternatePhone != null &&
+        params.customerAlternatePhone!.isNotEmpty) {
+      custPhone = '$custPhone, ${params.customerAlternatePhone}';
     }
     final custAddress = params.customerAddress;
 
@@ -518,16 +547,21 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final String commentConfigKey = dc?.containsKey('showOrderComment') == true
         ? 'showOrderComment'
         : 'showComment';
+    // Master switch of the whole customer section (payment, comment and
+    // delivery included).
     final bool showCustomerSection =
-        dc?['showCustomerNameAndPhone']?.visible ?? true;
+        params.isVisible('showCustomerNameAndPhone');
     final bool showCustomerName = cfgVisibleDefault('showCustomerName');
     final bool showCustomerAddress = cfgVisibleDefault('showCustomerAddress');
     final bool showCustomerVat = cfgVisible('showCustomerVatNumber');
     final bool showCustomerCr = cfgVisible('showCustomerCrNumber');
-    final bool showPayment =
-        !isQuotation && cfgVisibleDefault(paymentConfigKey);
-    final bool showComment = cfgVisibleDefault(commentConfigKey);
-    final bool showDeliveryMethod = cfgVisibleDefault('showDeliveryMethod');
+    final bool showPayment = showCustomerSection &&
+        !isQuotation &&
+        cfgVisibleDefault(paymentConfigKey);
+    final bool showComment =
+        showCustomerSection && cfgVisibleDefault(commentConfigKey);
+    final bool showDeliveryMethod =
+        showCustomerSection && cfgVisibleDefault('showDeliveryMethod');
     final bool hasSummaryComment = showComment &&
         params.orderComment != null &&
         params.orderComment!.isNotEmpty;
@@ -540,13 +574,15 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     // Human-readable payment method summary (handles single + multi-payment),
     // reused by both the invoice info box and the left payment line.
     final paymentMethodSummary = _paymentMethodSummary(params);
+    final paymentBreakdownLines =
+        _buildPaymentBreakdownLines(params, currency, wordsStyle, dc);
 
     // ── Totals visibility ───────────────────────────────────────────
     final bool showSubTotalFlag =
-        (dc?['showSubTotal']?.visible ?? dc?['showMRPTotal']?.visible) != false;
-    final bool showDiscountFlag = dc?['showDiscount']?.visible != false;
-    final bool showTaxTotalFlag = dc?['showTax']?.visible != false;
-    final bool showNetFlag = dc?['showNetAmount']?.visible != false;
+        params.isVisible('showSubTotal') || params.isVisible('showMRPTotal');
+    final bool showDiscountFlag = params.isVisible('showDiscount');
+    final bool showTaxTotalFlag = params.isVisible('showTax');
+    final bool showNetFlag = params.isVisible('showNetAmount');
 
     // ── Customer box rows ───────────────────────────────────────────
     final customerRows = <pw.Widget>[];
@@ -564,7 +600,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             infoLabel,
             infoValue));
       }
-      if (showCustomerAddress) {
+      if (showCustomerAddress && displayOrBlank(custAddress).isNotEmpty) {
         customerRows.add(_kvRow(
             _infoLabel(
                 _labelEn(
@@ -577,7 +613,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             infoLabel,
             infoValue));
       }
-      if (showCustomerVat) {
+      if (showCustomerVat &&
+          displayOrBlank(params.customerVatNumber).isNotEmpty) {
         customerRows.add(_kvRow(
             _infoLabel(
                 _labelEn(dc, 'showCustomerVatNumber', null, 'Customer VAT No.',
@@ -590,7 +627,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             infoLabel,
             infoValue));
       }
-      if (showCustomerCr) {
+      if (showCustomerCr &&
+          displayOrBlank(params.customerCrNumber).isNotEmpty) {
         customerRows.add(_kvRow(
             _infoLabel(
                 _labelEn(dc, 'showCustomerCrNumber', null, 'Customer CR No.',
@@ -603,7 +641,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             infoLabel,
             infoValue));
       }
-      if (custPhone != null) {
+      if (custPhone.isNotEmpty) {
         customerRows.add(_kvRow(
             _infoLabel(
                 _labelEn(
@@ -674,6 +712,17 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             params.deliveryMethod!,
             infoLabel,
             infoValue),
+      if (showCustomerSection &&
+          params.isVisible('showDeliveryPhone') &&
+          (params.deliveryPhone ?? '').trim().isNotEmpty)
+        _kvRow(
+            _infoLabel(_labelEn(dc, 'showDeliveryPhone', null, 'Delivery Phone', isDualLanguage), _labelAr(dc, 'showDeliveryPhone', null, 'هاتف التوصيل', isDualLanguage), isDualLanguage, isAr: isAr),
+            params.deliveryPhone!.trim(), infoLabel, infoValue),
+      if (params.isVisible('showTokenNumber') &&
+          (params.tokenNumber ?? '').trim().isNotEmpty)
+        _kvRow(
+            _infoLabel(_labelEn(dc, 'showTokenNumber', null, 'Token No', isDualLanguage), _labelAr(dc, 'showTokenNumber', null, 'رقم الرمز', isDualLanguage), isDualLanguage, isAr: isAr),
+            params.tokenNumber!.trim(), infoLabel, infoValue),
     ];
 
     final runtimeSellerName = params.storeName?.trim().isNotEmpty == true
@@ -825,7 +874,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           'فاتورة ضريبية',
           isDualLanguage,
         );
-        final showReferenceTitle = resolvedTitleOpt?.visible != false;
+        final showReferenceTitle = params.isVisible('showInvoiceTitle');
 
         final showReferenceGross =
             dc?['showMRPTotal']?.visible ?? showSubTotalFlag;
@@ -1179,6 +1228,12 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       }
 
       return [
+        // Document-level header / subheader (shared language rules).
+        for (final text in [
+          params.documentText(config.header),
+          params.documentText(config.subheader)
+        ])
+          if (text.isNotEmpty) pw.Center(child: modeText(text, headerDetailStyle)),
         // ═══════════════════════════════════════════════════════
         // SECTION 1: HEADER — English | centered logo | Arabic
         // ═══════════════════════════════════════════════════════
@@ -1193,7 +1248,6 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 detailStyle: headerDetailStyle,
                 alignment: pw.CrossAxisAlignment.start,
                 textAlign: pw.TextAlign.left,
-                textDirection: pw.TextDirection.ltr,
                 singleLineHeading: true,
               ),
             ),
@@ -1218,7 +1272,6 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 detailStyle: headerDetailStyle,
                 alignment: pw.CrossAxisAlignment.end,
                 textAlign: pw.TextAlign.right,
-                textDirection: pw.TextDirection.rtl,
                 singleLineHeading: true,
               ),
             ),
@@ -1239,18 +1292,18 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 alignment: pw.Alignment.centerLeft,
                 child: (cfgVisible('showExtraHeading2') &&
                         extraHeading2.isNotEmpty)
-                    ? pdfText(extraHeading2, style: crVatStyle)
-                    : (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
-                        ? pdfText(storeFssai, style: crVatStyle)
-                        : pw.SizedBox(),
+                    ? modeText(
+                        extraHeading2, crVatStyle, pw.CrossAxisAlignment.start)
+                    : pw.SizedBox(),
               ),
             ),
-            pdfText(invoiceTitleText.toUpperCase(), style: titleStyle),
+            modeText(invoiceTitleText.toUpperCase(), titleStyle),
             pw.Expanded(
               child: pw.Align(
                 alignment: pw.Alignment.centerRight,
                 child: (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
-                    ? pdfText(storeFssai, style: crVatStyle)
+                    ? modeText(
+                        storeFssai, crVatStyle, pw.CrossAxisAlignment.end)
                     : pw.SizedBox(),
               ),
             ),
@@ -1527,7 +1580,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                           if (hasSummaryComment) ...[
                             if (bankLines.isNotEmpty) pw.SizedBox(height: 4),
                             pdfText(
-                                '${_getLabel(dc, commentConfigKey, null, 'Comment')}: ${params.orderComment}',
+                                '${params.labelFor(commentConfigKey, englishFallback: 'Comment', arabicFallback: 'تعليق', inlineBilingual: true)}: ${params.orderComment}',
                                 style: wordsStyle),
                           ],
                           if (showSavedSummary)
@@ -1580,18 +1633,20 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                           children: [
                             if (cfgVisible('showItemsCount'))
                               _totalsRow(
-                                  _withColon(_getLabel(
-                                      dc, 'showItemsCount', null, 'Items')),
-                                  '',
+                                  _withColon(_labelEn(dc, 'showItemsCount',
+                                      null, 'Items', isDualLanguage)),
+                                  _labelAr(dc, 'showItemsCount', null, 'العدد',
+                                      isDualLanguage),
                                   params.cartItems.length.toString(),
                                   totalsLabelEn,
                                   totalsLabelAr,
                                   totalsValueStyle),
                             if (cfgVisible('showQuantityCount'))
                               _totalsRow(
-                                  _withColon(_getLabel(dc, 'showQuantityCount',
-                                      null, 'Total Qty')),
-                                  '',
+                                  _withColon(_labelEn(dc, 'showQuantityCount',
+                                      null, 'Total Qty', isDualLanguage)),
+                                  _labelAr(dc, 'showQuantityCount', null,
+                                      'إجمالي الكمية', isDualLanguage),
                                   params.totalQuantity % 1 == 0
                                       ? params.totalQuantity.toInt().toString()
                                       : params.totalQuantity.toStringAsFixed(2),
@@ -1651,7 +1706,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               ),
             ],
           ),
-          if (customerBalanceSummaryLines.isNotEmpty ||
+          if (paymentBreakdownLines.isNotEmpty ||
+              customerBalanceSummaryLines.isNotEmpty ||
               cfgVisible('showAmountInWords')) ...[
             pw.SizedBox(height: 4),
             pw.Row(
@@ -1660,7 +1716,10 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 pw.Expanded(
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: customerBalanceSummaryLines,
+                    children: [
+                      ...paymentBreakdownLines,
+                      ...customerBalanceSummaryLines,
+                    ],
                   ),
                 ),
                 pw.SizedBox(width: 8),
@@ -1699,22 +1758,28 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         // ═══════════════════════════════════════════════════════
         // TERMS & CONDITIONS (config value → billDocumentConfig.terms)
         // ═══════════════════════════════════════════════════════
-        if (cfgVisible('showTermsConditions')) ...[
-          pdfText(_termsText(dc, config), style: smallStyle),
+        if (params.termsText.isNotEmpty) ...[
+          modeText(
+              params.termsText, smallStyle, pw.CrossAxisAlignment.start),
           pw.SizedBox(height: 4),
         ],
 
         // ═══════════════════════════════════════════════════════
         // THANK YOU (config value → footer → default)
         // ═══════════════════════════════════════════════════════
-        if (cfgVisible('showThankYouMessage'))
+        if (params.thankYouText.isNotEmpty)
+          pw.Center(child: modeText(params.thankYouText, footerBold)),
+        if (params.isVisible('showVATFooter') &&
+            (params.zatcaVatNumber ?? '').trim().isNotEmpty)
           pw.Center(
-            child: pdfText(
-              _thankYouText(dc, config, isEnglish),
-              style: footerBold,
-              textAlign: pw.TextAlign.center,
-            ),
-          ),
+              child: pdfText(
+                  '${params.labelFor('showVATFooter', englishFallback: 'VAT No', arabicFallback: 'الرقم الضريبي', inlineBilingual: true)}: ${params.zatcaVatNumber!.trim()}',
+                  style: footerStyle)),
+        if (params.isVisible('showOrderNumberInFooter'))
+          pw.Center(
+              child: pdfText(
+                  '${params.labelFor('showOrderNumberInFooter', englishFallback: 'Invoice No', arabicFallback: 'رقم الفاتورة', inlineBilingual: true)}: ${params.printableOrderNumberComponent}',
+                  style: footerStyle)),
         pw.SizedBox(height: 10),
 
         // ═══════════════════════════════════════════════════════
@@ -1725,22 +1790,26 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           children: [
             pw.Row(
               children: [
-                pdfText('Customer Signature: ____________________',
+                pdfText(
+                    '${isRtl ? '' : 'Customer Signature: '}____________________',
                     style: signatureStyle),
                 pw.SizedBox(width: 6),
-                pdfText('التوقيع',
-                    style: signatureArStyle,
-                    textDirection: pw.TextDirection.rtl),
+                if (!isEnglish)
+                  pdfText('التوقيع',
+                      style: signatureArStyle,
+                      textDirection: pw.TextDirection.rtl),
               ],
             ),
             pw.Row(
               children: [
-                pdfText('Salesman Signature: ____________________',
+                pdfText(
+                    '${isRtl ? '' : 'Salesman Signature: '}____________________',
                     style: signatureStyle),
                 pw.SizedBox(width: 6),
-                pdfText('توقيع البائع',
-                    style: signatureArStyle,
-                    textDirection: pw.TextDirection.rtl),
+                if (!isEnglish)
+                  pdfText('توقيع البائع',
+                      style: signatureArStyle,
+                      textDirection: pw.TextDirection.rtl),
               ],
             ),
           ],
@@ -2825,7 +2894,6 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     required pw.TextStyle detailStyle,
     required pw.CrossAxisAlignment alignment,
     required pw.TextAlign textAlign,
-    required pw.TextDirection textDirection,
     bool singleLineHeading = false,
   }) {
     pw.Widget line(int i) => pdfText(
@@ -2836,7 +2904,6 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           textAlign: textAlign,
           maxLines: singleLineHeading && i == 0 ? 1 : 2,
           softWrap: !(singleLineHeading && i == 0),
-          textDirection: textDirection,
         );
 
     return pw.Column(
@@ -2866,7 +2933,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   /// configured label already ends with one (e.g. value `"AR Qty:"`).
   String _withColon(String label) {
     final t = label.trimRight();
-    return t.endsWith(':') ? t : '$t:';
+    return t.isEmpty || t.endsWith(':') ? t : '$t:';
   }
 
   /// Bilingual label used in the compact customer/invoice information boxes.
@@ -2879,26 +2946,19 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     return en;
   }
 
-  /// Get a label with priority: displayConfig value > resolvedLabel > default.
+  /// One-line label resolved by the shared contract for the active language
+  /// mode (the Arabic fallback is the contract's translation of [defaultLabel]).
   String _getLabel(Map<String, DisplayOption>? dc, String key,
       String? resolvedLabel, String defaultLabel) {
-    final configValue = dc?[key]?.value as String?;
-    if (configValue != null && configValue.isNotEmpty) return configValue;
-    if (resolvedLabel != null && resolvedLabel.isNotEmpty) return resolvedLabel;
-    return defaultLabel;
-  }
-
-  /// Text from a config option: value > defaultValue > fallback > default.
-  /// Mirrors the thermal layout's `_getOptionText`.
-  String _getOptionText(Map<String, DisplayOption>? dc, String key,
-      {String? fallback, String defaultValue = ''}) {
-    final opt = dc?[key];
-    final v = opt?.value;
-    if (v is String && v.isNotEmpty) return v;
-    final d = opt?.defaultValue;
-    if (d != null && d.isNotEmpty) return d;
-    if (fallback != null && fallback.isNotEmpty) return fallback;
-    return defaultValue;
+    return ReceiptConfigurationContract.label(
+      options: dc,
+      key: key,
+      mode: _mode,
+      englishFallback: defaultLabel,
+      arabicFallback: '',
+      resolvedEnglish: resolvedLabel,
+      inlineBilingual: true,
+    );
   }
 
   /// English label slot, dual-language aware.
@@ -2910,6 +2970,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   /// default. Mirrors the English half of the thermal `_getBilingualLabel`.
   String _labelEn(Map<String, DisplayOption>? dc, String key,
       String? resolvedEnglish, String defaultEn, bool isDual) {
+    // Arabic-only invoices leave the English slot empty.
+    if (_mode.isArabic) return '';
     if (isDual) {
       final cfgEn = dc?[key]?.defaultValue;
       if (cfgEn != null && cfgEn.isNotEmpty) return cfgEn;
@@ -2928,7 +2990,10 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   /// template translation. Mirrors the Arabic half of `_getBilingualLabel`.
   String _labelAr(Map<String, DisplayOption>? dc, String key,
       String? resolvedArabic, String defaultAr, bool isDual) {
-    if (isDual) {
+    // English-only invoices leave the Arabic slot empty; Arabic-only invoices
+    // use the configured Arabic label like bilingual ones.
+    if (_mode.isEnglish) return '';
+    if (isDual || _mode.isArabic) {
       final cfgAr = dc?[key]?.value as String?;
       if (cfgAr != null && cfgAr.isNotEmpty) return cfgAr;
       if (resolvedArabic != null && resolvedArabic.isNotEmpty) {
@@ -3042,7 +3107,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     pw.TextStyle style,
     Map<String, DisplayOption>? dc,
   ) {
-    final bool showPaymentBreaked = dc?['showPaymentBreaked']?.visible ?? true;
+    final bool showPaymentBreaked =
+        ReceiptConfigurationContract.isVisible(dc, 'showPaymentBreaked');
     if (params.paidAmount == null || !showPaymentBreaked) return [];
 
     String labelFor(String method) {
@@ -3106,9 +3172,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     pw.TextStyle style,
     pw.TextStyle boldStyle,
   ) {
-    final bool showCustomerBalance =
-        dc?['showCustomerBalance']?.visible ?? true;
-    if (!showCustomerBalance) return [];
+    if (!params.isVisible('showCustomerBalance')) return [];
     if (params.isDefaultCustomer) return [];
     if (params.customerOldBalance == null &&
         params.customerCurrentBalance == null &&
@@ -3116,9 +3180,9 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       return [];
     }
 
-    final bool showPrev = dc?['showCustomerPrevBalance']?.visible ?? true;
-    final bool showPaid = dc?['showCustomerPaidAmount']?.visible ?? true;
-    final bool showCurrent = dc?['showCustomerCurrentBalance']?.visible ?? true;
+    final bool showPrev = params.isVisible('showCustomerPrevBalance');
+    final bool showPaid = params.isVisible('showCustomerPaidAmount');
+    final bool showCurrent = params.isVisible('showCustomerCurrentBalance');
 
     final lines = <pw.Widget>[];
     if (showPrev && params.customerOldBalance != null) {
@@ -3143,24 +3207,6 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       ));
     }
     return lines;
-  }
-
-  /// Terms text: config value, falling back to billDocumentConfig.terms.
-  String _termsText(Map<String, DisplayOption>? dc, DocumentConfig config) {
-    String? terms = dc?['showTermsConditions']?.value as String?;
-    if (terms == null || terms.trim().isEmpty) {
-      terms = config.terms;
-    }
-    return terms?.trim() ?? '';
-  }
-
-  /// Thank-you text: config value → billDocumentConfig.footer → default.
-  String _thankYouText(
-      Map<String, DisplayOption>? dc, DocumentConfig config, bool isEnglish) {
-    final value = dc?['showThankYouMessage']?.value as String?;
-    if (value != null && value.isNotEmpty) return value;
-    if (config.footer?.isNotEmpty == true) return config.footer!;
-    return isEnglish ? 'Thank you for your business' : 'شكراً لتسوقكم معنا';
   }
 
   /// Key/value row used in the customer & invoice info boxes.
@@ -3382,7 +3428,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   style: headerAr,
                   textDirection: pw.TextDirection.rtl,
                   textAlign: pw.TextAlign.center),
-            pdfText(en, style: headerEn, textAlign: pw.TextAlign.center),
+            if (en.isNotEmpty)
+              pdfText(en, style: headerEn, textAlign: pw.TextAlign.center),
           ],
         ),
       );
@@ -3424,7 +3471,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       hdrs.add(hdr(
           _labelEn(
               dc, 'showSLNumber', resolvedLabels?.slNumberDefault, 'NO', isAr),
-          _labelAr(dc, 'showSLNumber', resolvedLabels?.slNumber, '', isAr)));
+          _labelAr(dc, 'showSLNumber', resolvedLabels?.slNumber,
+              mode == ReceiptLanguageMode.arabic ? 'م' : '', isAr)));
     }
     if (showItems) {
       hdrs.add(hdr(
@@ -3851,7 +3899,9 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
 
     // — Customer Details section —
     final custRows = <pw.Widget>[];
-    if (params.customerName != null && params.customerName!.trim().isNotEmpty) {
+    if (params.isVisible('showCustomerName') &&
+        params.customerName != null &&
+        params.customerName!.trim().isNotEmpty) {
       custRows.add(_kvRow(
         'Customer Name:',
         params.customerName!,
@@ -3859,12 +3909,12 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         valueStyle,
       ));
     }
-    if (params.customerPhone != null &&
-        params.customerPhone!.trim().isNotEmpty) {
-      custRows
-          .add(_kvRow('Phone:', params.customerPhone!, labelStyle, valueStyle));
+    if (params.customerPhoneText.isNotEmpty) {
+      custRows.add(
+          _kvRow('Phone:', params.customerPhoneText, labelStyle, valueStyle));
     }
-    if (params.customerAddress != null &&
+    if (params.isVisible('showCustomerAddress') &&
+        params.customerAddress != null &&
         params.customerAddress!.trim().isNotEmpty) {
       custRows.add(_kvRow(
           'Billing Address:', params.customerAddress!, labelStyle, valueStyle));
@@ -3892,8 +3942,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       widgets.add(pw.SizedBox(height: 4));
     }
 
-    if (col('showReturnItemsCount') ||
-        (retLabels?.creditNoteItemsCount != null)) {
+    if (col('showReturnItemsCount')) {
       final countLabel = (retLabels?.creditNoteItemsCount != null)
           ? retLbl('showCreditNoteItemsCount', retLabels?.creditNoteItemsCount,
               'Total Items:')
@@ -3903,8 +3952,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       widgets.add(pw.SizedBox(height: 2));
     }
 
-    if (col('showReturnTotalAmount') ||
-        (retLabels?.creditNoteTotalAmount != null)) {
+    if (col('showReturnTotalAmount')) {
       final label = (retLabels?.creditNoteTotalAmount != null)
           ? retLbl('showCreditNoteTotalAmount',
               retLabels?.creditNoteTotalAmount, 'Total Amount:')
@@ -3918,7 +3966,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       ));
     }
 
-    if (col('showReturnNetAmount') || (retLabels?.creditNoteRefund != null)) {
+    if (col('showReturnNetAmount')) {
       final label = (retLabels?.creditNoteRefund != null)
           ? retLbl('showCreditNoteRefund', retLabels?.creditNoteRefund,
               'Credit Note Total:')
@@ -3932,10 +3980,11 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       ));
     }
 
-    if (hasCreditNoteConfig) {
+    if (hasCreditNoteConfig &&
+        (col('showReturnTotalAmount') || col('showReturnNetAmount'))) {
       widgets.add(pw.SizedBox(height: 4));
-      widgets.addAll(
-          _amountInWords(returnRateTotal, currency, false, null, labelStyle));
+      widgets.addAll(_amountInWords(returnRateTotal, currency, false,
+          params.amountInWordsLanguage, labelStyle));
     }
 
     return widgets;
@@ -3957,8 +4006,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     }
     double fs(double v) => isA5 ? v * 0.78 : v;
 
-    bool vis(String key) => dc?[key]?.visible != false;
-    bool visExplicit(String key) => dc?[key]?.visible == true;
+    bool vis(String key) => ReceiptConfigurationContract.isVisible(dc, key);
     String lbl(String key, String def) {
       final v = dc?[key]?.value as String?;
       if (v != null && v.isNotEmpty) return v;
@@ -3968,7 +4016,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final showFinalPurchase = vis('showFinalPurchase');
     final showFinalReturn = vis('showFinalReturn');
     final showFinalNetAmount = vis('showFinalNetAmount');
-    final showFinalAmountInWords = visExplicit('showFinalAmountInWords');
+    final showFinalAmountInWords = vis('showFinalAmountInWords');
 
     if (!showFinalPurchase && !showFinalReturn && !showFinalNetAmount) {
       return [];

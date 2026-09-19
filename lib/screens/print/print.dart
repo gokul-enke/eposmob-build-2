@@ -1312,6 +1312,9 @@ class _PrintPageState extends State<PrintPage> {
                             selectedPaperSize = newValue!;
                             _saveDefaultPaperSize(selectedPaperSize);
                           });
+                          // Thermal and A4/A5 use different records ("Bill"
+                          // vs "Bill A4"), so re-resolve for the new size.
+                          _loadDocumentConfigurationsFromProvider();
                         },
                       ),
                     ],

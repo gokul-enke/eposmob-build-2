@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/helpers/string_helper.dart';
 import 'package:pos_machine/models/bank.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/document_configurations.dart';
@@ -144,7 +145,10 @@ class ReceiptLayoutParams {
       merged['showInvoiceTitle'] = DisplayOption(
         visible: true,
         value: titleOverride,
-        defaultValue: options['showInvoiceTitle']?.defaultValue,
+        // With no configured English title the override is the whole title,
+        // so bilingual mode must not pair it with the 'INVOICE' fallback.
+        defaultValue:
+            options['showInvoiceTitle']?.defaultValue ?? titleOverride,
       );
       return merged;
     }
@@ -164,7 +168,8 @@ class ReceiptLayoutParams {
         merged['showInvoiceTitle'] = DisplayOption(
           visible: true,
           value: titleOverride,
-          defaultValue: options['showInvoiceTitle']?.defaultValue,
+          defaultValue:
+              options['showInvoiceTitle']?.defaultValue ?? titleOverride,
         );
         return merged;
       }
@@ -181,6 +186,19 @@ class ReceiptLayoutParams {
               )
             : b2bInvoiceTitle;
     return merged;
+  }
+
+  /// Keeps a stable offline receipt reference intact in every thermal and
+  /// PDF theme while retaining legacy ORD-/CONF- number stripping.
+  ///
+  /// gokul-dev resolves this through `ReceiptIdentityService`; this branch
+  /// does not carry that service yet, so the same two rules live here.
+  String get printableOrderNumberComponent {
+    final trimmed = orderNumber.trim();
+    if (RegExp(r'^\d+-\d{2,3}-\d{6}-\d{4,}$').hasMatch(trimmed)) {
+      return trimmed;
+    }
+    return RegExp(r'[1-9]\d*').firstMatch(trimmed)?.group(0) ?? trimmed;
   }
 
   /// Display configuration options from the Return Bill document config.
@@ -283,6 +301,83 @@ class ReceiptLayoutParams {
     ).trim();
     return label.isEmpty ? storeAddressValue : '$label: $storeAddressValue';
   }
+
+  /// Store phone / email line shared by every template. [key] is `showTel`
+  /// or `showEmail`: the option owns the label and the visibility switch, the
+  /// active store (then the customer-care setting) owns the value. Empty when
+  /// hidden or when there is no value, so no template prints an orphan label.
+  String storeContactText(String key, {bool inlineBilingual = true}) {
+    final isTel = key == 'showTel';
+    final primary = (isTel ? storePhone : storeEmail)?.trim() ?? '';
+    final value = primary.isNotEmpty
+        ? primary
+        : (isTel ? customerCareNumber : customerCareEmail).trim();
+    if (!isVisible(key) || value.isEmpty) return '';
+
+    final label = labelFor(
+      key,
+      englishFallback: isTel ? 'Telephone' : 'Email',
+      arabicFallback: isTel ? 'الهاتف' : 'البريد الإلكتروني',
+      inlineBilingual: inlineBilingual,
+    ).trim();
+    return label.isEmpty ? value : '$label: $value';
+  }
+
+  /// Customer phone exactly as every template must print it: empty when the
+  /// toggle is off, the phone is missing, or the walk-in default customer is
+  /// hidden; masked when `showCustomerPhoneMasked` is on.
+  String get customerPhoneText {
+    final phone = customerPhone?.trim() ?? '';
+    if (!isVisible('showCustomerPhone') || phone.isEmpty) return '';
+    if (isDefaultCustomer && hideDefaultCustomerPhone) return '';
+    return isVisible('showCustomerPhoneMasked')
+        ? StringHelper.maskStringShowLast4(phone)
+        : phone;
+  }
+
+  /// Printed invoice number: the literal configured prefix (or the primary
+  /// language fallback) followed by the stable order-number component.
+  String get invoiceNumberText {
+    final prefix = ReceiptConfigurationContract.numberPrefix(
+      billDocumentConfig.numberPrefix,
+      receiptLanguageMode,
+      englishFallback: 'INV-',
+      arabicFallback: 'رقم الفاتورة: ',
+    );
+    return '$prefix$printableOrderNumberComponent';
+  }
+
+  /// Terms block: the text configured on `showTermsConditions`, falling back
+  /// to the document-level `terms`. Empty when the toggle is off.
+  String get termsText {
+    if (!isVisible('showTermsConditions')) return '';
+    final documentTerms = documentText(billDocumentConfig.terms);
+    final text = labelFor(
+      'showTermsConditions',
+      englishFallback: documentTerms,
+      arabicFallback: documentTerms,
+    );
+    return text.isNotEmpty ? text : documentTerms;
+  }
+
+  /// Closing message: the text configured on `showThankYouMessage`, then the
+  /// document-level `footer`, then the renderer default. Empty when hidden.
+  String get thankYouText {
+    if (!isVisible('showThankYouMessage')) return '';
+    final documentFooter = documentText(billDocumentConfig.footer);
+    final text = labelFor(
+      'showThankYouMessage',
+      englishFallback: documentFooter.isNotEmpty
+          ? documentFooter
+          : 'Thank You for Your Visit!',
+      arabicFallback:
+          documentFooter.isNotEmpty ? documentFooter : 'شكراً لزيارتكم!',
+    );
+    return text.isNotEmpty ? text : documentFooter;
+  }
+
+  /// Language code for amount-in-words. Bilingual templates print both.
+  String get amountInWordsLanguage => receiptLanguageMode.isArabic ? 'ar' : 'en';
 
   String labelFor(
     String key, {

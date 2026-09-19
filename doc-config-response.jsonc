@@ -1,0 +1,1140 @@
+
+// Here is some output for the document template or API response. 
+
+{
+    "status": "success",
+    "document_configurations": {
+        "Bill": {
+            "id": 1102,
+            "company_id": 2,
+            "type": "Bill",
+            "logo": null,
+            "show_logo": 1,
+            "icon": null,
+            "show_icon": 1,
+            "number_prefix": "INV-",
+            "discount_method": null,
+            "accent_color": null,
+            "font": null,
+            "template": "bill",
+            "theme": "supermarket2",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2026-08-12 11:00:25",
+            "updated_at": "2026-09-11 10:54:17",
+            "language": "ar",
+            "header": "عنوان الفاتورة ١١٠٢",
+            "subheader": "العنوان الفرعي ١١٠٢",
+            "terms": "تذييل الفاتورة ١١٠٢تذييل الفاتورة ١١٠٢",
+            "footer": "تذييل الفاتورة ١١٠٢",
+            "item_name": null,
+            "tax_name": null,
+            "unit_name": null,
+            "price_name": null,
+            "amount_name": null,
+            "is_active": 1,
+            "display_configuration": {
+                "showStoreName": {
+                    "visible": true,
+                    "value": "متجر الاختبار ١١٠٢",
+                    "default": "EN STORE 1102"
+                },
+                "showDescription": {
+                    "visible": true,
+                    "value": "وصف عربي ١١٠٢",
+                    "default": "EN DESCRIPTION 1102"
+                },
+                "showTel": {
+                    "visible": true,
+                    "value": "هاتف المتجر ١١٠٢",
+                    "default": "EN TELEPHONE 1102"
+                },
+                "showEmail": {
+                    "visible": true,
+                    "value": "بريد المتجر ١١٠٢",
+                    "default": "en-1102@example.invalid"
+                },
+                "showInvoiceNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showInvoiceTitle": {
+                    "visible": true,
+                    "value": "فاتورة عربية",
+                    "default": "EN INVOICE"
+                },
+                "showInvoiceTitleB2b": {
+                    "visible": true,
+                    "value": "فاتورة أعمال عربية",
+                    "default": "EN B2B INVOICE"
+                },
+                "showStoreAddress": {
+                    "visible": true,
+                    "value": "عنوان المتجر ١١٠٢",
+                    "default": "EN ADDRESS 1102"
+                },
+                "showFssaiInfo": {
+                    "visible": true,
+                    "value": "معلومات الضريبة ١١٠٢",
+                    "default": "EN TAX INFO 1102"
+                },
+                "showVatNumber": {
+                    "visible": true,
+                    "value": "الرقم الضريبي ١١٠٢",
+                    "default": "EN VAT 1102"
+                },
+                "showCRNumber": {
+                    "visible": true,
+                    "value": "السجل التجاري ١١٠٢",
+                    "default": "EN CR 1102"
+                },
+                "showCustomerNameAndPhone": {
+                    "visible": true,
+                    "value": null
+                },
+                "showExtraHeading1": {
+                    "visible": true,
+                    "value": "عنوان إضافي أول",
+                    "default": "EN EXTRA HEADING ONE"
+                },
+                "showExtraHeading2": {
+                    "visible": true,
+                    "value": "عنوان إضافي ثان",
+                    "default": "EN EXTRA HEADING TWO"
+                },
+                "showTokenNumber": {
+                    "visible": true,
+                    "value": "رقم الرمز",
+                    "default": "EN TOKEN"
+                },
+                "showCustomerName": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerPhone": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerAddress": {
+                    "visible": true,
+                    "value": null
+                },
+                "showPayment": {
+                    "visible": true,
+                    "value": null
+                },
+                "showComment": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerPhoneMasked": {
+                    "visible": true,
+                    "value": null
+                },
+                "showPaymentBreaked": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDate": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDeliveryMethod": {
+                    "visible": true,
+                    "value": "طريقة التوصيل",
+                    "default": "EN DELIVERY"
+                },
+                "showCustomerVatNumber": {
+                    "visible": true,
+                    "value": "ضريبة العميل",
+                    "default": "EN CUSTOMER VAT"
+                },
+                "showCustomerCrNumber": {
+                    "visible": true,
+                    "value": "سجل العميل",
+                    "default": "EN CUSTOMER CR"
+                },
+                "showSLNumber": {
+                    "visible": true,
+                    "value": "م",
+                    "default": "E-SL"
+                },
+                "showParticulars": {
+                    "visible": true,
+                    "value": "الصنف",
+                    "default": "E-ITEM"
+                },
+                "showMRP": {
+                    "visible": true,
+                    "value": "سعر التجزئة",
+                    "default": "E-MRP"
+                },
+                "showQty": {
+                    "visible": true,
+                    "value": "الكمية",
+                    "default": "E-QTY"
+                },
+                "showRate": {
+                    "visible": true,
+                    "value": "السعر شامل الضريبة",
+                    "default": "E-RATE+"
+                },
+                "showRateExcTax": {
+                    "visible": true,
+                    "value": "السعر دون الضريبة",
+                    "default": "E-RATE-"
+                },
+                "showUnit": {
+                    "visible": true,
+                    "value": "الوحدة",
+                    "default": "E-UNIT"
+                },
+                "showTaxHeader": {
+                    "visible": true,
+                    "value": "الضريبة",
+                    "default": "E-TAX"
+                },
+                "showTotal": {
+                    "visible": true,
+                    "value": "الإجمالي",
+                    "default": "E-TOTAL"
+                },
+                "showWarranty": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDiscount": {
+                    "visible": true,
+                    "value": "الخصم",
+                    "default": "E-DISCOUNT"
+                },
+                "showNetAmount": {
+                    "visible": true,
+                    "value": "الصافي",
+                    "default": "E-NET"
+                },
+                "showMRPTotal": {
+                    "visible": true,
+                    "value": "إجمالي التجزئة",
+                    "default": "E-MRP-TOTAL"
+                },
+                "showSaved": {
+                    "visible": true,
+                    "value": "التوفير",
+                    "default": "E-SAVED"
+                },
+                "showAmountInWords": {
+                    "visible": true,
+                    "value": null
+                },
+                "showItemsCount": {
+                    "visible": true,
+                    "value": "عدد الأصناف",
+                    "default": "E-ITEMS"
+                },
+                "showQuantityCount": {
+                    "visible": true,
+                    "value": "إجمالي الكمية",
+                    "default": "E-QUANTITY"
+                },
+                "showTax": {
+                    "visible": true,
+                    "value": "إجمالي الضريبة",
+                    "default": "E-TAX-TOTAL"
+                },
+                "showSubTotal": {
+                    "visible": true,
+                    "value": "المجموع الفرعي",
+                    "default": "E-SUBTOTAL"
+                },
+                "showBankInfo": {
+                    "visible": true,
+                    "value": null
+                },
+                "showBankName": {
+                    "visible": true,
+                    "value": null
+                },
+                "showAccountName": {
+                    "visible": true,
+                    "value": null
+                },
+                "showAccountNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showIBAN": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSwiftCode": {
+                    "visible": true,
+                    "value": null
+                },
+                "showOrderNumberInFooter": {
+                    "visible": true,
+                    "value": "رقم الطلب في التذييل",
+                    "default": "E-ORDER-FOOTER"
+                },
+                "showVATFooter": {
+                    "visible": true,
+                    "value": "ضريبة التذييل",
+                    "default": "E-VAT-FOOTER"
+                },
+                "showThankYouMessage": {
+                    "visible": true,
+                    "value": "شكراً لزيارتكم ١١٠٢",
+                    "default": "E-THANK-YOU-1102"
+                },
+                "showQRCode": {
+                    "visible": true,
+                    "value": "رسالة الرمز المربع ١١٠٢",
+                    "default": "E-QR-1102"
+                },
+                "showTermsConditions": {
+                    "visible": true,
+                    "value": "الشروط والأحكام ١١٠٢",
+                    "default": "E-TERMS-1102"
+                },
+                "showCustomerBalance": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerPrevBalance": {
+                    "visible": true,
+                    "value": "الرصيد السابق",
+                    "default": "E-PREV-BAL"
+                },
+                "showCustomerPaidAmount": {
+                    "visible": true,
+                    "value": "المبلغ المدفوع",
+                    "default": "E-PAID"
+                },
+                "showCustomerCurrentBalance": {
+                    "visible": true,
+                    "value": "الرصيد الحالي",
+                    "default": "E-CURRENT-BAL"
+                },
+                "showDeliveryPhone": {
+                    "visible": true,
+                    "value": "هاتف التوصيل",
+                    "default": "E-DELIVERY-PHONE"
+                }
+            },
+            "resolved_labels": {
+                "sl_number": "م",
+                "sl_number_default": "Sl#",
+                "particulars": "الصنف",
+                "particulars_default": "PARTICULARS",
+                "mrp": "سعر التجزئة",
+                "mrp_default": "MRP",
+                "qty": "الكمية",
+                "qty_default": "QTY",
+                "rate": "السعر شامل الضريبة",
+                "rate_default": "RATE (INC TAX)",
+                "rate_exc_tax": "السعر دون الضريبة",
+                "rate_exc_tax_default": "RATE (EXC TAX)",
+                "unit": "الوحدة",
+                "unit_default": "UNIT",
+                "total": "الإجمالي",
+                "total_default": "Total",
+                "tax": "الضريبة",
+                "tax_default": "Tax"
+            }
+        }
+    },
+    "options": {
+        "item_name_options": {
+            "items": "Items",
+            "products": "Products",
+            "services": "Services",
+            "other": "Other"
+        },
+        "unit_name_options": {
+            "quantity": "Quantity",
+            "hours": "Hours",
+            "other": "Other"
+        },
+        "price_name_options": {
+            "price": "Price",
+            "rate": "Rate",
+            "other": "Other"
+        },
+        "tax_name_options": {
+            "tax": "Tax",
+            "GST": "GST",
+            "VAT": "VAT",
+            "tax (%)": "Tax (%)",
+            "other": "Other"
+        },
+        "amount_name_options": {
+            "amount": "Amount",
+            "total": "Total",
+            "other": "Other"
+        },
+        "template_options": {
+            "default": "Default",
+            "bill": "Bill",
+            "bill-a4": "Bill A4",
+            "quotation": "Quotation",
+            "sales_and_return_bill": "Sales Return Bill",
+            "sales_and_return_bill_a4": "Sales Return Bill A4",
+            "return_bill": "Return Bill",
+            "credit_note": "Credit Note",
+            "receipt": "Receipt",
+            "voucher": "Voucher",
+            "payslip": "Payslip",
+            "email": "Email",
+            "supplier_invoice": "Supplier Invoice",
+            "delivery_note": "Delivery Note",
+            "customer_statement": "Customer Statement",
+            "supplier_statement": "Supplier Statement",
+            "kitchen_order": "Kitchen Order",
+            "barcode": "Barcode"
+        }
+    }
+}
+
+
+
+// Here is another output where the language is English and Arabic. 
+
+{
+    "status": "success",
+    "document_configurations": {
+        "Bill": {
+            "id": 1102,
+            "company_id": 2,
+            "type": "Bill",
+            "logo": null,
+            "show_logo": 1,
+            "icon": null,
+            "show_icon": 1,
+            "number_prefix": "INV-",
+            "discount_method": null,
+            "accent_color": null,
+            "font": null,
+            "template": "bill",
+            "theme": "supermarket2",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2026-08-12 11:00:25",
+            "updated_at": "2026-09-18 19:02:24",
+            "language": "en_ar",
+            "header": "عنوان الفاتورة ١١٠٢",
+            "subheader": "العنوان الفرعي ١١٠٢",
+            "terms": null,
+            "footer": "تذييل الفاتورة ١١٠٢",
+            "item_name": null,
+            "tax_name": null,
+            "unit_name": null,
+            "price_name": null,
+            "amount_name": null,
+            "is_active": 1,
+            "display_configuration": {
+                "showStoreName": {
+                    "visible": true,
+                    "value": "متجر الاختبار ١١٠٢",
+                    "default": "EN STORE 1102"
+                },
+                "showDescription": {
+                    "visible": true,
+                    "value": "وصف عربي ١١٠٢",
+                    "default": "EN DESCRIPTION 1102"
+                },
+                "showTel": {
+                    "visible": true,
+                    "value": "هاتف المتجر ١١٠٢",
+                    "default": "EN TELEPHONE 1102"
+                },
+                "showEmail": {
+                    "visible": true,
+                    "value": "بريد المتجر ١١٠٢",
+                    "default": "en-1102@example.invalid"
+                },
+                "showInvoiceNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showInvoiceTitle": {
+                    "visible": true,
+                    "value": "فاتورة عربية",
+                    "default": "EN INVOICE"
+                },
+                "showInvoiceTitleB2b": {
+                    "visible": true,
+                    "value": "فاتورة أعمال عربية",
+                    "default": "EN B2B INVOICE"
+                },
+                "showStoreAddress": {
+                    "visible": true,
+                    "value": "عنوان المتجر ١١٠٢",
+                    "default": "EN ADDRESS 1102"
+                },
+                "showFssaiInfo": {
+                    "visible": true,
+                    "value": "معلومات الضريبة ١١٠٢",
+                    "default": "EN TAX INFO 1102"
+                },
+                "showVatNumber": {
+                    "visible": true,
+                    "value": "الرقم الضريبي ١١٠٢",
+                    "default": "EN VAT 1102"
+                },
+                "showCRNumber": {
+                    "visible": true,
+                    "value": "السجل التجاري ١١٠٢",
+                    "default": "EN CR 1102"
+                },
+                "showCustomerNameAndPhone": {
+                    "visible": true,
+                    "value": null
+                },
+                "showExtraHeading1": {
+                    "visible": true,
+                    "value": "عنوان إضافي أول",
+                    "default": "EN EXTRA HEADING ONE"
+                },
+                "showExtraHeading2": {
+                    "visible": true,
+                    "value": "عنوان إضافي ثان",
+                    "default": "EN EXTRA HEADING TWO"
+                },
+                "showTokenNumber": {
+                    "visible": true,
+                    "value": "رقم الرمز",
+                    "default": "EN TOKEN"
+                },
+                "showCustomerName": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerPhone": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerAddress": {
+                    "visible": true,
+                    "value": null
+                },
+                "showPayment": {
+                    "visible": true,
+                    "value": null
+                },
+                "showComment": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerPhoneMasked": {
+                    "visible": true,
+                    "value": null
+                },
+                "showPaymentBreaked": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDate": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDeliveryMethod": {
+                    "visible": true,
+                    "value": "طريقة التوصيل",
+                    "default": "EN DELIVERY"
+                },
+                "showCustomerVatNumber": {
+                    "visible": true,
+                    "value": "ضريبة العميل",
+                    "default": "EN CUSTOMER VAT"
+                },
+                "showCustomerCrNumber": {
+                    "visible": true,
+                    "value": "سجل العميل",
+                    "default": "EN CUSTOMER CR"
+                },
+                "showSLNumber": {
+                    "visible": true,
+                    "value": "A-SL",
+                    "default": "E-SL"
+                },
+                "showParticulars": {
+                    "visible": true,
+                    "value": "A-ITEM",
+                    "default": "E-ITEM"
+                },
+                "showMRP": {
+                    "visible": true,
+                    "value": "سعر التجزئة",
+                    "default": "E-MRP"
+                },
+                "showQty": {
+                    "visible": true,
+                    "value": "الكمية",
+                    "default": "E-QTY"
+                },
+                "showRate": {
+                    "visible": true,
+                    "value": "السعر شامل الضريبة",
+                    "default": "E-RATE+"
+                },
+                "showRateExcTax": {
+                    "visible": true,
+                    "value": "السعر دون الضريبة",
+                    "default": "E-RATE-"
+                },
+                "showUnit": {
+                    "visible": true,
+                    "value": "الوحدة",
+                    "default": "E-UNIT"
+                },
+                "showTaxHeader": {
+                    "visible": true,
+                    "value": "الضريبة",
+                    "default": "E-TAX"
+                },
+                "showTotal": {
+                    "visible": true,
+                    "value": "الإجمالي",
+                    "default": "E-TOTAL"
+                },
+                "showWarranty": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDiscount": {
+                    "visible": true,
+                    "value": "الخصم",
+                    "default": "E-DISCOUNT"
+                },
+                "showNetAmount": {
+                    "visible": true,
+                    "value": "الصافي",
+                    "default": "E-NET"
+                },
+                "showMRPTotal": {
+                    "visible": true,
+                    "value": "إجمالي التجزئة",
+                    "default": "E-MRP-TOTAL"
+                },
+                "showSaved": {
+                    "visible": true,
+                    "value": "التوفير",
+                    "default": "E-SAVED"
+                },
+                "showAmountInWords": {
+                    "visible": true,
+                    "value": null
+                },
+                "showItemsCount": {
+                    "visible": true,
+                    "value": "عدد الأصناف",
+                    "default": "E-ITEMS"
+                },
+                "showQuantityCount": {
+                    "visible": true,
+                    "value": "إجمالي الكمية",
+                    "default": "E-QUANTITY"
+                },
+                "showTax": {
+                    "visible": true,
+                    "value": "إجمالي الضريبة",
+                    "default": "E-TAX-TOTAL"
+                },
+                "showSubTotal": {
+                    "visible": true,
+                    "value": "المجموع الفرعي",
+                    "default": "E-SUBTOTAL"
+                },
+                "showBankInfo": {
+                    "visible": true,
+                    "value": null
+                },
+                "showBankName": {
+                    "visible": true,
+                    "value": null
+                },
+                "showAccountName": {
+                    "visible": true,
+                    "value": null
+                },
+                "showAccountNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showIBAN": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSwiftCode": {
+                    "visible": true,
+                    "value": null
+                },
+                "showOrderNumberInFooter": {
+                    "visible": true,
+                    "value": "رقم الطلب في التذييل",
+                    "default": "E-ORDER-FOOTER"
+                },
+                "showVATFooter": {
+                    "visible": true,
+                    "value": "ضريبة التذييل",
+                    "default": "E-VAT-FOOTER"
+                },
+                "showThankYouMessage": {
+                    "visible": true,
+                    "value": "شكراً لزيارتكم ١١٠٢",
+                    "default": "E-THANK-YOU-1102"
+                },
+                "showQRCode": {
+                    "visible": true,
+                    "value": "رسالة الرمز المربع ١١٠٢",
+                    "default": "E-QR-1102"
+                },
+                "showTermsConditions": {
+                    "visible": true,
+                    "value": "الشروط والأحكام ١١٠٢",
+                    "default": "E-TERMS-1102"
+                },
+                "showCustomerBalance": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerPrevBalance": {
+                    "visible": true,
+                    "value": "الرصيد السابق",
+                    "default": "E-PREV-BAL"
+                },
+                "showCustomerPaidAmount": {
+                    "visible": true,
+                    "value": "المبلغ المدفوع",
+                    "default": "E-PAID"
+                },
+                "showCustomerCurrentBalance": {
+                    "visible": true,
+                    "value": "الرصيد الحالي",
+                    "default": "E-CURRENT-BAL"
+                },
+                "showDeliveryPhone": {
+                    "visible": true,
+                    "value": "هاتف التوصيل",
+                    "default": "E-DELIVERY-PHONE"
+                }
+            },
+            "resolved_labels": {
+                "sl_number": "A-SL",
+                "sl_number_default": "Sl#",
+                "particulars": "A-ITEM",
+                "particulars_default": "PARTICULARS",
+                "mrp": "سعر التجزئة",
+                "mrp_default": "MRP",
+                "qty": "الكمية",
+                "qty_default": "QTY",
+                "rate": "السعر شامل الضريبة",
+                "rate_default": "RATE (INC TAX)",
+                "rate_exc_tax": "السعر دون الضريبة",
+                "rate_exc_tax_default": "RATE (EXC TAX)",
+                "unit": "الوحدة",
+                "unit_default": "UNIT",
+                "total": "الإجمالي",
+                "total_default": "Total",
+                "tax": "الضريبة",
+                "tax_default": "Tax"
+            }
+        }
+    },
+    "options": {
+        "item_name_options": {
+            "items": "Items",
+            "products": "Products",
+            "services": "Services",
+            "other": "Other"
+        },
+        "unit_name_options": {
+            "quantity": "Quantity",
+            "hours": "Hours",
+            "other": "Other"
+        },
+        "price_name_options": {
+            "price": "Price",
+            "rate": "Rate",
+            "other": "Other"
+        },
+        "tax_name_options": {
+            "tax": "Tax",
+            "GST": "GST",
+            "VAT": "VAT",
+            "tax (%)": "Tax (%)",
+            "other": "Other"
+        },
+        "amount_name_options": {
+            "amount": "Amount",
+            "total": "Total",
+            "other": "Other"
+        },
+        "template_options": {
+            "default": "Default",
+            "bill": "Bill",
+            "bill-a4": "Bill A4",
+            "quotation": "Quotation",
+            "sales_and_return_bill": "Sales Return Bill",
+            "sales_and_return_bill_a4": "Sales Return Bill A4",
+            "return_bill": "Return Bill",
+            "credit_note": "Credit Note",
+            "receipt": "Receipt",
+            "voucher": "Voucher",
+            "payslip": "Payslip",
+            "email": "Email",
+            "supplier_invoice": "Supplier Invoice",
+            "delivery_note": "Delivery Note",
+            "customer_statement": "Customer Statement",
+            "supplier_statement": "Supplier Statement",
+            "kitchen_order": "Kitchen Order",
+            "barcode": "Barcode"
+        }
+    }
+},
+
+
+// Here is another output when the language is English only. 
+
+{
+    "status": "success",
+    "document_configurations": {
+        "Bill": {
+            "id": 1102,
+            "company_id": 2,
+            "type": "Bill",
+            "logo": null,
+            "show_logo": 1,
+            "icon": null,
+            "show_icon": 1,
+            "number_prefix": "INV-",
+            "discount_method": null,
+            "accent_color": null,
+            "font": null,
+            "template": "bill",
+            "theme": "supermarket2",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2026-08-12 11:00:25",
+            "updated_at": "2026-09-18 19:03:18",
+            "language": "en",
+            "header": "EN HEADER 1102",
+            "subheader": "EN SUBHEADER 1102",
+            "terms": null,
+            "footer": "EN FOOTER 1102",
+            "item_name": null,
+            "tax_name": null,
+            "unit_name": null,
+            "price_name": null,
+            "amount_name": null,
+            "is_active": 1,
+            "display_configuration": {
+                "showStoreName": {
+                    "visible": true,
+                    "value": "EN STORE 1102"
+                },
+                "showDescription": {
+                    "visible": true,
+                    "value": "EN DESCRIPTION 1102"
+                },
+                "showTel": {
+                    "visible": true,
+                    "value": "EN TELEPHONE 1102"
+                },
+                "showEmail": {
+                    "visible": true,
+                    "value": "en-1102@example.invalid"
+                },
+                "showInvoiceNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showInvoiceTitle": {
+                    "visible": true,
+                    "value": "EN INVOICE"
+                },
+                "showInvoiceTitleB2b": {
+                    "visible": true,
+                    "value": "EN B2B INVOICE"
+                },
+                "showStoreAddress": {
+                    "visible": true,
+                    "value": "EN ADDRESS 1102"
+                },
+                "showFssaiInfo": {
+                    "visible": true,
+                    "value": "EN TAX INFO 1102"
+                },
+                "showVatNumber": {
+                    "visible": true,
+                    "value": "EN VAT 1102"
+                },
+                "showCRNumber": {
+                    "visible": true,
+                    "value": "EN CR 1102"
+                },
+                "showCustomerNameAndPhone": {
+                    "visible": true,
+                    "value": null
+                },
+                "showExtraHeading1": {
+                    "visible": true,
+                    "value": "EN EXTRA HEADING ONE"
+                },
+                "showExtraHeading2": {
+                    "visible": true,
+                    "value": "EN EXTRA HEADING TWO"
+                },
+                "showTokenNumber": {
+                    "visible": true,
+                    "value": "EN TOKEN"
+                },
+                "showCustomerName": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerPhone": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerAddress": {
+                    "visible": true,
+                    "value": null
+                },
+                "showPayment": {
+                    "visible": true,
+                    "value": null
+                },
+                "showComment": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerPhoneMasked": {
+                    "visible": true,
+                    "value": null
+                },
+                "showPaymentBreaked": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDate": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDeliveryMethod": {
+                    "visible": true,
+                    "value": "EN DELIVERY"
+                },
+                "showCustomerVatNumber": {
+                    "visible": true,
+                    "value": "EN CUSTOMER VAT"
+                },
+                "showCustomerCrNumber": {
+                    "visible": true,
+                    "value": "EN CUSTOMER CR"
+                },
+                "showSLNumber": {
+                    "visible": true,
+                    "value": "E-SL"
+                },
+                "showParticulars": {
+                    "visible": true,
+                    "value": "E-ITEM"
+                },
+                "showMRP": {
+                    "visible": true,
+                    "value": "E-MRP"
+                },
+                "showQty": {
+                    "visible": true,
+                    "value": "E-QTY"
+                },
+                "showRate": {
+                    "visible": true,
+                    "value": "E-RATE+"
+                },
+                "showRateExcTax": {
+                    "visible": true,
+                    "value": "E-RATE-"
+                },
+                "showUnit": {
+                    "visible": true,
+                    "value": "E-UNIT"
+                },
+                "showTaxHeader": {
+                    "visible": true,
+                    "value": "E-TAX"
+                },
+                "showTotal": {
+                    "visible": true,
+                    "value": "E-TOTAL"
+                },
+                "showWarranty": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDiscount": {
+                    "visible": true,
+                    "value": "E-DISCOUNT"
+                },
+                "showNetAmount": {
+                    "visible": true,
+                    "value": "E-NET"
+                },
+                "showMRPTotal": {
+                    "visible": true,
+                    "value": "E-MRP-TOTAL"
+                },
+                "showSaved": {
+                    "visible": true,
+                    "value": "E-SAVED"
+                },
+                "showAmountInWords": {
+                    "visible": true,
+                    "value": null
+                },
+                "showItemsCount": {
+                    "visible": true,
+                    "value": "E-ITEMS"
+                },
+                "showQuantityCount": {
+                    "visible": true,
+                    "value": "E-QUANTITY"
+                },
+                "showTax": {
+                    "visible": true,
+                    "value": "E-TAX-TOTAL"
+                },
+                "showSubTotal": {
+                    "visible": true,
+                    "value": "E-SUBTOTAL"
+                },
+                "showBankInfo": {
+                    "visible": true,
+                    "value": null
+                },
+                "showBankName": {
+                    "visible": true,
+                    "value": null
+                },
+                "showAccountName": {
+                    "visible": true,
+                    "value": null
+                },
+                "showAccountNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showIBAN": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSwiftCode": {
+                    "visible": true,
+                    "value": null
+                },
+                "showOrderNumberInFooter": {
+                    "visible": true,
+                    "value": "E-ORDER-FOOTER"
+                },
+                "showVATFooter": {
+                    "visible": true,
+                    "value": "E-VAT-FOOTER"
+                },
+                "showThankYouMessage": {
+                    "visible": true,
+                    "value": "E-THANK-YOU-1102"
+                },
+                "showQRCode": {
+                    "visible": true,
+                    "value": "E-QR-1102"
+                },
+                "showTermsConditions": {
+                    "visible": true,
+                    "value": "E-TERMS-1102"
+                },
+                "showCustomerBalance": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerPrevBalance": {
+                    "visible": true,
+                    "value": "E-PREV-BAL"
+                },
+                "showCustomerPaidAmount": {
+                    "visible": true,
+                    "value": "E-PAID"
+                },
+                "showCustomerCurrentBalance": {
+                    "visible": true,
+                    "value": "E-CURRENT-BAL"
+                },
+                "showDeliveryPhone": {
+                    "visible": true,
+                    "value": "E-DELIVERY-PHONE"
+                }
+            },
+            "resolved_labels": {
+                "sl_number": "E-SL",
+                "particulars": "E-ITEM",
+                "mrp": "E-MRP",
+                "qty": "E-QTY",
+                "rate": "E-RATE+",
+                "rate_exc_tax": "E-RATE-",
+                "unit": "E-UNIT",
+                "total": "E-TOTAL",
+                "tax": "E-TAX"
+            }
+        }
+    },
+    "options": {
+        "item_name_options": {
+            "items": "Items",
+            "products": "Products",
+            "services": "Services",
+            "other": "Other"
+        },
+        "unit_name_options": {
+            "quantity": "Quantity",
+            "hours": "Hours",
+            "other": "Other"
+        },
+        "price_name_options": {
+            "price": "Price",
+            "rate": "Rate",
+            "other": "Other"
+        },
+        "tax_name_options": {
+            "tax": "Tax",
+            "GST": "GST",
+            "VAT": "VAT",
+            "tax (%)": "Tax (%)",
+            "other": "Other"
+        },
+        "amount_name_options": {
+            "amount": "Amount",
+            "total": "Total",
+            "other": "Other"
+        },
+        "template_options": {
+            "default": "Default",
+            "bill": "Bill",
+            "bill-a4": "Bill A4",
+            "quotation": "Quotation",
+            "sales_and_return_bill": "Sales Return Bill",
+            "sales_and_return_bill_a4": "Sales Return Bill A4",
+            "return_bill": "Return Bill",
+            "credit_note": "Credit Note",
+            "receipt": "Receipt",
+            "voucher": "Voucher",
+            "payslip": "Payslip",
+            "email": "Email",
+            "supplier_invoice": "Supplier Invoice",
+            "delivery_note": "Delivery Note",
+            "customer_statement": "Customer Statement",
+            "supplier_statement": "Supplier Statement",
+            "kitchen_order": "Kitchen Order",
+            "barcode": "Barcode"
+        }
+    }
+}

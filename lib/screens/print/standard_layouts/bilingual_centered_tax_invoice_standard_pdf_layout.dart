@@ -12,7 +12,6 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
-import 'package:pos_machine/helpers/string_helper.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/payment_gateway.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -168,7 +167,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
             .paymentGateways;
     final currency = appSettings?.currency ?? '';
     final config = params.billDocumentConfig;
-    final dc = config.displayConfiguration?.options;
+    final dc = params.displayConfig;
     final resolvedLabels = config.resolvedLabels;
     final isA5 = params.selectedPaperSize.toUpperCase() == 'A5';
     final pageFormat = isA5 ? PdfPageFormat.a5 : PdfPageFormat.a4;
@@ -177,20 +176,16 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     final summaryQrSize = isA5 ? 68.0 : 100.0;
 
     // Resolve B2B/B2C invoice title — params.displayConfig is B2B-aware
-    final resolvedTitleOpt = params.displayConfig?['showInvoiceTitle'];
-    final resolvedTitleVal = resolvedTitleOpt?.value?.toString().trim();
-    final resolvedTitleDefault =
-        resolvedTitleOpt?.defaultValue?.toString().trim();
-    final invoiceTitleText = (resolvedTitleVal?.isNotEmpty == true)
-        ? resolvedTitleVal!
-        : (resolvedTitleDefault?.isNotEmpty == true
-            ? resolvedTitleDefault!
-            : 'Simplified Tax Invoice');
+    final invoiceTitleText = params.isVisible('showInvoiceTitle')
+        ? params.labelFor('showInvoiceTitle',
+            englishFallback: 'Simplified Tax Invoice',
+            arabicFallback: 'فاتورة ضريبية مبسطة',
+            inlineBilingual: true)
+        : '';
 
     // ── Fonts & language ────────────────────────────────────────────
     final font = await _loadArabicFont();
     final fontBold = await _loadArabicFontBold();
-    final configLang = config.language;
     final mode = params.receiptLanguageMode;
     final isDualLanguage = mode == ReceiptLanguageMode.bilingual;
     final isRtl = mode == ReceiptLanguageMode.arabic;
@@ -251,13 +246,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
         pw.TextStyle(font: font, fontBold: fontBold, fontSize: fs(7));
 
     // ── Config helpers ──────────────────────────────────────────────
-    String cfgVal(String key, String fallback) {
-      final v = dc?[key]?.value as String?;
-      return (v != null && v.isNotEmpty) ? v : fallback;
-    }
-
-    bool cfgVisible(String key) => dc?[key]?.visible == true;
-    bool cfgVisibleDefault(String key) => dc?[key]?.visible != false;
+    bool cfgVisible(String key) => params.isVisible(key);
 
     String displayOrBlank(String? value) {
       final trimmed = value?.trim();
@@ -383,14 +372,37 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
       for (final key in headerConfigKeys) {
         final option = dc?[key];
         if (option?.visible != true) continue;
+        final columnMode =
+            arabic ? ReceiptLanguageMode.arabic : ReceiptLanguageMode.english;
 
         if (key == 'showStoreAddress') {
-          final address = params.storeAddressText(
-            mode: arabic
-                ? ReceiptLanguageMode.arabic
-                : ReceiptLanguageMode.english,
-          );
+          final address = params.storeAddressText(mode: columnMode);
           if (address.isNotEmpty) lines.add(address);
+          continue;
+        }
+
+        if (key == 'showTel' || key == 'showEmail') {
+          // Shared helper owns visibility + value ('' = hidden or no value);
+          // only the label is re-resolved in this column's language.
+          final contact = params.storeContactText(key);
+          if (contact.isEmpty) continue;
+          final label = ReceiptConfigurationContract.label(
+              options: dc,
+              key: key,
+              mode: columnMode,
+              englishFallback: key == 'showTel' ? 'Telephone' : 'Email',
+              arabicFallback:
+                  key == 'showTel' ? 'الهاتف' : 'البريد الإلكتروني');
+          lines.add('$label: ${contact.split(': ').last}');
+          continue;
+        }
+
+        // A single-language document has one header column: print the
+        // configured text through the shared contract so nothing is lost.
+        if (!isDualLanguage) {
+          final text =
+              params.labelFor(key, englishFallback: '', arabicFallback: '');
+          if (text.isNotEmpty) lines.add(text);
           continue;
         }
 
@@ -412,12 +424,26 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
       return lines;
     }
 
-    final arabicHeaderLines = configuredHeaderLines(arabic: true);
+    // English-only documents have no Arabic column and vice versa.
+    final arabicHeaderLines =
+        isEnglish ? <String>[] : configuredHeaderLines(arabic: true);
     // Store name and description stay on separate lines, mirroring the Arabic
     // side; merging them overflowed the single-line heading.
-    final englishHeaderLines = configuredHeaderLines(arabic: false);
-    final storeFssai = cfgVal('showFssaiInfo', '');
-    final extraHeading2 = cfgVal('showExtraHeading2', '');
+    final englishHeaderLines =
+        isRtl ? <String>[] : configuredHeaderLines(arabic: false);
+    final storeFssai = params.labelFor('showFssaiInfo',
+        englishFallback: '', arabicFallback: '', inlineBilingual: true);
+    final extraHeading2 = params.labelFor('showExtraHeading2',
+        englishFallback: '', arabicFallback: '', inlineBilingual: true);
+    // Store CR / VAT: '<label>: <number>' only when toggled on and known.
+    String storeTaxLine(String key, String? number, String en, String ar) =>
+        (cfgVisible(key) && (number ?? '').trim().isNotEmpty)
+            ? '${params.labelFor(key, englishFallback: en, arabicFallback: ar, inlineBilingual: true)}: ${number!.trim()}'
+            : '';
+    final storeCrLine = storeTaxLine(
+        'showCRNumber', params.zatcaCrNumber, 'CR No', 'السجل التجاري');
+    final storeVatLine = storeTaxLine(
+        'showVatNumber', params.zatcaVatNumber, 'VAT No', 'الرقم الضريبي');
     final primaryBank = params.primaryBank;
     final primaryBankAccount = params.primaryBankAccount;
     final ibanValue = primaryBankAccount?.iban ?? '';
@@ -453,16 +479,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
         'configuredLineCount=${bankLines.length} '
         'willRender=${bankLines.isNotEmpty}');
 
-    // ── Invoice number (prefix + stripping) ─────────────────────────
-    // Invoice prefix: config value > config default > numberPrefix > 'INV-'
-    // (mirrors the thermal layout's showInvoicePrefix resolution).
-    final prefix = _getOptionText(dc, 'showInvoicePrefix',
-        fallback: config.numberPrefix, defaultValue: 'INV-');
-    final invRegex = RegExp(r'[1-9]\d*');
-    final invMatch = invRegex.firstMatch(params.orderNumber);
-    final strippedOrderNumber =
-        invMatch != null ? invMatch.group(0)! : params.orderNumber;
-    final invoiceNumber = '$prefix$strippedOrderNumber';
+    // ── Invoice number (shared: number_prefix + order number) ───────
+    final invoiceNumber = params.invoiceNumberText;
 
     // ── Date (ISO/IST aware, matches thermal layouts) ───────────────
     String displayDate;
@@ -480,23 +498,14 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     }
 
     // ── Customer info ───────────────────────────────────────────────
-    final bool isDefault = params.isDefaultCustomer;
-    final bool hideDefaultPhone = params.hideDefaultCustomerPhone;
     final custName = params.customerName ?? (isRtl ? 'عميل' : 'GENERAL');
-    final bool maskPhone = dc?['showCustomerPhoneMasked']?.visible ??
-        dc?['maskCustomerPhone']?.visible ??
-        false;
-    String? custPhone;
-    if (params.customerPhone != null &&
-        params.customerPhone!.isNotEmpty &&
-        !(isDefault && hideDefaultPhone)) {
-      custPhone = maskPhone
-          ? StringHelper.maskStringShowLast4(params.customerPhone!)
-          : params.customerPhone!;
-      if (params.customerAlternatePhone != null &&
-          params.customerAlternatePhone!.isNotEmpty) {
-        custPhone = '$custPhone, ${params.customerAlternatePhone}';
-      }
+    // Shared rule: '' when showCustomerPhone is off / no phone / hidden
+    // walk-in customer; masked when showCustomerPhoneMasked is on.
+    String custPhone = params.customerPhoneText;
+    if (custPhone.isNotEmpty &&
+        params.customerAlternatePhone != null &&
+        params.customerAlternatePhone!.isNotEmpty) {
+      custPhone = '$custPhone, ${params.customerAlternatePhone}';
     }
     final custAddress = params.customerAddress;
 
@@ -511,16 +520,19 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     final String commentConfigKey = dc?.containsKey('showOrderComment') == true
         ? 'showOrderComment'
         : 'showComment';
-    final bool showCustomerSection =
-        dc?['showCustomerNameAndPhone']?.visible ?? true;
-    final bool showCustomerName = cfgVisibleDefault('showCustomerName');
-    final bool showCustomerAddress = cfgVisibleDefault('showCustomerAddress');
+    // Master switch of the whole customer section (incl. payment, comment,
+    // delivery), same as the thermal layouts.
+    final bool showCustomerSection = cfgVisible('showCustomerNameAndPhone');
+    final bool showCustomerName = cfgVisible('showCustomerName');
+    final bool showCustomerAddress = cfgVisible('showCustomerAddress');
     final bool showCustomerVat = cfgVisible('showCustomerVatNumber');
     final bool showCustomerCr = cfgVisible('showCustomerCrNumber');
     final bool showPayment =
-        !isQuotation && cfgVisibleDefault(paymentConfigKey);
-    final bool showComment = cfgVisibleDefault(commentConfigKey);
-    final bool showDeliveryMethod = cfgVisibleDefault('showDeliveryMethod');
+        showCustomerSection && !isQuotation && cfgVisible(paymentConfigKey);
+    final bool showComment =
+        showCustomerSection && cfgVisible(commentConfigKey);
+    final bool showDeliveryMethod =
+        showCustomerSection && cfgVisible('showDeliveryMethod');
 
     // Human-readable payment method summary (handles single + multi-payment),
     // reused by both the invoice info box and the left payment line.
@@ -528,10 +540,10 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
 
     // ── Totals visibility ───────────────────────────────────────────
     final bool showSubTotalFlag =
-        (dc?['showSubTotal']?.visible ?? dc?['showMRPTotal']?.visible) != false;
-    final bool showDiscountFlag = dc?['showDiscount']?.visible != false;
-    final bool showTaxTotalFlag = dc?['showTax']?.visible != false;
-    final bool showNetFlag = dc?['showNetAmount']?.visible != false;
+        cfgVisible('showSubTotal') || cfgVisible('showMRPTotal');
+    final bool showDiscountFlag = cfgVisible('showDiscount');
+    final bool showTaxTotalFlag = cfgVisible('showTax');
+    final bool showNetFlag = cfgVisible('showNetAmount');
 
     // ── Customer box rows ───────────────────────────────────────────
     final customerRows = <pw.Widget>[];
@@ -540,61 +552,63 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
         customerRows.add(_kvRow(
             _infoLabel(
                 _labelEn(
-                    dc, 'showCustomerName', null, 'Customer', isDualLanguage),
+                    dc, 'showCustomerName', null, 'Customer', mode),
                 _labelAr(
-                    dc, 'showCustomerName', null, 'العميل', isDualLanguage),
+                    dc, 'showCustomerName', null, 'العميل', mode),
                 isDualLanguage,
                 isAr: isAr),
             custName,
             infoLabel,
             infoValue));
       }
-      if (showCustomerAddress) {
+      if (showCustomerAddress && displayOrBlank(custAddress).isNotEmpty) {
         customerRows.add(_kvRow(
             _infoLabel(
                 _labelEn(
-                    dc, 'showCustomerAddress', null, 'Address', isDualLanguage),
+                    dc, 'showCustomerAddress', null, 'Address', mode),
                 _labelAr(
-                    dc, 'showCustomerAddress', null, 'العنوان', isDualLanguage),
+                    dc, 'showCustomerAddress', null, 'العنوان', mode),
                 isDualLanguage,
                 isAr: isAr),
             displayOrBlank(custAddress),
             infoLabel,
             infoValue));
       }
-      if (showCustomerVat) {
+      if (showCustomerVat &&
+          displayOrBlank(params.customerVatNumber).isNotEmpty) {
         customerRows.add(_kvRow(
             _infoLabel(
                 _labelEn(dc, 'showCustomerVatNumber', null, 'Customer VAT No.',
-                    isDualLanguage),
+                    mode),
                 _labelAr(dc, 'showCustomerVatNumber', null,
-                    'الرقم الضريبي للعميل', isDualLanguage),
+                    'الرقم الضريبي للعميل', mode),
                 isDualLanguage,
                 isAr: isAr),
             displayOrBlank(params.customerVatNumber),
             infoLabel,
             infoValue));
       }
-      if (showCustomerCr) {
+      if (showCustomerCr &&
+          displayOrBlank(params.customerCrNumber).isNotEmpty) {
         customerRows.add(_kvRow(
             _infoLabel(
                 _labelEn(dc, 'showCustomerCrNumber', null, 'Customer CR No.',
-                    isDualLanguage),
+                    mode),
                 _labelAr(dc, 'showCustomerCrNumber', null,
-                    'رقم السجل التجاري للعميل', isDualLanguage),
+                    'رقم السجل التجاري للعميل', mode),
                 isDualLanguage,
                 isAr: isAr),
             displayOrBlank(params.customerCrNumber),
             infoLabel,
             infoValue));
       }
-      if (custPhone != null) {
+      if (custPhone.isNotEmpty) {
         customerRows.add(_kvRow(
             _infoLabel(
                 _labelEn(
-                    dc, 'showCustomerPhone', null, 'Phone', isDualLanguage),
+                    dc, 'showCustomerPhone', null, 'Phone', mode),
                 _labelAr(
-                    dc, 'showCustomerPhone', null, 'الهاتف', isDualLanguage),
+                    dc, 'showCustomerPhone', null, 'الهاتف', mode),
                 isDualLanguage,
                 isAr: isAr),
             custPhone,
@@ -607,27 +621,27 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     final String numberLabelDefault =
         isQuotation ? 'Quotation No.' : 'Invoice No.';
     final invoiceRows = <pw.Widget>[
-      if (cfgVisibleDefault('showInvoiceNumber'))
+      if (cfgVisible('showInvoiceNumber'))
         _kvRow(
             _infoLabel(
                 _labelEn(dc, 'showInvoiceNumber', null, numberLabelDefault,
-                    isDualLanguage),
+                    mode),
                 _labelAr(
                     dc,
                     'showInvoiceNumber',
                     null,
                     isQuotation ? 'رقم عرض السعر' : 'رقم الفاتورة',
-                    isDualLanguage),
+                    mode),
                 isDualLanguage,
                 isAr: isAr),
             invoiceNumber,
             infoLabel,
             infoValue),
-      if (cfgVisibleDefault('showDate'))
+      if (cfgVisible('showDate'))
         _kvRow(
             _infoLabel(
-                _labelEn(dc, 'showDate', null, 'Date', isDualLanguage),
-                _labelAr(dc, 'showDate', null, 'التاريخ', isDualLanguage),
+                _labelEn(dc, 'showDate', null, 'Date', mode),
+                _labelAr(dc, 'showDate', null, 'التاريخ', mode),
                 isDualLanguage,
                 isAr: isAr),
             '$displayDate${displayTime.isNotEmpty ? ' $displayTime' : ''}',
@@ -637,9 +651,9 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
         _kvRow(
             _infoLabel(
                 _labelEn(dc, paymentConfigKey, null, 'Payment Method',
-                    isDualLanguage),
+                    mode),
                 _labelAr(
-                    dc, paymentConfigKey, null, 'طريقة الدفع', isDualLanguage),
+                    dc, paymentConfigKey, null, 'طريقة الدفع', mode),
                 isDualLanguage,
                 isAr: isAr),
             paymentMethodSummary,
@@ -651,9 +665,9 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
         _kvRow(
             _infoLabel(
                 _labelEn(
-                    dc, 'showDeliveryMethod', null, 'Delivery', isDualLanguage),
+                    dc, 'showDeliveryMethod', null, 'Delivery', mode),
                 _labelAr(dc, 'showDeliveryMethod', null, 'طريقة التسليم',
-                    isDualLanguage),
+                    mode),
                 isDualLanguage,
                 isAr: isAr),
             params.deliveryMethod!,
@@ -683,6 +697,12 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
         ),
         build: (pw.Context ctx) {
           return [
+            // Document-level header / subheader (shared documentText rule).
+            for (final t in [config.header, config.subheader])
+              if (params.documentText(t).isNotEmpty)
+                pw.Center(
+                    child: pdfText(params.documentText(t), style: headerDetailStyle,
+                        textAlign: pw.TextAlign.center)),
             // ═══════════════════════════════════════════════════════
             // SECTION 1: HEADER — Arabic | centered logo | English
             // ═══════════════════════════════════════════════════════
@@ -696,7 +716,6 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                     detailStyle: headerDetailStyle,
                     alignment: pw.CrossAxisAlignment.start,
                     textAlign: pw.TextAlign.left,
-                    textDirection: pw.TextDirection.rtl,
                   ),
                 ),
                 pw.Expanded(
@@ -718,7 +737,6 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                     detailStyle: headerDetailStyle,
                     alignment: pw.CrossAxisAlignment.end,
                     textAlign: pw.TextAlign.right,
-                    textDirection: pw.TextDirection.ltr,
                     singleLineHeading: true,
                   ),
                 ),
@@ -737,7 +755,9 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                 pw.Expanded(
                   child: pw.Align(
                     alignment: pw.Alignment.centerLeft,
-                    child: (cfgVisible('showExtraHeading2') &&
+                    child: storeCrLine.isNotEmpty
+                        ? pdfText(storeCrLine, style: crVatStyle)
+                        : (cfgVisible('showExtraHeading2') &&
                             extraHeading2.isNotEmpty)
                         ? pdfText(extraHeading2, style: crVatStyle)
                         : (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
@@ -749,8 +769,9 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                 pw.Expanded(
                   child: pw.Align(
                     alignment: pw.Alignment.centerRight,
-                    child:
-                        (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
+                    child: storeVatLine.isNotEmpty
+                        ? pdfText(storeVatLine, style: crVatStyle)
+                        : (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
                             ? pdfText(storeFssai, style: crVatStyle)
                             : pw.SizedBox(),
                   ),
@@ -851,13 +872,13 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                             params.orderComment != null &&
                             params.orderComment!.isNotEmpty)
                           pdfText(
-                              '${_getLabel(dc, commentConfigKey, null, 'Comment')}: ${params.orderComment}',
+                              '${_getLabel(params, commentConfigKey, null, 'Comment')}: ${params.orderComment}',
                               style: wordsStyle),
                         ..._customerBalanceLines(
-                            params, dc, currency, wordsStyle, wordsBold),
+                            params, currency, wordsStyle, wordsBold),
                         if (cfgVisible('showSaved') && saved > 0)
                           pdfText(
-                            '${_getLabel(dc, 'showSaved', null, 'You Saved:')} ${_formatMoney(currency, saved)}',
+                            '${_getLabel(params, 'showSaved', null, 'You Saved:')} ${_formatMoney(currency, saved)}',
                             style: wordsBold,
                           ),
                       ],
@@ -881,7 +902,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                                 cfgVisible('showItemsCount'))
                               _totalsRow(
                                   _withColon(_getLabel(
-                                      dc, 'showItemsCount', null, 'Items')),
+                                      params, 'showItemsCount', null, 'Items')),
                                   '',
                                   params.cartItems.length.toString(),
                                   totalsLabelEn,
@@ -890,7 +911,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                             if (!params.isReturnOnly &&
                                 cfgVisible('showQuantityCount'))
                               _totalsRow(
-                                  _withColon(_getLabel(dc, 'showQuantityCount',
+                                  _withColon(_getLabel(params, 'showQuantityCount',
                                       null, 'Total Qty')),
                                   '',
                                   params.totalQuantity % 1 == 0
@@ -902,9 +923,9 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                             if (showSubTotalFlag)
                               _totalsRow(
                                   _labelEn(dc, 'showSubTotal', null,
-                                      'SUB TOTAL', isDualLanguage),
+                                      'SUB TOTAL', mode),
                                   _labelAr(dc, 'showSubTotal', null,
-                                      'المجموع الفرعي', isDualLanguage),
+                                      'المجموع الفرعي', mode),
                                   _formatMoney(currency, netExcTaxValue),
                                   totalsLabelEn,
                                   totalsLabelAr,
@@ -912,9 +933,9 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                             if (showDiscountFlag && discountAmountValue != 0)
                               _totalsRow(
                                   _labelEn(dc, 'showDiscount', null, 'DISCOUNT',
-                                      isDualLanguage),
+                                      mode),
                                   _labelAr(dc, 'showDiscount', null, 'الخصم',
-                                      isDualLanguage),
+                                      mode),
                                   _formatMoney(currency, discountAmountValue),
                                   totalsLabelEn,
                                   totalsLabelAr,
@@ -926,9 +947,9 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                                       'showTax',
                                       resolvedLabels?.taxDefault,
                                       'TOTAL VAT 15%',
-                                      isDualLanguage),
+                                      mode),
                                   _labelAr(dc, 'showTax', resolvedLabels?.tax,
-                                      'ضريبة القيمة المضافة', isDualLanguage),
+                                      'ضريبة القيمة المضافة', mode),
                                   _formatMoney(currency, totalTax),
                                   totalsLabelEn,
                                   totalsLabelAr,
@@ -936,9 +957,9 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                             if (showNetFlag)
                               _totalsRow(
                                   _labelEn(dc, 'showNetAmount', null,
-                                      'NET AMOUNT', isDualLanguage),
+                                      'NET AMOUNT', mode),
                                   _labelAr(dc, 'showNetAmount', null,
-                                      'المبلغ الصافي', isDualLanguage),
+                                      'المبلغ الصافي', mode),
                                   _formatMoney(currency, totalAmount),
                                   totalsLabelEn,
                                   totalsLabelAr,
@@ -947,8 +968,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                         ),
                         if (cfgVisible('showAmountInWords')) ...[
                           pw.SizedBox(height: 4),
-                          ..._amountInWords(totalAmount, currency,
-                              isDualLanguage, configLang, wordsBold),
+                          ..._amountInWords(
+                              totalAmount, currency, params, wordsBold),
                         ],
                       ],
                     ),
@@ -983,7 +1004,10 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                           children: [
                             if (bankLines.isNotEmpty) ...[
                               pw.Center(
-                                child: pdfText('BANK DETAILS', style: footerBold,
+                                child: pdfText(
+                                    _getLabel(params, 'showBankInfo', null,
+                                        'BANK DETAILS'),
+                                    style: footerBold,
                                     textAlign: pw.TextAlign.center),
                               ),
                               pw.SizedBox(height: 3),
@@ -995,14 +1019,16 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                                 params.orderComment!.isNotEmpty) ...[
                               if (bankLines.isNotEmpty) pw.SizedBox(height: 4),
                               pdfText(
-                                  '${_getLabel(dc, commentConfigKey, null, 'Comment')}: ${params.orderComment}',
+                                  '${_withColon(_getLabel(params, commentConfigKey, null, 'Comment:'))} ${params.orderComment}',
                                   style: wordsStyle),
                             ],
+                            ..._buildPaymentBreakdownLines(
+                                params, currency, wordsStyle),
                             ..._customerBalanceLines(
-                                params, dc, currency, wordsStyle, wordsBold),
+                                params, currency, wordsStyle, wordsBold),
                             if (cfgVisible('showSaved') && saved > 0)
                               pdfText(
-                                '${_getLabel(dc, 'showSaved', null, 'You Saved:')} ${_formatMoney(currency, saved)}',
+                                '${_getLabel(params, 'showSaved', null, 'You Saved:')} ${_formatMoney(currency, saved)}',
                                 style: wordsBold,
                               ),
                           ],
@@ -1040,21 +1066,20 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                             children: [
                               if (cfgVisible('showItemsCount'))
                                 _totalsRow(
-                                    _withColon(_getLabel(
-                                        dc, 'showItemsCount', null, 'Items')),
-                                    '',
+                                    _withColon(_labelEn(dc, 'showItemsCount',
+                                        null, 'Items', mode)),
+                                    _labelAr(dc, 'showItemsCount', null,
+                                        'العدد', mode),
                                     params.cartItems.length.toString(),
                                     totalsLabelEn,
                                     totalsLabelAr,
                                     totalsValueStyle),
                               if (cfgVisible('showQuantityCount'))
                                 _totalsRow(
-                                    _withColon(_getLabel(
-                                        dc,
-                                        'showQuantityCount',
-                                        null,
-                                        'Total Qty')),
-                                    '',
+                                    _withColon(_labelEn(dc, 'showQuantityCount',
+                                        null, 'Total Qty', mode)),
+                                    _labelAr(dc, 'showQuantityCount', null,
+                                        'إجمالي الكمية', mode),
                                     params.totalQuantity % 1 == 0
                                         ? params.totalQuantity
                                             .toInt()
@@ -1067,9 +1092,9 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                               if (showSubTotalFlag)
                                 _totalsRow(
                                     _labelEn(dc, 'showSubTotal', null,
-                                        'SUB TOTAL', isDualLanguage),
+                                        'SUB TOTAL', mode),
                                     _labelAr(dc, 'showSubTotal', null,
-                                        'المجموع الفرعي', isDualLanguage),
+                                        'المجموع الفرعي', mode),
                                     _formatMoney(currency, netExcTaxValue),
                                     totalsLabelEn,
                                     totalsLabelAr,
@@ -1077,9 +1102,9 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                               if (showDiscountFlag && discountAmountValue != 0)
                                 _totalsRow(
                                     _labelEn(dc, 'showDiscount', null,
-                                        'DISCOUNT', isDualLanguage),
+                                        'DISCOUNT', mode),
                                     _labelAr(dc, 'showDiscount', null, 'الخصم',
-                                        isDualLanguage),
+                                        mode),
                                     _formatMoney(currency, discountAmountValue),
                                     totalsLabelEn,
                                     totalsLabelAr,
@@ -1091,9 +1116,9 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                                         'showTax',
                                         resolvedLabels?.taxDefault,
                                         'TOTAL VAT 15%',
-                                        isDualLanguage),
+                                        mode),
                                     _labelAr(dc, 'showTax', resolvedLabels?.tax,
-                                        'ضريبة القيمة المضافة', isDualLanguage),
+                                        'ضريبة القيمة المضافة', mode),
                                     _formatMoney(currency, totalTax),
                                     totalsLabelEn,
                                     totalsLabelAr,
@@ -1101,9 +1126,9 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                               if (showNetFlag)
                                 _totalsRow(
                                     _labelEn(dc, 'showNetAmount', null,
-                                        'NET AMOUNT', isDualLanguage),
+                                        'NET AMOUNT', mode),
                                     _labelAr(dc, 'showNetAmount', null,
-                                        'المبلغ الصافي', isDualLanguage),
+                                        'المبلغ الصافي', mode),
                                     _formatMoney(currency, totalAmount),
                                     totalsLabelEn,
                                     totalsLabelAr,
@@ -1123,8 +1148,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
-                      ..._amountInWords(totalAmount, currency, isDualLanguage,
-                          configLang, wordsBold),
+                      ..._amountInWords(
+                          totalAmount, currency, params, wordsBold),
                     ],
                   ),
                 ),
@@ -1140,25 +1165,25 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
               ..._buildReturnsPdfSection(
                   params, dc, currency, font, fontBold, isA5),
               if (!params.isReturnOnly)
-                ..._buildFinalSummaryPdfSection(params, dc, currency, font,
-                    fontBold, isA5, isDualLanguage, configLang),
+                ..._buildFinalSummaryPdfSection(
+                    params, currency, font, fontBold, isA5),
             ],
 
             // ═══════════════════════════════════════════════════════
             // TERMS & CONDITIONS (config value → billDocumentConfig.terms)
             // ═══════════════════════════════════════════════════════
-            if (cfgVisible('showTermsConditions')) ...[
-              pdfText(_termsText(dc, config), style: smallStyle),
+            if (params.termsText.isNotEmpty) ...[
+              pdfText(params.termsText, style: smallStyle),
               pw.SizedBox(height: 4),
             ],
 
             // ═══════════════════════════════════════════════════════
             // THANK YOU (config value → footer → default)
             // ═══════════════════════════════════════════════════════
-            if (cfgVisible('showThankYouMessage'))
+            if (params.thankYouText.isNotEmpty)
               pw.Center(
                 child: pdfText(
-                  _thankYouText(dc, config, isEnglish),
+                  params.thankYouText,
                   style: footerBold,
                   textAlign: pw.TextAlign.center,
                 ),
@@ -1222,7 +1247,6 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     required pw.TextStyle detailStyle,
     required pw.CrossAxisAlignment alignment,
     required pw.TextAlign textAlign,
-    required pw.TextDirection textDirection,
     bool singleLineHeading = false,
   }) {
     pw.Widget line(int i) => pdfText(
@@ -1231,7 +1255,6 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
           textAlign: textAlign,
           maxLines: singleLineHeading && i == 0 ? 1 : 2,
           softWrap: !(singleLineHeading && i == 0),
-          textDirection: textDirection,
         );
 
     return pw.Column(
@@ -1261,6 +1284,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
   /// configured label already ends with one (e.g. value `"AR Qty:"`).
   String _withColon(String label) {
     final t = label.trimRight();
+    if (t.isEmpty) return t; // empty language slot: no orphan colon
     return t.endsWith(':') ? t : '$t:';
   }
 
@@ -1274,44 +1298,39 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     return en;
   }
 
-  /// Get a label with priority: displayConfig value > resolvedLabel > default.
-  String _getLabel(Map<String, DisplayOption>? dc, String key,
-      String? resolvedLabel, String defaultLabel) {
-    final configValue = dc?[key]?.value as String?;
-    if (configValue != null && configValue.isNotEmpty) return configValue;
-    if (resolvedLabel != null && resolvedLabel.isNotEmpty) return resolvedLabel;
-    return defaultLabel;
-  }
-
-  /// Text from a config option: value > defaultValue > fallback > default.
-  /// Mirrors the thermal layout's `_getOptionText`.
-  String _getOptionText(Map<String, DisplayOption>? dc, String key,
-      {String? fallback, String defaultValue = ''}) {
-    final opt = dc?[key];
-    final v = opt?.value;
-    if (v is String && v.isNotEmpty) return v;
-    final d = opt?.defaultValue;
-    if (d != null && d.isNotEmpty) return d;
-    if (fallback != null && fallback.isNotEmpty) return fallback;
-    return defaultValue;
-  }
+  /// One-line label through the shared contract (en: English, ar: Arabic,
+  /// en_ar: 'Arabic / English'). The Arabic default is derived by the contract.
+  String _getLabel(ReceiptLayoutParams params, String key,
+          String? resolvedLabel, String defaultLabel) =>
+      params.labelFor(key,
+          englishFallback: defaultLabel,
+          arabicFallback: '',
+          resolvedEnglish: resolvedLabel,
+          inlineBilingual: true);
 
   /// English label slot, dual-language aware.
   ///
   /// In dual/Arabic configs the localized custom label lives in `value`
   /// (Arabic) and the English text in `defaultValue`, so the English slot must
-  /// prefer `defaultValue`. In English configs `value` *is* the English label.
+  /// prefer `defaultValue`.
   /// Falls back to the English-default resolved label, then the hardcoded
   /// default. Mirrors the English half of the thermal `_getBilingualLabel`.
   String _labelEn(Map<String, DisplayOption>? dc, String key,
-      String? resolvedEnglish, String defaultEn, bool isDual) {
-    if (isDual) {
-      final cfgEn = dc?[key]?.defaultValue;
-      if (cfgEn != null && cfgEn.isNotEmpty) return cfgEn;
-    } else {
-      final cfgVal = dc?[key]?.value as String?;
-      if (cfgVal != null && cfgVal.isNotEmpty) return cfgVal;
+      String? resolvedEnglish, String defaultEn, ReceiptLanguageMode mode) {
+    // Arabic-only documents have no English slot; English-only documents use
+    // the shared contract. Bilingual keeps `default` as the English slot.
+    if (mode.isArabic) return '';
+    if (mode.isEnglish) {
+      return ReceiptConfigurationContract.label(
+          options: dc,
+          key: key,
+          mode: mode,
+          englishFallback: defaultEn,
+          arabicFallback: '',
+          resolvedEnglish: resolvedEnglish);
     }
+    final cfgEn = dc?[key]?.defaultValue;
+    if (cfgEn != null && cfgEn.isNotEmpty) return cfgEn;
     if (resolvedEnglish != null && resolvedEnglish.isNotEmpty) {
       return resolvedEnglish;
     }
@@ -1322,21 +1341,31 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
   /// (`value`) / localized resolved label; otherwise fall back to the fixed
   /// template translation. Mirrors the Arabic half of `_getBilingualLabel`.
   String _labelAr(Map<String, DisplayOption>? dc, String key,
-      String? resolvedArabic, String defaultAr, bool isDual) {
-    if (isDual) {
-      final cfgAr = dc?[key]?.value as String?;
-      if (cfgAr != null && cfgAr.isNotEmpty) return cfgAr;
-      if (resolvedArabic != null && resolvedArabic.isNotEmpty) {
-        return resolvedArabic;
-      }
+      String? resolvedArabic, String defaultAr, ReceiptLanguageMode mode) {
+    // English-only documents have no Arabic slot; Arabic-only documents use
+    // the configured label through the shared contract.
+    if (mode.isEnglish) return '';
+    if (mode.isArabic) {
+      return ReceiptConfigurationContract.label(
+          options: dc,
+          key: key,
+          mode: mode,
+          englishFallback: '',
+          arabicFallback: defaultAr,
+          resolvedArabic: resolvedArabic);
+    }
+    final cfgAr = dc?[key]?.value as String?;
+    if (cfgAr != null && cfgAr.isNotEmpty) return cfgAr;
+    if (resolvedArabic != null && resolvedArabic.isNotEmpty) {
+      return resolvedArabic;
     }
     return defaultAr;
   }
 
   /// Bilingual amount-in-words (Arabic + English when the template is Arabic).
   List<pw.Widget> _amountInWords(double total, String currency,
-      bool isDualLanguage, String? configLang, pw.TextStyle style) {
-    if (isDualLanguage) {
+      ReceiptLayoutParams params, pw.TextStyle style) {
+    if (params.isBilingual) {
       final ar = AmountHelper()
           .convertNumberToWords(total, currency: currency, language: 'ar');
       final en = AmountHelper()
@@ -1346,18 +1375,15 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
         pdfText('$en Only.', style: style),
       ];
     }
-    final language = (configLang ?? 'en').toLowerCase();
-    final words = AmountHelper()
-        .convertNumberToWords(total, currency: currency, language: language);
-    final mode = ReceiptConfigurationContract.languageMode(configLang);
-    final suffix = mode == ReceiptLanguageMode.arabic ? ' فقط.' : ' only.';
-    final needsRtl = mode == ReceiptLanguageMode.arabic ||
-        mode == ReceiptLanguageMode.bilingual;
+    final words = AmountHelper().convertNumberToWords(total,
+        currency: currency, language: params.amountInWordsLanguage);
+    final suffix = params.isRtl ? ' فقط.' : ' only.';
     return [
       pdfText(
         '$words$suffix',
         style: style,
-        textDirection: needsRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
+        textDirection:
+            params.isRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
       ),
     ];
   }
@@ -1435,10 +1461,10 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     ReceiptLayoutParams params,
     String currency,
     pw.TextStyle style,
-    Map<String, DisplayOption>? dc,
   ) {
-    final bool showPaymentBreaked = dc?['showPaymentBreaked']?.visible ?? true;
-    if (params.paidAmount == null || !showPaymentBreaked) return [];
+    if (params.paidAmount == null || !params.isVisible('showPaymentBreaked')) {
+      return [];
+    }
 
     String labelFor(String method) {
       if (method == 'CASH') return 'Cash';
@@ -1496,14 +1522,11 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
   /// Customer balance lines (master gate + default-customer guard + per field).
   List<pw.Widget> _customerBalanceLines(
     ReceiptLayoutParams params,
-    Map<String, DisplayOption>? dc,
     String currency,
     pw.TextStyle style,
     pw.TextStyle boldStyle,
   ) {
-    final bool showCustomerBalance =
-        dc?['showCustomerBalance']?.visible ?? true;
-    if (!showCustomerBalance) return [];
+    if (!params.isVisible('showCustomerBalance')) return [];
     if (params.isDefaultCustomer) return [];
     if (params.customerOldBalance == null &&
         params.customerCurrentBalance == null &&
@@ -1511,45 +1534,27 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
       return [];
     }
 
-    final bool showPrev = dc?['showCustomerPrevBalance']?.visible ?? true;
-    final bool showPaid = dc?['showCustomerPaidAmount']?.visible ?? true;
-    final bool showCurrent = dc?['showCustomerCurrentBalance']?.visible ?? true;
+    final bool showPrev = params.isVisible('showCustomerPrevBalance');
+    final bool showPaid = params.isVisible('showCustomerPaidAmount');
+    final bool showCurrent = params.isVisible('showCustomerCurrentBalance');
 
     final lines = <pw.Widget>[];
     if (showPrev && params.customerOldBalance != null) {
       lines.add(pdfText(
-          '${_getLabel(dc, 'showCustomerPrevBalance', null, 'Previous Balance')}: ${_formatMoney(currency, params.customerOldBalance!)}',
+          '${_getLabel(params, 'showCustomerPrevBalance', null, 'Previous Balance')}: ${_formatMoney(currency, params.customerOldBalance!)}',
           style: style));
     }
     if (showPaid && params.paidAmount != null) {
       lines.add(pdfText(
-          '${_getLabel(dc, 'showCustomerPaidAmount', null, 'Paid Amount')}: ${_formatMoney(currency, params.paidAmount!)}',
+          '${_getLabel(params, 'showCustomerPaidAmount', null, 'Paid Amount')}: ${_formatMoney(currency, params.paidAmount!)}',
           style: style));
     }
     if (showCurrent && params.customerCurrentBalance != null) {
       lines.add(pdfText(
-          '${_getLabel(dc, 'showCustomerCurrentBalance', null, 'Current Balance')}: ${_formatMoney(currency, params.customerCurrentBalance!)}',
+          '${_getLabel(params, 'showCustomerCurrentBalance', null, 'Current Balance')}: ${_formatMoney(currency, params.customerCurrentBalance!)}',
           style: boldStyle));
     }
     return lines;
-  }
-
-  /// Terms text: config value, falling back to billDocumentConfig.terms.
-  String _termsText(Map<String, DisplayOption>? dc, DocumentConfig config) {
-    String? terms = dc?['showTermsConditions']?.value as String?;
-    if (terms == null || terms.trim().isEmpty) {
-      terms = config.terms;
-    }
-    return terms?.trim() ?? '';
-  }
-
-  /// Thank-you text: config value → billDocumentConfig.footer → default.
-  String _thankYouText(
-      Map<String, DisplayOption>? dc, DocumentConfig config, bool isEnglish) {
-    final value = dc?['showThankYouMessage']?.value as String?;
-    if (value != null && value.isNotEmpty) return value;
-    if (config.footer?.isNotEmpty == true) return config.footer!;
-    return isEnglish ? 'Thank you for your business' : 'شكراً لتسوقكم معنا';
   }
 
   /// Key/value row used in the customer & invoice info boxes.
@@ -1784,55 +1789,55 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     if (showSL) {
       hdrs.add(hdr(
           _labelEn(
-              dc, 'showSLNumber', resolvedLabels?.slNumberDefault, 'NO', isAr),
-          _labelAr(dc, 'showSLNumber', resolvedLabels?.slNumber, '', isAr)));
+              dc, 'showSLNumber', resolvedLabels?.slNumberDefault, 'NO', mode),
+          _labelAr(dc, 'showSLNumber', resolvedLabels?.slNumber, '', mode)));
     }
     if (showItems) {
       hdrs.add(hdr(
           _labelEn(dc, 'showParticulars', resolvedLabels?.particularsDefault,
-              'DESCRIPTION', isAr),
+              'DESCRIPTION', mode),
           _labelAr(dc, 'showParticulars', resolvedLabels?.particulars, 'الوصف',
-              isAr)));
+              mode)));
     }
     if (showMRP) {
-      hdrs.add(hdr(_labelEn(dc, 'showMRP', null, 'MRP', isAr),
-          _labelAr(dc, 'showMRP', resolvedLabels?.mrp, 'القيمة', isAr)));
+      hdrs.add(hdr(_labelEn(dc, 'showMRP', null, 'MRP', mode),
+          _labelAr(dc, 'showMRP', resolvedLabels?.mrp, 'القيمة', mode)));
     }
     if (showQty) {
       hdrs.add(hdr(
-          _labelEn(dc, 'showQty', resolvedLabels?.qtyDefault, 'QTY', isAr),
-          _labelAr(dc, 'showQty', resolvedLabels?.qty, 'كمية', isAr)));
+          _labelEn(dc, 'showQty', resolvedLabels?.qtyDefault, 'QTY', mode),
+          _labelAr(dc, 'showQty', resolvedLabels?.qty, 'كمية', mode)));
     }
     if (showRate) {
       hdrs.add(hdr(
           _labelEn(
-              dc, 'showRate', resolvedLabels?.rateDefault, 'UNIT PRICE', isAr),
-          _labelAr(dc, 'showRate', resolvedLabels?.rate, 'سعر الوحده', isAr)));
+              dc, 'showRate', resolvedLabels?.rateDefault, 'UNIT PRICE', mode),
+          _labelAr(dc, 'showRate', resolvedLabels?.rate, 'سعر الوحده', mode)));
     }
     if (showRateExcTax) {
-      hdrs.add(hdr(_labelEn(dc, 'showRateExcTax', null, 'RATE EX TAX', isAr),
-          _labelAr(dc, 'showRateExcTax', null, 'السعر بدون ضريبة', isAr)));
+      hdrs.add(hdr(_labelEn(dc, 'showRateExcTax', null, 'RATE EX TAX', mode),
+          _labelAr(dc, 'showRateExcTax', null, 'السعر بدون ضريبة', mode)));
     }
     if (showUnit) {
-      hdrs.add(hdr(_labelEn(dc, 'showUnit', null, 'UNIT', isAr),
-          _labelAr(dc, 'showUnit', resolvedLabels?.unitName, 'الوحدة', isAr)));
+      hdrs.add(hdr(_labelEn(dc, 'showUnit', null, 'UNIT', mode),
+          _labelAr(dc, 'showUnit', resolvedLabels?.unitName, 'الوحدة', mode)));
     }
     if (showDiscountColumn) {
-      hdrs.add(hdr(_labelEn(dc, 'showDiscountColumn', null, 'DISCOUNT', isAr),
-          _labelAr(dc, 'showDiscountColumn', null, 'خصم', isAr)));
+      hdrs.add(hdr(_labelEn(dc, 'showDiscountColumn', null, 'DISCOUNT', mode),
+          _labelAr(dc, 'showDiscountColumn', null, 'خصم', mode)));
     }
     if (showTax) {
       hdrs.add(hdr(
           _labelEn(
-              dc, 'showTaxHeader', resolvedLabels?.taxDefault, 'VAT 15%', isAr),
-          _labelAr(dc, 'showTaxHeader', resolvedLabels?.tax, 'الضريبة', isAr)));
+              dc, 'showTaxHeader', resolvedLabels?.taxDefault, 'VAT 15%', mode),
+          _labelAr(dc, 'showTaxHeader', resolvedLabels?.tax, 'الضريبة', mode)));
     }
     if (showTotal) {
       hdrs.add(hdr(
           _labelEn(
-              dc, 'showTotal', resolvedLabels?.totalDefault, 'NET TOTAL', isAr),
+              dc, 'showTotal', resolvedLabels?.totalDefault, 'NET TOTAL', mode),
           _labelAr(dc, 'showTotal', resolvedLabels?.total, 'الإجمالي الصافي',
-              isAr)));
+              mode)));
     }
 
     final rows = <pw.TableRow>[];
@@ -2010,12 +2015,23 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
         font: fontBold, fontSize: fs(10), fontWeight: pw.FontWeight.bold);
 
     bool col(String key) => dc?[key]?.visible == true;
-    String lbl(String key, String? resolved, String def) {
-      final v = dc?[key]?.value as String?;
-      if (v != null && v.isNotEmpty) return v;
-      if (resolved != null && resolved.isNotEmpty) return resolved;
-      return def;
+    // Labels resolve through the shared contract for the document language.
+    String cfgLbl(Map<String, DisplayOption>? options, String key,
+        String? resolved, String def) {
+      final text = ReceiptConfigurationContract.label(
+          options: options,
+          key: key,
+          mode: params.receiptLanguageMode,
+          englishFallback: def,
+          arabicFallback: '',
+          resolvedEnglish: resolved,
+          resolvedArabic: resolved,
+          inlineBilingual: true);
+      return text.isNotEmpty ? text : def;
     }
+
+    String lbl(String key, String? resolved, String def) =>
+        cfgLbl(dc, key, resolved, def);
 
     final showSl = col('showReturnSLNumber');
     final showParticulars = col('showReturnParticulars');
@@ -2035,8 +2051,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
 
     pw.Widget hdrCell(String text) => pw.Padding(
           padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
-          child:
-              pdfText(text, style: headerStyle, textAlign: pw.TextAlign.center),
+          child: pdfText(text, style: headerStyle, textAlign: pw.TextAlign.center),
         );
 
     final headerCells = <pw.Widget>[];
@@ -2154,12 +2169,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     final retDc = params.returnBillDisplayConfig;
     final retLabels = params.returnBillResolvedLabels;
     bool retVis(String key) => retDc?[key]?.visible == true;
-    String retLbl(String key, String? resolved, String def) {
-      final v = retDc?[key]?.value as String?;
-      if (v != null && v.isNotEmpty) return v;
-      if (resolved != null && resolved.isNotEmpty) return resolved;
-      return def;
-    }
+    String retLbl(String key, String? resolved, String def) =>
+        cfgLbl(retDc, key, resolved, def);
 
     final sectionHeadingStyle = pw.TextStyle(
         font: fontBold, fontSize: fs(9), fontWeight: pw.FontWeight.bold);
@@ -2218,26 +2229,32 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
 
     // — Customer Details section —
     final custRows = <pw.Widget>[];
-    if (params.customerName != null && params.customerName!.trim().isNotEmpty) {
+    String modeText(String english, String arabic) => params.textForMode(
+        english: english, arabic: arabic, inlineBilingual: true);
+    if (params.isVisible('showCustomerName') &&
+        params.customerName != null &&
+        params.customerName!.trim().isNotEmpty) {
       custRows.add(_kvRow(
-        'Customer Name:',
+        modeText('Customer Name:', 'اسم العميل:'),
         params.customerName!,
         labelStyle,
         valueStyle,
       ));
     }
-    if (params.customerPhone != null &&
-        params.customerPhone!.trim().isNotEmpty) {
-      custRows
-          .add(_kvRow('Phone:', params.customerPhone!, labelStyle, valueStyle));
+    if (params.customerPhoneText.isNotEmpty) {
+      custRows.add(_kvRow(modeText('Phone:', 'الهاتف:'),
+          params.customerPhoneText, labelStyle, valueStyle));
     }
-    if (params.customerAddress != null &&
+    if (params.isVisible('showCustomerAddress') &&
+        params.customerAddress != null &&
         params.customerAddress!.trim().isNotEmpty) {
-      custRows.add(_kvRow(
-          'Billing Address:', params.customerAddress!, labelStyle, valueStyle));
+      custRows.add(_kvRow(modeText('Billing Address:', 'عنوان الفاتورة:'),
+          params.customerAddress!, labelStyle, valueStyle));
     }
     if (custRows.isNotEmpty) {
-      widgets.add(pdfText(retLabels?.customerHeading ?? 'CUSTOMER DETAILS',
+      widgets.add(pdfText(
+          retLabels?.customerHeading ??
+              modeText('CUSTOMER DETAILS', 'بيانات العميل'),
           style: sectionHeadingStyle));
       widgets.add(pw.SizedBox(height: 2));
       widgets.addAll(custRows);
@@ -2259,19 +2276,17 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
       widgets.add(pw.SizedBox(height: 4));
     }
 
-    if (col('showReturnItemsCount') ||
-        (retLabels?.creditNoteItemsCount != null)) {
+    if (col('showReturnItemsCount')) {
       final countLabel = (retLabels?.creditNoteItemsCount != null)
           ? retLbl('showCreditNoteItemsCount', retLabels?.creditNoteItemsCount,
               'Total Items:')
           : lbl('showReturnItemsCount', null, 'Return Items:');
-      widgets.add(pdfText('$countLabel ${orderReturns.returnItems!.length}',
-          style: labelStyle));
+      widgets.add(pdfText(
+          '$countLabel ${orderReturns.returnItems!.length}', style: labelStyle));
       widgets.add(pw.SizedBox(height: 2));
     }
 
-    if (col('showReturnTotalAmount') ||
-        (retLabels?.creditNoteTotalAmount != null)) {
+    if (col('showReturnTotalAmount')) {
       final label = (retLabels?.creditNoteTotalAmount != null)
           ? retLbl('showCreditNoteTotalAmount',
               retLabels?.creditNoteTotalAmount, 'Total Amount:')
@@ -2285,7 +2300,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
       ));
     }
 
-    if (col('showReturnNetAmount') || (retLabels?.creditNoteRefund != null)) {
+    if (col('showReturnNetAmount')) {
       final label = (retLabels?.creditNoteRefund != null)
           ? retLbl('showCreditNoteRefund', retLabels?.creditNoteRefund,
               'Credit Note Total:')
@@ -2302,7 +2317,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     if (hasCreditNoteConfig) {
       widgets.add(pw.SizedBox(height: 4));
       widgets.addAll(
-          _amountInWords(returnRateTotal, currency, false, null, labelStyle));
+          _amountInWords(returnRateTotal, currency, params, labelStyle));
     }
 
     return widgets;
@@ -2310,13 +2325,10 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
 
   List<pw.Widget> _buildFinalSummaryPdfSection(
     ReceiptLayoutParams params,
-    Map<String, DisplayOption>? dc,
     String currency,
     pw.Font font,
     pw.Font fontBold,
     bool isA5,
-    bool isDualLanguage,
-    String? configLang,
   ) {
     final orderReturns = params.orderReturns!;
     if (orderReturns.returnItems == null || orderReturns.returnItems!.isEmpty) {
@@ -2324,18 +2336,14 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     }
     double fs(double v) => isA5 ? v * 0.78 : v;
 
-    bool vis(String key) => dc?[key]?.visible != false;
-    bool visExplicit(String key) => dc?[key]?.visible == true;
-    String lbl(String key, String def) {
-      final v = dc?[key]?.value as String?;
-      if (v != null && v.isNotEmpty) return v;
-      return def;
-    }
+    bool vis(String key) => params.isVisible(key);
+    String lbl(String key, String en, String ar) => params.labelFor(key,
+        englishFallback: en, arabicFallback: ar, inlineBilingual: true);
 
     final showFinalPurchase = vis('showFinalPurchase');
     final showFinalReturn = vis('showFinalReturn');
     final showFinalNetAmount = vis('showFinalNetAmount');
-    final showFinalAmountInWords = visExplicit('showFinalAmountInWords');
+    final showFinalAmountInWords = vis('showFinalAmountInWords');
 
     if (!showFinalPurchase && !showFinalReturn && !showFinalNetAmount) {
       return [];
@@ -2410,16 +2418,22 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
 
     final tableRows = <pw.TableRow>[];
     if (showFinalPurchase) {
-      tableRows.add(summaryRow(lbl('showFinalPurchase', 'Order Total:'),
-          _formatMoney(currency, orderTotal), valueStyle));
+      tableRows.add(summaryRow(
+          lbl('showFinalPurchase', 'Order Total:', 'إجمالي الطلب:'),
+          _formatMoney(currency, orderTotal),
+          valueStyle));
     }
     if (showFinalReturn) {
-      tableRows.add(summaryRow(lbl('showFinalReturn', 'Return Total:'),
-          _formatMoney(currency, returnTotal), valueStyle));
+      tableRows.add(summaryRow(
+          lbl('showFinalReturn', 'Return Total:', 'إجمالي المرتجع:'),
+          _formatMoney(currency, returnTotal),
+          valueStyle));
     }
     if (showFinalNetAmount) {
-      tableRows.add(summaryRow(lbl('showFinalNetAmount', 'Final Total:'),
-          _formatMoney(currency, finalTotal), valueBold));
+      tableRows.add(summaryRow(
+          lbl('showFinalNetAmount', 'Final Total:', 'المبلغ النهائي:'),
+          _formatMoney(currency, finalTotal),
+          valueBold));
     }
 
     final widgets = <pw.Widget>[
@@ -2438,8 +2452,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
 
     if (showFinalAmountInWords) {
       widgets.add(pw.SizedBox(height: 4));
-      widgets.addAll(_amountInWords(
-          finalTotal, currency, isDualLanguage, configLang, wordsBold));
+      widgets
+          .addAll(_amountInWords(finalTotal, currency, params, wordsBold));
     }
 
     return widgets;

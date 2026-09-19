@@ -476,15 +476,27 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           : null;
       final defaultPrinterJson =
           isPdfSharing ? null : prefs.getString(printerKey);
+      // PrintPage falls back to the B2C billing keys when the B2B/Quotation
+      // profile has no saved value, so show what will actually print.
+      final usesBillingFallback =
+          settingsType == 'Billing' || settingsType == 'Quotation';
       final defaultPaperSize = settingsType == 'Barcode'
           ? null
-          : shareProfile?.paperSize ?? prefs.getString(paperSizeKey);
+          : shareProfile?.paperSize ??
+              prefs.getString(paperSizeKey) ??
+              (usesBillingFallback
+                  ? prefs.getString('default_paper_size')
+                  : null);
       final defaultFontStyle = settingsType == 'Barcode' || isPdfSharing
           ? null
           : prefs.getString(fontStyleKey);
       final savedTheme = settingsType == 'Barcode'
           ? null
-          : shareProfile?.theme ?? prefs.getString(themeKey);
+          : shareProfile?.theme ??
+              prefs.getString(themeKey) ??
+              (usesBillingFallback
+                  ? prefs.getString('billing_receipt_theme')
+                  : null);
 
       var paperSize = defaultPaperSize ??
           (isPdfSharing ? PdfShareSettings.defaultPaperSize : '80mm');
@@ -781,6 +793,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                 paperSize: selectedPaperSize,
                 themeName: themeName,
                 themeId: selectedReceiptTheme,
+                isB2B: _isB2BSegment,
                 onResync: _resyncDocumentConfigurations,
                 isResyncing: _isResyncingDocConfig,
               );
