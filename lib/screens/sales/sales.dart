@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'dart:io';
 import 'dart:convert';
@@ -109,6 +110,27 @@ class _SalesScreenState extends State<SalesScreen> {
 
   bool initLoading = false;
 
+  /// Debounces the per-keystroke filter searches so typing fires one request
+  /// instead of one per character.
+  Timer? _filterDebounce;
+
+  /// Identifies the newest load/search so a slower earlier one cannot turn the
+  /// spinner off (or report an error) while a fresher request is still running.
+  int _loadSeq = 0;
+
+  /// Whether the newest request this screen started failed. Background
+  /// refreshes deliberately do not set this, so a failed sync never replaces a
+  /// list that is already on screen.
+  bool _lastRequestFailed = false;
+
+  void _onFilterTextChanged() {
+    _filterDebounce?.cancel();
+    _filterDebounce = Timer(const Duration(milliseconds: 400), () {
+      if (!mounted) return;
+      searchOrders(1);
+    });
+  }
+
   // Helper method to get or create the epos directory
   Future<Directory> _getEposDirectory() async {
     final documentsDirectory = await getApplicationDocumentsDirectory();
@@ -152,6 +174,7 @@ class _SalesScreenState extends State<SalesScreen> {
 
   @override
   void dispose() {
+    _filterDebounce?.cancel();
     orderNumberController.dispose();
     customerNameController.dispose();
     dateController.dispose();
@@ -1074,6 +1097,8 @@ Powered by CloudPOS''',
 
   void loadInitData() async {
     debugPrint('=== LOAD INIT DATA START ===');
+    final int loadId = ++_loadSeq;
+    bool failed = false;
     try {
       setState(() {
         initLoading = true;
@@ -1102,14 +1127,19 @@ Powered by CloudPOS''',
       );
       debugPrint('fetchOrders completed successfully');
     } catch (error, stackTrace) {
+      failed = true;
       debugPrint('=== LOAD INIT DATA ERROR ===');
       debugPrint('Error Type: ${error.runtimeType}');
       debugPrint('Error Message: $error');
       debugPrint('Stack Trace: $stackTrace');
     } finally {
-      setState(() {
-        initLoading = false;
-      });
+      // Only the newest load may clear the spinner.
+      if (mounted && loadId == _loadSeq) {
+        setState(() {
+          initLoading = false;
+          _lastRequestFailed = failed;
+        });
+      }
       debugPrint('=== LOAD INIT DATA END ===');
     }
   }
@@ -1258,7 +1288,7 @@ Powered by CloudPOS''',
               height: 45,
               onchanged: (value) {
                 if (value == null || value.isEmpty || value.length > 2) {
-                  searchOrders(1);
+                  _onFilterTextChanged();
                 }
               },
               controller: controller,
@@ -1632,6 +1662,8 @@ Powered by CloudPOS''',
   void searchOrders(page) async {
     debugPrint('=== SEARCH ORDERS START ===');
     debugPrint('Requested Page: $page');
+    final int loadId = ++_loadSeq;
+    bool failed = false;
     try {
       setState(() {
         initLoading = true;
@@ -1691,20 +1723,29 @@ Powered by CloudPOS''',
       debugPrint('Total Pages: ${orderProvider.totalPages}');
       debugPrint('Orders Count: ${orderProvider.orders.length}');
     } catch (error, stackTrace) {
+      failed = true;
       debugPrint('Search error: $error');
       debugPrint('Stack trace: $stackTrace');
-      showScaffoldError(
-        context: context,
-        message: 'sales.no_orders_found'.tr,
-      );
+      // A superseded search must not report a failure for a request the user
+      // has already replaced.
+      if (mounted && loadId == _loadSeq) {
+        showScaffoldError(
+          context: context,
+          message: 'sales.no_orders_found'.tr,
+        );
+      }
     } finally {
-      setState(() {
-        initLoading = false;
-      });
+      if (mounted && loadId == _loadSeq) {
+        setState(() {
+          initLoading = false;
+          _lastRequestFailed = failed;
+        });
+      }
     }
   }
 
   void resetSearch() {
+    _filterDebounce?.cancel();
     setState(() {
       orderNumberController.clear();
       customerNameController.clear();
@@ -2480,6 +2521,64 @@ Powered by CloudPOS''',
     );
   }
 
+  Widget _buildErrorState() {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 88,
+              width: 88,
+              decoration: BoxDecoration(
+                color: ColorManager.kPrimaryColor.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.cloud_off_outlined,
+                  size: 40, color: ColorManager.kPrimaryColor),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'sales.orders_load_failed'.tr,
+              textAlign: TextAlign.center,
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s16,
+                0.20,
+                ColorManager.kTitleTextColor,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'sales.orders_load_failed_hint'.tr,
+              textAlign: TextAlign.center,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s12,
+                0.10,
+                ColorManager.kGreyColor,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: CustomRoundButton(
+                title: 'sales.retry'.tr,
+                boxColor: ColorManager.kPrimaryColor,
+                textColor: Colors.white,
+                fct: () => searchOrders(1),
+                height: 44,
+                width: 180,
+                fontSize: FontSize.s12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildEmptyState(
       SalesProvider provider, List<ListOrderModelData> displayedOrders) {
     final hasFilters = orderNumberController.text.isNotEmpty ||
@@ -2967,7 +3066,7 @@ Powered by CloudPOS''',
                                               onchanged: (value) {
                                                 if (value!.isEmpty ||
                                                     value.length > 2) {
-                                                  searchOrders(1);
+                                                  _onFilterTextChanged();
                                                 }
                                               },
                                               controller: orderNumberController,
@@ -3005,7 +3104,7 @@ Powered by CloudPOS''',
                                               onchanged: (value) {
                                                 if (value!.isEmpty ||
                                                     value.length > 2) {
-                                                  searchOrders(1);
+                                                  _onFilterTextChanged();
                                                 }
                                               },
                                               controller:
@@ -3044,7 +3143,7 @@ Powered by CloudPOS''',
                                               onchanged: (value) {
                                                 if (value!.isEmpty ||
                                                     value.length > 2) {
-                                                  searchOrders(1);
+                                                  _onFilterTextChanged();
                                                 }
                                               },
                                               controller: phoneController,
@@ -3110,7 +3209,7 @@ Powered by CloudPOS''',
                                               onchanged: (value) {
                                                 if (value!.isEmpty ||
                                                     value.length > 2) {
-                                                  searchOrders(1);
+                                                  _onFilterTextChanged();
                                                 }
                                               },
                                               controller: amountController,
@@ -3335,6 +3434,15 @@ Powered by CloudPOS''',
                       }
 
                       final displayedOrders = orderProvider.orders;
+
+                      // A failed request is not the same as "no orders": show
+                      // the failure (with a retry) instead of claiming the
+                      // store has no matching orders. A later successful fetch
+                      // clears the provider error and the list comes back.
+                      if (_lastRequestFailed &&
+                          orderProvider.ordersError != null) {
+                        return _buildErrorState();
+                      }
 
                       if (displayedOrders.isEmpty) {
                         // Pass displayedOrders to empty state for correct message

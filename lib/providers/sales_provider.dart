@@ -41,6 +41,8 @@ class SalesProvider with ChangeNotifier {
   }
 
   void applyRealtimeOrders(List<ListOrderModelData> orders) {
+    // Supersede any in-flight fetch so its response cannot overwrite this list.
+    _ordersRequestSeq++;
     _orders = List<ListOrderModelData>.from(orders);
     currentPage = 1;
     totalPages = 1;
@@ -194,6 +196,22 @@ class SalesProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Monotonic token used to discard responses that belong to a request which
+  /// has already been superseded by a newer [fetchOrders] call. Without this,
+  /// two in-flight requests (side menu + screen init, or two keystrokes) can
+  /// finish out of order and the stale one overwrites the fresh list.
+  int _ordersRequestSeq = 0;
+
+  /// Last error raised by [fetchOrders], so the UI can tell "no orders" apart
+  /// from "the request failed".
+  String? _ordersError;
+  String? get ordersError => _ordersError;
+
+  /// Parameters of the most recent successful [fetchOrders] call, so realtime
+  /// refreshes can replay the exact query the user is currently looking at
+  /// instead of dropping the active filters.
+  Map<String, dynamic>? _lastOrdersQuery;
+
   Future<void> fetchOrders({
     required String accessToken,
     int? storeId,
@@ -214,6 +232,26 @@ class SalesProvider with ChangeNotifier {
     int? page,
     bool? filterOnlineSales,
   }) async {
+    final int requestId = ++_ordersRequestSeq;
+    final Map<String, dynamic> requestQuery = {
+      'storeId': storeId,
+      'orderNumber': orderNumber,
+      'filterName': filterName,
+      'date': date,
+      'from': from,
+      'until': until,
+      'businessDate': businessDate,
+      'customerId': customerId,
+      'productId': productId,
+      'filterStatus': filterStatus,
+      'filterPrice': filterPrice,
+      'filterEmail': filterEmail,
+      'filterPhone': filterPhone,
+      'filterStore': filterStore,
+      'filterCreatedBy': filterCreatedBy,
+      'page': page,
+      'filterOnlineSales': filterOnlineSales,
+    };
     final queryParameters = <String, String>{};
 
     // Add store_id from parameter or from SharedPreferences
@@ -344,6 +382,14 @@ class SalesProvider with ChangeNotifier {
             debugPrint(
                 'Model Pagination: ${listSalesOrderModel.pagination != null ? "Present" : "Null"}');
 
+            // A newer fetch was started while this one was in flight: drop this
+            // (now stale) response instead of overwriting the fresher list.
+            if (requestId != _ordersRequestSeq) {
+              debugPrint(
+                  '=== STALE ORDERS RESPONSE IGNORED (req $requestId, latest $_ordersRequestSeq) ===');
+              return;
+            }
+
             if (listSalesOrderModel.pagination != null) {
               int newCurrentPage =
                   listSalesOrderModel.pagination?.currentPage ?? 1;
@@ -391,6 +437,8 @@ class SalesProvider with ChangeNotifier {
             }
 
             _orders = listSalesOrderModel.data ?? [];
+            _ordersError = null;
+            _lastOrdersQuery = requestQuery;
             debugPrint('Orders Set Successfully: ${_orders.length} orders');
 
             // DEBUG: Print each order details
@@ -440,7 +488,14 @@ class SalesProvider with ChangeNotifier {
             if (jsonBody is Map &&
                 jsonBody['status'] == 'failed' &&
                 jsonBody['message'] == 'No Orders Found') {
+              if (requestId != _ordersRequestSeq) {
+                debugPrint(
+                    '=== STALE ORDERS RESPONSE IGNORED (req $requestId, latest $_ordersRequestSeq) ===');
+                return;
+              }
               _orders = [];
+              _ordersError = null;
+              _lastOrdersQuery = requestQuery;
               currentPage = 1;
               totalPages = 1;
               paginationFrom = 1;
@@ -460,7 +515,13 @@ class SalesProvider with ChangeNotifier {
       debugPrint('Error Type: ${error.runtimeType}');
       debugPrint('Error Message: $error');
       debugPrint('Stack Trace: $stackTrace');
-      _orders = [];
+      // Only the newest request may report an error, and it must not discard
+      // orders that were loaded successfully: a failed background refresh used
+      // to wipe the list and surface as an empty "no orders found" screen.
+      if (requestId == _ordersRequestSeq) {
+        _ordersError = error.toString();
+        notifyListeners();
+      }
       rethrow;
     }
   }
@@ -471,6 +532,35 @@ class SalesProvider with ChangeNotifier {
     required String accessToken,
     required int storeId,
   }) {
+    final lastQuery = _lastOrdersQuery;
+
+    // Replay the query the user is currently looking at. Refreshing with only
+    // the store id while keeping the page number could land on a page that does
+    // not exist in the unfiltered result set and blank the list.
+    if (lastQuery != null) {
+      return fetchOrders(
+        accessToken: accessToken,
+        storeId: lastQuery['storeId'] as int?,
+        orderNumber: lastQuery['orderNumber'] as String?,
+        filterName: lastQuery['filterName'] as String?,
+        date: lastQuery['date'] as String?,
+        from: lastQuery['from'] as String?,
+        until: lastQuery['until'] as String?,
+        businessDate: lastQuery['businessDate'] as String?,
+        customerId: lastQuery['customerId'] as int?,
+        productId: lastQuery['productId'] as int?,
+        filterStatus: lastQuery['filterStatus'] as String?,
+        filterPrice: lastQuery['filterPrice'] as String?,
+        filterEmail: lastQuery['filterEmail'] as String?,
+        filterPhone: lastQuery['filterPhone'] as String?,
+        filterStore: (lastQuery['filterStore'] as String?) ??
+            (lastQuery['storeId'] == null ? storeId.toString() : null),
+        filterCreatedBy: lastQuery['filterCreatedBy'] as String?,
+        page: (lastQuery['page'] as int?) ?? (currentPage > 0 ? currentPage : 1),
+        filterOnlineSales: lastQuery['filterOnlineSales'] as bool?,
+      );
+    }
+
     return fetchOrders(
       accessToken: accessToken,
       filterStore: storeId.toString(),

@@ -17,6 +17,7 @@ import '../providers/authentication_providers.dart';
 
 import '../providers/sales_provider.dart';
 import '../providers/shared_preferences.dart';
+import '../providers/store_session_provider.dart';
 import '../providers/supplier_provider.dart';
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
@@ -521,15 +522,32 @@ class _SideMenuState extends State<SideMenu> {
                   icon: fa.FontAwesomeIcons.shoppingCart,
                   title: 'nav.sales'.tr,
                   onTap: () {
+                    final bool alreadyOnSales =
+                        sideBarController.index.value == 2;
                     sideBarController.index.value = 2;
-                    final salesProvider =
-                        Provider.of<SalesProvider>(context, listen: false);
-                    String? accessToken =
-                        Provider.of<AuthModel>(context, listen: false).token;
-                    salesProvider.fetchOrders(
-                      accessToken: accessToken ?? '',
-                      storeId: 1,
-                    );
+
+                    // SalesScreen loads its own data when it mounts. Fetching
+                    // here as well raced that request into the same shared
+                    // order list, so only refresh when we are already on the
+                    // screen and there is nothing else loading it.
+                    if (alreadyOnSales) {
+                      final salesProvider =
+                          Provider.of<SalesProvider>(context, listen: false);
+                      String? accessToken =
+                          Provider.of<AuthModel>(context, listen: false).token;
+                      final int? activeStoreId =
+                          Provider.of<StoreSessionProvider>(context,
+                                  listen: false)
+                              .activeStore
+                              ?.storeId;
+                      salesProvider
+                          .refreshOrdersForRealtime(
+                            accessToken: accessToken ?? '',
+                            storeId: activeStoreId ?? 1,
+                          )
+                          .catchError((Object error) =>
+                              debugPrint('Sales refresh failed: $error'));
+                    }
                   },
                   selected: sideBarController.index.value == 2 ||
                       sideBarController.index.value == 11 ||

@@ -8,6 +8,7 @@ import 'package:pos_machine/providers/authentication_providers.dart';
 import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/supplier_provider.dart';
 import 'package:pos_machine/screens/login/login.dart';
 import 'package:pos_machine/services/session_reset_service.dart';
@@ -66,9 +67,24 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
     }
 
     void fetchSalesOrders() {
+      // SalesScreen loads its own data when it mounts, so only refresh when we
+      // are already on it. Fetching alongside the screen's own request raced
+      // it into the same shared order list and could blank the list.
+      if (sideBarController.index.value != 2) return;
+
       final salesProvider = Provider.of<SalesProvider>(context, listen: false);
       final accessToken = Provider.of<AuthModel>(context, listen: false).token;
-      salesProvider.fetchOrders(accessToken: accessToken ?? '', storeId: 1);
+      final activeStoreId =
+          Provider.of<StoreSessionProvider>(context, listen: false)
+              .activeStore
+              ?.storeId;
+      salesProvider
+          .refreshOrdersForRealtime(
+            accessToken: accessToken ?? '',
+            storeId: activeStoreId ?? 1,
+          )
+          .catchError(
+              (Object error) => debugPrint('Sales refresh failed: $error'));
     }
 
     void fetchSuppliers() {
