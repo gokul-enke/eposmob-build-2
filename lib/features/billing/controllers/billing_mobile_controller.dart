@@ -545,8 +545,9 @@ class BillingMobileController {
     List<GetProduct> filteredProducts = [];
 
     try {
-      // Embedded scale barcodes (14 chars, '000' prefix) carry a product code
-      // + weight/qty payload; parsing lives in the pure EmbeddedBarcode helper.
+      // Embedded scale barcodes (12 or legacy 14 chars, '000' prefix) carry a
+      // product code + weight/qty payload; parsing lives in the pure
+      // EmbeddedBarcode helper.
       final bool isEmbedded = EmbeddedBarcode.isEmbedded(query);
 
       filteredProducts = Provider.of<LocalProductProvider>(context,

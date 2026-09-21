@@ -110,6 +110,33 @@ void main() {
   });
 
   group('§2 embedded weight barcode resolution', () {
+    test('12-char 000… KG barcode parses weight from the 4-digit PLU layout',
+        () {
+      const embedded = '000012300725'; // PLU 0123, 725 g
+      final product = GetProduct(
+        productId: 4,
+        productName: 'Tomato',
+        unit: 'KG',
+        price: ProductPrice(price: '40'),
+      );
+
+      expect(resolveMobileEmbeddedQuantity(product, embedded),
+          closeTo(0.725, 1e-9));
+      expect(EmbeddedBarcode.searchCode(embedded), '0123');
+    });
+
+    test('12-char 000… PCS barcode parses piece count', () {
+      const embedded = '000012300003';
+      final product = GetProduct(
+        productId: 5,
+        productName: 'Buns',
+        unit: 'PCS',
+        price: ProductPrice(price: '5'),
+      );
+
+      expect(resolveMobileEmbeddedQuantity(product, embedded), 3);
+    });
+
     test('14-char 000… KG barcode parses embedded weight quantity', () {
       const embedded = '00012345601500'; // 1.5 kg
       final product = GetProduct(
