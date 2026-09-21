@@ -775,16 +775,19 @@ class BarcodePrinterService {
         }
 
         final stickerImage = pw.MemoryImage(pngBytes);
-        final stickerWidget = pw.Image(
-          stickerImage,
-          width: stickerW,
-          height: stickerH,
-        );
         for (int i = 0; i < item.quantity; i++) {
+          // A pw.Widget stores its layout box on the instance, so the same
+          // instance used twice inside one Row keeps only the last position
+          // and both copies paint on top of each other, blanking a column.
+          // Every copy needs its own widget; the image data is safe to share.
           stickers.add(
             _RenderedBarcodeSticker(
               pngBytes: pngBytes,
-              widget: stickerWidget,
+              widget: pw.Image(
+                stickerImage,
+                width: stickerW,
+                height: stickerH,
+              ),
             ),
           );
         }
