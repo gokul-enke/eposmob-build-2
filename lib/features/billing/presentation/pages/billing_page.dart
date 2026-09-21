@@ -23,6 +23,7 @@ import 'package:pos_machine/models/delivery_method_registry.dart';
 import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/features/billing/domain/billing_totals.dart';
+import 'package:pos_machine/features/billing/domain/embedded_barcode.dart';
 import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 import 'package:pos_machine/features/billing/domain/payment_validation.dart';
@@ -1509,16 +1510,12 @@ class BillingPageState extends State<BillingPage>
     List<GetProduct> filteredProducts = [];
     try {
       debugPrint("🔴 [BillingPage.processBarcode] Parsing barcode...");
-      String? prefix;
-      String? productCode;
-      String? lastFive;
+      // Embedded scale barcodes (12 or legacy 14 chars, '000' prefix) carry a
+      // product code + weight/qty payload; parsing lives in the pure
+      // EmbeddedBarcode helper.
+      final bool isEmbedded = EmbeddedBarcode.isEmbedded(query);
 
-      if (query.length > 2) {
-        prefix = query.substring(0, 3); // First 3 digits;
-        debugPrint("🔴 [BillingPage.processBarcode] Prefix: $prefix");
-      }
-
-      if (prefix != '000' || query.length != 14) {
+      if (!isEmbedded) {
         debugPrint(
             "🔴 [BillingPage.processBarcode] Standard barcode - searching by: '$query'");
         filteredProducts =
@@ -1527,14 +1524,12 @@ class BillingPageState extends State<BillingPage>
           barCode: query,
         );
       } else {
-        productCode = query.substring(3, 9); // Next 6 digits
-        lastFive = query.substring(9, 14); // Last 5 digits
         debugPrint(
-            "🔴 [BillingPage.processBarcode] Weight/Count barcode - productCode: $productCode, lastFive: $lastFive");
+            "🔴 [BillingPage.processBarcode] Weight/Count barcode - productCode: ${EmbeddedBarcode.searchCode(query)}, payload: ${EmbeddedBarcode.payload(query)}");
         filteredProducts =
             Provider.of<LocalProductProvider>(context, listen: false)
                 .filterProductByBarcode(
-          barCode: productCode,
+          barCode: EmbeddedBarcode.searchCode(query),
         );
       }
 
@@ -1566,25 +1561,13 @@ class BillingPageState extends State<BillingPage>
         }
 
         num? quantity;
-        if ((product.unit == 'KGS' || product.unit == 'KG') &&
-            prefix == '000' &&
-            query.length == 14) {
-          // Weight-based product
-          String weightKg = lastFive!.substring(0, 2); // First 2 digits = KG
-          String weightGrams =
-              lastFive.substring(2, 5); // Last 3 digits = Grams
-          // Malformed digits must not abort the sale — fall back to qty 1
-          // (cashier can correct the quantity in the cart).
-          final parsedKg = double.tryParse(weightKg);
-          final parsedGrams = double.tryParse(weightGrams);
-          quantity = (parsedKg == null || parsedGrams == null)
-              ? null
-              : parsedKg + (parsedGrams / 1000);
+        if ((product.unit == 'KGS' || product.unit == 'KG') && isEmbedded) {
+          // Weight-based product; the payload holds whole grams.
+          quantity = EmbeddedBarcode.weightQuantityKg(query);
         } else if ((product.unit == 'PCS' || product.unit == 'PC') &&
-            prefix == '000' &&
-            query.length == 14) {
-          // Count-based product; malformed digits fall back to qty 1.
-          quantity = int.tryParse(lastFive!);
+            isEmbedded) {
+          // Count-based product.
+          quantity = EmbeddedBarcode.pieceQuantity(query);
         } else if (matchedSaleUnit != null) {
           quantity = _resolveSaleUnitQuantity(matchedSaleUnit);
           debugPrint(
