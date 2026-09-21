@@ -99,6 +99,21 @@ void main() {
     expect(prefsFile().existsSync(), isFalse);
   });
 
+  // A power cut commits the file size to NTFS but not the data, so both the
+  // file and the copy from the last healthy launch come back full of zeros.
+  // Seen on a till that was switched off at the mains: 35036 and 34552 bytes,
+  // every byte 0x00.
+  test('zero-filled file and backup start empty instead of throwing', () async {
+    prefsFile().writeAsBytesSync(List.filled(35036, 0));
+    backupFile().writeAsBytesSync(List.filled(34552, 0));
+
+    final state = await PreferencesFileGuard.ensureReadable(directory: dir);
+
+    expect(state, PreferencesFileState.reset);
+    expect(prefsFile().existsSync(), isFalse);
+    expect(quarantined().single.lengthSync(), 35036);
+  });
+
   test('runWithRepair retries once after repairing the file', () async {
     prefsFile().writeAsStringSync('{"flutter.api_key":"ab');
     var calls = 0;
