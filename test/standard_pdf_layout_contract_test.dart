@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pdf/pdf.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -332,6 +333,53 @@ void main() {
         }
       }
     }
+  });
+
+  testWidgets(
+      'every standard PDF theme shapes all Arabic text (no raw Arabic letters)',
+      (tester) async {
+    late BuildContext context;
+    await tester.pumpWidget(_providerHarness(onContext: (value) {
+      context = value;
+    }));
+
+    // The `pdf` package only shapes Arabic (into U+FExx presentation forms)
+    // when a Text widget is RTL. A raw letter in an embedded font therefore
+    // means some Arabic run was drawn unshaped, left-to-right. Mixing raw and
+    // shaped letters in one document also corrupts glyphs: the package's TTF
+    // subsetter swaps in a wrong glyph when U+0644 and U+FEDD share one.
+    bool isRawArabicLetter(int rune) =>
+        (rune >= 0x0621 && rune <= 0x063A) ||
+        (rune >= 0x0641 && rune <= 0x064A);
+
+    final failures = <String>[];
+    for (final theme in _themes) {
+      for (final language in _languageModes.entries) {
+        final params = _params(
+          context: context,
+          theme: theme,
+          language: language.key,
+          paperSize: 'A4',
+          options: <String, DisplayOption>{
+            ..._options(visible: true),
+            'showQRCode': DisplayOption(visible: false),
+          },
+        );
+        final document = await StandardPdfLayoutFactory.getLayout(theme)
+            .buildPdfDocument(params);
+        await document.save();
+
+        final raw = <int>{
+          for (final font in document.document.fonts.whereType<PdfTtfFont>())
+            ...font.unicodeCMap.cmap.where(isRawArabicLetter),
+        };
+        if (raw.isNotEmpty) {
+          failures.add('$theme/${language.key}: '
+              '${String.fromCharCodes(raw.toList()..sort())}');
+        }
+      }
+    }
+    expect(failures, isEmpty, reason: failures.join('\n'));
   });
 
   test('all six standard themes resolve the active-store address centrally',

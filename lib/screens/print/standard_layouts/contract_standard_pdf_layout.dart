@@ -7,6 +7,7 @@ import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'pdf_bidi_text.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
@@ -315,7 +316,7 @@ class ContractStandardPdfRenderer {
         ),
         footer: (context) => pw.Align(
           alignment: pw.Alignment.center,
-          child: pw.Text(
+          child: pdfText(
             '${context.pageNumber} / ${context.pagesCount}',
             style: fonts.small,
           ),
@@ -1293,7 +1294,7 @@ class ContractStandardPdfRenderer {
       String title, pw.TextStyle style, PdfColor accent, double scale) {
     return pw.Container(
       margin: pw.EdgeInsets.only(bottom: 4 * scale),
-      child: pw.Text(
+      child: pdfText(
         title,
         style: style.copyWith(color: accent),
         textAlign: pw.TextAlign.left,
@@ -1308,10 +1309,10 @@ class ContractStandardPdfRenderer {
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Expanded(child: pw.Text(label, style: style)),
+          pw.Expanded(child: pdfText(label, style: style)),
           pw.SizedBox(width: 8),
           pw.Expanded(
-            child: pw.Text(value, style: style, textAlign: pw.TextAlign.right),
+            child: pdfText(value, style: style, textAlign: pw.TextAlign.right),
           ),
         ],
       ),
@@ -1321,7 +1322,7 @@ class ContractStandardPdfRenderer {
   pw.Widget _centerText(String text, pw.TextStyle style) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(vertical: 1.5),
-      child: pw.Text(text, style: style, textAlign: pw.TextAlign.center),
+      child: pdfText(text, style: style, textAlign: pw.TextAlign.center),
     );
   }
 
@@ -1329,7 +1330,7 @@ class ContractStandardPdfRenderer {
     return pw.Padding(
       padding: const pw.EdgeInsets.all(3),
       child:
-          pw.Text(value, style: style, textAlign: align ?? pw.TextAlign.left),
+          pdfText(value, style: style, textAlign: align ?? pw.TextAlign.left),
     );
   }
 
@@ -1525,12 +1526,12 @@ class ContractStandardPdfRenderer {
     final english = _firstText([
       explicitEnglish,
       _localizedField(names, const ['en', 'english', 'default']),
-      if (!_hasArabic(direct)) direct,
+      if (!pdfHasArabic(direct)) direct,
     ]);
     final arabic = _firstText([
       explicitArabic,
       _localizedField(names, const ['ar', 'arabic']),
-      if (_hasArabic(direct)) direct,
+      if (pdfHasArabic(direct)) direct,
     ]);
     final localized = switch (params.receiptLanguageMode) {
       ReceiptLanguageMode.english => english,
@@ -1722,8 +1723,6 @@ class ContractStandardPdfRenderer {
     }
     return '';
   }
-
-  bool _hasArabic(String value) => RegExp(r'[\u0600-\u06FF]').hasMatch(value);
 
   String _clean(dynamic value) => value?.toString().trim() ?? '';
 
