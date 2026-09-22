@@ -832,7 +832,12 @@
     "label_balance": "ബാലൻസ്"
   },
   "app": {
-    "title": "CLOUDPOS"
+    "title": "CLOUDPOS",
+    "software_information": "സോഫ്റ്റ്‌വെയർ വിവരങ്ങൾ",
+    "software": "സോഫ്റ്റ്‌വെയർ",
+    "version": "പതിപ്പ്",
+    "software_info_tooltip": "സോഫ്റ്റ്‌വെയർ വിവരങ്ങൾ",
+    "version_unavailable": "ലഭ്യമല്ല"
   },
   "pagination": {
     "previous": "മുമ്പത്തേത്",

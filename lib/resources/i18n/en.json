@@ -832,7 +832,12 @@
     "label_balance": "Balance"
   },
   "app": {
-    "title": "CLOUDPOS"
+    "title": "CLOUDPOS",
+    "software_information": "Software Information",
+    "software": "Software",
+    "version": "Version",
+    "software_info_tooltip": "Software information",
+    "version_unavailable": "Not available"
   },
   "pagination": {
     "previous": "Previous",
