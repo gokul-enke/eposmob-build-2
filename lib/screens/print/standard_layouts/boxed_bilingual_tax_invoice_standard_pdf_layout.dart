@@ -402,14 +402,9 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     }
 
     final arabicHeaderLines = configuredHeaderLines(arabic: true);
+    // Store name and description stay on separate lines, mirroring the Arabic
+    // side; merging them overflowed the single-line heading.
     final englishHeaderLines = configuredHeaderLines(arabic: false);
-    if (dc?['showStoreName']?.visible == true &&
-        dc?['showDescription']?.visible == true &&
-        englishHeaderLines.length >= 2) {
-      englishHeaderLines[0] =
-          '${englishHeaderLines[0]} ${englishHeaderLines[1]}';
-      englishHeaderLines.removeAt(1);
-    }
     final storeFssai = cfgVal('showFssaiInfo', '');
     final extraHeading2 = cfgVal('showExtraHeading2', '');
     final primaryBank = params.primaryBank;
@@ -2713,20 +2708,31 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     required pw.TextDirection textDirection,
     bool singleLineHeading = false,
   }) {
+    pw.Widget line(int i) => pdfText(
+          lines[i],
+          style: i == 0 ? headingStyle : detailStyle,
+          textAlign: textAlign,
+          maxLines: singleLineHeading && i == 0 ? 1 : 2,
+          softWrap: !(singleLineHeading && i == 0),
+          textDirection: textDirection,
+        );
+
     return pw.Column(
       crossAxisAlignment: alignment,
       children: [
         for (var i = 0; i < lines.length; i++) ...[
           pw.Container(
             width: double.infinity,
-            child: pdfText(
-              lines[i],
-              style: i == 0 ? headingStyle : detailStyle,
-              textAlign: textAlign,
-              maxLines: singleLineHeading && i == 0 ? 1 : 2,
-              softWrap: !(singleLineHeading && i == 0),
-              textDirection: textDirection,
-            ),
+            child: singleLineHeading && i == 0
+                // Shrink an over-long heading rather than run off the page.
+                ? pw.Align(
+                    alignment: textAlign == pw.TextAlign.right
+                        ? pw.Alignment.centerRight
+                        : pw.Alignment.centerLeft,
+                    child: pw.FittedBox(
+                        fit: pw.BoxFit.scaleDown, child: line(i)),
+                  )
+                : line(i),
           ),
           if (i < lines.length - 1) pw.SizedBox(height: 2),
         ],

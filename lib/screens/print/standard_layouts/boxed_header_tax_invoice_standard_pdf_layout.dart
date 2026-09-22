@@ -2828,22 +2828,33 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     required pw.TextDirection textDirection,
     bool singleLineHeading = false,
   }) {
+    pw.Widget line(int i) => pdfText(
+          singleLineHeading && i == 0
+              ? lines[i].replaceAll(RegExp(r'\s+'), ' ').trim()
+              : lines[i],
+          style: i == 0 ? headingStyle : detailStyle,
+          textAlign: textAlign,
+          maxLines: singleLineHeading && i == 0 ? 1 : 2,
+          softWrap: !(singleLineHeading && i == 0),
+          textDirection: textDirection,
+        );
+
     return pw.Column(
       crossAxisAlignment: alignment,
       children: [
         for (var i = 0; i < lines.length; i++) ...[
           pw.Container(
             width: double.infinity,
-            child: pdfText(
-              singleLineHeading && i == 0
-                  ? lines[i].replaceAll(RegExp(r'\s+'), ' ').trim()
-                  : lines[i],
-              style: i == 0 ? headingStyle : detailStyle,
-              textAlign: textAlign,
-              maxLines: singleLineHeading && i == 0 ? 1 : 2,
-              softWrap: !(singleLineHeading && i == 0),
-              textDirection: textDirection,
-            ),
+            child: singleLineHeading && i == 0
+                // Shrink an over-long heading rather than run off the page.
+                ? pw.Align(
+                    alignment: textAlign == pw.TextAlign.right
+                        ? pw.Alignment.centerRight
+                        : pw.Alignment.centerLeft,
+                    child: pw.FittedBox(
+                        fit: pw.BoxFit.scaleDown, child: line(i)),
+                  )
+                : line(i),
           ),
           if (i < lines.length - 1) pw.SizedBox(height: 2),
         ],
