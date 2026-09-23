@@ -70,3 +70,10 @@ admin@zaviyaalraqi.com	Admin!@1243	EAZY_ZAVIYA_AL_RAQI_Llh0LXAn1iatsjqF09FG9Kje2
 
 EAZY_CITY_SWEETS_gEimbsJ3CYiyWFRuan2FuNkjwXGUZY3h
 salesexe@easy.sa 123456
+
+
+salesexe@naseemalghad.com
+EAZY_NASEEM_AL-GHAD_TRADING_EST_ZcZEr7eJHDCM7YOFZ6CqYEXNmmZoFIyG
+123456
+admin@naseemalghadtrading.com
+https://erp.easysolutions.com.sa/NASEEM-AL-GHAD-TRADING-EST
