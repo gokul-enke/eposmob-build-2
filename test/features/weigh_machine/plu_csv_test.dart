@@ -3,7 +3,7 @@ import 'package:pos_machine/features/weigh_machine/domain/plu_csv.dart';
 import 'package:pos_machine/models/get_product.dart';
 
 void main() {
-  test('exports only weighted products and preserves CSV data', () {
+  test('exports only products with an SKU and preserves CSV data', () {
     final weighted = GetProduct(
       productId: 1,
       productName: 'Apples, "red"',
@@ -14,15 +14,17 @@ void main() {
       unit: 'KG',
       purchasePrice: '2',
       names: {'ar': 'تفاح'},
-      weightInfo: WeightInfo(isWeighted: true),
+      sku: 'APL-1',
     );
     final ordinary = GetProduct(
       productId: 2,
       productName: 'Bag',
-      weightInfo: WeightInfo(isWeighted: false),
+      // The old flag no longer decides anything.
+      weightInfo: WeightInfo(isWeighted: true),
     );
+    final blankSku = GetProduct(productId: 3, productName: 'Tray', sku: '  ');
 
-    final items = PluCsv.weighted([weighted, ordinary]);
+    final items = PluCsv.weighted([weighted, ordinary, blankSku]);
     expect(items, [weighted]);
     expect(
       PluCsv.build(items),

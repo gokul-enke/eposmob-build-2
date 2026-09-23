@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/weigh_machine/domain/plu_csv.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -335,7 +336,9 @@ class PluProductTable extends StatelessWidget {
 
   /// `true` all shown selected, `false` none, `null` some.
   final bool? allShownState;
-  final VoidCallback onToggleAllShown;
+
+  /// Null when nothing is shown.
+  final VoidCallback? onToggleAllShown;
   final Widget empty;
 
   @override
@@ -359,12 +362,14 @@ class PluProductTable extends StatelessWidget {
                     tristate: true,
                     value: allShownState,
                     activeColor: ColorManager.kPrimaryColor,
-                    onChanged:
-                        products.isEmpty ? null : (_) => onToggleAllShown(),
+                    onChanged: onToggleAllShown == null
+                        ? null
+                        : (_) => onToggleAllShown!(),
                   ),
                 ),
               ),
               const _HeaderCell('PRODUCT', flex: 4),
+              const _HeaderCell('SKU', flex: 2),
               const _HeaderCell('CATEGORY', flex: 2),
               const _HeaderCell('BARCODE', flex: 2),
               const _HeaderCell('UNIT', flex: 1),
@@ -463,7 +468,8 @@ class _TableRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final weighted = product.weightInfo?.isWeighted == true;
+    // Any product can be ticked (for Excel); the SKU only drives PLU.csv.
+    final weighted = PluCsv.isWeighted(product);
     return Material(
       color: selected
           ? WeighUiColors.softBlue.withValues(alpha: 0.6)
@@ -514,6 +520,15 @@ class _TableRow extends StatelessWidget {
                   ),
                 ),
               ),
+              _cell(
+                weighted ? product.sku!.trim() : '—',
+                flex: 2,
+                style: TextStyle(
+                  color: weighted ? WeighUiColors.body : WeighUiColors.muted,
+                  fontSize: 13,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
               _cell(product.category?.name ?? 'Uncategorized', flex: 2),
               _cell(
                 product.barcode?.isNotEmpty == true ? product.barcode! : '—',
@@ -560,8 +575,9 @@ class PluProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final weighted = product.weightInfo?.isWeighted == true;
+    final weighted = PluCsv.isWeighted(product);
     final details = [
+      if (weighted) 'SKU ${product.sku!.trim()}',
       product.category?.name ?? 'Uncategorized',
       if (product.barcode?.isNotEmpty == true) product.barcode!,
       if (product.unit?.isNotEmpty == true) product.unit!,
@@ -648,17 +664,21 @@ class PluProductCard extends StatelessWidget {
   }
 }
 
-/// Sticky footer on narrow layouts: the selection count and primary action
-/// stay reachable while the user scrolls a long catalog.
+/// Sticky footer on narrow layouts: what PLU.csv will hold and the Download
+/// action stay reachable while the user scrolls a long catalog. Ticks (for
+/// Excel) are shown separately because they do not affect PLU.csv.
 class PluSelectionBar extends StatelessWidget {
   const PluSelectionBar({
     super.key,
-    required this.selectedCount,
+    required this.productCount,
+    required this.tickedCount,
     required this.onClear,
     required this.download,
   });
 
-  final int selectedCount;
+  /// Products with an SKU, i.e. what PLU.csv will contain.
+  final int productCount;
+  final int tickedCount;
   final VoidCallback? onClear;
   final Widget download;
 
@@ -687,7 +707,7 @@ class PluSelectionBar extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${WeighFormat.count(selectedCount)} selected',
+                    '${WeighFormat.products(productCount)} in PLU.csv',
                     style: const TextStyle(
                       color: WeighUiColors.heading,
                       fontSize: 14,
@@ -698,11 +718,11 @@ class PluSelectionBar extends StatelessWidget {
                     GestureDetector(
                       key: const ValueKey('plu_clear_selection'),
                       onTap: onClear,
-                      child: const Padding(
-                        padding: EdgeInsets.only(top: 2),
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 2),
                         child: Text(
-                          'Clear selection',
-                          style: TextStyle(
+                          'Untick ${WeighFormat.count(tickedCount)}',
+                          style: const TextStyle(
                             color: ColorManager.kPrimaryColor,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,

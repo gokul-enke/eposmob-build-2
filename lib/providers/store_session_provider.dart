@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/features/weigh_machine/data/plu_export_service.dart';
 import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/admin_settings_provider.dart';
@@ -177,6 +178,12 @@ class StoreSessionProvider extends ChangeNotifier {
         if (kDebugMode) {
           await _updateStatus('store_bootstrap.clearing_cache'.tr);
         }
+
+        // PLU.csv is a copy of the product cache. Remove it while the old
+        // store is still active (its folder is found by the old store ID), so
+        // the weigh machine never imports another store's items.
+        currentStage = 'removing the previous weigh machine file';
+        await PluExportService.instance.discardFile();
 
         // Always clear local data
         currentStage = 'clearing the previous product cache';

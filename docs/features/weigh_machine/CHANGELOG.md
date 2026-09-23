@@ -18,6 +18,13 @@
 - Default save folder is now `Documents/epos/PLU` instead of Downloads, with a
   **Use default folder** link after choosing another folder. Excel exports
   from this page go to the same folder.
+- Weighted now means “has an SKU”. PLU.csv always holds every SKU product and
+  ignores ticks; ticks are for Excel's “Only ticked products” and work on any
+  product. The page opens on the Weighted view and shows an SKU column.
+- Removed the 200-product confirmation; ticking only affects Excel now.
+- PLU.csv is removed on store switch, Reset API key and Clear local storage
+  (kept on logout), so another store's or tenant's items never stay where
+  the scale imports.
 - Excel export now ticks only Product Name by default, with a Select all link.
 - Category is now the shared searchable dropdown, which also fixes Reset not
   clearing the selected category.

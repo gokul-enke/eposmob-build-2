@@ -23,14 +23,15 @@ class WeighMachineExportPage extends StatefulWidget {
 }
 
 class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
-  /// Selecting more than this many shown products asks for confirmation.
-  static const _bulkSelectConfirm = 200;
   static const _wideLayout = 1000.0;
 
   final _search = TextEditingController();
   Set<int>? _selected;
   String? _category;
-  PluProductView _view = PluProductView.all;
+
+  /// Scale items first; All is one tap away. Reset returns here.
+  static const _defaultView = PluProductView.weighted;
+  PluProductView _view = _defaultView;
   String? _destination;
   bool _customFolder = false;
   bool _autoEnabled = false;
@@ -88,25 +89,20 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
         PluProductView.weighted => PluCsv.weighted(filtered),
       };
 
-  bool _isSelected(GetProduct product) => _selected == null
-      ? product.weightInfo?.isWeighted == true
-      : _selected!.contains(product.productId);
+  /// Ticks drive Excel's "Only ticked products" option. Any product can be
+  /// ticked; PLU.csv ignores ticks and always holds every SKU product.
+  bool _isSelected(GetProduct product) =>
+      _selected?.contains(product.productId) ?? false;
 
-  /// Until the user edits the selection, weighted products are the default.
-  Set<int> _ensureSelection(List<GetProduct> all) =>
-      _selected ??= PluCsv.weighted(all)
-          .map((item) => item.productId)
-          .whereType<int>()
-          .toSet();
+  Set<int> _ensureSelection() => _selected ??= <int>{};
 
   void _persistSelection() {
     unawaited(PluExportService.instance.setSelectedProductIds(_selected!));
   }
 
-  void _updateSelection(
-      GetProduct product, bool selected, List<GetProduct> all) {
+  void _updateSelection(GetProduct product, bool selected) {
     setState(() {
-      final ids = _ensureSelection(all);
+      final ids = _ensureSelection();
       if (selected) {
         if (product.productId != null) ids.add(product.productId!);
       } else {
@@ -116,41 +112,29 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
     _persistSelection();
   }
 
-  Future<void> _setShown(
-      List<GetProduct> shown, List<GetProduct> all, bool select) async {
+  void _setShown(List<GetProduct> shown, bool select) {
     final ids = shown.map((p) => p.productId).whereType<int>().toList();
     if (select) {
-      final adding = shown.where((p) => !_isSelected(p)).length;
-      if (adding > _bulkSelectConfirm && !await _confirmBulkSelect(adding)) {
-        return;
-      }
-      if (!mounted) return;
-      setState(() => _ensureSelection(all).addAll(ids));
+      setState(() => _ensureSelection().addAll(ids));
       _persistSelection();
       return;
     }
     _changeWithUndo(
-      all,
       (selection) => selection.removeAll(ids),
-      'Removed ${WeighFormat.products(ids.length)} from PLU.csv',
+      'Unticked ${WeighFormat.products(ids.length)}',
     );
   }
 
   void _clearSelection(List<GetProduct> all) {
     final count = all.where(_isSelected).length;
     _changeWithUndo(
-      all,
       (selection) => selection.clear(),
-      'Cleared ${WeighFormat.products(count)}',
+      'Unticked ${WeighFormat.products(count)}',
     );
   }
 
-  void _changeWithUndo(
-    List<GetProduct> all,
-    void Function(Set<int>) change,
-    String message,
-  ) {
-    final before = Set<int>.of(_ensureSelection(all));
+  void _changeWithUndo(void Function(Set<int>) change, String message) {
+    final before = Set<int>.of(_ensureSelection());
     setState(() => change(_selected!));
     _persistSelection();
     showScaffold(
@@ -163,36 +147,6 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
         _persistSelection();
       },
     );
-  }
-
-  Future<bool> _confirmBulkSelect(int count) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Select ${WeighFormat.products(count)}?'),
-        content: const Text(
-          'Every product shown will be written to PLU.csv. Use search, '
-          'category or the Weighted filter to narrow the list first.',
-        ),
-        actions: [
-          TextButton(
-            style: TextButton.styleFrom(
-                foregroundColor: ColorManager.kPrimaryColor),
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            key: const ValueKey('plu_confirm_select'),
-            style: weighPrimaryButtonStyle(),
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text('Select ${WeighFormat.count(count)}'),
-          ),
-        ],
-      ),
-    );
-    return confirmed ?? false;
   }
 
   void _message(String text, {bool error = false}) {
@@ -216,11 +170,11 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
           throwOnError: true,
         );
       }
-      final items = catalog.products.where(_isSelected).toList(growable: false);
+      // Every SKU product, ticked or not.
+      final items = PluCsv.weighted(catalog.products);
       if (items.isEmpty) {
-        _message(sync
-            ? 'Catalog synced. Select products to create PLU.csv.'
-            : 'Select at least one product first.');
+        _message('No products have an SKU yet, so there is nothing for '
+            'the weigh machine.');
         return;
       }
       final file = await PluExportService.instance.export(items);
@@ -374,7 +328,7 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
                   activeThumbColor: ColorManager.kPrimaryColor,
                   activeTrackColor:
                       ColorManager.kPrimaryColor.withValues(alpha: 0.3),
-                  title: const Text('Only selected machine items'),
+                  title: const Text('Only ticked products'),
                   subtitle: const Text('Otherwise export every product '
                       'matching the current search and category.'),
                   value: selectedOnly,
@@ -430,7 +384,7 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
     _search.clear();
     setState(() {
       _category = null;
-      _view = PluProductView.all;
+      _view = _defaultView;
     });
   }
 
@@ -448,7 +402,7 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
       return WeighEmptyState(
         icon: Icons.checklist_rounded,
         title: 'Nothing selected yet',
-        message: 'Tick products in the full list to add them to PLU.csv.',
+        message: 'Tick products in the full list to export them to Excel.',
         actionLabel: 'Show all products',
         onAction: () => setState(() => _view = PluProductView.all),
       );
@@ -457,8 +411,9 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
       return WeighEmptyState(
         icon: Icons.scale_outlined,
         title: 'No weighted products',
-        message: 'Mark products as weighted in product settings, or tick '
-            'them manually from the full list.',
+        message: 'Only products with an SKU can go on the weigh machine. '
+            'Ask your back office to add an SKU to the items the scale '
+            'sells, then sync.',
         actionLabel: 'Show all products',
         onAction: () => setState(() => _view = PluProductView.all),
       );
@@ -485,6 +440,8 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
         .toList()
       ..sort();
     final selectedCount = all.where(_isSelected).length;
+    // What PLU.csv will hold: every SKU product, regardless of ticks.
+    final pluCount = PluCsv.weighted(all).length;
     final counts = PluViewCounts(
       all: filtered.length,
       selected: filtered.where(_isSelected).length,
@@ -500,8 +457,8 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
             : null;
 
     void toggle(GetProduct product, bool value) =>
-        _updateSelection(product, value, all);
-    void toggleAllShown() => _setShown(visible, all, allShownState != true);
+        _updateSelection(product, value);
+    void toggleAllShown() => _setShown(visible, allShownState != true);
 
     final empty = _emptyState(catalogEmpty: all.isEmpty);
 
@@ -514,8 +471,7 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
       view: _view,
       counts: counts,
       onViewChanged: (value) => setState(() => _view = value),
-      onReset:
-          _hasFilters || _view != PluProductView.all ? _resetFilters : null,
+      onReset: _hasFilters || _view != _defaultView ? _resetFilters : null,
     );
 
     return LayoutBuilder(builder: (context, constraints) {
@@ -528,8 +484,7 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
       );
 
       final filePanel = PluFilePanel(
-        selectedCount: selectedCount,
-        weightedCount: PluCsv.weighted(all).length,
+        productCount: pluCount,
         destination: _destination,
         autoEnabled: _autoEnabled,
         running: _running,
@@ -593,7 +548,9 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
                                         isSelected: _isSelected,
                                         onToggle: toggle,
                                         allShownState: allShownState,
-                                        onToggleAllShown: toggleAllShown,
+                                        onToggleAllShown: visible.isEmpty
+                                            ? null
+                                            : toggleAllShown,
                                         empty: empty,
                                       ),
                                     ),
@@ -622,10 +579,11 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
       return Scaffold(
         backgroundColor: Colors.white,
         bottomNavigationBar: PluSelectionBar(
-          selectedCount: selectedCount,
+          productCount: pluCount,
+          tickedCount: selectedCount,
           onClear: selectedCount == 0 ? null : () => _clearSelection(all),
           download: PluDownloadButton(
-            enabled: selectedCount > 0 && _running == null,
+            enabled: pluCount > 0 && _running == null,
             running: _running == PluTask.download,
             onPressed: _download,
             label: 'Download',
@@ -706,7 +664,7 @@ class _PageHeader extends StatelessWidget {
               if (!compact) ...[
                 const SizedBox(height: 3),
                 const Text(
-                  'Pick the products your scale sells, then save PLU.csv for it.',
+                  'Products with an SKU are saved to PLU.csv for your scale.',
                   style: TextStyle(color: WeighUiColors.muted, fontSize: 13),
                 ),
               ],

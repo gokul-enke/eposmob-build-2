@@ -25,8 +25,7 @@ class PluLastSave {
 class PluFilePanel extends StatelessWidget {
   const PluFilePanel({
     super.key,
-    required this.selectedCount,
-    required this.weightedCount,
+    required this.productCount,
     required this.destination,
     required this.autoEnabled,
     required this.running,
@@ -40,8 +39,8 @@ class PluFilePanel extends StatelessWidget {
     this.folderHint,
   });
 
-  final int selectedCount;
-  final int weightedCount;
+  /// Products with an SKU: exactly what PLU.csv will contain.
+  final int productCount;
   final String? destination;
   final bool autoEnabled;
   final PluTask? running;
@@ -58,7 +57,7 @@ class PluFilePanel extends StatelessWidget {
   final bool showDownload;
   final String? folderHint;
 
-  bool get _ready => selectedCount > 0;
+  bool get _ready => productCount > 0;
 
   @override
   Widget build(BuildContext context) {
@@ -96,9 +95,7 @@ class PluFilePanel extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _StatusBanner(
-            ready: _ready,
-            selectedCount: selectedCount,
-            weightedCount: weightedCount,
+            productCount: productCount,
           ),
           const SizedBox(height: 16),
           const _SectionLabel('Save folder'),
@@ -181,7 +178,7 @@ class PluFilePanel extends StatelessWidget {
               ),
             ),
             subtitle: const Text(
-              'Rewrites PLU.csv when prices or selected items change.',
+              'Rewrites PLU.csv when products or prices change.',
               style: TextStyle(color: WeighUiColors.muted, fontSize: 12),
             ),
             value: autoEnabled,
@@ -250,30 +247,23 @@ class PluDownloadButton extends StatelessWidget {
 }
 
 class _StatusBanner extends StatelessWidget {
-  const _StatusBanner({
-    required this.ready,
-    required this.selectedCount,
-    required this.weightedCount,
-  });
+  const _StatusBanner({required this.productCount});
 
-  final bool ready;
-  final int selectedCount;
-  final int weightedCount;
+  final int productCount;
 
   @override
   Widget build(BuildContext context) {
+    final ready = productCount > 0;
     final background =
         ready ? WeighUiColors.softGreen : WeighUiColors.softAmber;
     final foreground = ready ? WeighUiColors.green : WeighUiColors.amber;
     final title = ready
-        ? '${WeighFormat.products(selectedCount)} ready'
-        : 'No products selected';
+        ? '${WeighFormat.products(productCount)} ready'
+        : 'No products with an SKU';
     final message = ready
-        ? 'These items will be written to the machine file.'
-        : weightedCount > 0
-            ? 'Tick products in the list, or use the Weighted filter to find '
-                'the ${WeighFormat.count(weightedCount)} flagged items.'
-            : 'Tick the products your weigh machine sells by weight.';
+        ? 'Every product with an SKU goes into PLU.csv.'
+        : 'Only products with an SKU go on the weigh machine. Ask your '
+            'back office to add SKUs, then use Sync & download.';
 
     return Container(
       key: const ValueKey('plu_status'),

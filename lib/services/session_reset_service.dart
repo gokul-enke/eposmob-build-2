@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/weigh_machine/data/plu_export_service.dart';
 import 'package:pos_machine/providers/admin_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
@@ -134,6 +135,10 @@ class SessionResetService {
     try {
       await context.read<RealtimeSyncProvider>().stop();
     } catch (_) {}
+
+    // Before prefs.clear() below: the saved PLU folder is still readable, and
+    // the old tenant's items must not stay where the weigh machine imports.
+    await PluExportService.instance.discardFile();
 
     String? rememberedEmail;
     String? rememberedPassword;

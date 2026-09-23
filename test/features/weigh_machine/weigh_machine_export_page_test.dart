@@ -29,16 +29,20 @@ GetProduct _product(int id, String name, {bool weighted = false}) => GetProduct(
       barcode: '1000$id',
       price: ProductPrice(price: '${id * 3}'),
       unit: 'KG',
-      weightInfo: WeightInfo(isWeighted: weighted),
+      // An SKU is what makes a product a weigh-machine item.
+      sku: weighted ? 'SKU$id' : null,
     );
 
-Future<void> _pump(WidgetTester tester, Size size) async {
+/// Pumps the page with a real temp save folder, returned for file checks.
+Future<Directory> _pump(WidgetTester tester, Size size) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
+  final folder = Directory.systemTemp.createTempSync('plu_page_save_');
+  addTearDown(() => folder.deleteSync(recursive: true));
   SharedPreferences.setMockInitialValues({
-    // Avoids path_provider, which has no plugin in widget tests.
-    'plu_export_local_default_directory': '/tmp',
+    // A chosen folder avoids path_provider, which has no plugin in tests.
+    'plu_export_local_default_directory': folder.path,
   });
   final catalog = _FakeCatalog([
     _product(1, 'Apples', weighted: true),
@@ -62,6 +66,7 @@ Future<void> _pump(WidgetTester tester, Size size) async {
     ),
   );
   await tester.pumpAndSettle();
+  return folder;
 }
 
 void main() {
@@ -72,7 +77,7 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('PRODUCT'), findsOneWidget);
     expect(find.byKey(const ValueKey('plu_download')), findsOneWidget);
-    // Weighted products are selected by default.
+    // PLU.csv holds every product with an SKU.
     expect(find.text('2 products ready'), findsOneWidget);
 
     // Search, category and Reset share one height and top edge.
@@ -107,35 +112,88 @@ void main() {
     expect(decoration.focusedBorder, InputBorder.none);
     expect(decoration.enabledBorder, InputBorder.none);
 
+    // Opens on the Weighted view: only the two SKU products.
+    expect(find.text('Showing 2 of 39'), findsOneWidget);
+
+    // Any product can be ticked (for Excel); ticks never change PLU.csv.
+    await tester.tap(find.byKey(const ValueKey('plu_product_1')));
+    await tester.tap(find.byKey(const ValueKey('plu_view_all')));
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('plu_product_2')));
     await tester.pump();
-    expect(find.text('3 products ready'), findsOneWidget);
+    expect(find.text('2 products ready'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('plu_view_selected')));
     await tester.pump();
-    expect(find.text('Showing 3 of 39'), findsOneWidget);
+    expect(find.text('Showing 2 of 39'), findsOneWidget);
+    expect(find.text('Mutton'), findsOneWidget);
   });
 
   testWidgets('narrow layout keeps download in the sticky bar', (tester) async {
     await _pump(tester, const Size(375, 812));
 
     expect(tester.takeException(), isNull);
-    expect(find.text('2 selected'), findsOneWidget);
+    expect(find.text('2 products in PLU.csv'), findsOneWidget);
     expect(find.byKey(const ValueKey('plu_download')), findsOneWidget);
+    expect(find.byKey(const ValueKey('plu_clear_selection')), findsNothing);
+
+    // Cards sit below the panel and filters on phones.
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('plu_product_1')),
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byType(CustomScrollView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    // Bring the whole card clear of the bottom edge before tapping.
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -200));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('plu_product_1')));
+    await tester.pump();
+    expect(find.text('Untick 1'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('plu_clear_selection')));
     await tester.pumpAndSettle();
-    expect(find.text('0 selected'), findsOneWidget);
-    expect(find.text('No products selected'), findsOneWidget);
+    expect(find.text('Untick 1'), findsNothing);
+    expect(find.text('2 products in PLU.csv'), findsOneWidget);
 
     // The overlay message from custom_dialog_box offers Undo.
     await tester.tap(find.text('Undo'));
     await tester.pumpAndSettle();
-    expect(find.text('2 selected'), findsOneWidget);
+    expect(find.text('Untick 1'), findsOneWidget);
     expect(find.text('Undo'), findsNothing);
 
     // Let the message's auto-dismiss timer finish.
     await tester.pump(const Duration(seconds: 6));
+  });
+
+  testWidgets('Download writes every SKU product and ignores ticks',
+      (tester) async {
+    final folder = await _pump(tester, const Size(1366, 768));
+
+    // Tick a product without an SKU; it must still stay out of PLU.csv.
+    await tester.tap(find.byKey(const ValueKey('plu_view_all')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('plu_product_2')));
+    await tester.pump();
+
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const ValueKey('plu_download')));
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+    });
+    await tester.pump();
+
+    final csv = File('${folder.path}${Platform.pathSeparator}PLU.csv')
+        .readAsStringSync();
+    expect(csv, contains('Apples'));
+    expect(csv, contains('Bananas'));
+    expect(csv, isNot(contains('Mutton')));
+    expect(csv, isNot(contains('Item 4')));
+    expect(find.textContaining('Last saved at'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 3));
   });
 
   testWidgets('custom folder offers a way back to the default', (tester) async {
@@ -190,6 +248,8 @@ void main() {
   testWidgets('category dropdown is searchable and Reset clears it',
       (tester) async {
     await _pump(tester, const Size(1366, 768));
+    await tester.tap(find.byKey(const ValueKey('plu_view_all')));
+    await tester.pump();
 
     await tester.tap(find.byKey(const ValueKey('plu_category')));
     await tester.pumpAndSettle();
@@ -210,11 +270,12 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('plu_reset_filters')));
     await tester.pumpAndSettle();
-    expect(find.text('39 products'), findsOneWidget);
+    // Back to the default Weighted view with no category.
+    expect(find.text('Showing 2 of 39'), findsOneWidget);
     expect(find.text('All categories'), findsOneWidget);
   });
 
-  testWidgets('Reset clears search and returns to all products',
+  testWidgets('Reset clears search and returns to the Weighted view',
       (tester) async {
     await _pump(tester, const Size(1366, 768));
 
@@ -222,13 +283,13 @@ void main() {
     await tester.pump();
     expect(find.text('No matching products'), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('plu_view_weighted')));
+    await tester.tap(find.byKey(const ValueKey('plu_view_all')));
     await tester.pump();
 
     await tester.tap(find.byKey(const ValueKey('plu_reset_filters')));
     await tester.pump();
     expect(find.text('No matching products'), findsNothing);
-    expect(find.text('39 products'), findsOneWidget);
+    expect(find.text('Showing 2 of 39'), findsOneWidget);
     // Nothing left to reset, so the button disables itself.
     final reset =
         tester.widget<InkWell>(find.byKey(const ValueKey('plu_reset_filters')));

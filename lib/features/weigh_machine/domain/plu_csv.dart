@@ -15,9 +15,14 @@ class PluCsv {
     'Arabic Name',
   ];
 
-  static List<GetProduct> weighted(Iterable<GetProduct> products) => products
-      .where((product) => product.weightInfo?.isWeighted == true)
-      .toList(growable: false);
+  /// A product belongs on the weigh machine when it has an SKU. The back
+  /// office sets an SKU only on products sold through the scale; the
+  /// `weight_info.is_weighted` flag is not sent with the catalog.
+  static bool isWeighted(GetProduct product) =>
+      product.sku?.trim().isNotEmpty ?? false;
+
+  static List<GetProduct> weighted(Iterable<GetProduct> products) =>
+      products.where(isWeighted).toList(growable: false);
 
   static String build(Iterable<GetProduct> products) {
     final rows = <List<String>>[
