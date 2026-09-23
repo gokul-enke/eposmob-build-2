@@ -27,7 +27,15 @@ double? _rightForDialog(bool isMobile) {
   return null;
 }
 
-ScaffoldMessengerState showScaffold({required BuildContext context, message}) {
+/// [actionLabel] and [onAction] add a button such as "Undo"; the message then
+/// stays for 5 seconds instead of 2 so there is time to press it.
+ScaffoldMessengerState showScaffold({
+  required BuildContext context,
+  message,
+  String? actionLabel,
+  VoidCallback? onAction,
+}) {
+  final hasAction = actionLabel != null && onAction != null;
   // Remove any existing overlay message
   _currentOverlayEntry?.remove();
 
@@ -78,6 +86,19 @@ ScaffoldMessengerState showScaffold({required BuildContext context, message}) {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              if (hasAction)
+                TextButton(
+                  onPressed: () {
+                    _currentOverlayEntry?.remove();
+                    _currentOverlayEntry = null;
+                    onAction();
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  child: Text(actionLabel),
+                ),
               IconButton(
                 icon: Icon(Icons.close,
                     color: Colors.white, size: isMobile ? 18 : 20),
@@ -98,10 +119,13 @@ ScaffoldMessengerState showScaffold({required BuildContext context, message}) {
   );
 
   // Insert the overlay entry
-  Overlay.of(context).insert(_currentOverlayEntry!);
+  final entry = _currentOverlayEntry!;
+  Overlay.of(context).insert(entry);
 
-  // Auto-remove after 2 seconds
-  Future.delayed(const Duration(seconds: 2), () {
+  // Auto-remove this entry only, so an earlier timer cannot cut a newer
+  // message short.
+  Future.delayed(Duration(seconds: hasAction ? 5 : 2), () {
+    if (!identical(_currentOverlayEntry, entry)) return;
     _currentOverlayEntry?.remove();
     _currentOverlayEntry = null;
   });
@@ -238,10 +262,12 @@ ScaffoldMessengerState showScaffoldError(
   );
 
   // Insert the overlay entry
-  Overlay.of(context).insert(_currentOverlayEntry!);
+  final entry = _currentOverlayEntry!;
+  Overlay.of(context).insert(entry);
 
-  // Auto-remove after 2 seconds
+  // Auto-remove after 2 seconds, unless a newer message replaced this one.
   Future.delayed(const Duration(seconds: 2), () {
+    if (!identical(_currentOverlayEntry, entry)) return;
     _currentOverlayEntry?.remove();
     _currentOverlayEntry = null;
   });

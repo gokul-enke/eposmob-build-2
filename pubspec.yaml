@@ -111,6 +111,8 @@ dependencies:
   geolocator: ^13.0.0
   marionette_flutter: 0.6.0
   sentry_flutter: ^9.3.0
+  excel: 4.0.6
+  archive: 3.6.1
 msix_config:
   display_name: CLOUDPOS - Billing App
   publisher_display_name: enkeconsulting

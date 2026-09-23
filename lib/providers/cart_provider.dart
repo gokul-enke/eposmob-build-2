@@ -1024,6 +1024,7 @@ class CartProvider with ChangeNotifier {
       'Authorization': 'Bearer $accessToken',
       'X-Tenant': apiKey,
     };
+    debugPrint('📤 ADD TO ORDER request body: ${json.encode(apiBodyData)}');
     // Other order workflows retain their existing API contract. Only the
     // supermarket callers participate in durable recovery and cleanup.
     if (!protectSubmission) {

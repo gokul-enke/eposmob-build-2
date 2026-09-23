@@ -658,13 +658,19 @@ class _SideMenuState extends State<SideMenu> {
                     onTapTitle3: () {
                       sideBarController.index.value = 83;
                     },
+                    onTapTitle4: () {
+                      sideBarController.index.value =
+                          SideBarController.weighMachineExportIndex;
+                    },
                     listTitle1: 'nav.product'.tr,
                     listTitle2: 'nav.stock'.tr,
                     listTitle3: 'nav.product_barcode'.tr,
+                    listTitle4: 'Weigh machine download',
                     // Permission-based visibility
                     showTitle1: hasProductPermission,
                     showTitle2: hasStockPermission,
                     showTitle3: hasBarcodePermission,
+                    showTitle4: hasProductPermission,
                     icon: fa.FontAwesomeIcons.cube,
                     title: 'nav.product'.tr,
                     onTap: () async {
@@ -677,7 +683,9 @@ class _SideMenuState extends State<SideMenu> {
                         sideBarController.index.value == 28 ||
                         sideBarController.index.value == 33 ||
                         sideBarController.index.value == 83 ||
-                        sideBarController.index.value == 35),
+                        sideBarController.index.value == 35 ||
+                        sideBarController.index.value ==
+                            SideBarController.weighMachineExportIndex),
               );
             },
           ),

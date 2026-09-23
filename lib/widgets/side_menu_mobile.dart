@@ -436,8 +436,17 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                 () => _MobileDrawerExpandableTile(
                   icon: Icons.inventory_2_rounded,
                   title: 'nav.product'.tr,
-                  selected: [14, 15, 17, 18, 28, 33, 35, 83]
-                      .contains(sideBarController.index.value),
+                  selected: [
+                    14,
+                    15,
+                    17,
+                    18,
+                    28,
+                    33,
+                    35,
+                    83,
+                    SideBarController.weighMachineExportIndex
+                  ].contains(sideBarController.index.value),
                   subItems: [
                     if (hasProductPermission)
                       _MobileDrawerSubItem(
@@ -453,6 +462,12 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                       _MobileDrawerSubItem(
                         title: 'nav.product_barcode'.tr,
                         onTap: () => navigate(83),
+                      ),
+                    if (hasProductPermission)
+                      _MobileDrawerSubItem(
+                        title: 'Weigh machine download',
+                        onTap: () =>
+                            navigate(SideBarController.weighMachineExportIndex),
                       ),
                   ],
                 ),

@@ -8,6 +8,7 @@ import 'package:marionette_flutter/marionette_flutter.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:pos_machine/features/weigh_machine/data/plu_export_service.dart';
 import 'package:pos_machine/components/virtual_keyboard_widget.dart';
 import 'package:pos_machine/components/startup_gate.dart';
 import 'package:pos_machine/services/order_submission_coordinator.dart';
@@ -222,6 +223,7 @@ Future<Widget> _bootstrap(ValueChanged<String> reportStage) async {
       rethrow;
     }
     debugPrint('[Startup] ready elapsed_ms=${clock.elapsedMilliseconds}');
+    PluExportService.instance.bind(localProducts);
     _startupWork.checkRunning();
     _appReady = true;
     return SentryWidget(child: MyApp(localProducts: localProducts));

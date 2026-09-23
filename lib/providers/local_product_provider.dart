@@ -2558,6 +2558,7 @@ class LocalProductProvider extends ChangeNotifier {
     bool refresh = false,
     Function(int total, int current)? onProgress,
     bool sellableOnly = false,
+    bool throwOnError = false,
   }) async {
     List<GetProduct> allProducts = [];
     final Set<int> deletedProductIds = {};
@@ -2675,6 +2676,7 @@ class LocalProductProvider extends ChangeNotifier {
               jsonData = json.decode(response.body);
             } catch (e) {
               debugPrint('❌ [API] JSON decode failed for page $pageNum: $e');
+              if (throwOnError) rethrow;
               continue;
             }
 
@@ -2707,6 +2709,10 @@ class LocalProductProvider extends ChangeNotifier {
 
             if (response.statusCode == 401 || response.statusCode == 403) {
               throw const HttpException("Unauthorized. Please login again.");
+            }
+
+            if (throwOnError) {
+              throw HttpException('Product page $pageNum failed (${response.statusCode}).');
             }
 
             emptyPageCount++;
@@ -2792,6 +2798,7 @@ class LocalProductProvider extends ChangeNotifier {
       } catch (_) {}
     } catch (e) {
       debugPrint("❌ [API] Error fetching all products from API: $e");
+      if (throwOnError) rethrow;
     } finally {
       isLoading = false;
       notifyListeners();
