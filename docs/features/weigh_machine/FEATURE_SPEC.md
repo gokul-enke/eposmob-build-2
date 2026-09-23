@@ -51,7 +51,9 @@ selected by default.
 - Status banner:
   - Green, “N products ready” when at least one product is selected.
   - Amber, “No products selected” with guidance otherwise.
-- Save folder with a **Change** button. On Android and iOS a hint reminds the
+- Save folder with a **Change** button. The default is `Documents/epos/PLU`
+  (created automatically), next to the app's other files in `Documents/epos`.
+  After choosing another folder, **Use default folder** switches back. On Android and iOS a hint reminds the
   user to pick a folder the machine can read.
 - **Keep file up to date** switch turns automatic rewriting on or off.
 - **Download PLU.csv** is disabled when nothing is selected.

@@ -32,6 +32,7 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
   String? _category;
   PluProductView _view = PluProductView.all;
   String? _destination;
+  bool _customFolder = false;
   bool _autoEnabled = false;
   PluTask? _running;
   PluLastSave? _lastSave;
@@ -46,11 +47,13 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
     final service = PluExportService.instance;
     final selected = await service.selectedProductIds();
     final destination = await service.directoryPath();
+    final customFolder = await service.usesCustomDirectory();
     final autoEnabled = await service.autoEnabled();
     if (mounted) {
       setState(() {
         _selected = selected;
         _destination = destination;
+        _customFolder = customFolder;
         _autoEnabled = autoEnabled;
       });
     }
@@ -257,9 +260,30 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
     if (chosen == null) return;
     try {
       await PluExportService.instance.setDirectoryPath(chosen);
-      if (mounted) setState(() => _destination = chosen);
+      if (mounted) {
+        setState(() {
+          _destination = chosen;
+          _customFolder = true;
+        });
+      }
     } catch (error) {
       _message('Could not use folder: $error', error: true);
+    }
+  }
+
+  Future<void> _useDefaultFolder() async {
+    try {
+      final service = PluExportService.instance;
+      await service.resetDirectoryPath();
+      final path = await service.directoryPath();
+      if (!mounted) return;
+      setState(() {
+        _destination = path;
+        _customFolder = false;
+      });
+      _message('PLU.csv will be saved to $path');
+    } catch (error) {
+      _message('Could not use the default folder: $error', error: true);
     }
   }
 
@@ -513,6 +537,7 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
         onDownload: _download,
         onSyncDownload: () => _download(sync: true),
         onChooseFolder: _chooseFolder,
+        onUseDefaultFolder: _customFolder ? _useDefaultFolder : null,
         onAutoChanged: _setAuto,
         showDownload: wide,
         folderHint: Platform.isAndroid || Platform.isIOS

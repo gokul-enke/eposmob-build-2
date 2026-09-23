@@ -57,13 +57,39 @@ class PluExportService {
     if (await autoEnabled()) _catalogChanged();
   }
 
+  /// Default save folder, inside the app's own `Documents/epos` folder that
+  /// printing and other exports already use.
+  static const defaultFolder = ['epos', 'PLU'];
+
+  @visibleForTesting
+  Future<Directory> Function() documentsDirectory =
+      getApplicationDocumentsDirectory;
+
+  /// The user's chosen folder, or `Documents/epos/PLU`. The default folder is
+  /// created when missing so the first download never fails on it.
   Future<String> directoryPath() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString('${await _prefix()}_directory');
     if (saved != null && saved.isNotEmpty) return saved;
-    final directory = await getDownloadsDirectory() ??
-        await getApplicationDocumentsDirectory();
+    final documents = await documentsDirectory();
+    final directory = Directory(
+        [documents.path, ...defaultFolder].join(Platform.pathSeparator));
+    if (!await directory.exists()) await directory.create(recursive: true);
     return directory.path;
+  }
+
+  /// Whether the user has picked a folder instead of using the default.
+  Future<bool> usesCustomDirectory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString('${await _prefix()}_directory');
+    return saved != null && saved.isNotEmpty;
+  }
+
+  /// Forgets the chosen folder so files go to `Documents/epos/PLU` again.
+  Future<void> resetDirectoryPath() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('${await _prefix()}_directory');
+    if (await autoEnabled()) _catalogChanged();
   }
 
   Future<void> setDirectoryPath(String path) async {

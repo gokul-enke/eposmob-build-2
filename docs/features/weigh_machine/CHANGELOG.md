@@ -15,6 +15,9 @@
 - Added a Reset filters button like the Customers page.
 - Search, Category and Reset now share the `lib/newcomponents` look: 48px
   white box, soft shadow, 7px corners, primary outline on focus.
+- Default save folder is now `Documents/epos/PLU` instead of Downloads, with a
+  **Use default folder** link after choosing another folder. Excel exports
+  from this page go to the same folder.
 - Excel export now ticks only Product Name by default, with a Select all link.
 - Category is now the shared searchable dropdown, which also fixes Reset not
   clearing the selected category.

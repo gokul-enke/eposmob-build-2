@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pos_machine/features/weigh_machine/data/plu_export_service.dart';
 import 'package:pos_machine/features/weigh_machine/presentation/weigh_machine_export_page.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -133,6 +136,30 @@ void main() {
 
     // Let the message's auto-dismiss timer finish.
     await tester.pump(const Duration(seconds: 6));
+  });
+
+  testWidgets('custom folder offers a way back to the default', (tester) async {
+    final documents = Directory.systemTemp.createTempSync('plu_page_docs_');
+    addTearDown(() => documents.deleteSync(recursive: true));
+    final service = PluExportService.instance;
+    final original = service.documentsDirectory;
+    service.documentsDirectory = () async => documents;
+    addTearDown(() => service.documentsDirectory = original);
+
+    // _pump saves a custom folder, so the link is shown.
+    await _pump(tester, const Size(1366, 768));
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const ValueKey('plu_default_folder')));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('plu_default_folder')), findsNothing);
+    expect(
+      find.text([documents.path, 'epos', 'PLU'].join(Platform.pathSeparator)),
+      findsOneWidget,
+    );
+    await tester.pump(const Duration(seconds: 3));
   });
 
   testWidgets('Excel export ticks only Product Name by default',

@@ -34,6 +34,7 @@ class PluFilePanel extends StatelessWidget {
     required this.onDownload,
     required this.onSyncDownload,
     required this.onChooseFolder,
+    this.onUseDefaultFolder,
     required this.onAutoChanged,
     this.showDownload = true,
     this.folderHint,
@@ -48,6 +49,9 @@ class PluFilePanel extends StatelessWidget {
   final VoidCallback onDownload;
   final VoidCallback onSyncDownload;
   final VoidCallback onChooseFolder;
+
+  /// Shown only when a custom folder is set; returns to Documents/epos/PLU.
+  final VoidCallback? onUseDefaultFolder;
   final ValueChanged<bool> onAutoChanged;
 
   /// Narrow layouts show Download in the sticky selection bar instead.
@@ -138,6 +142,22 @@ class PluFilePanel extends StatelessWidget {
               ],
             ),
           ),
+          if (onUseDefaultFolder != null)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const ValueKey('plu_default_folder'),
+                onPressed: busy ? null : onUseDefaultFolder,
+                icon: const Icon(Icons.undo_rounded, size: 16),
+                label: const Text('Use default folder'),
+                style: TextButton.styleFrom(
+                  foregroundColor: ColorManager.kPrimaryColor,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  textStyle: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
           if (folderHint != null) ...[
             const SizedBox(height: 6),
             Text(
