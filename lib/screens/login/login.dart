@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -652,6 +653,16 @@ class _SignInScreenState extends State<SignInScreen> {
                                                 } else {
                                                   _updateLoadingState(
                                                       false, "");
+                                                  if (kDebugMode) {
+                                                    debugPrint(
+                                                        '=== LOGIN NOT SUCCESS ===');
+                                                    debugPrint(
+                                                        'status field: ${value["status"]}');
+                                                    debugPrint(
+                                                        'full value: ${json.encode(value)}');
+                                                    debugPrint(
+                                                        '=========================');
+                                                  }
                                                   showScaffoldError(
                                                     context: context,
                                                     message:
@@ -665,8 +676,17 @@ class _SignInScreenState extends State<SignInScreen> {
                                                       .pushReplacementNamed(
                                                           context, '/api-key');
                                                 }
-                                              } catch (e) {
+                                              } catch (e, stackTrace) {
                                                 _updateLoadingState(false, "");
+                                                if (kDebugMode) {
+                                                  debugPrint(
+                                                      '=== LOGIN EXCEPTION ===');
+                                                  debugPrint(
+                                                      '${e.runtimeType}: $e');
+                                                  debugPrint('$stackTrace');
+                                                  debugPrint(
+                                                      '=======================');
+                                                }
                                                 showScaffoldError(
                                                   context: context,
                                                   message: e.toString(),

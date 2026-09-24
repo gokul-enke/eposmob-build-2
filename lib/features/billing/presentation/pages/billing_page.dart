@@ -6826,6 +6826,7 @@ class BillingPageState extends State<BillingPage>
         quotationId: localProductProvider.currentOrder?.quotationId,
       )
           .then((response) async {
+        debugPrint('🧾 BILLING ORDER API RESPONSE: ${json.encode(response)}');
         if (!mounted) return;
 
         if (await SubscriptionActionGuard.handleBackendResponse(
@@ -7207,6 +7208,7 @@ class BillingPageState extends State<BillingPage>
         quotationId: localProductProvider.currentOrder?.quotationId,
       )
           .then((response) async {
+        debugPrint('🧾 BILLING ORDER API RESPONSE: ${json.encode(response)}');
         if (!mounted) return;
 
         if (await SubscriptionActionGuard.handleBackendResponse(

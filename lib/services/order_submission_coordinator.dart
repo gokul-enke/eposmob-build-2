@@ -348,6 +348,8 @@ class OrderSubmissionCoordinator extends ChangeNotifier {
       final response = await send();
       debugPrint(
           '[Checkout] request_ms=${clock.elapsedMilliseconds} http=${response.statusCode}');
+      debugPrint(
+          '[Checkout] raw response http=${response.statusCode} body=${response.body}');
       final decoded = jsonDecode(response.body);
       final data = decoded is Map
           ? Map<String, dynamic>.from(decoded)
