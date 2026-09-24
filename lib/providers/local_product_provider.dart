@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer';
 import 'dart:io';
 import 'package:uuid/uuid.dart';
 import 'package:pos_machine/services/order_submission_coordinator.dart';
@@ -9,7 +8,9 @@ import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/sync_log.dart';
 import 'package:pos_machine/helpers/quantity_input_helper.dart';
+import 'package:pos_machine/helpers/product_display_order.dart';
 import 'package:pos_machine/helpers/product_search_helper.dart';
 import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
 import 'package:pos_machine/features/billing/domain/product_variant_selection.dart';
@@ -476,6 +477,10 @@ class LocalProductProvider extends ChangeNotifier {
   final List<LocalCartItem> _cartItems = [];
   List<LocalCartItem> get cartItems => _cartItems;
   bool isLoading = false;
+
+  /// What the last product fetch changed; printed by the Sync button
+  /// (`SyncLog.products`). Null until a fetch succeeds.
+  ProductFetchSummary? lastFetchSummary;
 
   // List of saved orders
   final List<SavedOrder> _savedOrders = [];
@@ -1993,7 +1998,8 @@ class LocalProductProvider extends ChangeNotifier {
       }
     }
 
-    _products = decoded;
+    // Hive iterates int keys ascending, i.e. by product id.
+    _products = sortProductsForDisplay(decoded);
     _filteredProducts = List.from(_products);
     _rebuildBarcodeIndex();
     _updatePagination();
@@ -2378,7 +2384,7 @@ class LocalProductProvider extends ChangeNotifier {
   void initializeProducts(List<GetProduct> products) {
     _catalogEpoch++;
     _dirtyProductIds.clear();
-    _products = products;
+    _products = sortProductsForDisplay(List.of(products));
     // Initially, set filtered products same as the full list.
     _filteredProducts = List.from(_products);
     _rebuildBarcodeIndex();
@@ -2486,7 +2492,7 @@ class LocalProductProvider extends ChangeNotifier {
 
     _catalogEpoch++;
     _dirtyProductIds.clear();
-    _products = authoritative;
+    _products = sortProductsForDisplay(authoritative);
     _filteredProducts = List<GetProduct>.from(_products);
     _rebuildBarcodeIndex();
     _updatePagination();
@@ -2580,6 +2586,7 @@ class LocalProductProvider extends ChangeNotifier {
     int successResponses = 0;
 
     isLoading = true;
+    lastFetchSummary = null;
     notifyListeners();
 
     try {
@@ -2644,16 +2651,15 @@ class LocalProductProvider extends ChangeNotifier {
             baseUri.replace(queryParameters: finalQueryParams),
           );
 
-          futures.add(http.get(
-            url,
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $accessToken',
-              'X-Tenant': apiKey,
-              if (ApiLocale.enabled && ApiLocale.isLocalized(url))
-                'Accept-Language': ApiLocale.current,
-            },
-          ));
+          final headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $accessToken',
+            'X-Tenant': apiKey,
+            if (ApiLocale.enabled && ApiLocale.isLocalized(url))
+              'Accept-Language': ApiLocale.current,
+          };
+          SyncLog.request('GET', url, headers: headers);
+          futures.add(http.get(url, headers: headers));
         }
 
         // Wait for all requests in batch to complete
@@ -2671,9 +2677,20 @@ class LocalProductProvider extends ChangeNotifier {
           if (response.statusCode == 200) {
             successResponses++;
             dynamic jsonData;
-            log(response.body);
             try {
               jsonData = json.decode(response.body);
+              final pagination =
+                  jsonData is Map ? jsonData['pagination'] : null;
+              final count = jsonData is Map && jsonData['product'] is List
+                  ? (jsonData['product'] as List).length
+                  : 0;
+              SyncLog.response(
+                response.statusCode,
+                'page $pageNum · $count product(s)'
+                '${pagination is Map ? ' · total ${pagination['total']} · last_page ${pagination['last_page']}' : ''}'
+                ' · ${response.body.length} bytes'
+                ' · batch ${swBatch.elapsedMilliseconds} ms',
+              );
             } catch (e) {
               debugPrint('❌ [API] JSON decode failed for page $pageNum: $e');
               if (throwOnError) rethrow;
@@ -2704,8 +2721,12 @@ class LocalProductProvider extends ChangeNotifier {
               await onProgress(allProducts.length, productsFetched);
             }
           } else {
-            debugPrint(
-                '❌ [API] Page $pageNum failed: Status ${response.statusCode}');
+            final body = response.body;
+            SyncLog.response(
+              response.statusCode,
+              '❌ page $pageNum failed · '
+              '${body.length > 300 ? '${body.substring(0, 300)}…' : body}',
+            );
 
             if (response.statusCode == 401 || response.statusCode == 403) {
               throw const HttpException("Unauthorized. Please login again.");
@@ -2730,6 +2751,7 @@ class LocalProductProvider extends ChangeNotifier {
 
       _catalogEpoch++;
       _dirtyProductIds.clear();
+      final addedIds = <int>{};
       if (useDelta) {
         if (allProducts.isNotEmpty) {
           final updatedProducts = List<GetProduct>.from(_products);
@@ -2749,6 +2771,7 @@ class LocalProductProvider extends ChangeNotifier {
               updatedProducts[existingIndex] = product;
             } else {
               newProducts.add(product);
+              if (id != null) addedIds.add(id);
             }
           }
 
@@ -2770,6 +2793,8 @@ class LocalProductProvider extends ChangeNotifier {
             "🗑️ [Sync] Removed ${beforeCount - _products.length} product(s) via deleted_product_ids (${deletedProductIds.length} id(s) reported)");
       }
 
+      // Delta syncs prepend new products; full syncs keep API page order.
+      _products = sortProductsForDisplay(List.of(_products));
       _filteredProducts = List.from(_products);
       _rebuildBarcodeIndex();
       _updatePagination();
@@ -2790,6 +2815,17 @@ class LocalProductProvider extends ChangeNotifier {
         await prefsProvider.saveLastProductSyncIso(syncEndIso);
       }
       swTotal.stop();
+      lastFetchSummary = ProductFetchSummary(
+        delta: useDelta,
+        products: allProducts
+            .where((p) =>
+                p.productId == null || !deletedProductIds.contains(p.productId))
+            .toList(growable: false),
+        addedIds: addedIds,
+        deletedIds: Set.of(deletedProductIds),
+        total: _products.length,
+        elapsed: swTotal.elapsed,
+      );
       debugPrint(
           '✅ [API] All products loaded successfully. Total: ${_products.length} | Duration: ${swTotal.elapsedMilliseconds}ms');
       try {
@@ -3027,7 +3063,9 @@ class LocalProductProvider extends ChangeNotifier {
     // Check if the product already exists in the list
     int index = _products.indexWhere((p) => p.productId == product.productId);
     if (index == -1) {
-      _products.insert(0, product);
+      _products.add(product);
+      sortProductsForDisplay(_products);
+      // The product list screen shows the new product first until refiltered.
       _filteredProducts.insert(0, product);
       _rebuildBarcodeIndex();
       _saveProductToHive(product);
@@ -3035,6 +3073,8 @@ class LocalProductProvider extends ChangeNotifier {
       debugPrint("✅ Product added to local storage successfully");
     } else {
       _products[index] = product;
+      // An edit may change sort_order or the name.
+      sortProductsForDisplay(_products);
       final filteredIndex =
           _filteredProducts.indexWhere((p) => p.productId == product.productId);
       if (filteredIndex == -1) {
@@ -4201,6 +4241,7 @@ class LocalProductProvider extends ChangeNotifier {
     } else {
       _products.add(product);
     }
+    sortProductsForDisplay(_products);
     _saveProductToHive(product);
     refreshProducts();
   }

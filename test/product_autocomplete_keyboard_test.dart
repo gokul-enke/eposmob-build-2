@@ -147,9 +147,10 @@ void main() {
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
 
-    expect(selectedProductIds, [2]);
+    // Display order is aaa, Abu Jabal, Auto Racing Car; Arrow Down picks the 2nd.
+    expect(selectedProductIds, [3]);
     expect(localProducts.cartItems, hasLength(1));
-    expect(localProducts.cartItems.single.product.productId, 2);
+    expect(localProducts.cartItems.single.product.productId, 3);
     expect(localProducts.cartItems.single.quantity, 1);
 
     // Let the add-to-cart success snackbar timer finish before test teardown.
