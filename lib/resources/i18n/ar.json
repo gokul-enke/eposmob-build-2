@@ -879,7 +879,12 @@
     "label_balance": "رصيد"
   },
   "app": {
-    "title": "كلاود بوس"
+    "title": "كلاود بوس",
+    "software_information": "معلومات البرنامج",
+    "software": "البرنامج",
+    "version": "الإصدار",
+    "software_info_tooltip": "معلومات البرنامج",
+    "version_unavailable": "غير متاح"
   },
   "pagination": {
     "previous": "السابق",

@@ -56,6 +56,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   bool isBulkSending = false;
   String? activeBulkSyncType;
   Timer? _invoiceSearchDebounce;
+  bool _zatcaCleanupScheduled = false;
 
   final FocusNode invoiceNoFocusNode = FocusNode();
   final FocusNode nameFocusNode = FocusNode();
@@ -162,6 +163,43 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         Timer(const Duration(milliseconds: 350), searchInvoices);
   }
 
+  void _clearUnavailableZatcaStateAfterBuild(
+    AppSettingsProvider appSettingsProvider,
+  ) {
+    final bool phase2VerifiedEnabled = appSettingsProvider.isReady &&
+        (appSettingsProvider.appSettings?.zatcaPhase2Enabled ?? false);
+
+    // Do not clear a user's filter during an in-flight settings refresh. Wait
+    // until the request has either resolved disabled or failed.
+    if (appSettingsProvider.loading ||
+        phase2VerifiedEnabled ||
+        _zatcaCleanupScheduled ||
+        (selectedZatcaStatus == null && selectedInvoiceIds.isEmpty)) {
+      return;
+    }
+
+    _zatcaCleanupScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _zatcaCleanupScheduled = false;
+      if (!mounted) return;
+
+      final latestSettings = context.read<AppSettingsProvider>();
+      final bool latestPhase2VerifiedEnabled = latestSettings.isReady &&
+          (latestSettings.appSettings?.zatcaPhase2Enabled ?? false);
+      if (latestSettings.loading || latestPhase2VerifiedEnabled) return;
+
+      final bool hadZatcaFilter = selectedZatcaStatus != null;
+      setState(() {
+        selectedZatcaStatus = null;
+        selectedInvoiceIds.clear();
+      });
+
+      if (hadZatcaFilter) {
+        searchInvoices();
+      }
+    });
+  }
+
   @override
   void dispose() {
     _invoiceSearchDebounce?.cancel();
@@ -207,7 +245,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         return;
       }
 
-      showScaffold(context: context, message: 'invoice.processing_zatca_phase2'.tr);
+      showScaffold(
+          context: context, message: 'invoice.processing_zatca_phase2'.tr);
       showLoadingOverlay(context, message: 'invoice.processing'.tr);
 
       final provider = Provider.of<InvoiceProvider>(context, listen: false);
@@ -231,7 +270,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         }
         showScaffold(
           context: context,
-          message: 'invoice.processed_phase2'.tr.replaceAll('@number', invoiceNumber),
+          message: 'invoice.processed_phase2'
+              .tr
+              .replaceAll('@number', invoiceNumber),
         );
         // Flip row UI immediately
         Provider.of<InvoiceProvider>(context, listen: false)
@@ -254,7 +295,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       }
     } catch (e) {
       debugPrint('[ZATCA][Phase2 Send With PDF] EXCEPTION: $e');
-      showScaffoldError(context: context, message: 'invoice.error_generic'.tr.replaceAll('@error', e.toString()));
+      showScaffoldError(
+          context: context,
+          message:
+              'invoice.error_generic'.tr.replaceAll('@error', e.toString()));
     } finally {
       hideLoadingOverlay();
     }
@@ -298,7 +342,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         if (ok) {
           showScaffold(
             context: context,
-            message: 'invoice.resynced_with_status'.tr
+            message: 'invoice.resynced_with_status'
+                .tr
                 .replaceAll('@number', invoiceNumber)
                 .replaceAll('@status', resyncStatus),
           );
@@ -321,9 +366,11 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   .replaceAll(RegExp(r'<[^>]*>'), ' ')
                   .replaceAll(RegExp(r'\s+'), ' ')
                   .trim()
-              : (result['message']?.toString() ?? 'invoice.resync_failed_generic'.tr);
+              : (result['message']?.toString() ??
+                  'invoice.resync_failed_generic'.tr);
           if (detail.length > 220) detail = '${detail.substring(0, 220)}...';
-          final errMsg = 'invoice.resync_failed_detail'.tr
+          final errMsg = 'invoice.resync_failed_detail'
+              .tr
               .replaceAll('@number', invoiceNumber)
               .replaceAll('@status', resyncStatus)
               .replaceAll('@detail', detail);
@@ -336,7 +383,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       }
     } catch (e) {
       debugPrint('[ZATCA][Phase2 Resync] EXCEPTION: $e');
-      showScaffoldError(context: context, message: 'invoice.error_generic'.tr.replaceAll('@error', e.toString()));
+      showScaffoldError(
+          context: context,
+          message:
+              'invoice.error_generic'.tr.replaceAll('@error', e.toString()));
     } finally {
       hideLoadingOverlay();
     }
@@ -548,8 +598,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   children: [
                     Text(
                       'invoice.more_options_title'.tr,
-                      style:
-                          const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close, size: 20),
@@ -586,7 +636,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           invoice.zatcaStatus?.toLowerCase() == 'sent') {
         showScaffold(
           context: context,
-          message: 'invoice.already_sent_zatca'.tr.replaceAll('@number', invoice.invoiceNumber),
+          message: 'invoice.already_sent_zatca'
+              .tr
+              .replaceAll('@number', invoice.invoiceNumber),
         );
         return;
       }
@@ -615,7 +667,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         // Do NOT open PDF here per requirement. Just inform the user.
         showScaffold(
           context: context,
-          message: 'invoice.submitted_to_zatca'.tr.replaceAll('@number', invoiceNumber),
+          message: 'invoice.submitted_to_zatca'
+              .tr
+              .replaceAll('@number', invoiceNumber),
         );
         // Flip row UI immediately
         Provider.of<InvoiceProvider>(context, listen: false)
@@ -638,7 +692,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       }
     } catch (e) {
       debugPrint('[ZATCA][Phase2 Send] EXCEPTION: $e');
-      showScaffoldError(context: context, message: 'invoice.error_generic'.tr.replaceAll('@error', e.toString()));
+      showScaffoldError(
+          context: context,
+          message:
+              'invoice.error_generic'.tr.replaceAll('@error', e.toString()));
     } finally {
       hideLoadingOverlay();
     }
@@ -671,7 +728,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       });
     } catch (error) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('invoice.error_loading_invoices'.tr.replaceAll('@error', error.toString()))),
+        SnackBar(
+            content: Text('invoice.error_loading_invoices'
+                .tr
+                .replaceAll('@error', error.toString()))),
       );
     }
   }
@@ -783,6 +843,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     final bool isMobile = size.width < 700;
+    final appSettingsProvider = context.watch<AppSettingsProvider>();
+    final bool showZatcaControls = appSettingsProvider.isReady &&
+        (appSettingsProvider.appSettings?.zatcaPhase2Enabled ?? false);
+    _clearUnavailableZatcaStateAfterBuild(appSettingsProvider);
 
     if (isMobile) {
       return SafeArea(
@@ -791,6 +855,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           child: Consumer<InvoiceProvider>(
             builder: (context, invoiceProvider, child) {
               return InvoiceMobileView(
+                showZatcaControls: showZatcaControls,
                 invoices:
                     invoiceProvider.invoiceListDetails ?? const <Invoice>[],
                 isLoading: invoiceProvider.isLoading,
@@ -894,9 +959,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               children: [
                 _buildHeader(size),
                 const SizedBox(height: 10),
-                _buildSearchBar(size),
+                _buildSearchBar(size, showZatcaControls: showZatcaControls),
                 // const SizedBox(height: 10),
-                _buildInvoiceTable(),
+                _buildInvoiceTable(showZatcaControls: showZatcaControls),
                 const SizedBox(height: 10),
                 _buildPaginationControls(),
               ],
@@ -937,7 +1002,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     );
   }
 
-  Widget _buildSearchBar(Size size) {
+  Widget _buildSearchBar(
+    Size size, {
+    required bool showZatcaControls,
+  }) {
     return Column(
       children: [
         // First row of search fields
@@ -969,11 +1037,11 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 child: _buildPhoneSearch(),
               ),
 
-              // Email Search Field
-              Expanded(
-                flex: 1,
-                child: _buildZatcaStatusFilter(),
-              ),
+              if (showZatcaControls)
+                Expanded(
+                  flex: 1,
+                  child: _buildZatcaStatusFilter(),
+                ),
             ],
           ),
         ),
@@ -1016,7 +1084,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             ],
           ),
         ),
-        _buildSelectionActions(),
+        if (showZatcaControls) _buildSelectionActions(),
         const SizedBox(height: 10),
       ],
     );
@@ -1048,7 +1116,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         confirmationMessage = 'invoice.confirm_sync_not_sent'.tr;
         break;
       default:
-        confirmationMessage = 'invoice.confirm_sync_selected'.tr
+        confirmationMessage = 'invoice.confirm_sync_selected'
+            .tr
             .replaceAll('@count', idsToSync.length.toString());
     }
 
@@ -1108,11 +1177,15 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         });
         await refreshData();
       } else {
-        final errorMsg = result?['message'] ?? 'invoice.sync_failed_fallback'.tr;
+        final errorMsg =
+            result?['message'] ?? 'invoice.sync_failed_fallback'.tr;
         showScaffoldError(context: context, message: errorMsg);
       }
     } catch (e) {
-      showScaffoldError(context: context, message: 'invoice.bulk_sync_error'.tr.replaceAll('@error', e.toString()));
+      showScaffoldError(
+          context: context,
+          message:
+              'invoice.bulk_sync_error'.tr.replaceAll('@error', e.toString()));
     } finally {
       if (mounted) {
         setState(() {
@@ -1252,7 +1325,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               const Spacer(),
               // Selection info on the right
               Text(
-                'invoice.records_selected'.tr.replaceAll('@count', selectedInvoiceIds.length.toString()),
+                'invoice.records_selected'
+                    .tr
+                    .replaceAll('@count', selectedInvoiceIds.length.toString()),
                 style: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s14,
@@ -1706,8 +1781,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   Future<void> _showInvoiceDetails(Invoice invoice) async {
     final String? token = Provider.of<AuthModel>(context, listen: false).token;
     if (token == null || token.isEmpty) {
-      showScaffoldError(
-          context: context, message: 'invoice.missing_token'.tr);
+      showScaffoldError(context: context, message: 'invoice.missing_token'.tr);
       return;
     }
 
@@ -1719,7 +1793,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       hideLoadingOverlay();
 
       if (details == null) {
-        showScaffoldError(context: context, message: 'invoice.failed_load_details'.tr);
+        showScaffoldError(
+            context: context, message: 'invoice.failed_load_details'.tr);
         return;
       }
 
@@ -1739,15 +1814,21 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               CommonDetailsDialog.buildKeyValueRow(
                   'invoice.field_customer_phone'.tr, details.customer.phone,
                   copyable: true),
-              CommonDetailsDialog.buildKeyValueRow('invoice.field_amount'.tr, details.amount),
-              CommonDetailsDialog.buildKeyValueRow('invoice.field_type'.tr, details.type),
+              CommonDetailsDialog.buildKeyValueRow(
+                  'invoice.field_amount'.tr, details.amount),
+              CommonDetailsDialog.buildKeyValueRow(
+                  'invoice.field_type'.tr, details.type),
             ],
             [
               CommonDetailsDialog.buildKeyValueRow(
                   'invoice.field_invoice_date'.tr, details.invoiceDate),
-              CommonDetailsDialog.buildKeyValueRow('invoice.field_due_date'.tr, details.dueDate),
-              CommonDetailsDialog.buildKeyValueRow('invoice.field_status'.tr, details.status),
-              CommonDetailsDialog.buildKeyValueRow('invoice.field_order_number'.tr, 'common_details_dialog.na'.tr),
+              CommonDetailsDialog.buildKeyValueRow(
+                  'invoice.field_due_date'.tr, details.dueDate),
+              CommonDetailsDialog.buildKeyValueRow(
+                  'invoice.field_status'.tr, details.status),
+              CommonDetailsDialog.buildKeyValueRow(
+                  'invoice.field_order_number'.tr,
+                  'common_details_dialog.na'.tr),
             ],
           ],
           sectionTitle: 'invoice.items_title'.tr,
@@ -1879,7 +1960,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     } catch (e) {
       hideLoadingOverlay();
       showScaffoldError(
-          context: context, message: 'invoice.error_loading_details'.tr.replaceAll('@error', e.toString()));
+          context: context,
+          message: 'invoice.error_loading_details'
+              .tr
+              .replaceAll('@error', e.toString()));
     }
   }
 
@@ -2028,7 +2112,41 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     );
   }
 
-  Widget _buildInvoiceTable() {
+  Map<int, TableColumnWidth> _invoiceTableColumnWidths(
+    bool showZatcaControls,
+  ) {
+    final actionWidth = FlexColumnWidth(
+      MediaQuery.of(context).size.width < 900 ? 1.8 : 1.4,
+    );
+
+    if (showZatcaControls) {
+      return {
+        0: const FixedColumnWidth(40),
+        1: const FlexColumnWidth(1.2),
+        2: const FlexColumnWidth(0.8),
+        3: const FlexColumnWidth(1.4),
+        4: const FlexColumnWidth(1.1),
+        5: const FlexColumnWidth(0.7),
+        6: const FlexColumnWidth(1.1),
+        7: const FlexColumnWidth(0.8),
+        8: const FlexColumnWidth(1.2),
+        9: actionWidth,
+      };
+    }
+
+    return {
+      0: const FlexColumnWidth(1.2),
+      1: const FlexColumnWidth(0.8),
+      2: const FlexColumnWidth(1.4),
+      3: const FlexColumnWidth(1.1),
+      4: const FlexColumnWidth(0.7),
+      5: const FlexColumnWidth(1.1),
+      6: const FlexColumnWidth(0.8),
+      7: actionWidth,
+    };
+  }
+
+  Widget _buildInvoiceTable({required bool showZatcaControls}) {
     return Expanded(
       child:
           Consumer<InvoiceProvider>(builder: (context, invoiceProvider, child) {
@@ -2061,36 +2179,31 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                               ],
                             ),
                             child: Table(
-                              columnWidths: {
-                                0: const FixedColumnWidth(40), // Checkbox
-                                1: const FlexColumnWidth(1.2), // Invoice Number
-                                2: const FlexColumnWidth(0.8), // Amount
-                                3: const FlexColumnWidth(1.4), // Name
-                                4: const FlexColumnWidth(1.1), // Invoice Date
-                                5: const FlexColumnWidth(0.7), // Type
-                                6: const FlexColumnWidth(1.1), // Due Date
-                                7: const FlexColumnWidth(0.8), // Status
-                                8: const FlexColumnWidth(1.2), // ZATCA Status
-                                9: FlexColumnWidth(
-                                    MediaQuery.of(context).size.width < 900
-                                        ? 1.8
-                                        : 1.4),
-                              },
+                              columnWidths: _invoiceTableColumnWidths(
+                                showZatcaControls,
+                              ),
                               border: null,
                               defaultVerticalAlignment:
                                   TableCellVerticalAlignment.middle,
                               children: [
                                 TableRow(
                                   children: [
-                                    _buildTableHeader(""), // Selection Checkbox
-                                    _buildTableHeader('invoice.field_invoice_number'.tr),
+                                    if (showZatcaControls)
+                                      _buildTableHeader(""),
+                                    _buildTableHeader(
+                                        'invoice.field_invoice_number'.tr),
                                     _buildTableHeader('invoice.col_amount'.tr),
                                     _buildTableHeader('invoice.col_name'.tr),
-                                    _buildTableHeader('invoice.field_invoice_date'.tr),
+                                    _buildTableHeader(
+                                        'invoice.field_invoice_date'.tr),
                                     _buildTableHeader('invoice.field_type'.tr),
-                                    _buildTableHeader('invoice.field_due_date'.tr),
-                                    _buildTableHeader('invoice.field_status'.tr),
-                                    _buildTableHeader('invoice.col_zatca_status'.tr),
+                                    _buildTableHeader(
+                                        'invoice.field_due_date'.tr),
+                                    _buildTableHeader(
+                                        'invoice.field_status'.tr),
+                                    if (showZatcaControls)
+                                      _buildTableHeader(
+                                          'invoice.col_zatca_status'.tr),
                                     _buildTableHeader('invoice.col_action'.tr),
                                   ],
                                 ),
@@ -2118,33 +2231,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                         physics: const BouncingScrollPhysics(),
                                         scrollDirection: Axis.vertical,
                                         child: Table(
-                                          columnWidths: {
-                                            0: const FixedColumnWidth(
-                                                40), // Checkbox
-                                            1: const FlexColumnWidth(
-                                                1.2), // Invoice Number
-                                            2: const FlexColumnWidth(
-                                                0.8), // Amount
-                                            3: const FlexColumnWidth(
-                                                1.4), // Name
-                                            4: const FlexColumnWidth(
-                                                1.1), // Invoice Date
-                                            5: const FlexColumnWidth(
-                                                0.7), // Type
-                                            6: const FlexColumnWidth(
-                                                1.1), // Due Date
-                                            7: const FlexColumnWidth(
-                                                0.8), // Status
-                                            8: const FlexColumnWidth(
-                                                1.2), // ZATCA Status
-                                            9: FlexColumnWidth(
-                                                MediaQuery.of(context)
-                                                            .size
-                                                            .width <
-                                                        900
-                                                    ? 1.8
-                                                    : 1.4),
-                                          },
+                                          columnWidths:
+                                              _invoiceTableColumnWidths(
+                                            showZatcaControls,
+                                          ),
                                           border: null,
                                           defaultVerticalAlignment:
                                               TableCellVerticalAlignment.middle,
@@ -2165,28 +2255,30 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                                         .withOpacity(0.1),
                                               ),
                                               children: [
-                                                TableCell(
-                                                  verticalAlignment:
-                                                      TableCellVerticalAlignment
-                                                          .middle,
-                                                  child: Checkbox(
-                                                    value: isSelected,
-                                                    activeColor: ColorManager
-                                                        .kPrimaryColor,
-                                                    onChanged: (bool? value) {
-                                                      setState(() {
-                                                        if (value == true) {
-                                                          selectedInvoiceIds
-                                                              .add(invoice.id);
-                                                        } else {
-                                                          selectedInvoiceIds
-                                                              .remove(
-                                                                  invoice.id);
-                                                        }
-                                                      });
-                                                    },
+                                                if (showZatcaControls)
+                                                  TableCell(
+                                                    verticalAlignment:
+                                                        TableCellVerticalAlignment
+                                                            .middle,
+                                                    child: Checkbox(
+                                                      value: isSelected,
+                                                      activeColor: ColorManager
+                                                          .kPrimaryColor,
+                                                      onChanged: (bool? value) {
+                                                        setState(() {
+                                                          if (value == true) {
+                                                            selectedInvoiceIds
+                                                                .add(
+                                                                    invoice.id);
+                                                          } else {
+                                                            selectedInvoiceIds
+                                                                .remove(
+                                                                    invoice.id);
+                                                          }
+                                                        });
+                                                      },
+                                                    ),
                                                   ),
-                                                ),
                                                 TableCell(
                                                   verticalAlignment:
                                                       TableCellVerticalAlignment
@@ -2224,7 +2316,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                                             showScaffold(
                                                               context: context,
                                                               message:
-                                                                  'invoice.invoice_number_copied'.tr,
+                                                                  'invoice.invoice_number_copied'
+                                                                      .tr,
                                                             );
                                                           },
                                                           child: Icon(
@@ -2278,10 +2371,12 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                                 Center(
                                                     child: _buildStatusChip(
                                                         invoice.status)),
-                                                Center(
+                                                if (showZatcaControls)
+                                                  Center(
                                                     child:
                                                         _buildZatcaStatusChip(
-                                                            invoice)),
+                                                            invoice),
+                                                  ),
                                                 Center(
                                                   child: Padding(
                                                     padding:
@@ -2412,7 +2507,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         return;
       }
 
-      showScaffold(context: context, message: 'invoice.processing_zatca_print'.tr);
+      showScaffold(
+          context: context, message: 'invoice.processing_zatca_print'.tr);
       showLoadingOverlay(context, message: 'invoice.processing'.tr);
 
       final provider = Provider.of<InvoiceProvider>(context, listen: false);
@@ -2434,7 +2530,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         } else {
           showScaffold(
             context: context,
-            message: (result['message']?.toString() ?? 'invoice.zatca_print_completed'.tr),
+            message: (result['message']?.toString() ??
+                'invoice.zatca_print_completed'.tr),
           );
         }
       } else {
@@ -2445,7 +2542,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       }
     } catch (e) {
       debugPrint('[ZATCA][Phase1 Print] EXCEPTION: $e');
-      showScaffoldError(context: context, message: 'invoice.error_generic'.tr.replaceAll('@error', e.toString()));
+      showScaffoldError(
+          context: context,
+          message:
+              'invoice.error_generic'.tr.replaceAll('@error', e.toString()));
     } finally {
       hideLoadingOverlay();
     }
@@ -2456,7 +2556,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     try {
       if (kIsWeb) {
         await launchUrlString(url, mode: LaunchMode.externalApplication);
-        showScaffold(context: context, message: 'invoice.opened_pdf_browser'.tr);
+        showScaffold(
+            context: context, message: 'invoice.opened_pdf_browser'.tr);
         return;
       }
 
@@ -2485,7 +2586,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       try {
         await launchUrlString(url, mode: LaunchMode.externalApplication);
       } catch (_) {}
-      showScaffoldError(context: context, message: 'invoice.failed_open_pdf'.tr);
+      showScaffoldError(
+          context: context, message: 'invoice.failed_open_pdf'.tr);
     }
   }
 
@@ -2651,7 +2753,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   const SizedBox(height: 12),
                   Text(
                     message ??
-                        'invoice.send_zatca_confirm_message'.tr.replaceAll('@count', count.toString()),
+                        'invoice.send_zatca_confirm_message'
+                            .tr
+                            .replaceAll('@count', count.toString()),
                     textAlign: TextAlign.center,
                     softWrap: true,
                     maxLines: null,

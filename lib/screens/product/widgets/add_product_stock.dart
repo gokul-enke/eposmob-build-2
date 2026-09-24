@@ -147,6 +147,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   // Header form controllers
   final TextEditingController supplierSearchController =
       TextEditingController();
+  final FocusNode supplierFocusNode =
+      FocusNode(debugLabel: 'add-product-stock-supplier');
 
   // Search controllers for each row
   final Map<int, TextEditingController> categorySearchControllers = {};
@@ -166,7 +168,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   final Map<int, TextEditingController> purchaseUnitSearchControllers = {};
   final Map<int, TextEditingController> rackSearchControllers = {};
 
-  // Focus nodes for barcode and quantity fields
+  // Focus nodes for keyboard navigation through each stock row
+  final Map<int, FocusNode> productFocusNodes = {};
   final Map<int, FocusNode> barcodeFocusNodes = {};
   final Map<int, FocusNode> quantityFocusNodes = {};
 
@@ -365,6 +368,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     }
 
     // Focus nodes
+    if (productFocusNodes.containsKey(index)) {
+      try {
+        productFocusNodes[index]!.dispose();
+      } catch (_) {}
+      productFocusNodes.remove(index);
+    }
     if (barcodeFocusNodes.containsKey(index)) {
       try {
         barcodeFocusNodes[index]!.dispose();
@@ -806,6 +815,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     }
 
     // Dispose all focus nodes safely
+    for (var focusNode in productFocusNodes.values) {
+      try {
+        focusNode.dispose();
+      } catch (e) {
+        debugPrint('Error disposing product focus node: $e');
+      }
+    }
     for (var focusNode in barcodeFocusNodes.values) {
       try {
         focusNode.dispose();
@@ -826,6 +842,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     } catch (e) {
       debugPrint('⚠️ Error disposing supplier search controller: $e');
     }
+    try {
+      supplierFocusNode.dispose();
+    } catch (e) {
+      debugPrint('Error disposing supplier focus node: $e');
+    }
     super.dispose();
   }
 
@@ -842,6 +863,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       productSearchControllers[index] = TextEditingController();
     }
     return productSearchControllers[index]!;
+  }
+
+  FocusNode _getProductFocusNode(int index) {
+    return productFocusNodes.putIfAbsent(
+      index,
+      () => FocusNode(debugLabel: 'add-product-stock-product-$index'),
+    );
   }
 
   TextEditingController _getBarcodeController(int index) {
@@ -3342,6 +3370,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     },
                     displayText: (supplier) => supplier.name,
                     searchController: supplierSearchController,
+                    focusNode: supplierFocusNode,
                     isRequired: true,
                     searchHintText: 'add_stock.search_supplier'.tr,
                   ),
@@ -6980,6 +7009,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           },
           displayText: (product) => product.productName ?? '',
           searchController: _getProductSearchController(index),
+          focusNode: _getProductFocusNode(index),
           isRequired: false,
           height: 40,
           searchHintText: 'add_stock.search_product'.tr,

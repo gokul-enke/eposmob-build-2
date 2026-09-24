@@ -6,6 +6,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../components/build_round_button.dart';
 import '../../components/build_title.dart';
+import '../../components/software_info_dialog.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
@@ -156,7 +157,7 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
                           FontWeightManager.regular,
                           FontSize.s14,
                           0.27,
-                          Colors.black.withOpacity(0.6),
+                          Colors.black.withValues(alpha: 0.6),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -195,7 +196,7 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
                                     prefixIcon: Icon(
                                       Icons.key,
                                       color: ColorManager.kPrimaryColor
-                                          .withOpacity(0.5),
+                                          .withValues(alpha: 0.5),
                                     ),
                                     hintText: 'login.api_key_hint'.tr,
                                     hintStyle: buildTextFieldStyle,
@@ -210,7 +211,7 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
                                             ? Icons.visibility_off
                                             : Icons.visibility,
                                         color: ColorManager.kPrimaryColor
-                                            .withOpacity(0.5),
+                                            .withValues(alpha: 0.5),
                                       ),
                                     ),
                                     errorBorder: const OutlineInputBorder(
@@ -284,7 +285,7 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
                               FontWeightManager.regular,
                               FontSize.s14,
                               0.27,
-                              Colors.black.withOpacity(0.6),
+                              Colors.black.withValues(alpha: 0.6),
                             ),
                           ),
                           GestureDetector(
@@ -313,36 +314,49 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
               ),
             ),
           ),
-          // Keyboard toggle button (top-right)
+          // Pre-login actions (top-right)
           SafeArea(
             child: Align(
               alignment: Alignment.topRight,
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: IconButton(
-                  icon: Icon(
-                    Provider.of<KeyboardProvider>(context).showKeyboardFeature
-                        ? Icons.keyboard_hide
-                        : Icons.keyboard,
-                    color: Provider.of<KeyboardProvider>(context)
-                            .showKeyboardFeature
-                        ? ColorManager.kPrimaryColor
-                        : Colors.grey.shade600,
-                  ),
-                  tooltip:
-                      Provider.of<KeyboardProvider>(context).showKeyboardFeature
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.info_outline_rounded),
+                      color: Colors.grey.shade600,
+                      tooltip: 'app.software_info_tooltip'.tr,
+                      onPressed: () => SoftwareInfoDialog.show(context),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        Provider.of<KeyboardProvider>(context)
+                                .showKeyboardFeature
+                            ? Icons.keyboard_hide
+                            : Icons.keyboard,
+                        color: Provider.of<KeyboardProvider>(context)
+                                .showKeyboardFeature
+                            ? ColorManager.kPrimaryColor
+                            : Colors.grey.shade600,
+                      ),
+                      tooltip: Provider.of<KeyboardProvider>(context)
+                              .showKeyboardFeature
                           ? 'login.tooltip_hide_keyboard'.tr
                           : 'login.tooltip_show_keyboard'.tr,
-                  onPressed: () {
-                    final keyboardProvider =
-                        Provider.of<KeyboardProvider>(context, listen: false);
-                    if (keyboardProvider.showKeyboardFeature) {
-                      keyboardProvider.featureOff();
-                      keyboardProvider.clear();
-                    } else {
-                      keyboardProvider.featureOn();
-                    }
-                  },
+                      onPressed: () {
+                        final keyboardProvider = Provider.of<KeyboardProvider>(
+                            context,
+                            listen: false);
+                        if (keyboardProvider.showKeyboardFeature) {
+                          keyboardProvider.featureOff();
+                          keyboardProvider.clear();
+                        } else {
+                          keyboardProvider.featureOn();
+                        }
+                      },
+                    ),
+                  ],
                 ),
               ),
             ),

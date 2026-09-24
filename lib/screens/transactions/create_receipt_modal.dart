@@ -284,13 +284,13 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
           Provider.of<InvoiceProvider>(context, listen: false);
 
       if (authModel.token != null && authModel.token!.isNotEmpty) {
-        await invoiceProvider.listAllInvoices(
+        final invoices = await invoiceProvider.fetchAllInvoicesSnapshot(
           accessToken: authModel.token!,
-          loadAll: true,
         );
+        if (!mounted) return;
 
         setState(() {
-          _invoiceList = invoiceProvider.allInvoices ?? [];
+          _invoiceList = invoices;
           _isLoadingInvoices = false;
 
           // Debug print invoice list

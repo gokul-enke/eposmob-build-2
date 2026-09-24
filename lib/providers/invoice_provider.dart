@@ -89,6 +89,7 @@ class InvoiceProvider extends ChangeNotifier {
   int _currentPage = 1;
   int _totalPages = 1;
   int _itemsPerPage = 20;
+  int _invoiceListRequestVersion = 0;
   String? _lastInvoiceAccessToken;
   String? _filterName;
   String? _filterInvoiceNumber;
@@ -1664,6 +1665,56 @@ class InvoiceProvider extends ChangeNotifier {
 
   //          *********************** LIST ALL INVOICE API ***************************************************
 
+  /// Fetches an unfiltered invoice snapshot without changing the invoice-list
+  /// screen's filters, pagination, loading state, or request generation.
+  ///
+  /// Consumers such as the create-receipt modal need their own complete result
+  /// set and must not supersede or overwrite the app-scoped invoice list.
+  Future<List<Invoice>> fetchAllInvoicesSnapshot({
+    required String accessToken,
+    int perPage = 1000,
+    http.Client? client,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final apiKey = prefs.getString('api_key');
+    final activeStoreId = prefs.getInt('active_store_id');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    final queryParams = <String, String>{
+      'page': '1',
+      'per_page': perPage.toString(),
+      if (activeStoreId != null) 'store_id': activeStoreId.toString(),
+    };
+    final uri =
+        Uri.parse(APPUrl.listAllInvoices).replace(queryParameters: queryParams);
+    final headers = {
+      'Authorization': 'Bearer $accessToken',
+      'X-Tenant': apiKey,
+    };
+    final response = await (client == null
+        ? http.get(uri, headers: headers)
+        : client.get(uri, headers: headers));
+
+    if (response.statusCode != 200) {
+      _debugPrintHttpFailure(
+        requestName: 'fetchAllInvoicesSnapshot',
+        uri: uri,
+        response: response,
+      );
+      throw HttpException(
+        'Failed to fetch invoices (${response.statusCode})',
+        uri: uri,
+      );
+    }
+
+    final jsonData = json.decode(response.body);
+    final listInvoiceModel = ListInvoiceModel.fromJson(jsonData);
+    return List<Invoice>.from(listInvoiceModel.data.invoices);
+  }
+
   Future<dynamic> listAllInvoices({
     required String accessToken,
     String? name,
@@ -1680,6 +1731,7 @@ class InvoiceProvider extends ChangeNotifier {
     bool loadAll = false,
     http.Client? client,
   }) async {
+    final requestVersion = ++_invoiceListRequestVersion;
     debugPrint(
         "listAllInvoices called: name=$name, page=$page, loadAll=$loadAll");
     _isLoading = true;
@@ -1716,6 +1768,9 @@ class InvoiceProvider extends ChangeNotifier {
 
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (requestVersion != _invoiceListRequestVersion) {
+      return _supersededInvoiceListResult(requestVersion);
+    }
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
 
@@ -1758,6 +1813,9 @@ class InvoiceProvider extends ChangeNotifier {
     debugPrint("Fetching invoices from: $uri");
 
     if (apiKey == null || apiKey.isEmpty) {
+      if (requestVersion != _invoiceListRequestVersion) {
+        return _supersededInvoiceListResult(requestVersion);
+      }
       if (hasActiveFilters) _clearInvoiceResults();
       _isLoading = false;
       notifyListeners();
@@ -1771,6 +1829,10 @@ class InvoiceProvider extends ChangeNotifier {
       final response = await (client == null
           ? http.get(uri, headers: headers)
           : client.get(uri, headers: headers));
+
+      if (requestVersion != _invoiceListRequestVersion) {
+        return _supersededInvoiceListResult(requestVersion);
+      }
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
@@ -1816,11 +1878,25 @@ class InvoiceProvider extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint("Exception fetching invoices: $e");
+      if (requestVersion != _invoiceListRequestVersion) {
+        return _supersededInvoiceListResult(requestVersion);
+      }
       if (hasActiveFilters) _clearInvoiceResults();
       _isLoading = false;
       notifyListeners();
       return {'status': 'error', 'message': e.toString()};
     }
+  }
+
+  Map<String, dynamic> _supersededInvoiceListResult(int requestVersion) {
+    debugPrint(
+      '[InvoiceProvider] Discarding superseded invoice list response '
+      'version $requestVersion; latest is $_invoiceListRequestVersion.',
+    );
+    return const {
+      'status': 'superseded',
+      'message': 'A newer invoice request replaced this request.',
+    };
   }
 
   //          *********************** CALL DETAILS OF INVOICE API ***************************************************

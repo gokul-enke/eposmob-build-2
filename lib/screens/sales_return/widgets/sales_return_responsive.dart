@@ -9,9 +9,13 @@ import 'package:pos_machine/resources/style_manager.dart';
 /// Presentational only — no business logic, providers or navigation.
 
 const double kSalesReturnPhoneBreakpoint = 600;
+const double kSalesReturnItemsTableMinWidth = 960;
 
 bool salesReturnIsPhone(BuildContext context) =>
     MediaQuery.of(context).size.width < kSalesReturnPhoneBreakpoint;
+
+bool salesReturnUseItemCards(double availableWidth) =>
+    availableWidth < kSalesReturnItemsTableMinWidth;
 
 double salesReturnHorizontalPadding(double width) =>
     width < kSalesReturnPhoneBreakpoint ? 12.0 : 20.0;

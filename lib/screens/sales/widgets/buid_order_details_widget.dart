@@ -712,11 +712,20 @@ class OrderDetailWidget extends StatelessWidget {
 
   Widget _buildStatusChips(BuildContext context) {
     final chips = <Widget>[
-      _buildStatusChip(orderDetailsModelData?.orderStatus ?? ''),
+      _buildStatusChip(
+        'sales_order_details.title_order_status'.tr,
+        orderDetailsModelData?.orderStatus ?? '',
+      ),
       if (orderDetailsModelData?.paymentStatus != null)
-        _buildStatusChip(orderDetailsModelData?.paymentStatus ?? ''),
+        _buildStatusChip(
+          'sales_order_details.btn_payment_status'.tr,
+          orderDetailsModelData?.paymentStatus ?? '',
+        ),
       if (orderDetailsModelData?.deliveryStatus != null)
-        _buildStatusChip(orderDetailsModelData?.deliveryStatus ?? ''),
+        _buildStatusChip(
+          'sales_order_details.label_delivery_job_status'.tr,
+          orderDetailsModelData?.deliveryStatus ?? '',
+        ),
     ];
 
     if (ResponsiveWidget.isMobile(context)) {
@@ -737,7 +746,7 @@ class OrderDetailWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusChip(String status) {
+  Widget _buildStatusChip(String label, String status) {
     Color backgroundColor;
     Color textColor;
 
@@ -771,7 +780,7 @@ class OrderDetailWidget extends StatelessWidget {
         border: Border.all(color: textColor.withOpacity(0.3)),
       ),
       child: Text(
-        UiCodeLabels.status(status),
+        '$label: ${UiCodeLabels.status(status)}',
         style: TextStyle(
           color: textColor,
           fontSize: 12,
