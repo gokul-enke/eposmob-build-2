@@ -10,9 +10,13 @@ import 'package:pos_machine/resources/style_manager.dart';
 /// Presentational only — no business logic, providers or navigation.
 
 const double kExpenseListPhoneBreakpoint = 600;
+const double kExpenseListTableMinWidth = 880;
 
 bool expenseListIsPhone(BuildContext context) =>
     MediaQuery.of(context).size.width < kExpenseListPhoneBreakpoint;
+
+bool expenseListUseCards(double availableWidth) =>
+    availableWidth < kExpenseListTableMinWidth;
 
 double expenseListHorizontalPadding(double width) =>
     width < kExpenseListPhoneBreakpoint ? 12.0 : 20.0;
@@ -318,7 +322,7 @@ class ExpenseListResponsiveTable extends StatelessWidget {
   const ExpenseListResponsiveTable({
     super.key,
     required this.table,
-    this.minWidth = 880,
+    this.minWidth = kExpenseListTableMinWidth,
   });
 
   @override

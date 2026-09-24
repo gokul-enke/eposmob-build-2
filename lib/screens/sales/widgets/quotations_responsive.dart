@@ -9,9 +9,13 @@ import 'package:pos_machine/resources/style_manager.dart';
 /// Presentational only — no business logic, providers or navigation.
 
 const double kQuotationsPhoneBreakpoint = 600;
+const double kQuotationsTableMinWidth = 900;
 
 bool quotationsIsPhone(BuildContext context) =>
     MediaQuery.of(context).size.width < kQuotationsPhoneBreakpoint;
+
+bool quotationsUseCards(double availableWidth) =>
+    availableWidth < kQuotationsTableMinWidth;
 
 double quotationsHorizontalPadding(double width) =>
     width < kQuotationsPhoneBreakpoint ? 12.0 : 20.0;
@@ -320,7 +324,7 @@ class QuotationsResponsiveTable extends StatelessWidget {
   const QuotationsResponsiveTable({
     super.key,
     required this.table,
-    this.minWidth = 900,
+    this.minWidth = kQuotationsTableMinWidth,
   });
 
   @override
