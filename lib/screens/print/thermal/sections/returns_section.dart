@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/order_details.dart';
@@ -118,21 +119,23 @@ class ReturnsSectionBuilder {
               bold: true,
               height: ThermalFontConfig.textSizeSmall,
               width: ThermalFontConfig.textSizeSmall));
-      final custLabel = 'Customer Name:';
+      final custLabel = '${'voucher_print.customer_name'.tr}:';
       bytes += generator.text('$custLabel $customerName',
           styles: PosStyles(
               fontType: fontType,
               align: PosAlign.left,
               height: ThermalFontConfig.textSizeSmall));
       if (customerPhone != null && customerPhone.trim().isNotEmpty) {
-        bytes += generator.text('Phone: $customerPhone',
+        bytes += generator.text(
+            '${'voucher_print.phone'.tr}: $customerPhone',
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.left,
                 height: ThermalFontConfig.textSizeSmall));
       }
       if (customerAddress != null && customerAddress.trim().isNotEmpty) {
-        bytes += generator.text('Billing Address: $customerAddress',
+        bytes += generator.text(
+            '${'voucher_print.billing_address'.tr}: $customerAddress',
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.left,

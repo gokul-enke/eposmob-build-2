@@ -67,6 +67,15 @@ class AppSettings {
   final bool compulsoryShiftOpen;
   final bool posAuthenticateClearCart;
   final String posAuthenticateClearCartKey;
+
+  /// Hides products/stock rows that have no available quantity from every POS
+  /// listing. Only meaningful when stock tracking is enabled for the tenant
+  /// (see `GeneralSettings.stockEnabled`).
+  final bool posHideNonStockProduct;
+
+  /// Online-store tenants must capture a pincode on address-based deliveries;
+  /// POS-only tenants keep it optional.
+  final bool ecommerceEnabled;
   final bool companySubscriptionFallbackEnabled;
   final String companySubscriptionStatus;
   final String companySubscriptionMessage;
@@ -112,11 +121,13 @@ class AppSettings {
     this.skipCheckoutOnConfirmAndPrint = false,
     this.compulsoryDayCloseRegister = false,
     this.productVariantEnabled = false,
-    this.multiSaleUnitEnabled = false,
+    this.multiSaleUnitEnabled = true,
     this.allowOverselling = true,
     this.compulsoryShiftOpen = false,
     this.posAuthenticateClearCart = false,
     this.posAuthenticateClearCartKey = '',
+    this.posHideNonStockProduct = false,
+    this.ecommerceEnabled = false,
     this.companySubscriptionFallbackEnabled = false,
     this.companySubscriptionStatus = 'active',
     this.companySubscriptionMessage = '',
@@ -257,12 +268,12 @@ class AppSettings {
         'PRODUCT_VARIANT_ENABLED',
         defaultValue: false,
       ),
-      // Fail closed: alternate sale units are unavailable until explicitly
-      // enabled for the tenant/store by the backend.
+      // Preserve sale-unit switching for tenants that have not received this
+      // setting yet. Setting the status to false disables alternate units.
       multiSaleUnitEnabled: _readSettingStatus(
         settingsMap,
         'MULTI_SALE_UNIT_ENABLED',
-        defaultValue: false,
+        defaultValue: true,
       ),
       // Preserve the existing cashier-first behavior for tenants that have
       // not received this setting yet. Setting the status to false enables
@@ -285,6 +296,18 @@ class AppSettings {
       posAuthenticateClearCartKey: _readEnabledSettingValue(
         settingsMap,
         'POS_AUTHENTICATE_CLEARCART',
+      ),
+      // Fail open: catalogs stay fully visible unless the tenant explicitly
+      // opts into hiding out-of-stock items.
+      posHideNonStockProduct: _readSettingStatus(
+        settingsMap,
+        'POS_HIDE_NONSTOCK_PRODUCT',
+        defaultValue: false,
+      ),
+      ecommerceEnabled: _readSettingStatus(
+        settingsMap,
+        'ECOMMERCE_ENABLED',
+        defaultValue: false,
       ),
       // The row status enables this temporary compatibility source. The
       // subscription state itself is stored in the row value.
@@ -552,6 +575,18 @@ class AppSettings {
           "code": "POS_AUTHENTICATE_CLEARCART",
           "value": posAuthenticateClearCartKey,
           "status": posAuthenticateClearCart.toString(),
+        },
+        {
+          "name": "POS Hide Non-Stock Product",
+          "code": "POS_HIDE_NONSTOCK_PRODUCT",
+          "value": "",
+          "status": posHideNonStockProduct.toString(),
+        },
+        {
+          "name": "E-commerce Enabled",
+          "code": "ECOMMERCE_ENABLED",
+          "value": "",
+          "status": ecommerceEnabled.toString(),
         },
         {
           "name": "Company Subscription Status",

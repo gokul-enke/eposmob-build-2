@@ -110,7 +110,7 @@ class KotPrintPage extends StatefulWidget {
         if (context.mounted) {
           showScaffold(
             context: context,
-            message: 'KOT printing is disabled in document configuration.',
+            message: 'print.kot_disabled'.tr,
           );
         }
         await invokeKotPrintSuccessCallback(onPrintSuccess);
@@ -168,10 +168,10 @@ class KotPrintPage extends StatefulWidget {
       if (context.mounted) {
         final normalizedKotType = kotType.trim().toLowerCase();
         final successMessage = normalizedKotType == 'cancel'
-            ? 'Cancel KOT printed successfully!'
+            ? 'print.cancel_kot_printed_successfully'.tr
             : normalizedKotType == 'add_on'
-                ? 'Add-on KOT printed successfully!'
-                : 'KOT printed successfully!';
+                ? 'print.add_on_kot_printed_successfully'.tr
+                : 'print.kot_printed_successfully'.tr;
         showScaffold(
           context: context,
           message: successMessage,
@@ -260,8 +260,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('ui_codes.permissions_required'.tr),
-        content: const Text(
-            'This app needs Bluetooth and Location permissions to scan for printers.'),
+        content: Text('voucher_print.printer_permissions_required'.tr),
         actions: [
           TextButton(
             child: Text('general.ok'.tr),
@@ -418,7 +417,9 @@ class _KotPrintPageState extends State<KotPrintPage> {
     if (mounted) {
       showScaffold(
         context: context,
-        message: "${printer.deviceName.toString()} Printer Selected",
+        message: 'voucher_print.printer_selected'.trParams({
+          'name': printer.deviceName.toString(),
+        }),
       );
     }
   }
@@ -477,7 +478,9 @@ class _KotPrintPageState extends State<KotPrintPage> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Error loading document configurations: ${e.toString()}",
+          message: 'voucher_print.error_loading_document_config'.trParams(
+            {'error': e.toString()},
+          ),
         );
       }
     }
@@ -489,7 +492,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Document configuration not loaded. Please try again.",
+          message: 'voucher_print.document_config_not_loaded_retry'.tr,
         );
       }
       return;
@@ -499,7 +502,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'KOT printing is disabled in document configuration.',
+          message: 'print.kot_disabled'.tr,
         );
       }
       return;
@@ -542,7 +545,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
       if (mounted) {
         showScaffold(
           context: context,
-          message: "KOT printed successfully!",
+          message: 'print.kot_printed_successfully'.tr,
         );
         Navigator.pop(context, true);
       }
@@ -550,7 +553,9 @@ class _KotPrintPageState extends State<KotPrintPage> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Failed to print KOT: ${e.toString()}",
+          message: 'print.kot_print_failed'.trParams(
+            {'error': e.toString()},
+          ),
         );
       }
     }
@@ -584,7 +589,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
       if (mounted) {
         showScaffold(
           context: context,
-          message: "KOT PDF generated successfully!",
+          message: 'print.kot_pdf_generated_successfully'.tr,
         );
         Navigator.pop(context, true);
       }
@@ -592,7 +597,9 @@ class _KotPrintPageState extends State<KotPrintPage> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Failed to generate KOT PDF: ${e.toString()}",
+          message: 'print.kot_pdf_generation_failed'.trParams(
+            {'error': e.toString()},
+          ),
         );
       }
     }
@@ -649,8 +656,8 @@ class _KotPrintPageState extends State<KotPrintPage> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'Select Printer',
+        title: Text(
+          'voucher_print.select_printer'.tr,
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -688,8 +695,8 @@ class _KotPrintPageState extends State<KotPrintPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Paper Size',
+                    Text(
+                      'voucher_print.paper_size'.tr,
                       style: TextStyle(
                         color: textPrimaryColor,
                         fontSize: 20,
@@ -737,8 +744,8 @@ class _KotPrintPageState extends State<KotPrintPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Available Printers',
+                    Text(
+                      'voucher_print.available_printers'.tr,
                       style: TextStyle(
                         color: textPrimaryColor,
                         fontSize: 20,
@@ -748,7 +755,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
                     const SizedBox(height: 8),
                     Text(
                       _isScanning
-                          ? 'Scanning...'
+                          ? 'voucher_print.scanning'.tr
                           : '${devices.length} device${devices.length == 1 ? '' : 's'} found',
                       style: const TextStyle(
                         color: textSecondaryColor,
@@ -772,8 +779,8 @@ class _KotPrintPageState extends State<KotPrintPage> {
                             color: textSecondaryColor,
                           ),
                           const SizedBox(height: 16),
-                          const Text(
-                            'No printers found',
+                          Text(
+                            'voucher_print.no_printers_found'.tr,
                             style: TextStyle(
                               color: textSecondaryColor,
                               fontSize: 16,
@@ -782,7 +789,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Tap the refresh button to scan for printers',
+                            'voucher_print.tap_refresh_to_scan'.tr,
                             style: TextStyle(
                               color: textSecondaryColor.withOpacity(0.8),
                               fontSize: 14,
@@ -851,7 +858,9 @@ class _KotPrintPageState extends State<KotPrintPage> {
                                 ),
                                 onPressed: () => selectPrinter(printer),
                                 child: Text(
-                                  isSelected ? 'Selected' : 'Select',
+                                  isSelected
+                                      ? 'voucher_print.selected'.tr
+                                      : 'voucher_print.select'.tr,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -879,7 +888,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Loading document configuration...',
+                        'voucher_print.loading_document_config'.tr,
                         style: TextStyle(
                           color: Colors.orange[700],
                           fontSize: 14,
@@ -896,7 +905,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
                         }
                       },
                       child: Text(
-                        'Retry',
+                        'general.retry'.tr,
                         style: TextStyle(
                           color: Colors.orange[700],
                           fontWeight: FontWeight.bold,
@@ -911,7 +920,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
                 if (selectedPrinter == null) {
                   showScaffoldError(
                     context: context,
-                    message: "Please select a printer first",
+                    message: 'voucher_print.select_printer_first'.tr,
                   );
                   return;
                 }
@@ -919,15 +928,15 @@ class _KotPrintPageState extends State<KotPrintPage> {
                   showScaffoldError(
                     context: context,
                     message:
-                        "Document configuration not loaded. Please wait or try again.",
+                        'voucher_print.document_config_not_loaded'.tr,
                   );
                   return;
                 }
                 _handlePrinting();
               },
               icon: const Icon(Icons.receipt_long),
-              label: const Text(
-                'Print KOT',
+              label: Text(
+                'print.print_kot'.tr,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -948,7 +957,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _isScanning ? null : _checkPermissions,
-        tooltip: 'Scan for printers',
+        tooltip: 'voucher_print.scan_for_printers'.tr,
         backgroundColor: _isScanning ? textSecondaryColor : primaryColor,
         elevation: 4,
         child: _isScanning

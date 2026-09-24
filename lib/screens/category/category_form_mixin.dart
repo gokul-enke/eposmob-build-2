@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -119,7 +119,7 @@ mixin CategoryFormMixin<T extends StatefulWidget> on State<T> {
     if (baseText.isEmpty) {
       showScaffoldError(
         context: context,
-        message: 'Please enter Category Name before translating.',
+        message: 'category.enter_name_before_translating'.tr,
       );
       return;
     }
@@ -136,7 +136,7 @@ mixin CategoryFormMixin<T extends StatefulWidget> on State<T> {
       if (accessToken.isEmpty) {
         showScaffoldError(
           context: context,
-          message: 'Authentication token missing. Please login again.',
+          message: 'general.auth_token_missing'.tr,
         );
         return;
       }
@@ -156,19 +156,21 @@ mixin CategoryFormMixin<T extends StatefulWidget> on State<T> {
         languageNameControllers[language.id]?.text = translated;
         showScaffold(
           context: context,
-          message: 'Translated to ${language.name}',
+          message: 'category.translated_to'.trParams(
+            {'language': language.name},
+          ),
         );
       } else {
         showScaffoldError(
           context: context,
-          message: 'Translation failed. Please try again.',
+          message: 'category.translation_failed'.tr,
         );
       }
     } catch (e) {
       if (!mounted) return;
       showScaffoldError(
         context: context,
-        message: 'Translation failed. Please try again.',
+        message: 'category.translation_failed'.tr,
       );
     } finally {
       if (mounted) {

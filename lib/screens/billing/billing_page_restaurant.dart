@@ -1633,7 +1633,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         if (matchedSaleUnit != null && !multiSaleUnitEnabled) {
           showScaffoldError(
             context: context,
-            message: 'Multi sale units are disabled for this store.',
+            message: 'billing.error_multi_sale_disabled'.tr,
           );
           return;
         }
@@ -1908,9 +1908,13 @@ class BillingPageState extends State<BillingPageRestaurant>
               localProductProvider.getCurrentDiscount()['percentageDiscount'] ??
                   0.0,
           isCouponApplied: isCouponApplied,
-          confirmButtonTitle: isSaveMode ? 'billing.save_order'.tr : 'Confirm',
+          confirmButtonTitle: isSaveMode
+              ? 'billing.save_order'.tr
+              : 'general.confirm'.tr,
           printButtonTitle:
-              isSaveMode ? 'billing.save_and_print'.tr : 'Confirm & Print',
+              isSaveMode
+                  ? 'billing.save_and_print'.tr
+                  : 'general.confirm_and_print'.tr,
           requireCheckoutCompletion: !isSaveMode,
           initialStep: initialStep,
 
@@ -2650,7 +2654,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                 Icons.help_outline,
                 color: Colors.grey.shade600,
               ),
-              tooltip: 'Keyboard Shortcuts (Ctrl+H)',
+              tooltip: 'billing.keyboard_shortcuts'.tr,
               onPressed: () => KeyboardShortcutsHelpDialog.show(
                 context,
                 mode: KeyboardShortcutsHelpMode.restaurant,
@@ -2692,7 +2696,8 @@ class BillingPageState extends State<BillingPageRestaurant>
                         ? ColorManager.kPrimaryColor
                         : Colors.grey.shade600,
                   ),
-                  tooltip: 'Font: ${fontProvider.fontSizeLevelName}',
+                  tooltip:
+                      '${'billing.font_prefix'.tr}${fontProvider.fontSizeLevelName}',
                   onPressed: () {
                     fontProvider.cycleFontSize();
                   },
@@ -6829,13 +6834,13 @@ class BillingPageState extends State<BillingPageRestaurant>
 
           showScaffold(
             context: context,
-            message: result['message'] ?? 'Coupon Applied Successfully',
+            message: result['message'] ?? 'billing.coupon_applied'.tr,
           );
         } else {
           // Handle failure to apply coupon
           showScaffoldError(
             context: context,
-            message: result['message'] ?? 'Failed to Apply Coupon',
+            message: result['message'] ?? 'billing.coupon_apply_failed'.tr,
           );
         }
       } else {
@@ -6897,10 +6902,10 @@ class BillingPageState extends State<BillingPageRestaurant>
   Future<bool> _confirmCustomerCopyPrint() async {
     return (await ConfirmationDialog.show(
           context: context,
-          title: 'Print customer copy?',
-          message: 'Do you want to print a customer copy now?',
-          confirmText: 'Yes, print',
-          cancelText: 'No',
+          title: 'general.print_customer_copy'.tr,
+          message: 'general.print_customer_copy_prompt'.tr,
+          confirmText: 'general.yes_print'.tr,
+          cancelText: 'general.no'.tr,
         )) ??
         false;
   }

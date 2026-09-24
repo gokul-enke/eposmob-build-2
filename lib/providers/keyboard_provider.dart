@@ -222,14 +222,31 @@ class KeyboardProvider extends ChangeNotifier {
 
   void hide() {
     if (!_showKeyboard && _controller == null) return;
+
+    // A hidden keyboard must not leave its field focused. The global keyboard
+    // is driven by focus changes, so retaining focus here would make a later
+    // tap on the same field a no-op and the keyboard could not reopen.
+    ++_focusCheckGeneration;
     _showKeyboard = false;
     _controller = null;
     _shouldReplaceOnFirstInput = false;
+    FocusManager.instance.primaryFocus?.unfocus();
     // Keep the OS keyboard suppressed when the feature is on.
     if (_showKeyboardFeature) {
       SystemChannels.textInput.invokeMethod('TextInput.hide');
     }
     notifyListeners();
+  }
+
+  /// Dismisses the app's virtual keyboard in response to a system Back action.
+  ///
+  /// Returns `true` when the keyboard consumed the action. Releasing focus is
+  /// intentional: after Back hides the keyboard, tapping the same field must
+  /// produce a new focus event so the keyboard can be shown again.
+  bool dismissForBack() {
+    if (!_showKeyboard) return false;
+    hide();
+    return true;
   }
 
   /// Clears the controller reference and replace flag when focus is lost
@@ -419,6 +436,13 @@ class _KeyboardSuppressorObserver extends WidgetsBindingObserver {
   final KeyboardProvider _provider;
 
   _KeyboardSuppressorObserver(this._provider);
+
+  @override
+  Future<bool> didPopRoute() async {
+    // This observer is installed above the app Navigator, so it also sees Back
+    // presses on pushed routes that are outside MainScreen's PopScope.
+    return _provider.dismissForBack();
+  }
 
   @override
   void didChangeMetrics() {

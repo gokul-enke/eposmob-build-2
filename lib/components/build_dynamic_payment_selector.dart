@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/models/master_data.dart';
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
@@ -98,7 +99,7 @@ class BuildDynamicPaymentSelector extends StatefulWidget {
 
   const BuildDynamicPaymentSelector({
     Key? key,
-    this.title = "Select Payment Method",
+    this.title = '',
     required this.paymentMethods,
     required this.onPaymentChanged,
     this.initialData,
@@ -260,7 +261,9 @@ class _BuildDynamicPaymentSelectorState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.title,
+              widget.title.isNotEmpty
+                  ? widget.title
+                  : 'general.select_payment_method'.tr,
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s16,
@@ -286,7 +289,9 @@ class _BuildDynamicPaymentSelectorState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.title,
+              widget.title.isNotEmpty
+                  ? widget.title
+                  : 'general.select_payment_method'.tr,
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s16,
@@ -296,7 +301,7 @@ class _BuildDynamicPaymentSelectorState
             ),
             const SizedBox(height: 8),
             Text(
-              'No payment methods available',
+              'general.no_payment_methods_available'.tr,
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s12,
@@ -318,7 +323,9 @@ class _BuildDynamicPaymentSelectorState
         children: [
           // Title
           Text(
-            widget.title,
+            widget.title.isNotEmpty
+                ? widget.title
+                : 'general.select_payment_method'.tr,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s16,
@@ -424,7 +431,11 @@ class _BuildDynamicPaymentSelectorState
                       method: primaryMethod!,
                       controller: primaryAmountController,
                       placeholder:
-                          'Enter ${primaryMethod!.description.isNotEmpty ? primaryMethod!.description : primaryMethod!.value} Amount',
+                          'general.enter_payment_amount'.trParams({
+                            'method': primaryMethod!.description.isNotEmpty
+                                ? primaryMethod!.description
+                                : primaryMethod!.value,
+                          }),
                       focusNode: _primaryAmountFocusNode,
                     ),
                   ),
@@ -436,7 +447,11 @@ class _BuildDynamicPaymentSelectorState
                       method: secondaryMethod!,
                       controller: secondaryAmountController,
                       placeholder:
-                          'Enter ${secondaryMethod!.description.isNotEmpty ? secondaryMethod!.description : secondaryMethod!.value} Amount',
+                          'general.enter_payment_amount'.trParams({
+                            'method': secondaryMethod!.description.isNotEmpty
+                                ? secondaryMethod!.description
+                                : secondaryMethod!.value,
+                          }),
                       focusNode: _secondaryAmountFocusNode,
                     ),
                   ),
@@ -536,7 +551,7 @@ class _BuildDynamicPaymentSelectorState
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Total: ${total.toStringAsFixed(2)}',
+            '${'general.total'.tr}: ${total.toStringAsFixed(2)}',
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s14,
@@ -547,10 +562,10 @@ class _BuildDynamicPaymentSelectorState
           if (expectedAmount != null) ...[
             Text(
               isAcceptedPartial
-                  ? 'Remaining: ${difference.toStringAsFixed(2)}'
+                  ? '${'general.remaining'.tr}: ${difference.toStringAsFixed(2)}'
                   : isOverpaid
-                      ? 'Overpaid: ${(-difference).toStringAsFixed(2)}'
-                      : 'Expected: ${expectedAmount.toStringAsFixed(2)}',
+                      ? '${'general.overpaid'.tr}: ${(-difference).toStringAsFixed(2)}'
+                      : '${'general.expected'.tr}: ${expectedAmount.toStringAsFixed(2)}',
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s12,

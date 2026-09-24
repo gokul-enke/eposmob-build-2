@@ -1,5 +1,6 @@
 ﻿import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/document_configurations.dart';
@@ -61,7 +62,7 @@ class CustomerVoucherThermalPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: "Document configurations not loaded. Please wait.",
+          message: 'voucher_print.document_config_missing'.tr,
         );
       }
       return const SizedBox.shrink();
@@ -77,7 +78,7 @@ class CustomerVoucherThermalPrinter {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: 'Please select a printer',
+            message: 'voucher_print.select_printer'.tr,
           );
         }
         return const SizedBox.shrink();
@@ -183,7 +184,7 @@ class CustomerVoucherThermalPrinter {
 
       // Customer Information
       bytes += generator.text(
-        'Customer Details',
+        'voucher_print.customer_details'.tr,
         styles: PosStyles(
           align: PosAlign.left,
           height: textSizeSmall,
@@ -193,7 +194,7 @@ class CustomerVoucherThermalPrinter {
       );
 
       bytes += generator.text(
-        'Name: ${voucher.customer.user.name}',
+        '${'voucher_print.name'.tr}: ${voucher.customer.user.name}',
         styles: PosStyles(
           align: PosAlign.left,
           height: textSizeSmall,
@@ -202,7 +203,7 @@ class CustomerVoucherThermalPrinter {
       );
 
       bytes += generator.text(
-        'Phone: ${voucher.customer.user.phone}',
+        '${'voucher_print.phone'.tr}: ${voucher.customer.user.phone}',
         styles: PosStyles(
           align: PosAlign.left,
           height: textSizeSmall,
@@ -216,7 +217,7 @@ class CustomerVoucherThermalPrinter {
       // Items Table Header
       bytes += generator.row([
         PosColumn(
-          text: 'Item',
+          text: 'voucher_print.item'.tr,
           width: 6,
           styles: PosStyles(
             align: PosAlign.left,
@@ -226,7 +227,7 @@ class CustomerVoucherThermalPrinter {
           ),
         ),
         PosColumn(
-          text: 'Qty',
+          text: 'voucher_print.qty'.tr,
           width: 2,
           styles: PosStyles(
             align: PosAlign.center,
@@ -236,7 +237,7 @@ class CustomerVoucherThermalPrinter {
           ),
         ),
         PosColumn(
-          text: 'Amount',
+          text: 'voucher_print.amount'.tr,
           width: 4,
           styles: PosStyles(
             align: PosAlign.right,
@@ -366,7 +367,7 @@ class CustomerVoucherThermalPrinter {
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: 'Customer Voucher printed successfully',
+          message: 'voucher_print.customer_voucher_printed'.tr,
         );
       }
     } catch (e) {
@@ -374,7 +375,8 @@ class CustomerVoucherThermalPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error printing: $e',
+          message: 'voucher_print.error_printing'
+              .trParams({'error': e.toString()}),
         );
       }
     }

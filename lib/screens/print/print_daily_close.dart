@@ -6,7 +6,6 @@ import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platfor
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/daily_sales_close.dart';
@@ -160,8 +159,7 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('ui_codes.permissions_required'.tr),
-        content: const Text(
-            'This app needs Bluetooth and Location permissions to scan for printers.'),
+        content: Text('voucher_print.printer_permissions_required'.tr),
         actions: [
           TextButton(
             child: Text('general.ok'.tr),
@@ -313,7 +311,9 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
     if (mounted) {
       showScaffold(
         context: context,
-        message: "${printer.deviceName.toString()} Printer Selected",
+        message: 'voucher_print.printer_selected'.trParams({
+          'name': printer.deviceName.toString(),
+        }),
       );
     }
   }
@@ -332,7 +332,7 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Please select a printer first",
+          message: 'voucher_print.select_printer_first'.tr,
         );
       }
       return;
@@ -353,9 +353,7 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
       builder: (dialogContext) {
         return AlertDialog(
           title: Text('ui_codes.print_transaction_list'.tr),
-          content: const Text(
-            'Do you want to include transaction details in this print?',
-          ),
+          content: Text('print.include_transaction_details_prompt'.tr),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
@@ -390,7 +388,7 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
       if (mounted) {
         showScaffold(
           context: context,
-          message: "Daily Close Report printed successfully!",
+          message: 'print.daily_close_printed_successfully'.tr,
         );
         Navigator.pop(context);
       }
@@ -398,7 +396,9 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Failed to print: ${e.toString()}",
+          message: 'print.daily_close_print_failed'.trParams(
+            {'error': e.toString()},
+          ),
         );
       }
     }
@@ -418,7 +418,7 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
       if (mounted) {
         showScaffold(
           context: context,
-          message: "Daily Close PDF generated successfully!",
+          message: 'print.daily_close_pdf_generated_successfully'.tr,
         );
         Navigator.pop(context);
       }
@@ -426,7 +426,9 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Failed to generate PDF: ${e.toString()}",
+          message: 'print.pdf_generation_failed'.trParams(
+            {'error': e.toString()},
+          ),
         );
       }
     }
@@ -444,7 +446,7 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
             selectedPaperSize = '80mm';
             _saveDefaultPaperSize('80mm');
           } else if (paperSizes.contains(paperSize)) {
-            selectedPaperSize = paperSize!;
+            selectedPaperSize = paperSize;
           } else {
             // Fallback if loaded size is not in our supported list
             selectedPaperSize = '80mm';
@@ -481,8 +483,8 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'Print Daily Close',
+        title: Text(
+          'print.print_daily_close'.tr,
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -518,8 +520,8 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Paper Size',
+                    Text(
+                      'voucher_print.paper_size'.tr,
                       style: TextStyle(
                         color: textPrimaryColor,
                         fontSize: 20,
@@ -567,8 +569,8 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Available Printers',
+                    Text(
+                      'voucher_print.available_printers'.tr,
                       style: TextStyle(
                         color: textPrimaryColor,
                         fontSize: 20,
@@ -578,7 +580,7 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
                     const SizedBox(height: 8),
                     Text(
                       _isScanning
-                          ? 'Scanning...'
+                          ? 'voucher_print.scanning'.tr
                           : '${devices.length} device${devices.length == 1 ? '' : 's'} found',
                       style: const TextStyle(
                         color: textSecondaryColor,
@@ -602,8 +604,8 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
                             color: textSecondaryColor,
                           ),
                           const SizedBox(height: 16),
-                          const Text(
-                            'No printers found',
+                          Text(
+                            'voucher_print.no_printers_found'.tr,
                             style: TextStyle(
                               color: textSecondaryColor,
                               fontSize: 16,
@@ -612,7 +614,7 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Tap the refresh button to scan for printers',
+                            'voucher_print.tap_refresh_to_scan'.tr,
                             style: TextStyle(
                               color: textSecondaryColor.withOpacity(0.8),
                               fontSize: 14,
@@ -681,7 +683,9 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
                                 ),
                                 onPressed: () => selectPrinter(printer),
                                 child: Text(
-                                  isSelected ? 'Selected' : 'Select',
+                                  isSelected
+                                      ? 'voucher_print.selected'.tr
+                                      : 'voucher_print.select'.tr,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -699,15 +703,15 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
                 if (selectedPrinter == null) {
                   showScaffoldError(
                     context: context,
-                    message: "Please select a printer first",
+                    message: 'voucher_print.select_printer_first'.tr,
                   );
                   return;
                 }
                 _handlePrinting();
               },
               icon: const Icon(Icons.receipt_long),
-              label: const Text(
-                'Print Report',
+              label: Text(
+                'print.print_report'.tr,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -728,7 +732,7 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _isScanning ? null : _checkPermissions,
-        tooltip: 'Scan for printers',
+        tooltip: 'voucher_print.scan_for_printers'.tr,
         backgroundColor: _isScanning ? textSecondaryColor : primaryColor,
         elevation: 4,
         child: _isScanning

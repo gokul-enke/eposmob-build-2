@@ -132,7 +132,16 @@ class Store {
         storeId: json["store_id"] ?? json["id"],
         storeName: json["store_name"] ?? json["name"],
         code: json["code"],
-        location: json["location"],
+        // Login, store-list, and cached endpoints have used different names
+        // for the same printable address. Prefer `location`, but do not lose a
+        // valid address merely because that field is present as an empty
+        // string in one response shape.
+        location: _firstNonEmptyText([
+          json["location"],
+          json["address"],
+          json["store_address"],
+          json["storeAddress"],
+        ]),
         email: json["email"],
         phone: json["phone"]?.toString(),
         stateId: json["state_id"],
@@ -141,6 +150,14 @@ class Store {
         localLocationId: json["local_location_id"] ?? json["location_id"],
         storeOpenTime: json["store_open_time"],
       );
+
+  static String? _firstNonEmptyText(Iterable<dynamic> values) {
+    for (final value in values) {
+      final text = value?.toString().trim();
+      if (text != null && text.isNotEmpty) return text;
+    }
+    return null;
+  }
 
   Map<String, dynamic> toJson() => {
         "store_id": storeId,

@@ -135,9 +135,9 @@ class MarketProductGrid extends StatelessWidget {
     );
 
     if (products.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          'No products found',
+          'stock.no_products_found'.tr,
           style: TextStyle(
             fontFamily: 'Poppins',
             color: Colors.grey,
@@ -387,7 +387,7 @@ class _ListBodyTapTarget extends StatelessWidget {
     }
 
     return Semantics(
-      label: 'Add product to cart',
+      label: 'billing.add_product_to_cart'.tr,
       button: true,
       child: Material(
         color: Colors.transparent,

@@ -214,7 +214,8 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Failed to load graph data: $error',
+          message: 'general.failed_to_load_graph_data'
+              .trParams({'error': error.toString()}),
         );
       }
     }
@@ -901,7 +902,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        "Recent Transactions",
+                        'company_admin.recent_transactions'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s15,
@@ -931,7 +932,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        "Top Products",
+                        'company_admin.top_products'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s15,
@@ -995,7 +996,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        "Payment Methods",
+                        'company_admin.payment_methods'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s15,
@@ -1206,7 +1207,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
       PieChartSectionData(
         color: ColorManager.kPrimaryColor,
         value: 45,
-        title: 'Card\n45%',
+        title: '${'company_admin.payment_card'.tr}\n45%',
         radius: 50,
         titleStyle: const TextStyle(
             fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
@@ -1214,7 +1215,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
       PieChartSectionData(
         color: ColorManager.kOrange,
         value: 30,
-        title: 'Cash\n30%',
+        title: '${'company_admin.payment_cash'.tr}\n30%',
         radius: 50,
         titleStyle: const TextStyle(
             fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
@@ -1222,7 +1223,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
       PieChartSectionData(
         color: ColorManager.kMagentha,
         value: 15,
-        title: 'UPI\n15%',
+        title: '${'company_admin.payment_upi'.tr}\n15%',
         radius: 50,
         titleStyle: const TextStyle(
             fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
@@ -1230,7 +1231,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
       PieChartSectionData(
         color: ColorManager.kBlue,
         value: 10,
-        title: 'Other\n10%',
+        title: '${'company_admin.payment_other'.tr}\n10%',
         radius: 50,
         titleStyle: const TextStyle(
             fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
@@ -1809,7 +1810,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              "Quick Actions",
+              'company_admin.quick_actions'.tr,
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s15,
@@ -1824,7 +1825,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
           children: [
             QuickAccessCard(
               onTap: () {},
-              title: "New Sale",
+              title: 'company_admin.new_sale'.tr,
               gradient: const LinearGradient(
                 colors: [
                   Color(0xFF667eea),
@@ -1838,7 +1839,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
             ),
             QuickAccessCard(
               onTap: () {},
-              title: "Inventory",
+              title: 'company_admin.inventory'.tr,
               gradient: const LinearGradient(
                 colors: [
                   Color(0xFFf093fb),
@@ -1852,7 +1853,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
             ),
             QuickAccessCard(
               onTap: () {},
-              title: "Reports",
+              title: 'company_admin.reports'.tr,
               gradient: const LinearGradient(
                 colors: [
                   Color(0xFF4facfe),
@@ -1866,7 +1867,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
             ),
             QuickAccessCard(
               onTap: () {},
-              title: "Settings",
+              title: 'company_admin.settings'.tr,
               gradient: const LinearGradient(
                 colors: [
                   Color(0xFF43e97b),
@@ -2182,7 +2183,7 @@ class QuickAccessCard extends StatelessWidget {
                       Row(
                         children: [
                           Text(
-                            'View details',
+                            'general.view_details'.tr,
                             style: TextStyle(
                               fontFamily: FontConstants.fontFamily,
                               fontSize: FontSize.s11,

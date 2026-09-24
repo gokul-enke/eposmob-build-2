@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class CartActionButtons extends StatelessWidget {
   const CartActionButtons({
@@ -38,8 +39,8 @@ class CartActionButtons extends StatelessWidget {
                 ),
               ),
               icon: const Icon(Icons.arrow_forward, size: 18),
-              label: const Text(
-                'Proceed to Payment',
+              label: Text(
+                'billing.proceed_to_payment'.tr,
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 13,
@@ -55,7 +56,7 @@ class CartActionButtons extends StatelessWidget {
           backgroundColor: Colors.blue.shade50,
           iconColor: const Color(0xFF2E69C8),
           isLoading: isSavingOrder,
-          semanticsLabel: 'Save Order',
+          semanticsLabel: 'billing.save_order'.tr,
           onTap: (hasItems && !_isCartActionBusy) ? onSaveOrder : null,
         ),
         const SizedBox(width: 10),
@@ -64,7 +65,7 @@ class CartActionButtons extends StatelessWidget {
           backgroundColor: Colors.red.shade50,
           iconColor: Colors.red.shade400,
           isLoading: isClearingCart,
-          semanticsLabel: 'Clear Cart',
+          semanticsLabel: 'billing.clear_cart_button'.tr,
           onTap: (hasItems && !_isCartActionBusy) ? onClearCart : null,
         ),
       ],

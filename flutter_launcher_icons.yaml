@@ -5,3 +5,4 @@ flutter_icons:
   min_sdk_android: 21
   windows:
     generate: true
+    icon_size: 256

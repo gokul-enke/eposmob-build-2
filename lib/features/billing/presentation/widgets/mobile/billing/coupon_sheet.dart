@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/coupon_section.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/mobile_sheet_header.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -38,7 +39,7 @@ class _CouponSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             MobileSheetHeader(
-              title: 'Coupon',
+              title: 'billing.coupon'.tr,
               onClose: () => Navigator.pop(context),
             ),
             const Flexible(

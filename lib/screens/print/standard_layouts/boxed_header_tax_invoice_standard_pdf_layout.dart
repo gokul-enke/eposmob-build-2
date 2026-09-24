@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'pdf_bidi_text.dart';
 import 'package:open_file/open_file.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -93,34 +94,6 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         currency.trim().toUpperCase() == 'INR' ? 'Rs.' : currency.trim();
     if (currencyPrefix.isEmpty) return amount.toStringAsFixed(2);
     return '$currencyPrefix ${amount.toStringAsFixed(2)}';
-  }
-
-  // ── Bidi helpers ────────────────────────────────────────────────────
-  // The `pdf` package only applies Arabic glyph shaping + bidi reordering
-  // when a Text widget's resolved textDirection is RTL. On this LTR page any
-  // Text carrying Arabic must therefore be flagged RTL, otherwise its letters
-  // render isolated/unshaped and overlap adjacent Latin text. Detection is
-  // conditional because forcing RTL on pure-Latin text reverses its word order.
-  static final RegExp _arabicRegex = RegExp('[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]');
-
-  bool _hasArabic(String? s) => s != null && _arabicRegex.hasMatch(s);
-
-  pw.TextDirection _dirOf(String? s) =>
-      _hasArabic(s) ? pw.TextDirection.rtl : pw.TextDirection.ltr;
-
-  /// Text widget that auto-selects its direction from its content so Arabic is
-  /// shaped/reordered correctly while Latin/numeric content stays LTR.
-  pw.Widget _autoText(String text, pw.TextStyle style,
-      {pw.TextAlign? textAlign,
-      int? maxLines,
-      bool? softWrap,
-      pw.TextDirection? textDirection}) {
-    return pw.Text(text,
-        style: style,
-        textAlign: textAlign,
-        maxLines: maxLines,
-        softWrap: softWrap,
-        textDirection: textDirection ?? _dirOf(text));
   }
 
   // ── Public interface ────────────────────────────────────────────────
@@ -384,8 +357,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     }
 
     // ── Header / store info from config ─────────────────────────────
-    // The centered template intentionally prints these values exactly as
-    // configured. It does not append runtime store address/contact values.
+    // Configuration supplies header labels and visibility. The active store
+    // supplies the address value.
     // FSSAI/VAT and Extra Heading 2 are excluded because they are rendered in
     // the title band below the accent divider.
     const headerConfigKeys = [
@@ -403,6 +376,16 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         final option = dc?[key];
         if (option?.visible != true) continue;
 
+        if (key == 'showStoreAddress') {
+          final address = params.storeAddressText(
+            mode: arabic
+                ? ReceiptLanguageMode.arabic
+                : ReceiptLanguageMode.english,
+          );
+          if (address.isNotEmpty) lines.add(address);
+          continue;
+        }
+
         // Prefer the API's normal language mapping (Arabic in `value`, English
         // in `default`), then fall back to the other slot only when its actual
         // script matches. This keeps English-only values out of the Arabic
@@ -413,7 +396,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         for (final raw in candidates) {
           if (raw == null) continue;
           final text = raw.toString();
-          if (text.trim().isEmpty || _hasArabic(text) != arabic) continue;
+          if (text.trim().isEmpty || pdfHasArabic(text) != arabic) continue;
           lines.add(text);
           break;
         }
@@ -575,7 +558,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     dc, 'showCustomerName', null, 'Customer', isDualLanguage),
                 _labelAr(
                     dc, 'showCustomerName', null, 'العميل', isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             custName,
             infoLabel,
             infoValue));
@@ -587,7 +571,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     dc, 'showCustomerAddress', null, 'Address', isDualLanguage),
                 _labelAr(
                     dc, 'showCustomerAddress', null, 'العنوان', isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             displayOrBlank(custAddress),
             infoLabel,
             infoValue));
@@ -599,7 +584,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     isDualLanguage),
                 _labelAr(dc, 'showCustomerVatNumber', null,
                     'الرقم الضريبي للعميل', isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             displayOrBlank(params.customerVatNumber),
             infoLabel,
             infoValue));
@@ -611,7 +597,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     isDualLanguage),
                 _labelAr(dc, 'showCustomerCrNumber', null,
                     'رقم السجل التجاري للعميل', isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             displayOrBlank(params.customerCrNumber),
             infoLabel,
             infoValue));
@@ -623,7 +610,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     dc, 'showCustomerPhone', null, 'Phone', isDualLanguage),
                 _labelAr(
                     dc, 'showCustomerPhone', null, 'الهاتف', isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             custPhone,
             infoLabel,
             infoValue));
@@ -645,7 +633,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     null,
                     isQuotation ? 'رقم عرض السعر' : 'رقم الفاتورة',
                     isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             invoiceNumber,
             infoLabel,
             infoValue),
@@ -654,7 +643,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             _infoLabel(
                 _labelEn(dc, 'showDate', null, 'Date', isDualLanguage),
                 _labelAr(dc, 'showDate', null, 'التاريخ', isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             '$displayDate${displayTime.isNotEmpty ? ' $displayTime' : ''}',
             infoLabel,
             infoValue),
@@ -665,7 +655,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     isDualLanguage),
                 _labelAr(
                     dc, paymentConfigKey, null, 'طريقة الدفع', isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             paymentMethodSummary,
             infoLabel,
             infoValue),
@@ -678,7 +669,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     dc, 'showDeliveryMethod', null, 'Delivery', isDualLanguage),
                 _labelAr(dc, 'showDeliveryMethod', null, 'طريقة التسليم',
                     isDualLanguage),
-                isDualLanguage, isAr: isAr),
+                isDualLanguage,
+                isAr: isAr),
             params.deliveryMethod!,
             infoLabel,
             infoValue),
@@ -693,25 +685,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       runtimeSellerName ?? 'Seller',
       isDualLanguage,
     ).join(' / ');
-    final sellerAddressOption = dc?['showStoreAddress'];
-    final localizedSellerAddress =
-        sellerAddressOption?.value?.toString().trim() ?? '';
-    final englishSellerAddress =
-        sellerAddressOption?.defaultValue?.trim() ?? '';
-    final runtimeSellerAddress = params.storeLocation?.trim() ?? '';
-    final referenceSellerAddress =
-        isDualLanguage && englishSellerAddress.isNotEmpty
-            ? englishSellerAddress
-            : (localizedSellerAddress.isNotEmpty
-                ? localizedSellerAddress
-                : (englishSellerAddress.isNotEmpty
-                    ? englishSellerAddress
-                    : runtimeSellerAddress));
-    final referenceSellerAddressSecondary = isDualLanguage &&
-            localizedSellerAddress.isNotEmpty &&
-            localizedSellerAddress != referenceSellerAddress
-        ? localizedSellerAddress
-        : null;
+    final referenceSellerAddress = params.storeAddressValue;
+    const String? referenceSellerAddressSecondary = null;
     final referenceBuyerAddress = params.customerAddress?.trim() ?? '';
     final referenceDueDate = displayDate;
     final referenceGross = netExcTaxValue + discountAmountValue;
@@ -758,7 +733,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         pw.Widget metadataValue(String value) => pw.Padding(
               padding:
                   const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-              child: _autoText(value, referenceValueStyle,
+              child: pdfText(value, style: referenceValueStyle,
                   textAlign: pw.TextAlign.left),
             );
 
@@ -988,11 +963,11 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.center,
                 children: [
-                  pw.Text(referenceTitleEnglish, style: referenceTitleStyle),
+                  pdfText(referenceTitleEnglish, style: referenceTitleStyle),
                   if (isDualLanguage &&
                       referenceTitleArabic.trim().isNotEmpty) ...[
-                    pw.Text(' / ', style: referenceTitleStyle),
-                    pw.Text(
+                    pdfText(' / ', style: referenceTitleStyle),
+                    pdfText(
                       referenceTitleArabic,
                       style: referenceTitleStyle,
                       textDirection: pw.TextDirection.rtl,
@@ -1030,7 +1005,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     secondaryAddress: referenceSellerAddressSecondary,
                     showName: cfgVisibleDefault('showStoreName'),
                     showVat: true,
-                    showAddress: cfgVisibleDefault('showStoreAddress'),
+                    showAddress: cfgVisible('showStoreAddress'),
                     font: font,
                     fontBold: fontBold,
                     isA5: isA5,
@@ -1141,7 +1116,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               spacing: 4,
               runSpacing: 1,
               children: referenceTerms
-                  .map((text) => _autoText(text, smallStyle))
+                  .map((text) => pdfText(text, style: smallStyle))
                   .toList(),
             ),
             pw.SizedBox(height: 2),
@@ -1154,9 +1129,9 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 runSpacing: 1,
                 children: referenceThankYou
                     .map(
-                      (text) => _autoText(
+                      (text) => pdfText(
                         text,
-                        referenceFooterBold,
+                        style: referenceFooterBold,
                         textAlign: pw.TextAlign.center,
                       ),
                     )
@@ -1169,12 +1144,12 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             children: [
               pw.Row(
                 children: [
-                  pw.Text(
+                  pdfText(
                     'Customer Signature: ____________________',
                     style: referenceSignatureStyle,
                   ),
                   pw.SizedBox(width: 4),
-                  pw.Text(
+                  pdfText(
                     'التوقيع',
                     style: referenceSignatureArStyle,
                     textDirection: pw.TextDirection.rtl,
@@ -1183,12 +1158,12 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               ),
               pw.Row(
                 children: [
-                  pw.Text(
+                  pdfText(
                     'Salesman Signature: ____________________',
                     style: referenceSignatureStyle,
                   ),
                   pw.SizedBox(width: 4),
-                  pw.Text(
+                  pdfText(
                     'توقيع البائع',
                     style: referenceSignatureArStyle,
                     textDirection: pw.TextDirection.rtl,
@@ -1264,18 +1239,18 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 alignment: pw.Alignment.centerLeft,
                 child: (cfgVisible('showExtraHeading2') &&
                         extraHeading2.isNotEmpty)
-                    ? _autoText(extraHeading2, crVatStyle)
+                    ? pdfText(extraHeading2, style: crVatStyle)
                     : (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
-                        ? _autoText(storeFssai, crVatStyle)
+                        ? pdfText(storeFssai, style: crVatStyle)
                         : pw.SizedBox(),
               ),
             ),
-            _autoText(invoiceTitleText.toUpperCase(), titleStyle),
+            pdfText(invoiceTitleText.toUpperCase(), style: titleStyle),
             pw.Expanded(
               child: pw.Align(
                 alignment: pw.Alignment.centerRight,
                 child: (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
-                    ? _autoText(storeFssai, crVatStyle)
+                    ? pdfText(storeFssai, style: crVatStyle)
                     : pw.SizedBox(),
               ),
             ),
@@ -1402,13 +1377,13 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     if (showComment &&
                         params.orderComment != null &&
                         params.orderComment!.isNotEmpty)
-                      _autoText(
+                      pdfText(
                           '${_getLabel(dc, commentConfigKey, null, 'Comment')}: ${params.orderComment}',
-                          wordsStyle),
+                          style: wordsStyle),
                     ..._customerBalanceLines(
                         params, dc, currency, wordsStyle, wordsBold),
                     if (cfgVisible('showSaved') && saved > 0)
-                      pw.Text(
+                      pdfText(
                         '${_getLabel(dc, 'showSaved', null, 'You Saved:')} ${_formatMoney(currency, saved)}',
                         style: wordsBold,
                       ),
@@ -1542,21 +1517,21 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                         children: [
                           if (bankLines.isNotEmpty) ...[
                             pw.Center(
-                              child: _autoText('BANK DETAILS', footerBold,
+                              child: pdfText('BANK DETAILS', style: footerBold,
                                   textAlign: pw.TextAlign.center),
                             ),
                             pw.SizedBox(height: 3),
                             ...bankLines
-                                .map((line) => _autoText(line, footerStyle)),
+                                .map((line) => pdfText(line, style: footerStyle)),
                           ],
                           if (hasSummaryComment) ...[
                             if (bankLines.isNotEmpty) pw.SizedBox(height: 4),
-                            _autoText(
+                            pdfText(
                                 '${_getLabel(dc, commentConfigKey, null, 'Comment')}: ${params.orderComment}',
-                                wordsStyle),
+                                style: wordsStyle),
                           ],
                           if (showSavedSummary)
-                            pw.Text(
+                            pdfText(
                               '${_getLabel(dc, 'showSaved', null, 'You Saved:')} ${_formatMoney(currency, saved)}',
                               style: wordsBold,
                             ),
@@ -1725,7 +1700,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         // TERMS & CONDITIONS (config value → billDocumentConfig.terms)
         // ═══════════════════════════════════════════════════════
         if (cfgVisible('showTermsConditions')) ...[
-          _autoText(_termsText(dc, config), smallStyle),
+          pdfText(_termsText(dc, config), style: smallStyle),
           pw.SizedBox(height: 4),
         ],
 
@@ -1734,9 +1709,9 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         // ═══════════════════════════════════════════════════════
         if (cfgVisible('showThankYouMessage'))
           pw.Center(
-            child: _autoText(
+            child: pdfText(
               _thankYouText(dc, config, isEnglish),
-              footerBold,
+              style: footerBold,
               textAlign: pw.TextAlign.center,
             ),
           ),
@@ -1750,20 +1725,20 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           children: [
             pw.Row(
               children: [
-                pw.Text('Customer Signature: ____________________',
+                pdfText('Customer Signature: ____________________',
                     style: signatureStyle),
                 pw.SizedBox(width: 6),
-                pw.Text('التوقيع',
+                pdfText('التوقيع',
                     style: signatureArStyle,
                     textDirection: pw.TextDirection.rtl),
               ],
             ),
             pw.Row(
               children: [
-                pw.Text('Salesman Signature: ____________________',
+                pdfText('Salesman Signature: ____________________',
                     style: signatureStyle),
                 pw.SizedBox(width: 6),
-                pw.Text('توقيع البائع',
+                pdfText('توقيع البائع',
                     style: signatureArStyle,
                     textDirection: pw.TextDirection.rtl),
               ],
@@ -1886,12 +1861,12 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         .where((part) => part.isNotEmpty)
         .toList();
     final englishParts =
-        parts.where((part) => !_hasArabic(part)).toList(growable: false);
+        parts.where((part) => !pdfHasArabic(part)).toList(growable: false);
     final arabicParts =
-        parts.where((part) => _hasArabic(part)).toList(growable: false);
+        parts.where((part) => pdfHasArabic(part)).toList(growable: false);
 
     if (englishParts.isEmpty || arabicParts.isEmpty) {
-      return _autoText(text, style);
+      return pdfText(text, style: style);
     }
 
     return pw.Directionality(
@@ -1899,17 +1874,17 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       child: pw.Wrap(
         crossAxisAlignment: pw.WrapCrossAlignment.center,
         children: [
-          pw.Text(
+          pdfText(
             englishParts.join(' / '),
             style: style,
             textDirection: pw.TextDirection.ltr,
           ),
-          pw.Text(
+          pdfText(
             ' / ',
             style: style,
             textDirection: pw.TextDirection.ltr,
           ),
-          pw.Text(
+          pdfText(
             arabicParts.join(' / '),
             style: style,
             textDirection: pw.TextDirection.rtl,
@@ -1943,11 +1918,11 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         mainAxisAlignment: pw.MainAxisAlignment.center,
         crossAxisAlignment: pw.CrossAxisAlignment.end,
         children: [
-          pw.Text(arabic,
+          pdfText(arabic,
               style: arabicStyle,
               textDirection: pw.TextDirection.rtl,
               textAlign: pw.TextAlign.right),
-          pw.Text(english, style: englishStyle, textAlign: pw.TextAlign.right),
+          pdfText(english, style: englishStyle, textAlign: pw.TextAlign.right),
         ],
       ),
     );
@@ -2077,10 +2052,10 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             child: pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.center,
               children: [
-                pw.Text(titleEnglish, style: titleStyle),
+                pdfText(titleEnglish, style: titleStyle),
                 if (isDualLanguage && titleArabic.trim().isNotEmpty) ...[
-                  pw.Text(' | ', style: titleStyle),
-                  pw.Text(
+                  pdfText(' | ', style: titleStyle),
+                  pdfText(
                     titleArabic,
                     style: titleStyle,
                     textDirection: pw.TextDirection.rtl,
@@ -2107,17 +2082,19 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     width: isA5 ? 74 : 104,
                     child: pw.Wrap(
                       children: [
-                        pw.Text(row.english, style: labelStyle),
-                        if (isDualLanguage && row.arabic.trim().isNotEmpty)
-                          pw.Text(
-                            ' ${row.arabic}',
+                        pdfText(row.english, style: labelStyle),
+                        if (isDualLanguage && row.arabic.trim().isNotEmpty) ...[
+                          pw.SizedBox(width: 3),
+                          pdfText(
+                            row.arabic,
                             style: valueStyle,
                             textDirection: pw.TextDirection.rtl,
                           ),
+                        ],
                       ],
                     ),
                   ),
-                  pw.Text(': ', style: valueStyle),
+                  pdfText(': ', style: valueStyle),
                   pw.Expanded(
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -2125,10 +2102,10 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                         if (row.isName)
                           _referencePartyNameText(row.value, valueStyle)
                         else
-                          _autoText(row.value, valueStyle),
+                          pdfText(row.value, style: valueStyle),
                         if (row.secondaryValue.trim().isNotEmpty &&
                             row.secondaryValue.trim() != row.value.trim())
-                          _autoText(row.secondaryValue, valueStyle),
+                          pdfText(row.secondaryValue, style: valueStyle),
                       ],
                     ),
                   ),
@@ -2172,9 +2149,9 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           child: pw.Column(
             mainAxisAlignment: pw.MainAxisAlignment.center,
             children: [
-              pw.Text(english, style: headerEn, textAlign: pw.TextAlign.center),
+              pdfText(english, style: headerEn, textAlign: pw.TextAlign.center),
               if (arabic.isNotEmpty)
-                pw.Text(arabic,
+                pdfText(arabic,
                     style: headerAr,
                     textDirection: pw.TextDirection.rtl,
                     textAlign: pw.TextAlign.center),
@@ -2401,7 +2378,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 1.5),
           child: pw.Align(
             alignment: alignment,
-            child: pw.Text(
+            child: pdfText(
               text,
               style: bodyStyle,
               textDirection: direction,
@@ -2417,7 +2394,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             crossAxisAlignment: pw.CrossAxisAlignment.stretch,
             children: [
               if (englishName.trim().isNotEmpty)
-                pw.Text(
+                pdfText(
                   englishName,
                   style: bodyStyle,
                   textDirection: pw.TextDirection.ltr,
@@ -2427,7 +2404,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   softWrap: true,
                 ),
               if (arabicName.trim().isNotEmpty)
-                pw.Text(
+                pdfText(
                   arabicName,
                   style: bodyStyle,
                   textDirection: pw.TextDirection.rtl,
@@ -2631,10 +2608,10 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.center,
             children: [
-              pw.Text(headingEnglish, style: headingStyle),
+              pdfText(headingEnglish, style: headingStyle),
               if (isDualLanguage && headingArabic.trim().isNotEmpty) ...[
-                pw.Text(' | ', style: headingStyle),
-                pw.Text(
+                pdfText(' | ', style: headingStyle),
+                pdfText(
                   headingArabic,
                   style: headingStyle,
                   textDirection: pw.TextDirection.rtl,
@@ -2649,11 +2626,13 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               child: pw.Wrap(
                 crossAxisAlignment: pw.WrapCrossAlignment.center,
                 children: [
-                  pw.Text(row.english, style: labelStyle),
-                  if (isDualLanguage && row.arabic.trim().isNotEmpty)
-                    pw.Text(' ${row.arabic}',
+                  pdfText(row.english, style: labelStyle),
+                  if (isDualLanguage && row.arabic.trim().isNotEmpty) ...[
+                    pw.SizedBox(width: 3),
+                    pdfText(row.arabic,
                         style: valueStyle, textDirection: pw.TextDirection.rtl),
-                  pw.Text(': ${row.value}', style: valueStyle),
+                  ],
+                  pdfText(': ${row.value}', style: valueStyle),
                 ],
               ),
             ),
@@ -2721,14 +2700,14 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 0.75),
           child: pw.Row(
             children: [
-              pw.Text(english, style: bold ? labelBold : labelStyle),
+              pdfText(english, style: bold ? labelBold : labelStyle),
               if (isDualLanguage && arabic.trim().isNotEmpty) ...[
                 pw.SizedBox(width: 3),
-                pw.Text(arabic,
+                pdfText(arabic,
                     style: labelStyle, textDirection: pw.TextDirection.rtl),
               ],
               pw.Spacer(),
-              pw.Text(money(amount), style: bold ? valueBold : valueStyle),
+              pdfText(money(amount), style: bold ? valueBold : valueStyle),
             ],
           ),
         );
@@ -2798,10 +2777,10 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               padding: const pw.EdgeInsets.symmetric(horizontal: 5),
               child: pw.Row(
                 children: [
-                  pw.Text(wordsEnglish, style: labelBold),
+                  pdfText(wordsEnglish, style: labelBold),
                   if (isDualLanguage && wordsArabic.trim().isNotEmpty) ...[
                     pw.SizedBox(width: 3),
-                    pw.Text(
+                    pdfText(
                       wordsArabic,
                       style: labelStyle,
                       textDirection: pw.TextDirection.rtl,
@@ -2849,22 +2828,33 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     required pw.TextDirection textDirection,
     bool singleLineHeading = false,
   }) {
+    pw.Widget line(int i) => pdfText(
+          singleLineHeading && i == 0
+              ? lines[i].replaceAll(RegExp(r'\s+'), ' ').trim()
+              : lines[i],
+          style: i == 0 ? headingStyle : detailStyle,
+          textAlign: textAlign,
+          maxLines: singleLineHeading && i == 0 ? 1 : 2,
+          softWrap: !(singleLineHeading && i == 0),
+          textDirection: textDirection,
+        );
+
     return pw.Column(
       crossAxisAlignment: alignment,
       children: [
         for (var i = 0; i < lines.length; i++) ...[
           pw.Container(
             width: double.infinity,
-            child: _autoText(
-              singleLineHeading && i == 0
-                  ? lines[i].replaceAll(RegExp(r'\s+'), ' ').trim()
-                  : lines[i],
-              i == 0 ? headingStyle : detailStyle,
-              textAlign: textAlign,
-              maxLines: singleLineHeading && i == 0 ? 1 : 2,
-              softWrap: !(singleLineHeading && i == 0),
-              textDirection: textDirection,
-            ),
+            child: singleLineHeading && i == 0
+                // Shrink an over-long heading rather than run off the page.
+                ? pw.Align(
+                    alignment: textAlign == pw.TextAlign.right
+                        ? pw.Alignment.centerRight
+                        : pw.Alignment.centerLeft,
+                    child: pw.FittedBox(
+                        fit: pw.BoxFit.scaleDown, child: line(i)),
+                  )
+                : line(i),
           ),
           if (i < lines.length - 1) pw.SizedBox(height: 2),
         ],
@@ -2957,8 +2947,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       final en = AmountHelper()
           .convertNumberToWords(total, currency: currency, language: 'en');
       return [
-        pw.Text('$ar فقط.', style: style, textDirection: pw.TextDirection.rtl),
-        pw.Text('$en Only.', style: style),
+        pdfText('$ar فقط.', style: style, textDirection: pw.TextDirection.rtl),
+        pdfText('$en Only.', style: style),
       ];
     }
     final language = (configLang ?? 'en').toLowerCase();
@@ -2969,7 +2959,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final needsRtl = mode == ReceiptLanguageMode.arabic ||
         mode == ReceiptLanguageMode.bilingual;
     return [
-      pw.Text(
+      pdfText(
         '$words$suffix',
         style: style,
         textDirection: needsRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
@@ -3071,7 +3061,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       breakdown.forEach((method, amount) {
         final amt = double.tryParse(amount.toString()) ?? 0.0;
         if (amt > 0) {
-          lines.add(pw.Text(
+          lines.add(pdfText(
               '${labelFor(method)}: ${_formatMoney(currency, amt)}',
               style: style));
         }
@@ -3086,7 +3076,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           amounts.forEach((method, amount) {
             final amt = double.tryParse(amount.toString()) ?? 0.0;
             if (amt > 0) {
-              lines.add(pw.Text(
+              lines.add(pdfText(
                   '${labelFor(method)}: ${_formatMoney(currency, amt)}',
                   style: style));
             }
@@ -3100,7 +3090,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     if (!isMulti) {
       final pm = params.paymentMethod;
       if (pm != null && pm.isNotEmpty && !pm.startsWith('{')) {
-        lines.add(pw.Text(
+        lines.add(pdfText(
             '${_paymentMethodLabel(pm)}: ${_formatMoney(currency, params.paidAmount!)}',
             style: style));
       }
@@ -3132,23 +3122,23 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
 
     final lines = <pw.Widget>[];
     if (showPrev && params.customerOldBalance != null) {
-      lines.add(_autoText(
+      lines.add(pdfText(
         '${_getLabel(dc, 'showCustomerPrevBalance', null, 'Previous Balance')}: ${_formatMoney(currency, params.customerOldBalance!)}',
-        style,
+        style: style,
         textAlign: pw.TextAlign.left,
       ));
     }
     if (showPaid && params.paidAmount != null) {
-      lines.add(_autoText(
+      lines.add(pdfText(
         '${_getLabel(dc, 'showCustomerPaidAmount', null, 'Paid Amount')}: ${_formatMoney(currency, params.paidAmount!)}',
-        style,
+        style: style,
         textAlign: pw.TextAlign.left,
       ));
     }
     if (showCurrent && params.customerCurrentBalance != null) {
-      lines.add(_autoText(
+      lines.add(pdfText(
         '${_getLabel(dc, 'showCustomerCurrentBalance', null, 'Current Balance')}: ${_formatMoney(currency, params.customerCurrentBalance!)}',
-        boldStyle,
+        style: boldStyle,
         textAlign: pw.TextAlign.left,
       ));
     }
@@ -3188,7 +3178,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           children: [
             pw.SizedBox(
               width: labelWidth,
-              child: pw.Text(
+              child: pdfText(
                 englishLabel,
                 style: labelStyle,
                 maxLines: 2,
@@ -3199,19 +3189,19 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             pw.Expanded(
               child: pw.Align(
                 alignment: pw.Alignment.center,
-                child: pw.Text(
+                child: pdfText(
                   value,
                   style: valueStyle,
                   maxLines: 2,
                   textAlign: pw.TextAlign.center,
                   overflow: pw.TextOverflow.clip,
-                  textDirection: _dirOf(value),
+                  textDirection: pdfTextDirectionOf(value),
                 ),
               ),
             ),
             pw.SizedBox(
               width: labelWidth,
-              child: pw.Text(
+              child: pdfText(
                 arabicLabel,
                 style: labelStyle,
                 maxLines: 2,
@@ -3232,19 +3222,21 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         children: [
           pw.SizedBox(
             width: labelWidth,
-            child: pw.Text(label,
+            child: pdfText(label,
                 style: labelStyle,
                 maxLines: 2,
                 softWrap: true,
                 overflow: pw.TextOverflow.clip,
-                textDirection: _dirOf(label)),
+                textDirection: pdfTextDirectionOf(label)),
           ),
+          // Keep a gap: an RTL label hugs the right edge of its box.
+          pw.SizedBox(width: 6),
           pw.Expanded(
-            child: pw.Text(value,
+            child: pdfText(value,
                 style: valueStyle,
                 maxLines: 2,
                 overflow: pw.TextOverflow.clip,
-                textDirection: _dirOf(value)),
+                textDirection: pdfTextDirectionOf(value)),
           ),
         ],
       ),
@@ -3257,21 +3249,21 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     return pw.TableRow(children: [
       pw.Padding(
         padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-        child: pw.Text(en, style: enStyle, textDirection: _dirOf(en)),
+        child: pdfText(en, style: enStyle, textDirection: pdfTextDirectionOf(en)),
       ),
       pw.Padding(
         padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
         child: pw.Align(
           alignment: pw.Alignment.centerRight,
           child:
-              pw.Text(ar, style: arStyle, textDirection: pw.TextDirection.rtl),
+              pdfText(ar, style: arStyle, textDirection: pw.TextDirection.rtl),
         ),
       ),
       pw.Padding(
         padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
         child: pw.Align(
           alignment: pw.Alignment.centerRight,
-          child: pw.Text(value, style: valueStyle),
+          child: pdfText(value, style: valueStyle),
         ),
       ),
     ]);
@@ -3386,11 +3378,11 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
             if (ar.isNotEmpty)
-              pw.Text(ar,
+              pdfText(ar,
                   style: headerAr,
                   textDirection: pw.TextDirection.rtl,
                   textAlign: pw.TextAlign.center),
-            pw.Text(en, style: headerEn, textAlign: pw.TextAlign.center),
+            pdfText(en, style: headerEn, textAlign: pw.TextAlign.center),
           ],
         ),
       );
@@ -3400,7 +3392,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       pw.Widget nameLine(String text, pw.TextDirection direction) =>
           pw.Container(
             width: double.infinity,
-            child: pw.Text(
+            child: pdfText(
               text,
               style: bodyStyle,
               // Product names must wrap instead of being clipped when they
@@ -3421,7 +3413,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             if (arabicName.isNotEmpty && englishName.isNotEmpty)
               pw.SizedBox(height: 1),
             if (englishName.isNotEmpty)
-              nameLine(englishName, _dirOf(englishName)),
+              nameLine(englishName, pdfTextDirectionOf(englishName)),
           ],
         ),
       );
@@ -3611,7 +3603,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 1.5),
       child: pw.Align(
         alignment: align,
-        child: pw.Text(
+        child: pdfText(
           text,
           style: style,
           maxLines: 2,
@@ -3677,7 +3669,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     pw.Widget hdrCell(String text) => pw.Padding(
           padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
           child:
-              pw.Text(text, style: headerStyle, textAlign: pw.TextAlign.center),
+              pdfText(text, style: headerStyle, textAlign: pw.TextAlign.center),
         );
 
     final headerCells = <pw.Widget>[];
@@ -3711,7 +3703,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
           child: pw.Align(
             alignment: align,
-            child: pw.Text(text, style: bodyStyle),
+            child: pdfText(text, style: bodyStyle),
           ),
         );
 
@@ -3813,7 +3805,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       pw.Divider(height: 0, thickness: 0.8),
       pw.SizedBox(height: 4),
       if (!hasCreditNoteConfig) ...[
-        pw.Text(params.returnsSectionHeading, style: titleStyle),
+        pdfText(params.returnsSectionHeading, style: titleStyle),
         pw.SizedBox(height: 4),
       ],
     ];
@@ -3847,7 +3839,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       ));
     }
     if (cnDetailsRows.isNotEmpty) {
-      widgets.add(pw.Text(
+      widgets.add(pdfText(
         retLbl('showCreditNoteOrder', retLabels?.detailsHeading,
             'CREDIT NOTE DETAILS'),
         style: sectionHeadingStyle,
@@ -3878,7 +3870,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           'Billing Address:', params.customerAddress!, labelStyle, valueStyle));
     }
     if (custRows.isNotEmpty) {
-      widgets.add(pw.Text(retLabels?.customerHeading ?? 'CUSTOMER DETAILS',
+      widgets.add(pdfText(retLabels?.customerHeading ?? 'CUSTOMER DETAILS',
           style: sectionHeadingStyle));
       widgets.add(pw.SizedBox(height: 2));
       widgets.addAll(custRows);
@@ -3887,7 +3879,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
 
     if (retLabels?.itemsHeading != null) {
       widgets
-          .add(pw.Text(retLabels!.itemsHeading!, style: sectionHeadingStyle));
+          .add(pdfText(retLabels!.itemsHeading!, style: sectionHeadingStyle));
       widgets.add(pw.SizedBox(height: 2));
     }
 
@@ -3906,7 +3898,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           ? retLbl('showCreditNoteItemsCount', retLabels?.creditNoteItemsCount,
               'Total Items:')
           : lbl('showReturnItemsCount', null, 'Return Items:');
-      widgets.add(pw.Text('$countLabel ${orderReturns.returnItems!.length}',
+      widgets.add(pdfText('$countLabel ${orderReturns.returnItems!.length}',
           style: labelStyle));
       widgets.add(pw.SizedBox(height: 2));
     }
@@ -3920,8 +3912,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       widgets.add(pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.end,
         children: [
-          pw.Text('$label ', style: labelStyle),
-          pw.Text(_formatMoney(currency, returnRateTotal), style: valueStyle),
+          pdfText('$label ', style: labelStyle),
+          pdfText(_formatMoney(currency, returnRateTotal), style: valueStyle),
         ],
       ));
     }
@@ -3934,8 +3926,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       widgets.add(pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.end,
         children: [
-          pw.Text('$label ', style: labelStyle),
-          pw.Text(_formatMoney(currency, returnRateTotal), style: valueStyle),
+          pdfText('$label ', style: labelStyle),
+          pdfText(_formatMoney(currency, returnRateTotal), style: valueStyle),
         ],
       ));
     }
@@ -4038,13 +4030,13 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         pw.TableRow(children: [
           pw.Padding(
             padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-            child: pw.Text(label, style: labelStyle),
+            child: pdfText(label, style: labelStyle),
           ),
           pw.Padding(
             padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
             child: pw.Align(
               alignment: pw.Alignment.centerRight,
-              child: pw.Text(value, style: valStyle),
+              child: pdfText(value, style: valStyle),
             ),
           ),
         ]);

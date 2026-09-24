@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -104,7 +105,7 @@ class _SupplierAutocompleteState extends State<SupplierAutocomplete> {
               }
             },
             decoration: InputDecoration(
-              hintText: "Search Supplier",
+              hintText: 'supplier.search_supplier'.tr,
               hintStyle: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s12,

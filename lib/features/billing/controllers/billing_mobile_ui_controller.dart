@@ -49,6 +49,8 @@ class BillingMobileErrorMessages {
       'billing_mobile_errors.no_internet_confirm'.tr;
   static String get noInternetCreateOrder =>
       'billing_mobile_errors.no_internet_create_order'.tr;
+  static String get orderRequestTimedOut =>
+      'billing_mobile_errors.order_request_timed_out'.tr;
 
   // Quotation
   static String get quotationCreateFailed => 'billing_mobile_errors.quotation_create_failed'.tr;
@@ -101,6 +103,13 @@ class BillingMobileErrorMessages {
   static String productNotSellable(String productName) =>
       '$productName is marked as not sellable';
 
+  /// Shown when POS_HIDE_NONSTOCK_PRODUCT hides an item that was reached via
+  /// barcode scan or search rather than the (already filtered) product grid.
+  static String productOutOfStock(String productName) =>
+      'billing_mobile_errors.product_out_of_stock'.trParams(
+        {'product': productName},
+      );
+
   // Coupon / discount
   static String get emptyCartDiscount => 'billing_mobile_errors.empty_cart_discount'.tr;
   static String get discountNegative => 'billing_mobile_errors.discount_negative'.tr;
@@ -151,6 +160,10 @@ class BillingMobileErrorMessages {
     Map<dynamic, dynamic> response, {
     String? fallback,
   }) {
+    // The order providers mark timeouts explicitly. Their raw message is an
+    // untranslated fallback for logs, so surface the localised copy instead.
+    if (response['timed_out'] == true) return orderRequestTimedOut;
+
     final message = response['message'];
     if (message is String && message.trim().isNotEmpty) {
       return userFacingException(message, fallback: fallback ?? confirmOrderFailed);
@@ -225,6 +238,22 @@ class BillingMobileSettingsController {
     final allowed = appSettings?.allowOverselling ?? true;
     localProductProvider.setAllowOverselling(allowed);
     return allowed;
+  }
+
+  /// Mirrors POS_HIDE_NONSTOCK_PRODUCT into the product provider so every
+  /// catalog listing hides out-of-stock items. Returns the raw setting; the
+  /// provider decides whether stock tracking makes it effective.
+  bool syncHideNonStockProduct({
+    required AppSettings? appSettings,
+    required LocalProductProvider localProductProvider,
+    int? activeStoreId,
+  }) {
+    final hide = appSettings?.posHideNonStockProduct ?? false;
+    localProductProvider.setHideNonStockProduct(
+      hide,
+      activeStoreId: activeStoreId,
+    );
+    return hide;
   }
 
   bool isBarcodeSalesEnabled(AppSettings? appSettings) {
@@ -368,11 +397,11 @@ class BillingMobileMarketController {
   String defaultQuantityText() => '1';
 
   double defaultUnitPrice(GetProduct product) {
-    return double.tryParse(product.price?.price ?? '0') ?? 0;
+    return double.tryParse(product.price?.price?.toString() ?? '0') ?? 0;
   }
 
   double defaultMrp(GetProduct product) {
-    return double.tryParse(product.mrp ?? '0') ?? 0;
+    return double.tryParse(product.mrp?.toString() ?? '0') ?? 0;
   }
 
   String formatAddFieldPrice(double value) =>
@@ -1997,14 +2026,14 @@ class BillingMobilePaymentController {
       return MobilePaymentReadyResult(
         isValid: false,
         message: bp.paymentValidationError ??
-            'Please configure payment before confirm',
+            'billing.configure_payment_before_confirm'.tr,
       );
     }
 
     if (!paymentStepVisited && !bp.paymentStepVisited) {
-      return const MobilePaymentReadyResult(
+      return MobilePaymentReadyResult(
         isValid: false,
-        message: 'Please configure payment before confirm',
+        message: 'billing.configure_payment_before_confirm'.tr,
       );
     }
 
@@ -2053,9 +2082,9 @@ class BillingMobilePaymentController {
           normalized.contains('APPROVED') ||
           normalized.contains('TXN SUCCESS');
       if (isSuccess) {
-        return const PineLabsTerminalResult(
+        return PineLabsTerminalResult(
           success: true,
-          message: 'Pine Labs payment successful',
+          message: 'billing.pine_labs_payment_successful'.tr,
         );
       }
       return PineLabsTerminalResult(success: false, message: resultStr);

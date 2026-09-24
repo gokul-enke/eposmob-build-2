@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/weigh_machine/data/plu_export_service.dart';
 import 'package:pos_machine/providers/admin_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
@@ -7,6 +8,7 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/features/realtime_sync/presentation/realtime_sync_provider.dart';
+import 'package:pos_machine/services/tenant_config_store.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -110,9 +112,11 @@ class SessionResetService {
     BuildContext context, {
     bool preserveRememberMe = true,
   }) async {
+    // Keeps the tenant (API key and server): this clears data, it does not
+    // unprovision the till. Use resetForApiKeyReset for that.
     await _reset(
       context,
-      clearApiKey: true,
+      clearApiKey: false,
       clearAllPreferences: true,
       preserveRememberMe: preserveRememberMe,
       preserveDeviceScopedKeys: true,
@@ -131,6 +135,10 @@ class SessionResetService {
     try {
       await context.read<RealtimeSyncProvider>().stop();
     } catch (_) {}
+
+    // Before prefs.clear() below: the saved PLU folder is still readable, and
+    // the old tenant's items must not stay where the weigh machine imports.
+    await PluExportService.instance.discardFile();
 
     String? rememberedEmail;
     String? rememberedPassword;
@@ -163,6 +171,14 @@ class SessionResetService {
     context.read<AdminSettingsProvider>().clear();
     context.read<StoreSessionProvider>().resetSession();
 
+    final shouldClearApiKey =
+        clearApiKey && !(preserveRememberMe && rememberedFlag);
+    if (shouldClearApiKey) {
+      // Otherwise the next launch restores the tenant this reset removes.
+      await TenantConfigStore.delete();
+    }
+
+    final String? existingAppUrl = prefs.getString('app_url');
     if (clearAllPreferences) {
       await prefs.clear();
     } else {
@@ -171,15 +187,16 @@ class SessionResetService {
       }
     }
 
-    final shouldClearApiKey =
-        clearApiKey && !(preserveRememberMe && rememberedFlag);
-
     if (shouldClearApiKey) {
       await prefs.remove('api_key');
-    } else if (clearAllPreferences &&
-        existingApiKey != null &&
-        existingApiKey.isNotEmpty) {
-      await prefs.setString('api_key', existingApiKey);
+    } else if (clearAllPreferences) {
+      // Clearing local data must not unprovision the till.
+      if (existingApiKey != null && existingApiKey.isNotEmpty) {
+        await prefs.setString('api_key', existingApiKey);
+      }
+      if (existingAppUrl != null && existingAppUrl.isNotEmpty) {
+        await prefs.setString('app_url', existingAppUrl);
+      }
     }
 
     if (preserveRememberMe && rememberedFlag) {

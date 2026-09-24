@@ -249,6 +249,7 @@ class PrintPage extends StatefulWidget {
       final zatcaCompanyName = await sharedPrefProvider.getZatcaCompanyName();
 
       // Create params
+      final store = await storeSession.resolveActiveStore();
       debugPrint(
           '[PrintPage.autoPrint] Creating ReceiptLayoutParams with ${cartItems.length} cart items');
       debugPrint(
@@ -300,9 +301,9 @@ class PrintPage extends StatefulWidget {
         netExcTax: netExcTax,
         bankDetails: bankProvider.banks,
         storeName: storeName,
-        storeLocation: storeSession.activeStore?.location,
-        storePhone: storeSession.activeStore?.phone,
-        storeEmail: storeSession.activeStore?.email,
+        storeLocation: store?.location,
+        storePhone: store?.phone,
+        storeEmail: store?.email,
         apiTotalTax: apiTotalTax,
         returnBillDocumentConfig: returnBillDocConfig,
       );
@@ -828,7 +829,9 @@ class _PrintPageState extends State<PrintPage> {
     if (mounted) {
       showScaffold(
         context: context,
-        message: "${printer.deviceName.toString()} Printer Selected",
+        message: '${'voucher_print.printer_selected'.trParams({
+          'name': printer.deviceName.toString(),
+        })}',
       );
     }
   }
@@ -936,7 +939,7 @@ class _PrintPageState extends State<PrintPage> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Error loading document configurations: ${e.toString()}",
+          message: '${'voucher_print.error_loading_document_config'.tr}: ${e.toString()}',
         );
       }
     }
@@ -952,7 +955,7 @@ class _PrintPageState extends State<PrintPage> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: "Document configuration not loaded. Please try again.",
+          message: 'voucher_print.document_config_not_loaded_retry'.tr,
         );
       }
       return;
@@ -1000,6 +1003,7 @@ class _PrintPageState extends State<PrintPage> {
     final bankProvider = Provider.of<BankProvider>(context, listen: false);
     final storeSession =
         Provider.of<StoreSessionProvider>(context, listen: false);
+    final store = await storeSession.resolveActiveStore();
     final bool hideDefaultCustomerPhone =
         appSettingsProvider.appSettings?.hideDefaultPhone ?? true;
 
@@ -1053,9 +1057,9 @@ class _PrintPageState extends State<PrintPage> {
       netExcTax: widget.netExcTax,
       bankDetails: bankProvider.banks,
       storeName: widget.storeName,
-      storeLocation: storeSession.activeStore?.location,
-      storePhone: storeSession.activeStore?.phone,
-      storeEmail: storeSession.activeStore?.email,
+      storeLocation: store?.location,
+      storePhone: store?.phone,
+      storeEmail: store?.email,
       apiTotalTax: widget.apiTotalTax,
       returnBillDocumentConfig: _returnBillDocumentConfig,
     );
@@ -1121,6 +1125,7 @@ class _PrintPageState extends State<PrintPage> {
     final bankProvider = Provider.of<BankProvider>(context, listen: false);
     final storeSession =
         Provider.of<StoreSessionProvider>(context, listen: false);
+    final store = await storeSession.resolveActiveStore();
     final bool hideDefaultCustomerPhone =
         appSettingsProvider.appSettings?.hideDefaultPhone ?? true;
 
@@ -1167,9 +1172,9 @@ class _PrintPageState extends State<PrintPage> {
       netExcTax: widget.netExcTax,
       bankDetails: bankProvider.banks,
       storeName: widget.storeName,
-      storeLocation: storeSession.activeStore?.location,
-      storePhone: storeSession.activeStore?.phone,
-      storeEmail: storeSession.activeStore?.email,
+      storeLocation: store?.location,
+      storePhone: store?.phone,
+      storeEmail: store?.email,
       apiTotalTax: widget.apiTotalTax,
       returnBillDocumentConfig: _returnBillDocumentConfig,
     );
@@ -1240,8 +1245,8 @@ class _PrintPageState extends State<PrintPage> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'Select Printer',
+        title: Text(
+          'voucher_print.select_printer'.tr,
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -1488,7 +1493,7 @@ class _PrintPageState extends State<PrintPage> {
                           }
                         },
                         child: Text(
-                          'Retry',
+                          'general.retry'.tr,
                           style: TextStyle(
                             color: Colors.orange[700],
                             fontWeight: FontWeight.bold,
@@ -1505,7 +1510,7 @@ class _PrintPageState extends State<PrintPage> {
                     debugPrint("[LOGO_DEBUG] No printer selected");
                     showScaffoldError(
                       context: context,
-                      message: "Please select a printer first",
+                      message: 'voucher_print.select_printer_first'.tr,
                     );
                     return;
                   }
@@ -1514,7 +1519,7 @@ class _PrintPageState extends State<PrintPage> {
                     showScaffoldError(
                       context: context,
                       message:
-                          "Document configuration not loaded. Please wait or try again.",
+                          'voucher_print.document_config_not_loaded'.tr,
                     );
                     return;
                   }
@@ -1523,8 +1528,8 @@ class _PrintPageState extends State<PrintPage> {
                       appSettings.customerCareEmail);
                 },
                 icon: const Icon(Icons.receipt_long),
-                label: const Text(
-                  'Print Receipt',
+                label: Text(
+                  'voucher_print.print_receipt'.tr,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -1546,7 +1551,7 @@ class _PrintPageState extends State<PrintPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _isScanning ? null : _checkPermissions,
-        tooltip: 'Scan for printers',
+        tooltip: 'voucher_print.scan_for_printers'.tr,
         backgroundColor: _isScanning ? textSecondaryColor : primaryColor,
         elevation: 4,
         child: _isScanning

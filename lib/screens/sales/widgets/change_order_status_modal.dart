@@ -121,7 +121,7 @@ class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Update Order Status",
+                      'change_order_status.title'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         FontSize.s20,
@@ -146,8 +146,8 @@ class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
                       0.27,
                       ColorManager.textColor,
                     ),
-                    children: const [
-                      TextSpan(text: 'Status'),
+                    children: [
+                      TextSpan(text: 'change_order_status.status'.tr),
                       TextSpan(
                         text: '*',
                         style: TextStyle(color: Colors.red),
@@ -192,7 +192,7 @@ class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
                     _selectedStatus == 'delivered') ...[
                   const SizedBox(height: 20),
                   Text(
-                    "Delivery Logistics",
+                    'change_order_status.delivery_logistics'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s14,
@@ -224,7 +224,7 @@ class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
                 if (_selectedStatus == 'cancelled') ...[
                   const SizedBox(height: 20),
                   Text(
-                    "Refund Payment Method",
+                    'change_order_status.refund_payment_method'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s14,
@@ -272,7 +272,7 @@ class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
                         ),
                   const SizedBox(height: 20),
                   Text(
-                    "Refund Amount",
+                    'change_order_status.refund_amount'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s14,
@@ -319,7 +319,7 @@ class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        "Delivery Charge Refundable",
+                        'change_order_status.delivery_charge_refundable'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.regular,
                           FontSize.s14,
@@ -341,7 +341,7 @@ class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
                         if (_selectedStatus == null) {
                           showScaffoldError(
                             context: context,
-                            message: "Please select a status",
+                            message: 'sales.select_status'.tr,
                           );
                           return;
                         }
@@ -354,7 +354,7 @@ class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
                           if (_selectedPaymentMethodId == null) {
                             showScaffoldError(
                               context: context,
-                              message: "Please select a refund payment method",
+                              message: 'sales.select_refund_payment_method'.tr,
                             );
                             return;
                           }
@@ -362,7 +362,7 @@ class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
                           if (refundAmount == null || refundAmount < 0) {
                             showScaffoldError(
                               context: context,
-                              message: "Please enter a valid refund amount",
+                              message: 'sales.valid_refund_amount'.tr,
                             );
                             return;
                           }
@@ -371,7 +371,8 @@ class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
                           if (refundAmount > total) {
                             showScaffoldError(
                               context: context,
-                              message: "Refund amount cannot exceed order total ($total)",
+                              message: 'change_order_status.refund_exceeds_total'
+                                  .trParams({'total': '$total'}),
                             );
                             return;
                           }
@@ -401,7 +402,7 @@ class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
                         elevation: 0,
                       ),
                       child: Text(
-                        "Update Status",
+                        'change_order_status.update_status'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s14,
@@ -421,7 +422,7 @@ class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
                         ),
                       ),
                       child: Text(
-                        "Cancel",
+                        'general.cancel'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s14,

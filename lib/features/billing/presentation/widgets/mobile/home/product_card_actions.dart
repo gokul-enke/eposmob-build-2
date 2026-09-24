@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 /// Info (product details) and custom-add controls shared across market card layouts.
 class ProductCardActions extends StatelessWidget {
@@ -66,7 +67,7 @@ class _InfoButton extends StatelessWidget {
     final iconSize = compact ? 16.0 : 18.0;
 
     return Semantics(
-      label: 'View product details',
+      label: 'product_detail.view_details'.tr,
       button: true,
       child: Material(
         color: Colors.blueGrey.shade50,
@@ -105,7 +106,7 @@ class _AddOptionsButton extends StatelessWidget {
     final borderRadius = BorderRadius.circular(compact ? 8 : 10);
 
     return Semantics(
-      label: 'Add product with custom price and quantity',
+      label: 'billing.add_product_custom'.tr,
       button: true,
       child: Material(
         color: Colors.green,

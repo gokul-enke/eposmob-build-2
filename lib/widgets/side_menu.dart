@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:pos_machine/resources/recovery_text.dart';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -16,6 +17,7 @@ import '../providers/authentication_providers.dart';
 
 import '../providers/sales_provider.dart';
 import '../providers/shared_preferences.dart';
+import '../providers/store_session_provider.dart';
 import '../providers/supplier_provider.dart';
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
@@ -209,7 +211,9 @@ class _SideMenuState extends State<SideMenu> {
                   color: ColorManager.kPrimaryColor,
                   size: isExpanded ? 24 : 16,
                 ),
-                tooltip: isExpanded ? 'Collapse Sidebar' : 'Expand Sidebar',
+                tooltip: isExpanded
+                    ? 'general.collapse_sidebar'.tr
+                    : 'general.expand_sidebar'.tr,
                 padding: EdgeInsets.all(isExpanded ? 8 : 8),
                 constraints: const BoxConstraints(),
                 onPressed: () {
@@ -503,6 +507,10 @@ class _SideMenuState extends State<SideMenu> {
                   listTitle4: 'nav.day_sale_closing'.tr,
                   listTitle5: 'nav.admin_day_sale_records'.tr,
                   listTitle6: 'nav.online_orders'.tr,
+                  listTitle7: recoveryText('Orders to review'),
+                  onTapTitle7: () => sideBarController.index.value =
+                      SideBarController.ordersToReviewIndex,
+                  showTitle7: hasSalesPermission,
 
                   // Permission-based visibility
                   showTitle1: hasSalesPermission,
@@ -514,15 +522,32 @@ class _SideMenuState extends State<SideMenu> {
                   icon: fa.FontAwesomeIcons.shoppingCart,
                   title: 'nav.sales'.tr,
                   onTap: () {
+                    final bool alreadyOnSales =
+                        sideBarController.index.value == 2;
                     sideBarController.index.value = 2;
-                    final salesProvider =
-                        Provider.of<SalesProvider>(context, listen: false);
-                    String? accessToken =
-                        Provider.of<AuthModel>(context, listen: false).token;
-                    salesProvider.fetchOrders(
-                      accessToken: accessToken ?? '',
-                      storeId: 1,
-                    );
+
+                    // SalesScreen loads its own data when it mounts. Fetching
+                    // here as well raced that request into the same shared
+                    // order list, so only refresh when we are already on the
+                    // screen and there is nothing else loading it.
+                    if (alreadyOnSales) {
+                      final salesProvider =
+                          Provider.of<SalesProvider>(context, listen: false);
+                      String? accessToken =
+                          Provider.of<AuthModel>(context, listen: false).token;
+                      final int? activeStoreId =
+                          Provider.of<StoreSessionProvider>(context,
+                                  listen: false)
+                              .activeStore
+                              ?.storeId;
+                      salesProvider
+                          .refreshOrdersForRealtime(
+                            accessToken: accessToken ?? '',
+                            storeId: activeStoreId ?? 1,
+                          )
+                          .catchError((Object error) =>
+                              debugPrint('Sales refresh failed: $error'));
+                    }
                   },
                   selected: sideBarController.index.value == 2 ||
                       sideBarController.index.value == 11 ||
@@ -533,7 +558,9 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value == 78 ||
                       sideBarController.index.value == 79 ||
                       sideBarController.index.value == 84 ||
-                      sideBarController.index.value == 92,
+                      sideBarController.index.value == 92 ||
+                      sideBarController.index.value ==
+                          SideBarController.ordersToReviewIndex,
                 ),
               );
             },
@@ -631,13 +658,19 @@ class _SideMenuState extends State<SideMenu> {
                     onTapTitle3: () {
                       sideBarController.index.value = 83;
                     },
+                    onTapTitle4: () {
+                      sideBarController.index.value =
+                          SideBarController.weighMachineExportIndex;
+                    },
                     listTitle1: 'nav.product'.tr,
                     listTitle2: 'nav.stock'.tr,
                     listTitle3: 'nav.product_barcode'.tr,
+                    listTitle4: 'Weigh machine download',
                     // Permission-based visibility
                     showTitle1: hasProductPermission,
                     showTitle2: hasStockPermission,
                     showTitle3: hasBarcodePermission,
+                    showTitle4: hasProductPermission,
                     icon: fa.FontAwesomeIcons.cube,
                     title: 'nav.product'.tr,
                     onTap: () async {
@@ -650,7 +683,9 @@ class _SideMenuState extends State<SideMenu> {
                         sideBarController.index.value == 28 ||
                         sideBarController.index.value == 33 ||
                         sideBarController.index.value == 83 ||
-                        sideBarController.index.value == 35),
+                        sideBarController.index.value == 35 ||
+                        sideBarController.index.value ==
+                            SideBarController.weighMachineExportIndex),
               );
             },
           ),
@@ -691,8 +726,8 @@ class _SideMenuState extends State<SideMenu> {
                     onTap: () async {
                       sideBarController.index.value = 81;
                     },
-                    selected:
-                        [81, 82, 36, 99, 100].contains(sideBarController.index.value)),
+                    selected: [81, 82, 36, 99, 100]
+                        .contains(sideBarController.index.value)),
               );
             },
           ),
@@ -1163,7 +1198,7 @@ class _SideMenuState extends State<SideMenu> {
                     );
                   });
 
-              String message = 'Logged out successfully';
+              String message = 'general.logged_out_successfully'.tr;
               try {
                 final value =
                     await AuthenticationProvider().logout(token, context);
@@ -1174,7 +1209,7 @@ class _SideMenuState extends State<SideMenu> {
                 // Server logout is best-effort. The user must still be able to
                 // leave the local session when the network is unavailable.
                 debugPrint('Server logout deferred: $error');
-                message = 'Logged out locally';
+                message = 'general.logged_out_locally'.tr;
               }
 
               await SessionResetService.resetAfterLogout(context);
@@ -1221,7 +1256,7 @@ class _SideMenuState extends State<SideMenu> {
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.done) {
                         return Text(
-                          snapshot.data ?? 'Default Name',
+                          snapshot.data ?? 'general.default_name'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.semiBold,
                             FontSize.s14,

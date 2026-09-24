@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/resources/recovery_text.dart';
 import 'package:get/get.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -7,6 +8,7 @@ import 'package:pos_machine/providers/authentication_providers.dart';
 import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/supplier_provider.dart';
 import 'package:pos_machine/screens/login/login.dart';
 import 'package:pos_machine/services/session_reset_service.dart';
@@ -65,9 +67,24 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
     }
 
     void fetchSalesOrders() {
+      // SalesScreen loads its own data when it mounts, so only refresh when we
+      // are already on it. Fetching alongside the screen's own request raced
+      // it into the same shared order list and could blank the list.
+      if (sideBarController.index.value != 2) return;
+
       final salesProvider = Provider.of<SalesProvider>(context, listen: false);
       final accessToken = Provider.of<AuthModel>(context, listen: false).token;
-      salesProvider.fetchOrders(accessToken: accessToken ?? '', storeId: 1);
+      final activeStoreId =
+          Provider.of<StoreSessionProvider>(context, listen: false)
+              .activeStore
+              ?.storeId;
+      salesProvider
+          .refreshOrdersForRealtime(
+            accessToken: accessToken ?? '',
+            storeId: activeStoreId ?? 1,
+          )
+          .catchError(
+              (Object error) => debugPrint('Sales refresh failed: $error'));
     }
 
     void fetchSuppliers() {
@@ -184,7 +201,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const _MobileSectionHeader(title: 'Main'),
+            _MobileSectionHeader(title: 'nav.section_main'.tr),
             if (hasHome)
               Obx(
                 () => _MobileDrawerTile(
@@ -289,7 +306,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _MobileSectionDivider(),
-            const _MobileSectionHeader(title: 'Sales'),
+            _MobileSectionHeader(title: 'nav.section_sales'.tr),
             if (hasSalesGroup)
               Obx(
                 () => _MobileDrawerExpandableTile(
@@ -306,8 +323,14 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                     79,
                     84,
                     92,
+                    SideBarController.ordersToReviewIndex,
                   ].contains(sideBarController.index.value),
                   subItems: [
+                    if (hasSalesPermission)
+                      _MobileDrawerSubItem(
+                          title: recoveryText('Orders to review'),
+                          onTap: () =>
+                              navigate(SideBarController.ordersToReviewIndex)),
                     if (hasSalesPermission)
                       _MobileDrawerSubItem(
                         title: 'nav.sales'.tr,
@@ -397,7 +420,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _MobileSectionDivider(),
-            const _MobileSectionHeader(title: 'Inventory'),
+            _MobileSectionHeader(title: 'nav.section_inventory'.tr),
             if (hasCategory)
               Obx(
                 () => _MobileDrawerTile(
@@ -413,8 +436,17 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                 () => _MobileDrawerExpandableTile(
                   icon: Icons.inventory_2_rounded,
                   title: 'nav.product'.tr,
-                  selected: [14, 15, 17, 18, 28, 33, 35, 83]
-                      .contains(sideBarController.index.value),
+                  selected: [
+                    14,
+                    15,
+                    17,
+                    18,
+                    28,
+                    33,
+                    35,
+                    83,
+                    SideBarController.weighMachineExportIndex
+                  ].contains(sideBarController.index.value),
                   subItems: [
                     if (hasProductPermission)
                       _MobileDrawerSubItem(
@@ -431,6 +463,12 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                         title: 'nav.product_barcode'.tr,
                         onTap: () => navigate(83),
                       ),
+                    if (hasProductPermission)
+                      _MobileDrawerSubItem(
+                        title: 'Weigh machine download',
+                        onTap: () =>
+                            navigate(SideBarController.weighMachineExportIndex),
+                      ),
                   ],
                 ),
               ),
@@ -439,8 +477,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                 () => _MobileDrawerExpandableTile(
                   icon: Icons.shopping_bag_rounded,
                   title: 'nav.purchase'.tr,
-                  selected:
-                      [81, 82, 36, 99, 100].contains(sideBarController.index.value),
+                  selected: [81, 82, 36, 99, 100]
+                      .contains(sideBarController.index.value),
                   subItems: [
                     _MobileDrawerSubItem(
                       title: 'nav.purchase_orders'.tr,
@@ -503,7 +541,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _MobileSectionDivider(),
-            const _MobileSectionHeader(title: 'Reports'),
+            _MobileSectionHeader(title: 'nav.section_reports'.tr),
             Obx(
               () => _MobileDrawerExpandableTile(
                 icon: Icons.analytics_rounded,
@@ -606,7 +644,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _MobileSectionDivider(),
-            const _MobileSectionHeader(title: 'Accounts'),
+            _MobileSectionHeader(title: 'nav.section_accounts'.tr),
             if (hasTransactions)
               Obx(
                 () => _MobileDrawerExpandableTile(
@@ -715,7 +753,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _MobileSectionDivider(),
-            const _MobileSectionHeader(title: 'Directory'),
+            _MobileSectionHeader(title: 'nav.section_directory'.tr),
             if (hasCustomers)
               Obx(
                 () => _MobileDrawerTile(
@@ -780,7 +818,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _MobileSectionDivider(),
-            const _MobileSectionHeader(title: 'Settings'),
+            _MobileSectionHeader(title: 'nav.section_settings'.tr),
             if (hasPrinter)
               Obx(
                 () => _MobileDrawerTile(

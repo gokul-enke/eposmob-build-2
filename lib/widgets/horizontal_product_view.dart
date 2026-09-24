@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/models/add_to_cart.dart';
@@ -7,6 +8,7 @@ import '../providers/cart_provider.dart';
 import '../providers/auth_model.dart';
 import '../models/get_product.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 
 class HorizontalProductView extends StatefulWidget {
@@ -32,8 +34,19 @@ class _HorizontalProductViewState extends State<HorizontalProductView> {
     final gridProvider =
         Provider.of<GridSelectionProvider>(context, listen: false);
     await gridProvider.listQuickAccessProducts();
+    if (!mounted) return;
+    // Respect POS_HIDE_NONSTOCK_PRODUCT for quick-access products too.
+    final quickAccess = gridProvider.quickAccessProductList ?? <GetProduct>[];
+    final visible = NonStockVisibility.isEnabledIn(context, listen: false)
+        ? NonStockVisibility.filterProducts(
+            quickAccess,
+            hideNonStockProduct: true,
+            stockEnabled: true,
+            activeStoreId: NonStockVisibility.activeStoreIdOf(context),
+          )
+        : quickAccess;
     setState(() {
-      products = gridProvider.quickAccessProductList ?? [];
+      products = visible;
     });
   }
 
@@ -88,7 +101,7 @@ class _HorizontalProductViewState extends State<HorizontalProductView> {
                         height: 15,
                         alignment: Alignment.center,
                         child: Text(
-                          product.productName ?? 'Product Name',
+                          product.productName ?? 'general.product_name'.tr,
                           style: const TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w500,
@@ -150,7 +163,7 @@ class _HorizontalProductViewState extends State<HorizontalProductView> {
                               if (value["status"] == "success") {
                                 showScaffold(
                                   context: context,
-                                  message: "Added to Cart",
+                                  message: 'billing.added_to_cart'.tr,
                                 );
                               } else {
                                 showScaffoldError(
@@ -161,7 +174,7 @@ class _HorizontalProductViewState extends State<HorizontalProductView> {
                               }
                             });
                           },
-                          title: "Add",
+                          title: 'billing.add'.tr,
                           fontSize: 9,
                           height: 25,
                           width: 40,

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/master_data.dart';
 import 'package:pos_machine/models/payment_method.dart';
+import 'package:pos_machine/models/payment_method_registry.dart';
 import 'package:pos_machine/resources/api_locale.dart';
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -225,10 +226,10 @@ class MasterDataProvider with ChangeNotifier {
           // Re-parse rich models directly from raw JSON so the optional
           // backend fields (code/label/enabled/sort_order/icon_key/behavior/
           // requires_reference) are honored, not just id/value/description.
-          _paymentMethodModels = dataList
+          _setPaymentMethodModels(dataList
               .whereType<Map<String, dynamic>>()
               .map((item) => PaymentMethod.fromJson(item))
-              .toList();
+              .toList());
           await _savePaymentMethodsToLocalCache(
             prefs,
             activeStoreId,
@@ -378,7 +379,7 @@ class MasterDataProvider with ChangeNotifier {
             .map((item) => PaymentMethod.fromJson(item))
             .toList();
         if (models.isNotEmpty) {
-          _paymentMethodModels = models;
+          _setPaymentMethodModels(models);
           return;
         }
       } catch (error) {
@@ -386,16 +387,16 @@ class MasterDataProvider with ChangeNotifier {
       }
     }
     // Fallback: derive from legacy MasterDataValue cache (already loaded).
-    _paymentMethodModels = _paymentMethods
+    _setPaymentMethodModels(_paymentMethods
         ?.map((value) => PaymentMethod.fromMasterDataValue(value))
-        .toList();
+        .toList());
   }
 
   /// Clears payment methods cache to force re-fetch
   void clearPaymentMethodsCache() {
     _setPaymentMethods(null, null);
     _paymentMethodsLocale = null;
-    _paymentMethodModels = null;
+    _setPaymentMethodModels(null);
     notifyListeners();
   }
 
@@ -467,9 +468,18 @@ class MasterDataProvider with ChangeNotifier {
     _paymentMethods = methods;
     _paymentMethodsStoreId = storeId;
     _paymentMethodsLocale = ApiLocale.current;
-    _paymentMethodModels = methods
+    _setPaymentMethodModels(methods
         ?.map((value) => PaymentMethod.fromMasterDataValue(value))
-        .toList();
+        .toList());
+  }
+
+  /// Single assignment point for [_paymentMethodModels], so the static
+  /// [PaymentMethodRegistry] snapshot can never drift from the provider.
+  /// The registry is what lets the order-details and print layers localize a
+  /// stored payment code without a BuildContext.
+  void _setPaymentMethodModels(List<PaymentMethod>? models) {
+    _paymentMethodModels = models;
+    PaymentMethodRegistry.update(models);
   }
 
   Future<MasterData?> fetchMasterData(String code) async {

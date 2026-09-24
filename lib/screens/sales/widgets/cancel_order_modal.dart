@@ -89,7 +89,7 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "Cancel Order",
+                    'cancel_order_modal.title'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s20,
@@ -108,7 +108,7 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
               ),
               const SizedBox(height: 16),
               Text(
-                "Select a payment method and refund amount for this order.",
+                'cancel_order_modal.description'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s14,
@@ -154,7 +154,7 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
                     ),
               const SizedBox(height: 20),
               Text(
-                "Refund Amount",
+                'cancel_order_modal.refund_amount'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.semiBold,
                   FontSize.s14,
@@ -190,7 +190,9 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
               if (widget.initialRefundAmount.trim().isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
-                  "Original total: ${widget.initialRefundAmount}",
+                  'cancel_order_modal.original_total'.trParams({
+                    'amount': widget.initialRefundAmount,
+                  }),
                   style: buildCustomStyle(
                     FontWeightManager.regular,
                     FontSize.s12,
@@ -218,7 +220,7 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "Delivery Charge Refundable",
+                          'cancel_order_modal.delivery_charge_refundable'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.semiBold,
                             FontSize.s14,
@@ -228,7 +230,7 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          "Turn off to exclude the delivery charge from the refund.",
+                          'cancel_order_modal.delivery_charge_refundable_hint'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.regular,
                             FontSize.s12,
@@ -254,7 +256,7 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
                         ),
                       ),
                       child: Text(
-                        "Close",
+                        'general.close'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s14,
@@ -276,7 +278,7 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
                         if (_selectedPaymentMethodId == null) {
                           showScaffoldError(
                             context: context,
-                            message: "Please select a payment method",
+                            message: 'sales.select_payment_method'.tr,
                           );
                           return;
                         }
@@ -285,7 +287,7 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
                             parsedRefundAmount == null) {
                           showScaffoldError(
                             context: context,
-                            message: "Please enter a valid refund amount",
+                            message: 'sales.valid_refund_amount'.tr,
                           );
                           return;
                         }
@@ -293,7 +295,7 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
                         if (parsedRefundAmount <= 0) {
                           showScaffoldError(
                             context: context,
-                            message: "Refund amount must be greater than 0",
+                            message: 'cancel_order_modal.refund_amount_positive'.tr,
                           );
                           return;
                         }
@@ -303,7 +305,7 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
                           showScaffoldError(
                             context: context,
                             message:
-                                "Refund amount cannot exceed the original total",
+                                'cancel_order_modal.refund_amount_exceeds_total'.tr,
                           );
                           return;
                         }
@@ -326,7 +328,7 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
                         elevation: 0,
                       ),
                       child: Text(
-                        "Confirm",
+                        'general.confirm'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s14,

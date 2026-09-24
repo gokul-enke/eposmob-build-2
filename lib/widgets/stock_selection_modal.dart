@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -167,11 +168,18 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
             ?.currency ??
         'INR';
 
+    // POS_HIDE_NONSTOCK_PRODUCT: drop empty stock rows before grouping so a
+    // zero-quantity batch never appears as a selectable option.
+    final hideNonStockProduct = NonStockVisibility.isEnabledIn(context);
+    final stockOptions = hideNonStockProduct
+        ? NonStockVisibility.visibleStocks(widget.stockOptions)
+        : widget.stockOptions;
+
     // Group stocks by pricing information (using master data active fields)
     final masterDataProvider =
         Provider.of<MasterDataProvider>(context, listen: false);
     List<CombinedStock> combinedStocks = groupStocksByPricing(
-      widget.stockOptions,
+      stockOptions,
       activeFields: masterDataProvider.activeStockGroupingFields,
     );
 
@@ -209,7 +217,7 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
               children: [
                 Flexible(
                   child: Text(
-                    'Multiple Stock Options Available',
+                    'stock.multiple_options_available'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.bold,
                       FontSize.s16,
@@ -226,7 +234,7 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Product: ${widget.product.localizedName}',
+              'stock.product_prefix'.tr + (widget.product.localizedName ?? ''),
               style: buildCustomStyle(
                 FontWeightManager.bold,
                 FontSize.s16,
@@ -289,17 +297,20 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                                   children: [
                                     const SizedBox(height: 4),
                                     Text(
-                                      'Price: $currency ${combinedStock.price ?? "0.00"}',
+                                      'stock.price_prefix'.tr +
+                                          '$currency ${combinedStock.price ?? "0.00"}',
                                       style: const TextStyle(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w500),
                                     ),
                                     Text(
-                                      'MRP: $currency ${combinedStock.mrp ?? "0.00"}',
+                                      'stock.mrp_prefix'.tr +
+                                          '$currency ${combinedStock.mrp ?? "0.00"}',
                                       style: const TextStyle(fontSize: 12),
                                     ),
                                     Text(
-                                      'Available Quantity: ${combinedStock.totalQuantity}',
+                                      'stock.available_quantity_prefix'.tr +
+                                          combinedStock.totalQuantity.toString(),
                                       style: const TextStyle(fontSize: 12),
                                     ),
                                     // Show expiry date for single stock entries
@@ -308,7 +319,8 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                                         combinedStock.firstStock.expiryDate !=
                                             null)
                                       Text(
-                                        'Expiry Date: ${combinedStock.firstStock.expiryDate}',
+                                        'stock.expiry_date_prefix'.tr +
+                                            combinedStock.firstStock.expiryDate!,
                                         style: const TextStyle(
                                             fontSize: 12, color: Colors.orange),
                                       ),
@@ -327,7 +339,11 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                                         child: Row(
                                           children: [
                                             Text(
-                                              'From ${combinedStock.originalStocks.length} stock entries',
+                                              'stock.from_entries'.trParams({
+                                                'count': combinedStock
+                                                    .originalStocks.length
+                                                    .toString(),
+                                              }),
                                               style: const TextStyle(
                                                   fontSize: 11,
                                                   fontStyle: FontStyle.italic),
@@ -419,7 +435,7 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                                           ),
                                           const SizedBox(width: 8),
                                           Text(
-                                            'Individual Stock Details',
+                                            'stock.individual_details'.tr,
                                             style: TextStyle(
                                               fontSize: 13,
                                               fontWeight: FontWeight.bold,
@@ -436,7 +452,11 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                                                   BorderRadius.circular(10),
                                             ),
                                             child: Text(
-                                              '${combinedStock.originalStocks.length} items',
+                                              'stock.items_count'.trParams({
+                                                'count': combinedStock
+                                                    .originalStocks.length
+                                                    .toString(),
+                                              }),
                                               style: const TextStyle(
                                                 color: Colors.white,
                                                 fontSize: 9,
@@ -514,7 +534,7 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                                                         Row(
                                                           children: [
                                                             Text(
-                                                              'Stock ID: ',
+                                                              'stock.stock_id_prefix'.tr,
                                                               style: TextStyle(
                                                                 fontSize: 11,
                                                                 color: Colors
@@ -548,7 +568,9 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                                                             const SizedBox(
                                                                 width: 4),
                                                             Text(
-                                                              'Qty: ${stock.quantity}',
+                                                              'stock.quantity_prefix'.tr +
+                                                                  stock.quantity
+                                                                      .toString(),
                                                               style: TextStyle(
                                                                 fontSize: 10,
                                                                 color: Colors
@@ -581,7 +603,7 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
                                                                         null
                                                                     ? stock
                                                                         .expiryDate!
-                                                                    : 'No expiry',
+                                                                    : 'general.no_expiry'.tr,
                                                                 style:
                                                                     TextStyle(
                                                                   fontSize: 10,
@@ -673,7 +695,7 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
               children: [
                 // Close Button
                 CustomRoundButton(
-                  title: "Cancel",
+                  title: 'general.cancel'.tr,
                   fontSize: FontSize.s12,
                   height: MediaQuery.of(context).size.height * .05,
                   width: 120,

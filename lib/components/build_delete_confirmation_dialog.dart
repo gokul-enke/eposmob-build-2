@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 
 class DeleteConfirmationDialog extends StatelessWidget {
-  final String title;
+  final String? title;
   final String itemName;
-  final String message;
+  final String? message;
   final VoidCallback onDelete;
   final VoidCallback? onCancel;
-  final String deleteButtonText;
-  final String cancelButtonText;
+  final String? deleteButtonText;
+  final String? cancelButtonText;
   final IconData? warningIcon;
   final Color? warningIconColor;
   final Color? deleteButtonColor;
@@ -21,13 +22,13 @@ class DeleteConfirmationDialog extends StatelessWidget {
 
   const DeleteConfirmationDialog({
     Key? key,
-    this.title = "Delete Item",
+    this.title,
     required this.itemName,
-    this.message = "This action cannot be undone.",
+    this.message,
     required this.onDelete,
     this.onCancel,
-    this.deleteButtonText = "Delete",
-    this.cancelButtonText = "Cancel",
+    this.deleteButtonText,
+    this.cancelButtonText,
     this.warningIcon = Icons.warning_amber_rounded,
     this.warningIconColor = ColorManager.kButtonRed,
     this.deleteButtonColor = ColorManager.kButtonRed,
@@ -41,13 +42,13 @@ class DeleteConfirmationDialog extends StatelessWidget {
   /// Show a delete confirmation dialog with full customization options
   static Future<bool?> show({
     required BuildContext context,
-    String title = "Delete Item",
+    String? title,
     required String itemName,
-    String message = "This action cannot be undone.",
+    String? message,
     required VoidCallback onDelete,
     VoidCallback? onCancel,
-    String deleteButtonText = "Delete",
-    String cancelButtonText = "Cancel",
+    String? deleteButtonText,
+    String? cancelButtonText,
     IconData? warningIcon = Icons.warning_amber_rounded,
     Color? warningIconColor = ColorManager.kButtonRed,
     Color? deleteButtonColor = ColorManager.kButtonRed,
@@ -62,13 +63,13 @@ class DeleteConfirmationDialog extends StatelessWidget {
       barrierDismissible: barrierDismissible,
       builder: (BuildContext context) {
         return DeleteConfirmationDialog(
-          title: title,
+          title: title ?? 'general.delete_item'.tr,
           itemName: itemName,
-          message: message,
+          message: message ?? 'general.delete_warning'.tr,
           onDelete: onDelete,
           onCancel: onCancel,
-          deleteButtonText: deleteButtonText,
-          cancelButtonText: cancelButtonText,
+          deleteButtonText: deleteButtonText ?? 'general.delete'.tr,
+          cancelButtonText: cancelButtonText ?? 'general.cancel'.tr,
           warningIcon: warningIcon,
           warningIconColor: warningIconColor,
           deleteButtonColor: deleteButtonColor,
@@ -93,7 +94,7 @@ class DeleteConfirmationDialog extends StatelessWidget {
       context: context,
       itemName: itemName,
       onDelete: onDelete,
-      message: customMessage ?? "This action cannot be undone.",
+      message: customMessage ?? 'general.delete_warning'.tr,
     );
   }
 
@@ -121,7 +122,7 @@ class DeleteConfirmationDialog extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        title,
+                        title ?? 'general.delete_item'.tr,
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -174,7 +175,9 @@ class DeleteConfirmationDialog extends StatelessWidget {
                       ),
                     if (warningIcon != null) const SizedBox(height: 8),
                     Text(
-                      "Are you sure you want to delete '$itemName'?",
+                      'general.confirm_delete_item'.trParams({
+                        'item': itemName,
+                      }),
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 16,
@@ -183,7 +186,7 @@ class DeleteConfirmationDialog extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      message,
+                      message ?? 'general.delete_warning'.tr,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 14,
@@ -204,7 +207,7 @@ class DeleteConfirmationDialog extends StatelessWidget {
                     if (onCancel != null) onCancel!();
                     Navigator.pop(context, false);
                   },
-                  title: cancelButtonText,
+                  title: cancelButtonText ?? 'general.cancel'.tr,
                   height: 40,
                   width: 100,
                   fontSize: 14,
@@ -218,7 +221,7 @@ class DeleteConfirmationDialog extends StatelessWidget {
                     onDelete();
                     Navigator.pop(context, true);
                   },
-                  title: deleteButtonText,
+                  title: deleteButtonText ?? 'general.delete'.tr,
                   height: 40,
                   width: 100,
                   fontSize: 14,

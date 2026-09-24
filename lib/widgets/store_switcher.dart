@@ -88,7 +88,7 @@ class StoreSwitcher extends StatelessWidget {
                 ),
                 child: Text(
                   storeSession.activeStore?.storeName ??
-                      'No Store Selected',
+                      'common.no_store_selected'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.medium,
                     FontSize.s12,

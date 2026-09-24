@@ -185,6 +185,47 @@ class CustomerListModelData {
                 json["addresses"].map((x) => Address.fromJson(x))),
       );
 
+  CustomerListModelData copyWithAddresses(List<Address> newAddresses) =>
+      CustomerListModelData(
+        id: id,
+        name: name,
+        email: email,
+        phone: phone,
+        altPhone: altPhone,
+        gender: gender,
+        dob: dob,
+        profileImage: profileImage,
+        storeId: storeId,
+        userId: userId,
+        createdAt: createdAt,
+        updatedAt: updatedAt,
+        deletedAt: deletedAt,
+        cardNumber: cardNumber,
+        loyaltyPoints: loyaltyPoints,
+        validFrom: validFrom,
+        validUntil: validUntil,
+        cardStatus: cardStatus,
+        membershipName: membershipName,
+        membershipCode: membershipCode,
+        minRedeemablePoints: minRedeemablePoints,
+        pricePerPoint: pricePerPoint,
+        balance: balance,
+        paymentType: paymentType,
+        customerType: customerType,
+        address: address,
+        pincode: pincode,
+        city: city,
+        state: state,
+        country: country,
+        district: district,
+        companyId: companyId,
+        storeName: storeName,
+        kyc: kyc,
+        transactions: transactions,
+        orders: orders,
+        addresses: newAddresses,
+      );
+
   Map<String, dynamic> toJson() => {
         "id": id,
         "name": name,
@@ -562,6 +603,7 @@ class Address {
   final int? stateId;
   final int? districtId;
   final int? pincodeId;
+  final String? pincode;
   final String? phone;
   final String? type;
   final String? landmark;
@@ -576,6 +618,7 @@ class Address {
     this.stateId,
     this.districtId,
     this.pincodeId,
+    this.pincode,
     this.phone,
     this.type,
     this.landmark,
@@ -601,6 +644,7 @@ class Address {
         pincodeId: json["pincode_id"] is int
             ? json["pincode_id"]
             : int.tryParse(json["pincode_id"].toString()),
+        pincode: _parsePincodeLabel(json["pincode"] ?? json["pin_code"]),
         phone: json["phone"],
         type: json["type"],
         landmark: json["landmark"],
@@ -616,9 +660,35 @@ class Address {
         "state_id": stateId,
         "district_id": districtId,
         "pincode_id": pincodeId,
+        "pincode": pincode,
         "phone": phone,
         "type": type,
         "landmark": landmark,
         "company_id": companyId,
       };
+
+  Address withPincode(String? value) => Address(
+        id: id,
+        customerId: customerId,
+        name: name,
+        address: address,
+        city: city,
+        stateId: stateId,
+        districtId: districtId,
+        pincodeId: pincodeId,
+        pincode: value,
+        phone: phone,
+        type: type,
+        landmark: landmark,
+        companyId: companyId,
+      );
+
+  /// The API may send the pincode flat ("673572") or as a lookup object.
+  static String? _parsePincodeLabel(dynamic value) {
+    final raw = value is Map
+        ? (value["pin_code"] ?? value["pincode"] ?? value["name"])
+        : value;
+    final text = raw?.toString().trim() ?? '';
+    return text.isEmpty || text == 'null' ? null : text;
+  }
 }

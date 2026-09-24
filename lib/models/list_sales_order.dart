@@ -37,8 +37,7 @@ class ListSalesOrderModel {
         message: json["message"],
         data: json["data"]?["data"] == null
             ? []
-            : List<ListOrderModelData>.from(json["data"]["data"]
-                .map((x) => ListOrderModelData.fromJson(x))),
+            : _parseOrders(json["data"]["data"]),
         pagination:
             json["data"] != null ? PaginationInfo.fromJson(json["data"]) : null,
       );
@@ -48,6 +47,25 @@ class ListSalesOrderModel {
       debugPrint('Stack trace: $stackTrace');
       rethrow;
     }
+  }
+
+  /// Parses the order rows one by one so a single malformed row (an unexpected
+  /// field type, for instance) drops only that row instead of throwing away the
+  /// whole page and leaving the list empty.
+  static List<ListOrderModelData> _parseOrders(dynamic rows) {
+    if (rows is! List) return [];
+
+    final parsed = <ListOrderModelData>[];
+    for (final row in rows) {
+      try {
+        parsed.add(ListOrderModelData.fromJson(row));
+      } catch (e) {
+        debugPrint('=== SKIPPED UNPARSEABLE ORDER ROW ===');
+        debugPrint('Error: $e');
+        debugPrint('Row: $row');
+      }
+    }
+    return parsed;
   }
 
   Map<String, dynamic> toJson() => {
@@ -118,16 +136,16 @@ class ListOrderModelData {
       }
 
       return ListOrderModelData(
-        id: json["id"],
-        cartId: json["cart_id"],
-        orderDate: json["order_date"] == null
-            ? null
-            : DateTime.tryParse(json["order_date"]),
-        orderNumber: json["order_number"],
-        grantTotal: json["grand_total"],
-        paymentStatus: json["payment_status"],
-        status: json["status"],
-        customerName: json["customer_name"],
+        id: _asInt(json["id"]),
+        cartId: _asInt(json["cart_id"]),
+        orderDate: json["order_date"] is String
+            ? DateTime.tryParse(json["order_date"])
+            : null,
+        orderNumber: _asString(json["order_number"]),
+        grantTotal: _asString(json["grand_total"]),
+        paymentStatus: _asString(json["payment_status"]),
+        status: _asString(json["status"]),
+        customerName: _asString(json["customer_name"]),
         customerDetails:
             json["orderProps"] != null ? CustomerDetails.fromJson(json) : null,
         priceSummary: json["cart_items"]?["price_summary"] != null
@@ -141,7 +159,7 @@ class ListOrderModelData {
             ? []
             : List<CartItem>.from(json["cart_items"]["cart_items"]
                 .map((x) => CartItem.fromJson(x))),
-        invoiceHash: json["invoice_hash"],
+        invoiceHash: _asString(json["invoice_hash"]),
         isOnline: json["is_online"] == true ||
             json["is_online"] == 1 ||
             json["is_online"] == "1",
@@ -153,6 +171,22 @@ class ListOrderModelData {
       debugPrint('JSON input: $json');
       rethrow;
     }
+  }
+
+  /// Accepts int, num or numeric String ids without throwing on type variance.
+  static int? _asInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString());
+  }
+
+  /// These fields arrive as strings today, but a numeric value used to make the
+  /// implicit cast throw and take the whole order list down with it.
+  static String? _asString(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    return value.toString();
   }
 
   Map<String, dynamic> toJson() => {

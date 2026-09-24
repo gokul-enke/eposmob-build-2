@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:provider/provider.dart';
 
@@ -118,7 +119,7 @@ class CategoryListItemWidget extends StatelessWidget {
           // ),
           const SizedBox(height: 4),
           CustomRoundButton(
-            title: "Add To Cart",
+            title: 'billing.add_to_cart'.tr,
             fct: () {
               String? accessToken =
                   Provider.of<AuthModel>(context, listen: false).token;
@@ -134,14 +135,16 @@ class CategoryListItemWidget extends StatelessWidget {
                 if (value["status"] == "success") {
                   showScaffold(
                     context: context,
-                    message: addToCartModel.message ?? 'Added To Cart',
+                    message: addToCartModel.message ??
+                        'billing.added_to_cart'.tr,
                   );
                   //  'Order Placed Successfully',
                 } else {
                   showScaffoldError(
                     context: context,
                     message:
-                        addToCartModel.message ?? "Error Occured ! Try Again",
+                        addToCartModel.message ??
+                            'general.error_occurred_try_again'.tr,
                   );
                 }
               });
@@ -268,7 +271,7 @@ class SelectedCategoryListItemWidget extends StatelessWidget {
           // ),
           const SizedBox(height: 4),
           CustomRoundButton(
-            title: "Add To Cart",
+            title: 'billing.add_to_cart'.tr,
             fct: () {
               String? accessToken =
                   Provider.of<AuthModel>(context, listen: false).token;
@@ -284,14 +287,16 @@ class SelectedCategoryListItemWidget extends StatelessWidget {
                 if (value["status"] == "success") {
                   showScaffold(
                     context: context,
-                    message: addToCartModel.message ?? 'Added To Cart',
+                    message: addToCartModel.message ??
+                        'billing.added_to_cart'.tr,
                   );
                   //  'Order Placed Successfully',
                 } else {
                   showScaffoldError(
                     context: context,
                     message:
-                        addToCartModel.message ?? "Error Occured ! Try Again",
+                        addToCartModel.message ??
+                            'general.error_occurred_try_again'.tr,
                   );
                   //  'Added To Cart',
                 }

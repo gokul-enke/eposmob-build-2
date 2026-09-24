@@ -43,6 +43,11 @@ class RealtimeSyncRepository {
       );
     }
 
+    // A large catalog may still be decoding right after launch; do not decide
+    // full-vs-delta against a half-loaded baseline.
+    await _localProducts.hydrated;
+    if (!isCurrent()) return;
+
     final hasProductBaseline = _localProducts.products.isNotEmpty;
     final hasCustomerBaseline = _customers.allCustomers?.isNotEmpty ?? false;
     final hasStockBaseline = _stocks.allStocks?.isNotEmpty ?? false;

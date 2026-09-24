@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'pdf_bidi_text.dart';
 import 'package:open_file/open_file.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -105,34 +106,6 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
         currency.trim().toUpperCase() == 'INR' ? 'Rs.' : currency.trim();
     if (currencyPrefix.isEmpty) return amount.toStringAsFixed(2);
     return '$currencyPrefix ${amount.toStringAsFixed(2)}';
-  }
-
-  // ── Bidi helpers ────────────────────────────────────────────────────
-  // The `pdf` package only applies Arabic glyph shaping + bidi reordering
-  // when a Text widget's resolved textDirection is RTL. On this LTR page any
-  // Text carrying Arabic must therefore be flagged RTL, otherwise its letters
-  // render isolated/unshaped and overlap adjacent Latin text. Detection is
-  // conditional because forcing RTL on pure-Latin text reverses its word order.
-  static final RegExp _arabicRegex = RegExp('[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]');
-
-  bool _hasArabic(String? s) => s != null && _arabicRegex.hasMatch(s);
-
-  pw.TextDirection _dirOf(String? s) =>
-      _hasArabic(s) ? pw.TextDirection.rtl : pw.TextDirection.ltr;
-
-  /// Text widget that auto-selects its direction from its content so Arabic is
-  /// shaped/reordered correctly while Latin/numeric content stays LTR.
-  pw.Widget _autoText(String text, pw.TextStyle style,
-      {pw.TextAlign? textAlign,
-      int? maxLines,
-      bool? softWrap,
-      pw.TextDirection? textDirection}) {
-    return pw.Text(text,
-        style: style,
-        textAlign: textAlign,
-        maxLines: maxLines,
-        softWrap: softWrap,
-        textDirection: textDirection ?? _dirOf(text));
   }
 
   // ── Public interface ────────────────────────────────────────────────
@@ -378,8 +351,8 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
     }
 
     // ── Header / store info from config ─────────────────────────────
-    // The centered template intentionally prints these values exactly as
-    // configured. It does not append runtime store address/contact values.
+    // Configuration supplies header labels and visibility. The active store
+    // supplies the address value.
     // FSSAI/VAT and Extra Heading 2 are excluded because they are rendered in
     // the title band below the accent divider.
     const headerConfigKeys = [
@@ -397,6 +370,16 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
         final option = dc?[key];
         if (option?.visible != true) continue;
 
+        if (key == 'showStoreAddress') {
+          final address = params.storeAddressText(
+            mode: arabic
+                ? ReceiptLanguageMode.arabic
+                : ReceiptLanguageMode.english,
+          );
+          if (address.isNotEmpty) lines.add(address);
+          continue;
+        }
+
         // Prefer the API's normal language mapping (Arabic in `value`, English
         // in `default`), then fall back to the other slot only when its actual
         // script matches. This keeps English-only values out of the Arabic
@@ -407,7 +390,7 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
         for (final raw in candidates) {
           if (raw == null) continue;
           final text = raw.toString();
-          if (text.trim().isEmpty || _hasArabic(text) != arabic) continue;
+          if (text.trim().isEmpty || pdfHasArabic(text) != arabic) continue;
           lines.add(text);
           break;
         }
@@ -576,7 +559,7 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
           ),
         ),
         footer: (ctx) => pw.Center(
-          child: pw.Text('Page ${ctx.pageNumber} of ${ctx.pagesCount}',
+          child: pdfText('Page ${ctx.pageNumber} of ${ctx.pagesCount}',
               style: pw.TextStyle(font: font, fontSize: fs(6))),
         ),
         build: (pw.Context ctx) {
@@ -636,19 +619,19 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
                     alignment: pw.Alignment.centerLeft,
                     child: (cfgVisible('showExtraHeading2') &&
                             extraHeading2.isNotEmpty)
-                        ? _autoText(extraHeading2, crVatStyle)
+                        ? pdfText(extraHeading2, style: crVatStyle)
                         : (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
-                            ? _autoText(storeFssai, crVatStyle)
+                            ? pdfText(storeFssai, style: crVatStyle)
                             : pw.SizedBox(),
                   ),
                 ),
-                _autoText(invoiceTitleText.toUpperCase(), titleStyle),
+                pdfText(invoiceTitleText.toUpperCase(), style: titleStyle),
                 pw.Expanded(
                   child: pw.Align(
                     alignment: pw.Alignment.centerRight,
                     child:
                         (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
-                            ? _autoText(storeFssai, crVatStyle)
+                            ? pdfText(storeFssai, style: crVatStyle)
                             : pw.SizedBox(),
                   ),
                 ),
@@ -726,42 +709,42 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
                               isDualLanguage, configLang, wordsBold),
                         pw.SizedBox(height: 4),
                         if (cfgVisibleDefault('showDate'))
-                          pw.Text(
+                          pdfText(
                               'Time: $displayDate${displayTime.isNotEmpty ? ' $displayTime' : ''}',
                               style: wordsStyle),
                         if (showPayment && paymentMethodSummary.isNotEmpty)
-                          _autoText(
+                          pdfText(
                               '${_getLabel(dc, paymentConfigKey, null, 'Payment Method')}: $paymentMethodSummary',
-                              wordsStyle),
+                              style: wordsStyle),
                         if (showComment &&
                             params.orderComment != null &&
                             params.orderComment!.isNotEmpty)
-                          _autoText(
+                          pdfText(
                               '${_getLabel(dc, commentConfigKey, null, 'Comment')}: ${params.orderComment}',
-                              wordsStyle),
+                              style: wordsStyle),
                         if (showDeliveryMethod &&
                             params.deliveryMethod != null &&
                             params.deliveryMethod!.isNotEmpty)
-                          _autoText(
+                          pdfText(
                               '${_getLabel(dc, 'showDeliveryMethod', null, 'Delivery')}: ${params.deliveryMethod}',
-                              wordsStyle),
+                              style: wordsStyle),
                         ...paymentLines,
                         ..._customerBalanceLines(
                             params, dc, currency, wordsStyle, wordsBold),
                         if (!params.isReturnOnly &&
                             cfgVisible('showItemsCount'))
-                          _autoText(
+                          pdfText(
                             '${_withColon(_getLabel(dc, 'showItemsCount', null, 'Items'))} ${params.cartItems.length}',
-                            wordsStyle,
+                            style: wordsStyle,
                           ),
                         if (!params.isReturnOnly &&
                             cfgVisible('showQuantityCount'))
-                          _autoText(
+                          pdfText(
                             '${_withColon(_getLabel(dc, 'showQuantityCount', null, 'Total Qty'))} ${params.totalQuantity % 1 == 0 ? params.totalQuantity.toInt().toString() : params.totalQuantity.toStringAsFixed(2)}',
-                            wordsStyle,
+                            style: wordsStyle,
                           ),
                         if (cfgVisible('showSaved') && saved > 0)
-                          pw.Text(
+                          pdfText(
                             '${_getLabel(dc, 'showSaved', null, 'You Saved:')} ${_formatMoney(currency, saved)}',
                             style: wordsBold,
                           ),
@@ -848,7 +831,7 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
             // TERMS & CONDITIONS (config value → billDocumentConfig.terms)
             // ═══════════════════════════════════════════════════════
             if (cfgVisible('showTermsConditions')) ...[
-              _autoText(_termsText(dc, config), smallStyle),
+              pdfText(_termsText(dc, config), style: smallStyle),
               pw.SizedBox(height: 4),
             ],
 
@@ -857,9 +840,9 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
             // ═══════════════════════════════════════════════════════
             if (cfgVisible('showThankYouMessage'))
               pw.Center(
-                child: _autoText(
+                child: pdfText(
                   _thankYouText(dc, config, isEnglish),
-                  footerBold,
+                  style: footerBold,
                   textAlign: pw.TextAlign.center,
                 ),
               ),
@@ -873,20 +856,20 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
               children: [
                 pw.Row(
                   children: [
-                    pw.Text('Signature: ____________________',
+                    pdfText('Signature: ____________________',
                         style: signatureStyle),
                     pw.SizedBox(width: 6),
-                    pw.Text('التوقيع',
+                    pdfText('التوقيع',
                         style: signatureArStyle,
                         textDirection: pw.TextDirection.rtl),
                   ],
                 ),
                 pw.Row(
                   children: [
-                    pw.Text('Salesman Signature: ____________________',
+                    pdfText('Salesman Signature: ____________________',
                         style: signatureStyle),
                     pw.SizedBox(width: 6),
-                    pw.Text('توقيع البائع',
+                    pdfText('توقيع البائع',
                         style: signatureArStyle,
                         textDirection: pw.TextDirection.rtl),
                   ],
@@ -907,15 +890,15 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
               pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.center,
                 children: [
-                  _autoText('BANK DETAILS', footerBold,
+                  pdfText('BANK DETAILS', style: footerBold,
                       textAlign: pw.TextAlign.center),
-                  ...bankLines.map((line) => _autoText(line, footerStyle,
+                  ...bankLines.map((line) => pdfText(line, style: footerStyle,
                       textAlign: pw.TextAlign.center)),
                 ],
               ),
             if (cfgVisible('showVATFooter') &&
                 params.zatcaVatNumber?.isNotEmpty == true)
-              pw.Text(
+              pdfText(
                   '${cfgVal('showVATFooter', '').trim().isNotEmpty ? '${cfgVal('showVATFooter', '').trim()} ' : ''}${params.zatcaVatNumber}',
                   style: footerStyle),
           ];
@@ -946,9 +929,9 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
         for (var i = 0; i < lines.length; i++) ...[
           pw.Container(
             width: double.infinity,
-            child: _autoText(
+            child: pdfText(
               lines[i],
-              i == 0 ? headingStyle : detailStyle,
+              style: i == 0 ? headingStyle : detailStyle,
               textAlign: textAlign,
               maxLines: 2,
               textDirection: textDirection,
@@ -1035,8 +1018,8 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
       final en = AmountHelper()
           .convertNumberToWords(total, currency: currency, language: 'en');
       return [
-        pw.Text('$ar فقط.', style: style, textDirection: pw.TextDirection.rtl),
-        pw.Text('$en Only.', style: style),
+        pdfText('$ar فقط.', style: style, textDirection: pw.TextDirection.rtl),
+        pdfText('$en Only.', style: style),
       ];
     }
     final language = (configLang ?? 'en').toLowerCase();
@@ -1047,7 +1030,7 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
     final needsRtl = mode == ReceiptLanguageMode.arabic ||
         mode == ReceiptLanguageMode.bilingual;
     return [
-      pw.Text(
+      pdfText(
         '$words$suffix',
         style: style,
         textDirection: needsRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
@@ -1149,7 +1132,7 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
       breakdown.forEach((method, amount) {
         final amt = double.tryParse(amount.toString()) ?? 0.0;
         if (amt > 0) {
-          lines.add(pw.Text(
+          lines.add(pdfText(
               '${labelFor(method)}: ${_formatMoney(currency, amt)}',
               style: style));
         }
@@ -1164,7 +1147,7 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
           amounts.forEach((method, amount) {
             final amt = double.tryParse(amount.toString()) ?? 0.0;
             if (amt > 0) {
-              lines.add(pw.Text(
+              lines.add(pdfText(
                   '${labelFor(method)}: ${_formatMoney(currency, amt)}',
                   style: style));
             }
@@ -1178,7 +1161,7 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
     if (!isMulti) {
       final pm = params.paymentMethod;
       if (pm != null && pm.isNotEmpty && !pm.startsWith('{')) {
-        lines.add(pw.Text(
+        lines.add(pdfText(
             '${_paymentMethodLabel(pm)}: ${_formatMoney(currency, params.paidAmount!)}',
             style: style));
       }
@@ -1210,17 +1193,17 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
 
     final lines = <pw.Widget>[];
     if (showPrev && params.customerOldBalance != null) {
-      lines.add(pw.Text(
+      lines.add(pdfText(
           '${_getLabel(dc, 'showCustomerPrevBalance', null, 'Previous Balance')}: ${_formatMoney(currency, params.customerOldBalance!)}',
           style: style));
     }
     if (showPaid && params.paidAmount != null) {
-      lines.add(pw.Text(
+      lines.add(pdfText(
           '${_getLabel(dc, 'showCustomerPaidAmount', null, 'Paid Amount')}: ${_formatMoney(currency, params.paidAmount!)}',
           style: style));
     }
     if (showCurrent && params.customerCurrentBalance != null) {
-      lines.add(pw.Text(
+      lines.add(pdfText(
           '${_getLabel(dc, 'showCustomerCurrentBalance', null, 'Current Balance')}: ${_formatMoney(currency, params.customerCurrentBalance!)}',
           style: boldStyle));
     }
@@ -1256,19 +1239,21 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
         children: [
           pw.SizedBox(
             width: labelWidth,
-            child: pw.Text(label,
+            child: pdfText(label,
                 style: labelStyle,
                 maxLines: 1,
                 softWrap: false,
                 overflow: pw.TextOverflow.clip,
-                textDirection: _dirOf(label)),
+                textDirection: pdfTextDirectionOf(label)),
           ),
+          // Keep a gap: an RTL label hugs the right edge of its box.
+          pw.SizedBox(width: 6),
           pw.Expanded(
-            child: pw.Text(value,
+            child: pdfText(value,
                 style: valueStyle,
                 maxLines: 2,
                 overflow: pw.TextOverflow.clip,
-                textDirection: _dirOf(value)),
+                textDirection: pdfTextDirectionOf(value)),
           ),
         ],
       ),
@@ -1281,21 +1266,21 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
     return pw.TableRow(children: [
       pw.Padding(
         padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-        child: pw.Text(en, style: enStyle, textDirection: _dirOf(en)),
+        child: pdfText(en, style: enStyle, textDirection: pdfTextDirectionOf(en)),
       ),
       pw.Padding(
         padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
         child: pw.Align(
           alignment: pw.Alignment.centerRight,
           child:
-              pw.Text(ar, style: arStyle, textDirection: pw.TextDirection.rtl),
+              pdfText(ar, style: arStyle, textDirection: pw.TextDirection.rtl),
         ),
       ),
       pw.Padding(
         padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
         child: pw.Align(
           alignment: pw.Alignment.centerRight,
-          child: pw.Text(value, style: valueStyle),
+          child: pdfText(value, style: valueStyle),
         ),
       ),
     ]);
@@ -1413,11 +1398,11 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
             if (ar.isNotEmpty)
-              pw.Text(ar,
+              pdfText(ar,
                   style: headerAr,
                   textDirection: pw.TextDirection.rtl,
                   textAlign: pw.TextAlign.center),
-            pw.Text(en, style: headerEn, textAlign: pw.TextAlign.center),
+            pdfText(en, style: headerEn, textAlign: pw.TextAlign.center),
           ],
         ),
       );
@@ -1549,7 +1534,7 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
       name = _bilingualItemName(item, name, isAr);
       // Right-align + RTL-shape whenever the name carries any Arabic (covers
       // bilingual names and English names with embedded Arabic).
-      final bool isArName = _hasArabic(name);
+      final bool isArName = pdfHasArabic(name);
 
       final cells = <pw.Widget>[];
       if (showSL) cells.add(_dataCell('${i + 1}', bodyStyle));
@@ -1613,7 +1598,7 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
       padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
       child: pw.Align(
         alignment: align,
-        child: pw.Text(
+        child: pdfText(
           text,
           style: style,
           maxLines: 2,
@@ -1679,7 +1664,7 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
     pw.Widget hdrCell(String text) => pw.Padding(
           padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
           child:
-              pw.Text(text, style: headerStyle, textAlign: pw.TextAlign.center),
+              pdfText(text, style: headerStyle, textAlign: pw.TextAlign.center),
         );
 
     final headerCells = <pw.Widget>[];
@@ -1713,7 +1698,7 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
           padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
           child: pw.Align(
             alignment: align,
-            child: pw.Text(text, style: bodyStyle),
+            child: pdfText(text, style: bodyStyle),
           ),
         );
 
@@ -1815,7 +1800,7 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
       pw.Divider(height: 0, thickness: 0.8),
       pw.SizedBox(height: 4),
       if (!hasCreditNoteConfig) ...[
-        pw.Text(params.returnsSectionHeading, style: titleStyle),
+        pdfText(params.returnsSectionHeading, style: titleStyle),
         pw.SizedBox(height: 4),
       ],
     ];
@@ -1849,7 +1834,7 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
       ));
     }
     if (cnDetailsRows.isNotEmpty) {
-      widgets.add(pw.Text(
+      widgets.add(pdfText(
         retLbl('showCreditNoteOrder', retLabels?.detailsHeading,
             'CREDIT NOTE DETAILS'),
         style: sectionHeadingStyle,
@@ -1880,7 +1865,7 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
           'Billing Address:', params.customerAddress!, labelStyle, valueStyle));
     }
     if (custRows.isNotEmpty) {
-      widgets.add(pw.Text(retLabels?.customerHeading ?? 'CUSTOMER DETAILS',
+      widgets.add(pdfText(retLabels?.customerHeading ?? 'CUSTOMER DETAILS',
           style: sectionHeadingStyle));
       widgets.add(pw.SizedBox(height: 2));
       widgets.addAll(custRows);
@@ -1889,7 +1874,7 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
 
     if (retLabels?.itemsHeading != null) {
       widgets
-          .add(pw.Text(retLabels!.itemsHeading!, style: sectionHeadingStyle));
+          .add(pdfText(retLabels!.itemsHeading!, style: sectionHeadingStyle));
       widgets.add(pw.SizedBox(height: 2));
     }
 
@@ -1908,7 +1893,7 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
           ? retLbl('showCreditNoteItemsCount', retLabels?.creditNoteItemsCount,
               'Total Items:')
           : lbl('showReturnItemsCount', null, 'Return Items:');
-      widgets.add(pw.Text('$countLabel ${orderReturns.returnItems!.length}',
+      widgets.add(pdfText('$countLabel ${orderReturns.returnItems!.length}',
           style: labelStyle));
       widgets.add(pw.SizedBox(height: 2));
     }
@@ -1922,8 +1907,8 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
       widgets.add(pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.end,
         children: [
-          pw.Text('$label ', style: labelStyle),
-          pw.Text(_formatMoney(currency, returnRateTotal), style: valueStyle),
+          pdfText('$label ', style: labelStyle),
+          pdfText(_formatMoney(currency, returnRateTotal), style: valueStyle),
         ],
       ));
     }
@@ -1936,8 +1921,8 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
       widgets.add(pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.end,
         children: [
-          pw.Text('$label ', style: labelStyle),
-          pw.Text(_formatMoney(currency, returnRateTotal), style: valueStyle),
+          pdfText('$label ', style: labelStyle),
+          pdfText(_formatMoney(currency, returnRateTotal), style: valueStyle),
         ],
       ));
     }
@@ -2040,13 +2025,13 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
         pw.TableRow(children: [
           pw.Padding(
             padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-            child: pw.Text(label, style: labelStyle),
+            child: pdfText(label, style: labelStyle),
           ),
           pw.Padding(
             padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
             child: pw.Align(
               alignment: pw.Alignment.centerRight,
-              child: pw.Text(value, style: valStyle),
+              child: pdfText(value, style: valStyle),
             ),
           ),
         ]);

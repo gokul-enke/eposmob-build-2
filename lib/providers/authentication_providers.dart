@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:http/http.dart' as http;
@@ -58,12 +59,27 @@ class AuthenticationProvider {
         'password': password,
       };
       final url = Uri.parse(APPUrl.loginUrl);
+      if (kDebugMode) {
+        debugPrint('=== LOGIN REQUEST ===');
+        debugPrint('URL: $url');
+        debugPrint('X-Tenant: $apiKey');
+        debugPrint('Email: $normalizedEmail');
+        debugPrint('Password length: ${password.length}');
+        debugPrint('=====================');
+      }
       final response =
           await httpClient.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'X-Tenant': apiKey,
       }).timeout(timeout);
+      if (kDebugMode) {
+        debugPrint('=== LOGIN RESPONSE ===');
+        debugPrint('Status: ${response.statusCode} ${response.reasonPhrase}');
+        debugPrint('Headers: ${response.headers}');
+        debugPrint('Body: ${response.body}');
+        debugPrint('======================');
+      }
 
       // Sync server time from headers
       if (response.headers['date'] != null) {
@@ -79,8 +95,18 @@ class AuthenticationProvider {
       dynamic payload;
       try {
         payload = json.decode(response.body);
-      } catch (_) {
+      } catch (e) {
+        if (kDebugMode) debugPrint('LOGIN: body is not JSON: $e');
         payload = null;
+      }
+      if (kDebugMode) {
+        debugPrint('LOGIN: payload type=${payload.runtimeType}');
+        if (payload is Map) {
+          debugPrint('LOGIN: payload keys=${payload.keys.toList()}');
+          debugPrint('LOGIN: status=${payload["status"]} '
+              'message=${payload["message"]} '
+              'error=${payload["error"]} errors=${payload["errors"]}');
+        }
       }
 
       if (payload is Map<String, dynamic> &&

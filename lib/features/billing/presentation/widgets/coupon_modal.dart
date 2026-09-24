@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
@@ -192,7 +192,7 @@ class _CouponModalState extends State<CouponModal> {
     if (flatDiscount < 0) {
       showScaffoldError(
         context: context,
-        message: 'Flat discount cannot be negative',
+        message: 'coupon.flat_discount_negative'.tr,
       );
       return false;
     }
@@ -200,7 +200,7 @@ class _CouponModalState extends State<CouponModal> {
     if (percentageDiscount < 0) {
       showScaffoldError(
         context: context,
-        message: 'Percentage discount cannot be negative',
+        message: 'coupon.percentage_discount_negative'.tr,
       );
       return false;
     }
@@ -208,7 +208,7 @@ class _CouponModalState extends State<CouponModal> {
     if (percentageDiscount > 100) {
       showScaffoldError(
         context: context,
-        message: 'Percentage discount cannot exceed 100%',
+        message: 'coupon.percentage_discount_max'.tr,
       );
       return false;
     }
@@ -216,7 +216,7 @@ class _CouponModalState extends State<CouponModal> {
     if (flatDiscount > originalSubTotal && originalSubTotal > 0) {
       showScaffoldError(
         context: context,
-        message: 'Flat discount cannot exceed cart total',
+        message: 'coupon.flat_discount_exceeds_total'.tr,
       );
       return false;
     }
@@ -238,7 +238,7 @@ class _CouponModalState extends State<CouponModal> {
     if (originalSubTotal == 0) {
       showScaffoldError(
         context: context,
-        message: 'Cannot apply discount to empty cart',
+        message: 'coupon.empty_cart'.tr,
       );
       return;
     }
@@ -257,8 +257,9 @@ class _CouponModalState extends State<CouponModal> {
       if (validity != DiscountValidity.valid) {
         showScaffoldError(
           context: context,
-          message:
-              'Cannot apply ${_selectedDiscount!.couponName}: Coupon is not valid',
+          message: 'coupon.invalid_selected'.trParams({
+            'name': _selectedDiscount!.couponName,
+          }),
         );
         return;
       }
@@ -320,7 +321,7 @@ class _CouponModalState extends State<CouponModal> {
                             CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Flat Discount',
+                            'coupon.flat_discount'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.medium,
                               FontSize.s12,
@@ -409,7 +410,7 @@ class _CouponModalState extends State<CouponModal> {
                             CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Percentage Discount (%)',
+                            'coupon.percentage_discount'.tr,
                             style: buildCustomStyle(
                               FontWeightManager.medium,
                               FontSize.s12,
@@ -491,7 +492,7 @@ class _CouponModalState extends State<CouponModal> {
               ),
               SizedBox(height: isDenseEmbedded ? 14 : 20),
               Text(
-                'Select Coupon',
+                'coupon.select_coupon'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s12,
@@ -503,7 +504,7 @@ class _CouponModalState extends State<CouponModal> {
               FocusTraversalOrder(
                 order: const NumericFocusOrder(30),
                 child: CustomDropDownWithSearch<DiscountData>(
-                  hintText: 'Search or select a discount',
+                  hintText: 'coupon.search_or_select'.tr,
                   value: _selectedDiscount,
                   items: discountProvider.discounts,
                   onChanged: (val) {
@@ -513,7 +514,7 @@ class _CouponModalState extends State<CouponModal> {
                   },
                   displayText: (discount) =>
                       '${discount.couponCode} - ${discount.couponName}',
-                  searchHintText: 'Search by code or name...',
+                  searchHintText: 'coupon.search_by_code_or_name'.tr,
                   showName: false,
                   margin: const EdgeInsets.symmetric(
                       horizontal: 0, vertical: 0),
@@ -548,7 +549,7 @@ class _CouponModalState extends State<CouponModal> {
                           MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Net Total:',
+                          'coupon.net_total'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.semiBold,
                             isDenseEmbedded
@@ -578,7 +579,7 @@ class _CouponModalState extends State<CouponModal> {
                           MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Discount Amount:',
+                          'coupon.discount_amount'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.semiBold,
                             isDenseEmbedded
@@ -649,7 +650,7 @@ class _CouponModalState extends State<CouponModal> {
                           MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Total after Discount:',
+                          'coupon.total_after_discount'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.semiBold,
                             isDenseEmbedded
@@ -709,7 +710,7 @@ class _CouponModalState extends State<CouponModal> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Cart is empty. Add products before applying discounts.',
+                          'coupon.empty_cart_hint'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.medium,
                             FontSize.s11,
@@ -743,7 +744,7 @@ class _CouponModalState extends State<CouponModal> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Discount & Coupon',
+                      'coupon.discount_and_coupon'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         FontSize.s16,
@@ -802,7 +803,7 @@ class _CouponModalState extends State<CouponModal> {
                         child: FocusTraversalOrder(
                           order: const NumericFocusOrder(40),
                           child: CustomRoundButton(
-                            title: "Skip",
+                            title: 'general.skip'.tr,
                             fct: widget.onSkip ?? () {},
                             fontSize:
                                 isDenseEmbedded ? FontSize.s14 : FontSize.s16,
@@ -819,7 +820,7 @@ class _CouponModalState extends State<CouponModal> {
                       child: FocusTraversalOrder(
                         order: const NumericFocusOrder(50),
                         child: CustomRoundButton(
-                          title: "Clear",
+                          title: 'general.clear'.tr,
                           fct: () {
                             setState(() {
                               flatDiscountController.clear();
@@ -841,7 +842,9 @@ class _CouponModalState extends State<CouponModal> {
                       child: FocusTraversalOrder(
                         order: const NumericFocusOrder(60),
                         child: CustomRoundButton(
-                          title: _isLoading ? "Applying..." : "Apply Discount",
+                          title: _isLoading
+                              ? 'coupon.applying'.tr
+                              : 'coupon.apply_discount'.tr,
                           fct: _isLoading ? () {} : _applyDiscount,
                           fontSize:
                               isDenseEmbedded ? FontSize.s14 : FontSize.s16,

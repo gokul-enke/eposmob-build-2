@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../components/build_round_button.dart';
 import '../../components/build_title.dart';
@@ -9,6 +12,7 @@ import '../../resources/style_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/helpers/debug_login_autofill.dart';
+import 'package:pos_machine/services/preferences_file_guard.dart';
 import 'package:pos_machine/services/tenant_domain_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -42,8 +46,15 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
   }
 
   Future<void> _loadExistingApiKey() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedApiKey = prefs.getString('api_key')?.trim();
+    String? savedApiKey;
+    try {
+      final prefs = await PreferencesFileGuard.runWithRepair(
+          SharedPreferences.getInstance);
+      savedApiKey = prefs.getString('api_key')?.trim();
+    } catch (error) {
+      // Prefilling is a convenience; Submit reports a real storage failure.
+      debugPrint('⚠️ Could not read saved API key: $error');
+    }
     if (savedApiKey != null && savedApiKey.isNotEmpty) {
       _apiKeyController.text = savedApiKey;
     } else {
@@ -80,6 +91,12 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
     } on TenantDomainException catch (e) {
       if (mounted) {
         setState(() => _errorMessage = e.message);
+      }
+    } catch (error, stackTrace) {
+      debugPrint('⚠️ Could not save API key: $error\n$stackTrace');
+      unawaited(Sentry.captureException(error, stackTrace: stackTrace));
+      if (mounted) {
+        setState(() => _errorMessage = 'login.api_key_save_failed'.tr);
       }
     } finally {
       if (mounted) {

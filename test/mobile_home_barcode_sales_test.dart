@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_home_widget.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home_tab.dart';
+import 'package:pos_machine/components/virtual_keyboard_widget.dart';
 import 'package:pos_machine/models/get_app_settings.dart';
 import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -64,9 +65,7 @@ class _TestBillingProvider extends BillingProvider {
 
 Finder _hintTextField(String hint) {
   return find.byWidgetPredicate(
-    (widget) =>
-        widget is TextField &&
-        widget.decoration?.hintText == hint,
+    (widget) => widget is TextField && widget.decoration?.hintText == hint,
   );
 }
 
@@ -74,6 +73,8 @@ Widget _wrap({
   required bool barcodeSales,
   required Widget child,
   LocalProductProvider? localProductProvider,
+  KeyboardProvider? keyboardProvider,
+  bool includeVirtualKeyboard = false,
 }) {
   return MultiProvider(
     providers: [
@@ -89,15 +90,28 @@ Widget _wrap({
       ChangeNotifierProvider<CustomerSelectionProvider>(
         create: (_) => CustomerSelectionProvider(),
       ),
-      ChangeNotifierProvider<KeyboardProvider>(
-        create: (_) => KeyboardProvider(),
-      ),
+      keyboardProvider == null
+          ? ChangeNotifierProvider<KeyboardProvider>(
+              create: (_) => KeyboardProvider(),
+            )
+          : ChangeNotifierProvider<KeyboardProvider>.value(
+              value: keyboardProvider,
+            ),
       ChangeNotifierProvider<RoleProvider>(
         create: (_) => _TestRoleProvider(),
       ),
     ],
     child: MaterialApp(
-      home: Scaffold(body: child),
+      home: Scaffold(
+        body: includeVirtualKeyboard
+            ? Stack(
+                children: [
+                  Positioned.fill(child: child),
+                  const GlobalVirtualKeyboard(),
+                ],
+              )
+            : child,
+      ),
     ),
   );
 }
@@ -108,7 +122,8 @@ void main() {
   late Directory hiveDir;
 
   setUpAll(() async {
-    hiveDir = await Directory.systemTemp.createTemp('epos_mobile_home_barcode_');
+    hiveDir =
+        await Directory.systemTemp.createTemp('epos_mobile_home_barcode_');
     Hive.init(hiveDir.path);
     if (!Hive.isAdapterRegistered(0)) {
       Hive.registerAdapter(HiveStringValueAdapter());
@@ -156,7 +171,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(_hintTextField('Barcode'), findsOneWidget);
-      expect(_hintTextField('Search Product'), findsNothing);
+      expect(_hintTextField('Search product'), findsNothing);
     });
 
     testWidgets('submitting barcode calls onProcessBarcode', (tester) async {
@@ -179,6 +194,44 @@ void main() {
 
       expect(processed, ['9988776655']);
     });
+
+    testWidgets('catalog search accepts virtual-keyboard key taps',
+        (tester) async {
+      final keyboard = KeyboardProvider(enablePersistence: false)..featureOn();
+      addTearDown(keyboard.dispose);
+      await tester.pumpWidget(_wrap(
+        barcodeSales: true,
+        keyboardProvider: keyboard,
+        includeVirtualKeyboard: true,
+        child: MarketHomeWidget(
+          autocompleteProductKey: GlobalKey(),
+          onProcessBarcode: (_) {},
+          onClearProductFields: () {},
+          focusTextField: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final searchField = _hintTextField('Search products');
+      await tester.tap(searchField);
+      await tester.pump();
+      await tester.pump();
+
+      final field = tester.widget<TextField>(searchField);
+      expect(keyboard.showKeyboard, isTrue);
+      expect(identical(keyboard.controller, field.controller), isTrue);
+
+      expect(find.byType(VirtualKeyboardWidget), findsOneWidget);
+      await tester.tap(find.descendant(
+        of: find.byType(VirtualKeyboardWidget),
+        matching: find.text('q'),
+      ));
+      await tester.pump();
+
+      final updatedField = tester.widget<TextField>(searchField);
+      expect(updatedField.decoration?.suffixIcon, isNotNull,
+          reason: 'virtual key taps must update the active catalog query');
+    });
   });
 
   group('MarketHomeWidget — barcodeSales disabled', () {
@@ -195,8 +248,35 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(_hintTextField('Search Product'), findsOneWidget);
+      expect(_hintTextField('Search product'), findsOneWidget);
       expect(_hintTextField('Barcode'), findsNothing);
+    });
+
+    testWidgets('product autocomplete opens the virtual keyboard',
+        (tester) async {
+      final keyboard = KeyboardProvider(enablePersistence: false)..featureOn();
+      addTearDown(keyboard.dispose);
+      await tester.pumpWidget(_wrap(
+        barcodeSales: false,
+        keyboardProvider: keyboard,
+        child: MarketHomeWidget(
+          autocompleteProductKey: GlobalKey(),
+          onProcessBarcode: (_) {},
+          onClearProductFields: () {},
+          focusTextField: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final productField = _hintTextField('Search product');
+      await tester.tap(productField);
+      await tester.pump();
+
+      final field = tester.widget<TextField>(productField);
+      expect(keyboard.showKeyboardFeature, isTrue);
+      expect(keyboard.showKeyboard, isTrue);
+      expect(identical(keyboard.controller, field.controller), isTrue);
+      expect(keyboard.keyboardType, 'text');
     });
   });
 

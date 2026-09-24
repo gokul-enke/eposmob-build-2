@@ -1,5 +1,6 @@
 ﻿import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
@@ -111,7 +112,7 @@ class TransactionReportThermalPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: "Document configurations not loaded. Please wait.",
+          message: 'voucher_print.document_config_missing'.tr,
         );
       }
       return;
@@ -254,7 +255,7 @@ class TransactionReportThermalPrinter {
       debugPrint("Print job sent successfully");
 
       if (context.mounted) {
-        showScaffold(context: context, message: "Print job sent successfully");
+        showScaffold(context: context, message: 'voucher_print.print_job_sent'.tr);
         // Navigation is handled by the parent TransactionReportPrintPage
       }
     } catch (e) {
@@ -262,7 +263,8 @@ class TransactionReportThermalPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: "Error printing: ${e.toString()}",
+          message: 'voucher_print.error_printing'
+              .trParams({'error': e.toString()}),
         );
       }
     } finally {
@@ -1133,7 +1135,7 @@ class TransactionReportThermalPrinter {
     // Only add customer information section if at least one field should be shown
     if (showName || showEmail || showPhone || showAddress || showDates) {
       // Add a header for customer details
-      bytes += generator.text('Customer Information',
+      bytes += generator.text('voucher_print.customer_information'.tr,
           styles: PosStyles(
               fontType: fontType,
               align: PosAlign.center,
@@ -1145,7 +1147,8 @@ class TransactionReportThermalPrinter {
 
       // Add customer details based on visibility settings
       if (showName) {
-        bytes += generator.text('Name: $customerName',
+        bytes += generator.text(
+            '${'voucher_print.name'.tr}: $customerName',
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.left,
@@ -1154,7 +1157,8 @@ class TransactionReportThermalPrinter {
       }
 
       if (showEmail) {
-        bytes += generator.text('Email: $customerEmail',
+        bytes += generator.text(
+            '${'voucher_print.email'.tr}: $customerEmail',
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.left,
@@ -1163,7 +1167,8 @@ class TransactionReportThermalPrinter {
       }
 
       if (showPhone) {
-        bytes += generator.text('Phone: $customerPhone',
+        bytes += generator.text(
+            '${'voucher_print.phone'.tr}: $customerPhone',
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.left,

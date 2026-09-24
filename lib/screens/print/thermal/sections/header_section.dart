@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -136,7 +137,7 @@ class HeaderSectionBuilder {
           appSettings?.customerCareEmail ??
           '';
       if (email.isNotEmpty) {
-        bytes += generator.text('Email: $email',
+        bytes += generator.text('${'voucher_print.email'.tr}: $email',
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.center,

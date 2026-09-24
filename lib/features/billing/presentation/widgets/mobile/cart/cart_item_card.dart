@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/domain/billing_crash_guards.dart';
 import 'package:pos_machine/features/billing/domain/billing_debug_log.dart';
@@ -246,7 +247,7 @@ class CartItemCard extends StatelessWidget {
                   if (canViewBillingProductDetails)
                     _CardIconButton(
                       key: const ValueKey('cart_product_details_action'),
-                      tooltip: 'Product details',
+                      tooltip: 'product_detail.view_details'.tr,
                       icon: Icons.info_outline,
                       iconColor: ColorManager.kGreyColor,
                       onTap: () => _showProductDetailsDialog(context, item),
@@ -254,7 +255,7 @@ class CartItemCard extends StatelessWidget {
                   if (canShowPurchaseHistoryAction)
                     _CardIconButton(
                       key: const ValueKey('cart_purchase_history_action'),
-                      tooltip: 'Customer purchase history',
+                      tooltip: 'billing.customer_purchase_history'.tr,
                       icon: Icons.history,
                       iconColor: ColorManager.kPrimaryColor,
                       onTap: () => _showCustomerPurchaseHistoryForCartItem(
@@ -264,7 +265,7 @@ class CartItemCard extends StatelessWidget {
                       ),
                     ),
                   _CardIconButton(
-                    tooltip: 'Remove item',
+                    tooltip: 'billing.remove_item'.tr,
                     icon: Icons.delete_outline,
                     iconColor: ColorManager.kButtonRed,
                     onTap: onRemove,
@@ -419,20 +420,20 @@ Future<void> _showCustomerPurchaseHistoryForCartItem(
         true) {
       showScaffoldError(
         context: context,
-        message: 'Customer purchase history is disabled',
+        message: 'billing.purchase_history_disabled'.tr,
       );
       return;
     }
     if (customerSelectionProvider.isDefaultCustomer) {
       showScaffoldError(
         context: context,
-        message: 'Purchase history is not shown for the default customer',
+        message: 'billing.purchase_history_default_customer'.tr,
       );
       return;
     }
     showScaffoldError(
       context: context,
-      message: 'Select a customer to view purchase history',
+      message: 'billing.select_customer_purchase_history'.tr,
     );
     return;
   }
@@ -444,7 +445,7 @@ Future<void> _showCustomerPurchaseHistoryForCartItem(
   if (customerId == null || productId == null || customerName == null) {
     showScaffoldError(
       context: context,
-      message: 'Select a customer to view purchase history',
+      message: 'billing.select_customer_purchase_history'.tr,
     );
     return;
   }
@@ -454,7 +455,7 @@ Future<void> _showCustomerPurchaseHistoryForCartItem(
   if (token == null) {
     showScaffoldError(
       context: context,
-      message: 'Unable to load purchase history',
+      message: 'billing.purchase_history_load_failed'.tr,
     );
     return;
   }
@@ -474,7 +475,7 @@ Future<void> _showCustomerPurchaseHistoryForCartItem(
         purchaseHistory.data.isEmpty) {
       showScaffoldError(
         context: context,
-        message: 'No purchase history found for this product',
+        message: 'billing.no_purchase_history'.tr,
       );
       return;
     }
@@ -531,7 +532,7 @@ Future<void> _showCustomerPurchaseHistoryForCartItem(
     if (!context.mounted) return;
     showScaffoldError(
       context: context,
-      message: 'Unable to load purchase history',
+      message: 'billing.purchase_history_load_failed'.tr,
     );
   }
 }

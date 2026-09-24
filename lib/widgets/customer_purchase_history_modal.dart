@@ -1,14 +1,12 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:pos_machine/components/build_container_box.dart';
-import 'package:pos_machine/components/build_round_button.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/models/customer_purchase_history.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
-import 'package:intl/intl.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 
@@ -87,7 +85,7 @@ class _CustomerPurchaseHistoryModalState
                     child: Column(
                       children: [
                         Text(
-                          'Customer Purchase History',
+                          'billing.customer_purchase_history'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.bold,
                             FontSize.s16,
@@ -97,7 +95,7 @@ class _CustomerPurchaseHistoryModalState
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Customer: ${widget.customerName}',
+                          'general.customer_prefix'.tr + widget.customerName,
                           style: buildCustomStyle(
                             FontWeightManager.semiBold,
                             FontSize.s14,
@@ -107,7 +105,8 @@ class _CustomerPurchaseHistoryModalState
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Product: ${widget.product.productName}',
+                          'general.product_prefix'.tr +
+                              (widget.product.productName ?? ''),
                           style: buildCustomStyle(
                             FontWeightManager.medium,
                             FontSize.s14,
@@ -149,7 +148,9 @@ class _CustomerPurchaseHistoryModalState
 
               // Purchase history list
               Text(
-                'Last ${widget.purchaseHistory.length} Purchase${widget.purchaseHistory.length != 1 ? 's' : ''}:',
+                'billing.last_purchases'.trParams({
+                  'count': widget.purchaseHistory.length.toString(),
+                }),
                 style: buildCustomStyle(
                   FontWeightManager.semiBold,
                   FontSize.s16,
@@ -173,7 +174,7 @@ class _CustomerPurchaseHistoryModalState
                     Expanded(
                       flex: 2,
                       child: Text(
-                        'Order #',
+                        'general.order_number_hash'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.bold,
                           FontSize.s12,
@@ -185,7 +186,7 @@ class _CustomerPurchaseHistoryModalState
                     Expanded(
                       flex: 2,
                       child: Text(
-                        'Date',
+                        'general.date'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.bold,
                           FontSize.s12,
@@ -197,7 +198,7 @@ class _CustomerPurchaseHistoryModalState
                     Expanded(
                       flex: 1,
                       child: Text(
-                        'Qty',
+                        'general.quantity_short'.tr,
                         textAlign: TextAlign.center,
                         style: buildCustomStyle(
                           FontWeightManager.bold,
@@ -210,7 +211,7 @@ class _CustomerPurchaseHistoryModalState
                     Expanded(
                       flex: 2,
                       child: Text(
-                        'Price',
+                        'billing.price'.tr,
                         textAlign: TextAlign.center,
                         style: buildCustomStyle(
                           FontWeightManager.bold,
@@ -223,7 +224,7 @@ class _CustomerPurchaseHistoryModalState
                     Expanded(
                       flex: 2,
                       child: Text(
-                        'Action',
+                        'general.action'.tr,
                         textAlign: TextAlign.center,
                         style: buildCustomStyle(
                           FontWeightManager.bold,
@@ -264,7 +265,9 @@ class _CustomerPurchaseHistoryModalState
                               Expanded(
                                 flex: 2,
                                 child: Text(
-                                  item.orderNumber ?? 'N/A',
+                                  item.orderNumber.isEmpty
+                                      ? 'general.not_available'.tr
+                                      : item.orderNumber,
                                   style: buildCustomStyle(
                                     FontWeightManager.medium,
                                     FontSize.s12,
@@ -363,7 +366,7 @@ class _CustomerPurchaseHistoryModalState
                                             minimumSize: const Size(60, 28),
                                           ),
                                           child: Text(
-                                            'Use This',
+                                            'billing.use_this'.tr,
                                             style: buildCustomStyle(
                                               FontWeightManager.medium,
                                               FontSize.s10,
@@ -421,7 +424,7 @@ class _CustomerPurchaseHistoryModalState
                                 });
                               },
                               child: Text(
-                                'Use Current Price',
+                                'billing.use_current_price'.tr,
                                 style: buildCustomStyle(
                                   FontWeightManager.medium,
                                   FontSize.s14,
@@ -461,7 +464,7 @@ class _CustomerPurchaseHistoryModalState
                                     horizontal: 16, vertical: 8),
                               ),
                               child: Text(
-                                'Cancel',
+                                'general.cancel'.tr,
                                 style: buildCustomStyle(
                                   FontWeightManager.medium,
                                   FontSize.s14,

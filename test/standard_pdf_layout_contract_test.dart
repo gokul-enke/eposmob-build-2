@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pdf/pdf.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -187,6 +188,26 @@ String _standardLayoutSource(String theme) {
   ).readAsStringSync();
 }
 
+String _standardAddressRendererSource(String theme) {
+  // Classic delegates its document body to the shared contract renderer.
+  final file = theme == 'classic'
+      ? 'contract_standard_pdf_layout.dart'
+      : switch (theme) {
+          'simplified_tax_invoice' =>
+            'simplified_tax_invoice_standard_pdf_layout.dart',
+          'centered_simplified_tax_invoice' =>
+            'centered_simplified_tax_invoice_standard_pdf_layout.dart',
+          'bilingual_centered_tax_invoice' =>
+            'bilingual_centered_tax_invoice_standard_pdf_layout.dart',
+          'boxed_bilingual_tax_invoice' =>
+            'boxed_bilingual_tax_invoice_standard_pdf_layout.dart',
+          'boxed_header_tax_invoice' =>
+            'boxed_header_tax_invoice_standard_pdf_layout.dart',
+          _ => throw ArgumentError.value(theme, 'theme'),
+        };
+  return File('lib/screens/print/standard_layouts/$file').readAsStringSync();
+}
+
 void main() {
   test('factory exposes exactly the six standard PDF themes', () {
     expect(StandardPdfLayoutFactory.availableThemes, orderedEquals(_themes));
@@ -311,6 +332,66 @@ void main() {
               reason: '$theme/${language.key}/$paper/header');
         }
       }
+    }
+  });
+
+  testWidgets(
+      'every standard PDF theme shapes all Arabic text (no raw Arabic letters)',
+      (tester) async {
+    late BuildContext context;
+    await tester.pumpWidget(_providerHarness(onContext: (value) {
+      context = value;
+    }));
+
+    // The `pdf` package only shapes Arabic (into U+FExx presentation forms)
+    // when a Text widget is RTL. A raw letter in an embedded font therefore
+    // means some Arabic run was drawn unshaped, left-to-right. Mixing raw and
+    // shaped letters in one document also corrupts glyphs: the package's TTF
+    // subsetter swaps in a wrong glyph when U+0644 and U+FEDD share one.
+    bool isRawArabicLetter(int rune) =>
+        (rune >= 0x0621 && rune <= 0x063A) ||
+        (rune >= 0x0641 && rune <= 0x064A);
+
+    final failures = <String>[];
+    for (final theme in _themes) {
+      for (final language in _languageModes.entries) {
+        final params = _params(
+          context: context,
+          theme: theme,
+          language: language.key,
+          paperSize: 'A4',
+          options: <String, DisplayOption>{
+            ..._options(visible: true),
+            'showQRCode': DisplayOption(visible: false),
+          },
+        );
+        final document = await StandardPdfLayoutFactory.getLayout(theme)
+            .buildPdfDocument(params);
+        await document.save();
+
+        final raw = <int>{
+          for (final font in document.document.fonts.whereType<PdfTtfFont>())
+            ...font.unicodeCMap.cmap.where(isRawArabicLetter),
+        };
+        if (raw.isNotEmpty) {
+          failures.add('$theme/${language.key}: '
+              '${String.fromCharCodes(raw.toList()..sort())}');
+        }
+      }
+    }
+    expect(failures, isEmpty, reason: failures.join('\n'));
+  });
+
+  test('all six standard themes resolve the active-store address centrally',
+      () {
+    for (final theme in _themes) {
+      final source = _standardAddressRendererSource(theme);
+      expect(source.contains('params.storeAddressText('), isTrue,
+          reason: '$theme/shared address resolver');
+      expect(source.contains("cfgVal('showStoreAddress'"), isFalse,
+          reason: '$theme must not print the configured label as the address');
+      expect(source.contains('sellerAddressOption?.value'), isFalse,
+          reason: '$theme must not print the configured label as seller data');
     }
   });
 

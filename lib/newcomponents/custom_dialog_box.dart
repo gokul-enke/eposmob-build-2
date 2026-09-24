@@ -9,6 +9,12 @@ OverlayEntry? _currentOverlayEntry;
 OverlayEntry? _loadingOverlayEntry;
 String _notificationPosition = 'left';
 
+void _removeNotification(OverlayEntry entry) {
+  if (!identical(_currentOverlayEntry, entry)) return;
+  _currentOverlayEntry = null;
+  entry.remove();
+}
+
 void setNotificationPosition(String position) {
   const valid = {'left', 'center', 'right'};
   _notificationPosition = valid.contains(position) ? position : 'left';
@@ -27,16 +33,26 @@ double? _rightForDialog(bool isMobile) {
   return null;
 }
 
-ScaffoldMessengerState showScaffold({required BuildContext context, message}) {
+/// [actionLabel] and [onAction] add a button such as "Undo"; the message then
+/// stays for 5 seconds instead of 2 so there is time to press it.
+ScaffoldMessengerState showScaffold({
+  required BuildContext context,
+  message,
+  String? actionLabel,
+  VoidCallback? onAction,
+}) {
+  final hasAction = actionLabel != null && onAction != null;
   // Remove any existing overlay message
-  _currentOverlayEntry?.remove();
+  final previousEntry = _currentOverlayEntry;
+  if (previousEntry != null) _removeNotification(previousEntry);
 
   // Get screen width for responsive design
   final screenWidth = MediaQuery.of(context).size.width;
   final isMobile = screenWidth < 600;
 
   // Create a custom overlay message that will appear above modals
-  _currentOverlayEntry = OverlayEntry(
+  late final OverlayEntry entry;
+  entry = OverlayEntry(
     builder: (context) => Positioned(
       bottom: 20,
       left: _leftForDialog(isMobile, screenWidth),
@@ -78,12 +94,23 @@ ScaffoldMessengerState showScaffold({required BuildContext context, message}) {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              if (hasAction)
+                TextButton(
+                  onPressed: () {
+                    _removeNotification(entry);
+                    onAction();
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  child: Text(actionLabel),
+                ),
               IconButton(
                 icon: Icon(Icons.close,
                     color: Colors.white, size: isMobile ? 18 : 20),
                 onPressed: () {
-                  _currentOverlayEntry?.remove();
-                  _currentOverlayEntry = null;
+                  _removeNotification(entry);
                 },
                 padding: EdgeInsets.zero,
                 constraints: BoxConstraints(
@@ -98,12 +125,13 @@ ScaffoldMessengerState showScaffold({required BuildContext context, message}) {
   );
 
   // Insert the overlay entry
-  Overlay.of(context).insert(_currentOverlayEntry!);
+  Overlay.of(context).insert(entry);
+  _currentOverlayEntry = entry;
 
-  // Auto-remove after 2 seconds
-  Future.delayed(const Duration(seconds: 2), () {
-    _currentOverlayEntry?.remove();
-    _currentOverlayEntry = null;
+  // Auto-remove this entry only, so an earlier timer cannot cut a newer
+  // message short.
+  Future.delayed(Duration(seconds: hasAction ? 5 : 2), () {
+    _removeNotification(entry);
   });
 
   // Return ScaffoldMessenger for compatibility
@@ -112,10 +140,12 @@ ScaffoldMessengerState showScaffold({required BuildContext context, message}) {
 
 void showLoadingOverlay(BuildContext context,
     {String message = 'Please wait...'}) {
-  _loadingOverlayEntry?.remove();
+  final previousEntry = _loadingOverlayEntry;
+  _loadingOverlayEntry = null;
+  previousEntry?.remove();
   final screenWidth = MediaQuery.of(context).size.width;
   final isMobile = screenWidth < 600;
-  _loadingOverlayEntry = OverlayEntry(
+  final entry = OverlayEntry(
     builder: (context) => Stack(
       children: [
         Positioned.fill(
@@ -158,25 +188,29 @@ void showLoadingOverlay(BuildContext context,
       ],
     ),
   );
-  Overlay.of(context).insert(_loadingOverlayEntry!);
+  Overlay.of(context).insert(entry);
+  _loadingOverlayEntry = entry;
 }
 
 void hideLoadingOverlay() {
-  _loadingOverlayEntry?.remove();
+  final entry = _loadingOverlayEntry;
   _loadingOverlayEntry = null;
+  entry?.remove();
 }
 
 ScaffoldMessengerState showScaffoldError(
     {required BuildContext context, required String message}) {
   // Remove any existing overlay message
-  _currentOverlayEntry?.remove();
+  final previousEntry = _currentOverlayEntry;
+  if (previousEntry != null) _removeNotification(previousEntry);
 
   // Get screen width for responsive design
   final screenWidth = MediaQuery.of(context).size.width;
   final isMobile = screenWidth < 600;
 
   // Create a custom overlay message that will appear above modals
-  _currentOverlayEntry = OverlayEntry(
+  late final OverlayEntry entry;
+  entry = OverlayEntry(
     builder: (context) => Positioned(
       bottom: 20,
       left: _leftForDialog(isMobile, screenWidth),
@@ -222,8 +256,7 @@ ScaffoldMessengerState showScaffoldError(
                 icon: Icon(Icons.close,
                     color: Colors.white, size: isMobile ? 18 : 20),
                 onPressed: () {
-                  _currentOverlayEntry?.remove();
-                  _currentOverlayEntry = null;
+                  _removeNotification(entry);
                 },
                 padding: EdgeInsets.zero,
                 constraints: BoxConstraints(
@@ -238,12 +271,12 @@ ScaffoldMessengerState showScaffoldError(
   );
 
   // Insert the overlay entry
-  Overlay.of(context).insert(_currentOverlayEntry!);
+  Overlay.of(context).insert(entry);
+  _currentOverlayEntry = entry;
 
-  // Auto-remove after 2 seconds
-  Future.delayed(const Duration(seconds: 2), () {
-    _currentOverlayEntry?.remove();
-    _currentOverlayEntry = null;
+  // Auto-remove after 4 seconds, unless a newer message replaced this one.
+  Future.delayed(const Duration(seconds: 4), () {
+    _removeNotification(entry);
   });
 
   // Return ScaffoldMessenger for compatibility

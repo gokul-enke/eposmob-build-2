@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/features/billing/domain/product_details_helpers.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_display.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/product_card_actions.dart';
@@ -190,7 +191,7 @@ class _CardBodyTapTarget extends StatelessWidget {
     }
 
     return Semantics(
-      label: 'Add product to cart',
+      label: 'billing.add_product_to_cart'.tr,
       button: true,
       child: Material(
         color: Colors.transparent,

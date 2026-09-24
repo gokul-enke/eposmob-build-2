@@ -39,9 +39,9 @@ class ViewPurchaseWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!canViewPurchasePrice(context)) {
-      return const SafeArea(
+      return SafeArea(
         child: Center(
-          child: Text('Purchase permission is required to view details.'),
+          child: Text('purchase.permission_required_view_details'.tr),
         ),
       );
     }

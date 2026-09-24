@@ -99,11 +99,11 @@ class _PosSecurityKeyDialogState extends State<_PosSecurityKeyDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       key: const ValueKey('pos_security_key_dialog'),
-      title: const Row(
+      title: Row(
         children: [
           Icon(Icons.lock_outline, color: Color(0xFF2563EB)),
           SizedBox(width: 10),
-          Expanded(child: Text('Security Key Required')),
+          Expanded(child: Text('security_key.title'.tr)),
         ],
       ),
       content: SizedBox(
@@ -112,7 +112,9 @@ class _PosSecurityKeyDialogState extends State<_PosSecurityKeyDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Enter the 4-digit security key to ${widget.action}.'),
+            Text(
+              'security_key.instruction'.trParams({'action': widget.action}),
+            ),
             const SizedBox(height: 16),
             TextField(
               key: const ValueKey(PosSecurityKeyDialog.inputKey),
@@ -126,7 +128,7 @@ class _PosSecurityKeyDialogState extends State<_PosSecurityKeyDialog> {
               onSubmitted: (_) => _verify(),
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: InputDecoration(
-                labelText: '4-digit security key',
+                labelText: 'security_key.input_label'.tr,
                 border: const OutlineInputBorder(),
                 errorText: _errorText,
                 counterText: '',

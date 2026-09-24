@@ -1692,7 +1692,8 @@ class OrderPanelState extends State<OrderPanel> {
         if (mounted) {
           showScaffoldError(
             context: context,
-            message: 'Failed to mark items as served: ${response['message']}',
+          message: 'restaurant.failed_mark_served'.trParams(
+              {'message': '${response['message']}'}),
           );
         }
         return false;
@@ -1702,7 +1703,8 @@ class OrderPanelState extends State<OrderPanel> {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error marking items as served: $e',
+          message: 'restaurant.error_mark_served'.trParams(
+              {'error': '$e'}),
         );
       }
       return false;
@@ -2574,7 +2576,7 @@ class OrderPanelState extends State<OrderPanel> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Add Comment',
+                      'order_panel.add_comment'.tr,
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         FontSize.s16,
@@ -2590,7 +2592,7 @@ class OrderPanelState extends State<OrderPanel> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Comment',
+                  'order_panel.comment'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.medium,
                     FontSize.s12,
@@ -3390,12 +3392,12 @@ class OrderPanelState extends State<OrderPanel> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildSummaryRow(
-            'Net Amount',
+            'order_panel.net_amount'.tr,
             '$currency ${netAmount.toStringAsFixed(2)}',
             color: const Color(0xFF3F3F46),
           ),
           _buildSummaryRow(
-            'Tax',
+            'order_panel.tax'.tr,
             '$currency ${taxAmount.toStringAsFixed(2)}',
             color: const Color(0xFF7C8DB5),
           ),
@@ -3403,19 +3405,19 @@ class OrderPanelState extends State<OrderPanel> {
           Container(height: 1, color: const Color(0xFFE4E4ED)),
           const SizedBox(height: 8),
           _buildSummaryRow(
-            'Total Payable',
+            'order_panel.total_payable'.tr,
             '$currency ${totalPayable.toStringAsFixed(2)}',
             color: const Color(0xFF3B82F6),
             isBold: true,
             large: true,
           ),
           _buildSummaryRow(
-            'Total Paid',
+            'order_panel.total_paid'.tr,
             '$currency ${totalPaidAmount.toStringAsFixed(2)}',
             color: const Color(0xFF3F3F46),
           ),
           _buildSummaryRow(
-            'Balance',
+            'order_panel.balance'.tr,
             '$currency ${cashBalance.toStringAsFixed(2)}',
             color: const Color(0xFF00C739),
             isBold: true,
@@ -3562,7 +3564,9 @@ class OrderPanelState extends State<OrderPanel> {
         return _buildSavedOrdersList();
       }
       // For other errors, show the error message
-      return Center(child: Text('Error: $_error'));
+      return Center(
+        child: Text("${'general.error_prefix'.tr}$_error"),
+      );
     }
 
     if (_selectedOrder != null) {
@@ -3940,7 +3944,7 @@ class OrderPanelState extends State<OrderPanel> {
                                       ),
                                       const SizedBox(height: 20),
                                       Text(
-                                        'No orders found',
+                                        'order_panel.no_orders_found'.tr,
                                         textAlign: TextAlign.center,
                                         style: buildCustomStyle(
                                             FontWeightManager.bold,
@@ -3952,7 +3956,7 @@ class OrderPanelState extends State<OrderPanel> {
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        'Add products from the menu\nto start a new order',
+                                'order_panel.add_products_to_start'.tr,
                                         textAlign: TextAlign.center,
                                         style: buildCustomStyle(
                                             FontWeightManager.medium,
@@ -5137,10 +5141,10 @@ class OrderPanelState extends State<OrderPanel> {
       ),
       child: Column(
         children: [
-          _buildPanelHeader(
+            _buildPanelHeader(
             _selectedOrder['order_number'] != null
-                ? 'Edit Order - ${_selectedOrder['order_number']}'
-                : 'Edit Order',
+                ? '${'order_panel.edit_order'.tr} - ${_selectedOrder['order_number']}'
+                : 'order_panel.edit_order'.tr,
             Icons.shopping_cart,
             const Color(0xFFD97706),
             showBackButton: true,
@@ -5191,7 +5195,7 @@ class OrderPanelState extends State<OrderPanel> {
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                'No items in this order',
+                                'order_panel.no_items_in_order'.tr,
                                 style: buildCustomStyle(
                                     FontWeightManager.semiBold,
                                     widget.isCompact
@@ -5593,8 +5597,8 @@ class OrderPanelState extends State<OrderPanel> {
                                     children: [
                                       Text(
                                         useCompactActionLabels
-                                            ? 'KOT'
-                                            : 'Print KOT',
+                                            ? 'order_panel.kot'.tr
+                                            : 'order_panel.print_kot'.tr,
                                         style: buildCustomStyle(
                                             FontWeightManager.semiBold,
                                             widget.isCompact
@@ -5652,8 +5656,8 @@ class OrderPanelState extends State<OrderPanel> {
                                       children: [
                                         Text(
                                           useCompactActionLabels
-                                              ? 'BILL'
-                                              : 'Pre-Bill',
+                                              ? 'order_panel.bill'.tr
+                                              : 'order_panel.pre_bill'.tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.semiBold,
                                             widget.isCompact
@@ -5733,10 +5737,10 @@ class OrderPanelState extends State<OrderPanel> {
                                     children: [
                                       Text(
                                         allItemsServed
-                                            ? 'Confirm'
+                                            ? 'order_panel.confirm'.tr
                                             : (useCompactActionLabels
-                                                ? 'Serve'
-                                                : 'Mark Served'),
+                                                ? 'order_panel.serve'.tr
+                                                : 'order_panel.mark_served'.tr),
                                         style: buildCustomStyle(
                                             FontWeightManager.semiBold,
                                             widget.isCompact
@@ -5829,7 +5833,7 @@ class OrderPanelState extends State<OrderPanel> {
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildSummaryRow(
-            'Net Amount',
+            'order_panel.net_amount'.tr,
             '$currency ${finalOrderTotal.toStringAsFixed(2)}',
             color: const Color(0xFF3F3F46),
           ),
@@ -5837,14 +5841,14 @@ class OrderPanelState extends State<OrderPanel> {
           Container(height: 1, color: const Color(0xFFE4E4ED)),
           const SizedBox(height: 8),
           _buildSummaryRow(
-            'Total Payable',
+            'order_panel.total_payable'.tr,
             '$currency ${finalOrderTotal.toStringAsFixed(2)}',
             color: const Color(0xFF3B82F6),
             isBold: true,
             large: true,
           ),
           _buildSummaryRow(
-            'Total Paid',
+            'order_panel.total_paid'.tr,
             '$currency 0.00',
             color: const Color(0xFF3F3F46),
           ),
@@ -5974,7 +5978,9 @@ class OrderPanelState extends State<OrderPanel> {
         return CheckoutModal(
           mode: mode,
           title: title ??
-              (offlineSaveAndPrint ? 'Save Offline Order' : 'Finalize Order'),
+              (offlineSaveAndPrint
+                  ? 'order_panel.save_offline_order'.tr
+                  : 'order_panel.finalize_order'.tr),
           initialStep: initialStep,
           cartTotal: checkoutCartTotal,
           availableCustomers: _customers,
@@ -5982,7 +5988,9 @@ class OrderPanelState extends State<OrderPanel> {
           hasOpenedPaymentModalOnce: _hasOpenedPaymentModalOnce,
           confirmButtonTitle: offlineSaveAndPrint ? 'Save' : 'Confirm',
           printButtonTitle:
-              offlineSaveAndPrint ? 'Save & Print' : 'Confirm & Print',
+              offlineSaveAndPrint
+                  ? 'order_panel.save_and_print'.tr
+                  : 'general.confirm_and_print'.tr,
 
           // Delivery State
           enableDelivery: deliveryEnabled,
@@ -6685,7 +6693,8 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Error updating cart item: ${e.toString()}');
       showScaffoldError(
         context: context,
-        message: 'Failed to update cart item: ${e.toString()}',
+          message: 'restaurant.failed_update_cart_item'
+              .trParams({'error': e.toString()}),
       );
     }
   }
@@ -6738,7 +6747,7 @@ class OrderPanelState extends State<OrderPanel> {
         // Success - optimistic update was correct, just show success message
         showScaffold(
           context: context,
-          message: 'Item removed successfully',
+          message: 'billing.item_removed_successfully'.tr,
         );
 
         // Only refresh the saved orders list in the background to update totals
@@ -6762,7 +6771,8 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Error removing cart item: ${e.toString()}');
       showScaffoldError(
         context: context,
-        message: 'Failed to remove item: ${e.toString()}',
+          message: 'restaurant.failed_remove_item'
+              .trParams({'error': e.toString()}),
       );
     }
   }
@@ -6885,10 +6895,10 @@ class OrderPanelState extends State<OrderPanel> {
   Future<bool> _confirmCustomerCopyPrint() async {
     return (await ConfirmationDialog.show(
           context: context,
-          title: 'Print customer copy?',
-          message: 'Do you want to print a customer copy now?',
-          confirmText: 'Yes, print',
-          cancelText: 'No',
+          title: 'general.print_customer_copy'.tr,
+          message: 'general.print_customer_copy_prompt'.tr,
+          confirmText: 'general.yes_print'.tr,
+          cancelText: 'general.no'.tr,
         )) ??
         false;
   }
@@ -7164,7 +7174,8 @@ class OrderPanelState extends State<OrderPanel> {
       } catch (e) {
         debugPrint("ÃƒÂ¢Ã‚ÂÃ…â€™ Error printing bill: $e");
         showScaffoldError(
-            context: context, message: "Failed to print bill: $e");
+          context: context,
+          message: 'restaurant.failed_print_bill'.trParams({'error': '$e'}));
 
         // Even if print fails, the order was confirmed, so cleanup
         if (mounted) {
@@ -7869,7 +7880,8 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint('Error saving offline order: $e');
       showScaffoldError(
         context: context,
-        message: 'Failed to save offline order: ${e.toString()}',
+        message: 'restaurant.failed_save_offline_order'
+            .trParams({'error': e.toString()}),
       );
       return false;
     } finally {
@@ -8024,7 +8036,8 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint('Error confirming counter order: $e');
       showScaffoldError(
         context: context,
-        message: 'Failed to confirm counter order: ${e.toString()}',
+        message: 'restaurant.failed_confirm_counter_order'
+            .trParams({'error': e.toString()}),
       );
       return false;
     } finally {
@@ -8332,7 +8345,8 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Error confirming order: ${e.toString()}');
       showScaffoldError(
         context: context,
-        message: 'Failed to confirm order: ${e.toString()}',
+        message: 'restaurant.failed_confirm_order'
+            .trParams({'error': e.toString()}),
       );
       return false;
     } finally {
@@ -8730,7 +8744,8 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint('Error printing order summary: $e');
       showScaffoldError(
         context: context,
-        message: 'Failed to print order summary: ${e.toString()}',
+        message: 'restaurant.failed_print_order_summary'
+            .trParams({'error': e.toString()}),
       );
       return false;
     }

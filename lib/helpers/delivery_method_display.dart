@@ -87,6 +87,26 @@ class DeliveryMethodDisplay {
     return fromBackend;
   }
 
+  /// Display label for an order's delivery method, resolved from its id first.
+  ///
+  /// The order-details response returns `delivery_method_name` already
+  /// resolved to the store's default language and ships no `translations`
+  /// alongside it, so `delivery_method_id` is the only stable key — "Dine In"
+  /// matches no [DeliveryKind] token and would otherwise stay English forever.
+  ///
+  /// [name] is still needed as a fallback: when the registry is cold (a deep
+  /// link that lands before store bootstrap) or the method has since been
+  /// deleted, the id resolves to nothing, and echoing `199` back at the user
+  /// is worse than showing untranslated words.
+  static String labelForIdOrName(String? id, String? name) {
+    final methodId = id?.trim();
+    if (methodId != null && methodId.isNotEmpty) {
+      final method = DeliveryMethodRegistry.find(methodId);
+      if (method != null) return labelForMethod(method);
+    }
+    return labelFor(name);
+  }
+
   /// Display label for a stored delivery-method string.
   static String labelFor(String? value) {
     final method = DeliveryMethodRegistry.find(value);
