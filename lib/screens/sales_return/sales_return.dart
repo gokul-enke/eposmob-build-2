@@ -831,16 +831,22 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               const SizedBox(height: 16),
               SalesReturnSectionTitle(title: 'sales_return_form.section_order_items'.tr),
               const SizedBox(height: 12),
-              Consumer<SalesProvider>(
-                builder: (context, salesProvider, _) {
-                  final itemCount = salesProvider.salesReturnItems.length;
-                  final isPhone = salesReturnIsPhone(context);
-                  if (isPhone) {
-                    return _buildOrderDetails();
-                  }
-                  return SizedBox(
-                    height: _itemsTableHeight(itemCount),
-                    child: _buildOrderDetails(),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final useItemCards =
+                      salesReturnUseItemCards(constraints.maxWidth);
+
+                  return Consumer<SalesProvider>(
+                    builder: (context, salesProvider, _) {
+                      final itemCount = salesProvider.salesReturnItems.length;
+                      if (useItemCards) {
+                        return _buildOrderDetails(useItemCards: true);
+                      }
+                      return SizedBox(
+                        height: _itemsTableHeight(itemCount),
+                        child: _buildOrderDetails(useItemCards: false),
+                      );
+                    },
                   );
                 },
               ),
@@ -1661,10 +1667,9 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     );
   }
 
-  Widget _buildOrderDetails() {
+  Widget _buildOrderDetails({required bool useItemCards}) {
     return Consumer<SalesProvider>(builder: (context, salesProvider, child) {
       final salesReturnItems = salesProvider.salesReturnItems;
-      final isPhone = salesReturnIsPhone(context);
 
       if (salesReturnItems.isEmpty) {
         return SalesReturnContentCard(
@@ -1691,7 +1696,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         );
       }
 
-      if (isPhone) {
+      if (useItemCards) {
         return Column(
           children: salesReturnItems.asMap().entries.map((entry) {
             final index = entry.key;
@@ -1702,7 +1707,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       }
 
       return SalesReturnResponsiveTable(
-        minWidth: 960,
+        minWidth: kSalesReturnItemsTableMinWidth,
         table: SizedBox(
           height: _itemsTableHeight(salesReturnItems.length),
           child: Column(
