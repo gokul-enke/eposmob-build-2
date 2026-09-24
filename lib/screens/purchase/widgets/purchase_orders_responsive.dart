@@ -262,7 +262,7 @@ class PurchaseOrdersIconAction extends StatelessWidget {
 }
 
 /// Horizontally scrollable table wrapper for narrow screens.
-class PurchaseOrdersResponsiveTable extends StatelessWidget {
+class PurchaseOrdersResponsiveTable extends StatefulWidget {
   final Widget table;
   final double minWidth;
 
@@ -273,6 +273,21 @@ class PurchaseOrdersResponsiveTable extends StatelessWidget {
   });
 
   @override
+  State<PurchaseOrdersResponsiveTable> createState() =>
+      _PurchaseOrdersResponsiveTableState();
+}
+
+class _PurchaseOrdersResponsiveTableState
+    extends State<PurchaseOrdersResponsiveTable> {
+  final ScrollController _horizontalController = ScrollController();
+
+  @override
+  void dispose() {
+    _horizontalController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return PurchaseOrdersContentCard(
       padding: EdgeInsets.zero,
@@ -280,14 +295,22 @@ class PurchaseOrdersResponsiveTable extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            if (constraints.maxWidth >= minWidth) {
-              return table;
+            if (constraints.maxWidth >= widget.minWidth) {
+              return widget.table;
             }
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minWidth: minWidth),
-                child: table,
+            return Scrollbar(
+              controller: _horizontalController,
+              thumbVisibility: true,
+              trackVisibility: true,
+              interactive: true,
+              scrollbarOrientation: ScrollbarOrientation.bottom,
+              child: SingleChildScrollView(
+                controller: _horizontalController,
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: widget.minWidth,
+                  child: widget.table,
+                ),
               ),
             );
           },
