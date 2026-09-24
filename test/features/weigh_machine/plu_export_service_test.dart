@@ -79,6 +79,25 @@ void main() {
     );
   });
 
+  test('uses the active store' 's stock-row SKUs', () async {
+    SharedPreferences.setMockInitialValues({'active_store_id': 35});
+    final file = await service.export([
+      GetProduct(
+        productId: 1,
+        productName: 'Mutton',
+        stock: [Stock(storeId: 35, sku: '4225')],
+      ),
+      GetProduct(
+        productId: 2,
+        productName: 'Other store only',
+        stock: [Stock(storeId: 2, sku: '9999')],
+      ),
+    ]);
+    final csv = await file.readAsString();
+    expect(csv, contains('Mutton'));
+    expect(csv, isNot(contains('Other store only')));
+  });
+
   test('discardFile removes PLU.csv from the default folder', () async {
     final file = await service.export([
       GetProduct(productId: 1, productName: 'Apples', sku: 'APL'),

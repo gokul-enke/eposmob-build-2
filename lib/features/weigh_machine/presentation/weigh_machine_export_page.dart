@@ -34,6 +34,9 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
   PluProductView _view = _defaultView;
   String? _destination;
   bool _customFolder = false;
+
+  /// Whose stock rows supply each product's SKU.
+  int? _storeId;
   bool _autoEnabled = false;
   PluTask? _running;
   PluLastSave? _lastSave;
@@ -49,12 +52,14 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
     final selected = await service.selectedProductIds();
     final destination = await service.directoryPath();
     final customFolder = await service.usesCustomDirectory();
+    final storeId = await service.activeStoreId();
     final autoEnabled = await service.autoEnabled();
     if (mounted) {
       setState(() {
         _selected = selected;
         _destination = destination;
         _customFolder = customFolder;
+        _storeId = storeId;
         _autoEnabled = autoEnabled;
       });
     }
@@ -65,6 +70,9 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
     _search.dispose();
     super.dispose();
   }
+
+  String? _skuOf(GetProduct product) =>
+      PluCsv.skuOf(product, storeId: _storeId);
 
   bool get _hasFilters => _search.text.trim().isNotEmpty || _category != null;
 
@@ -86,7 +94,7 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
         PluProductView.all => filtered,
         PluProductView.selected =>
           filtered.where(_isSelected).toList(growable: false),
-        PluProductView.weighted => PluCsv.weighted(filtered),
+        PluProductView.weighted => PluCsv.weighted(filtered, storeId: _storeId),
       };
 
   /// Ticks drive Excel's "Only ticked products" option. Any product can be
@@ -171,7 +179,7 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
         );
       }
       // Every SKU product, ticked or not.
-      final items = PluCsv.weighted(catalog.products);
+      final items = PluCsv.weighted(catalog.products, storeId: _storeId);
       if (items.isEmpty) {
         _message('No products have an SKU yet, so there is nothing for '
             'the weigh machine.');
@@ -441,11 +449,11 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
       ..sort();
     final selectedCount = all.where(_isSelected).length;
     // What PLU.csv will hold: every SKU product, regardless of ticks.
-    final pluCount = PluCsv.weighted(all).length;
+    final pluCount = PluCsv.weighted(all, storeId: _storeId).length;
     final counts = PluViewCounts(
       all: filtered.length,
       selected: filtered.where(_isSelected).length,
-      weighted: PluCsv.weighted(filtered).length,
+      weighted: PluCsv.weighted(filtered, storeId: _storeId).length,
     );
     final shownSelected = _view == PluProductView.selected
         ? visible.length
@@ -545,6 +553,7 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
                                     Expanded(
                                       child: PluProductTable(
                                         products: visible,
+                                        skuOf: _skuOf,
                                         isSelected: _isSelected,
                                         onToggle: toggle,
                                         allShownState: allShownState,
@@ -617,6 +626,7 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
                       final product = visible[index];
                       return PluProductCard(
                         product: product,
+                        sku: _skuOf(product),
                         selected: _isSelected(product),
                         onToggle: toggle,
                       );

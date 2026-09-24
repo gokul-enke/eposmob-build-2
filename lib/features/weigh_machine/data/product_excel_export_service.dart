@@ -5,6 +5,7 @@ import 'dart:isolate';
 import 'package:archive/archive.dart';
 import 'package:excel/excel.dart';
 import 'package:pos_machine/features/weigh_machine/data/plu_export_service.dart';
+import 'package:pos_machine/features/weigh_machine/domain/plu_csv.dart';
 import 'package:pos_machine/models/get_product.dart';
 
 enum ProductExcelField {
@@ -24,7 +25,8 @@ enum ProductExcelField {
   /// Pre-ticked in the export dialog; users add the other columns they need.
   static const defaults = <ProductExcelField>[name];
 
-  CellValue? value(GetProduct product) {
+  /// [storeId] picks which store's stock rows supply the SKU.
+  CellValue? value(GetProduct product, {int? storeId}) {
     switch (this) {
       case name:
         return TextCellValue(product.productName ?? '');
@@ -39,7 +41,7 @@ enum ProductExcelField {
       case unit:
         return TextCellValue(product.unit ?? '');
       case sku:
-        return TextCellValue(product.sku ?? '');
+        return TextCellValue(PluCsv.skuOf(product, storeId: storeId) ?? '');
       case purchasePrice:
         return _number(product.purchasePrice);
       case arabicName:
@@ -62,10 +64,11 @@ class ProductExcelExportService {
     if (products.isEmpty) throw StateError('There are no products to export.');
     if (fields.isEmpty) throw StateError('Choose at least one field.');
 
+    final storeId = await PluExportService.instance.activeStoreId();
     final rows = <List<CellValue?>>[
       [for (final field in fields) TextCellValue(field.label)],
       for (final product in products)
-        [for (final field in fields) field.value(product)],
+        [for (final field in fields) field.value(product, storeId: storeId)],
     ];
     final bytes = await Isolate.run(() => _encodeWorkbook(rows, fields.length));
     final directory =

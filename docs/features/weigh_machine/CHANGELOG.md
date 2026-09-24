@@ -25,6 +25,8 @@
 - PLU.csv is removed on store switch, Reset API key and Clear local storage
   (kept on logout), so another store's or tenant's items never stay where
   the scale imports.
+- SKU is read from the active store's stock rows when the product has none
+  of its own (the API puts it there). Excel's SKU column uses the same rule.
 - Excel export now ticks only Product Name by default, with a Select all link.
 - Category is now the shared searchable dropdown, which also fixes Reset not
   clearing the selected category.

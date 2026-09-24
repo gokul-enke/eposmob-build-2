@@ -62,6 +62,12 @@ class PluExportService {
     return 'plu_export_${tenant}_$store';
   }
 
+  /// The active store, whose stock rows decide each product's SKU.
+  Future<int?> activeStoreId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('active_store_id');
+  }
+
   Future<bool> autoEnabled() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool('${await _prefix()}_auto') ?? false;
@@ -175,7 +181,7 @@ class PluExportService {
   /// Writes PLU.csv. Products without an SKU are never written, whatever
   /// the caller passes; see [PluCsv.isWeighted].
   Future<File> export(Iterable<GetProduct> products) async {
-    final items = PluCsv.weighted(products);
+    final items = PluCsv.weighted(products, storeId: await activeStoreId());
     if (items.isEmpty) {
       throw StateError('Select at least one product with an SKU.');
     }
@@ -224,7 +230,10 @@ class PluExportService {
   Future<void> _autoWrite(LocalProductProvider catalog, int generation) async {
     if (!await autoEnabled()) return;
     // Every SKU product; ticks on the page are for Excel only.
-    final items = PluCsv.weighted(catalog.products);
+    final items = PluCsv.weighted(
+      catalog.products,
+      storeId: await activeStoreId(),
+    );
     if (items.isEmpty) return;
     _writing = true;
     try {

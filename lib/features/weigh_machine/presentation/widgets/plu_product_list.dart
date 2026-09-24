@@ -321,6 +321,7 @@ class PluProductTable extends StatelessWidget {
   const PluProductTable({
     super.key,
     required this.products,
+    required this.skuOf,
     required this.isSelected,
     required this.onToggle,
     required this.allShownState,
@@ -331,6 +332,9 @@ class PluProductTable extends StatelessWidget {
   static const rowHeight = 56.0;
 
   final List<GetProduct> products;
+
+  /// The product's SKU in the active store, or null (see [PluCsv.skuOf]).
+  final String? Function(GetProduct) skuOf;
   final bool Function(GetProduct) isSelected;
   final void Function(GetProduct, bool) onToggle;
 
@@ -397,6 +401,7 @@ class PluProductTable extends StatelessWidget {
                       final product = products[index];
                       return _TableRow(
                         product: product,
+                        sku: skuOf(product),
                         selected: isSelected(product),
                         onToggle: onToggle,
                       );
@@ -440,11 +445,13 @@ class _HeaderCell extends StatelessWidget {
 class _TableRow extends StatelessWidget {
   const _TableRow({
     required this.product,
+    required this.sku,
     required this.selected,
     required this.onToggle,
   });
 
   final GetProduct product;
+  final String? sku;
   final bool selected;
   final void Function(GetProduct, bool) onToggle;
 
@@ -469,7 +476,7 @@ class _TableRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Any product can be ticked (for Excel); the SKU only drives PLU.csv.
-    final weighted = PluCsv.isWeighted(product);
+    final weighted = sku != null;
     return Material(
       color: selected
           ? WeighUiColors.softBlue.withValues(alpha: 0.6)
@@ -521,7 +528,7 @@ class _TableRow extends StatelessWidget {
                 ),
               ),
               _cell(
-                weighted ? product.sku!.trim() : '—',
+                sku ?? '—',
                 flex: 2,
                 style: TextStyle(
                   color: weighted ? WeighUiColors.body : WeighUiColors.muted,
@@ -565,19 +572,23 @@ class PluProductCard extends StatelessWidget {
   const PluProductCard({
     super.key,
     required this.product,
+    required this.sku,
     required this.selected,
     required this.onToggle,
   });
 
   final GetProduct product;
+
+  /// The product's SKU in the active store, or null.
+  final String? sku;
   final bool selected;
   final void Function(GetProduct, bool) onToggle;
 
   @override
   Widget build(BuildContext context) {
-    final weighted = PluCsv.isWeighted(product);
+    final weighted = sku != null;
     final details = [
-      if (weighted) 'SKU ${product.sku!.trim()}',
+      if (sku != null) 'SKU $sku',
       product.category?.name ?? 'Uncategorized',
       if (product.barcode?.isNotEmpty == true) product.barcode!,
       if (product.unit?.isNotEmpty == true) product.unit!,

@@ -26,9 +26,13 @@ Per tenant and store, `PluExportService` stores in shared preferences:
 
 ## Weighted products
 
-A product is **weighted** (a weigh-machine item) when it has a non-blank SKU.
-The back office sets an SKU only on products sold through the scale. The
-`weight_info.is_weighted` flag is not used; the catalog does not send it.
+A product is **weighted** (a weigh-machine item) when it has a non-blank SKU in
+the active store (`PluCsv.skuOf`). The catalog API usually leaves the product's
+own `sku` empty and sets it on each store's stock rows (`stock[].sku`), so the
+product-level SKU wins, then the latest stock row of the active store. Stock
+rows of other stores are ignored. The back office sets an SKU only on
+products sold through the scale. The `weight_info.is_weighted` flag is not
+used; the catalog does not send it.
 
 - `PLU.csv` always contains **every** weighted product. Ticks do not affect
   it. Download, Sync & download and the automatic update all write the full
