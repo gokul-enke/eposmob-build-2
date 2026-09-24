@@ -206,17 +206,15 @@ class ReceiptConfigurationContract {
       // contain only punctuation/numbers.
       _clean(safeArabicFallback),
     ]);
-    // In bilingual API responses `default` is the primary English label and
-    // `value` is the optional secondary-language label. The primary label may
-    // fall back when it is missing, but the secondary label must be explicitly
-    // configured: an empty `value` means that the store wants English only for
-    // this field.
-    final bilingualEnglish = _firstNonEmpty([
-      _withoutArabic(defaultValue),
-      _withoutArabic(resolvedEnglish),
-      _withoutArabic(safeEnglishFallback),
-    ]);
-    final bilingualSecondary = value;
+    // In bilingual API responses `value` is the Arabic label and `default` is
+    // the English label. Each line prints only when the store typed it: a store
+    // that fills every Arabic value but types English for just a few fields
+    // wants English on those fields alone, so a missing `default` must never
+    // be replaced by a master default or a renderer placeholder. Fallbacks
+    // apply only when the store typed nothing for this key, and then the
+    // Arabic one is preferred.
+    final bilingualArabic = value;
+    final bilingualEnglish = defaultValue;
 
     switch (mode) {
       case ReceiptLanguageMode.english:
@@ -224,15 +222,24 @@ class ReceiptConfigurationContract {
       case ReceiptLanguageMode.arabic:
         return arabic;
       case ReceiptLanguageMode.bilingual:
-        if (bilingualSecondary.isEmpty) return bilingualEnglish;
+        if (bilingualArabic.isEmpty && bilingualEnglish.isEmpty) {
+          return _firstNonEmpty([
+            _withArabic(resolvedArabic),
+            _withArabic(safeArabicFallback),
+            _clean(resolvedArabic),
+            _clean(safeArabicFallback),
+            _clean(resolvedEnglish),
+            safeEnglishFallback,
+          ]);
+        }
+        if (bilingualArabic.isEmpty) return bilingualEnglish;
         if (bilingualEnglish.isEmpty ||
-            bilingualSecondary.toLowerCase() ==
-                bilingualEnglish.toLowerCase()) {
-          return bilingualSecondary;
+            bilingualArabic.toLowerCase() == bilingualEnglish.toLowerCase()) {
+          return bilingualArabic;
         }
         return inlineBilingual
-            ? '$bilingualSecondary / $bilingualEnglish'
-            : '$bilingualSecondary\n$bilingualEnglish';
+            ? '$bilingualArabic / $bilingualEnglish'
+            : '$bilingualArabic\n$bilingualEnglish';
     }
   }
 
