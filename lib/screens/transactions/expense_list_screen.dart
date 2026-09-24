@@ -130,7 +130,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
             _buildFilterSection(isPhone),
             const SizedBox(height: 12),
           ],
-          Expanded(child: _buildExpenseTable(isPhone)),
+          Expanded(child: _buildExpenseTable()),
           const SizedBox(height: 12),
           _buildPaginationControls(),
         ],
@@ -528,7 +528,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
     Get.put(ExpenseViewController()).selectedRef.value = referenceNumber;
   }
 
-  Widget _buildExpenseTable(bool isPhone) {
+  Widget _buildExpenseTable() {
     return Consumer<ExpenseProvider>(
       builder: (context, provider, child) {
         final currency =
@@ -587,16 +587,26 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
           );
         }
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (!isPhone) DashboardSectionHeader(title: 'expense.expense_records'.tr),
-            Expanded(
-              child: isPhone
-                  ? _buildMobileList(expenseList, currency)
-                  : _buildDesktopTable(expenseList, currency),
-            ),
-          ],
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final useCards = expenseListUseCards(constraints.maxWidth);
+            final isPhone = expenseListIsPhone(context);
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (!isPhone)
+                  DashboardSectionHeader(
+                    title: 'expense.expense_records'.tr,
+                  ),
+                Expanded(
+                  child: useCards
+                      ? _buildMobileList(expenseList, currency)
+                      : _buildDesktopTable(expenseList, currency),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -708,6 +718,8 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                 Divider(color: Colors.grey.withOpacity(0.08), height: 16),
                 _buildInfoRow('expense.col_payment_date'.tr, dateStr),
                 _buildInfoRow('expense.category'.tr, exp.category),
+                _buildInfoRow('expense.col_debit_ac'.tr, exp.debitAccount),
+                _buildInfoRow('expense.col_credit_ac'.tr, exp.creditAccount),
               ],
             ),
           ),
@@ -718,6 +730,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
 
   Widget _buildDesktopTable(List<Expense> expenseList, String currency) {
     return ExpenseListResponsiveTable(
+      minWidth: kExpenseListTableMinWidth,
       table: Column(
         children: [
           Container(

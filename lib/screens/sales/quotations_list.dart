@@ -986,10 +986,14 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
   }
 
   Widget _buildQuotationsContent(QuotationsProvider provider) {
-    if (quotationsIsPhone(context)) {
-      return _buildMobileList(provider);
-    }
-    return _buildDesktopTable(provider);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (quotationsUseCards(constraints.maxWidth)) {
+          return _buildMobileList(provider);
+        }
+        return _buildDesktopTable(provider);
+      },
+    );
   }
 
   Widget _buildMobileList(QuotationsProvider provider) {
@@ -1144,7 +1148,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
 
   Widget _buildDesktopTable(QuotationsProvider provider) {
     return QuotationsResponsiveTable(
-      minWidth: 900,
+      minWidth: kQuotationsTableMinWidth,
       table: Column(
         children: [
           Container(

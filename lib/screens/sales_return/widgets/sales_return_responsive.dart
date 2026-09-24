@@ -9,13 +9,13 @@ import 'package:pos_machine/resources/style_manager.dart';
 /// Presentational only — no business logic, providers or navigation.
 
 const double kSalesReturnPhoneBreakpoint = 600;
-const double kSalesReturnItemsTableMinWidth = 960;
+const double kSalesReturnItemsTableMinWidth = 1100;
 
 bool salesReturnIsPhone(BuildContext context) =>
     MediaQuery.of(context).size.width < kSalesReturnPhoneBreakpoint;
 
 bool salesReturnUseItemCards(double availableWidth) =>
-    availableWidth < kSalesReturnItemsTableMinWidth;
+    availableWidth < kSalesReturnPhoneBreakpoint;
 
 double salesReturnHorizontalPadding(double width) =>
     width < kSalesReturnPhoneBreakpoint ? 12.0 : 20.0;
@@ -330,7 +330,7 @@ class SalesReturnIconAction extends StatelessWidget {
 }
 
 /// Horizontally scrollable table wrapper for narrow screens.
-class SalesReturnResponsiveTable extends StatelessWidget {
+class SalesReturnResponsiveTable extends StatefulWidget {
   final Widget table;
   final double minWidth;
 
@@ -341,6 +341,21 @@ class SalesReturnResponsiveTable extends StatelessWidget {
   });
 
   @override
+  State<SalesReturnResponsiveTable> createState() =>
+      _SalesReturnResponsiveTableState();
+}
+
+class _SalesReturnResponsiveTableState
+    extends State<SalesReturnResponsiveTable> {
+  final ScrollController _horizontalController = ScrollController();
+
+  @override
+  void dispose() {
+    _horizontalController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return SalesReturnContentCard(
       padding: EdgeInsets.zero,
@@ -348,14 +363,22 @@ class SalesReturnResponsiveTable extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            if (constraints.maxWidth >= minWidth) {
-              return table;
+            if (constraints.maxWidth >= widget.minWidth) {
+              return widget.table;
             }
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minWidth: minWidth),
-                child: table,
+            return Scrollbar(
+              controller: _horizontalController,
+              thumbVisibility: true,
+              trackVisibility: true,
+              interactive: true,
+              scrollbarOrientation: ScrollbarOrientation.bottom,
+              child: SingleChildScrollView(
+                controller: _horizontalController,
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: widget.minWidth,
+                  child: widget.table,
+                ),
               ),
             );
           },
