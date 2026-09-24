@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/models/customer_purchase_history.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
@@ -153,19 +154,20 @@ class _ZeroPriceQuickEntryModalState extends State<ZeroPriceQuickEntryModal> {
     final num quantity = _currentQuantity();
 
     if (price == null || price <= 0) {
-      setState(() => _errorText = 'Enter a valid price');
+      setState(() => _errorText = 'general.valid_price_required'.tr);
       _focusPriceField();
       return;
     }
     final double? minPrice = widget.minimumPrice;
     if (minPrice != null && price < minPrice - 0.001) {
-      setState(() => _errorText =
-          'Price is below the minimum sale price of ${minPrice.toStringAsFixed(2)}');
+      setState(() => _errorText = 'general.price_below_minimum'.trParams({
+            'price': minPrice.toStringAsFixed(2),
+          }));
       _focusPriceField();
       return;
     }
     if (quantity <= 0) {
-      setState(() => _errorText = 'Enter a valid quantity');
+      setState(() => _errorText = 'general.valid_quantity_required'.tr);
       _quantityFocusNode.requestFocus();
       _bindKeyboard(_quantityController);
       return;
@@ -280,7 +282,7 @@ class _ZeroPriceQuickEntryModalState extends State<ZeroPriceQuickEntryModal> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Set Price & Quantity',
+                          'billing.set_price_quantity'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.bold,
                             FontSize.s16,
@@ -290,7 +292,7 @@ class _ZeroPriceQuickEntryModalState extends State<ZeroPriceQuickEntryModal> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Enter values before adding to cart',
+                          'billing.enter_values_before_adding'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.regular,
                             FontSize.s12,
@@ -368,7 +370,7 @@ class _ZeroPriceQuickEntryModalState extends State<ZeroPriceQuickEntryModal> {
                                     if (stockQuantity != null)
                                       _metaChip(
                                         Icons.inventory_2_outlined,
-                                        'Stock: $stockQuantity',
+                                        '${'stock.stock_prefix'.tr}: $stockQuantity',
                                       ),
                                   ],
                                 ),
@@ -382,7 +384,7 @@ class _ZeroPriceQuickEntryModalState extends State<ZeroPriceQuickEntryModal> {
                   const SizedBox(height: 20),
 
                   // Quantity control
-                  _sectionLabel('Quantity'),
+                  _sectionLabel('stock.quantity'.tr),
                   const SizedBox(height: 8),
                   _QuantityStepper(
                     controller: _quantityController,
@@ -398,7 +400,7 @@ class _ZeroPriceQuickEntryModalState extends State<ZeroPriceQuickEntryModal> {
 
                   // Price field – listed after quantity in the tree, but is the
                   // intended initial focus target (see _focusPriceField).
-                  _sectionLabel('Price (${widget.currency})'),
+                  _sectionLabel('${'product_detail.price'.tr} (${widget.currency})'),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _priceController,
@@ -500,7 +502,7 @@ class _ZeroPriceQuickEntryModalState extends State<ZeroPriceQuickEntryModal> {
                         ),
                       ),
                       child: Text(
-                        'Cancel',
+                        'general.cancel'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s14,
@@ -524,7 +526,7 @@ class _ZeroPriceQuickEntryModalState extends State<ZeroPriceQuickEntryModal> {
                         ),
                       ),
                       child: Text(
-                        'Apply',
+                        'general.apply'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s14,

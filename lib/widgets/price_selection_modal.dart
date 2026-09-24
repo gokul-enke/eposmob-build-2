@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -129,7 +130,7 @@ class _PriceSelectionModalState extends State<PriceSelectionModal> {
         child: Column(
           children: [
             Text(
-              'Select Price for',
+              'billing.select_price_for'.tr,
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s16,
@@ -227,7 +228,7 @@ class _PriceSelectionModalState extends State<PriceSelectionModal> {
                       ),
                       child: Center(
                         child: Text(
-                          'Cancel',
+                          'general.cancel'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.semiBold,
                             FontSize.s14,

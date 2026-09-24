@@ -70,7 +70,7 @@ class BillingActionButtons extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Semantics(
-            label: 'Save Order',
+            label: 'billing.save_order'.tr,
             button: true,
             child: ExcludeSemantics(
               child: ElevatedButton.icon(
@@ -85,8 +85,8 @@ class BillingActionButtons extends StatelessWidget {
                       )
                     : const Icon(Icons.save_outlined,
                         color: Colors.white, size: 18),
-                label: const Text(
-                  'Save Order',
+                label: Text(
+                  'billing.save_order'.tr,
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -251,7 +251,7 @@ class BillingActionButtons extends StatelessWidget {
 
   Widget _buildOfflineActions({required bool hasItems}) {
     return Semantics(
-      label: 'Save and Print',
+      label: 'billing.save_and_print'.tr,
       button: true,
       child: ExcludeSemantics(
         child: ElevatedButton.icon(
@@ -265,8 +265,8 @@ class BillingActionButtons extends StatelessWidget {
                   ),
                 )
               : const Icon(Icons.print, color: Colors.white, size: 18),
-          label: const Text(
-            'Save & Print',
+          label: Text(
+            'billing.save_and_print'.tr,
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -299,7 +299,7 @@ class BillingActionButtons extends StatelessWidget {
         if (showConfirmButton) ...[
           Expanded(
             child: Semantics(
-              label: 'Confirm',
+              label: 'general.confirm'.tr,
               button: true,
               child: ExcludeSemantics(
                 child: ElevatedButton.icon(
@@ -314,8 +314,8 @@ class BillingActionButtons extends StatelessWidget {
                         )
                       : const Icon(Icons.check_circle,
                           color: Colors.white, size: 18),
-                  label: const Text(
-                    'Confirm',
+                  label: Text(
+                    'general.confirm'.tr,
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -344,7 +344,7 @@ class BillingActionButtons extends StatelessWidget {
         if (showConfirmAndPrintButton)
           Expanded(
             child: Semantics(
-              label: 'Confirm & Print',
+              label: 'general.confirm_and_print'.tr,
               button: true,
               child: ExcludeSemantics(
                 child: ElevatedButton.icon(
@@ -358,8 +358,8 @@ class BillingActionButtons extends StatelessWidget {
                           ),
                         )
                       : const Icon(Icons.print, color: Colors.white, size: 18),
-                  label: const Text(
-                    'Confirm & Print',
+                  label: Text(
+                    'general.confirm_and_print'.tr,
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,

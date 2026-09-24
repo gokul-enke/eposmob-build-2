@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -250,11 +251,14 @@ class PaymentCoordinator {
       } else {
         showScaffoldError(
           context: context,
-          message: 'Error Occurred! Try Again',
+          message: 'billing.error_occurred_try_again'.tr,
         );
       }
     } else {
-      showScaffoldError(context: context, message: 'Not Authenticated');
+      showScaffoldError(
+        context: context,
+        message: 'general.not_authenticated'.tr,
+      );
     }
   }
 }

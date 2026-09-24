@@ -3,8 +3,116 @@
 #include <windows.h>
 #include <shellapi.h>
 
+#include <string>
+#include <vector>
+
 #include "flutter_window.h"
 #include "utils.h"
+#include "startup_window.h"
+#include "app_restart.h"
+
+namespace {
+
+// Session-scoped, so two Windows users on the same machine (or two RDP
+// sessions) can still each run their own till.
+constexpr wchar_t kSingleInstanceMutexName[] =
+    L"Local\\CLOUDPOS.EposMob.SingleInstance";
+
+// The window class every Flutter Windows runner registers. Matching on the
+// class alone would also match other Flutter apps, so we additionally require
+// the owning process to be running our exact executable.
+constexpr wchar_t kFlutterWindowClassName[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
+
+// Escape hatch for support/QA: deliberately start a second copy.
+constexpr char kAllowMultipleInstancesFlag[] = "--allow-multiple-instances";
+
+std::wstring GetImagePathForProcess(HANDLE process) {
+  wchar_t buffer[MAX_PATH * 4];
+  DWORD size = ARRAYSIZE(buffer);
+  if (!::QueryFullProcessImageNameW(process, 0, buffer, &size)) {
+    return std::wstring();
+  }
+  return std::wstring(buffer, size);
+}
+
+struct ExistingWindowSearch {
+  DWORD own_pid = 0;
+  std::wstring own_image;
+  HWND found = nullptr;
+};
+
+BOOL CALLBACK FindExistingInstanceWindow(HWND hwnd, LPARAM lparam) {
+  auto* search = reinterpret_cast<ExistingWindowSearch*>(lparam);
+  // During engine startup the real runner exists but has not painted. Focus
+  // the visible splash instead; never reveal a blank runner prematurely.
+  if (!::IsWindowVisible(hwnd) &&
+      ::GetPropW(hwnd, L"CLOUDPOS.ReadyWindow") == nullptr) return TRUE;
+
+  wchar_t class_name[256];
+  if (::GetClassNameW(hwnd, class_name, ARRAYSIZE(class_name)) == 0) {
+    return TRUE;
+  }
+  const bool cloudpos_window = ::GetPropW(hwnd, L"CLOUDPOS.ApplicationWindow") != nullptr;
+  if (!cloudpos_window && ::wcscmp(class_name, kFlutterWindowClassName) != 0) {
+    return TRUE;
+  }
+
+  DWORD pid = 0;
+  ::GetWindowThreadProcessId(hwnd, &pid);
+  if (pid == 0 || pid == search->own_pid) {
+    return TRUE;
+  }
+
+  HANDLE process = ::OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+  if (process == nullptr) {
+    return TRUE;
+  }
+  std::wstring image = GetImagePathForProcess(process);
+  ::CloseHandle(process);
+
+  if (cloudpos_window || (!image.empty() && !search->own_image.empty() &&
+      ::_wcsicmp(image.c_str(), search->own_image.c_str()) == 0)) {
+    search->found = hwnd;
+    return FALSE;  // Stop enumerating.
+  }
+  return TRUE;
+}
+
+// Brings the already-running copy to the front, so the double-click the user
+// just made still feels like it did something.
+bool FocusRunningInstance() {
+  ExistingWindowSearch search;
+  search.own_pid = ::GetCurrentProcessId();
+  search.own_image = GetImagePathForProcess(::GetCurrentProcess());
+
+  ::EnumWindows(FindExistingInstanceWindow, reinterpret_cast<LPARAM>(&search));
+  if (search.found == nullptr) {
+    return false;
+  }
+
+  if (::IsIconic(search.found)) {
+    ::ShowWindow(search.found, SW_RESTORE);
+  } else {
+    ::ShowWindow(search.found, SW_SHOW);
+  }
+  // The second process may itself have been launched with SW_HIDE. Explicitly
+  // show the existing window instead of letting that startup flag hide it.
+  if (!::SetWindowPos(search.found, HWND_TOP, 0, 0, 0, 0,
+      SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW | SWP_ASYNCWINDOWPOS)) return false;
+  ::SetForegroundWindow(search.found);
+  return true;
+}
+
+bool HasFlag(const std::vector<std::string>& arguments, const char* flag) {
+  for (const std::string& argument : arguments) {
+    if (argument == flag) {
+      return true;
+    }
+  }
+  return false;
+}
+
+}  // namespace
 
 // Check if the Visual C++ 2015-2022 Redistributable runtime is available.
 // Returns true if the required DLLs can be loaded, false otherwise.
@@ -38,12 +146,54 @@ void PromptVCRuntimeInstall() {
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
+  std::vector<std::string> command_line_arguments = GetCommandLineArguments();
+  int restart_exit_code = EXIT_FAILURE;
+  // Helpers must run before the single-instance gate and Flutter/Hive startup.
+  if (RunCloudPosRestartHelper(command_line_arguments, &restart_exit_code)) {
+    return restart_exit_code;
+  }
   // Check for Visual C++ Redistributable before anything else
   if (!IsVCRuntimeInstalled()) {
     PromptVCRuntimeInstall();
     return EXIT_FAILURE;
   }
 
+  // Only one copy may run per Windows session. A second copy points at the
+  // same Hive directory and fights the first one for its box locks, which
+  // ends in a long stall on startup and can corrupt the boxes outright.
+  // The handle is held for the lifetime of the process; Windows destroys the
+  // mutex when we exit or crash, so a stale mutex can never lock a user out.
+  HANDLE single_instance_mutex = nullptr;
+  if (!HasFlag(command_line_arguments, kAllowMultipleInstancesFlag)) {
+    single_instance_mutex =
+        ::CreateMutexW(nullptr, TRUE, kSingleInstanceMutexName);
+    const DWORD mutex_error = ::GetLastError();
+    // A copy running as administrator owns a mutex a normal copy may not
+    // open. Access denied still means CloudPOS is running; letting a second
+    // copy start would have both rewriting the same preferences and Hive files.
+    if ((single_instance_mutex != nullptr &&
+         mutex_error == ERROR_ALREADY_EXISTS) ||
+        (single_instance_mutex == nullptr &&
+         mutex_error == ERROR_ACCESS_DENIED)) {
+      bool focused = false;
+      for (int attempt = 0; attempt < 30 && !focused; ++attempt) {
+        focused = FocusRunningInstance();
+        if (!focused) ::Sleep(100);
+      }
+      if (!focused) {
+        MessageBoxW(nullptr, L"CloudPOS is already starting or running.\n\n"
+            L"We couldn't bring its window forward. Wait a moment and try "
+            L"opening CloudPOS again. If this continues, contact support.",
+            L"CLOUDPOS", MB_OK | MB_ICONINFORMATION);
+      }
+      if (single_instance_mutex != nullptr) {
+        ::CloseHandle(single_instance_mutex);
+      }
+      return EXIT_SUCCESS;
+    }
+  }
+
+  StartupWindow startup;
   // Attach to console when present (e.g., 'flutter run') or create a
   // new console when running with a debugger.
   if (!::AttachConsole(ATTACH_PARENT_PROCESS) && ::IsDebuggerPresent()) {
@@ -56,18 +206,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   flutter::DartProject project(L"data");
 
-  std::vector<std::string> command_line_arguments =
-      GetCommandLineArguments();
-
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
-  FlutterWindow window(project);
+  FlutterWindow window(project, &startup);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
   if (!window.Create(L"CLOUDPOS", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);
+  if (startup.cancelled()) return EXIT_SUCCESS;
 
   ::MSG msg;
   while (::GetMessage(&msg, nullptr, 0, 0)) {
@@ -76,5 +224,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   }
 
   ::CoUninitialize();
+  if (single_instance_mutex != nullptr) {
+    ::CloseHandle(single_instance_mutex);
+  }
   return EXIT_SUCCESS;
 }

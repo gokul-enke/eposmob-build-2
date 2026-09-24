@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -517,7 +515,8 @@ class _CustomerInformationEditWidgetState
             "Customer update successful, updating local customer data...");
         showScaffold(
             context: context,
-            message: response["message"] ?? "Customer updated successfully");
+            message: response["message"] ??
+                'customer_profile.updated_successfully'.tr);
 
         // Update the local customer data with the new information
         if (widget.customer != null) {
@@ -574,7 +573,7 @@ class _CustomerInformationEditWidgetState
         });
       } else {
         // Handle error response
-        String errorMsg = "Failed to update customer";
+        String errorMsg = 'customer_profile.error_update_failed'.tr;
 
         try {
           // Check if message is a Map (validation errors) or String
@@ -604,7 +603,7 @@ class _CustomerInformationEditWidgetState
           }
         } catch (e) {
           debugPrint("Error parsing error message: $e");
-          errorMsg = "Failed to update customer. Please try again.";
+            errorMsg = 'customer_profile.error_update_retry'.tr;
         }
 
         if (mounted) {
@@ -622,7 +621,10 @@ class _CustomerInformationEditWidgetState
 
       if (mounted) {
         showScaffoldError(
-            context: context, message: "An error occurred: $error");
+            context: context,
+            message: 'general.error_prefix'.trParams(
+              {'error': error.toString()},
+            ));
       }
     }
   }

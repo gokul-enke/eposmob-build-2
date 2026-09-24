@@ -462,7 +462,7 @@ The following is the conservative Retail Starter seed.
 | `FREE_DELIVERY_MINIMUM_AMOUNT` | `false` | `"0"` | Optional | Status enables delivery charge rules; value is free threshold. |
 | `ITEM_CODE_ENABLED` | `true` | `""` | Recommended | Shows item code when catalog supplies it. |
 | `B2B` | `false` | `""` | Feature | Customer type, VAT, CR, and B2B fields. |
-| `ENABLE_SEND_TO_KITCHEN_BUTTON` | `false` | `""` | Restaurant feature | Set true for restaurant workflows. |
+| `ENABLE_SEND_TO_KITCHEN_BUTTON` | `true` | `""` | Restaurant feature | Set true for restaurant workflows. |
 | `ENABLE_KOT_BILL_BUTTON` | `false` | `""` | Restaurant feature | Combined KOT + Bill. |
 | `KOT_BILL_AUTO_MARK_SERVED` | `false` | `""` | Restaurant feature | Auto-applies `SERVED`. |
 | `KOT_BILL_ALLOWED_FOR_DINE_IN` | `false` | `""` | Restaurant feature | Allows KOT + Bill for table orders. |
@@ -470,7 +470,7 @@ The following is the conservative Retail Starter seed.
 | `SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT` | `false` | `""` | Recommended initial value | Keep false until defaults are proven. |
 | `COMPULSORY_DAY_CLOSE_REGISTER` | `false` | `""` | Feature | Adds pending day-close dependency. |
 | `PRODUCT_VARIANT_ENABLED` | `false` | `""` | Feature | Requires complete variant and variant-stock data. |
-| `MULTI_SALE_UNIT_ENABLED` | `false` | `""` | Feature | Requires complete sale-unit conversion and pricing. |
+| `MULTI_SALE_UNIT_ENABLED` | `true` | `""` | Feature | Requires complete sale-unit conversion and pricing. |
 | `ALLOW_OVERSELL` | `true` | `""` | Profile-specific | Use true when stock is off; false when stock is strictly managed. |
 | `COMPULSORY_SHIFT_OPEN_` | `false` | `""` | Feature | Trailing underscore is required. |
 
@@ -508,7 +508,7 @@ Replace placeholders before seeding:
     {"code":"FREE_DELIVERY_MINIMUM_AMOUNT","status":false,"value":"0"},
     {"code":"ITEM_CODE_ENABLED","status":true,"value":""},
     {"code":"B2B","status":false,"value":""},
-    {"code":"ENABLE_SEND_TO_KITCHEN_BUTTON","status":false,"value":""},
+    {"code":"ENABLE_SEND_TO_KITCHEN_BUTTON","status":true,"value":""},
     {"code":"ENABLE_KOT_BILL_BUTTON","status":false,"value":""},
     {"code":"KOT_BILL_AUTO_MARK_SERVED","status":false,"value":""},
     {"code":"KOT_BILL_ALLOWED_FOR_DINE_IN","status":false,"value":""},
@@ -516,7 +516,7 @@ Replace placeholders before seeding:
     {"code":"SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT","status":false,"value":""},
     {"code":"COMPULSORY_DAY_CLOSE_REGISTER","status":false,"value":""},
     {"code":"PRODUCT_VARIANT_ENABLED","status":false,"value":""},
-    {"code":"MULTI_SALE_UNIT_ENABLED","status":false,"value":""},
+    {"code":"MULTI_SALE_UNIT_ENABLED","status":true,"value":""},
     {"code":"ALLOW_OVERSELL","status":true,"value":""},
     {"code":"COMPULSORY_SHIFT_OPEN_","status":false,"value":""}
   ]

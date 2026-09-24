@@ -1,9 +1,11 @@
  .\build-installer.ps1 -SkipClean     
 
 demo build
+git push build hotfix/urgent-fix
 git push build gokul-dev
-git tag v0.1.0-dev.790
-git push build v0.1.0-dev.790
+git push build mobileappfixes
+git tag v0.1.0-dev.842
+git push build v0.1.0-dev.842
 git push https://govindhansv@github.com/govindhansv/eposmob-buildnew.git gokul-dev 
 
 git tag v0.1.0-dev.468
@@ -60,3 +62,18 @@ live - souq
 ENKE_SOUQPOINT_S9z2X9Vef2bwrlvBS1befpCVJPxkmFqI
 salesexecutive1@souqpoint.in
 123456
+
+
+
+
+admin@zaviyaalraqi.com	Admin!@1243	EAZY_ZAVIYA_AL_RAQI_Llh0LXAn1iatsjqF09FG9Kje27Xa8xo5	salesexecutive1@zaviyaalraqi.com  123456
+
+EAZY_CITY_SWEETS_gEimbsJ3CYiyWFRuan2FuNkjwXGUZY3h
+salesexe@easy.sa 123456
+
+
+salesexe@naseemalghad.com
+EAZY_NASEEM_AL-GHAD_TRADING_EST_ZcZEr7eJHDCM7YOFZ6CqYEXNmmZoFIyG
+123456
+admin@naseemalghadtrading.com
+https://erp.easysolutions.com.sa/NASEEM-AL-GHAD-TRADING-EST

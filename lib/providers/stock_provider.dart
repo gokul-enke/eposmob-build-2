@@ -945,14 +945,22 @@ class StockProvider extends ChangeNotifier {
     final uri =
         Uri.parse(APPUrl.listStock).replace(queryParameters: queryParameters);
 
+    final requestHeaders = {
+      'Authorization': 'Bearer $accessToken',
+      'Content-Type': 'application/json',
+      'X-Tenant': apiKey,
+    };
+
+    debugPrint('=== List Stock API Request ===');
+    debugPrint('URL: $uri');
+    debugPrint('Query Parameters: $queryParameters');
+    debugPrint('Headers: $requestHeaders');
+    debugPrint('===============================');
+
     try {
       final response = await http.get(
         uri,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json',
-          'X-Tenant': apiKey,
-        },
+        headers: requestHeaders,
       ).timeout(const Duration(seconds: 15));
 
       debugPrint('Stock API Response: ${response.statusCode}');
@@ -960,6 +968,21 @@ class StockProvider extends ChangeNotifier {
       if (response.statusCode == 200) {
         if (response.body.isNotEmpty) {
           final jsonData = json.decode(response.body);
+
+          debugPrint('=== List Stock API Raw Response ===');
+          try {
+            final rawList = jsonData["data"]?["data"];
+            if (rawList is List && rawList.isNotEmpty) {
+              debugPrint('First raw item keys: ${rawList.first.keys.toList()}');
+              debugPrint('First raw item: ${json.encode(rawList.first)}');
+            } else {
+              debugPrint('Full body: ${response.body}');
+            }
+          } catch (e) {
+            debugPrint('Raw dump failed: $e');
+            debugPrint('Full body: ${response.body}');
+          }
+          debugPrint('====================================');
 
           try {
             stock_models.ListStockModel listStockModel =

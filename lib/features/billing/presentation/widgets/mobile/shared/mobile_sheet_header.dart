@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 
 /// Standard top chrome for mobile bottom sheets: drag handle, optional
@@ -14,7 +15,7 @@ class MobileSheetHeader extends StatelessWidget {
     this.thumbnail,
     this.onClose,
     this.showDragHandle = true,
-    this.closeTooltip = 'Close',
+    this.closeTooltip,
   });
 
   final String title;
@@ -22,7 +23,7 @@ class MobileSheetHeader extends StatelessWidget {
   final Widget? thumbnail;
   final VoidCallback? onClose;
   final bool showDragHandle;
-  final String closeTooltip;
+  final String? closeTooltip;
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +76,7 @@ class MobileSheetHeader extends StatelessWidget {
               if (onClose != null)
                 IconButton(
                   icon: const Icon(Icons.close),
-                  tooltip: closeTooltip,
+                tooltip: closeTooltip ?? 'general.close'.tr,
                   onPressed: onClose,
                 ),
             ],

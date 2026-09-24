@@ -260,7 +260,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     if (accessToken.isEmpty) {
       showScaffoldError(
         context: context,
-        message: 'Authentication token not found. Please log in again.',
+        message: 'product_detail.auth_token_missing_login'.tr,
       );
       return;
     }
@@ -291,21 +291,22 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
         showScaffold(
           context: context,
           message: resolvedBarcode == generatedBarcode
-              ? 'Barcode generated'
-              : 'Barcode generated and incremented to keep it unique',
+              ? 'product_detail.barcode_generated'.tr
+              : 'product_detail.barcode_generated_unique'.tr,
         );
       } else {
         showScaffoldError(
           context: context,
           message:
-              result?['message']?.toString() ?? 'Failed to generate barcode',
+              result?['message']?.toString() ??
+                  'product_detail.barcode_generation_failed'.tr,
         );
       }
     } catch (e) {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error generating barcode: $e',
+          message: '${'product_detail.barcode_generation_error'.tr} $e',
         );
       }
     } finally {
@@ -462,7 +463,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     if (baseText.isEmpty) {
       showScaffoldError(
         context: context,
-        message: 'Please enter Product Name before translating.',
+        message: 'product_detail.enter_name_before_translate'.tr,
       );
       return;
     }
@@ -496,12 +497,14 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       _languageNameControllers[language.id]!.text = translated;
       showScaffold(
         context: context,
-        message: 'Translated to ${language.name}',
+        message: 'product_detail.translated_to'.trParams({
+          'language': language.name,
+        }),
       );
     } else {
       showScaffoldError(
         context: context,
-        message: 'Translation failed. Please try again.',
+        message: 'product_detail.translation_failed'.tr,
       );
     }
 
@@ -556,7 +559,9 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       if (product == null && mounted) {
         showScaffoldError(
           context: context,
-          message: 'Product with barcode "$barcode" not found',
+          message: 'product_detail.barcode_product_not_found'.trParams({
+            'barcode': barcode,
+          }),
         );
       }
     } catch (e) {
@@ -564,7 +569,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Error fetching product: $e',
+          message: '${'product_detail.product_fetch_error'.tr} $e',
         );
       }
     }
@@ -678,7 +683,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     )) {
       showScaffoldError(
         context: context,
-        message: 'You do not have permission to edit this product.',
+        message: 'product_detail.edit_permission_denied'.tr,
       );
       return;
     }
@@ -767,7 +772,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
         setState(() => _isSaving = false);
         showScaffoldError(
           context: context,
-          message: 'Authentication token not found.',
+        message: 'product_detail.auth_token_missing'.tr,
         );
       }
       return;
@@ -961,7 +966,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     if (stock.id == null) {
       showScaffoldError(
         context: context,
-        message: 'Stock id missing. Unable to edit this row.',
+        message: 'product_detail.stock_id_missing_edit'.tr,
       );
       return;
     }
@@ -1493,7 +1498,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                   border: Border.all(color: Colors.grey.shade200),
                 ),
                 child: Text(
-                  'No stock information available',
+                  'product_detail.no_stock_information'.tr,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: 'Poppins',
@@ -1516,7 +1521,9 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
               ),
               MobileDetailRow(
                 label: 'product_detail.is_weighted'.tr,
-                value: product.weightInfo!.isWeighted == true ? 'Yes' : 'No',
+                value: product.weightInfo!.isWeighted == true
+                    ? 'general.yes'.tr
+                    : 'general.no'.tr,
               ),
             ],
           ),
@@ -1561,7 +1568,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
             )
           : const Icon(Icons.translate, size: 20),
       color: ColorManager.kPrimaryColor,
-      tooltip: 'Translate from English',
+      tooltip: 'product_detail.translate_from_english'.tr,
     );
   }
 
@@ -1953,8 +1960,8 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                   minimumSize: const Size.fromHeight(48),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: const Text(
-                  'Close',
+                child: Text(
+                  'general.close'.tr,
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 15,

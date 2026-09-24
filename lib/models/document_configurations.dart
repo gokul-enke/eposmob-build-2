@@ -291,10 +291,35 @@ class DisplayOption {
   });
 
   factory DisplayOption.fromJson(Map<String, dynamic> json) => DisplayOption(
-        visible: json["visible"],
+        visible: _parseBooleanFlag(json["visible"]),
         value: json["value"],
         defaultValue: json["default"],
       );
+
+  /// Accept the boolean encodings used by both the current API and older
+  /// cached document configurations. Receipt renderers intentionally require
+  /// an explicit `true`, so normalizing here prevents `1`/`"true"` from being
+  /// treated as missing (or causing the complete options map to fail parsing).
+  static bool? _parseBooleanFlag(dynamic value) {
+    if (value == null) return null;
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+
+    switch (value.toString().trim().toLowerCase()) {
+      case 'true':
+      case '1':
+      case 'yes':
+      case 'on':
+        return true;
+      case 'false':
+      case '0':
+      case 'no':
+      case 'off':
+        return false;
+      default:
+        return null;
+    }
+  }
 
   Map<String, dynamic> toJson() => {
         "visible": visible,

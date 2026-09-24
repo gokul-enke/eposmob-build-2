@@ -49,8 +49,16 @@ void main() {
       ),
     );
 
-    expect(find.text('Receipt Setup & Live Preview'), findsOneWidget);
-    expect(find.text('Common visibility preview'), findsOneWidget);
+    // The workspace and its expensive preview are now collapsed by default.
+    await tester.tap(find.text('Receipt layout & preview'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Field reference'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Live preview'));
+    await tester.tap(find.text('Live preview'));
+    await tester.pumpAndSettle();
+    expect(find.text('Receipt layout & preview'), findsOneWidget);
+    expect(find.text('Live preview'), findsOneWidget);
     expect(
       find.textContaining('Classic is selected.'),
       findsOneWidget,
@@ -58,6 +66,7 @@ void main() {
     expect(find.text('Test Store'), findsWidgets);
     expect(find.text('متجر الاختبار'), findsWidgets);
 
+    await tester.ensureVisible(find.text('Customer').first);
     await tester.tap(find.text('Customer').first);
     await tester.pumpAndSettle();
 

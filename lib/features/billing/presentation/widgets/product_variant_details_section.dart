@@ -53,8 +53,8 @@ class ProductVariantDetailsSection extends StatelessWidget {
               color: ColorManager.kPrimaryColor,
             ),
             const SizedBox(width: 8),
-            const Text(
-              'Variants & Variant Stock',
+            Text(
+              'product_detail.variants_and_stock'.tr,
               style: TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 16,
@@ -141,10 +141,14 @@ class _VariantCard extends StatelessWidget {
                 ),
               ),
               if (selected) ...[
-                const _Badge(label: 'Selected'),
+                _Badge(label: 'product_detail.selected'.tr),
                 const SizedBox(width: 6),
               ],
-              _Badge(label: variant.active ? 'Active' : 'Inactive'),
+              _Badge(
+                label: variant.active
+                    ? 'product_detail.active'.tr
+                    : 'product_detail.inactive'.tr,
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -199,23 +203,32 @@ class _VariantCard extends StatelessWidget {
                   spacing: 16,
                   runSpacing: 4,
                   children: [
-                    _Fact(label: 'Stock ID', value: '${stock.id ?? 'N/A'}'),
-                    _Fact(label: 'Qty', value: value(stock.quantity)),
                     _Fact(
-                      label: 'Price',
+                      label: 'product_detail.stock_id'.tr,
+                      value: '${stock.id ?? 'general.na'.tr}',
+                    ),
+                    _Fact(label: 'product_detail.qty'.tr, value: value(stock.quantity)),
+                    _Fact(
+                      label: 'product_detail.price'.tr,
                       value: stock.price == null
-                          ? 'N/A'
+                          ? 'general.na'.tr
                           : money(double.tryParse(stock.price!)),
                     ),
                     if (showMrp)
                       _Fact(
-                        label: 'MRP',
+                        label: 'product_detail.mrp'.tr,
                         value: stock.mrp == null
-                            ? 'N/A'
+                            ? 'general.na'.tr
                             : money(double.tryParse(stock.mrp!)),
                       ),
-                    _Fact(label: 'Supplier', value: stock.supplier ?? 'N/A'),
-                    _Fact(label: 'Expiry', value: stock.expiryDate ?? 'N/A'),
+                    _Fact(
+                      label: 'product_detail.supplier'.tr,
+                      value: stock.supplier ?? 'general.na'.tr,
+                    ),
+                    _Fact(
+                      label: 'product_detail.expiry'.tr,
+                      value: stock.expiryDate ?? 'general.na'.tr,
+                    ),
                   ],
                 ),
               ),

@@ -408,14 +408,15 @@ class KioskOrderPageState extends State<KioskOrderPage> {
       if (value["status"] == "success") {
         showScaffold(
             context: context,
-            message: addToCartModel.message ?? "Added to Cart");
+            message: addToCartModel.message ?? 'billing.added_to_cart'.tr);
         // Notify the cart provider of the change so it updates count
         Provider.of<CartProvider>(context, listen: false)
             .incrementCount(productId);
       } else {
         showScaffoldError(
             context: context,
-            message: addToCartModel.message ?? "Error Occurred! Try Again!");
+            message: addToCartModel.message ??
+                'general.error_occurred_try_again'.tr);
       }
     });
   }
@@ -445,14 +446,15 @@ class KioskOrderPageState extends State<KioskOrderPage> {
       if (value["status"] == "success") {
         showScaffold(
             context: context,
-            message: addToCartModel.message ?? "Removed From Cart");
+            message: addToCartModel.message ?? 'billing.removed_from_cart'.tr);
         // Notify the cart provider of the change so it updates count
         Provider.of<CartProvider>(context, listen: false)
             .decrementCount(productId);
       } else {
         showScaffoldError(
             context: context,
-            message: addToCartModel.message ?? "Error Occurred! Try Again!");
+            message: addToCartModel.message ??
+                'general.error_occurred_try_again'.tr);
       }
     });
   }

@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/services/cash_drawer_service.dart';
 
 class OpenCashDrawerButton extends StatefulWidget {
   final Color color;
   final double iconSize;
-  final String tooltip;
+  final String? tooltip;
   final bool simulateIfNoPrinter;
 
   const OpenCashDrawerButton({
     super.key,
     required this.color,
     this.iconSize = 20,
-    this.tooltip = 'Open cash drawer',
+    this.tooltip,
     this.simulateIfNoPrinter = true,
   });
 
@@ -49,7 +50,8 @@ class _OpenCashDrawerButtonState extends State<OpenCashDrawerButton> {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      tooltip: widget.tooltip,
+      tooltip: widget.tooltip ??
+          'general.unable_open_cash_drawer'.tr,
       onPressed: _isOpening ? null : _handleTap,
       icon: _isOpening
           ? SizedBox(

@@ -22,6 +22,9 @@ class AppSettingsProvider extends ChangeNotifier {
       appSettings?.posAuthenticateClearCart ?? false;
   String get posAuthenticateClearCartKey =>
       appSettings?.posAuthenticateClearCartKey ?? '';
+  bool get posHideNonStockProduct =>
+      appSettings?.posHideNonStockProduct ?? false;
+  bool get ecommerceEnabled => appSettings?.ecommerceEnabled ?? false;
 
   CompanySubscription? get companySubscriptionFallback {
     final settings = _appSettings;
@@ -82,9 +85,12 @@ class AppSettingsProvider extends ChangeNotifier {
       final url = Uri.parse(APPUrl.getAppSettings)
           .replace(queryParameters: queryParameters);
 
+      // This call sits behind the subscription fallback, which order flows can
+      // reach. Without a timeout a stalled connection hangs those flows for as
+      // long as the socket stays open.
       final response = await http.get(url, headers: {
         'X-Tenant': apiKey,
-      });
+      }).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);

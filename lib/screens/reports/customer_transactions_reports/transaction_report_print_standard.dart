@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
@@ -111,7 +112,7 @@ class TransactionReportStandardPrinter {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: "Document configurations not loaded. Please wait.",
+            message: 'voucher_print.document_config_missing'.tr,
           );
         }
         return;
@@ -201,7 +202,8 @@ class TransactionReportStandardPrinter {
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: "Preparing $selectedPaperSize document for printing...",
+          message: 'voucher_print.preparing_document'.trParams(
+              {'paperSize': selectedPaperSize}),
         );
       }
 
@@ -467,7 +469,9 @@ class TransactionReportStandardPrinter {
           if (context.mounted) {
             showScaffold(
               context: context,
-              message: 'Report sent to ${selectedPrinter.deviceName}',
+              message: 'voucher_print.report_sent_to'.trParams({
+                'printer': selectedPrinter.deviceName!,
+              })!,
             );
           }
           return;
@@ -489,14 +493,16 @@ class TransactionReportStandardPrinter {
             } else {
               if (context.mounted) {
                 showScaffold(
-                    context: context, message: "PDF created successfully");
+                    context: context,
+                    message: 'voucher_print.pdf_created_successfully'.tr);
                 // Navigation is handled by the parent TransactionReportPrintPage
               }
             }
           } else {
             if (context.mounted) {
               showScaffold(
-                  context: context, message: "PDF opened for printing");
+                  context: context,
+                  message: 'voucher_print.pdf_opened_for_printing'.tr);
               // Navigation is handled by the parent TransactionReportPrintPage
             }
           }
@@ -507,7 +513,8 @@ class TransactionReportStandardPrinter {
           } else {
             if (context.mounted) {
               showScaffold(
-                  context: context, message: "PDF created successfully");
+                  context: context,
+                  message: 'voucher_print.pdf_created_successfully'.tr);
               // Navigation is handled by the parent TransactionReportPrintPage
             }
           }
@@ -518,7 +525,8 @@ class TransactionReportStandardPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: "Error generating PDF: ${e.toString()}",
+          message: 'voucher_print.error_generating_pdf'
+              .trParams({'error': e.toString()}),
         );
       }
     }
@@ -532,14 +540,18 @@ class TransactionReportStandardPrinter {
 
       // Always show success message on Windows, regardless of result
       if (context.mounted) {
-        showScaffold(context: context, message: "PDF created successfully");
+        showScaffold(
+            context: context,
+            message: 'voucher_print.pdf_created_successfully'.tr);
         // Navigation is handled by the parent TransactionReportPrintPage
       }
     } catch (e) {
       debugPrint("Windows PDF handling error: $e");
       // Still show success message on error
       if (context.mounted) {
-        showScaffold(context: context, message: "PDF created successfully");
+        showScaffold(
+            context: context,
+            message: 'voucher_print.pdf_created_successfully'.tr);
         // Navigation is handled by the parent TransactionReportPrintPage
       }
     }
@@ -549,7 +561,9 @@ class TransactionReportStandardPrinter {
   void _showFileLocationInfo(File file) {
     if (context.mounted) {
       // Navigation is handled by the parent TransactionReportPrintPage
-      showScaffold(context: context, message: "PDF created successfully");
+      showScaffold(
+          context: context,
+          message: 'voucher_print.pdf_created_successfully'.tr);
     }
   }
 
@@ -568,7 +582,8 @@ class TransactionReportStandardPrinter {
 
         if (context.mounted) {
           showScaffold(
-              context: context, message: "PDF shared. Please open it to print");
+              context: context,
+              message: 'voucher_print.pdf_shared_open_to_print'.tr);
           // Navigation is handled by the parent TransactionReportPrintPage
         }
       } else {
@@ -957,7 +972,8 @@ class TransactionReportStandardPrinter {
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text('Total Transactions:', style: style),
+            pw.Text('customer_transaction_report.total_transactions'.tr,
+                style: style),
             pw.Text(itemCount.toString(), style: style),
           ],
         ),
@@ -971,7 +987,8 @@ class TransactionReportStandardPrinter {
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text('Total Amount:', style: style),
+            pw.Text('customer_transaction_report.total_amount'.tr,
+                style: style),
             pw.Text(totalMRP.toStringAsFixed(2), style: style),
           ],
         ),
@@ -985,7 +1002,7 @@ class TransactionReportStandardPrinter {
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text('You Saved:', style: style),
+            pw.Text('customer_transaction_report.you_saved'.tr, style: style),
             pw.Text(savedTotalValue.toStringAsFixed(2), style: style),
           ],
         ),
@@ -999,7 +1016,7 @@ class TransactionReportStandardPrinter {
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text('Discount:', style: style),
+            pw.Text('customer_transaction_report.discount'.tr, style: style),
             pw.Text(discountAmountValue.toStringAsFixed(2), style: style),
           ],
         ),
@@ -1009,7 +1026,7 @@ class TransactionReportStandardPrinter {
 
     // Display Net Total (Amount)
     if (displayConfig?['showNetAmount']?.visible == true) {
-      const label = 'Net Total';
+      final label = 'customer_transaction_report.net_total'.tr;
       summaryWidgets.add(pw.Divider(color: PdfColors.black));
       summaryWidgets.add(
         pw.Row(
@@ -1294,7 +1311,8 @@ class TransactionReportStandardPrinter {
       customerDetailWidgets.add(
         pw.Padding(
           padding: const pw.EdgeInsets.only(bottom: 8),
-          child: pw.Text('N/A', style: customerDetailStyle),
+          child: pw.Text('customer_transaction_report.na'.tr,
+              style: customerDetailStyle),
         ),
       );
     }
@@ -1313,7 +1331,7 @@ class TransactionReportStandardPrinter {
         children: [
           // Add a header for customer details
           pw.Text(
-            'Customer Information',
+            'voucher_print.customer_information'.tr,
             style: customerInfoHeaderStyle,
           ),
           pw.SizedBox(height: 8),

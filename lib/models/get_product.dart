@@ -620,10 +620,12 @@ class ProductPrice {
   });
 
   factory ProductPrice.fromJson(Map<String, dynamic> json) => ProductPrice(
-        oldPrice: json["old_price"] ?? json["original_price"],
-        price: json["base_price"] ?? json["price"] ?? json["selling_price"],
-        percentage: json["percentage"],
-        totalPrice: json["total_price"],
+        oldPrice:
+            (json["old_price"] ?? json["original_price"])?.toString(),
+        price: (json["base_price"] ?? json["price"] ?? json["selling_price"])
+            ?.toString(),
+        percentage: json["percentage"]?.toString(),
+        totalPrice: json["total_price"]?.toString(),
       );
 
   Map<String, dynamic> toJson() => {

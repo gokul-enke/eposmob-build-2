@@ -418,7 +418,7 @@ class MenuPanelState extends State<MenuPanel> {
                                         color: Colors.white, size: 18),
                                     const SizedBox(width: 8),
                                     Text(
-                                      'Add to Order',
+                                      'restaurant.add_to_order'.tr,
                                       style: buildCustomStyle(
                                         FontWeightManager.semiBold,
                                         FontSize.s14,
@@ -817,7 +817,10 @@ class MenuPanelState extends State<MenuPanel> {
         // Get products for selected category - only show sellable products in billing
         List<GetProduct> items = [];
         if (isFavouritesSelected) {
-          items = gridProvider.quickAccessProductList ?? [];
+          // Favourites bypass sellableProducts, so apply the
+          // POS_HIDE_NONSTOCK_PRODUCT rule to this branch explicitly.
+          items = productProvider.applyNonStockVisibility(
+              gridProvider.quickAccessProductList ?? <GetProduct>[]);
         } else if (selectedCategoryId == 0) {
           // "ALL" category - show all sellable products
           items = productProvider.sellableFilteredProducts;
@@ -1170,7 +1173,7 @@ class MenuPanelState extends State<MenuPanel> {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              'Loading menu items...',
+                              'restaurant.loading_menu_items'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.medium,
                                 FontSize.s14,

@@ -26,6 +26,9 @@ import 'package:pos_machine/resources/style_manager.dart'; // Re-added for deliv
 import 'package:pos_machine/components/build_dialog_box.dart'; // For showScaffoldError
 import 'package:pos_machine/features/billing/domain/payment_validation.dart';
 import 'package:pos_machine/helpers/payment_auto_fill_helper.dart';
+import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/location_provider.dart';
+import 'package:pos_machine/screens/customer_profile/widgets/customer_address_form_widget.dart';
 
 enum CheckoutModalMode {
   checkout,
@@ -37,7 +40,7 @@ class CheckoutModal extends StatefulWidget {
   final List<CustomerListModelData> availableCustomers;
   final CustomerListModelData? selectedCustomer;
   final CheckoutModalMode mode;
-  final String title;
+  final String? title;
 
   // Payment Modal State
   final bool hasOpenedPaymentModalOnce;
@@ -49,6 +52,8 @@ class CheckoutModal extends StatefulWidget {
   final String carNumber;
   final String deliveryComment;
   final String deliveryAddress;
+  final int? deliveryAddressId;
+  final String deliveryPincode;
   final String? deliveryDate;
   final String? deliveryTime;
   final double initialDeliveryCharge;
@@ -81,8 +86,8 @@ class CheckoutModal extends StatefulWidget {
   final double flatDiscount;
   final double percentageDiscount;
   final bool isCouponApplied;
-  final String confirmButtonTitle;
-  final String printButtonTitle;
+  final String? confirmButtonTitle;
+  final String? printButtonTitle;
   final bool requireCheckoutCompletion;
   final bool isQuotationMode;
   final bool requireSavedCustomer;
@@ -106,6 +111,8 @@ class CheckoutModal extends StatefulWidget {
   final Function(String method, String methodId, String carNo, String comment,
       String? date, String? time, String address)? onDeliveryUpdated;
   final Function(double deliveryCharge)? onDeliveryChargeUpdated;
+  final void Function(int? addressId, String pincode)?
+      onDeliveryAddressDetailsUpdated;
 
   final Function(
       bool isCash,
@@ -143,7 +150,7 @@ class CheckoutModal extends StatefulWidget {
     required this.availableCustomers,
     this.selectedCustomer,
     this.mode = CheckoutModalMode.checkout,
-    this.title = 'Finalize Order',
+    this.title,
     this.hasOpenedPaymentModalOnce = false,
     required this.isCashSelected,
     required this.isCardSelected,
@@ -170,6 +177,8 @@ class CheckoutModal extends StatefulWidget {
     this.carNumber = "",
     this.deliveryComment = "",
     this.deliveryAddress = "",
+    this.deliveryAddressId,
+    this.deliveryPincode = "",
     this.deliveryDate,
     this.deliveryTime,
     this.initialDeliveryCharge = 0.0,
@@ -177,8 +186,8 @@ class CheckoutModal extends StatefulWidget {
     required this.flatDiscount,
     required this.percentageDiscount,
     required this.isCouponApplied,
-    this.confirmButtonTitle = 'Confirm',
-    this.printButtonTitle = 'Confirm & Print',
+    this.confirmButtonTitle,
+    this.printButtonTitle,
     this.requireCheckoutCompletion = true,
     this.isQuotationMode = false,
     this.requireSavedCustomer = false,
@@ -193,6 +202,7 @@ class CheckoutModal extends StatefulWidget {
     required this.onDiscountApplied,
     this.onDeliveryUpdated,
     this.onDeliveryChargeUpdated,
+    this.onDeliveryAddressDetailsUpdated,
     required this.onPaymentUpdated,
     this.onQuotationDatesUpdated,
     required this.onConfirmOrder,
@@ -238,6 +248,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
   final FocusNode _deliveryCarNumberFocusNode = FocusNode();
   final FocusNode _deliveryCommentFocusNode = FocusNode();
   final FocusNode _deliveryAddressFocusNode = FocusNode();
+  final FocusNode _deliveryPincodeFocusNode = FocusNode();
 
   // Local State to handle Optimistic Updates (Fixes "Not selecting" issues)
   CustomerListModelData? _localSelectedCustomer;
@@ -254,6 +265,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
   late TextEditingController _lCarNumberController;
   late TextEditingController _lCommentController;
   late TextEditingController _lAddressController;
+  late TextEditingController _lPincodeController;
+  int? _lSelectedAddressId;
   DateTime? _lSelectedDeliveryDate;
   TimeOfDay? _lSelectedDeliveryTime;
 
@@ -289,7 +302,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
       case 0:
         return _localSelectedCustomer != null;
       case 1:
-        return _lDeliveryMethodId.isNotEmpty || _lDeliveryMethod.isNotEmpty;
+        return (_lDeliveryMethodId.isNotEmpty || _lDeliveryMethod.isNotEmpty) &&
+            !_isDeliveryPincodeMissing;
       case 3:
         return _hasAnyPaymentMethodSelected();
       default:
@@ -365,6 +379,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
     _lCarNumberController = TextEditingController(text: widget.carNumber);
     _lCommentController = TextEditingController(text: widget.deliveryComment);
     _lAddressController = TextEditingController(text: widget.deliveryAddress);
+    _lPincodeController = TextEditingController(text: widget.deliveryPincode)
+      // A listener (not onChanged) also catches edits from the on-screen keyboard.
+      ..addListener(_onPincodeChanged);
+    _lSelectedAddressId = widget.deliveryAddressId;
     if (widget.deliveryDate != null && widget.deliveryDate!.isNotEmpty) {
       _lSelectedDeliveryDate = DateTime.tryParse(widget.deliveryDate!);
     }
@@ -530,9 +548,13 @@ class _CheckoutModalState extends State<CheckoutModal> {
     _deliveryCarNumberFocusNode.dispose();
     _deliveryCommentFocusNode.dispose();
     _deliveryAddressFocusNode.dispose();
+    _deliveryPincodeFocusNode.dispose();
     _lCarNumberController.dispose();
     _lCommentController.dispose();
     _lAddressController.dispose();
+    _lPincodeController
+      ..removeListener(_onPincodeChanged)
+      ..dispose();
     super.dispose();
   }
 
@@ -586,6 +608,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
   bool _onHardwareKey(KeyEvent event) {
     if (!mounted) return false;
     if (event is! KeyDownEvent) return false;
+    // While the address form dialog is on top, F2/F8/Esc must not act on the order.
+    if (ModalRoute.of(context)?.isCurrent == false) return false;
 
     debugPrint(
         "⌨️ [CheckoutModal] key=${event.logicalKey.debugName} | step=$_currentStep | customer=${_localSelectedCustomer?.id} | canConfirm=$_canConfirmOrPrint | canPrint=$_canPrint | paymentVisited=$_hasOpenedPaymentModalOnce");
@@ -828,10 +852,228 @@ class _CheckoutModalState extends State<CheckoutModal> {
         _lAddressController.text,
       );
     }
+    widget.onDeliveryAddressDetailsUpdated?.call(
+      _lSelectedAddressId,
+      _lPincodeController.text.trim(),
+    );
 
     if (widget.onDeliveryChargeUpdated != null) {
       widget.onDeliveryChargeUpdated!(resolvedCharge);
     }
+  }
+
+  // --- Delivery address & pincode ---
+  bool get _isEcommerceEnabled =>
+      Provider.of<AppSettingsProvider>(context, listen: false).ecommerceEnabled;
+
+  bool get _isDeliveryPincodeRequired =>
+      _isEcommerceEnabled &&
+      widget.enableDelivery &&
+      DeliveryMethodRegistry.requiresAddress(_lDeliveryMethod);
+
+  bool get _isDeliveryPincodeMissing =>
+      _isDeliveryPincodeRequired && _lPincodeController.text.trim().isEmpty;
+
+  void _onPincodeChanged() {
+    if (!mounted) return;
+    setState(() {});
+    _handleDeliveryUpdate();
+  }
+
+  // Once the text diverges from the picked saved address, the id no longer
+  // describes what will be delivered to.
+  void _handleManualAddressEdit() {
+    setState(() => _lSelectedAddressId = null);
+    _handleDeliveryUpdate();
+  }
+
+  String _formatSavedAddress(Address address, {bool includePincode = false}) {
+    return [
+      address.address,
+      address.city,
+      if (includePincode) address.pincode,
+    ]
+        .map((part) => part?.trim() ?? '')
+        .where((part) => part.isNotEmpty)
+        .join(', ');
+  }
+
+  /// Saved addresses usually carry only `pincode_id`; resolve its label from
+  /// the district's pincode list.
+  Future<String> _lookupPincode(Address address) async {
+    final pincodeId = address.pincodeId?.toString();
+    if (pincodeId == null) return '';
+
+    final locationProvider =
+        Provider.of<LocationProvider>(context, listen: false);
+    String? findLabel() {
+      for (final entry in locationProvider.pincodeList) {
+        if (entry.key == pincodeId) return entry.value;
+      }
+      return null;
+    }
+
+    final cached = findLabel();
+    if (cached != null) return cached;
+
+    final token = Provider.of<AuthModel>(context, listen: false).token;
+    if (address.districtId == null || token == null) return '';
+    try {
+      await locationProvider.listAllPincodes(
+        accessToken: token,
+        districtId: address.districtId.toString(),
+      );
+    } catch (e) {
+      debugPrint("⚠️ [CheckoutModal] Pincode lookup failed: $e");
+      return '';
+    }
+    return findLabel() ?? '';
+  }
+
+  Future<void> _applySavedAddress(Address address) async {
+    setState(() => _lSelectedAddressId = address.id);
+    _lAddressController.text = _formatSavedAddress(address);
+    _lPincodeController.text = address.pincode?.trim() ?? '';
+    _handleDeliveryUpdate();
+    if (_lPincodeController.text.isNotEmpty) return;
+
+    final pincode = await _lookupPincode(address);
+    // Skip if the cashier picked another address or started typing meanwhile.
+    if (!mounted ||
+        pincode.isEmpty ||
+        _lSelectedAddressId != address.id ||
+        _lPincodeController.text.isNotEmpty) {
+      return;
+    }
+    _lPincodeController.text = pincode;
+  }
+
+  Future<void> _openAddressForm(CustomerListModelData customer,
+      {Address? address}) async {
+    final saved = await showCustomerAddressFormDialog(
+      context: context,
+      customer: customer,
+      address: address,
+      requirePincode: _isEcommerceEnabled,
+    );
+    if (saved == null || !mounted) return;
+
+    final knownPincode = saved.pincode?.trim() ?? '';
+    final pincode =
+        knownPincode.isNotEmpty ? knownPincode : await _lookupPincode(saved);
+    if (!mounted) return;
+
+    final resolved = saved.withPincode(pincode.isEmpty ? null : pincode);
+    Provider.of<CustomerSelectionProvider>(context, listen: false)
+        .upsertSelectedCustomerAddress(resolved);
+    await _applySavedAddress(resolved);
+  }
+
+  Widget _buildSavedAddressPicker(CustomerSelectionProvider customerProvider) {
+    final customer = customerProvider.hasSelectedCustomer
+        ? customerProvider.selectedCustomer
+        : null;
+    final addresses = customer?.addresses ?? const <Address>[];
+    final canManageAddresses =
+        customer?.id != null && !customerProvider.isDefaultCustomer;
+    if (addresses.isEmpty && !canManageAddresses) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'checkout_modal.hint_choose_an_address'.tr,
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s12,
+                  0.12,
+                  Colors.black87,
+                ),
+              ),
+            ),
+            if (canManageAddresses)
+              TextButton.icon(
+                onPressed: () => _openAddressForm(customer!),
+                icon: const Icon(Icons.add_location_alt_outlined, size: 18),
+                label: Text('checkout_modal.btn_add_address'.tr),
+                style: TextButton.styleFrom(
+                  foregroundColor: ColorManager.kPrimaryColor,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+          ],
+        ),
+        if (addresses.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: addresses.map((Address address) {
+              final isSelected =
+                  address.id != null && address.id == _lSelectedAddressId;
+              return Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => _applySavedAddress(address),
+                  child: Container(
+                    padding: EdgeInsets.fromLTRB(
+                        10, 6, canManageAddresses ? 2 : 10, 6),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: isSelected
+                            ? ColorManager.kPrimaryColor
+                            : Colors.grey.shade300,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                      color: isSelected
+                          ? ColorManager.kPrimaryWithOpacity10
+                          : Colors.grey.shade50,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            _formatSavedAddress(address, includePincode: true),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: buildCustomStyle(
+                              FontWeightManager.regular,
+                              FontSize.s12,
+                              0.12,
+                              Colors.black87,
+                            ),
+                          ),
+                        ),
+                        if (canManageAddresses)
+                          IconButton(
+                            tooltip: 'checkout_modal.tooltip_edit_address'.tr,
+                            onPressed: () =>
+                                _openAddressForm(customer!, address: address),
+                            icon: const Icon(Icons.edit_outlined, size: 16),
+                            color: ColorManager.kPrimaryColor,
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                                minWidth: 28, minHeight: 28),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ],
+    );
   }
 
   // --- Step 1: Customer Logic ---
@@ -1125,7 +1367,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         alignment: Alignment.center,
         children: [
           Text(
-            widget.title,
+            widget.title ?? 'checkout_modal.title_finalize_order'.tr,
             style: buildCustomStyle(
               FontWeightManager.bold,
               _isDenseCheckout ? FontSize.s18 : FontSize.s20,
@@ -1164,7 +1406,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
               Align(
                 alignment: Alignment.center,
                 child: Text(
-                  "Finalize Order",
+                  'checkout_modal.title_finalize_order'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.bold,
                     FontSize.s20,
@@ -1465,7 +1707,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                     onChanged: _filterCustomers,
                                     decoration: InputDecoration(
                                       hintText:
-                                          'Search by name or phone number...',
+                                          'checkout_modal.search_by_name_or_phone_number'
+                                              .tr,
                                       hintStyle: TextStyle(
                                           color: Colors.grey.shade500),
                                       prefixIcon: Icon(Icons.search,
@@ -1671,8 +1914,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Quotation customer is not saved',
+                Text(
+                  'checkout_modal.msg_quotation_customer_not_saved'.tr,
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w800,
@@ -2471,7 +2714,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Delivery charges',
+                                    'checkout_modal.label_delivery_charges'.tr,
                                     style: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,
@@ -2625,79 +2868,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               _lDeliveryMethod)) ...[
                             const SizedBox(height: 10),
                             Consumer<CustomerSelectionProvider>(
-                              builder: (context, customerProvider, child) {
-                                if (!customerProvider.hasSelectedCustomer ||
-                                    customerProvider
-                                            .selectedCustomer!.addresses ==
-                                        null ||
-                                    customerProvider
-                                        .selectedCustomer!.addresses!.isEmpty) {
-                                  return const SizedBox.shrink();
-                                }
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'checkout_modal.hint_choose_an_address'.tr,
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.12,
-                                        Colors.black87,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Wrap(
-                                      spacing: 8,
-                                      runSpacing: 8,
-                                      children: customerProvider
-                                          .selectedCustomer!.addresses!
-                                          .map((Address address) {
-                                        return Material(
-                                          color: Colors.transparent,
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          child: InkWell(
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            onTap: () {
-                                              setState(() {
-                                                String fullAddress =
-                                                    "${address.address}, ${address.city}";
-                                                _lAddressController.text =
-                                                    fullAddress;
-                                              });
-                                              _handleDeliveryUpdate();
-                                            },
-                                            child: Container(
-                                              padding: const EdgeInsets.all(8),
-                                              decoration: BoxDecoration(
-                                                border: Border.all(
-                                                    color:
-                                                        Colors.grey.shade300),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                color: Colors.grey.shade50,
-                                              ),
-                                              child: Text(
-                                                "${address.address}, ${address.city}",
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.regular,
-                                                  FontSize.s12,
-                                                  0.12,
-                                                  Colors.black87,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ],
-                                );
-                              },
+                              builder: (context, customerProvider, child) =>
+                                  _buildSavedAddressPicker(customerProvider),
                             ),
                             const SizedBox(height: 10),
                             FocusTraversalOrder(
@@ -2716,9 +2888,42 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                       .show('text', _lAddressController,
                                           replaceOnFirstInput: true);
                                 },
-                                onchanged: (_) => _handleDeliveryUpdate(),
+                                onchanged: (_) => _handleManualAddressEdit(),
                               ),
                             ),
+                            const SizedBox(height: 10),
+                            FocusTraversalOrder(
+                              order: const NumericFocusOrder(95),
+                              child: buildColumnWidgetForTextFields(
+                                controller: _lPincodeController,
+                                focusNode: _deliveryPincodeFocusNode,
+                                size: size,
+                                height: 50,
+                                hintText: _isDeliveryPincodeRequired
+                                    ? 'checkout_modal.hint_pincode_required'.tr
+                                    : 'checkout_modal.hint_pincode'.tr,
+                                width: double.infinity,
+                                margin: EdgeInsets.zero,
+                                onTap: () {
+                                  Provider.of<KeyboardProvider>(context,
+                                          listen: false)
+                                      .show('text', _lPincodeController,
+                                          replaceOnFirstInput: true);
+                                },
+                              ),
+                            ),
+                            if (_isDeliveryPincodeMissing) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                'checkout_modal.msg_pincode_required'.tr,
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s12,
+                                  0.12,
+                                  Colors.red.shade700,
+                                ),
+                              ),
+                            ],
                           ],
                         ],
                       );
@@ -3226,7 +3431,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                   : (_localSelectedCustomer?.balance ?? 0.0),
                           isDefaultCustomer:
                               _isDefaultCustomer(_localSelectedCustomer),
-                          customButtonTitle: "Confirm Payment Selection",
+                          customButtonTitle:
+                              'checkout_modal.confirm_payment_selection'.tr,
                           closeOnApply: false,
                           showConfirmButton: false,
                           showAsDialog: false,
@@ -3327,7 +3533,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
     if (_lIsUpiSelected) labels.add('UPI');
     if (_lIsCodSelected) labels.add('COD');
     if (_lIsDebitSelected) labels.add('CREDIT');
-    if (labels.isEmpty) return 'Not selected';
+    if (labels.isEmpty) return 'checkout_modal.label_not_selected'.tr;
     return labels.join(', ');
   }
 
@@ -3583,6 +3789,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
           !_lQuotationExpiryDate.isBefore(_lQuotationDate);
     }
 
+    if (_isDeliveryPincodeMissing) {
+      return false;
+    }
+
     if (!widget.requireCheckoutCompletion) {
       return true;
     }
@@ -3600,7 +3810,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
       return _canConfirmOrPrint;
     }
 
-    if (_hasQuoteOnlyCustomerNeedingSave) {
+    if (_hasQuoteOnlyCustomerNeedingSave || _isDeliveryPincodeMissing) {
       return false;
     }
 
@@ -3610,21 +3820,24 @@ class _CheckoutModalState extends State<CheckoutModal> {
   String _disabledActionMessage() {
     if (widget.isQuotationMode) {
       if (!_hasQuotationCustomer) {
-        return 'Please select a customer before creating quotation';
+        return 'checkout_modal.msg_select_customer_for_quotation'.tr;
       }
       if (_lQuotationExpiryDate.isBefore(_lQuotationDate)) {
-        return 'Expiry date cannot be before quotation date';
+        return 'checkout_modal.msg_expiry_before_quotation'.tr;
       }
-      return 'Unable to create quotation';
+      return 'checkout_modal.msg_unable_to_create_quotation'.tr;
     }
     if (_hasQuoteOnlyCustomerNeedingSave) {
-      return 'Create or select a saved customer before confirming';
+      return 'checkout_modal.msg_saved_customer_required'.tr;
+    }
+    if (_isDeliveryPincodeMissing) {
+      return 'checkout_modal.msg_pincode_required'.tr;
     }
     if (_localSelectedCustomer == null) {
-      return 'Please select a customer before confirming';
+      return 'checkout_modal.msg_select_customer_before_confirm'.tr;
     }
     if (!_hasOpenedPaymentModalOnce && _currentStep != 3) {
-      return 'Please configure payment before confirm';
+      return 'checkout_modal.msg_configure_payment_before_confirm'.tr;
     }
     final paymentResult = _validateLocalPayment();
     if (!paymentResult.isValid) {
@@ -3649,7 +3862,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
     if (_hasInlineQuotationCustomer) {
       return _quotationCustomerNameController.text.trim();
     }
-    return _localSelectedCustomer?.name ?? 'Not Selected';
+    return _localSelectedCustomer?.name ??
+        'checkout_modal.label_not_selected'.tr;
   }
 
   bool _isDefaultCustomer(CustomerListModelData? customer) {
@@ -3691,7 +3905,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
     }
     if (!_isDefaultCustomer(customer)) {
       lines.add(
-          'Balance: $currency ${(customer.balance ?? 0.0).toStringAsFixed(2)}');
+          '${'checkout_modal.label_balance'.tr}: $currency '
+          '${(customer.balance ?? 0.0).toStringAsFixed(2)}');
     }
 
     return lines.join('\n');
@@ -3850,7 +4065,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                   child: Opacity(
                     opacity: _canConfirmOrPrint ? 1.0 : 0.5,
                     child: CustomRoundButtonWithIconAdvanced(
-                      title: widget.confirmButtonTitle,
+                      title: widget.confirmButtonTitle ??
+                          'general.confirm'.tr,
                       isLoading: _isConfirming,
                       shortcutLabel: 'F2',
                       fct: _canConfirmOrPrint
@@ -3889,7 +4105,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                   child: Opacity(
                     opacity: _canPrint ? 1.0 : 0.5,
                     child: CustomRoundButtonWithIconAdvanced(
-                      title: widget.printButtonTitle,
+                      title: widget.printButtonTitle ??
+                          'general.confirm_and_print'.tr,
                       isLoading: _isPrinting,
                       shortcutLabel: 'F6',
                       fct: _canPrint
@@ -4197,7 +4414,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       ? 'Create customer'
                       : widget.isQuotationMode
                           ? _quotationCustomerDisplayName
-                          : (_localSelectedCustomer?.name ?? 'Not Selected'),
+                          : (_localSelectedCustomer?.name ??
+                              'checkout_modal.label_not_selected'.tr),
                   hasCustomer,
                   Icons.person_outline,
                   0,

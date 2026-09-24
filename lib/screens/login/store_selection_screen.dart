@@ -375,8 +375,19 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
   Future<void> _handleSubmit() async {
     if (_selectedStoreId == null) return;
 
-    final selectedStore =
-        widget.stores.firstWhere((store) => store.storeId == _selectedStoreId);
+    Store? selectedStore;
+    for (final store in widget.stores) {
+      if (store.storeId == _selectedStoreId) {
+        selectedStore = store;
+        break;
+      }
+    }
+    if (selectedStore == null) {
+      debugPrint(
+        'Store selection ignored because store ID $_selectedStoreId is no longer available.',
+      );
+      return;
+    }
 
     try {
       final storeSession =
@@ -430,9 +441,10 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
         if (!mounted) return;
 
         bool isPastDate = false;
-        if (pendingStatus != null && pendingStatus.businessDate != null) {
+        final pendingBusinessDate = pendingStatus?.businessDate;
+        if (pendingBusinessDate != null) {
           try {
-            final parts = pendingStatus.businessDate!.split('-');
+            final parts = pendingBusinessDate.split('-');
             if (parts.length == 3) {
               final year = int.parse(parts[0]);
               final month = int.parse(parts[1]);
@@ -533,11 +545,16 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
           ),
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('Store selection/bootstrap failed: $e');
+      debugPrintStack(stackTrace: stackTrace);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${'login.error_saving_store'.tr}: ${e.toString()}'),
+            // Keep implementation details and stack information in the debug
+            // log. A raw Dart exception is not actionable for the cashier and
+            // can expose backend/data-shape details on a production screen.
+            content: Text('login.error_saving_store'.tr),
             backgroundColor: Colors.red,
           ),
         );

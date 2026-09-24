@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/models/restaurant/table_model.dart';
 
 class DiningSelectionModal extends StatelessWidget {
@@ -33,14 +34,14 @@ class DiningSelectionModal extends StatelessWidget {
             _buildHeader(context),
             Expanded(
               child: tables.isEmpty
-                  ? const Center(child: Text('No tables available'))
+                  ? Center(child: Text('dining.no_tables_available'.tr))
                   : SingleChildScrollView(
                       padding: const EdgeInsets.fromLTRB(28, 24, 28, 28),
                       child: Column(
                         children: [
                           if (indoorTables.isNotEmpty)
                             _buildSection(
-                              title: 'INDOOR',
+                              title: 'dining.indoor'.tr,
                               tables: indoorTables,
                             ),
                           if (indoorTables.isNotEmpty &&
@@ -51,7 +52,7 @@ class DiningSelectionModal extends StatelessWidget {
                             ),
                           if (outdoorTables.isNotEmpty)
                             _buildSection(
-                              title: 'OUTDOOR',
+                              title: 'dining.outdoor'.tr,
                               tables: outdoorTables,
                             ),
                         ],
@@ -72,8 +73,8 @@ class DiningSelectionModal extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Text(
-            'Table List',
+          Text(
+            'dining.table_list'.tr,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
@@ -81,14 +82,14 @@ class DiningSelectionModal extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          _buildLegendItem('Available', const Color(0xFF111827)),
-          _buildLegendItem('Reserved', const Color(0xFF2563EB)),
-          _buildLegendItem('Filled', const Color(0xFFCBD5E1)),
-          _buildLegendItem('Available soon', const Color(0xFFF2C94C)),
+          _buildLegendItem('dining.available'.tr, const Color(0xFF111827)),
+          _buildLegendItem('dining.reserved'.tr, const Color(0xFF2563EB)),
+          _buildLegendItem('dining.filled'.tr, const Color(0xFFCBD5E1)),
+          _buildLegendItem('dining.available_soon'.tr, const Color(0xFFF2C94C)),
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(Icons.close_rounded),
-            tooltip: 'Close',
+            tooltip: 'general.close'.tr,
           ),
         ],
       ),

@@ -1,3 +1,4 @@
+import 'package:pos_machine/services/order_submission_coordinator.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -41,6 +42,14 @@ class _KeyboardDispatcherState extends State<KeyboardDispatcher> {
             keyboardProvider.physicalKeyboardConnected) {
           _insertPrintableCharacter(event, editable);
         }
+        return;
+      }
+
+      // Keep focused dialog fields usable during receipt handling. Only the
+      // unfocused barcode path is paused; never carry a partial scan past it.
+      if (OrderSubmissionCoordinator.instance.isBusy) {
+        _debounce?.cancel();
+        _buffer.clear();
         return;
       }
 

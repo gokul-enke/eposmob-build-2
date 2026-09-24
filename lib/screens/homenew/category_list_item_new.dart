@@ -538,7 +538,7 @@ showDialogFunctionForProductDetails(
                     ),
                     const SizedBox(height: 8),
                     CustomRoundButton(
-                      title: "Add To Cart",
+                      title: 'billing.add_to_cart'.tr,
                       fct: () {
                         String? accessToken =
                             Provider.of<AuthModel>(context, listen: false)
@@ -555,7 +555,7 @@ showDialogFunctionForProductDetails(
                             showScaffold(
                               context: context,
                               message: value.message ??
-                                  "Added To Cart", //  'Added To Cart',
+                                  'billing.added_to_cart'.tr,
                             );
                           } else {
                             showScaffoldError(
@@ -716,7 +716,7 @@ showDialogFunctionForProductDetailsAnimated(
                           ),
                           const SizedBox(height: 8),
                           CustomRoundButton(
-                            title: "Add To Cart",
+                            title: 'billing.add_to_cart'.tr,
                             fct: () {
                               String? accessToken =
                                   Provider.of<AuthModel>(context, listen: false)
@@ -736,7 +736,7 @@ showDialogFunctionForProductDetailsAnimated(
                                   showScaffold(
                                     context: context,
                                     message: addToCartModel.message ??
-                                        "Added To Cart !", //  'Order Placed Successfully',
+                                        'billing.added_to_cart'.tr,
                                   );
                                 } else {
                                   showScaffoldError(

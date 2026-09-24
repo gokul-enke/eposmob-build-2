@@ -1,4 +1,6 @@
+import 'package:pos_machine/components/order_submission_guard.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/models/sales_executive.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -95,8 +97,8 @@ class _UserSwitcherState extends State<UserSwitcher> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            "Switch User",
+                          Text(
+                            'general.switch_user'.tr,
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -111,13 +113,15 @@ class _UserSwitcherState extends State<UserSwitcher> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        "Enter password for ${executive.name}",
+                        'general.enter_password_for'.trParams(
+                          {'name': executive.name},
+                        ),
                         style: const TextStyle(
                             fontSize: 16, color: Colors.black54),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        executive.email ?? 'No email',
+                        executive.email ?? 'general.no_email'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.medium,
                           FontSize.s14,
@@ -130,7 +134,7 @@ class _UserSwitcherState extends State<UserSwitcher> {
                         controller: _passwordController,
                         obscureText: _obscureText,
                         decoration: InputDecoration(
-                          labelText: 'Password',
+                          labelText: 'general.password'.tr,
                           border: const OutlineInputBorder(),
                           suffixIcon: IconButton(
                             icon: Icon(
@@ -154,7 +158,7 @@ class _UserSwitcherState extends State<UserSwitcher> {
                         children: [
                           Expanded(
                             child: CustomRoundButton(
-                              title: "Cancel",
+                              title: 'general.cancel'.tr,
                               isLoading: false,
                               fontSize: FontSize.s12,
                               height: MediaQuery.of(context).size.height * .05,
@@ -170,7 +174,7 @@ class _UserSwitcherState extends State<UserSwitcher> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: CustomRoundButton(
-                              title: "Switch",
+                              title: 'general.switch'.tr,
                               isLoading: _isLoading,
                               fontSize: FontSize.s12,
                               height: MediaQuery.of(context).size.height * .05,
@@ -179,7 +183,7 @@ class _UserSwitcherState extends State<UserSwitcher> {
                                 if (_passwordController.text.isEmpty) {
                                   showScaffoldError(
                                     context: context,
-                                    message: 'Please enter password',
+                                    message: 'general.enter_password'.tr,
                                   );
                                   return;
                                 }
@@ -226,7 +230,9 @@ class _UserSwitcherState extends State<UserSwitcher> {
                                         showScaffoldError(
                                           context: context,
                                           message:
-                                              '${executive.name} doesn\'t have access to current store. Please logout and try.',
+                                              'general.no_current_store_access'.trParams({
+                                                'name': executive.name,
+                                              }),
                                         );
                                         return;
                                       } else if (!hasAccessToCurrentStore &&
@@ -235,7 +241,9 @@ class _UserSwitcherState extends State<UserSwitcher> {
                                         showScaffoldError(
                                           context: context,
                                           message:
-                                              '${executive.name} has no permission to any store. Please contact your administrator.',
+                                              'general.no_store_permission'.trParams({
+                                                'name': executive.name,
+                                              }),
                                         );
                                         return;
                                       }
@@ -288,7 +296,9 @@ class _UserSwitcherState extends State<UserSwitcher> {
                                         showScaffold(
                                           context: context,
                                           message:
-                                              'Successfully switched to ${executive.name}',
+                                              'general.switched_successfully'.trParams({
+                                                'name': executive.name,
+                                              }),
                                         );
                                       }
                                     }
@@ -296,13 +306,13 @@ class _UserSwitcherState extends State<UserSwitcher> {
                                     showScaffoldError(
                                       context: context,
                                       message: result["message"] ??
-                                          'Authentication failed',
+                                          'general.authentication_failed'.tr,
                                     );
                                   }
                                 } catch (e) {
                                   showScaffoldError(
                                     context: context,
-                                    message: 'Error: ${e.toString()}',
+                                    message: '${'general.error_prefix'.tr} ${e.toString()}',
                                   );
                                 } finally {
                                   setState(() {
@@ -326,7 +336,10 @@ class _UserSwitcherState extends State<UserSwitcher> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      OrderSubmissionGuard(busy: false, child: _buildPage(context));
+
+  Widget _buildPage(BuildContext context) {
     debugPrint("🔧 UserSwitcher: build method called");
 
     return Consumer<SalesExecutiveProvider>(
@@ -413,7 +426,7 @@ class _UserSwitcherState extends State<UserSwitcher> {
                                 maxLines: 1,
                               ),
                               Text(
-                                currentUser.email ?? 'No email',
+                                currentUser.email ?? 'general.no_email'.tr,
                                 style: buildCustomStyle(
                                   FontWeightManager.regular,
                                   emailFontSize,
@@ -464,7 +477,7 @@ class _UserSwitcherState extends State<UserSwitcher> {
                           Padding(
                             padding: const EdgeInsets.all(10.0),
                             child: Text(
-                              'Switch User',
+                              'general.switch_user'.tr,
                               style: buildCustomStyle(
                                 FontWeightManager.medium,
                                 FontSize.s14,
@@ -513,7 +526,7 @@ class _UserSwitcherState extends State<UserSwitcher> {
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       subtitle: Text(
-                                        executive.email ?? 'No email',
+                                        executive.email ?? 'general.no_email'.tr,
                                         style: buildCustomStyle(
                                           FontWeightManager.regular,
                                           FontSize.s12,

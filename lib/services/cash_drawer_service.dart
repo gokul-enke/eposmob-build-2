@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
@@ -83,7 +84,7 @@ class CashDrawerService {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'Unable to open cash drawer',
+          message: 'general.unable_open_cash_drawer'.tr,
         );
       }
       return false;

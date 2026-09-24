@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pos_machine/components/virtual_keyboard_widget.dart';
 import 'package:pos_machine/helpers/keyboard_dispatcher.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
+import 'package:pos_machine/providers/barcode_provider.dart';
+import 'package:pos_machine/services/order_submission_coordinator.dart';
 import 'package:provider/provider.dart';
+import 'package:virtual_keyboard_custom_layout/virtual_keyboard_custom_layout.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -72,9 +76,459 @@ void main() {
       controller.dispose();
       keyboardProvider.dispose();
     });
+
+    testWidgets('Back dismisses the virtual keyboard before navigation',
+        (tester) async {
+      final keyboardProvider = KeyboardProvider(enablePersistence: false);
+      final controller = TextEditingController(text: '1');
+      final focusNode = FocusNode();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TextField(controller: controller, focusNode: focusNode),
+          ),
+        ),
+      );
+      focusNode.requestFocus();
+      await tester.pump();
+      keyboardProvider.show('number', controller);
+
+      expect(keyboardProvider.dismissForBack(), isTrue);
+      await tester.pump();
+      expect(keyboardProvider.showKeyboard, isFalse);
+      expect(keyboardProvider.controller, isNull);
+      expect(focusNode.hasFocus, isFalse);
+      expect(keyboardProvider.dismissForBack(), isFalse,
+          reason: 'a second Back action must remain available to navigation');
+
+      keyboardProvider.dispose();
+      controller.dispose();
+      focusNode.dispose();
+    });
+
+    testWidgets('system Back on a pushed route dismisses keyboard before pop',
+        (tester) async {
+      final keyboardProvider = KeyboardProvider(enablePersistence: false)
+        ..featureOn();
+      final navigatorKey = GlobalKey<NavigatorState>();
+      final controller = TextEditingController();
+      final focusNode = FocusNode();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorKey: navigatorKey,
+          home: const Scaffold(body: Text('Home page')),
+        ),
+      );
+      navigatorKey.currentState!.push<void>(MaterialPageRoute<void>(
+        builder: (_) => Scaffold(
+          body: TextField(controller: controller, focusNode: focusNode),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      focusNode.requestFocus();
+      await tester.pump();
+      keyboardProvider.show('text', controller);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Home page'), findsNothing,
+          reason: 'the first Back must be consumed by the keyboard');
+      expect(keyboardProvider.showKeyboard, isFalse);
+      expect(focusNode.hasFocus, isFalse);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Home page'), findsOneWidget,
+          reason: 'the second Back may pop the pushed form route');
+
+      keyboardProvider.dispose();
+      controller.dispose();
+      focusNode.dispose();
+    });
+
+    testWidgets('mobile tap outside dismisses the app keyboard',
+        (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final keyboardProvider = KeyboardProvider(enablePersistence: false)
+        ..featureOn();
+      final controller = TextEditingController();
+      final focusNode = FocusNode();
+      const fieldKey = Key('tap-outside-field');
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<KeyboardProvider>.value(
+          value: keyboardProvider,
+          child: MaterialApp(
+            theme: ThemeData(platform: TargetPlatform.android),
+            builder: (context, child) => Column(
+              children: [
+                Expanded(
+                  child: GlobalKeyboardDismissRegion(
+                    child: child ?? const SizedBox.shrink(),
+                  ),
+                ),
+                const GlobalVirtualKeyboard(),
+              ],
+            ),
+            home: Scaffold(
+              body: Column(
+                children: [
+                  TextField(
+                    key: fieldKey,
+                    controller: controller,
+                    focusNode: focusNode,
+                  ),
+                  const Expanded(
+                    child: ColoredBox(
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(fieldKey));
+      await tester.pump();
+      await tester.pump();
+      expect(keyboardProvider.showKeyboard, isTrue);
+
+      await tester.tap(find.descendant(
+        of: find.byType(GlobalVirtualKeyboard),
+        matching: find.text('q'),
+      ));
+      await tester.pump();
+      expect(controller.text, 'q');
+      expect(keyboardProvider.showKeyboard, isTrue,
+          reason: 'keyboard keys are part of the active field tap region');
+
+      await tester.tapAt(const Offset(200, 100));
+      await tester.pump();
+      await tester.pump();
+      expect(keyboardProvider.showKeyboard, isFalse);
+      expect(focusNode.hasFocus, isFalse);
+
+      await tester.pumpWidget(const SizedBox());
+      keyboardProvider.dispose();
+      controller.dispose();
+      focusNode.dispose();
+    });
+
+    testWidgets('close button allows the same field to reopen the keyboard',
+        (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final keyboardProvider = KeyboardProvider(enablePersistence: false)
+        ..featureOn();
+      final controller = TextEditingController();
+      final focusNode = FocusNode();
+      const fieldKey = Key('reopen-field');
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<KeyboardProvider>.value(
+          value: keyboardProvider,
+          child: MaterialApp(
+            theme: ThemeData(platform: TargetPlatform.android),
+            home: Scaffold(
+              body: Stack(
+                children: [
+                  TextField(
+                    key: fieldKey,
+                    controller: controller,
+                    focusNode: focusNode,
+                  ),
+                  const Align(
+                    alignment: Alignment.bottomCenter,
+                    child: GlobalVirtualKeyboard(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(fieldKey));
+      await tester.pump();
+      await tester.pump();
+      expect(keyboardProvider.showKeyboard, isTrue);
+      expect(focusNode.hasFocus, isTrue);
+
+      await tester.tap(find.descendant(
+        of: find.byType(GlobalVirtualKeyboard),
+        matching: find.byIcon(Icons.close),
+      ));
+      await tester.pump();
+      await tester.pump();
+      expect(keyboardProvider.showKeyboard, isFalse);
+      expect(focusNode.hasFocus, isFalse);
+
+      await tester.tap(find.byKey(fieldKey));
+      await tester.pump();
+      await tester.pump();
+      expect(keyboardProvider.showKeyboard, isTrue);
+      expect(identical(keyboardProvider.controller, controller), isTrue);
+
+      await tester.pumpWidget(const SizedBox());
+      keyboardProvider.dispose();
+      controller.dispose();
+      focusNode.dispose();
+    });
+  });
+
+  group('VirtualKeyboardWidget editing contract', () {
+    testWidgets('typing replaces a reversed selected range', (tester) async {
+      final controller = TextEditingController(text: '110110');
+      final focusNode = FocusNode();
+      final changes = <String>[];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  onChanged: changes.add,
+                ),
+                Expanded(
+                  child: VirtualKeyboardWidget(
+                    controller: controller,
+                    keyboardType: VirtualKeyboardType.Numeric,
+                    height: 400,
+                    width: 600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      focusNode.requestFocus();
+      await tester.pump();
+      controller.selection = const TextSelection(
+        baseOffset: 6,
+        extentOffset: 0,
+      );
+      await tester.pump();
+
+      await tester.tap(find.descendant(
+        of: find.byType(VirtualKeyboardWidget),
+        matching: find.text('1'),
+      ));
+      await tester.pump();
+
+      expect(controller.text, '1');
+      expect(controller.selection, const TextSelection.collapsed(offset: 1));
+      expect(changes, ['1']);
+
+      controller.dispose();
+      focusNode.dispose();
+    });
+
+    testWidgets('applies field formatters and calls onChanged exactly once',
+        (tester) async {
+      final controller = TextEditingController();
+      final changes = <String>[];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                TextField(
+                  controller: controller,
+                  inputFormatters: [LengthLimitingTextInputFormatter(1)],
+                  onChanged: changes.add,
+                ),
+                Expanded(
+                  child: VirtualKeyboardWidget(
+                    controller: controller,
+                    keyboardType: VirtualKeyboardType.Alphanumeric,
+                    height: 400,
+                    width: 600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(TextField));
+      final qKey = find.descendant(
+        of: find.byType(VirtualKeyboardWidget),
+        matching: find.text('q'),
+      );
+      await tester.tap(qKey);
+      await tester.pump();
+      await tester.tap(qKey);
+      await tester.pump();
+
+      expect(controller.text, 'q');
+      expect(changes, ['q']);
+
+      controller.dispose();
+    });
+
+    testWidgets('replace-on-first-input reports the replacement value',
+        (tester) async {
+      final controller = TextEditingController(text: 'old');
+      final changes = <String>[];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                TextField(controller: controller, onChanged: changes.add),
+                Expanded(
+                  child: VirtualKeyboardWidget(
+                    controller: controller,
+                    keyboardType: VirtualKeyboardType.Alphanumeric,
+                    height: 400,
+                    width: 600,
+                    shouldReplaceOnFirstInput: true,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(TextField));
+      await tester.tap(find.descendant(
+        of: find.byType(VirtualKeyboardWidget),
+        matching: find.text('q'),
+      ));
+      await tester.pump();
+
+      expect(controller.text, 'q');
+      expect(changes, ['q']);
+
+      controller.dispose();
+    });
+
+    testWidgets('Return submits without inserting a newline', (tester) async {
+      final controller = TextEditingController(text: 'query');
+      final submissions = <String>[];
+      var editingCompleteCount = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                TextField(
+                  controller: controller,
+                  onSubmitted: submissions.add,
+                  onEditingComplete: () => editingCompleteCount++,
+                ),
+                Expanded(
+                  child: VirtualKeyboardWidget(
+                    controller: controller,
+                    keyboardType: VirtualKeyboardType.Alphanumeric,
+                    height: 400,
+                    width: 600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(TextField));
+      await tester.tap(find.byIcon(Icons.keyboard_return));
+      await tester.pump();
+
+      expect(controller.text, 'query');
+      expect(submissions, ['query']);
+      expect(editingCompleteCount, 1);
+
+      controller.dispose();
+    });
   });
 
   group('KeyboardProvider focus auto-show', () {
+    testWidgets('focused dialog text still accepts keys during checkout',
+        (tester) async {
+      final keyboard = KeyboardProvider(enablePersistence: false)..featureOn();
+      final controller = TextEditingController();
+      final navigator = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(ChangeNotifierProvider<KeyboardProvider>.value(
+        value: keyboard,
+        child: KeyboardDispatcher(
+          child: MaterialApp(
+            navigatorKey: navigator,
+            home: const Scaffold(body: Text('Billing')),
+          ),
+        ),
+      ));
+      final finish = OrderSubmissionCoordinator.instance.holdCheckoutUi();
+      addTearDown(finish);
+      showDialog<void>(
+        context: navigator.currentContext!,
+        builder: (_) => AlertDialog(
+          title: const Text('Receipt details'),
+          content: TextField(autofocus: true, controller: controller),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+      expect(controller.text, 'a');
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.text('Receipt details'), findsNothing);
+      finish();
+      await tester.pumpWidget(const SizedBox());
+      keyboard.dispose();
+      controller.dispose();
+    });
+
+    testWidgets('busy checkout drops scans without replaying a partial prefix',
+        (tester) async {
+      final barcode = BarcodeProvider();
+      final received = <String>[];
+      final subscription = barcode.barcodeStream.listen(received.add);
+      addTearDown(subscription.cancel);
+      await tester.pumpWidget(ChangeNotifierProvider<BarcodeProvider>.value(
+        value: barcode,
+        child: const KeyboardDispatcher(
+          child: MaterialApp(home: Scaffold(body: Text('Billing'))),
+        ),
+      ));
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+      final finish = OrderSubmissionCoordinator.instance.holdCheckoutUi();
+      addTearDown(finish);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyB);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      expect(received, isEmpty);
+      finish();
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      expect(received, ['C']);
+      await tester.pumpWidget(const SizedBox());
+      barcode.dispose();
+    });
+
     testWidgets('covers TextField and TextFormField without per-field wiring',
         (tester) async {
       final keyboardProvider = KeyboardProvider(enablePersistence: false)

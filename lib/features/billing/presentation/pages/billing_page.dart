@@ -1,3 +1,5 @@
+import 'package:pos_machine/components/order_submission_guard.dart';
+import 'package:pos_machine/services/order_submission_coordinator.dart';
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
@@ -21,6 +23,7 @@ import 'package:pos_machine/models/delivery_method_registry.dart';
 import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/features/billing/domain/billing_totals.dart';
+import 'package:pos_machine/features/billing/domain/embedded_barcode.dart';
 import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 import 'package:pos_machine/features/billing/domain/payment_validation.dart';
@@ -53,6 +56,7 @@ import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/providers/quotations_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
+import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -276,6 +280,8 @@ class BillingPageState extends State<BillingPage>
   String? deliveryDate;
   String? deliveryTime;
   String? deliveryAddress;
+  int? deliveryAddressId;
+  String? deliveryPincode;
   double? _selectedDeliveryCharge;
   DateTime _quotationDate = DateTime.now();
   DateTime _quotationExpiryDate = DateTime.now().add(const Duration(days: 30));
@@ -327,6 +333,10 @@ class BillingPageState extends State<BillingPage>
         Provider.of<AppSettingsProvider>(context, listen: false);
     localProductProvider.setAllowOverselling(
       appSettingsProvider.appSettings?.allowOverselling ?? true,
+    );
+    localProductProvider.setHideNonStockProduct(
+      appSettingsProvider.appSettings?.posHideNonStockProduct ?? false,
+      activeStoreId: NonStockVisibility.activeStoreIdOf(context),
     );
   }
 
@@ -963,6 +973,9 @@ class BillingPageState extends State<BillingPage>
         deliveryDate = currentOrder.deliveryDate;
         deliveryTime = currentOrder.deliveryTime;
         deliveryAddress = currentOrder.address; // Restore address
+        // Drafts don't persist these, so never carry them over from another order.
+        deliveryAddressId = null;
+        deliveryPincode = null;
 
         // 5. Restore Coupon State
         if ((currentOrder.couponId != null &&
@@ -1195,6 +1208,10 @@ class BillingPageState extends State<BillingPage>
       return false;
     }
 
+    // The receipt dialog can remain open while the checkout UI lease is held.
+    // Only suppress billing input after the route above has had ownership.
+    if (OrderSubmissionCoordinator.instance.isBusy) return true;
+
     if (event.logicalKey == LogicalKeyboardKey.tab &&
         !HardwareKeyboard.instance.isAltPressed &&
         _barcodeNode.hasFocus) {
@@ -1314,7 +1331,7 @@ class BillingPageState extends State<BillingPage>
 
       if (event.logicalKey == LogicalKeyboardKey.f1) {
         debugPrint("⌨️ [BillingPage] Handling F1 -> clear cart");
-        _clearCart();
+        _clearCartManually();
       } else if (event.logicalKey == LogicalKeyboardKey.f2) {
         if (!_isQuotationPage && !_showConfirmOrderButton) return;
         debugPrint("⌨️ [BillingPage] Handling F2 -> open checkout confirm");
@@ -1419,7 +1436,7 @@ class BillingPageState extends State<BillingPage>
     if (!billingProvider.hasInternet) {
       showScaffoldError(
         context: context,
-        message: 'No internet connection available for sync.',
+        message: 'billing.no_internet_sync'.tr,
       );
       return;
     }
@@ -1436,6 +1453,7 @@ class BillingPageState extends State<BillingPage>
   }
 
   Future<void> processBarcode(String barcode) async {
+    if (OrderSubmissionCoordinator.instance.isBusy) return;
     _enqueueBarcode(barcode);
   }
 
@@ -1492,16 +1510,12 @@ class BillingPageState extends State<BillingPage>
     List<GetProduct> filteredProducts = [];
     try {
       debugPrint("🔴 [BillingPage.processBarcode] Parsing barcode...");
-      String? prefix;
-      String? productCode;
-      String? lastFive;
+      // Embedded scale barcodes (12 or legacy 14 chars, '000' prefix) carry a
+      // product code + weight/qty payload; parsing lives in the pure
+      // EmbeddedBarcode helper.
+      final bool isEmbedded = EmbeddedBarcode.isEmbedded(query);
 
-      if (query.length > 2) {
-        prefix = query.substring(0, 3); // First 3 digits;
-        debugPrint("🔴 [BillingPage.processBarcode] Prefix: $prefix");
-      }
-
-      if (prefix != '000' || query.length != 14) {
+      if (!isEmbedded) {
         debugPrint(
             "🔴 [BillingPage.processBarcode] Standard barcode - searching by: '$query'");
         filteredProducts =
@@ -1510,14 +1524,12 @@ class BillingPageState extends State<BillingPage>
           barCode: query,
         );
       } else {
-        productCode = query.substring(3, 9); // Next 6 digits
-        lastFive = query.substring(9, 14); // Last 5 digits
         debugPrint(
-            "🔴 [BillingPage.processBarcode] Weight/Count barcode - productCode: $productCode, lastFive: $lastFive");
+            "🔴 [BillingPage.processBarcode] Weight/Count barcode - productCode: ${EmbeddedBarcode.searchCode(query)}, payload: ${EmbeddedBarcode.payload(query)}");
         filteredProducts =
             Provider.of<LocalProductProvider>(context, listen: false)
                 .filterProductByBarcode(
-          barCode: productCode,
+          barCode: EmbeddedBarcode.searchCode(query),
         );
       }
 
@@ -1543,31 +1555,19 @@ class BillingPageState extends State<BillingPage>
         if (matchedSaleUnit != null && !multiSaleUnitEnabled) {
           showScaffoldError(
             context: context,
-            message: 'Multi sale units are disabled for this store.',
+            message: 'billing.error_multi_sale_disabled'.tr,
           );
           return;
         }
 
         num? quantity;
-        if ((product.unit == 'KGS' || product.unit == 'KG') &&
-            prefix == '000' &&
-            query.length == 14) {
-          // Weight-based product
-          String weightKg = lastFive!.substring(0, 2); // First 2 digits = KG
-          String weightGrams =
-              lastFive.substring(2, 5); // Last 3 digits = Grams
-          // Malformed digits must not abort the sale — fall back to qty 1
-          // (cashier can correct the quantity in the cart).
-          final parsedKg = double.tryParse(weightKg);
-          final parsedGrams = double.tryParse(weightGrams);
-          quantity = (parsedKg == null || parsedGrams == null)
-              ? null
-              : parsedKg + (parsedGrams / 1000);
+        if ((product.unit == 'KGS' || product.unit == 'KG') && isEmbedded) {
+          // Weight-based product; the payload holds whole grams.
+          quantity = EmbeddedBarcode.weightQuantityKg(query);
         } else if ((product.unit == 'PCS' || product.unit == 'PC') &&
-            prefix == '000' &&
-            query.length == 14) {
-          // Count-based product; malformed digits fall back to qty 1.
-          quantity = int.tryParse(lastFive!);
+            isEmbedded) {
+          // Count-based product.
+          quantity = EmbeddedBarcode.pieceQuantity(query);
         } else if (matchedSaleUnit != null) {
           quantity = _resolveSaleUnitQuantity(matchedSaleUnit);
           debugPrint(
@@ -1691,7 +1691,13 @@ class BillingPageState extends State<BillingPage>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // Required for AutomaticKeepAliveClientMixin
+    super.build(context);
+    return OrderSubmissionGuard(
+        busy: _isOrderActionBusy, child: _buildPage(context));
+  }
+
+  Widget _buildPage(BuildContext context) {
+    // Required for AutomaticKeepAliveClientMixin
     context.watch<BillingProvider>().hasInternet;
 
     // Quick fix: if we are editing an order and it hasn't been rehydrated after navigation, rehydrate now
@@ -2209,7 +2215,7 @@ class BillingPageState extends State<BillingPage>
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Please wait while products are being loaded.',
+                    'billing.products_loading'.tr,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 11,
@@ -2553,7 +2559,7 @@ class BillingPageState extends State<BillingPage>
                   Icons.help_outline,
                   color: Colors.grey.shade600,
                 ),
-                tooltip: 'Keyboard Shortcuts (Ctrl+H)',
+                tooltip: 'billing.keyboard_shortcuts'.tr,
                 onPressed: () {
                   KeyboardShortcutsHelpDialog.show(context);
                 },
@@ -2594,7 +2600,8 @@ class BillingPageState extends State<BillingPage>
                           ? ColorManager.kPrimaryColor
                           : Colors.grey.shade600,
                     ),
-                    tooltip: 'Font: ${fontProvider.fontSizeLevelName}',
+                    tooltip:
+                        '${'billing.font_prefix'.tr}${fontProvider.fontSizeLevelName}',
                     onPressed: () {
                       fontProvider.cycleFontSize();
                     },
@@ -3224,7 +3231,7 @@ class BillingPageState extends State<BillingPage>
       if (!changed) {
         showScaffoldError(
           context: context,
-          message: 'Unable to change unit for this cart item.',
+          message: 'billing.unable_change_cart_unit'.tr,
         );
       }
       return;
@@ -3273,7 +3280,7 @@ class BillingPageState extends State<BillingPage>
     if (!changed) {
       showScaffoldError(
         context: context,
-        message: 'Unable to change unit for this cart item.',
+        message: 'billing.unable_change_cart_unit'.tr,
       );
     }
   }
@@ -3711,13 +3718,13 @@ class BillingPageState extends State<BillingPage>
                                                   const SizedBox(width: 6),
                                                   Tooltip(
                                                     message: isOutOfStock
-                                                        ? 'Out of stock'
+                                                        ? 'billing.out_of_stock'.tr
                                                         : isLowStock
-                                                            ? 'Low stock'
+                                                            ? 'billing.low_stock'.tr
                                                             : canViewBillingProductDetails
                                                                 ? 'billing.view_details'
                                                                     .tr
-                                                                : 'No permission to view product details',
+                                                                : 'product_detail.no_permission_view_details'.tr,
                                                     waitDuration:
                                                         const Duration(
                                                             milliseconds: 400),
@@ -3748,7 +3755,7 @@ class BillingPageState extends State<BillingPage>
                                                     const SizedBox(width: 6),
                                                     Tooltip(
                                                       message:
-                                                          'Customer purchase history',
+                                                          'billing.customer_purchase_history'.tr,
                                                       waitDuration:
                                                           const Duration(
                                                               milliseconds:
@@ -4522,7 +4529,7 @@ class BillingPageState extends State<BillingPage>
         true) {
       showScaffoldError(
         context: context,
-        message: 'Customer purchase history is disabled',
+        message: 'billing.purchase_history_disabled'.tr,
       );
       return;
     }
@@ -4532,7 +4539,7 @@ class BillingPageState extends State<BillingPage>
     if (customerSelectionProvider.isDefaultCustomer) {
       showScaffoldError(
         context: context,
-        message: 'Purchase history is not shown for the default customer',
+        message: 'billing.purchase_history_default_customer'.tr,
       );
       return;
     }
@@ -4547,7 +4554,7 @@ class BillingPageState extends State<BillingPage>
     if (customerId == null || productId == null || customerName == null) {
       showScaffoldError(
         context: context,
-        message: 'Select a customer to view purchase history',
+        message: 'billing.select_customer_purchase_history'.tr,
       );
       return;
     }
@@ -4556,7 +4563,7 @@ class BillingPageState extends State<BillingPage>
     if (token == null || token.isEmpty) {
       showScaffoldError(
         context: context,
-        message: 'Unable to load purchase history',
+        message: 'billing.purchase_history_load_failed'.tr,
       );
       return;
     }
@@ -4576,7 +4583,7 @@ class BillingPageState extends State<BillingPage>
           purchaseHistory.data.isEmpty) {
         showScaffoldError(
           context: context,
-          message: 'No purchase history found for this product',
+          message: 'billing.no_purchase_history'.tr,
         );
         return;
       }
@@ -4631,7 +4638,7 @@ class BillingPageState extends State<BillingPage>
       if (!mounted) return;
       showScaffoldError(
         context: context,
-        message: 'Unable to load purchase history',
+        message: 'billing.purchase_history_load_failed'.tr,
       );
     }
   }
@@ -5893,7 +5900,7 @@ class BillingPageState extends State<BillingPage>
               child: _buildActionButton(
                 text: 'billing.clear_cart'.tr,
                 color: ColorManager.kButtonRed,
-                onPressed: _clearCart,
+                onPressed: _clearCartManually,
                 isLoading: isLoadingClearCart,
                 isDisabled: disableActions && !isLoadingClearCart,
                 shortcutLabel: 'F1',
@@ -6079,6 +6086,18 @@ class BillingPageState extends State<BillingPage>
     );
   }
 
+  bool get _requiresDeliveryAddress =>
+      DeliveryMethodRegistry.requiresAddress(deliveryMethod);
+
+  bool _isDeliveryPincodeMissing() {
+    final ecommerceEnabled =
+        Provider.of<AppSettingsProvider>(context, listen: false)
+            .ecommerceEnabled;
+    return ecommerceEnabled &&
+        _requiresDeliveryAddress &&
+        (deliveryPincode?.trim().isEmpty ?? true);
+  }
+
   SavedOrder _saveCurrentCartAsDraft(
       LocalProductProvider localProductProvider) {
     final paymentData = _getPaymentMethodData();
@@ -6174,6 +6193,8 @@ class BillingPageState extends State<BillingPage>
       deliveryDate = null;
       deliveryTime = null;
       deliveryAddress = null;
+      deliveryAddressId = null;
+      deliveryPincode = null;
       _selectedDeliveryCharge = null;
       _commentController.clear();
       _carNumberController.clear();
@@ -6214,7 +6235,12 @@ class BillingPageState extends State<BillingPage>
     _resetBillingWorkspaceUi(refocus: refocus);
   }
 
-  Future<void> _clearCart() async {
+  /// Clears the cart because the cashier explicitly requested it.
+  ///
+  /// Keep the security-key check at this UI boundary. Successful order and
+  /// quotation flows must use [_clearOrderWorkspace] directly so their
+  /// automatic cleanup is never treated as a manual destructive action.
+  Future<void> _clearCartManually() async {
     if (!await PosSecurityKeyDialog.verify(
       context,
       action: 'clear the cart',
@@ -6660,9 +6686,6 @@ class BillingPageState extends State<BillingPage>
     if (!_ensureAuthoritativeAppSettings()) {
       return;
     }
-    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
-      return;
-    }
     // Check for internet connection before proceeding
     if (!_hasInternet) {
       showScaffoldError(
@@ -6671,8 +6694,6 @@ class BillingPageState extends State<BillingPage>
       );
       return; // Stop execution if no internet
     }
-    debugPrint("Create Order and Print pressed");
-    debugPrint("🚀 API REQUEST STARTING - Create Order and Print");
 
     // Require valid payment before creating order
     if (!_ensurePaymentReadyForConfirm(_createOrderAndPrint)) {
@@ -6686,7 +6707,12 @@ class BillingPageState extends State<BillingPage>
     setState(() {
       isLoadingCreateOrder = true;
     });
+    final releaseCheckoutUi =
+        OrderSubmissionCoordinator.instance.holdCheckoutUi();
     try {
+      if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(
+              context) ||
+          !mounted) return;
       final hasCustomer = selectedCustomerID != null ||
           (mobileNumberText?.isNotEmpty == true) ||
           (salesExecutivemobileNumberText?.isNotEmpty == true);
@@ -6718,13 +6744,19 @@ class BillingPageState extends State<BillingPage>
         return;
       }
 
+      if (_isDeliveryPincodeMissing()) {
+        showScaffoldError(
+          context: context,
+          message: "checkout_modal.msg_pincode_required".tr,
+        );
+        return;
+      }
+
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
       // debugPrint("accessToken From AuthModel $accessToken");
       final provider = Provider.of<CartProvider>(context, listen: false);
       int? cartId = provider.getCartIDForOrder;
-      debugPrint("📦 Cart ID for order: $cartId");
-      debugPrint("💰 Payment methods: $selectedPaymentMethods");
 
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
@@ -6754,26 +6786,14 @@ class BillingPageState extends State<BillingPage>
 
       final items = localProductProvider.buildOrderItemsPayload();
 
-      for (final item in items) {
-        debugPrint("📦 Order Item Payload: $item");
-      }
-
-      debugPrint("📋 Order Items: ${items.length} products");
-      debugPrint(
-          "💵 Total Price: ${localProductProvider.priceSummary!.netTotal}");
-      debugPrint("👤 Customer ID: $selectedCustomerID");
-      debugPrint(
-          "📱 Customer Phone: ${selectedCustomerPhone ?? mobileNumberText}");
-      debugPrint(
-          "💳 Payment Details - Paid: ${_paidAmountController.text}, Balance: $_balanceAmount");
-      debugPrint("🚚 Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
-
       final priceSummary = localProductProvider.priceSummary!;
-      debugPrint(
-          "🏷️ Discount Data - Flat: ${priceSummary.flatDiscount}, Percentage: ${priceSummary.percentageDiscount}, Total: ${priceSummary.discount}");
 
+      await localProductProvider.flushPersistence();
       await Provider.of<CartProvider>(context, listen: false)
           .addToOrderAPI(
+        protectSubmission: true,
+        localDraftId: localProductProvider.currentOrder?.id,
+        cartSessionId: localProductProvider.cartSessionId,
         items: items,
         cartIds: cartId ?? 0,
         accessToken: accessToken ?? "",
@@ -6800,12 +6820,15 @@ class BillingPageState extends State<BillingPage>
         discountAmount: priceSummary.discount,
         toCustomerCredit: _toCustomerCreditEnabled,
         address: deliveryAddress,
+        addressId: _requiresDeliveryAddress ? deliveryAddressId : null,
+        pincode: _requiresDeliveryAddress ? deliveryPincode : null,
         deliveryCharge: _getDeliveryChargeForOrder(),
         quotationId: localProductProvider.currentOrder?.quotationId,
       )
           .then((response) async {
-        debugPrint(
-            "✅ API RESPONSE - Create Order and Print: ${json.encode(response)}");
+        debugPrint('🧾 BILLING ORDER API RESPONSE: ${json.encode(response)}');
+        if (!mounted) return;
+
         if (await SubscriptionActionGuard.handleBackendResponse(
           context,
           response,
@@ -6827,17 +6850,18 @@ class BillingPageState extends State<BillingPage>
 
           // Clear cart without restoring stock (order is confirmed)
           localProductProvider.clearCartAfterOrder();
+          unawaited(Provider.of<CartProvider>(context, listen: false)
+              .submissions
+              .completeLocalCleanup(
+                  response, localProductProvider.flushPersistence));
 
           try {
             String ordersId = response["order_number"].toString();
             String? accessToken =
                 Provider.of<AuthModel>(context, listen: false).token;
 
-            debugPrint(
-                "🔍 Fetching order details for print - Order #$ordersId");
             final OrderDetailsresponse = await SalesProvider()
                 .listOrderDetails(context, ordersId, accessToken ?? "");
-            debugPrint("✅ Order details received for printing");
 
             OrderDetailsModel orderDetails =
                 OrderDetailsModel.fromJson(OrderDetailsresponse);
@@ -6860,12 +6884,6 @@ class BillingPageState extends State<BillingPage>
             // Extract payment breakdown (method -> amount mapping from API)
             Map<String, dynamic>? paymentBreakdown =
                 orderDetails.data?.payments;
-
-            debugPrint('[BillingPrint] Order number: ${ordersId}');
-            debugPrint('[BillingPrint] Payment method: $paymentMethod');
-            debugPrint('[BillingPrint] Payment breakdown: $paymentBreakdown');
-            debugPrint(
-                '[BillingPrint] Payment breakdown keys: ${paymentBreakdown?.keys.toList()}');
 
             String? orderComment;
             if (orderDetails.data?.orderProps != null) {
@@ -6907,8 +6925,6 @@ class BillingPageState extends State<BillingPage>
                         ? value.toDouble()
                         : double.tryParse(value.toString()) ?? 0.0);
               });
-              debugPrint(
-                  '[BillingPrint] Derived total paid from payment breakdown: $totalPaid');
             }
             double? currentBalance =
                 orderDetails.data?.customerDetails?.customerBalance;
@@ -6925,18 +6941,7 @@ class BillingPageState extends State<BillingPage>
             // local computation, leave it null rather than print a value we
             // can't trust.
 
-            debugPrint(
-                "🖨️ Attempting auto-print for order #${orderDetails.data!.orderNumber}");
-            debugPrint(
-                "💰 Customer Old Balanceance: $oldBalance, Paid: $totalPaid, Current Balance: $currentBalance");
-
             Future<bool> printOnce() {
-              debugPrint(
-                  '[BillingPrint] Sending payment method to PrintPage: $paymentMethod');
-              debugPrint(
-                  '[BillingPrint] Sending payment breakdown to PrintPage: $paymentBreakdown');
-              debugPrint(
-                  '[BillingPrint] Sending paid amount to PrintPage: ${totalPaid > 0 ? totalPaid : null}');
               return _printOrderDetailsWithFallback(
                 storeName: storeName,
                 cartItems: orderDetails.data!.cart!.cartItems!,
@@ -6979,7 +6984,8 @@ class BillingPageState extends State<BillingPage>
               printAction: printOnce,
             );
           } catch (error) {
-            debugPrint("❌ Error fetching order details for print: $error");
+            debugPrint(
+                '[BillingPrint] receipt_failed type=${error.runtimeType}');
           }
 
           // Clear the mobile number after successful save
@@ -7005,6 +7011,8 @@ class BillingPageState extends State<BillingPage>
             deliveryDate = null;
             deliveryTime = null;
             deliveryAddress = null;
+            deliveryAddressId = null;
+            deliveryPincode = null;
             _isCustomerManuallySelected = false;
             _hasOpenedPaymentModalOnce = false;
             _toCustomerCreditEnabled = false;
@@ -7032,31 +7040,33 @@ class BillingPageState extends State<BillingPage>
             providerCartAlreadyCleared: true,
           );
         } else {
-          debugPrint("❌ API ERROR - Create Order and Print failed");
           showScaffoldError(
             context: context,
-            message: "billing.failed_save_order_api".tr,
+            message: response["message"]?.toString() ??
+                "billing.failed_save_order_api".tr,
             // message: "${addToOrderModel.message}",
           );
         }
       });
     } catch (error) {
-      debugPrint("❌ EXCEPTION in _createOrderAndPrint: $error");
+      if (mounted)
+        showScaffoldError(
+            context: context,
+            message:
+                'We couldn’t complete the checkout screen. Review the order status before billing again.');
     } finally {
+      releaseCheckoutUi();
       // Set loading to false at the end of the function
-      setState(() {
-        isLoadingCreateOrder = false; // Indicate that loading has finished
-      });
+      if (mounted)
+        setState(() {
+          isLoadingCreateOrder = false; // Indicate that loading has finished
+        });
       _endOrderAction();
-      debugPrint("🏁 Create Order and Print process completed");
     }
   }
 
   Future<void> _confirmOrder() async {
     if (!_ensureAuthoritativeAppSettings()) {
-      return;
-    }
-    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
       return;
     }
     // Check for internet connection before proceeding
@@ -7067,8 +7077,6 @@ class BillingPageState extends State<BillingPage>
       );
       return; // Stop execution if no internet
     }
-    debugPrint("Confirm Order pressed");
-    debugPrint("🚀 API REQUEST STARTING - Confirm Order");
 
     // Require valid payment before confirming order
     if (!_ensurePaymentReadyForConfirm(_confirmOrder)) {
@@ -7082,7 +7090,12 @@ class BillingPageState extends State<BillingPage>
     setState(() {
       isLoadingConfirmOrder = true;
     });
+    final releaseCheckoutUi =
+        OrderSubmissionCoordinator.instance.holdCheckoutUi();
     try {
+      if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(
+              context) ||
+          !mounted) return;
       final hasCustomer = selectedCustomerID != null ||
           (mobileNumberText?.isNotEmpty == true) ||
           (salesExecutivemobileNumberText?.isNotEmpty == true);
@@ -7114,13 +7127,19 @@ class BillingPageState extends State<BillingPage>
         return;
       }
 
+      if (_isDeliveryPincodeMissing()) {
+        showScaffoldError(
+          context: context,
+          message: "checkout_modal.msg_pincode_required".tr,
+        );
+        return;
+      }
+
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
       // debugPrint("accessToken From AuthModel $accessToken");
       final provider = Provider.of<CartProvider>(context, listen: false);
       int? cartId = provider.getCartIDForOrder;
-      debugPrint("📦 Cart ID for order: $cartId");
-      debugPrint("💰 Payment methods: $selectedPaymentMethods");
 
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
@@ -7150,22 +7169,12 @@ class BillingPageState extends State<BillingPage>
 
       final items = localProductProvider.buildOrderItemsPayload();
 
-      for (final item in items) {
-        debugPrint("📦 Order Item Payload: $item");
-      }
-
-      debugPrint("📋 Order Items: ${items.length} products");
-      debugPrint(
-          "💵 Total Price: ${localProductProvider.priceSummary!.netTotal}");
-      debugPrint("👤 Customer ID: $selectedCustomerID");
-      debugPrint(
-          "📱 Customer Phone: ${selectedCustomerPhone ?? mobileNumberText}");
-      debugPrint(
-          "💳 Payment Details - Paid: ${_paidAmountController.text}, Balance: $_balanceAmount");
-      debugPrint("🚚 Delivery Method: $deliveryMethod (ID: $deliveryMethodId)");
-
+      await localProductProvider.flushPersistence();
       await Provider.of<CartProvider>(context, listen: false)
           .addToOrderAPI(
+        protectSubmission: true,
+        localDraftId: localProductProvider.currentOrder?.id,
+        cartSessionId: localProductProvider.cartSessionId,
         items: items,
         cartIds: cartId ?? 0,
         accessToken: accessToken ?? "",
@@ -7193,11 +7202,15 @@ class BillingPageState extends State<BillingPage>
         discountAmount: localProductProvider.priceSummary!.discount,
         toCustomerCredit: _toCustomerCreditEnabled,
         address: deliveryAddress,
+        addressId: _requiresDeliveryAddress ? deliveryAddressId : null,
+        pincode: _requiresDeliveryAddress ? deliveryPincode : null,
         deliveryCharge: _getDeliveryChargeForOrder(),
         quotationId: localProductProvider.currentOrder?.quotationId,
       )
           .then((response) async {
-        debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
+        debugPrint('🧾 BILLING ORDER API RESPONSE: ${json.encode(response)}');
+        if (!mounted) return;
+
         if (await SubscriptionActionGuard.handleBackendResponse(
           context,
           response,
@@ -7219,6 +7232,10 @@ class BillingPageState extends State<BillingPage>
 
           // Clear cart without restoring stock (order is confirmed)
           localProductProvider.clearCartAfterOrder();
+          unawaited(Provider.of<CartProvider>(context, listen: false)
+              .submissions
+              .completeLocalCleanup(
+                  response, localProductProvider.flushPersistence));
 
           // Clear the mobile number after successful save
           setState(() {
@@ -7243,6 +7260,8 @@ class BillingPageState extends State<BillingPage>
             deliveryDate = null;
             deliveryTime = null;
             deliveryAddress = null;
+            deliveryAddressId = null;
+            deliveryPincode = null;
             _isCustomerManuallySelected = false;
             _hasOpenedPaymentModalOnce = false;
             _toCustomerCreditEnabled = false;
@@ -7264,25 +7283,30 @@ class BillingPageState extends State<BillingPage>
               shouldFetchCustomers:
                   false); // Preserve customer selection after confirming
 
-          _clearCart();
+          localProductProvider.clearCurrentOrder();
         } else {
-          debugPrint("❌ API ERROR - Confirm Order failed");
           showScaffoldError(
             context: context,
-            message: "billing.order_failed".tr,
+            message:
+                response["message"]?.toString() ?? "billing.order_failed".tr,
           );
         }
       });
       _focusTextField();
     } catch (error) {
-      debugPrint("❌ EXCEPTION in _confirmOrder: $error");
+      if (mounted)
+        showScaffoldError(
+            context: context,
+            message:
+                'We couldn’t complete the checkout screen. Review the order status before billing again.');
     } finally {
+      releaseCheckoutUi();
       // Set loading to false at the end of the function
-      setState(() {
-        isLoadingConfirmOrder = false; // Indicate that loading has finished
-      });
+      if (mounted)
+        setState(() {
+          isLoadingConfirmOrder = false; // Indicate that loading has finished
+        });
       _endOrderAction();
-      debugPrint("🏁 Confirm Order process completed");
     }
   }
 
@@ -7809,7 +7833,7 @@ class BillingPageState extends State<BillingPage>
       builder: (dialogContext) {
         return CheckoutModal(
           mode: mode,
-          title: title ?? 'Finalize Order',
+          title: title ?? 'billing.finalize_order'.tr,
           initialStep: initialStep,
           cartTotal: localProductProvider.priceSummary?.subTotal ??
               localProductProvider.cartTotal,
@@ -7826,6 +7850,8 @@ class BillingPageState extends State<BillingPage>
           carNumber: _carNumberController.text,
           deliveryComment: _commentController.text,
           deliveryAddress: deliveryAddress ?? "",
+          deliveryAddressId: deliveryAddressId,
+          deliveryPincode: deliveryPincode ?? "",
           deliveryDate: deliveryDate,
           deliveryTime: deliveryTime,
           initialDeliveryCharge: _selectedDeliveryCharge ?? 0.0,
@@ -7839,6 +7865,12 @@ class BillingPageState extends State<BillingPage>
               deliveryDate = date;
               deliveryTime = time;
               deliveryAddress = address;
+            });
+          },
+          onDeliveryAddressDetailsUpdated: (addressId, pincode) {
+            setState(() {
+              deliveryAddressId = addressId;
+              deliveryPincode = pincode;
             });
           },
           onDeliveryChargeUpdated: (deliveryCharge) {
@@ -8168,7 +8200,7 @@ class BillingPageState extends State<BillingPage>
     if (localProductProvider.cartItems.isEmpty) {
       showScaffoldError(
         context: context,
-        message: 'Please add items to quote first.',
+        message: 'billing.add_items_to_quote_first'.tr,
       );
       setState(() {
         isLoadingSaveOrder = false;
@@ -8195,7 +8227,7 @@ class BillingPageState extends State<BillingPage>
     if (!hasExistingCustomer && !hasInlineCustomer) {
       showScaffoldError(
         context: context,
-        message: 'Please select or enter a customer before creating quotation.',
+        message: 'billing.select_or_enter_customer_quote'.tr,
       );
       setState(() {
         isLoadingSaveOrder = false;
@@ -8206,7 +8238,7 @@ class BillingPageState extends State<BillingPage>
     if (_quotationExpiryDate.isBefore(_quotationDate)) {
       showScaffoldError(
         context: context,
-        message: 'Expiry date cannot be before quotation date.',
+        message: 'billing.expiry_before_quotation'.tr,
       );
       setState(() {
         isLoadingSaveOrder = false;
@@ -8271,7 +8303,7 @@ class BillingPageState extends State<BillingPage>
         if (response['success'] == true || response['status'] == 'success') {
           showScaffold(
             context: context,
-            message: 'Quotation created successfully!',
+            message: 'billing.quotation_created'.tr,
           );
           final now = DateTime.now();
           _quotationDate = now;
@@ -8284,7 +8316,7 @@ class BillingPageState extends State<BillingPage>
               showScaffoldError(
                 context: context,
                 message:
-                    'Quotation created, but print failed because the API response did not include quotation id.',
+                    'billing.quotation_print_missing_id'.tr,
               );
             } else {
               final details = await quotationsProvider.fetchQuotationDetails(
@@ -8298,7 +8330,7 @@ class BillingPageState extends State<BillingPage>
                 showScaffoldError(
                   context: context,
                   message:
-                      'Quotation created, but details could not be loaded for printing.',
+                    'billing.quotation_print_details_failed'.tr,
                 );
               } else {
                 Future<bool> printOnce() => _printQuotationDetails(details);
@@ -8310,11 +8342,15 @@ class BillingPageState extends State<BillingPage>
               }
             }
           }
-          _clearCart();
+          _clearOrderWorkspace(
+            localProductProvider: localProductProvider,
+            preserveStockDeduction: false,
+          );
         } else {
           showScaffoldError(
             context: context,
-            message: response['message'] ?? 'Failed to create quotation',
+            message: response['message'] ??
+                'billing.quotation_create_failed'.tr,
           );
         }
       }
@@ -8322,7 +8358,7 @@ class BillingPageState extends State<BillingPage>
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'Failed to create quotation',
+          message: 'billing.quotation_create_failed'.tr,
         );
       }
     } finally {
@@ -8908,7 +8944,9 @@ class BillingPageState extends State<BillingPage>
       if ((double.tryParse(entry.value) ?? 0) > 0) {
         final label = _extraPaymentValues[entry.key];
         activeMethods.add(
-          label != null && label.isNotEmpty ? label : 'Extra',
+          label != null && label.isNotEmpty
+              ? label
+              : 'billing.extra_payment_method'.tr,
         );
       }
     }
@@ -8948,7 +8986,11 @@ class BillingPageState extends State<BillingPage>
     for (final entry in _extraPaymentAmounts.entries) {
       if ((double.tryParse(entry.value) ?? 0) > 0) {
         final label = _extraPaymentValues[entry.key];
-        activeMethods.add(label != null && label.isNotEmpty ? label : 'Extra');
+        activeMethods.add(
+          label != null && label.isNotEmpty
+              ? label
+              : 'billing.extra_payment_method'.tr,
+        );
       }
     }
 
@@ -9254,7 +9296,7 @@ class BillingPageState extends State<BillingPage>
     if (localProductProvider.priceSummary == null) {
       showScaffoldError(
         context: context,
-        message: 'Cart is empty or data not available',
+        message: 'billing.cart_empty_or_data_unavailable'.tr,
       );
       return;
     }
@@ -9358,10 +9400,10 @@ class BillingPageState extends State<BillingPage>
   Future<bool> _confirmCustomerCopyPrint() async {
     return (await ConfirmationDialog.show(
           context: context,
-          title: 'Print customer copy?',
-          message: 'Do you want to print a customer copy now?',
-          confirmText: 'Yes, print',
-          cancelText: 'No',
+          title: 'general.print_customer_copy'.tr,
+          message: 'general.print_customer_copy_prompt'.tr,
+          confirmText: 'general.yes_print'.tr,
+          cancelText: 'general.no'.tr,
         )) ??
         false;
   }

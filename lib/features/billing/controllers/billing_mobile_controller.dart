@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 import 'package:pos_machine/components/build_confirmation_dialog.dart';
@@ -544,8 +545,9 @@ class BillingMobileController {
     List<GetProduct> filteredProducts = [];
 
     try {
-      // Embedded scale barcodes (14 chars, '000' prefix) carry a product code
-      // + weight/qty payload; parsing lives in the pure EmbeddedBarcode helper.
+      // Embedded scale barcodes (12 or legacy 14 chars, '000' prefix) carry a
+      // product code + weight/qty payload; parsing lives in the pure
+      // EmbeddedBarcode helper.
       final bool isEmbedded = EmbeddedBarcode.isEmbedded(query);
 
       filteredProducts = Provider.of<LocalProductProvider>(context,
@@ -589,7 +591,7 @@ class BillingMobileController {
         if (matchedSaleUnit != null && !multiSaleUnitEnabled) {
           showScaffoldError(
             context: context,
-            message: 'Multi sale units are disabled for this store.',
+            message: 'billing.error_multi_sale_disabled'.tr,
           );
           return;
         }
@@ -1471,10 +1473,10 @@ class BillingMobileController {
 
     final shouldPrintCustomerCopy = await ConfirmationDialog.show(
           context: context,
-          title: 'Print customer copy?',
-          message: 'Do you want to print a customer copy now?',
-          confirmText: 'Yes, print',
-          cancelText: 'No',
+          title: 'general.print_customer_copy'.tr,
+          message: 'general.print_customer_copy_prompt'.tr,
+          confirmText: 'general.yes_print'.tr,
+          cancelText: 'general.no'.tr,
         ) ??
         false;
     if (!shouldPrintCustomerCopy || !context.mounted) return;

@@ -92,7 +92,7 @@ class HeaderBar extends StatelessWidget {
                 Icons.help_outline,
                 color: Colors.grey.shade600,
               ),
-              tooltip: 'Keyboard Shortcuts',
+              tooltip: 'billing.keyboard_shortcuts'.tr,
               onPressed: () {
                 KeyboardShortcutsHelpDialog.show(context);
               },
@@ -109,8 +109,8 @@ class HeaderBar extends StatelessWidget {
               ),
               tooltip:
                   Provider.of<KeyboardProvider>(context).showKeyboardFeature
-                      ? 'Hide Keyboard'
-                      : 'Show Keyboard',
+                      ? 'keyboard.hide'.tr
+                      : 'keyboard.show'.tr,
               onPressed: () {
                 final keyboardProvider =
                     Provider.of<KeyboardProvider>(context, listen: false);

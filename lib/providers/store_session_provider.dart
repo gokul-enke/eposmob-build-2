@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/features/weigh_machine/data/plu_export_service.dart';
 import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/admin_settings_provider.dart';
@@ -25,6 +26,19 @@ import 'package:pos_machine/features/realtime_sync/presentation/realtime_sync_pr
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:provider/provider.dart';
 
+class StoreBootstrapException implements Exception {
+  final String stage;
+  final Object cause;
+
+  const StoreBootstrapException({
+    required this.stage,
+    required this.cause,
+  });
+
+  @override
+  String toString() => 'Store setup failed while $stage: $cause';
+}
+
 class StoreSessionProvider extends ChangeNotifier {
   Store? _activeStore;
   bool _isBootstrapping = false;
@@ -35,6 +49,57 @@ class StoreSessionProvider extends ChangeNotifier {
   bool get isBootstrapping => _isBootstrapping;
   String? get statusMessage => _statusMessage;
   List<Store> get availableStores => List.unmodifiable(_availableStores);
+
+  /// In-memory store first; fill missing contact fields from the persisted
+  /// `active_store` snapshot so print still works if this process never
+  /// re-ran store selection.
+  Future<Store?> resolveActiveStore() async {
+    final persistedJson =
+        await SharedPreferenceProvider().getActiveStoreDetails();
+    final saved = persistedJson != null ? Store.fromJson(persistedJson) : null;
+    final current = _activeStore;
+
+    if (current == null && saved == null) return null;
+    if (saved == null) return current;
+
+    if (current == null) {
+      _activeStore = saved;
+      notifyListeners();
+      return saved;
+    }
+
+    final merged = Store(
+      storeId: current.storeId ?? saved.storeId,
+      storeName: _nonEmpty(current.storeName) ?? saved.storeName,
+      code: current.code ?? saved.code,
+      location: _nonEmpty(current.location) ?? saved.location,
+      email: _nonEmpty(current.email) ?? saved.email,
+      phone: _nonEmpty(current.phone) ?? saved.phone,
+      stateId: current.stateId ?? saved.stateId,
+      districtId: current.districtId ?? saved.districtId,
+      pincodeId: current.pincodeId ?? saved.pincodeId,
+      localLocationId: current.localLocationId ?? saved.localLocationId,
+      storeOpenTime: current.storeOpenTime ?? saved.storeOpenTime,
+    );
+
+    final filledMissingContact =
+        (!_hasText(current.location) && _hasText(merged.location)) ||
+            (!_hasText(current.phone) && _hasText(merged.phone)) ||
+            (!_hasText(current.email) && _hasText(merged.email));
+    if (filledMissingContact) {
+      _activeStore = merged;
+      notifyListeners();
+    }
+    return merged;
+  }
+
+  static String? _nonEmpty(String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) return null;
+    return trimmed;
+  }
+
+  static bool _hasText(String? value) => _nonEmpty(value) != null;
 
   void _setStatus(String message) {
     _statusMessage = message;
@@ -65,42 +130,45 @@ class StoreSessionProvider extends ChangeNotifier {
     _isBootstrapping = true;
     _setStatus('Saving your selection...');
 
-    final sharedPrefProvider = context.read<SharedPreferenceProvider>();
-    final previousActiveStoreId = await sharedPrefProvider.getActiveStoreId();
-    final selectedStoreId = store.storeId;
-    final didStoreChange = previousActiveStoreId != null &&
-        selectedStoreId != null &&
-        previousActiveStoreId != selectedStoreId;
-
-    if (didStoreChange) {
-      await context.read<RealtimeSyncProvider>().stop();
-    }
-
-    await sharedPrefProvider.saveActiveStoreId(store.storeId ?? 0);
-    await sharedPrefProvider.saveActiveStoreDetails(store.toJson());
-    _activeStore = store;
-    _setStatus('Preparing environment for ${store.storeName ?? "store"}...');
-
-    final authModel = context.read<AuthModel>();
-    final String accessToken = authModel.token ?? '';
-
-    final generalSettingsProvider = context.read<GeneralSettingsProvider>();
-    final appSettingsProvider = context.read<AppSettingsProvider>();
-    final adminSettingsProvider = context.read<AdminSettingsProvider>();
-    final bankProvider = context.read<BankProvider>();
-    final invoiceProvider = context.read<InvoiceProvider>();
-    final purchaseProvider = context.read<PurchaseProvider>();
-    final docConfigProvider = context.read<DocumentConfigProvider>();
-    final printerSettingsProvider = context.read<PrinterSettingsProvider>();
-    final categoryProvider = context.read<CategoryProvider>();
-    final localProductProvider = context.read<LocalProductProvider>();
-    final masterDataProvider = context.read<MasterDataProvider>();
-    final roleProvider = context.read<RoleProvider>();
-    final deliveryMethodsProvider = context.read<DeliveryMethodsProvider>();
-    final customerProvider = context.read<CustomerProvider>();
-
+    String currentStage = 'validating the selected store';
     try {
+      final selectedStoreId = store.storeId;
+      if (selectedStoreId == null || selectedStoreId <= 0) {
+        throw StateError('The selected store has no valid store ID.');
+      }
+
+      // Resolve dependencies before the first async gap and before changing
+      // persisted session state. A missing provider must not leave
+      // active_store_id half-switched.
+      currentStage = 'initializing store services';
+      final sharedPrefProvider = context.read<SharedPreferenceProvider>();
+      final realtimeSyncProvider = context.read<RealtimeSyncProvider>();
+      final authModel = context.read<AuthModel>();
+      final String accessToken = authModel.token ?? '';
+      final generalSettingsProvider = context.read<GeneralSettingsProvider>();
+      final appSettingsProvider = context.read<AppSettingsProvider>();
+      final adminSettingsProvider = context.read<AdminSettingsProvider>();
+      final bankProvider = context.read<BankProvider>();
+      final invoiceProvider = context.read<InvoiceProvider>();
+      final purchaseProvider = context.read<PurchaseProvider>();
+      final docConfigProvider = context.read<DocumentConfigProvider>();
+      final printerSettingsProvider = context.read<PrinterSettingsProvider>();
+      final categoryProvider = context.read<CategoryProvider>();
+      final localProductProvider = context.read<LocalProductProvider>();
+      final masterDataProvider = context.read<MasterDataProvider>();
+      final roleProvider = context.read<RoleProvider>();
+      final deliveryMethodsProvider = context.read<DeliveryMethodsProvider>();
+      final customerProvider = context.read<CustomerProvider>();
+
+      currentStage = 'reading the previous store session';
+      final previousActiveStoreId = await sharedPrefProvider.getActiveStoreId();
+      final didStoreChange = previousActiveStoreId != null &&
+          previousActiveStoreId != selectedStoreId;
+
       if (didStoreChange) {
+        currentStage = 'stopping the previous store sync';
+        await realtimeSyncProvider.stop();
+
         // Log store change (always)
         debugPrint(
           '🔄 [Store] Store changed: $previousActiveStoreId → $selectedStoreId. Clearing local data...',
@@ -111,9 +179,18 @@ class StoreSessionProvider extends ChangeNotifier {
           await _updateStatus('store_bootstrap.clearing_cache'.tr);
         }
 
+        // PLU.csv is a copy of the product cache. Remove it while the old
+        // store is still active (its folder is found by the old store ID), so
+        // the weigh machine never imports another store's items.
+        currentStage = 'removing the previous weigh machine file';
+        await PluExportService.instance.discardFile();
+
         // Always clear local data
+        currentStage = 'clearing the previous product cache';
         await localProductProvider.clearAllLocalData();
+        currentStage = 'clearing the previous category cache';
         await categoryProvider.clearAllCategories();
+        currentStage = 'clearing the previous document cache';
         await docConfigProvider.clearAllCaches();
 
         // Show UI status only in debug mode
@@ -123,8 +200,20 @@ class StoreSessionProvider extends ChangeNotifier {
         debugPrint('✅ [Store] Local data cleared for store: $selectedStoreId');
       }
 
+      // Persist only after the previous store's tenant-scoped data has been
+      // cleared successfully. This avoids a new active_store_id pointing at
+      // stale Hive data if a cache clear fails midway through a store switch.
+      currentStage = 'saving the selected store';
+      await sharedPrefProvider.saveActiveStoreDetails(store.toJson());
+      await sharedPrefProvider.saveActiveStoreId(selectedStoreId);
+      _activeStore = store;
+      _setStatus('Preparing environment for ${store.storeName ?? "store"}...');
+
       await _updateStatus('store_bootstrap.loading_permissions'.tr);
       try {
+        if (!context.mounted) {
+          throw StateError('Store selection screen was closed during setup.');
+        }
         await roleProvider.fetchRoles(context);
         await _updateStatus('store_bootstrap.permissions_loaded'.tr);
       } catch (e) {
@@ -197,13 +286,22 @@ class StoreSessionProvider extends ChangeNotifier {
       }
 
       await _updateStatus('store_bootstrap.fetching_vouchers'.tr);
-      await invoiceProvider.listVoucherAccountType(accessToken);
+      await _runOptionalBootstrapStep(
+        'loading voucher account types',
+        () => invoiceProvider.listVoucherAccountType(accessToken),
+      );
 
       await _updateStatus('store_bootstrap.updating_users'.tr);
-      await invoiceProvider.listUsersList(accessToken);
+      await _runOptionalBootstrapStep(
+        'loading users',
+        () => invoiceProvider.listUsersList(accessToken),
+      );
 
       await _updateStatus('store_bootstrap.retrieving_store'.tr);
-      await purchaseProvider.listAllStores(accessToken, null);
+      await _runOptionalBootstrapStep(
+        'loading store details',
+        () => purchaseProvider.listAllStores(accessToken, null),
+      );
 
       try {
         final fetchedStore = purchaseProvider.storeList.firstWhere(
@@ -242,10 +340,16 @@ class StoreSessionProvider extends ChangeNotifier {
       );
 
       await _updateStatus('store_bootstrap.syncing_units'.tr);
-      await purchaseProvider.listAllUnits(accessToken);
+      await _runOptionalBootstrapStep(
+        'loading units',
+        () => purchaseProvider.listAllUnits(accessToken),
+      );
 
       await _updateStatus('store_bootstrap.fetching_racks'.tr);
-      await purchaseProvider.listMasterDataValues(accessToken, 'RACKS');
+      await _runOptionalBootstrapStep(
+        'loading rack values',
+        () => purchaseProvider.listMasterDataValues(accessToken, 'RACKS'),
+      );
 
       await _updateStatus('store_bootstrap.downloading_docs'.tr);
       try {
@@ -301,10 +405,8 @@ class StoreSessionProvider extends ChangeNotifier {
       if (accessToken.isNotEmpty &&
           prefs != null &&
           prefs.isNotEmpty &&
-          companyId != null &&
-          selectedStoreId != null) {
+          companyId != null) {
         await _updateStatus('store_bootstrap.starting_realtime'.tr);
-        final realtimeSyncProvider = context.read<RealtimeSyncProvider>();
         final realtimeSession = RealtimeSyncSession(
           backendBaseUrl: APPUrl.baseURL,
           companyId: companyId,
@@ -323,6 +425,11 @@ class StoreSessionProvider extends ChangeNotifier {
       }
 
       await _updateStatus('store_bootstrap.finishing'.tr);
+    } catch (error, stackTrace) {
+      debugPrint('❌ [StoreBootstrap] Failed while $currentStage: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (error is StoreBootstrapException) rethrow;
+      throw StoreBootstrapException(stage: currentStage, cause: error);
     } finally {
       _isBootstrapping = false;
       _statusMessage = null;
@@ -335,6 +442,18 @@ class StoreSessionProvider extends ChangeNotifier {
     // Yield once so Flutter can paint the new status without adding an
     // artificial delay to every bootstrap step.
     await Future<void>.delayed(Duration.zero);
+  }
+
+  Future<void> _runOptionalBootstrapStep(
+    String stage,
+    Future<void> Function() action,
+  ) async {
+    try {
+      await action();
+    } catch (error, stackTrace) {
+      debugPrint('⚠️ [StoreBootstrap] Non-fatal failure while $stage: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 
   void resetSession() {

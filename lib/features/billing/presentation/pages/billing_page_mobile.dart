@@ -1,3 +1,4 @@
+import 'package:pos_machine/components/order_submission_guard.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,6 +11,7 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
@@ -333,6 +335,11 @@ class BillingPageMobileState extends State<BillingPageMobile>
       appSettings: appSettings,
       localProductProvider: localProductProvider,
     );
+    _settingsController.syncHideNonStockProduct(
+      appSettings: appSettings,
+      localProductProvider: localProductProvider,
+      activeStoreId: NonStockVisibility.activeStoreIdOf(context),
+    );
     _settingsController.syncAppSettingsFlags(
       appSettings: appSettings,
       billingProvider: billingProvider,
@@ -363,6 +370,14 @@ class BillingPageMobileState extends State<BillingPageMobile>
         localProductProvider:
             Provider.of<LocalProductProvider>(context, listen: false),
       );
+      // stock_enabled gates POS_HIDE_NONSTOCK_PRODUCT, so re-apply visibility
+      // whenever stock tracking is toggled.
+      _settingsController.syncHideNonStockProduct(
+        appSettings: appSettingsProvider.appSettings,
+        localProductProvider:
+            Provider.of<LocalProductProvider>(context, listen: false),
+        activeStoreId: NonStockVisibility.activeStoreIdOf(context),
+      );
     };
     generalSettingsProvider.addListener(_generalSettingsListener!);
     _generalSettingsListener!();
@@ -376,6 +391,12 @@ class BillingPageMobileState extends State<BillingPageMobile>
         appSettings: appSettings,
         localProductProvider:
             Provider.of<LocalProductProvider>(context, listen: false),
+      );
+      _settingsController.syncHideNonStockProduct(
+        appSettings: appSettings,
+        localProductProvider:
+            Provider.of<LocalProductProvider>(context, listen: false),
+        activeStoreId: NonStockVisibility.activeStoreIdOf(context),
       );
       _settingsController.syncAppSettingsFlags(
         appSettings: appSettings,
@@ -669,11 +690,14 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
   // Action methods — UI shell only; business logic lives in the controller.
   void clearCart() {
-    unawaited(_clearCartWithSecurityKey());
+    unawaited(_clearCartManually());
   }
 
-  Future<void> _clearCartWithSecurityKey(
-      {bool requireSecurityKey = true}) async {
+  /// Clears the cart because the cashier explicitly requested it.
+  ///
+  /// Automatic cleanup after save/confirm actions is intentionally performed
+  /// by the controller/service paths and must not call this method.
+  Future<void> _clearCartManually() async {
     if (_isClearingCart) return;
 
     final billingProvider =
@@ -683,11 +707,10 @@ class BillingPageMobileState extends State<BillingPageMobile>
     billingProvider.setLoadingClearCart(true);
 
     try {
-      if (requireSecurityKey &&
-          !await PosSecurityKeyDialog.verify(
-            context,
-            action: 'clear the cart',
-          )) {
+      if (!await PosSecurityKeyDialog.verify(
+        context,
+        action: 'clear the cart',
+      )) {
         return;
       }
       if (!mounted) return;
@@ -698,7 +721,10 @@ class BillingPageMobileState extends State<BillingPageMobile>
         _autocompletePhoneKey = GlobalKey();
       });
 
-      showScaffold(context: context, message: "Cart Cleared Successfully");
+      showScaffold(
+        context: context,
+        message: 'billing.cart_cleared'.tr,
+      );
       _focusTextField();
     } catch (e) {
       billingDebugLog('Error clearing cart: $e');
@@ -839,7 +865,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
       SnackBar(
         content: Text(BillingMobileErrorMessages.printRetryPrompt),
         action: SnackBarAction(
-          label: 'Retry',
+          label: 'general.retry'.tr,
           onPressed: () => _retryPendingPrint(),
         ),
         duration: const Duration(seconds: 12),
@@ -1023,7 +1049,9 @@ class BillingPageMobileState extends State<BillingPageMobile>
       }
 
       showScaffold(
-          context: context, message: 'Quotation created successfully!');
+        context: context,
+        message: 'billing.quotation_created'.tr,
+      );
       if (result.printError != null) {
         showScaffoldError(context: context, message: result.printError!);
       }
@@ -1035,7 +1063,13 @@ class BillingPageMobileState extends State<BillingPageMobile>
         _quotationInlineNameController.clear();
         _quotationInlinePhoneController.clear();
       });
-      await _clearCartWithSecurityKey(requireSecurityKey: false);
+      setState(() {
+        _controller.clearCartData(context);
+        _lastRehydratedOrderId = null;
+        _autocompleteProductKey = GlobalKey();
+        _autocompletePhoneKey = GlobalKey();
+      });
+      _focusTextField();
     } finally {
       if (mounted) {
         setState(() {
@@ -1166,9 +1200,9 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
     final confirmed = await DeleteConfirmationDialog.show(
       context: context,
-      title: 'Delete Order',
+      title: 'order_list.dialog_title_delete'.tr,
       itemName: orderLabel,
-      message: 'This order will be permanently removed from your saved orders.',
+      message: 'order_list.dialog_message_delete'.tr,
       warningIcon: Icons.receipt_long_outlined,
       onDelete: () {},
     );
@@ -1185,7 +1219,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
     _controller.deleteSavedOrder(context, order.id);
     showScaffold(
       context: context,
-      message: 'Order deleted successfully',
+      message: 'order_list.success_order_deleted'.tr,
     );
   }
 
@@ -1239,7 +1273,15 @@ class BillingPageMobileState extends State<BillingPageMobile>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    return OrderSubmissionGuard(
+        busy: _isConfirmingOrder ||
+            _isConfirmingAndPrinting ||
+            _isSavingOrder ||
+            _isClearingCart,
+        child: _buildPage(context));
+  }
 
+  Widget _buildPage(BuildContext context) {
     return KeyboardListener(
       focusNode: _focusNode,
       onKeyEvent: _handleKeyPress,

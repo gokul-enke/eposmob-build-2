@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_dynamic_payment_selector.dart';
 import 'package:pos_machine/models/master_data.dart';
@@ -21,16 +22,16 @@ class StockConfirmationDialog extends StatefulWidget {
   final List<Map<String, dynamic>>? stockItems;
   final double? supplierOldBalance;
 
-  const StockConfirmationDialog({
+  StockConfirmationDialog({
     Key? key,
-    this.title = "Confirm Stock Submission",
+    this.title = "billing.confirm_stock_submission",
     required this.itemCount,
     required this.totalAmount,
     this.paymentData,
     required this.onConfirm,
     this.onCancel,
-    this.confirmButtonText = "Confirm",
-    this.cancelButtonText = "Cancel",
+    this.confirmButtonText = "general.confirm",
+    this.cancelButtonText = "general.cancel",
     this.showPaymentWarning = false,
     this.totalDueOverride,
     this.stockItems,
@@ -52,14 +53,14 @@ class StockConfirmationDialog extends StatefulWidget {
       barrierDismissible: true,
       builder: (BuildContext context) {
         return StockConfirmationDialog(
-          title: "Submit Without Payment?",
+          title: "billing.submit_without_payment",
           itemCount: itemCount,
           totalAmount: totalAmount,
           paymentData: null,
           onConfirm: onConfirm,
           showPaymentWarning: true,
-          confirmButtonText: "Yes, Submit",
-          cancelButtonText: "Add Payment",
+          confirmButtonText: "billing.yes_submit",
+          cancelButtonText: "billing.add_payment",
           totalDueOverride: totalDueAmount,
           stockItems: stockItems,
           supplierOldBalance: supplierOldBalance,
@@ -84,14 +85,14 @@ class StockConfirmationDialog extends StatefulWidget {
       barrierDismissible: true,
       builder: (BuildContext context) {
         return StockConfirmationDialog(
-          title: "Payment Summary",
+          title: "billing.payment_summary",
           itemCount: itemCount,
           totalAmount: totalAmount,
           paymentData: paymentData,
           onConfirm: onConfirm,
           showPaymentWarning: false,
-          confirmButtonText: "Confirm & Submit",
-          cancelButtonText: "Cancel",
+          confirmButtonText: "billing.confirm_submit",
+          cancelButtonText: "general.cancel",
           totalDueOverride: totalDueAmount,
           stockItems: stockItems,
           supplierOldBalance: supplierOldBalance,
@@ -267,7 +268,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.title,
+                          widget.title.tr,
                           style: buildCustomStyle(
                             FontWeightManager.bold,
                             FontSize.s16,
@@ -277,7 +278,9 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          "${widget.itemCount} item${widget.itemCount > 1 ? 's' : ''} to be submitted",
+                          'billing.items_to_be_submitted'.trParams({
+                            'count': widget.itemCount.toString(),
+                          }),
                           style: buildCustomStyle(
                             FontWeightManager.regular,
                             FontSize.s12,
@@ -314,10 +317,11 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.08),
+                          color: Colors.orange.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(10),
                           border:
-                              Border.all(color: Colors.orange.withOpacity(0.3)),
+                              Border.all(
+                                  color: Colors.orange.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           children: [
@@ -326,7 +330,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                "Submitting without payment. Full amount will be recorded as balance due.",
+                                'billing.submitting_without_payment'.tr,
                                 style: buildCustomStyle(
                                   FontWeightManager.regular,
                                   FontSize.s12,
@@ -377,7 +381,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                         if (widget.onCancel != null) widget.onCancel!();
                         Navigator.pop(context, false);
                       },
-                      title: widget.cancelButtonText,
+                      title: widget.cancelButtonText.tr,
                       height: 44,
                       width: 150,
                       fontSize: FontSize.s13,
@@ -393,7 +397,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                         widget.onConfirm();
                         Navigator.pop(context, true);
                       },
-                      title: widget.confirmButtonText,
+                      title: widget.confirmButtonText.tr,
                       height: 44,
                       width: 150,
                       fontSize: FontSize.s13,
@@ -449,7 +453,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                 SizedBox(
                   width: 30,
                   child: Text(
-                    'No',
+                    'general.no'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s11,
@@ -461,7 +465,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                 Expanded(
                   flex: 3,
                   child: Text(
-                    'Product',
+                    'product.product'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s11,
@@ -473,7 +477,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                 Expanded(
                   flex: 2,
                   child: Text(
-                    'Price × Qty',
+                    'billing.price_quantity'.tr,
                     textAlign: TextAlign.center,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
@@ -486,7 +490,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                 SizedBox(
                   width: 70,
                   child: Text(
-                    'Tax',
+                    'billing.tax'.tr,
                     textAlign: TextAlign.right,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
@@ -499,7 +503,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                 SizedBox(
                   width: 70,
                   child: Text(
-                    'Total',
+                    'billing.total'.tr,
                     textAlign: TextAlign.right,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
@@ -640,8 +644,10 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                     const SizedBox(width: 4),
                     Text(
                       _isItemsExpanded
-                          ? 'Show Less'
-                          : 'Show All ${totalItems - _maxVisibleItems} More Items',
+                          ? 'general.show_less'.tr
+                          : 'general.show_more_items'.trParams({
+                              'count': (totalItems - _maxVisibleItems).toString(),
+                            }),
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s11,
@@ -682,7 +688,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
             children: [
               Expanded(
                 child: _buildCompactSummaryItem(
-                  'Total Items',
+                  'billing.total_items',
                   '${widget.itemCount}',
                   Icons.inventory_2_outlined,
                   Colors.blue,
@@ -691,7 +697,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
               const SizedBox(width: 8),
               Expanded(
                 child: _buildCompactSummaryItem(
-                  'Total Quantity',
+                  'billing.total_quantity',
                   '${_getTotalQuantity()}',
                   Icons.shopping_cart_outlined,
                   Colors.purple,
@@ -703,7 +709,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
 
           // Purchase Amount
           _buildSummaryRow(
-            "Total Purchase Amount",
+            "billing.total_purchase_amount",
             "${widget.totalAmount.toStringAsFixed(2)}",
             isBold: true,
             valueColor: ColorManager.textColor,
@@ -712,7 +718,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
           if (includedTax > 0) ...[
             const SizedBox(height: 4),
             _buildSummaryRow(
-              "Included Purchase Tax",
+              "billing.included_purchase_tax",
               "${includedTax.toStringAsFixed(2)}",
               valueColor: Colors.teal.shade700,
             ),
@@ -721,13 +727,13 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
           if (additionalTax > 0) ...[
             const SizedBox(height: 4),
             _buildSummaryRow(
-              "Additional Purchase Tax",
+              "billing.additional_purchase_tax",
               "${additionalTax.toStringAsFixed(2)}",
               valueColor: Colors.orange.shade700,
             ),
             const SizedBox(height: 4),
             _buildSummaryRow(
-              "Total Purchase + Tax",
+              "billing.total_purchase_tax",
               "${_getEffectivePurchaseTotal().toStringAsFixed(2)}",
               isBold: true,
               valueColor: Colors.black87,
@@ -738,7 +744,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
           if (supplierOldBalance != 0) ...[
             const SizedBox(height: 6),
             _buildSummaryRow(
-              "Old Supplier Balance",
+              "billing.old_supplier_balance",
               "${supplierOldBalance.toStringAsFixed(2)}",
               valueColor: supplierOldBalance > 0
                   ? Colors.orange.shade700
@@ -750,7 +756,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
           if (hasPayment) ...[
             const Divider(height: 16),
             Text(
-              'Payment Breakdown',
+              'billing.payment_breakdown'.tr,
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s12,
@@ -778,7 +784,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
             ],
             const Divider(height: 16),
             _buildSummaryRow(
-              "Total Paid Amount",
+              "billing.total_paid_amount",
               "${paidAmount.toStringAsFixed(2)}",
               valueColor: ColorManager.kSuccessColor,
               isBold: true,
@@ -805,7 +811,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "Current Supplier Balance",
+                  'billing.current_supplier_balance'.tr,
                   style: buildCustomStyle(
                     FontWeightManager.semiBold,
                     FontSize.s13,
@@ -839,7 +845,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -850,7 +856,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                label,
+                label.tr,
                 style: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s10,
@@ -886,7 +892,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            label,
+            label.tr,
             style: buildCustomStyle(
               isBold ? FontWeightManager.semiBold : FontWeightManager.regular,
               FontSize.s12,

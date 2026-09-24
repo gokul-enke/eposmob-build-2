@@ -130,7 +130,7 @@ class ViewImageOrVideoScreen extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(left: 10.0),
                         child: CustomRoundButton(
-                          title: "Back",
+                          title: 'general.back'.tr,
                           boxColor: Colors.white,
                           textColor: ColorManager.kPrimaryColor,
                           fct: () async {

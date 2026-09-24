@@ -385,7 +385,7 @@ class ThermalPrinter {
       debugPrint("Print job sent successfully");
 
       if (context.mounted) {
-        showScaffold(context: context, message: "Print job sent successfully");
+        showScaffold(context: context, message: 'voucher_print.print_job_sent'.tr);
         Navigator.pop(context);
         SideBarController sideBarController = Get.put(SideBarController());
         sideBarController.index.value = 90;
@@ -395,7 +395,8 @@ class ThermalPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: "Error printing: ${e.toString()}",
+          message: 'voucher_print.error_printing'
+              .trParams({'error': e.toString()}),
         );
       }
     } finally {
@@ -1170,7 +1171,7 @@ class ThermalPrinter {
       debugPrint("Print job sent successfully.");
 
       if (context.mounted) {
-        showScaffold(context: context, message: "Print job sent successfully");
+        showScaffold(context: context, message: 'voucher_print.print_job_sent'.tr);
         Navigator.pop(context);
         SideBarController sideBarController = Get.put(SideBarController());
         sideBarController.index.value = 90;
@@ -1180,7 +1181,9 @@ class ThermalPrinter {
       debugPrint("Stacktrace: $stacktrace");
       if (context.mounted) {
         showScaffoldError(
-            context: context, message: "Error printing: ${e.toString()}");
+            context: context,
+            message: 'voucher_print.error_printing'
+                .trParams({'error': e.toString()}));
       }
     } finally {
       debugPrint("Disconnecting from printer...");
@@ -1294,19 +1297,21 @@ class ThermalPrinter {
               bold: true,
               height: textSizeSmall,
               width: textSizeSmall));
-      final custLabel = 'Customer Name:';
+      final custLabel = '${'voucher_print.customer_name'.tr}:';
       bytes += generator.text('$custLabel $customerName',
           styles: PosStyles(
               fontType: fontType, align: PosAlign.left, height: textSizeSmall));
       if (customerPhone != null && customerPhone.trim().isNotEmpty) {
-        bytes += generator.text('Phone: $customerPhone',
+        bytes += generator.text(
+            '${'voucher_print.phone'.tr}: $customerPhone',
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.left,
                 height: textSizeSmall));
       }
       if (customerAddress != null && customerAddress.trim().isNotEmpty) {
-        bytes += generator.text('Billing Address: $customerAddress',
+        bytes += generator.text(
+            '${'voucher_print.billing_address'.tr}: $customerAddress',
             styles: PosStyles(
                 fontType: fontType,
                 align: PosAlign.left,

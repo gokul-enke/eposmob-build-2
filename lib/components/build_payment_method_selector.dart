@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';
@@ -43,7 +44,7 @@ class BuildPaymentMethodSelector extends StatefulWidget {
 
   const BuildPaymentMethodSelector({
     Key? key,
-    this.title = "Select Payment Method",
+    this.title = '',
     required this.availableMethods,
     this.initialAmounts = const {},
     this.selectedMethods = const [],
@@ -87,11 +88,11 @@ class _BuildPaymentMethodSelectorState
   String _getMethodDisplayName(PaymentMethod method) {
     switch (method) {
       case PaymentMethod.cash:
-        return 'Cash';
+        return 'general.cash'.tr;
       case PaymentMethod.card:
-        return 'Card';
+        return 'general.card'.tr;
       case PaymentMethod.upi:
-        return 'UPI';
+        return 'general.upi'.tr;
     }
   }
 
@@ -166,7 +167,9 @@ class _BuildPaymentMethodSelectorState
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: Text(
-                widget.title,
+            widget.title.isNotEmpty
+                ? widget.title
+                : 'general.select_payment_method'.tr,
                 style: buildCustomStyle(
                   FontWeightManager.semiBold,
                   FontSize.s16,
@@ -249,7 +252,9 @@ class _BuildPaymentMethodSelectorState
                   Row(
                     children: selectedMethods.map((method) {
                       String placeholder =
-                          'Enter ${_getMethodDisplayName(method)} Amount';
+                          'general.enter_payment_amount'.trParams({
+                            'method': _getMethodDisplayName(method),
+                          });
 
                       return Expanded(
                         child: Padding(
@@ -341,7 +346,7 @@ class _BuildPaymentMethodSelectorState
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Total Entered: ${totalEntered.toStringAsFixed(2)}',
+            '${'general.total_entered'.tr}: ${totalEntered.toStringAsFixed(2)}',
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s12,
@@ -350,7 +355,7 @@ class _BuildPaymentMethodSelectorState
             ),
           ),
           Text(
-            'Expected: ${expectedTotal.toStringAsFixed(2)}',
+            '${'general.expected'.tr}: ${expectedTotal.toStringAsFixed(2)}',
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s12,

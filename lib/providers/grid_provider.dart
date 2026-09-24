@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/get_product.dart';
+import '../helpers/product_display_order.dart';
 import '../helpers/product_search_helper.dart';
 
 import '../resources/app_url.dart';
@@ -211,11 +212,14 @@ class GridSelectionProvider extends ChangeNotifier {
         // debugPrint(json.decode(response.body).toString());
         final jsonData = json.decode(response.body);
         GetProductModel getProductModel = GetProductModel.fromJson(jsonData);
+        final products = getProductModel.product == null
+            ? null
+            : sortProductsForDisplay(List.of(getProductModel.product!));
 
-        productList = getProductModel.product;
-        filteredProductList = getProductModel.product;
-        mainProductList = getProductModel.product;
-        categoryProductList = getProductModel.product;
+        productList = products;
+        filteredProductList = products;
+        mainProductList = products;
+        categoryProductList = products;
 
         // debugPrint("categoryListModel.pagination?.toString()");
         // debugPrint(getProductModel.meta?.toString());
@@ -304,7 +308,9 @@ class GridSelectionProvider extends ChangeNotifier {
         final jsonData = json.decode(response.body);
         GetProductModel getProductModel = GetProductModel.fromJson(jsonData);
 
-        quickAccessProductList = getProductModel.product;
+        quickAccessProductList = getProductModel.product == null
+            ? null
+            : sortProductsForDisplay(List.of(getProductModel.product!));
 
         // debugPrint("categoryListModel.pagination?.toString()");
         // debugPrint(getProductModel.meta?.toString());

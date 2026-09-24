@@ -107,9 +107,9 @@ void main() {
   });
 
   group('MULTI_SALE_UNIT_ENABLED settings gate', () {
-    test('defaults to FALSE when the setting is absent', () {
+    test('defaults to TRUE when the setting is absent', () {
       final settings = AppSettings.fromJson(_settingsJson(const []));
-      expect(settings.multiSaleUnitEnabled, isFalse);
+      expect(settings.multiSaleUnitEnabled, isTrue);
     });
 
     test('parses string, boolean, and numeric enabled statuses', () {
@@ -142,7 +142,7 @@ void main() {
       final entry = entries.cast<Map<String, dynamic>>().firstWhere(
             (item) => item['code'] == 'MULTI_SALE_UNIT_ENABLED',
           );
-      expect(entry['status'], 'false');
+      expect(entry['status'], 'true');
     });
   });
 }

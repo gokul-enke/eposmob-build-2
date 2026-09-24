@@ -194,9 +194,9 @@ void main() {
         findsOneWidget,
       );
 
-      // Flush the overlay auto-dismiss timer (2s) so no pending timer trips
-      // the test framework's invariant check on teardown.
-      await tester.pump(const Duration(seconds: 2));
+      // Flush the error overlay's auto-dismiss timer (4s) so no pending timer
+      // trips the test framework's invariant check on teardown.
+      await tester.pump(const Duration(seconds: 4));
     });
   });
 }

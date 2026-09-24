@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -7,8 +8,8 @@ class ConfirmationDialog extends StatelessWidget {
   final String title;
   final String message;
   final String? subtitle;
-  final String confirmText;
-  final String cancelText;
+  final String? confirmText;
+  final String? cancelText;
   final Color confirmColor;
   final Color cancelColor;
   final bool showCloseButton;
@@ -18,8 +19,8 @@ class ConfirmationDialog extends StatelessWidget {
     required this.title,
     required this.message,
     this.subtitle,
-    this.confirmText = 'Yes',
-    this.cancelText = 'No',
+    this.confirmText,
+    this.cancelText,
     this.confirmColor = ColorManager.kPrimaryColor,
     this.cancelColor = ColorManager.kPrimaryColor,
     this.showCloseButton = true,
@@ -30,8 +31,8 @@ class ConfirmationDialog extends StatelessWidget {
     required String title,
     required String message,
     String? subtitle,
-    String confirmText = 'Yes',
-    String cancelText = 'No',
+    String? confirmText,
+    String? cancelText,
     Color confirmColor = ColorManager.kPrimaryColor,
     Color cancelColor = ColorManager.kPrimaryColor,
     bool showCloseButton = true,
@@ -44,8 +45,8 @@ class ConfirmationDialog extends StatelessWidget {
         title: title,
         message: message,
         subtitle: subtitle,
-        confirmText: confirmText,
-        cancelText: cancelText,
+        confirmText: confirmText ?? 'general.yes'.tr,
+        cancelText: cancelText ?? 'general.no'.tr,
         confirmColor: confirmColor,
         cancelColor: cancelColor,
         showCloseButton: showCloseButton,
@@ -146,7 +147,7 @@ class ConfirmationDialog extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                       ),
                       child: Text(
-                        cancelText,
+                        cancelText ?? 'general.no'.tr,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -171,7 +172,7 @@ class ConfirmationDialog extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                       ),
                       child: Text(
-                        confirmText,
+                        confirmText ?? 'general.yes'.tr,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(

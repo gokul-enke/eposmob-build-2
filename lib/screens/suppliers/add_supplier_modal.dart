@@ -1186,7 +1186,9 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
       Navigator.pop(context);
       debugPrint('Error in _submitForm: $error');
       showScaffoldError(
-          context: context, message: 'Error adding supplier: $error');
+          context: context,
+          message: 'add_supplier.error_adding_supplier'
+              .trParams({'error': '$error'}));
     }
   }
 

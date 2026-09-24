@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';
@@ -36,7 +37,7 @@ class SimplePaymentData {
 /// - Cash + Card
 /// Maximum 2 payment methods can be selected at once
 class BuildSimplePaymentSelector extends StatefulWidget {
-  final String title;
+  final String? title;
   final List<SimplePaymentType> availableMethods;
   final Function(SimplePaymentData) onPaymentChanged;
   final SimplePaymentData? initialData;
@@ -45,7 +46,7 @@ class BuildSimplePaymentSelector extends StatefulWidget {
 
   const BuildSimplePaymentSelector({
     Key? key,
-    this.title = "Select Payment Method",
+    this.title,
     this.availableMethods = const [
       SimplePaymentType.cash,
       SimplePaymentType.card,
@@ -92,11 +93,11 @@ class _BuildSimplePaymentSelectorState
   String _getMethodName(SimplePaymentType method) {
     switch (method) {
       case SimplePaymentType.cash:
-        return 'Cash';
+        return 'general.cash'.tr;
       case SimplePaymentType.card:
-        return 'Card';
+        return 'general.card'.tr;
       case SimplePaymentType.upi:
-        return 'UPI';
+        return 'general.upi'.tr;
     }
   }
 
@@ -174,7 +175,7 @@ class _BuildSimplePaymentSelectorState
         children: [
           // Title
           Text(
-            widget.title,
+            widget.title ?? 'general.select_payment_method'.tr,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s16,
@@ -262,7 +263,9 @@ class _BuildSimplePaymentSelectorState
                       method: primaryMethod!,
                       controller: primaryAmountController,
                       placeholder:
-                          'Enter ${_getMethodName(primaryMethod!)} Amount',
+                          'general.enter_payment_amount'.trParams({
+                            'method': _getMethodName(primaryMethod!)
+                          }),
                     ),
                   ),
                 if (primaryMethod != null && secondaryMethod != null)
@@ -273,7 +276,9 @@ class _BuildSimplePaymentSelectorState
                       method: secondaryMethod!,
                       controller: secondaryAmountController,
                       placeholder:
-                          'Enter ${_getMethodName(secondaryMethod!)} Amount',
+                          'general.enter_payment_amount'.trParams({
+                            'method': _getMethodName(secondaryMethod!)
+                          }),
                     ),
                   ),
               ],
@@ -356,7 +361,7 @@ class _BuildSimplePaymentSelectorState
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Total: ${total.toStringAsFixed(2)}',
+            '${'general.total'.tr}: ${total.toStringAsFixed(2)}',
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s14,
@@ -366,7 +371,8 @@ class _BuildSimplePaymentSelectorState
           ),
           if (widget.expectedAmount != null) ...[
             Text(
-              'Expected: ${widget.expectedAmount!.toStringAsFixed(2)}',
+              '${'general.expected'.tr}: '
+              '${widget.expectedAmount!.toStringAsFixed(2)}',
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s12,

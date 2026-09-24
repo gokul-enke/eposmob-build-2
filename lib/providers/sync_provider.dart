@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/helpers/sync_log.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import '../providers/local_product_provider.dart';
 import '../providers/category_providers.dart';
@@ -320,81 +321,93 @@ class SyncProvider extends ChangeNotifier {
   /// Main sync method that coordinates all data synchronization
   Future<void> syncAllData(BuildContext context) async {
     if (_isSyncing) {
-      debugPrint("Sync already in progress, skipping...");
+      SyncLog.line('Already running, skipped');
       return;
     }
+    // Hundreds of routine provider logs are hidden here; see [SyncLog].
+    await SyncLog.quiet(() => _syncAllData(context));
+  }
 
-    await OfflineSyncEndpoints.logSyncAll('Sync All (footer button)');
+  Future<void> _syncAllData(BuildContext context) async {
+    SyncLog.plan([
+      for (final call in await OfflineSyncEndpoints.forSyncAll())
+        (method: call.method, url: call.url, label: call.label),
+    ]);
+    final total = Stopwatch()..start();
 
     try {
       final accessToken = await _requireAccessToken(context);
       _startSync();
       await _ensureCanSync(context);
       _activeSyncKey = 'all';
-
-      debugPrint("🔄 Starting comprehensive data sync...");
-      debugPrint("Sync access token present: ${accessToken.isNotEmpty}");
+      SyncLog.line('Started');
 
       // Pre-Step: Refresh settings (general and app)
       _updateProgress(0.05, "Refreshing settings...");
       try {
-        await Provider.of<GeneralSettingsProvider>(context, listen: false)
-            .fetchGeneralSettings();
-        debugPrint("✅ General settings refreshed");
-        await Provider.of<AppSettingsProvider>(context, listen: false)
-            .fetchAppSettings();
-        debugPrint("✅ App settings refreshed");
-      } catch (e) {
-        debugPrint("⚠️ Failed to refresh settings during sync: $e");
+        await _step('Settings', () async {
+          await Provider.of<GeneralSettingsProvider>(context, listen: false)
+              .fetchGeneralSettings();
+          await Provider.of<AppSettingsProvider>(context, listen: false)
+              .fetchAppSettings();
+        });
+      } catch (_) {
         // Continue sync even if general settings refresh fails
       }
 
-      // Step 1: Sync Products (20%)
       _updateProgress(0.08, "Syncing roles and permissions...");
-      await _syncRoles(context);
+      await _step('Roles', () => _syncRoles(context));
 
       _updateProgress(0.1, "Syncing products...");
-      await _syncProducts(context, accessToken);
+      await _step('Products', () => _syncProducts(context, accessToken));
+      SyncLog.products(
+        Provider.of<LocalProductProvider>(context, listen: false)
+            .lastFetchSummary,
+      );
 
-      // Step 2: Sync Stock Data (30%)
       _updateProgress(0.2, "Syncing stock quantities...");
-      await _syncStockData(context, accessToken);
+      await _step('Stock', () => _syncStockData(context, accessToken));
 
-      // Step 3: Sync Categories (40%)
       _updateProgress(0.3, "Syncing categories...");
-      await _syncCategories(context);
+      await _step('Categories', () => _syncCategories(context));
 
-      // Step 4: Sync Document Configurations (55%)
       _updateProgress(0.4, "Syncing document configurations...");
-      await _syncDocumentConfigurations(context, accessToken);
+      await _step('Document settings',
+          () => _syncDocumentConfigurations(context, accessToken));
 
-      // Step 5: Sync Invoice Data (75%)
       _updateProgress(0.55, "Syncing invoice data...");
-      await _syncInvoiceData(context, accessToken);
+      await _step('Invoices', () => _syncInvoiceData(context, accessToken));
 
-      // Step 6: Sync Purchase Data (90%)
       _updateProgress(0.75, "Syncing purchase data...");
-      await _syncPurchaseData(context, accessToken);
+      await _step('Purchases', () => _syncPurchaseData(context, accessToken));
 
-      // Step 6.5: Sync Delivery Methods (92%)
       _updateProgress(0.92, "Syncing delivery methods...");
-      await _syncDeliveryMethods(context);
+      await _step('Delivery methods', () => _syncDeliveryMethods(context));
 
-      // Step 7: Sync Suppliers (95%)
       _updateProgress(0.95, "Syncing suppliers...");
-      await _syncSuppliers(context, accessToken);
+      await _step('Suppliers', () => _syncSuppliers(context, accessToken));
 
-      // Step 8: Complete (100%)
       _updateProgress(1.0, "Sync completed successfully!");
       _lastSyncTime = DateTime.now();
-
-      debugPrint("✅ Sync completed successfully at ${_lastSyncTime}");
+      SyncLog.line('✅ Done in ${total.elapsedMilliseconds} ms');
 
       await Future.delayed(const Duration(seconds: 1));
       _completSync();
     } catch (e) {
-      debugPrint("❌ Sync failed with error: $e");
+      SyncLog.line('❌ Failed after ${total.elapsedMilliseconds} ms: $e');
       _syncError(e.toString());
+    }
+  }
+
+  /// Runs one sync step and logs a single line with its outcome and time.
+  Future<void> _step(String name, Future<void> Function() body) async {
+    final clock = Stopwatch()..start();
+    try {
+      await body();
+      SyncLog.line('$name ✓ ${clock.elapsedMilliseconds} ms');
+    } catch (e) {
+      SyncLog.line('$name ✗ ${clock.elapsedMilliseconds} ms: $e');
+      rethrow;
     }
   }
 

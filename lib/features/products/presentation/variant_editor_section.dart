@@ -473,7 +473,7 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
     final selectedProp = _propertyById(group.productPropId);
     final propertyDropdown = CustomDropDownWithSearch<ProductProperty>(
       title: '',
-      hintText: 'Select option',
+      hintText: 'product_detail.select_option'.tr,
       value: selectedProp,
       height: 42,
       margin: EdgeInsets.zero,
@@ -555,7 +555,7 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
         if (availableValues.isNotEmpty)
           CustomDropDownWithSearch<String>(
             title: '',
-            hintText: 'Add value',
+            hintText: 'product_detail.add_value'.tr,
             value: null,
             height: 42,
             margin: EdgeInsets.zero,
@@ -582,10 +582,10 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
             child: TextField(
               controller: group.valueInputController,
               style: const TextStyle(fontSize: 12),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
-                hintText: 'Type value + Enter',
+                hintText: 'product_detail.type_value_enter'.tr,
                 hintStyle: TextStyle(fontSize: 11, color: Colors.black38),
               ),
               onSubmitted: (value) {

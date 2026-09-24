@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -29,17 +31,15 @@ void main() {
             404,
           ));
 
-      expect(
-        () => TenantDomainService.discoverDomain(
+      await expectLater(
+        TenantDomainService.discoverDomain(
           'bad-key',
           client: client,
         ),
         throwsA(
-          isA<TenantDomainException>().having(
-            (error) => error.message,
-            'message',
-            'Tenant not found',
-          ),
+          isA<TenantDomainException>()
+              .having((error) => error.message, 'message', 'Tenant not found')
+              .having((error) => error.serverRejected, 'serverRejected', true),
         ),
       );
     });
@@ -50,12 +50,38 @@ void main() {
             200,
           ));
 
-      expect(
-        () => TenantDomainService.discoverDomain(
+      await expectLater(
+        TenantDomainService.discoverDomain(
           'tenant-key',
           client: client,
         ),
-        throwsA(isA<TenantDomainException>()),
+        throwsA(isA<TenantDomainException>()
+            .having((error) => error.serverRejected, 'serverRejected', true)),
+      );
+    });
+
+    test('treats a gateway error as unreachable, not as a bad key', () async {
+      final client = MockClient(
+          (_) async => http.Response('<html>Bad gateway</html>', 502));
+
+      await expectLater(
+        TenantDomainService.discoverDomain('tenant-key', client: client),
+        throwsA(isA<TenantDomainException>()
+            .having((error) => error.serverRejected, 'serverRejected', false)),
+      );
+    });
+
+    test('treats a timeout as unreachable', () async {
+      final client = MockClient((_) => Completer<http.Response>().future);
+
+      await expectLater(
+        TenantDomainService.discoverDomain(
+          'tenant-key',
+          client: client,
+          timeout: const Duration(milliseconds: 10),
+        ),
+        throwsA(isA<TenantDomainException>()
+            .having((error) => error.serverRejected, 'serverRejected', false)),
       );
     });
   });

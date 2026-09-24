@@ -108,7 +108,7 @@ class PrintService {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'Unable to prepare this order for printing: $error',
+          message: '${'general.unable_prepare_print'.tr}: $error',
         );
       }
       return false;
@@ -188,10 +188,10 @@ class PrintService {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Padding(
+                Padding(
                   padding: EdgeInsets.all(16),
                   child: Text(
-                    'Select Print Option',
+                    'ui_chrome.select_print_option'.tr,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,

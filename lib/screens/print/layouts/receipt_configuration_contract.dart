@@ -206,22 +206,17 @@ class ReceiptConfigurationContract {
       // contain only punctuation/numbers.
       _clean(safeArabicFallback),
     ]);
-    // Bilingual output prints both lines, so a wrong-script configured value
-    // is additive there rather than a replacement; keep the stricter split so
-    // the renderer can still supply the missing counterpart line.
+    // In bilingual API responses `default` is the primary English label and
+    // `value` is the optional secondary-language label. The primary label may
+    // fall back when it is missing, but the secondary label must be explicitly
+    // configured: an empty `value` means that the store wants English only for
+    // this field.
     final bilingualEnglish = _firstNonEmpty([
       _withoutArabic(defaultValue),
-      _withoutArabic(value),
       _withoutArabic(resolvedEnglish),
-      _withoutArabic(resolvedArabic),
       _withoutArabic(safeEnglishFallback),
     ]);
-    final bilingualArabic = _firstNonEmpty([
-      _withArabic(value),
-      _withArabic(defaultValue),
-      _withArabic(resolvedArabic),
-      _clean(safeArabicFallback),
-    ]);
+    final bilingualSecondary = value;
 
     switch (mode) {
       case ReceiptLanguageMode.english:
@@ -229,14 +224,15 @@ class ReceiptConfigurationContract {
       case ReceiptLanguageMode.arabic:
         return arabic;
       case ReceiptLanguageMode.bilingual:
-        if (bilingualArabic.isEmpty) return bilingualEnglish;
+        if (bilingualSecondary.isEmpty) return bilingualEnglish;
         if (bilingualEnglish.isEmpty ||
-            bilingualArabic.toLowerCase() == bilingualEnglish.toLowerCase()) {
-          return bilingualArabic;
+            bilingualSecondary.toLowerCase() ==
+                bilingualEnglish.toLowerCase()) {
+          return bilingualSecondary;
         }
         return inlineBilingual
-            ? '$bilingualArabic / $bilingualEnglish'
-            : '$bilingualArabic\n$bilingualEnglish';
+            ? '$bilingualSecondary / $bilingualEnglish'
+            : '$bilingualSecondary\n$bilingualEnglish';
     }
   }
 
@@ -284,6 +280,22 @@ class ReceiptConfigurationContract {
     // nothing was configured at all.
     if (raw.isNotEmpty) return raw;
     return mode.isEnglish ? _clean(englishFallback) : _clean(arabicFallback);
+  }
+
+  /// Number prefixes are literal document configuration, not translated
+  /// display labels. Preserve a configured prefix exactly once; only use the
+  /// primary language's fallback when the API leaves it empty.
+  static String numberPrefix(
+    String? configured,
+    ReceiptLanguageMode mode, {
+    required String englishFallback,
+    required String arabicFallback,
+  }) {
+    final prefix = _clean(configured);
+    if (prefix.isNotEmpty) return prefix;
+    return mode == ReceiptLanguageMode.arabic
+        ? _clean(arabicFallback)
+        : _clean(englishFallback);
   }
 
   static String _clean(dynamic value) => value?.toString().trim() ?? '';

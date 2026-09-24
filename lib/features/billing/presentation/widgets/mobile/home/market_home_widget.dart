@@ -75,6 +75,7 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
       await localProductProvider.fetchProductsFromAPI(refresh: true);
 
       if (localProductProvider.sellableProducts.isEmpty) {
+        if (!mounted) return;
         await syncProvider.syncAllData(context);
       }
 
@@ -200,7 +201,7 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
                           color: Colors.black87,
                         ),
                         decoration: _entryDecoration(
-                          hintText: 'Search products',
+                          hintText: 'billing.search_products'.tr,
                           prefixIcon: Icon(
                             Icons.search,
                             color: Colors.blueGrey.shade400,
@@ -265,24 +266,24 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
                           ),
                         ),
                         _ViewModeButton(
-                          tooltip: 'Grid view',
-                          semanticsLabel: 'Grid view',
+                          tooltip: 'billing.grid_view'.tr,
+                          semanticsLabel: 'billing.grid_view'.tr,
                           icon: Icons.grid_view,
                           selected: _viewMode == ProductViewMode.grid,
                           onTap: () =>
                               setState(() => _viewMode = ProductViewMode.grid),
                         ),
                         _ViewModeButton(
-                          tooltip: 'List view',
-                          semanticsLabel: 'List view',
+                          tooltip: 'billing.list_view'.tr,
+                          semanticsLabel: 'billing.list_view'.tr,
                           icon: Icons.table_rows_outlined,
                           selected: _viewMode == ProductViewMode.list,
                           onTap: () =>
                               setState(() => _viewMode = ProductViewMode.list),
                         ),
                         _ViewModeButton(
-                          tooltip: 'Compact view',
-                          semanticsLabel: 'Compact view',
+                          tooltip: 'billing.compact_view'.tr,
+                          semanticsLabel: 'billing.compact_view'.tr,
                           icon: Icons.apps,
                           selected: _viewMode == ProductViewMode.dense,
                           onTap: () =>
@@ -388,8 +389,8 @@ class _EmptyCatalogLoading extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               resyncing
-                  ? 'Please wait while products are being loaded.'
-                  : 'Please wait.',
+                  ? 'billing.products_loading'.tr
+                  : 'billing.please_wait'.tr,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Poppins',
@@ -581,7 +582,7 @@ class _MobileBarcodeField extends StatelessWidget {
         color: Colors.black87,
       ),
       decoration: _entryDecoration(
-        hintText: 'Barcode',
+        hintText: 'billing.barcode'.tr,
         prefixIcon: Icon(
           Icons.qr_code_scanner,
           color: Colors.blueGrey.shade400,

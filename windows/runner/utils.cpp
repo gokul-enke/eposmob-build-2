@@ -60,5 +60,8 @@ std::string Utf8FromUtf16(const wchar_t* utf16_string) {
   if (converted_length == 0) {
     return std::string();
   }
+  // WideCharToMultiByte with -1 includes the terminator. Keeping it inside
+  // std::string breaks equality checks for runner flags and helper arguments.
+  utf8_string.resize(converted_length - 1);
   return utf8_string;
 }

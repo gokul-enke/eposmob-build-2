@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -141,7 +142,10 @@ class _CouponSectionState extends State<CouponSection> {
       return;
     }
 
-    showScaffold(context: context, message: 'Discount applied successfully');
+    showScaffold(
+      context: context,
+      message: 'billing.discount_applied_successfully'.tr,
+    );
   }
 
   void _clearDiscount() {
@@ -171,7 +175,7 @@ class _CouponSectionState extends State<CouponSection> {
       _selectedDiscount = null;
     });
 
-    showScaffold(context: context, message: 'Discount cleared');
+    showScaffold(context: context, message: 'billing.discount_cleared'.tr);
   }
 
   @override
@@ -202,8 +206,8 @@ class _CouponSectionState extends State<CouponSection> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Flat Discount',
+                  Text(
+                    'coupon.flat_discount'.tr,
                     style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -251,8 +255,8 @@ class _CouponSectionState extends State<CouponSection> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Percentage Discount (%)',
+                  Text(
+                    'coupon.percentage_discount'.tr,
                     style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -299,14 +303,14 @@ class _CouponSectionState extends State<CouponSection> {
         ),
         const SizedBox(height: 16),
 
-        const Text(
-          'Select Coupon',
+        Text(
+          'coupon.select_coupon'.tr,
           style: TextStyle(
               fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
         ),
         const SizedBox(height: 6),
         CustomDropDownWithSearch<DiscountData>(
-          hintText: 'Search or select a discount',
+          hintText: 'coupon.search_or_select'.tr,
           value: _selectedDiscount,
           items: discountProvider.discounts,
           displayText: (discount) =>
