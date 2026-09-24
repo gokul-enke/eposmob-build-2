@@ -43,6 +43,12 @@ class DateHelper {
     return DateTime.now().add(Duration(milliseconds: _serverTimeOffset));
   }
 
+  /// Current server-synchronised time in the configured business timezone.
+  /// Use this for date/time picker defaults instead of the device timezone.
+  static DateTime nowInConfiguredTimeZone() {
+    return _convertToLocal(now().toUtc());
+  }
+
   static void setTimeZone(String timeZone) {
     _timeZone = timeZone;
   }
@@ -289,6 +295,75 @@ class DateHelper {
       return formatter.format(localDate);
     } catch (e) {
       return value;
+    }
+  }
+
+  /// Formats an API timestamp for a date/time picker in the configured
+  /// business timezone. Values without an explicit timezone are treated as
+  /// already being in the business timezone.
+  static String formatISODateTimeForInput(String dateString) {
+    final value = dateString.trim();
+    if (value.isEmpty) return value;
+
+    try {
+      final parsedDate = DateTime.parse(value);
+      final localDate = _hasExplicitTimezone(value)
+          ? _convertToLocal(parsedDate)
+          : parsedDate;
+      return DateFormat('yyyy-MM-dd HH:mm').format(localDate);
+    } catch (e) {
+      return value;
+    }
+  }
+
+  /// Interprets an unzoned date/time selected in the UI as business-local
+  /// time and returns the corresponding UTC instant for the API.
+  static String? configuredDateTimeToUtcIso(String dateString) {
+    final value = dateString.trim();
+    if (value.isEmpty) return null;
+
+    try {
+      final parseCandidate =
+          value.contains('T') ? value : value.replaceFirst(' ', 'T');
+      final parsedDate = DateTime.parse(parseCandidate);
+      if (_hasExplicitTimezone(value)) {
+        return parsedDate.toUtc().toIso8601String();
+      }
+
+      if (_timeZone != null) {
+        try {
+          final location = tz.getLocation(_timeZone!);
+          final configuredDate = tz.TZDateTime(
+            location,
+            parsedDate.year,
+            parsedDate.month,
+            parsedDate.day,
+            parsedDate.hour,
+            parsedDate.minute,
+            parsedDate.second,
+            parsedDate.millisecond,
+            parsedDate.microsecond,
+          );
+          return configuredDate.toUtc().toIso8601String();
+        } catch (e) {
+          debugPrint(
+              "DateHelper: Invalid or missing timezone '$_timeZone', falling back to default offset. Error: $e");
+        }
+      }
+
+      final fallbackUtc = DateTime.utc(
+        parsedDate.year,
+        parsedDate.month,
+        parsedDate.day,
+        parsedDate.hour,
+        parsedDate.minute,
+        parsedDate.second,
+        parsedDate.millisecond,
+        parsedDate.microsecond,
+      ).subtract(_defaultOffset);
+      return fallbackUtc.toIso8601String();
+    } catch (e) {
+      return null;
     }
   }
 }

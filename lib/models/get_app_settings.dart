@@ -81,6 +81,7 @@ class AppSettings {
   final String companySubscriptionMessage;
   final String companySubscriptionValidUntil;
   final String companySubscriptionManageUrl;
+  final String dashboardDefaultPeriod;
 
   AppSettings({
     required this.barcodeSales,
@@ -132,7 +133,24 @@ class AppSettings {
     this.companySubscriptionMessage = '',
     this.companySubscriptionValidUntil = '',
     this.companySubscriptionManageUrl = '',
+    this.dashboardDefaultPeriod = '',
   });
+
+  /// Initial period for dashboards. Property values are case-insensitive and
+  /// Today is used when the property is inactive, missing, or invalid.
+  String get defaultDashboardPeriod {
+    switch (dashboardDefaultPeriod.trim().toLowerCase()) {
+      case 'week':
+        return 'week';
+      case 'month':
+        return 'month';
+      case 'year':
+        return 'year';
+      case 'today':
+      default:
+        return 'today';
+    }
+  }
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
     var data = json['data'] as List;
@@ -313,6 +331,10 @@ class AppSettings {
       companySubscriptionManageUrl: _readEnabledSettingValue(
         settingsMap,
         'COMPANY_SUBSCRIPTION_MANAGE_URL',
+      ),
+      dashboardDefaultPeriod: _readEnabledSettingValue(
+        settingsMap,
+        'DASHBOARD_DEFAULT_PERIOD',
       ),
     );
   }
@@ -589,6 +611,12 @@ class AppSettings {
           "code": "COMPANY_SUBSCRIPTION_MANAGE_URL",
           "value": companySubscriptionManageUrl,
           "status": companySubscriptionManageUrl.isNotEmpty.toString(),
+        },
+        {
+          "name": "Dashboard Default Period",
+          "code": "DASHBOARD_DEFAULT_PERIOD",
+          "value": dashboardDefaultPeriod,
+          "status": dashboardDefaultPeriod.isNotEmpty.toString(),
         },
       ],
     };
