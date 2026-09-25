@@ -10,6 +10,7 @@ import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/screens/print/receipt_customer_segment.dart';
+import 'package:pos_machine/services/receipt_identity_service.dart';
 import 'package:provider/provider.dart';
 import 'receipt_configuration_contract.dart';
 import '../thermal/thermal_paper_profile.dart';
@@ -196,16 +197,8 @@ class ReceiptLayoutParams {
 
   /// Keeps a stable offline receipt reference intact in every thermal and
   /// PDF theme while retaining legacy ORD-/CONF- number stripping.
-  ///
-  /// gokul-dev resolves this through `ReceiptIdentityService`; this branch
-  /// does not carry that service yet, so the same two rules live here.
-  String get printableOrderNumberComponent {
-    final trimmed = orderNumber.trim();
-    if (RegExp(r'^\d+-\d{2,3}-\d{6}-\d{4,}$').hasMatch(trimmed)) {
-      return trimmed;
-    }
-    return RegExp(r'[1-9]\d*').firstMatch(trimmed)?.group(0) ?? trimmed;
-  }
+  String get printableOrderNumberComponent =>
+      ReceiptIdentityService.printableInvoiceNumberComponent(orderNumber);
 
   /// Display configuration options from the Return Bill document config.
   Map<String, DisplayOption>? get returnBillDisplayConfig =>
@@ -957,7 +950,9 @@ class ReceiptLayoutParams {
   /// (price_summary.total_tax). Falls back to summing item-level taxAmount for
   /// offline/local-storage orders where the API value is unavailable.
   double get totalTax {
-    if (apiTotalTax != null) return apiTotalTax!;
+    if (apiTotalTax != null) {
+      return AmountHelper.truncateToTwoDecimals(apiTotalTax!);
+    }
     double tax = 0.0;
     for (var item in cartItems) {
       if (isFromLocalStorage || item is Map) {
@@ -966,7 +961,7 @@ class ReceiptLayoutParams {
         tax += double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0.0;
       }
     }
-    return tax;
+    return AmountHelper.truncateToTwoDecimals(tax);
   }
 
   /// Calculate total quantity from cart items

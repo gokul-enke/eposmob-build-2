@@ -272,6 +272,8 @@ class SavedOrder {
   final String? tableId;
   final String? alternatePhone;
   final String? address;
+  final int? addressId;
+  final String? pincode;
   final double? deliveryCharge;
   final String? customerVatNumber;
   final String? customerCrNumber;
@@ -307,6 +309,8 @@ class SavedOrder {
     this.tableId,
     this.alternatePhone,
     this.address,
+    this.addressId,
+    this.pincode,
     this.deliveryCharge,
     this.customerVatNumber,
     this.customerCrNumber,
@@ -1667,6 +1671,8 @@ class LocalProductProvider extends ChangeNotifier {
           },
           if (item.variantId != null) 'product_variant_id': item.variantId,
           'warranty_enabled': item.warrantyEnabled,
+          if (item.comment != null && item.comment!.trim().isNotEmpty)
+            'comment': item.comment!.trim(),
         });
       }
 
@@ -1692,6 +1698,8 @@ class LocalProductProvider extends ChangeNotifier {
           },
           if (item.variantId != null) 'product_variant_id': item.variantId,
           'warranty_enabled': item.warrantyEnabled,
+          if (item.comment != null && item.comment!.trim().isNotEmpty)
+            'comment': item.comment!.trim(),
         });
       }
     }
@@ -1822,10 +1830,14 @@ class LocalProductProvider extends ChangeNotifier {
           alternatePhone: hiveSavedOrder.alternatePhone,
           tableId: hiveSavedOrder.tableId,
           address: hiveSavedOrder.address,
+          addressId: hiveSavedOrder.addressId,
+          pincode: hiveSavedOrder.pincode,
           deliveryCharge: hiveSavedOrder.deliveryCharge,
           customerVatNumber: hiveSavedOrder.customerVatNumber,
           customerCrNumber: hiveSavedOrder.customerCrNumber,
           customerType: hiveSavedOrder.customerType,
+          quotationId: hiveSavedOrder.quotationId,
+          quotationNumber: hiveSavedOrder.quotationNumber,
         ));
       }
       notifyListeners();
@@ -1874,10 +1886,14 @@ class LocalProductProvider extends ChangeNotifier {
           tableId: order.tableId,
           alternatePhone: order.alternatePhone,
           address: order.address,
+          addressId: order.addressId,
+          pincode: order.pincode,
           deliveryCharge: order.deliveryCharge,
           customerVatNumber: order.customerVatNumber,
           customerCrNumber: order.customerCrNumber,
           customerType: order.customerType,
+          quotationId: order.quotationId,
+          quotationNumber: order.quotationNumber,
         );
       }
     } catch (e) {
@@ -2075,10 +2091,14 @@ class LocalProductProvider extends ChangeNotifier {
         tableId: hiveSavedOrder.tableId,
         alternatePhone: hiveSavedOrder.alternatePhone,
         address: hiveSavedOrder.address,
+        addressId: hiveSavedOrder.addressId,
+        pincode: hiveSavedOrder.pincode,
         deliveryCharge: hiveSavedOrder.deliveryCharge,
         customerVatNumber: hiveSavedOrder.customerVatNumber,
         customerCrNumber: hiveSavedOrder.customerCrNumber,
         customerType: hiveSavedOrder.customerType,
+        quotationId: hiveSavedOrder.quotationId,
+        quotationNumber: hiveSavedOrder.quotationNumber,
       );
       _savedOrders.add(savedOrder);
       debugPrint(
@@ -2278,10 +2298,14 @@ class LocalProductProvider extends ChangeNotifier {
         tableId: order.tableId,
         alternatePhone: order.alternatePhone,
         address: order.address,
+        addressId: order.addressId,
+        pincode: order.pincode,
         deliveryCharge: order.deliveryCharge,
         customerVatNumber: order.customerVatNumber,
         customerCrNumber: order.customerCrNumber,
         customerType: order.customerType,
+        quotationId: order.quotationId,
+        quotationNumber: order.quotationNumber,
       );
     }).toList();
 
@@ -2410,7 +2434,8 @@ class LocalProductProvider extends ChangeNotifier {
   }) async {
     await hydrated;
     if (isCurrent != null && !isCurrent()) {
-      throw StateError('The active store changed before stock could be applied.');
+      throw StateError(
+          'The active store changed before stock could be applied.');
     }
     final touchedProductIds = <int>{};
     final authoritative = products
@@ -2713,7 +2738,7 @@ class LocalProductProvider extends ChangeNotifier {
               continue;
             }
 
-           allProducts.addAll(getProductModel.product!);
+            allProducts.addAll(getProductModel.product!);
             debugPrint(
                 '✅ [API] Page $pageNum: $productsFetched products (Total: ${allProducts.length})');
 
@@ -4466,6 +4491,9 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   SavedOrder saveCurrentCartAsConfirmedOrder({
+    String? clientSaleId,
+    String? receiptNumber,
+    String? issuedAt,
     String? customerName,
     String? customerPhone,
     String? comment,
@@ -4487,26 +4515,38 @@ class LocalProductProvider extends ChangeNotifier {
     String? tableId,
     String? alternatePhone,
     String? address,
+    int? addressId,
+    String? pincode,
     double? deliveryCharge,
     String? customerVatNumber,
     String? customerCrNumber,
     String? customerType,
+    int? quotationId,
+    String? quotationNumber,
   }) {
     if (_cartItems.isEmpty) {
       throw Exception("Cannot save an empty cart as confirmed order");
     }
 
-    final String orderId = _generateLocalOrderId();
+    final String orderId = clientSaleId?.trim().isNotEmpty == true
+        ? clientSaleId!.trim()
+        : _generateLocalOrderId();
 
     // Calculate total with rounding if enabled
     final baseTotal = context != null ? getRoundedTotal(context) : cartTotal;
     double total = baseTotal + (deliveryCharge ?? 0.0);
 
-    // Create a deep copy of cart items to prevent modification
-    final orderItems = _cartItems.map(_cloneLocalCartItem).toList();
+    // The working cart is newest-first for fast cashier interaction, while the
+    // add-to-order API deliberately sends the reverse order. Snapshot confirmed
+    // receipts in that same API order so immediate/offline and server reprints
+    // both show the first scanned item first.
+    final orderItems =
+        _cartItems.reversed.map(_cloneLocalCartItem).toList(growable: false);
 
     // Generate sequential order number - use "CONF-" prefix for confirmed orders
-    String orderNumber = generateConfirmedOrderNumber();
+    final String orderNumber = receiptNumber?.trim().isNotEmpty == true
+        ? receiptNumber!.trim()
+        : generateConfirmedOrderNumber();
 
     // Create the confirmed order
     final SavedOrder order = SavedOrder(
@@ -4516,7 +4556,11 @@ class LocalProductProvider extends ChangeNotifier {
       customerName: customerName,
       customerPhone: customerPhone,
       comment: comment,
-      createdAt: DateHelper.now().toIso8601String(),
+      // Persist the actual instant. Print and ZATCA layers convert this UTC
+      // value to the configured business timezone where appropriate.
+      createdAt: issuedAt?.trim().isNotEmpty == true
+          ? issuedAt!.trim()
+          : DateHelper.now().toUtc().toIso8601String(),
       total: total,
       deliveryMethod: deliveryMethod,
       // Include new API-compatible fields
@@ -4537,10 +4581,14 @@ class LocalProductProvider extends ChangeNotifier {
       tableId: tableId,
       alternatePhone: alternatePhone,
       address: address,
+      addressId: addressId,
+      pincode: pincode,
       deliveryCharge: deliveryCharge,
       customerVatNumber: customerVatNumber,
       customerCrNumber: customerCrNumber,
       customerType: customerType,
+      quotationId: quotationId,
+      quotationNumber: quotationNumber,
     );
 
     // Add to confirmed orders list
@@ -4565,7 +4613,9 @@ class LocalProductProvider extends ChangeNotifier {
         SavedOrder confirmedOrder = SavedOrder(
           id: order.id,
           orderNumber: "CONF-${order.orderNumber.split('-')[1]}",
-          items: order.items,
+          items: order.items.reversed
+              .map(_cloneLocalCartItem)
+              .toList(growable: false),
           customerName: order.customerName,
           customerPhone: order.customerPhone,
           comment: order.comment,
@@ -4590,10 +4640,14 @@ class LocalProductProvider extends ChangeNotifier {
           tableId: order.tableId,
           alternatePhone: order.alternatePhone,
           address: order.address,
+          addressId: order.addressId,
+          pincode: order.pincode,
           deliveryCharge: order.deliveryCharge,
           customerVatNumber: order.customerVatNumber,
           customerCrNumber: order.customerCrNumber,
           customerType: order.customerType,
+          quotationId: order.quotationId,
+          quotationNumber: order.quotationNumber,
         );
 
         // Add to confirmed orders
@@ -4623,9 +4677,10 @@ class LocalProductProvider extends ChangeNotifier {
     int highestNumber = 0;
 
     for (var order in _confirmedOrders) {
-      // Extract the number part from the orderNumber (e.g., "CONF-5" -> 5)
-      String numPart = order.orderNumber.split('-')[1];
-      int orderNum = int.tryParse(numPart) ?? 0;
+      // New local-first receipts use a stable store/counter/date reference.
+      // Ignore those when allocating the legacy CONF-n fallback sequence.
+      final match = RegExp(r'^CONF-(\d+)$').firstMatch(order.orderNumber);
+      final orderNum = int.tryParse(match?.group(1) ?? '') ?? 0;
 
       if (orderNum > highestNumber) {
         highestNumber = orderNum;
@@ -4674,11 +4729,15 @@ class LocalProductProvider extends ChangeNotifier {
     BuildContext? context, // Add context parameter
     String? tableId,
     String? address,
+    int? addressId,
+    String? pincode,
     double? deliveryCharge,
     String? alternatePhone,
     String? customerVatNumber,
     String? customerCrNumber,
     String? customerType,
+    int? quotationId,
+    String? quotationNumber,
   }) {
     debugPrint("💾 LOCAL PROVIDER - saveCurrentCartAsOrder called");
     debugPrint("  - Customer Phone parameter: '$customerPhone'");
@@ -4712,7 +4771,9 @@ class LocalProductProvider extends ChangeNotifier {
       customerName: customerName,
       customerPhone: customerPhone,
       comment: comment,
-      createdAt: DateHelper.now().toIso8601String(),
+      // Persist the actual instant. Print and ZATCA layers convert this UTC
+      // value to the configured business timezone where appropriate.
+      createdAt: DateHelper.now().toUtc().toIso8601String(),
       total: total,
       deliveryMethod: deliveryMethod,
       // Include new API-compatible fields
@@ -4734,10 +4795,14 @@ class LocalProductProvider extends ChangeNotifier {
       alternatePhone: alternatePhone,
       address:
           address, // Pass address if available, or update if passed as param
+      addressId: addressId,
+      pincode: pincode,
       deliveryCharge: deliveryCharge,
       customerVatNumber: customerVatNumber,
       customerCrNumber: customerCrNumber,
       customerType: customerType,
+      quotationId: quotationId,
+      quotationNumber: quotationNumber,
     );
 
     // Add to saved orders list
@@ -4900,11 +4965,15 @@ class LocalProductProvider extends ChangeNotifier {
     BuildContext? context,
     String? tableId,
     String? address,
+    int? addressId,
+    String? pincode,
     double? deliveryCharge,
     String? alternatePhone,
     String? customerVatNumber,
     String? customerCrNumber,
     String? customerType,
+    int? quotationId,
+    String? quotationNumber,
   }) {
     debugPrint("💾 LOCAL PROVIDER - updateSavedOrder called");
     debugPrint("  - Order ID: $orderId");
@@ -4961,12 +5030,16 @@ class LocalProductProvider extends ChangeNotifier {
         tableId: tableId ?? _savedOrders[index].tableId,
         alternatePhone: alternatePhone ?? _savedOrders[index].alternatePhone,
         address: address ?? _savedOrders[index].address,
+        addressId: addressId ?? _savedOrders[index].addressId,
+        pincode: pincode ?? _savedOrders[index].pincode,
         deliveryCharge: deliveryCharge ?? _savedOrders[index].deliveryCharge,
         customerVatNumber:
             customerVatNumber ?? _savedOrders[index].customerVatNumber,
         customerCrNumber:
             customerCrNumber ?? _savedOrders[index].customerCrNumber,
         customerType: customerType ?? _savedOrders[index].customerType,
+        quotationId: quotationId ?? _savedOrders[index].quotationId,
+        quotationNumber: quotationNumber ?? _savedOrders[index].quotationNumber,
       );
 
       // Update in list

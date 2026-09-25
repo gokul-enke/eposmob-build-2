@@ -1839,7 +1839,7 @@
     "orders_list": "قائمة الطلبات",
     "online_orders_list": "قائمة الطلبات الإلكترونية",
     "order_number_short": "رقم الطلب",
-    "order_number_hint": "رقم الطلب",
+    "order_number_hint": "رقم الطلب أو مرجع الإيصال",
     "customer_name_hint": "اسم العميل",
     "phone": "الهاتف",
     "from_date": "من تاريخ",
@@ -1945,7 +1945,9 @@
     "select_payment_status": "يرجى اختيار حالة الدفع",
     "select_refund_payment_method": "يرجى اختيار طريقة دفع الاسترداد",
     "valid_amount_minimum_zero": "يرجى إدخال مبلغ صالح (الحد الأدنى 0)",
-    "valid_refund_amount": "يرجى إدخال مبلغ استرداد صالح"
+    "valid_refund_amount": "يرجى إدخال مبلغ استرداد صالح",
+    "receipt_reference": "مرجع الإيصال",
+    "backend_order_number": "طلب الخادم"
   },
   "kitchen": {
     "title": "رئيس المطبخ",
@@ -2505,7 +2507,7 @@
     "loading_product_details": "جاري تحميل تفاصيل المنتج...",
     "product_not_found": "المنتج غير موجود",
     "retry": "إعادة المحاولة",
-    "status_out_of_stock": "نفاد المخزون",
+    "status_out_of_stock": "نفدت الكمية",
     "status_at_reorder_level": "عند مستوى إعادة الطلب",
     "status_low_stock": "مخزون منخفض",
     "offer_price": "سعر العرض",
@@ -3980,7 +3982,19 @@
     "msg_dev_mode_error": "تعذّر تحديث وضع المطور: @error",
     "lang_english": "الإنجليزية",
     "lang_arabic": "العربية",
-    "lang_malayalam": "മലയാളം"
+    "lang_malayalam": "മലയാളം",
+    "counter_title": "هوية كاونتر نقطة البيع",
+    "counter_description": "حدد رقم الكاونتر لهذا الجهاز والمتجر. سيصبح جزءاً من مرجع كل إيصال دون اتصال.",
+    "counter_number": "رقم الكاونتر",
+    "counter_range": "استخدم رقماً من 1 إلى 999",
+    "counter_preview": "مثال مرجع الإيصال: @number",
+    "counter_device": "معرّف الجهاز: @device",
+    "counter_unique_warning": "يجب أن يستخدم كل كاونتر في المتجر نفسه رقماً مختلفاً. تغيير الرقم لا يغيّر الإيصالات الصادرة سابقاً.",
+    "counter_invalid": "أدخل رقم كاونتر من 1 إلى 999.",
+    "counter_saved": "تم حفظ الكاونتر @number لهذا المتجر.",
+    "counter_store_required": "حدد متجراً قبل إعداد هذا الكاونتر.",
+    "counter_configured": "كاونتر @number • جهاز @device",
+    "counter_default_warning": "يستخدم الكاونتر الافتراضي @number • اضغط للتأكيد"
   },
   "company_info": {
     "title": "معلومات الشركة",
@@ -4609,7 +4623,14 @@
     "section_totals": "الإجماليات والبنك",
     "section_totals_description": "الإجماليات المحسوبة والأرصدة وتفاصيل البنك",
     "source": "المصدر",
-    "values_from_document_config": "القيم تأتي من إعدادات المستند. عدّلها في لوحة الإدارة، ثم أعد المزامنة."
+    "values_from_document_config": "القيم تأتي من إعدادات المستند. عدّلها في لوحة الإدارة، ثم أعد المزامنة.",
+    "section_printers_sub_pdf": "اختر طابعة فعلية أو افتح ملف PDF المُنشأ بحجم A4/A5",
+    "open_pdf_subtitle": "إنشاء وفتح ملف PDF بحجم @paperSize في العارض الافتراضي",
+    "physical_printers": "الطابعات الفعلية",
+    "empty_physical_title": "لم يتم العثور على طابعات فعلية",
+    "empty_physical_subtitle": "يمكنك استخدام فتح PDF أو البحث مرة أخرى عن الطابعات",
+    "btn_use_open_pdf": "استخدام فتح PDF",
+    "toast_open_pdf_selected": "تم اختيار فتح PDF. ستُفتح مستندات A4/A5 في عارض PDF."
   },
   "barcode_layout": {
     "title": "تخطيط ملصق الباركود",
@@ -5658,6 +5679,7 @@
     "btn_add_address": "إضافة عنوان",
     "tooltip_edit_address": "تعديل العنوان",
     "hint_pincode": "الرمز البريدي (اختياري):",
+    "label_pincode": "الرمز البريدي",
     "hint_pincode_required": "الرمز البريدي (مطلوب):",
     "msg_pincode_required": "أدخل الرمز البريدي للتوصيل قبل التأكيد"
   },

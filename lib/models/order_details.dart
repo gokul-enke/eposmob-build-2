@@ -40,6 +40,9 @@ class OrderDetailsModelData {
   final num? deliveryCharge;
   final OrderDetailsModelDataCart? cart;
   final String? orderNumber;
+  final String? clientSaleId;
+  final String? receiptNumber;
+  final String? issuedAt;
   final String? tokenNumber;
   final String? orderStatus;
   final OrderDetailsModelDataCustomerDetails? customerDetails;
@@ -70,6 +73,9 @@ class OrderDetailsModelData {
     this.deliveryCharge,
     this.cart,
     this.orderNumber,
+    this.clientSaleId,
+    this.receiptNumber,
+    this.issuedAt,
     this.tokenNumber,
     this.orderStatus,
     this.customerDetails,
@@ -107,6 +113,9 @@ class OrderDetailsModelData {
             ? null
             : OrderDetailsModelDataCart.fromJson(json["cart"]),
         orderNumber: json["order_number"],
+        clientSaleId: json["client_sale_id"]?.toString(),
+        receiptNumber: json["receipt_number"]?.toString(),
+        issuedAt: json["issued_at"]?.toString(),
         tokenNumber: json["token_number"]?.toString(),
         orderStatus: json["order_status"],
         customerDetails: json["customer_details"] == null
@@ -410,6 +419,9 @@ class OrderDetailsModelData {
         "delivery_charge": deliveryCharge,
         "cart": cart?.toJson(),
         "order_number": orderNumber,
+        "client_sale_id": clientSaleId,
+        "receipt_number": receiptNumber,
+        "issued_at": issuedAt,
         "token_number": tokenNumber,
         "order_status": orderStatus,
         "customer_details": customerDetails?.toJson(),
@@ -431,6 +443,13 @@ class OrderDetailsModelData {
         "packing": packing?.toJson(),
         "delivery_address": deliveryAddress?.toJson(),
       };
+
+  String? get customerReceiptNumber {
+    final receipt = receiptNumber?.trim();
+    if (receipt != null && receipt.isNotEmpty) return receipt;
+    final server = orderNumber?.trim();
+    return server == null || server.isEmpty ? null : server;
+  }
 }
 
 class OrderDetailsModelDataCart {

@@ -36,12 +36,16 @@ class SessionResetService {
     'zatca_vat_number',
     'zatca_company_name',
     'default_printer',
+    'default_printer_open_pdf_output',
+    'default_printer_b2b_open_pdf_output',
     'default_paper_size',
     'default_font_style',
     'quotation_printer',
+    'quotation_printer_open_pdf_output',
     'quotation_paper_size',
     'quotation_font_style',
     'kot_printer',
+    'kot_printer_open_pdf_output',
     'kot_paper_size',
     'kot_font_style',
     'billing_receipt_theme',
@@ -61,14 +65,18 @@ class SessionResetService {
 
   static const List<String> _deviceScopedKeys = [
     'default_printer',
+    'default_printer_open_pdf_output',
+    'default_printer_b2b_open_pdf_output',
     'default_paper_size',
     'default_font_style',
     'default_printer_name',
     'default_printer_address',
     'quotation_printer',
+    'quotation_printer_open_pdf_output',
     'quotation_paper_size',
     'quotation_font_style',
     'kot_printer',
+    'kot_printer_open_pdf_output',
     'kot_paper_size',
     'kot_font_style',
     'billing_receipt_theme',
@@ -80,6 +88,11 @@ class SessionResetService {
     'kot_receipt_theme',
     'app_locale_code',
     'app_font_size_level',
+    // Receipt identity is device-scoped. Clearing cached tenant data must not
+    // make this physical till reuse an already-issued receipt sequence.
+    'pos_device_id',
+    'pos_counter_numbers_by_store',
+    'pos_receipt_sequences',
   ];
 
   static Future<void> resetAfterLogout(BuildContext context) async {

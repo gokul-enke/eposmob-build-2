@@ -72,6 +72,7 @@ ReceiptLayoutParams _params({
   required String language,
   required Map<String, DisplayOption> options,
   String? storeLocation,
+  String orderNumber = '1',
 }) {
   return ReceiptLayoutParams(
     context: context,
@@ -79,7 +80,7 @@ ReceiptLayoutParams _params({
     cartItems: const <dynamic>[],
     formattedTotal: '0.00',
     orderDate: '2026-01-01T00:00:00Z',
-    orderNumber: '1',
+    orderNumber: orderNumber,
     isFromLocalStorage: false,
     selectedPaperSize: '80mm',
     billDocumentConfig: DocumentConfig(
@@ -109,6 +110,29 @@ int _firstCallOffset(String source, String call) {
 }
 
 void main() {
+  testWidgets('shared print contract preserves a stable receipt reference',
+      (tester) async {
+    late BuildContext context;
+    await tester.pumpWidget(
+      Builder(
+        builder: (builderContext) {
+          context = builderContext;
+          return const SizedBox.shrink();
+        },
+      ),
+    );
+
+    final params = _params(
+      context: context,
+      theme: 'classic',
+      language: 'en',
+      options: _options(visible: true),
+      orderNumber: '2-03-260916-0001',
+    );
+
+    expect(params.printableOrderNumberComponent, '2-03-260916-0001');
+  });
+
   test('factory exposes the complete 17-theme production matrix', () {
     expect(
         ReceiptLayoutFactory.availableThemes, orderedEquals(_productionThemes));

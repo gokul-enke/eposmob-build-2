@@ -232,20 +232,23 @@ class _SalesScreenState extends State<SalesScreen> {
       if (response.statusCode == 200) {
         showScaffold(
           context: context,
-          message: 'sales.invoice_downloaded'.tr.replaceAll('@path', eposDirectory.path),
+          message: 'sales.invoice_downloaded'
+              .tr
+              .replaceAll('@path', eposDirectory.path),
         );
         debugPrint('File downloaded successfully to $filePath');
       } else if (response.statusCode == 404) {
         showScaffoldError(
           context: context,
-          message:
-              'sales.invoice_not_found'.tr,
+          message: 'sales.invoice_not_found'.tr,
         );
         debugPrint('Invoice not found: ${response.statusCode}');
       } else {
         showScaffoldError(
           context: context,
-          message: 'sales.failed_download_invoice'.tr.replaceAll('@code', response.statusCode.toString()),
+          message: 'sales.failed_download_invoice'
+              .tr
+              .replaceAll('@code', response.statusCode.toString()),
         );
         debugPrint('Failed to download file: ${response.statusCode}');
       }
@@ -259,19 +262,19 @@ class _SalesScreenState extends State<SalesScreen> {
       String errorMessage = 'sales.err_download_file_default'.tr;
       if (e is DioException) {
         if (e.type == DioExceptionType.connectionTimeout) {
-          errorMessage =
-              'sales.err_connection_timeout'.tr;
+          errorMessage = 'sales.err_connection_timeout'.tr;
         } else if (e.type == DioExceptionType.connectionError) {
-          errorMessage =
-              'sales.err_connection_error'.tr;
+          errorMessage = 'sales.err_connection_error'.tr;
         } else if (e.response?.statusCode == 500) {
-          errorMessage =
-              'sales.err_server_error'.tr;
+          errorMessage = 'sales.err_server_error'.tr;
         } else {
-          errorMessage = 'sales.err_download_error'.tr.replaceAll('@message', e.message.toString());
+          errorMessage = 'sales.err_download_error'
+              .tr
+              .replaceAll('@message', e.message.toString());
         }
       } else {
-        errorMessage = 'sales.err_downloading_file'.tr.replaceAll('@error', e.toString());
+        errorMessage =
+            'sales.err_downloading_file'.tr.replaceAll('@error', e.toString());
       }
 
       showScaffoldError(
@@ -356,7 +359,8 @@ class _SalesScreenState extends State<SalesScreen> {
       final standardPrinter = StandardPrinter(context);
       final storeSessionForPdfShare1 =
           Provider.of<StoreSessionProvider>(context, listen: false);
-      final storeForPdfShare1 = await storeSessionForPdfShare1.resolveActiveStore();
+      final storeForPdfShare1 =
+          await storeSessionForPdfShare1.resolveActiveStore();
 
       String? customerAlternatePhone =
           orderData.customerDetails?.alternatePhone;
@@ -386,8 +390,9 @@ class _SalesScreenState extends State<SalesScreen> {
         savedTotal: orderData.priceSummary?.savedTotal?.toString() ?? '0.00',
         discountAmount: orderData.priceSummary?.discount?.toString() ?? '0.00',
         orderDate: orderData.orderDate ?? DateTime.now().toIso8601String(),
-        orderNumber:
-            orderData.orderNumber?.toString() ?? order.orderNumber.toString(),
+        orderNumber: orderData.customerReceiptNumber ??
+            order.customerReceiptNumber ??
+            '',
         isFromLocalStorage: false,
         billDocumentConfig: billDocumentConfig,
         customerCareNumber: appSettings.customerCarePhone,
@@ -635,13 +640,16 @@ class _SalesScreenState extends State<SalesScreen> {
                   if (success) {
                     showScaffold(
                       context: context,
-                      message: 'sales.invoice_sent_whatsapp'.tr.replaceAll('@phone', customerPhone),
+                      message: 'sales.invoice_sent_whatsapp'
+                          .tr
+                          .replaceAll('@phone', customerPhone),
                     );
                   } else {
                     showScaffoldError(
                       context: context,
-                      message:
-                          'sales.failed_send_whatsapp'.tr.replaceAll('@error', whatsappProvider.lastError),
+                      message: 'sales.failed_send_whatsapp'
+                          .tr
+                          .replaceAll('@error', whatsappProvider.lastError),
                     );
                   }
                 }
@@ -758,7 +766,8 @@ class _SalesScreenState extends State<SalesScreen> {
       final standardPrinter = StandardPrinter(context);
       final storeSessionForPdfShare2 =
           Provider.of<StoreSessionProvider>(context, listen: false);
-      final storeForPdfShare2 = await storeSessionForPdfShare2.resolveActiveStore();
+      final storeForPdfShare2 =
+          await storeSessionForPdfShare2.resolveActiveStore();
 
       String? customerAlternatePhone =
           orderData.customerDetails?.alternatePhone;
@@ -787,8 +796,9 @@ class _SalesScreenState extends State<SalesScreen> {
         savedTotal: orderData.priceSummary?.savedTotal?.toString() ?? '0.00',
         discountAmount: orderData.priceSummary?.discount?.toString() ?? '0.00',
         orderDate: orderData.orderDate ?? DateTime.now().toIso8601String(),
-        orderNumber:
-            orderData.orderNumber?.toString() ?? order.orderNumber.toString(),
+        orderNumber: orderData.customerReceiptNumber ??
+            order.customerReceiptNumber ??
+            '',
         isFromLocalStorage: false,
         billDocumentConfig: billDocumentConfig,
         customerCareNumber: appSettings.customerCarePhone,
@@ -850,8 +860,9 @@ class _SalesScreenState extends State<SalesScreen> {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message:
-                'sales.pdf_corrupted'.tr.replaceAll('@size', fileSize.toString()),
+            message: 'sales.pdf_corrupted'
+                .tr
+                .replaceAll('@size', fileSize.toString()),
           );
         }
         return;
@@ -871,7 +882,9 @@ class _SalesScreenState extends State<SalesScreen> {
         if (context.mounted) {
           showScaffoldError(
             context: context,
-            message: 'sales.pdf_verification_failed'.tr.replaceAll('@error', e.toString()),
+            message: 'sales.pdf_verification_failed'
+                .tr
+                .replaceAll('@error', e.toString()),
           );
         }
         return;
@@ -918,8 +931,11 @@ Powered by CloudPOS''',
         if (success) {
           showScaffold(
             context: context,
-            message:
-                'sales.invoice_pdf_sent_whatsapp'.tr.replaceAll('@phone', customerPhone).replaceAll('@file', pdfFile.path.split('/').last).replaceAll('@size', (await pdfFile.length()).toString()),
+            message: 'sales.invoice_pdf_sent_whatsapp'
+                .tr
+                .replaceAll('@phone', customerPhone)
+                .replaceAll('@file', pdfFile.path.split('/').last)
+                .replaceAll('@size', (await pdfFile.length()).toString()),
           );
 
           // Optionally open the PDF file location
@@ -962,8 +978,10 @@ Powered by CloudPOS''',
           if (fallbackSuccess) {
             showScaffold(
               context: context,
-              message:
-                  'sales.invoice_message_sent_whatsapp'.tr.replaceAll('@phone', customerPhone).replaceAll('@path', pdfFile.path),
+              message: 'sales.invoice_message_sent_whatsapp'
+                  .tr
+                  .replaceAll('@phone', customerPhone)
+                  .replaceAll('@path', pdfFile.path),
             );
           } else {
             showScaffoldError(
@@ -1035,8 +1053,7 @@ Powered by CloudPOS''',
                   if (context.mounted) {
                     showScaffold(
                       context: context,
-                      message:
-                          'sales.file_location_opened'.tr,
+                      message: 'sales.file_location_opened'.tr,
                     );
                   }
                 } catch (e) {
@@ -1059,8 +1076,7 @@ Powered by CloudPOS''',
                   if (context.mounted) {
                     showScaffold(
                       context: context,
-                      message:
-                          'sales.pdf_opened'.tr,
+                      message: 'sales.pdf_opened'.tr,
                     );
                   }
                 } catch (e) {
@@ -2006,7 +2022,8 @@ Powered by CloudPOS''',
                                   showScaffoldError(
                                     context: context,
                                     message:
-                                        'sales.invoice_not_available_sharing'.tr,
+                                        'sales.invoice_not_available_sharing'
+                                            .tr,
                                   );
                                 }
                                 return;
@@ -2085,7 +2102,8 @@ Powered by CloudPOS''',
                                             ),
                                           ),
                                           Text(
-                                            'sales.title_share_invoice_sheet'.tr,
+                                            'sales.title_share_invoice_sheet'
+                                                .tr,
                                             style: const TextStyle(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.w600),
@@ -2195,7 +2213,8 @@ Powered by CloudPOS''',
                                             title: Text(
                                               intlPhone != null
                                                   ? '${'sales.opt_share_whatsapp'.tr} ($intlPhone)'
-                                                  : 'sales.opt_share_whatsapp'.tr,
+                                                  : 'sales.opt_share_whatsapp'
+                                                      .tr,
                                             ),
                                             onTap: () async {
                                               Navigator.pop(ctx);
@@ -2211,7 +2230,8 @@ Powered by CloudPOS''',
                                                   Icons.picture_as_pdf_outlined,
                                                   color: Color(0xFFE53E3E)),
                                             ),
-                                            title: Text('sales.opt_share_pdf'.tr),
+                                            title:
+                                                Text('sales.opt_share_pdf'.tr),
                                             onTap: () async {
                                               Navigator.pop(ctx);
                                               await _sharePDFInvoice(order);
@@ -2228,8 +2248,7 @@ Powered by CloudPOS''',
                               if (context.mounted) {
                                 showScaffoldError(
                                   context: context,
-                                  message:
-                                      'sales.err_sharing_invoice'.tr,
+                                  message: 'sales.err_sharing_invoice'.tr,
                                 );
                               }
                             }
@@ -2276,8 +2295,10 @@ Powered by CloudPOS''',
                               if (context.mounted) {
                                 showScaffold(
                                   context: context,
-                                  message:
-                                      'sales.preparing_return'.tr.replaceAll('@number', order.orderNumber.toString()),
+                                  message: 'sales.preparing_return'
+                                      .tr
+                                      .replaceAll('@number',
+                                          order.orderNumber.toString()),
                                 );
                               }
                             } catch (error) {
@@ -2286,8 +2307,7 @@ Powered by CloudPOS''',
                               if (context.mounted) {
                                 showScaffoldError(
                                   context: context,
-                                  message:
-                                      'sales.err_preparing_return'.tr,
+                                  message: 'sales.err_preparing_return'.tr,
                                 );
                               }
                             }
@@ -2334,7 +2354,8 @@ Powered by CloudPOS''',
                                     if (context.mounted) {
                                       showScaffold(
                                         context: context,
-                                        message: 'sales.order_cancelled_success'.tr,
+                                        message:
+                                            'sales.order_cancelled_success'.tr,
                                       );
                                       // Refresh orders
                                       salesProvider.fetchOrders(
@@ -2348,7 +2369,9 @@ Powered by CloudPOS''',
                                     if (context.mounted) {
                                       showScaffoldError(
                                         context: context,
-                                        message: 'sales.failed_cancel_order'.tr.replaceAll('@error', e.toString()),
+                                        message: 'sales.failed_cancel_order'
+                                            .tr
+                                            .replaceAll('@error', e.toString()),
                                       );
                                     }
                                   }
@@ -2402,8 +2425,10 @@ Powered by CloudPOS''',
                                     if (context.mounted) {
                                       showScaffold(
                                         context: context,
-                                        message:
-                                            'sales.order_status_updated'.tr.replaceAll('@status', newStatus.toString()),
+                                        message: 'sales.order_status_updated'
+                                            .tr
+                                            .replaceAll('@status',
+                                                newStatus.toString()),
                                       );
                                       salesProvider.fetchOrders(
                                         accessToken: authModel.token ?? "",
@@ -2415,7 +2440,10 @@ Powered by CloudPOS''',
                                       showScaffoldError(
                                         context: context,
                                         message:
-                                            'sales.failed_update_order_status'.tr.replaceAll('@error', e.toString()),
+                                            'sales.failed_update_order_status'
+                                                .tr
+                                                .replaceAll(
+                                                    '@error', e.toString()),
                                       );
                                     }
                                   }
@@ -2461,8 +2489,10 @@ Powered by CloudPOS''',
                                     if (context.mounted) {
                                       showScaffold(
                                         context: context,
-                                        message:
-                                            'sales.payment_status_updated'.tr.replaceAll('@status', newStatus.toString()),
+                                        message: 'sales.payment_status_updated'
+                                            .tr
+                                            .replaceAll('@status',
+                                                newStatus.toString()),
                                       );
                                       salesProvider.fetchOrders(
                                         accessToken: authModel.token ?? "",
@@ -2474,7 +2504,10 @@ Powered by CloudPOS''',
                                       showScaffoldError(
                                         context: context,
                                         message:
-                                            'sales.failed_update_payment_status'.tr.replaceAll('@error', e.toString()),
+                                            'sales.failed_update_payment_status'
+                                                .tr
+                                                .replaceAll(
+                                                    '@error', e.toString()),
                                       );
                                     }
                                   }
@@ -2771,30 +2804,60 @@ Powered by CloudPOS''',
                                             mainAxisAlignment:
                                                 MainAxisAlignment.center,
                                             children: [
-                                              Text(
-                                                "#${order.orderNumber}",
-                                                textAlign: TextAlign.center,
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s9,
-                                                  0.13,
-                                                  Colors.black,
+                                              Flexible(
+                                                child: Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      "#${order.orderNumber}",
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: buildCustomStyle(
+                                                        FontWeightManager
+                                                            .medium,
+                                                        FontSize.s9,
+                                                        0.13,
+                                                        Colors.black,
+                                                      ),
+                                                    ),
+                                                    if (order.receiptNumber
+                                                            ?.trim()
+                                                            .isNotEmpty ==
+                                                        true)
+                                                      Text(
+                                                        '${'sales.receipt_reference'.tr}: ${order.receiptNumber}',
+                                                        textAlign:
+                                                            TextAlign.center,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: buildCustomStyle(
+                                                          FontWeightManager
+                                                              .regular,
+                                                          FontSize.s8,
+                                                          0.10,
+                                                          ColorManager
+                                                              .kPrimaryColor,
+                                                        ),
+                                                      ),
+                                                  ],
                                                 ),
                                               ),
-                                              if (order.orderNumber != null &&
-                                                  order.orderNumber!
-                                                      .isNotEmpty) ...[
+                                              if (order.customerReceiptNumber !=
+                                                  null) ...[
                                                 const SizedBox(width: 6),
                                                 GestureDetector(
                                                   onTap: () {
-                                                    Clipboard.setData(
-                                                        ClipboardData(
-                                                            text: order
-                                                                .orderNumber!));
+                                                    Clipboard.setData(ClipboardData(
+                                                        text: order
+                                                            .customerReceiptNumber!));
                                                     showScaffold(
                                                       context: context,
                                                       message:
-                                                          'sales.order_number_copied'.tr,
+                                                          'sales.order_number_copied'
+                                                              .tr,
                                                     );
                                                   },
                                                   child: const Icon(

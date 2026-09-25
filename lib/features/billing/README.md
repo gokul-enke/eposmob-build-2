@@ -2,7 +2,8 @@
 
 Feature-first home for the billing/POS screen. See
 `docs/BILLING_RESPONSIVE_REFACTOR_PLAN.md` for the full migration plan and phase
-status. Behaviour reference: `wikidata/billing/`.
+status. The cross-surface final-sale contract is documented in
+`docs/OFFLINE_FIRST_SALES.md`. Behaviour reference: `wikidata/billing/`.
 
 ## Structure
 
@@ -44,7 +45,7 @@ domain helpers, and `lib/helpers/` — not in widget `build` methods.
 | --- | --- |
 | `billing_mobile_controller.dart` | Saved-order rehydration, payment/delivery/customer restore, barcode `processBarcode`, save/confirm/print via `CheckoutService`, keyboard shortcut dispatch, `CreateOrderAndPrintResult` / print retry |
 | `billing_mobile_ui_controller.dart` | Focused UI-domain controllers (no `BuildContext` in pure methods): |
-| ↳ `BillingMobileConnectivityController` | Online-checkout connectivity gate |
+| ↳ `BillingMobileConnectivityController` | Connectivity display/diagnostics; final confirmation is not gated by connectivity |
 | ↳ `BillingMobileSettingsController` | `barcodeSales`, stock-enabled sync, coupon/history/date visibility, default payment |
 | ↳ `BillingMobileMarketController` | Product grid filtering / category selection |
 | ↳ `BillingMobileCartController` | Quantity via `CartQuantityStockHelper`, sale-unit switch, price/MRP commit, cart totals |
@@ -83,6 +84,9 @@ domain helpers, and `lib/helpers/` — not in widget `build` methods.
 | Location | Responsibility |
 | --- | --- |
 | `services/checkout_service.dart` | `SaveOrderResult`, save draft, confirm, confirm-print |
+| `services/local_first_sale_coordinator.dart` | Shared disk-first final-sale transaction boundary for desktop, mobile, restaurant and attender |
+| `services/local_sale_sync_service.dart` | App-scoped durable one-attempt outbox and observable sync state |
+| `models/order_submission_payload.dart` | Canonical create/update request contract |
 | `services/print_service.dart` | Order print, saved-order print |
 | `providers/local_product_provider.dart` | Cart, stock reservations, saved/confirmed orders, Hive |
 | `providers/billing_provider.dart` | Payment state, connectivity, delivery/payment IDs |

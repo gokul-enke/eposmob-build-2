@@ -897,16 +897,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
     if (_isConfirmingOrder || _isConfirmingAndPrinting) return;
     if (!_isQuotationPage && !_showConfirmOrderButton) return;
 
-    final billingProvider =
-        Provider.of<BillingProvider>(context, listen: false);
-    if (_connectivityController.shouldBlockOnlineCheckout(billingProvider)) {
-      showScaffoldError(
-        context: context,
-        message: BillingMobileErrorMessages.noInternetConfirm,
-      );
-      return;
-    }
-
     if (!_isCustomerSatisfiedForCheckout()) {
       showScaffoldError(
           context: context, message: BillingMobileErrorMessages.selectCustomer);
@@ -928,7 +918,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
     }
     if (!mounted) return;
     if (confirmed) {
-      _controller.refreshCustomersInBackgroundAfterSale(context);
       // Mirror desktop `_confirmOrder`: reset the workspace and re-apply the
       // default customer (when configured) after a successful confirm.
       setState(() {
@@ -944,16 +933,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
   Future<void> createOrderAndPrint() async {
     if (_isConfirmingAndPrinting || _isConfirmingOrder) return;
     if (!_isQuotationPage && !_showConfirmOrderAndPrintButton) return;
-
-    final billingProvider =
-        Provider.of<BillingProvider>(context, listen: false);
-    if (_connectivityController.shouldBlockOnlineCheckout(billingProvider)) {
-      showScaffoldError(
-        context: context,
-        message: BillingMobileErrorMessages.noInternetCreateOrder,
-      );
-      return;
-    }
 
     if (_skipCheckoutOnConfirmAndPrint) {
       billingDebugLog(
@@ -984,7 +963,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
         _pendingPrintOrderNumber = null;
       }
       if (result.orderCreated) {
-        _controller.refreshCustomersInBackgroundAfterSale(context);
         // Mirror desktop `_createOrderAndPrint`: reset the workspace and
         // re-apply the default customer (when configured) once the order has
         // been created, regardless of whether printing succeeded.

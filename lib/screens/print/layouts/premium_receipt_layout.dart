@@ -2057,10 +2057,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
     if (showFooterInvoice) {
       // Extract number sequence (e.g., "1149" from "INV-1149")
-      final regex = RegExp(r'[1-9]\d*');
-      final match = regex.firstMatch(params.orderNumber);
-      final strippedNumber =
-          match != null ? match.group(0)! : params.orderNumber;
+      final strippedNumber = params.printableOrderNumberComponent;
 
       final String prefixText = ReceiptConfigurationContract.numberPrefix(
         params.billDocumentConfig.numberPrefix,

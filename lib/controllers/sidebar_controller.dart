@@ -1,6 +1,5 @@
 import 'package:get/get.dart';
 import 'package:pos_machine/features/weigh_machine/presentation/weigh_machine_export_page.dart';
-import 'package:pos_machine/components/order_submission_status.dart';
 import 'package:pos_machine/features/billing/presentation/pages/billing_quotation_page_responsive.dart';
 import 'package:pos_machine/features/billing/presentation/pages/billing_page_responsive.dart';
 import 'package:pos_machine/screens/billing/kitchen_master.dart';
@@ -101,8 +100,7 @@ import 'package:pos_machine/screens/sales/admin_daily_sales_close_list.dart';
 import 'package:pos_machine/screens/sales/quotations_list.dart';
 
 class SideBarController extends GetxController {
-  static const int ordersToReviewIndex = 101;
-  static const int weighMachineExportIndex = 102;
+  static const int weighMachineExportIndex = 101;
   static const int billingScreenIndex = 0;
 
   /// Position of [InvoiceListScreen] in [screens]. Named because more than one
@@ -241,7 +239,6 @@ class SideBarController extends GetxController {
     StockReportScreen(), // 98 Stock Report Screen
     PurchaseReturnListScreen(), // 99 Purchase Return List
     CreatePurchaseReturnScreen(), // 100 Create Purchase Return
-    OrdersToReviewPage(), // 101
-    WeighMachineExportPage(), // weighMachineExportIndex
+    WeighMachineExportPage(), // 101 weighMachineExportIndex
   ];
 }

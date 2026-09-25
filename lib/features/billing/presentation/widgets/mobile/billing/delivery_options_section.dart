@@ -25,20 +25,29 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
   static const _deliveryController = BillingMobileDeliveryController();
   static const _settingsController = BillingMobileSettingsController();
   late TextEditingController _addressController;
+  late TextEditingController _pincodeController;
 
   @override
   void initState() {
     super.initState();
     final bp = Provider.of<BillingProvider>(context, listen: false);
     _addressController = TextEditingController(text: bp.orderAddress);
+    _pincodeController = TextEditingController(text: bp.orderPincode);
     _addressController.addListener(() {
       bp.setOrderAddress(_addressController.text);
+    });
+    _pincodeController.addListener(() {
+      bp.setOrderAddressDetails(
+        addressId: bp.orderAddressId,
+        pincode: _pincodeController.text,
+      );
     });
   }
 
   @override
   void dispose() {
     _addressController.dispose();
+    _pincodeController.dispose();
     super.dispose();
   }
 
@@ -59,14 +68,16 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
               '',
         ) ??
         0.0;
-    final askDeliveryDate =
-        _settingsController.shouldShowDeliveryDateTime(
+    final askDeliveryDate = _settingsController.shouldShowDeliveryDateTime(
       appSettingsProvider.appSettings,
     );
 
     // Sync order address from provider if modified outside (e.g. order rehydration)
     if (_addressController.text != bp.orderAddress) {
       _addressController.text = bp.orderAddress;
+    }
+    if (_pincodeController.text != bp.orderPincode) {
+      _pincodeController.text = bp.orderPincode;
     }
 
     return Column(
@@ -93,87 +104,87 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
             ),
           ),
         ] else
-        // List of delivery methods
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: deliveryProvider.deliveryMethods.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 10),
-          itemBuilder: (context, index) {
-            final method = deliveryProvider.deliveryMethods[index];
-            final isSelected = _deliveryController.isSelected(method, bp);
+          // List of delivery methods
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: deliveryProvider.deliveryMethods.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              final method = deliveryProvider.deliveryMethods[index];
+              final isSelected = _deliveryController.isSelected(method, bp);
 
-            final feeLabel = _deliveryController.feeLabelForMethodInOrder(
-              method: method,
-              currency: currency,
-              freeDeliveryEnabled: freeDeliveryEnabled,
-              freeDeliveryMinimumAmount: freeDeliveryMinimumAmount,
-              netTotal: netTotal,
-              deliveryMethods: deliveryProvider.deliveryMethods,
-            );
+              final feeLabel = _deliveryController.feeLabelForMethodInOrder(
+                method: method,
+                currency: currency,
+                freeDeliveryEnabled: freeDeliveryEnabled,
+                freeDeliveryMinimumAmount: freeDeliveryMinimumAmount,
+                netTotal: netTotal,
+                deliveryMethods: deliveryProvider.deliveryMethods,
+              );
 
-            return InkWell(
-              onTap: () => _deliveryController.selectMethod(bp, method),
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFFEFF6FF) : Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: isSelected
-                        ? const Color(0xFF3B82F6)
-                        : Colors.grey.shade200,
-                    width: isSelected ? 1.5 : 1,
+              return InkWell(
+                onTap: () => _deliveryController.selectMethod(bp, method),
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isSelected ? const Color(0xFFEFF6FF) : Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isSelected
+                          ? const Color(0xFF3B82F6)
+                          : Colors.grey.shade200,
+                      width: isSelected ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _deliveryController.iconForMethod(method.name),
+                        color: isSelected
+                            ? const Color(0xFF0066CC)
+                            : Colors.grey.shade700,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          method.name,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight:
+                                isSelected ? FontWeight.bold : FontWeight.w500,
+                            color: isSelected
+                                ? const Color(0xFF0066CC)
+                                : Colors.black87,
+                          ),
+                        ),
+                      ),
+                      // Fee chip
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDCFCE7), // Light green
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          feeLabel,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF15803D), // Dark green
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _deliveryController.iconForMethod(method.name),
-                      color: isSelected
-                          ? const Color(0xFF0066CC)
-                          : Colors.grey.shade700,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        method.name,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.w500,
-                          color: isSelected
-                              ? const Color(0xFF0066CC)
-                              : Colors.black87,
-                        ),
-                      ),
-                    ),
-                    // Fee chip
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFDCFCE7), // Light green
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        feeLabel,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF15803D), // Dark green
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
+              );
+            },
+          ),
 
         // Optional Car Delivery fields
         if (bp.requiresCarNumber()) ...[
@@ -217,6 +228,49 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
               );
             },
           ),
+          const SizedBox(height: 12),
+          Text(
+            'checkout_modal.label_pincode'.tr,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _pincodeController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              hintText: 'checkout_modal.hint_pincode_required'.tr,
+              filled: true,
+              fillColor: const Color(0xFFF8FAFC),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(
+                  color: ColorManager.kPrimaryColor,
+                  width: 1.5,
+                ),
+              ),
+            ),
+            onTap: () {
+              Provider.of<KeyboardProvider>(context, listen: false).show(
+                'number',
+                _pincodeController,
+                replaceOnFirstInput: true,
+              );
+            },
+          ),
         ],
 
         // Optional door-delivery address fields
@@ -246,6 +300,10 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
                     setState(() {
                       _addressController.text = fullAddress;
                     });
+                    bp.setOrderAddressDetails(
+                      addressId: address.id,
+                      pincode: address.pincode,
+                    );
                   },
                   borderRadius: BorderRadius.circular(6),
                   child: Container(
@@ -338,8 +396,8 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
           const SizedBox(height: 6),
           TimePickerTableCell(
             initialTime: _deliveryController.parseDeliveryTime(bp.deliveryTime),
-            onTimeSelected: (time) =>
-                bp.setDeliveryTime(_deliveryController.formatDeliveryTime(time)),
+            onTimeSelected: (time) => bp
+                .setDeliveryTime(_deliveryController.formatDeliveryTime(time)),
           ),
         ],
 
