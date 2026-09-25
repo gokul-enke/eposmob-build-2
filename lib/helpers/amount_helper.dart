@@ -270,10 +270,12 @@ class AmountHelper {
       result += ' $mainUnit';
     }
 
-    // Handle decimal part if any
+    // Handle decimal part if any. The fraction joins the whole amount with an
+    // attached "و"; a fraction-only amount has nothing to join.
     if (decimalPart > 0) {
-      String decimalWords = _convertArabicDecimal(decimalPart);
-      result += ' و $decimalWords $fractionalUnit';
+      final decimalWords =
+          '${_convertArabicDecimal(decimalPart)} $fractionalUnit';
+      result = result.isEmpty ? decimalWords : '$result و$decimalWords';
     }
 
     return result.trim();
@@ -327,12 +329,10 @@ class AmountHelper {
       }
       if (ones == 0) {
         return arabicTens[tens];
-      } else if (ones == 1 || ones == 2) {
-        // Special case: one and two come before
-        return '${arabicOnes[ones]} و ${arabicTens[tens]}';
-      } else {
-        return '${arabicOnes[ones]} ${arabicTens[tens]}';
       }
+      // Units come first and the conjunction attaches to the tens word:
+      // 21 "واحد وعشرون", 59 "تسعة وخمسون".
+      return '${arabicOnes[ones]} و${arabicTens[tens]}';
     }
   }
 
@@ -360,26 +360,29 @@ class AmountHelper {
 
     if (remainder == 0) {
       return arabicHundreds[hundreds];
-    } else if (hundreds == 1 || hundreds == 2) {
-      return '${arabicHundreds[hundreds]} و ${_convertArabicTwoDigits(remainder)}';
-    } else {
-      return '${arabicHundreds[hundreds]} و ${_convertArabicTwoDigits(remainder)}';
     }
+    // 146 "مائة وستة وأربعون".
+    return '${arabicHundreds[hundreds]} و${_convertArabicTwoDigits(remainder)}';
   }
+
+  /// Joins Arabic number groups (crores, lakhs, millions, thousands, the
+  /// hundreds remainder) the way Arabic reads them: the conjunction attaches
+  /// to every group after the first, e.g. 1059 "ألف وتسعة وخمسون".
+  String _joinArabicGroups(List<String> groups) => groups.join(' و');
 
   // Helper: Arabic Indian numbering system (Lakhs, Crores)
   String _convertArabicIndian(int number) {
-    String result = '';
+    final groups = <String>[];
 
     // Crores (10 Million) - كرور
     if (number >= 10000000) {
-      result += '${_convertArabicHundreds(number ~/ 10000000)} كرور ';
+      groups.add('${_convertArabicHundreds(number ~/ 10000000)} كرور');
       number %= 10000000;
     }
 
     // Lakhs (100 Thousand) - لاك
     if (number >= 100000) {
-      result += '${_convertArabicHundreds(number ~/ 100000)} لاك ';
+      groups.add('${_convertArabicHundreds(number ~/ 100000)} لاك');
       number %= 100000;
     }
 
@@ -388,40 +391,40 @@ class AmountHelper {
       int thousands = number ~/ 1000;
       number %= 1000;
       if (thousands == 1) {
-        result += 'ألف ';
+        groups.add('ألف');
       } else if (thousands == 2) {
-        result += 'ألفان ';
+        groups.add('ألفان');
       } else if (thousands > 2 && thousands < 11) {
-        result += '${_convertArabicTwoDigits(thousands)} آلاف ';
+        groups.add('${_convertArabicTwoDigits(thousands)} آلاف');
       } else {
-        result += '${_convertArabicHundreds(thousands)} ألف ';
+        groups.add('${_convertArabicHundreds(thousands)} ألف');
       }
     }
 
     // Hundreds and below
     if (number > 0) {
-      result += '${_convertArabicHundreds(number)} ';
+      groups.add(_convertArabicHundreds(number));
     }
 
-    return result.trim();
+    return _joinArabicGroups(groups);
   }
 
   // Helper: Arabic International numbering system (Millions, Billions)
   String _convertArabicInternational(int number) {
-    String result = '';
+    final groups = <String>[];
 
     // Billions - مليار
     if (number >= 1000000000) {
       int billions = number ~/ 1000000000;
       number %= 1000000000;
       if (billions == 1) {
-        result += 'مليار ';
+        groups.add('مليار');
       } else if (billions == 2) {
-        result += 'ملياران ';
+        groups.add('ملياران');
       } else if (billions > 2 && billions < 11) {
-        result += '${_convertArabicTwoDigits(billions)} مليارات ';
+        groups.add('${_convertArabicTwoDigits(billions)} مليارات');
       } else {
-        result += '${_convertArabicHundreds(billions)} مليار ';
+        groups.add('${_convertArabicHundreds(billions)} مليار');
       }
     }
 
@@ -430,13 +433,13 @@ class AmountHelper {
       int millions = number ~/ 1000000;
       number %= 1000000;
       if (millions == 1) {
-        result += 'مليون ';
+        groups.add('مليون');
       } else if (millions == 2) {
-        result += 'مليونان ';
+        groups.add('مليونان');
       } else if (millions > 2 && millions < 11) {
-        result += '${_convertArabicTwoDigits(millions)} ملايين ';
+        groups.add('${_convertArabicTwoDigits(millions)} ملايين');
       } else {
-        result += '${_convertArabicHundreds(millions)} مليون ';
+        groups.add('${_convertArabicHundreds(millions)} مليون');
       }
     }
 
@@ -445,22 +448,22 @@ class AmountHelper {
       int thousands = number ~/ 1000;
       number %= 1000;
       if (thousands == 1) {
-        result += 'ألف ';
+        groups.add('ألف');
       } else if (thousands == 2) {
-        result += 'ألفان ';
+        groups.add('ألفان');
       } else if (thousands > 2 && thousands < 11) {
-        result += '${_convertArabicTwoDigits(thousands)} آلاف ';
+        groups.add('${_convertArabicTwoDigits(thousands)} آلاف');
       } else {
-        result += '${_convertArabicHundreds(thousands)} ألف ';
+        groups.add('${_convertArabicHundreds(thousands)} ألف');
       }
     }
 
     // Hundreds and below
     if (number > 0) {
-      result += '${_convertArabicHundreds(number)} ';
+      groups.add(_convertArabicHundreds(number));
     }
 
-    return result.trim();
+    return _joinArabicGroups(groups);
   }
 
   // Helper: Convert decimal part to Arabic words

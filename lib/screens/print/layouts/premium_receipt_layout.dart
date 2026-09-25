@@ -7,7 +7,6 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:provider/provider.dart';
 import 'package:image/image.dart' as img;
 import 'dart:ui' as ui;
-import 'dart:convert';
 
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -684,7 +683,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(paymentLabel,
               weight: 0.35, align: TextAlign.left, isBold: true, scale: scale),
-          ReceiptTableColumn(params.paymentMethod!,
+          ReceiptTableColumn(params.paymentMethodSummary,
               weight: 0.65, align: TextAlign.left, scale: scale),
         ]));
       }
@@ -786,7 +785,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
           params.paymentMethod != null &&
           params.paymentMethod!.isNotEmpty) {
         rows.add(ReceiptTableRow([
-          ReceiptTableColumn(params.paymentMethod!,
+          ReceiptTableColumn(params.paymentMethodSummary,
               weight: 0.65, align: TextAlign.left, scale: scale),
           ReceiptTableColumn(paymentLabel,
               weight: 0.35, align: TextAlign.right, isBold: true, scale: scale),
@@ -1610,7 +1609,6 @@ class PremiumReceiptLayout implements ReceiptLayout {
     rows.add(SpacingRow(_itemGap));
 
     final resolvedLabels = params.billDocumentConfig.resolvedLabels;
-    final bool isDualLanguage = params.isBilingual;
 
     // Get currency from appSettings
     final String currency = appSettings?.currency ?? 'INR';
@@ -1679,20 +1677,12 @@ class PremiumReceiptLayout implements ReceiptLayout {
     final discountLabel = discountLabelBase;
 
     final taxLabelBase =
-        _getLabel(displayConfig, 'showTax', resolvedLabels?.tax, "VAT");
+        _getLabel(displayConfig, 'showTax', resolvedLabels?.tax,
+            isEnglish ? "VAT" : "الضريبة");
     final vatLabel = taxLabelBase;
 
     final grandTotalLabel = _getLabel(displayConfig, 'showNetAmount', null,
         isEnglish ? "GRAND TOTAL" : "المبلغ الاجمالي");
-
-    final cashLabel = ReceiptConfigurationContract.label(
-      options: displayConfig,
-      key: 'showCash',
-      mode: params.receiptLanguageMode,
-      englishFallback: 'Cash',
-      arabicFallback: 'نقدي',
-      inlineBilingual: true,
-    );
 
     // Prepare boxed items
     List<BoxedLineItem> boxedItems = [];
@@ -1749,100 +1739,20 @@ class PremiumReceiptLayout implements ReceiptLayout {
     // Only show if paidAmount is provided (not null) and showPaymentBreaked is true or missing (default true)
     final bool showPaymentBreaked = params.isVisible('showPaymentBreaked');
 
-    if (params.paidAmount != null && showPaymentBreaked) {
+    // Shared rows (same as the standard layout): per-method amounts named in
+    // the document language (`showCash` label for cash), else the single
+    // method with the paid amount.
+    final paymentRows = params.paymentBreakdownRows;
+    if (params.paidAmount != null &&
+        showPaymentBreaked &&
+        paymentRows.isNotEmpty) {
       boxedItems.add(BoxedLineItem(isSeparator: true));
-
-      bool isMultiPayment = false;
-
-      // Check if paymentBreakdown is provided (preferred)
-      if (params.paymentBreakdown != null &&
-          params.paymentBreakdown!.isNotEmpty) {
-        isMultiPayment = true;
-        params.paymentBreakdown!.forEach((method, amount) {
-          double amt = double.tryParse(amount.toString()) ?? 0.0;
-          if (amt > 0) {
-            // Map method code to label if possible
-            String label = method;
-            if (method == 'CASH') {
-              label = params.textForMode(english: 'Cash', arabic: 'نقدي');
-            } else if (method == 'CARD') {
-              label = params.textForMode(english: 'Card', arabic: 'بطاقة');
-            } else if (method == 'UPI') {
-              label = params.textForMode(english: 'UPI', arabic: 'UPI');
-            }
-
-            boxedItems.add(BoxedLineItem(
-              label: label,
-              value: amt.toStringAsFixed(2),
-              isBold: true,
-              scale: 1.1,
-              icon: currencyIcon,
-              currencySymbol: currencySymbol,
-            ));
-          }
-        });
-      }
-      // Fallback to parsing paymentMethod string if it looks like JSON
-      else if (params.paymentMethod != null &&
-          params.paymentMethod!.startsWith('{')) {
-        try {
-          final Map<String, dynamic> paymentData =
-              json.decode(params.paymentMethod!);
-          if (paymentData['isMultiPayment'] == true) {
-            isMultiPayment = true;
-            final Map<String, dynamic> amounts = paymentData['amounts'];
-            amounts.forEach((method, amount) {
-              double amt = double.tryParse(amount.toString()) ?? 0.0;
-              if (amt > 0) {
-                String label = method;
-                if (method == 'CASH') {
-                  label = params.textForMode(english: 'Cash', arabic: 'نقدي');
-                } else if (method == 'CARD') {
-                  label = params.textForMode(english: 'Card', arabic: 'بطاقة');
-                } else if (method == 'UPI') {
-                  label = params.textForMode(english: 'UPI', arabic: 'UPI');
-                }
-
-                boxedItems.add(BoxedLineItem(
-                  label: label,
-                  value: amt.toStringAsFixed(2),
-                  isBold: true,
-                  scale: 1.1,
-                  icon: currencyIcon,
-                  currencySymbol: currencySymbol,
-                ));
-              }
-            });
-          }
-        } catch (e) {
-          debugPrint("Error parsing multi-payment: $e");
-        }
-      }
-
-      if (!isMultiPayment) {
-        // Single payment
-        String label = cashLabel;
-        if (params.paymentMethod != null && params.paymentMethod!.isNotEmpty) {
-          switch (params.paymentMethod!.trim().toUpperCase()) {
-            case 'CASH':
-              label = cashLabel;
-              break;
-            case 'CARD':
-              label = params.textForMode(english: 'Card', arabic: 'بطاقة');
-              break;
-            case 'UPI':
-              label = params.textForMode(english: 'UPI', arabic: 'UPI');
-              break;
-            default:
-              label = params.paymentMethod!;
-          }
-        }
-
+      for (final row in paymentRows) {
         boxedItems.add(BoxedLineItem(
-          label: label,
-          value: params.paidAmount!.toStringAsFixed(2),
+          label: row.$1,
+          value: row.$2.toStringAsFixed(2),
           isBold: true,
-          scale: 1.1,
+          scale: paymentRows.length == 1 ? 1.1 : 1,
           icon: currencyIcon,
           currencySymbol: currencySymbol,
         ));
@@ -1855,27 +1765,8 @@ class PremiumReceiptLayout implements ReceiptLayout {
     // Amount in Words
     if (params.isVisible('showAmountInWords')) {
       rows.add(SpacingRow(_itemGap));
-
-      if (isDualLanguage) {
-        final arabicText = AmountHelper()
-            .convertNumberToWords(total, currency: currency, language: 'ar');
-        final englishText = AmountHelper()
-            .convertNumberToWords(total, currency: currency, language: 'en');
-
-        rows.add(TextRow('$arabicText فقط.',
-            scale: is58mm ? 0.7 : 0.85, isBold: true));
-        rows.add(TextRow('$englishText Only.',
-            scale: is58mm ? 0.7 : 0.85,
-            isBold: true,
-            textDirectionOverride: TextDirection.ltr));
-      } else {
-        final language = params.amountInWordsLanguage;
-        final amountText = AmountHelper().convertNumberToWords(total,
-            currency: currency, language: language);
-        final suffix = language == 'ar' ? ' فقط.' : ' Only.';
-
-        rows.add(TextRow('$amountText$suffix',
-            scale: is58mm ? 0.7 : 0.85, isBold: true));
+      for (final line in params.amountInWordsLines(total, currency: currency)) {
+        rows.add(TextRow(line, scale: is58mm ? 0.7 : 0.85, isBold: true));
       }
     }
 
@@ -2235,14 +2126,15 @@ class PremiumReceiptLayout implements ReceiptLayout {
     String? resolvedLabel,
     String defaultLabel,
   ) {
-    final arabicFallback = _hasArabic(defaultLabel) ? defaultLabel : '';
-    final englishFallback = _hasArabic(defaultLabel) ? '' : defaultLabel;
+    // Callers pass the default of the document's language, so a neutral
+    // default ("MRP", "#") is kept on Arabic and bilingual receipts too.
+    final english = _activeLanguageMode.isEnglish;
     return ReceiptConfigurationContract.label(
       options: displayConfig,
       key: key,
       mode: _activeLanguageMode,
-      englishFallback: englishFallback,
-      arabicFallback: arabicFallback,
+      englishFallback: english ? defaultLabel : '',
+      arabicFallback: english ? '' : defaultLabel,
       resolvedArabic: resolvedLabel,
     );
   }
@@ -2299,7 +2191,8 @@ class PremiumReceiptLayout implements ReceiptLayout {
     // — Credit Note Details section —
     if (hasCreditNoteConfig) {
       final detailsHeading = _getLabel(retDc, 'showCreditNoteOrder',
-          retLabels?.detailsHeading, 'CREDIT NOTE DETAILS');
+          retLabels?.detailsHeading,
+          isEnglish ? 'CREDIT NOTE DETAILS' : 'تفاصيل إشعار الائتمان');
       rows.add(TextRow(detailsHeading, isBold: true, scale: scale));
       rows.add(SpacingRow(_itemGap));
       if (retLabels?.creditNoteNumber != null) {
@@ -2613,7 +2506,11 @@ class PremiumReceiptLayout implements ReceiptLayout {
             currency: currency, language: language);
         final suffix = language == 'ar' ? ' فقط.' : ' Only.';
         rows.add(SpacingRow(_itemGap));
-        rows.add(TextRow('Amount in Words:', isBold: true, scale: 0.9));
+        rows.add(TextRow(
+            params.rendererText(
+                english: 'Amount in Words:', arabic: 'المبلغ كتابة:'),
+            isBold: true,
+            scale: 0.9));
         rows.add(TextRow('$amountText$suffix', isBold: false, scale: 0.85));
       }
     }

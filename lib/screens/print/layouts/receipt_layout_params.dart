@@ -1,10 +1,16 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/string_helper.dart';
 import 'package:pos_machine/models/bank.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/order_details.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/screens/print/receipt_customer_segment.dart';
+import 'package:provider/provider.dart';
 import 'receipt_configuration_contract.dart';
 import '../thermal/thermal_paper_profile.dart';
 
@@ -307,20 +313,21 @@ class ReceiptLayoutParams {
   /// active store (then the customer-care setting) owns the value. Empty when
   /// hidden or when there is no value, so no template prints an orphan label.
   String storeContactText(String key, {bool inlineBilingual = true}) {
-    final isTel = key == 'showTel';
-    final primary = (isTel ? storePhone : storeEmail)?.trim() ?? '';
-    final value = primary.isNotEmpty
-        ? primary
-        : (isTel ? customerCareNumber : customerCareEmail).trim();
+    final value = storeContactValue(key);
     if (!isVisible(key) || value.isEmpty) return '';
 
-    final label = labelFor(
-      key,
-      englishFallback: isTel ? 'Telephone' : 'Email',
-      arabicFallback: isTel ? 'الهاتف' : 'البريد الإلكتروني',
-      inlineBilingual: inlineBilingual,
-    ).trim();
+    final label = fieldLabel(key, inlineBilingual: inlineBilingual).trim();
     return label.isEmpty ? value : '$label: $value';
+  }
+
+  /// The store phone (`showTel`) or email (`showEmail`) value alone: the
+  /// active store's, else the customer-care setting.
+  String storeContactValue(String key) {
+    final isTel = key == 'showTel';
+    final primary = (isTel ? storePhone : storeEmail)?.trim() ?? '';
+    return primary.isNotEmpty
+        ? primary
+        : (isTel ? customerCareNumber : customerCareEmail).trim();
   }
 
   /// Customer phone exactly as every template must print it: empty when the
@@ -377,7 +384,506 @@ class ReceiptLayoutParams {
   }
 
   /// Language code for amount-in-words. Bilingual templates print both.
-  String get amountInWordsLanguage => receiptLanguageMode.isArabic ? 'ar' : 'en';
+  /// Amount-in-words language: English documents only; Arabic and bilingual
+  /// documents print Arabic (a bilingual document adds no generated English).
+  String get amountInWordsLanguage =>
+      receiptLanguageMode.isEnglish ? 'en' : 'ar';
+
+  // ==================== SHARED FIELD TEXT ====================
+  //
+  // Every template — the thermal receipt and all six A4/A5 PDFs — resolves a
+  // display key's label through [fieldLabel] / [fieldLabelParts], so one
+  // configuration prints the same words everywhere. The fallbacks are the
+  // renderer defaults `StandardReceiptLayout` has always used; they only print
+  // when the store typed nothing for the key (see
+  // [ReceiptConfigurationContract.label] for the language rule).
+
+  static const Map<String, (String, String)> _fieldFallbacks = {
+    'showStoreAddress': ('Address', 'العنوان'),
+    'showTel': ('Telephone', 'الهاتف'),
+    'showEmail': ('Email', 'البريد الإلكتروني'),
+    'showVatNumber': ('VAT No', 'الرقم الضريبي'),
+    'showCRNumber': ('CR No', 'السجل التجاري'),
+    // A blank description prints nothing (never a "store description"
+    // placeholder); a blank store name uses the active store's name.
+    'showDescription': ('', ''),
+    'showCustomerName': ('Customer', 'العميل'),
+    'showCustomerPhone': ('Phone', 'الهاتف'),
+    'showPayment': ('Payment', 'الدفع'),
+    'showPaymentMethod': ('Payment', 'الدفع'),
+    'showCustomerAddress': ('Address', 'العنوان'),
+    'showComment': ('Comment', 'تعليق'),
+    'showOrderComment': ('Comment', 'تعليق'),
+    'showDeliveryMethod': ('Delivery', 'التوصيل'),
+    'showDeliveryPhone': ('Delivery Phone', 'هاتف التوصيل'),
+    'showCustomerVatNumber': ('Customer VAT', 'الرقم الضريبي للعميل'),
+    'showCustomerCrNumber': ('Customer CR', 'السجل التجاري للعميل'),
+    'showSLNumber': ('SL#', '#'),
+    'showParticulars': ('Item', 'البيان'),
+    'showMRP': ('MRP', 'MRP'),
+    'showQty': ('Qty', 'الكمية'),
+    'showRate': ('Rate', 'السعر'),
+    'showRateExcTax': ('Rate Ex Tax', 'السعر بدون ضريبة'),
+    'showUnit': ('Unit', 'الوحدة'),
+    'showTaxHeader': ('Tax', 'الضريبة'),
+    'showTotal': ('Total', 'الإجمالي'),
+    'showWarranty': ('Warranty', 'الضمان'),
+    'showSubTotal': ('NET TOTAL (Exc Tax)', 'المجموع'),
+    'showDiscount': ('DISCOUNTS', 'الخصم'),
+    'showTax': ('VAT', 'الضريبة'),
+    'showNetAmount': ('GRAND TOTAL', 'المبلغ الاجمالي'),
+    'showCash': ('Cash', 'نقدي'),
+    'showItemsCount': ('Items', 'العدد'),
+    'showQuantityCount': ('Total Qty', 'إجمالي الكمية'),
+    'showSaved': ('You Saved', 'لقد وفرت'),
+    'showCustomerPrevBalance': ('Previous Balance', 'الرصيد السابق'),
+    'showCustomerPaidAmount': ('Paid Amount', 'المبلغ المدفوع'),
+    'showCustomerCurrentBalance': ('Current Balance', 'الرصيد الحالي'),
+    'showBankInfo': ('BANK DETAILS', 'تفاصيل البنك'),
+    'showBankName': ('Bank', 'البنك'),
+    'showAccountName': ('Account Name', 'اسم الحساب'),
+    'showAccountNumber': ('Account Number', 'رقم الحساب'),
+    'showIBAN': ('IBAN', 'الآيبان'),
+    'showSwiftCode': ('SWIFT', 'سويفت'),
+    'showVATFooter': ('VAT', 'الرقم الضريبي'),
+  };
+
+  ({
+    String english,
+    String arabic,
+    String? resolvedEnglish,
+    String? resolvedArabic,
+  }) _fieldFallback(String key) {
+    final labels = billDocumentConfig.resolvedLabels;
+    // Item-table headers: bilingual documents consult both resolved labels,
+    // single-language documents only the value-side one — as the thermal
+    // header always has.
+    String? englishResolved(String? value) =>
+        receiptLanguageMode.isBilingual ? value : null;
+    ({
+      String english,
+      String arabic,
+      String? resolvedEnglish,
+      String? resolvedArabic,
+    }) fallback(
+      String english,
+      String arabic, {
+      String? resolvedEnglish,
+      String? resolvedArabic,
+    }) =>
+        (
+          english: english,
+          arabic: arabic,
+          resolvedEnglish: resolvedEnglish,
+          resolvedArabic: resolvedArabic,
+        );
+
+    switch (key) {
+      case 'showStoreName':
+        final name = storeName?.trim() ?? '';
+        return name.isNotEmpty
+            ? fallback(name, name)
+            : fallback('STORE NAME', 'اسم المتجر');
+      case 'showInvoiceTitle':
+        return fallback(_printTitle ?? 'INVOICE', 'فاتورة');
+      case 'showQRCode':
+        return hasZatcaCredentials
+            ? fallback('ZATCA E-Invoice QR', 'فاتورة الكترونية')
+            : fallback('Scan to Pay', 'امسح للدفع');
+      case 'showOrderNumberInFooter':
+        final prefix = ReceiptConfigurationContract.numberPrefix(
+          billDocumentConfig.numberPrefix,
+          receiptLanguageMode,
+          englishFallback: 'INV NO:',
+          arabicFallback: 'رقم الفاتورة:',
+        );
+        return fallback(prefix, prefix);
+      case 'showDate':
+        return fallback('', '', resolvedArabic: labels?.date);
+      case 'showTax':
+        return fallback('VAT', 'الضريبة', resolvedArabic: labels?.tax);
+      case 'showSLNumber':
+        return fallback('SL#', '#',
+            resolvedArabic: labels?.slNumber,
+            resolvedEnglish: englishResolved(labels?.slNumberDefault));
+      case 'showParticulars':
+        return fallback('Item', 'البيان',
+            resolvedArabic: labels?.particulars,
+            resolvedEnglish: englishResolved(labels?.particularsDefault));
+      case 'showMRP':
+        return fallback('MRP', 'MRP', resolvedArabic: labels?.mrp);
+      case 'showQty':
+        return fallback('Qty', 'الكمية',
+            resolvedArabic: labels?.qty,
+            resolvedEnglish: englishResolved(labels?.qtyDefault));
+      case 'showRate':
+        return fallback('Rate', 'السعر',
+            resolvedArabic: labels?.rate,
+            resolvedEnglish: englishResolved(labels?.rateDefault));
+      case 'showUnit':
+        return fallback('Unit', 'الوحدة', resolvedArabic: labels?.unitName);
+      case 'showTaxHeader':
+        return fallback('Tax', 'الضريبة',
+            resolvedArabic: labels?.tax,
+            resolvedEnglish: englishResolved(labels?.taxDefault));
+      case 'showTotal':
+        return fallback('Total', 'الإجمالي',
+            resolvedArabic: labels?.total,
+            resolvedEnglish: englishResolved(labels?.totalDefault));
+    }
+    final pair = _fieldFallbacks[key] ?? ('', '');
+    return fallback(pair.$1, pair.$2);
+  }
+
+  String? get _printTitle {
+    try {
+      final title = Provider.of<AppSettingsProvider>(context, listen: false)
+          .appSettings
+          ?.printTitle
+          .trim();
+      return title == null || title.isEmpty ? null : title;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// The label a display key prints on this document — the same text on every
+  /// template. [inlineBilingual] joins a two-language label on one line.
+  String fieldLabel(String key, {bool inlineBilingual = false}) {
+    final fallback = _fieldFallback(key);
+    return labelFor(
+      key,
+      englishFallback: fallback.english,
+      arabicFallback: fallback.arabic,
+      resolvedEnglish: fallback.resolvedEnglish,
+      resolvedArabic: fallback.resolvedArabic,
+      inlineBilingual: inlineBilingual,
+    );
+  }
+
+  /// [fieldLabel] split into its Arabic and English lines, for templates that
+  /// print the two languages in separate cells or columns.
+  ReceiptLabelParts fieldLabelParts(String key) {
+    final fallback = _fieldFallback(key);
+    return ReceiptConfigurationContract.labelParts(
+      options: displayConfig,
+      key: key,
+      mode: receiptLanguageMode,
+      englishFallback: fallback.english,
+      arabicFallback: fallback.arabic,
+      resolvedEnglish: fallback.resolvedEnglish,
+      resolvedArabic: fallback.resolvedArabic,
+    );
+  }
+
+  /// `label: value` for [key] on one line (bilingual labels inline).
+  String labelledField(String key, String value) =>
+      ReceiptConfigurationContract.labelled(
+        fieldLabel(key, inlineBilingual: true),
+        value,
+      );
+
+  /// `label: value` per language line, for two-column templates. When the key
+  /// resolves to no label at all, [value] goes to the document's own column.
+  ReceiptLabelParts labelledFieldParts(String key, String value) {
+    final parts = fieldLabelParts(key);
+    if (parts.isEmpty) {
+      return receiptLanguageMode.isEnglish
+          ? ReceiptLabelParts(english: value)
+          : ReceiptLabelParts(arabic: value);
+    }
+    String join(String label) =>
+        label.isEmpty ? '' : ReceiptConfigurationContract.labelled(label, value);
+    return ReceiptLabelParts(
+      arabic: join(parts.arabic),
+      english: join(parts.english),
+    );
+  }
+
+  /// Template-owned text with no display key (signatures, page numbers,
+  /// section headings). Nothing can be typed for it, so it follows the rule
+  /// for an empty key: English documents print [english]; Arabic and
+  /// bilingual documents print the built-in Arabic.
+  String rendererText({required String english, required String arabic}) =>
+      receiptLanguageMode.isEnglish ? english : arabic;
+
+  /// "Page 1 of 2" on English documents; a language-neutral "1 / 2" on Arabic
+  /// and bilingual ones (the PDF engine drops the space between Arabic words
+  /// and digits inside one run).
+  String pageNumberText(int page, int pageCount) => rendererText(
+        english: 'Page $page of $pageCount',
+        arabic: '$page / $pageCount',
+      );
+
+  /// Order date and time as every template prints them. Draw it as its own
+  /// left-to-right text: inside an Arabic run the bidi algorithm would reorder
+  /// it ("PM 03:10 24-09-2026"), and the PDF engine has no isolate support.
+  String get orderDateTimeText {
+    try {
+      final date = isFromLocalStorage
+          ? DateHelper.formatToISODateOnlyFromISO(orderDate)
+          : DateHelper.formatISODate(orderDate);
+      final time = isFromLocalStorage
+          ? DateHelper.formatToISOTimeOnlyFromISO(orderDate)
+          : DateHelper.formatISOTimeOnlyToIST(orderDate);
+      return time.trim().isEmpty ? date : '$date  $time';
+    } catch (_) {
+      return orderDate;
+    }
+  }
+
+  /// `<showTokenNumber label>: 286` (a symbol prefix such as `#` stays
+  /// attached). Empty when hidden or when the order has no token.
+  String get tokenText {
+    final token = tokenNumber?.trim() ?? '';
+    if (!isVisible('showTokenNumber') || token.isEmpty) return '';
+    final prefix = ReceiptConfigurationContract.withoutTrailingColon(
+      fieldLabel('showTokenNumber', inlineBilingual: true),
+    );
+    if (prefix.isEmpty) return token;
+    final separator = RegExp(r'[A-Za-z؀-ۿ]$').hasMatch(prefix) ? ': ' : '';
+    return '$prefix$separator$token';
+  }
+
+  /// Store VAT / CR registration line (`showVatNumber` / `showCRNumber`). The
+  /// number always comes from the store's ZATCA registration.
+  String storeTaxText(String key) {
+    final number = (key == 'showCRNumber' ? zatcaCrNumber : zatcaVatNumber)
+            ?.trim() ??
+        '';
+    if (!isVisible(key) || number.isEmpty) return '';
+    return labelledField(key, number);
+  }
+
+  /// Footer VAT line: `<showVATFooter label> 300000000000003`.
+  String get vatFooterText {
+    final vat = zatcaVatNumber?.trim() ?? '';
+    if (!isVisible('showVATFooter') || vat.isEmpty) return '';
+    return '${fieldLabel('showVATFooter', inlineBilingual: true)} $vat'.trim();
+  }
+
+  /// Footer order number: `<showOrderNumberInFooter label> 15`.
+  String get orderNumberFooterText {
+    if (!isVisible('showOrderNumberInFooter')) return '';
+    final label = fieldLabel('showOrderNumberInFooter', inlineBilingual: true);
+    return '$label $printableOrderNumberComponent'.trim();
+  }
+
+  /// Caption printed above the QR code.
+  String get qrCaption => fieldLabel('showQRCode', inlineBilingual: true);
+
+  /// Bank block heading (`showBankInfo`).
+  String get bankDetailsHeading =>
+      fieldLabel('showBankInfo', inlineBilingual: true);
+
+  /// `(label, value)` for each enabled bank field that has a value. Empty when
+  /// `showBankInfo` is off.
+  List<(String, String)> get bankDetailRows {
+    if (!isVisible('showBankInfo')) return const [];
+    final bank = primaryBank;
+    final account = primaryBankAccount;
+    final rows = <(String, String)>[];
+    void add(String key, String? value) {
+      final clean = value?.trim() ?? '';
+      if (isVisible(key) && clean.isNotEmpty) {
+        rows.add((
+          ReceiptConfigurationContract.withoutTrailingColon(
+              fieldLabel(key, inlineBilingual: true)),
+          clean,
+        ));
+      }
+    }
+
+    add('showBankName', bank?.bankName);
+    add('showAccountName', account?.accountHolderName);
+    add('showAccountNumber', account?.accountNumber);
+    add('showIBAN', account?.iban);
+    add('showSwiftCode', account?.swiftCode);
+    return rows;
+  }
+
+  /// Printable name of a payment method: the configured `showCash` label for
+  /// cash, renderer names for card / UPI, otherwise the method's own name.
+  String paymentMethodName(String method) {
+    final clean = method.trim();
+    switch (clean.toUpperCase()) {
+      case 'CASH':
+        return fieldLabel('showCash', inlineBilingual: true);
+      case 'CARD':
+        return rendererText(english: 'Card', arabic: 'بطاقة');
+      case 'UPI':
+        return 'UPI';
+      default:
+        return clean;
+    }
+  }
+
+  /// Per-method amounts from [paymentBreakdown] or a multi-payment JSON
+  /// [paymentMethod]; null when the order was paid with a single method.
+  Map<String, dynamic>? get _paymentAmounts {
+    var breakdown = paymentBreakdown;
+    if (breakdown != null && breakdown['amounts'] is Map) {
+      breakdown = Map<String, dynamic>.from(breakdown['amounts'] as Map);
+    }
+    if (breakdown != null && breakdown.isNotEmpty) return breakdown;
+    final raw = paymentMethod?.trim() ?? '';
+    if (!raw.startsWith('{')) return null;
+    try {
+      final decoded = json.decode(raw);
+      if (decoded is Map &&
+          decoded['isMultiPayment'] == true &&
+          decoded['amounts'] is Map) {
+        return Map<String, dynamic>.from(decoded['amounts'] as Map);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// `(method name, amount)` rows of the payment breakdown, printed when a
+  /// paid amount exists and `showPaymentBreaked` is on.
+  List<(String, double)> get paymentBreakdownRows {
+    if (paidAmount == null || !isVisible('showPaymentBreaked')) return const [];
+    final amounts = _paymentAmounts;
+    if (amounts != null) {
+      final rows = <(String, double)>[];
+      amounts.forEach((method, amount) {
+        final value = double.tryParse(amount.toString()) ?? 0.0;
+        if (value > 0) rows.add((paymentMethodName(method), value));
+      });
+      if (rows.isNotEmpty) return rows;
+    }
+    final method = paymentMethod?.trim() ?? '';
+    final label = method.isEmpty || method.startsWith('{')
+        ? fieldLabel('showCash', inlineBilingual: true)
+        : paymentMethodName(method);
+    return [(label, paidAmount!)];
+  }
+
+  /// Payment method(s) for the customer section, e.g. `نقدي, بطاقة`.
+  String get paymentMethodSummary {
+    final amounts = _paymentAmounts;
+    if (amounts != null) {
+      final names = <String>[
+        for (final entry in amounts.entries)
+          if ((double.tryParse(entry.value.toString()) ?? 0.0) > 0)
+            paymentMethodName(entry.key),
+      ];
+      if (names.isNotEmpty) return names.join(', ');
+    }
+    final method = paymentMethod?.trim() ?? '';
+    return method.isEmpty || method.startsWith('{')
+        ? ''
+        : paymentMethodName(method);
+  }
+
+  /// `(label, amount, emphasised)` rows of the customer balance block. Empty
+  /// for walk-in customers, when `showCustomerBalance` is off, or when the
+  /// order carries no balance.
+  List<(String, double, bool)> get customerBalanceRows {
+    if (!isVisible('showCustomerBalance') || isDefaultCustomer) {
+      return const [];
+    }
+    if (customerOldBalance == null && customerCurrentBalance == null) {
+      return const [];
+    }
+    String label(String key) => ReceiptConfigurationContract.withoutTrailingColon(
+        fieldLabel(key, inlineBilingual: true));
+    return [
+      if (isVisible('showCustomerPrevBalance') && customerOldBalance != null)
+        (label('showCustomerPrevBalance'), customerOldBalance!, false),
+      if (isVisible('showCustomerPaidAmount') && paidAmount != null)
+        (label('showCustomerPaidAmount'), paidAmount!, false),
+      if (isVisible('showCustomerCurrentBalance') &&
+          customerCurrentBalance != null)
+        (label('showCustomerCurrentBalance'), customerCurrentBalance!, true),
+    ];
+  }
+
+  /// Amount in words, one entry per printed line, in [amountInWordsLanguage]:
+  /// English on English documents, Arabic on Arabic and bilingual ones.
+  List<String> amountInWordsLines(double amount, {required String currency}) {
+    final language = amountInWordsLanguage;
+    final words = AmountHelper()
+        .convertNumberToWords(amount, currency: currency, language: language);
+    return ['$words${language == 'ar' ? ' فقط.' : ' Only.'}'];
+  }
+
+  /// Item name lines as every template prints them: Arabic above English on a
+  /// bilingual document (when the product has an Arabic name), the Arabic name
+  /// alone on an Arabic document, otherwise the English name. Variant
+  /// attributes follow the primary name.
+  List<String> itemNameLines(dynamic item) {
+    String text(dynamic value) => value?.toString().trim() ?? '';
+    var arabic = '';
+    var english = '';
+    var attributes = '';
+    if (item is Map) {
+      String fromNames(String field, String language) {
+        final names = item[field];
+        return names is Map ? text(names[language]) : '';
+      }
+
+      arabic = [
+        fromNames('names', 'ar'),
+        fromNames('product_names', 'ar'),
+        fromNames('productNames', 'ar'),
+        text(item['product_name_ar']),
+        text(item['productNameAr']),
+      ].firstWhere((name) => name.isNotEmpty, orElse: () => '');
+      english = [
+        fromNames('names', 'en'),
+        text(item['productName']),
+        text(item['product_name']),
+      ].firstWhere((name) => name.isNotEmpty, orElse: () => '');
+      attributes = _variantText(
+          item['variant_attributes'] ?? item['variantAttributes']);
+    } else {
+      try {
+        arabic = text(item.names?.ar);
+        english = text(item.names?.en);
+      } catch (_) {}
+      if (english.isEmpty) {
+        try {
+          english = text(item.productName);
+        } catch (_) {}
+      }
+      try {
+        attributes = _variantText(item.variantAttributes);
+      } catch (_) {}
+    }
+    String withAttributes(String name) =>
+        attributes.isEmpty || name.contains('($attributes)')
+            ? name
+            : (name.isEmpty ? attributes : '$name ($attributes)');
+
+    if (arabic.isNotEmpty && receiptLanguageMode.isBilingual) {
+      return [arabic, withAttributes(english)]
+          .where((line) => line.isNotEmpty)
+          .toList();
+    }
+    if (arabic.isNotEmpty && receiptLanguageMode.isArabic) {
+      return [withAttributes(arabic)];
+    }
+    return [withAttributes(english)];
+  }
+
+  static String _variantText(dynamic raw) {
+    var attributes = raw;
+    if (attributes is String) {
+      final trimmed = attributes.trim();
+      if (trimmed.isEmpty) return '';
+      try {
+        attributes = json.decode(trimmed);
+      } catch (_) {
+        return trimmed;
+      }
+    }
+    if (attributes is! Map) return '';
+    return attributes.values
+        .map((value) => value?.toString().trim() ?? '')
+        .where((value) => value.isNotEmpty)
+        .join(' | ');
+  }
 
   String labelFor(
     String key, {
@@ -405,15 +911,8 @@ class ReceiptLayoutParams {
     required String english,
     required String arabic,
     bool inlineBilingual = false,
-  }) {
-    final text = ReceiptConfigurationContract.documentText(
-      null,
-      receiptLanguageMode,
-      englishFallback: english,
-      arabicFallback: arabic,
-    );
-    return inlineBilingual ? text.replaceAll('\n', ' ') : text;
-  }
+  }) =>
+      rendererText(english: english, arabic: arabic);
 
   String documentText(
     String? text, {
@@ -549,38 +1048,13 @@ class ReceiptLayoutParams {
     return lines;
   }
 
-  /// Returns bank detail lines enabled by the document configuration.
+  /// Returns bank detail lines enabled by the document configuration, as
+  /// `label: value` with the configured (or built-in) labels of [bankDetailRows].
   ///
   /// `showBankInfo` is the master switch. The individual fields are controlled
   /// by `showBankName`, `showAccountName`, `showAccountNumber`, `showIBAN`, and
   /// `showSwiftCode`, matching the API's `display_configuration` keys.
   List<String> visibleBankAccountDetailLines(
-      Map<String, DisplayOption>? displayConfig) {
-    bool isVisible(String key) =>
-        ReceiptConfigurationContract.isVisible(displayConfig, key);
-
-    if (!isVisible('showBankInfo')) return const [];
-
-    final bank = primaryBank;
-    final account = primaryBankAccount;
-    final lines = <String>[];
-
-    void addLine(bool visible, String label, String? value) {
-      if (!visible) return;
-      final trimmed = value?.trim();
-      if (trimmed != null && trimmed.isNotEmpty) {
-        lines.add('$label: $trimmed');
-      }
-    }
-
-    addLine(isVisible('showBankName'), 'Bank Name', bank?.bankName);
-    addLine(isVisible('showAccountName'), 'Account Name',
-        account?.accountHolderName);
-    addLine(isVisible('showAccountNumber'), 'Account Number',
-        account?.accountNumber);
-    addLine(isVisible('showIBAN'), 'IBAN', account?.iban);
-    addLine(isVisible('showSwiftCode'), 'SWIFT Code', account?.swiftCode);
-
-    return lines;
-  }
+          [Map<String, DisplayOption>? displayConfig]) =>
+      [for (final row in bankDetailRows) '${row.$1}: ${row.$2}'];
 }

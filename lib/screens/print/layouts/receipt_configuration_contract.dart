@@ -178,31 +178,23 @@ class ReceiptConfigurationContract {
       arabicFallback,
       _arabicFallbackForEnglish(englishFallback),
     ]);
-    // Two tiers, in order: text the store typed against *this* key, then the
-    // master-data and renderer defaults. Same-script candidates are preferred
-    // within each tier, but configured text is never discarded for being in
-    // the "wrong" script: a store that types an Arabic store name on an
-    // English document must see that Arabic on the receipt, not a hardcoded
-    // English placeholder or a master default borrowed from another key.
+    // A single-language document prints only its own language: the text the
+    // store typed for that language, else the built-in text of that language.
+    // It never borrows the other language's field — an Arabic document whose
+    // Arabic field is empty prints the built-in Arabic, not the English the
+    // store typed for English documents (and vice versa).
     final english = _firstNonEmpty([
       _withoutArabic(defaultValue),
       _withoutArabic(value),
-      defaultValue,
-      value,
       _withoutArabic(resolvedEnglish),
       _withoutArabic(resolvedArabic),
-      _clean(resolvedEnglish),
-      _clean(resolvedArabic),
+      // The renderer-owned fallback may be data (e.g. the store name).
       safeEnglishFallback,
     ]);
     final arabic = _firstNonEmpty([
-      _withArabic(value),
-      _withArabic(defaultValue),
+      // `value` is the Arabic field: printed exactly as the store typed it.
       value,
-      defaultValue,
       _withArabic(resolvedArabic),
-      _clean(resolvedArabic),
-      _clean(resolvedEnglish),
       // The renderer-owned fallback may legitimately be transliterated or
       // contain only punctuation/numbers.
       _clean(safeArabicFallback),
@@ -224,12 +216,13 @@ class ReceiptConfigurationContract {
         return arabic;
       case ReceiptLanguageMode.bilingual:
         if (bilingualArabic.isEmpty && bilingualEnglish.isEmpty) {
+          // Nothing typed: Arabic only — never an English master label or
+          // renderer placeholder.
           return _firstNonEmpty([
             _withArabic(resolvedArabic),
             _withArabic(safeArabicFallback),
-            _clean(resolvedArabic),
             _clean(safeArabicFallback),
-            _clean(resolvedEnglish),
+            _clean(resolvedArabic),
             safeEnglishFallback,
           ]);
         }
@@ -242,6 +235,69 @@ class ReceiptConfigurationContract {
             ? '$bilingualArabic / $bilingualEnglish'
             : '$bilingualArabic\n$bilingualEnglish';
     }
+  }
+
+  /// [label] split into its language lines, for templates that print English
+  /// and Arabic in separate cells. Each slot holds only what [label] would
+  /// print for this document: on a bilingual document the English slot stays
+  /// empty unless the store typed an English `default`, and a key with nothing
+  /// typed resolves to the built-in Arabic fallback, exactly like the thermal
+  /// receipt.
+  static ReceiptLabelParts labelParts({
+    required Map<String, DisplayOption>? options,
+    required String key,
+    required ReceiptLanguageMode mode,
+    required String englishFallback,
+    required String arabicFallback,
+    String? resolvedEnglish,
+    String? resolvedArabic,
+  }) {
+    String resolve(ReceiptLanguageMode forMode) => label(
+          options: options,
+          key: key,
+          mode: forMode,
+          englishFallback: englishFallback,
+          arabicFallback: arabicFallback,
+          resolvedEnglish: resolvedEnglish,
+          resolvedArabic: resolvedArabic,
+        );
+
+    switch (mode) {
+      case ReceiptLanguageMode.english:
+        return ReceiptLabelParts(english: resolve(mode));
+      case ReceiptLanguageMode.arabic:
+        return ReceiptLabelParts(arabic: resolve(mode));
+      case ReceiptLanguageMode.bilingual:
+        final configured = option(options, key);
+        final value = _clean(configured?.value);
+        final defaultValue = _clean(configured?.defaultValue);
+        if (value.isEmpty && defaultValue.isEmpty) {
+          // Nothing typed: the fallback (built-in Arabic, or data such as the
+          // store name) fills the Arabic slot — the primary line of a
+          // bilingual document — so no English line is added.
+          return ReceiptLabelParts(arabic: resolve(mode));
+        }
+        if (value.isEmpty) return ReceiptLabelParts(english: defaultValue);
+        if (defaultValue.isEmpty ||
+            value.toLowerCase() == defaultValue.toLowerCase()) {
+          return ReceiptLabelParts(arabic: value);
+        }
+        return ReceiptLabelParts(arabic: value, english: defaultValue);
+    }
+  }
+
+  /// Removes one trailing colon from every line so a template can add its own
+  /// separator without printing `::` for a typed label such as `"Qty:"`.
+  static String withoutTrailingColon(String label) => label
+      .split('\n')
+      .map((line) => line.trimRight().replaceFirst(RegExp(r'[:：]\s*$'), ''))
+      .join('\n')
+      .trim();
+
+  /// `label: value`, or just the value when the label resolved to nothing.
+  static String labelled(String label, String value) {
+    final clean = withoutTrailingColon(label);
+    return clean.isEmpty ? value : '$clean: $value';
   }
 
   /// Applies the same language filtering to document-level strings such as
@@ -301,9 +357,8 @@ class ReceiptConfigurationContract {
   }) {
     final prefix = _clean(configured);
     if (prefix.isNotEmpty) return prefix;
-    return mode == ReceiptLanguageMode.arabic
-        ? _clean(arabicFallback)
-        : _clean(englishFallback);
+    // Bilingual documents add no English the store did not type.
+    return mode.isEnglish ? _clean(englishFallback) : _clean(arabicFallback);
   }
 
   static String _clean(dynamic value) => value?.toString().trim() ?? '';
@@ -459,4 +514,23 @@ class ReceiptConfigurationContract {
         'CR No': 'السجل التجاري',
       }[value.trim()] ??
       '';
+}
+
+/// The Arabic and English lines of one resolved label. Either may be empty:
+/// a bilingual document leaves [english] empty unless the store typed an
+/// English `default`, and single-language documents fill only their own slot.
+class ReceiptLabelParts {
+  const ReceiptLabelParts({this.arabic = '', this.english = ''});
+
+  final String arabic;
+  final String english;
+
+  bool get isEmpty => arabic.isEmpty && english.isEmpty;
+
+  /// The same text [ReceiptConfigurationContract.label] prints: Arabic first.
+  String joined({bool inline = false}) {
+    if (arabic.isEmpty) return english;
+    if (english.isEmpty) return arabic;
+    return inline ? '$arabic / $english' : '$arabic\n$english';
+  }
 }

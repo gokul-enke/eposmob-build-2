@@ -186,7 +186,8 @@ void main() {
             .amountInWordsLanguage;
     expect(code('ar'), 'ar');
     expect(code('en'), 'en');
-    expect(code('en_ar'), 'en');
-    expect(code('ar_en'), 'en');
+    // Bilingual documents add no generated English.
+    expect(code('en_ar'), 'ar');
+    expect(code('ar_en'), 'ar');
   });
 }

@@ -386,7 +386,13 @@ void main() {
       () {
     for (final theme in _themes) {
       final source = _standardAddressRendererSource(theme);
-      expect(source.contains('params.storeAddressText('), isTrue,
+      // Either the one-line resolver or the shared section helpers, which
+      // resolve the address through the same ReceiptLayoutParams contract.
+      expect(
+          source.contains('params.storeAddressText(') ||
+              source.contains('params.headerColumnLines(') ||
+              source.contains('params.storeLineParts('),
+          isTrue,
           reason: '$theme/shared address resolver');
       expect(source.contains("cfgVal('showStoreAddress'"), isFalse,
           reason: '$theme must not print the configured label as the address');

@@ -140,12 +140,9 @@ void main() {
       );
     });
 
-    test('prints Arabic-only configuration on an English document', () {
-      // Stores run an English template and still localize individual fields in
-      // Arabic. The renderer fallback is a placeholder for keys left empty, not
-      // a language filter, so configured text must survive. This previously
-      // asserted the opposite ('Fallback EN'), which contradicted the shipped
-      // behaviour and masked the resolved-label regression below.
+    test('an English document never prints the Arabic field', () {
+      // English documents print only English: a field typed only in Arabic
+      // falls back to the built-in English text.
       final arabicOnly = <String, DisplayOption>{
         'showStoreName': DisplayOption(
           visible: true,
@@ -161,15 +158,52 @@ void main() {
           englishFallback: 'Fallback EN',
           arabicFallback: 'احتياطي',
         ),
-        'متجر الاختبار',
+        'Fallback EN',
+      );
+    });
+
+    test('an Arabic document never prints the English field', () {
+      // Arabic documents print only Arabic: a field typed only in English
+      // (`default`) falls back to the built-in Arabic text.
+      final englishOnly = <String, DisplayOption>{
+        'showDeliveryMethod':
+            DisplayOption(visible: true, defaultValue: 'Delivery Method'),
+      };
+      expect(
+        ReceiptConfigurationContract.label(
+          options: englishOnly,
+          key: 'showDeliveryMethod',
+          mode: ReceiptLanguageMode.arabic,
+          englishFallback: 'Delivery',
+          arabicFallback: 'التوصيل',
+        ),
+        'التوصيل',
+      );
+    });
+
+    test('an Arabic document prints its Arabic field exactly as typed', () {
+      final typed = <String, DisplayOption>{
+        'showThankYouMessage': DisplayOption(
+            visible: true,
+            value: '***THANKYOU***',
+            defaultValue: 'Thank you for your business!'),
+      };
+      expect(
+        ReceiptConfigurationContract.label(
+          options: typed,
+          key: 'showThankYouMessage',
+          mode: ReceiptLanguageMode.arabic,
+          englishFallback: 'Thank You',
+          arabicFallback: 'شكراً',
+        ),
+        '***THANKYOU***',
       );
     });
 
     test('configured value outranks a resolved master label', () {
-      // Regression: resolved_labels.tax mirrors showTaxHeader ("TAX"), yet
-      // every renderer also passes it as showTax's resolved label. Ranked above
-      // the store's own value it replaced the configured "ضريبة" with "TAX" on
-      // an English document, so the settings preview disagreed with the print.
+      // Regression: resolved_labels.tax mirrors showTaxHeader, yet every
+      // renderer also passes it as showTax's resolved label. The store's own
+      // value must win over it.
       final options = <String, DisplayOption>{
         'showTax': DisplayOption(visible: true, value: 'ضريبة'),
       };
@@ -177,12 +211,27 @@ void main() {
         ReceiptConfigurationContract.label(
           options: options,
           key: 'showTax',
-          mode: ReceiptLanguageMode.english,
-          resolvedArabic: 'TAX',
+          mode: ReceiptLanguageMode.arabic,
+          resolvedArabic: 'الضريبة المضافة',
           englishFallback: 'VAT',
           arabicFallback: 'الضريبة',
         ),
         'ضريبة',
+      );
+    });
+
+    test('a bilingual document with nothing typed prints only Arabic', () {
+      expect(
+        ReceiptConfigurationContract.label(
+          options: const <String, DisplayOption>{},
+          key: 'showSLNumber',
+          mode: ReceiptLanguageMode.bilingual,
+          resolvedArabic: 'SL',
+          resolvedEnglish: 'Sl#',
+          englishFallback: 'SL#',
+          arabicFallback: '#',
+        ),
+        '#',
       );
     });
 
@@ -348,16 +397,18 @@ void main() {
       );
     });
 
-    test('uses only the primary fallback when the prefix is missing', () {
-      expect(
-        ReceiptConfigurationContract.numberPrefix(
-          null,
-          ReceiptLanguageMode.bilingual,
-          englishFallback: 'INV-',
-          arabicFallback: 'رقم الفاتورة: ',
-        ),
-        'INV-',
-      );
+    test('a missing prefix falls back to Arabic unless the document is English',
+        () {
+      String prefix(ReceiptLanguageMode mode) =>
+          ReceiptConfigurationContract.numberPrefix(
+            null,
+            mode,
+            englishFallback: 'INV-',
+            arabicFallback: 'رقم الفاتورة: ',
+          );
+      expect(prefix(ReceiptLanguageMode.english), 'INV-');
+      expect(prefix(ReceiptLanguageMode.arabic), 'رقم الفاتورة:');
+      expect(prefix(ReceiptLanguageMode.bilingual), 'رقم الفاتورة:');
     });
   });
 

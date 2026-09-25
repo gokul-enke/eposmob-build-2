@@ -9,13 +9,11 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'pdf_bidi_text.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/helpers/amount_helper.dart';
-import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
-import 'package:pos_machine/models/payment_gateway.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_configuration_contract.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
+import 'package:pos_machine/screens/print/layouts/receipt_sections.dart';
 import 'package:pos_machine/screens/print/logo_loader.dart';
 import 'package:pos_machine/services/development_printer_service.dart';
 import 'package:pos_machine/services/common_print_settings.dart';
@@ -151,78 +149,12 @@ class ContractStandardPdfLayout implements StandardPdfLayout {
 
 /// Contract implementation for the standard PDF surface.
 ///
-/// All option resolution intentionally goes through [ReceiptLayoutParams]
-/// (which delegates to [ReceiptConfigurationContract]).  In particular, this
-/// class never reads `DisplayOption.visible` or the raw language string.
+/// Every text comes from the shared [ReceiptLayoutParams] / [ReceiptSections]
+/// helpers (which delegate to [ReceiptConfigurationContract]), so this
+/// renderer prints the same labels, values and language lines as the thermal
+/// receipt and every other A4/A5 template. It never reads `DisplayOption`
+/// fields or the raw language string itself.
 class ContractStandardPdfRenderer {
-  // Keep the complete 61-key matrix visible at this production boundary.  The
-  // set is also used to normalize the incoming options before sections are
-  // built, so every key receives the same strict visibility semantics even if
-  // a visual section does not currently need its value.
-  static const List<String> contractBillKeys = [
-    'showAccountName',
-    'showAccountNumber',
-    'showAmountInWords',
-    'showBankInfo',
-    'showBankName',
-    'showComment',
-    'showCRNumber',
-    'showCustomerAddress',
-    'showCustomerBalance',
-    'showCustomerCrNumber',
-    'showCustomerCurrentBalance',
-    'showCustomerName',
-    'showCustomerNameAndPhone',
-    'showCustomerPaidAmount',
-    'showCustomerPhone',
-    'showCustomerPhoneMasked',
-    'showCustomerPrevBalance',
-    'showCustomerVatNumber',
-    'showDate',
-    'showDeliveryMethod',
-    'showDeliveryPhone',
-    'showDescription',
-    'showDiscount',
-    'showEmail',
-    'showExtraHeading1',
-    'showExtraHeading2',
-    'showFssaiInfo',
-    'showIBAN',
-    'showInvoiceNumber',
-    'showInvoiceTitle',
-    'showInvoiceTitleB2b',
-    'showItemsCount',
-    'showMRP',
-    'showMRPTotal',
-    'showNetAmount',
-    'showOrderNumberInFooter',
-    'showParticulars',
-    'showPayment',
-    'showPaymentBreaked',
-    'showQRCode',
-    'showQty',
-    'showQuantityCount',
-    'showRate',
-    'showRateExcTax',
-    'showSaved',
-    'showSLNumber',
-    'showStoreAddress',
-    'showStoreName',
-    'showSubTotal',
-    'showSwiftCode',
-    'showTax',
-    'showTaxHeader',
-    'showTel',
-    'showTermsConditions',
-    'showThankYouMessage',
-    'showTokenNumber',
-    'showTotal',
-    'showUnit',
-    'showVATFooter',
-    'showVatNumber',
-    'showWarranty',
-  ];
-
   Future<pw.Document> build(ReceiptLayoutParams params) async {
     final pageFormat = _pageFormat(params.selectedPaperSize);
     final mode = params.receiptLanguageMode;
@@ -232,79 +164,20 @@ class ContractStandardPdfRenderer {
     final accent = _accentColor(params.billDocumentConfig.accentColor);
     final logo = await _loadLogo(params);
 
-    // Resolve all keys once through the contract.  This is deliberately not
-    // used as a permissive fallback: a missing key remains false/hidden.
-    final visibleKeys = <String>{
-      for (final key in contractBillKeys)
-        if (params.isVisible(key)) key,
-    };
-    // Keep the canonical source list and runtime contract in lock-step.  The
-    // assertion is harmless in release builds and catches accidental matrix
-    // drift while developing a new server display option.
-    assert(
-      visibleKeys.length <=
-          ReceiptConfigurationContract.canonicalBillKeys.length,
-      'Standard PDF contract key matrix is larger than the canonical matrix',
-    );
-
     final document = pw.Document(version: PdfVersion.pdf_1_5, compress: true);
     final scale = pageFormat == PdfPageFormat.a5 ? 0.78 : 1.0;
     final body = <pw.Widget>[];
 
     // Canonical section order: header -> customer -> items -> totals ->
     // returns -> footer.  Keep these calls explicit for reviewability.
-    body.addAll(_buildHeaderSection(
-      params,
-      fonts,
-      accent,
-      logo,
-      scale,
-      mode,
-      visibleKeys,
-    ));
-    body.addAll(
-        _buildCustomerSection(params, fonts, accent, scale, visibleKeys));
+    body.addAll(_buildHeaderSection(params, fonts, accent, logo, scale));
+    body.addAll(_buildCustomerSection(params, fonts, accent, scale));
     if (!params.isReturnOnly) {
-      body.addAll(_buildCartItemsSection(
-        params,
-        fonts,
-        accent,
-        currency,
-        scale,
-        visibleKeys,
-      ));
-      body.addAll(_buildWarrantySection(
-        params,
-        fonts,
-        accent,
-        scale,
-        visibleKeys,
-      ));
-      body.addAll(_buildTotalsSection(
-        params,
-        fonts,
-        accent,
-        currency,
-        scale,
-        visibleKeys,
-      ));
+      body.addAll(_buildCartItemsSection(params, fonts, accent, currency, scale));
+      body.addAll(_buildTotalsSection(params, fonts, accent, currency, scale));
     }
-    body.addAll(_buildReturnSection(
-      params,
-      fonts,
-      accent,
-      currency,
-      scale,
-      visibleKeys,
-    ));
-    body.addAll(_buildFooterSection(
-      params,
-      fonts,
-      accent,
-      currency,
-      scale,
-      visibleKeys,
-    ));
+    body.addAll(_buildReturnSection(params, fonts, accent, currency, scale));
+    body.addAll(_buildFooterSection(params, fonts, accent, scale));
 
     document.addPage(
       pw.MultiPage(
@@ -317,7 +190,7 @@ class ContractStandardPdfRenderer {
         footer: (context) => pw.Align(
           alignment: pw.Alignment.center,
           child: pdfText(
-            '${context.pageNumber} / ${context.pagesCount}',
+            params.pageNumberText(context.pageNumber, context.pagesCount),
             style: fonts.small,
           ),
         ),
@@ -333,8 +206,6 @@ class ContractStandardPdfRenderer {
     PdfColor accent,
     pw.MemoryImage? logo,
     double scale,
-    ReceiptLanguageMode mode,
-    Set<String> visibleKeys,
   ) {
     final config = params.billDocumentConfig;
     final children = <pw.Widget>[];
@@ -352,90 +223,38 @@ class ContractStandardPdfRenderer {
 
     final header = params.documentText(config.header);
     final subheader = params.documentText(config.subheader);
-    if (header.isNotEmpty) children.add(_centerText(header, fonts.section));
-    if (subheader.isNotEmpty) children.add(_centerText(subheader, fonts.small));
+    if (header.isNotEmpty) children.add(_centerLines(header, fonts.section));
+    if (subheader.isNotEmpty) children.add(_centerLines(subheader, fonts.small));
 
-    if (_contains(visibleKeys, 'showStoreName')) {
-      final store = params.labelFor(
-        'showStoreName',
-        englishFallback: _nonEmpty(params.storeName, 'STORE NAME'),
-        arabicFallback: 'اسم المتجر',
-      );
-      if (store.isNotEmpty) children.add(_centerText(store, fonts.title));
+    final store = params.headerTextParts('showStoreName').joined();
+    if (store.isNotEmpty) children.add(_centerLines(store, fonts.title));
+    final description = params.headerTextParts('showDescription').joined();
+    if (description.isNotEmpty) {
+      children.add(_centerLines(description, fonts.bodyBold));
     }
-    if (_contains(visibleKeys, 'showDescription')) {
-      final description = params.labelFor(
-        'showDescription',
-        englishFallback: '',
-        arabicFallback: 'وصف المتجر',
-      );
-      if (description.isNotEmpty) {
-        children.add(_centerText(description, fonts.bodyBold));
+    for (final key in const [
+      'showStoreAddress',
+      'showFssaiInfo',
+      'showVatNumber',
+      'showCRNumber',
+      'showExtraHeading1',
+      'showExtraHeading2',
+      'showTel',
+      'showEmail',
+    ]) {
+      final parts = key == 'showFssaiInfo' ||
+              key == 'showExtraHeading1' ||
+              key == 'showExtraHeading2'
+          ? params.headerTextParts(key)
+          : params.storeLineParts(key);
+      final text = parts.joined();
+      if (text.isNotEmpty) {
+        children.add(_centerLines(
+            text, key == 'showStoreAddress' ? fonts.body : fonts.small));
       }
     }
-    final storeAddress = params.storeAddressText();
-    if (storeAddress.isNotEmpty) {
-      children.add(_centerText(storeAddress, fonts.body));
-    }
-    if (_contains(visibleKeys, 'showFssaiInfo')) {
-      final fssai = params.labelFor(
-        'showFssaiInfo',
-        englishFallback: '',
-        arabicFallback: '',
-      );
-      if (fssai.isNotEmpty) children.add(_centerText(fssai, fonts.small));
-    }
 
-    // Store tax-registration values are data, not configured labels.  Keep
-    // them in the store/header section and leave the VAT footer switch
-    // independent below.
-    if (_contains(visibleKeys, 'showVatNumber') &&
-        _clean(params.zatcaVatNumber).isNotEmpty) {
-      children.add(_labelValue(
-        params.labelFor(
-          'showVatNumber',
-          englishFallback: 'VAT No',
-          arabicFallback: 'الرقم الضريبي',
-        ),
-        params.documentText(params.zatcaVatNumber),
-        fonts.small,
-      ));
-    }
-    if (_contains(visibleKeys, 'showCRNumber') &&
-        _clean(params.zatcaCrNumber).isNotEmpty) {
-      children.add(_labelValue(
-        params.labelFor(
-          'showCRNumber',
-          englishFallback: 'CR No',
-          arabicFallback: 'السجل التجاري',
-        ),
-        params.documentText(params.zatcaCrNumber),
-        fonts.small,
-      ));
-    }
-    for (final key in const ['showExtraHeading1', 'showExtraHeading2']) {
-      if (_contains(visibleKeys, key)) {
-        final heading = params.labelFor(
-          key,
-          englishFallback: '',
-          arabicFallback: '',
-        );
-        if (heading.isNotEmpty) children.add(_centerText(heading, fonts.small));
-      }
-    }
-    for (final key in const ['showTel', 'showEmail']) {
-      final contact = params.storeContactText(key);
-      if (contact.isNotEmpty) children.add(_centerText(contact, fonts.small));
-    }
-
-    final invoiceTitleVisible = _contains(visibleKeys, 'showInvoiceTitle');
-    final title = invoiceTitleVisible
-        ? params.labelFor(
-            'showInvoiceTitle',
-            englishFallback: 'INVOICE',
-            arabicFallback: 'فاتورة',
-          )
-        : '';
+    final title = params.invoiceTitleText;
     if (title.isNotEmpty) {
       children.add(pw.SizedBox(height: 5 * scale));
       children.add(
@@ -446,38 +265,18 @@ class ContractStandardPdfRenderer {
             color: accent,
             borderRadius: pw.BorderRadius.circular(3),
           ),
-          child: _centerText(
+          child: _centerLines(
               title, fonts.section.copyWith(color: PdfColors.white)),
         ),
       );
     }
 
-    final meta = <pw.Widget>[];
-    if (_contains(visibleKeys, 'showInvoiceNumber')) {
-      meta.add(_labelValue(
-        params.labelFor('showInvoiceNumber',
-            englishFallback: 'Invoice No', arabicFallback: 'رقم الفاتورة'),
-        params.invoiceNumberText,
-        fonts.body,
-      ));
-    }
-    if (_contains(visibleKeys, 'showDate')) {
-      meta.add(_labelValue(
-        params.labelFor('showDate',
-            englishFallback: 'Date', arabicFallback: 'التاريخ'),
-        _formatDate(params.orderDate),
-        fonts.body,
-      ));
-    }
-    if (_contains(visibleKeys, 'showTokenNumber') &&
-        _clean(params.tokenNumber).isNotEmpty) {
-      meta.add(_labelValue(
-        params.labelFor('showTokenNumber',
-            englishFallback: 'Token No', arabicFallback: 'رقم الرمز'),
-        params.documentText(params.tokenNumber),
-        fonts.body,
-      ));
-    }
+    // Invoice number, token and date. The invoice number carries no label,
+    // exactly like the thermal receipt.
+    final meta = <pw.Widget>[
+      for (final row in params.orderInfoRows)
+        if (_metaKeys.contains(row.key)) _infoRow(row, fonts.body),
+    ];
     if (meta.isNotEmpty) {
       children.add(pw.SizedBox(height: 6 * scale));
       children.add(pw.Column(children: meta));
@@ -496,111 +295,34 @@ class ContractStandardPdfRenderer {
     ];
   }
 
+  static const _metaKeys = {
+    'showInvoiceNumber',
+    'showTokenNumber',
+    'showDate',
+  };
+
   List<pw.Widget> _buildCustomerSection(
     ReceiptLayoutParams params,
     _PdfFonts fonts,
     PdfColor accent,
     double scale,
-    Set<String> visibleKeys,
   ) {
-    final rows = <pw.Widget>[];
-    // `showCustomerNameAndPhone` is the customer-section master switch.  A
-    // child option being present must not resurrect the section when the
-    // master is disabled; this mirrors the thermal contract semantics.
-    if (!_contains(visibleKeys, 'showCustomerNameAndPhone')) {
-      return const <pw.Widget>[];
-    }
-    final showName = _contains(visibleKeys, 'showCustomerName');
-    final name = _clean(params.customerName);
-    final phone = params.customerPhoneText;
-    if (showName && name.isNotEmpty) {
-      rows.add(_labelValue(
-        params.labelFor('showCustomerName',
-            englishFallback: 'Customer', arabicFallback: 'العميل'),
-        params.documentText(name),
-        fonts.body,
-      ));
-    }
-    if (phone.isNotEmpty) {
-      rows.add(_labelValue(
-        params.labelFor('showCustomerPhone',
-            englishFallback: 'Phone', arabicFallback: 'الهاتف'),
-        params.documentText(phone),
-        fonts.body,
-      ));
-    }
-    if (_contains(visibleKeys, 'showCustomerAddress') &&
-        _clean(params.customerAddress).isNotEmpty) {
-      rows.add(_labelValue(
-        params.labelFor('showCustomerAddress',
-            englishFallback: 'Address', arabicFallback: 'العنوان'),
-        params.documentText(params.customerAddress),
-        fonts.body,
-      ));
-    }
-    if (_contains(visibleKeys, 'showCustomerVatNumber') &&
-        _clean(params.customerVatNumber).isNotEmpty) {
-      rows.add(_labelValue(
-        params.labelFor('showCustomerVatNumber',
-            englishFallback: 'Customer VAT',
-            arabicFallback: 'الرقم الضريبي للعميل'),
-        params.documentText(params.customerVatNumber),
-        fonts.body,
-      ));
-    }
-    if (_contains(visibleKeys, 'showCustomerCrNumber') &&
-        _clean(params.customerCrNumber).isNotEmpty) {
-      rows.add(_labelValue(
-        params.labelFor('showCustomerCrNumber',
-            englishFallback: 'Customer CR',
-            arabicFallback: 'السجل التجاري للعميل'),
-        params.documentText(params.customerCrNumber),
-        fonts.body,
-      ));
-    }
-    if (_contains(visibleKeys, 'showDeliveryMethod') &&
-        _clean(params.deliveryMethod).isNotEmpty) {
-      rows.add(_labelValue(
-        params.labelFor('showDeliveryMethod',
-            englishFallback: 'Delivery', arabicFallback: 'التوصيل'),
-        params.documentText(params.deliveryMethod),
-        fonts.body,
-      ));
-    }
-    if (_contains(visibleKeys, 'showDeliveryPhone') &&
-        _clean(params.deliveryPhone).isNotEmpty) {
-      rows.add(_labelValue(
-        params.labelFor('showDeliveryPhone',
-            englishFallback: 'Delivery Phone', arabicFallback: 'هاتف التوصيل'),
-        params.documentText(params.deliveryPhone),
-        fonts.body,
-      ));
-    }
-    if (_contains(visibleKeys, 'showPayment') &&
-        _clean(params.paymentMethod).isNotEmpty) {
-      rows.add(_labelValue(
-        params.labelFor('showPayment',
-            englishFallback: 'Payment', arabicFallback: 'الدفع'),
-        params.documentText(params.paymentMethod),
-        fonts.body,
-      ));
-    }
-    if (_contains(visibleKeys, 'showComment') &&
-        _clean(params.orderComment).isNotEmpty) {
-      rows.add(_labelValue(
-        params.labelFor('showComment',
-            englishFallback: 'Comment', arabicFallback: 'تعليق'),
-        params.documentText(params.orderComment),
-        fonts.body,
-      ));
-    }
+    // `showCustomerNameAndPhone` is the customer-section master switch; the
+    // shared rows already apply it.
+    final rows = <pw.Widget>[
+      for (final row in params.customerInfoRows) _infoRow(row, fonts.body),
+      for (final row in params.orderInfoRows)
+        if (!_metaKeys.contains(row.key)) _infoRow(row, fonts.body),
+    ];
+    final comment = params.commentText;
+    if (comment.isNotEmpty) rows.add(_textLine(comment, fonts.body));
     if (rows.isEmpty) return const <pw.Widget>[];
     return <pw.Widget>[
       _sectionBox(
         rows,
         accent,
         scale,
-        heading: params.textForMode(
+        heading: params.rendererText(
           english: 'Customer Details',
           arabic: 'بيانات العميل',
         ),
@@ -616,220 +338,81 @@ class ContractStandardPdfRenderer {
     PdfColor accent,
     String currency,
     double scale,
-    Set<String> visibleKeys,
   ) {
-    final columns = <_PdfColumn>[];
-    if (_contains(visibleKeys, 'showSLNumber')) {
-      columns.add(_PdfColumn(
-        key: 'showSLNumber',
-        heading: params.labelFor('showSLNumber',
-            englishFallback: '#', arabicFallback: 'م'),
-        value: (item, index) => '${index + 1}',
-      ));
-    }
-    if (_contains(visibleKeys, 'showParticulars')) {
-      final labels = params.billDocumentConfig.resolvedLabels;
-      columns.add(_PdfColumn(
-        key: 'showParticulars',
-        heading: params.labelFor(
-          'showParticulars',
-          englishFallback: 'PARTICULARS',
-          arabicFallback: 'البيان',
-          resolvedEnglish: labels?.particularsDefault ?? labels?.itemName,
-          resolvedArabic: labels?.particulars,
-        ),
-        flex: 3,
-        value: (item, index) => _itemName(params, item),
-      ));
-    }
-    if (_contains(visibleKeys, 'showMRP')) {
-      columns.add(_PdfColumn(
-        key: 'showMRP',
-        heading: params.labelFor('showMRP',
-            englishFallback: 'MRP', arabicFallback: 'سعر التجزئة'),
-        value: (item, index) => _money(
-            _number(_field(item, const ['mrp', 'maximum_retail_price'])),
-            currency),
-      ));
-    }
-    if (_contains(visibleKeys, 'showQty')) {
-      final labels = params.billDocumentConfig.resolvedLabels;
-      columns.add(_PdfColumn(
-        key: 'showQty',
-        heading: params.labelFor(
-          'showQty',
-          englishFallback: 'QTY',
-          arabicFallback: 'الكمية',
-          resolvedEnglish: labels?.qtyDefault,
-          resolvedArabic: labels?.qty,
-        ),
-        value: (item, index) =>
-            _quantity(_field(item, const ['quantity', 'qty'])),
-      ));
-    }
-    if (_contains(visibleKeys, 'showRate')) {
-      columns.add(_PdfColumn(
-        key: 'showRate',
-        heading: params.labelFor('showRate',
-            englishFallback: 'RATE', arabicFallback: 'السعر'),
-        value: (item, index) => _money(
-            _number(_field(item, const ['unitPrice', 'unit_price', 'price'])),
-            currency),
-      ));
-    }
-    if (_contains(visibleKeys, 'showRateExcTax')) {
-      columns.add(_PdfColumn(
-        key: 'showRateExcTax',
-        heading: params.labelFor('showRateExcTax',
-            englishFallback: 'RATE (EXC TAX)',
-            arabicFallback: 'السعر قبل الضريبة'),
-        value: (item, index) => _money(_rateExcTax(params, item), currency),
-      ));
-    }
-    if (_contains(visibleKeys, 'showUnit')) {
-      final labels = params.billDocumentConfig.resolvedLabels;
-      columns.add(_PdfColumn(
-        key: 'showUnit',
-        heading: params.labelFor(
-          'showUnit',
-          englishFallback: 'UNIT',
-          arabicFallback: 'الوحدة',
-          resolvedEnglish: labels?.unitNameDefault ?? labels?.unitName,
-          resolvedArabic: labels?.unitName,
-        ),
-        value: (item, index) => _text(_field(item, const [
-          'saleUnitName',
-          'sale_unit_name',
-          'productUnit',
-          'product_unit',
-          'unit'
-        ])),
-      ));
-    }
-    if (_contains(visibleKeys, 'showTotal')) {
-      final labels = params.billDocumentConfig.resolvedLabels;
-      columns.add(_PdfColumn(
-        key: 'showTotal',
-        heading: params.labelFor(
-          'showTotal',
-          englishFallback: 'TOTAL',
-          arabicFallback: 'الإجمالي',
-          resolvedEnglish: labels?.totalDefault ?? labels?.total,
-          resolvedArabic: labels?.total,
-        ),
-        value: (item, index) => _money(
-            _number(_field(
-                item, const ['totalPrice', 'total_price', 'amount', 'total'])),
-            currency),
-      ));
-    }
-    if (_contains(visibleKeys, 'showTaxHeader')) {
-      final labels = params.billDocumentConfig.resolvedLabels;
-      columns.add(_PdfColumn(
-        key: 'showTaxHeader',
-        heading: params.labelFor(
-          'showTaxHeader',
-          englishFallback: 'VAT',
-          arabicFallback: 'الضريبة',
-          resolvedEnglish: labels?.taxDefault ?? labels?.taxName,
-          resolvedArabic: labels?.tax,
-        ),
-        value: (item, index) => _money(
-            _number(_field(item, const ['taxAmount', 'tax_amount', 'tax'])),
-            currency),
-      ));
-    }
-
+    final columns = params.itemColumns;
     if (columns.isEmpty || params.cartItems.isEmpty) {
       return const <pw.Widget>[];
+    }
+    final lines = params.itemLines;
+    final warranty = params.warrantyLabel;
+    const moneyKeys = {
+      'showMRP',
+      'showRate',
+      'showRateExcTax',
+      'showTaxHeader',
+      'showTotal',
+    };
+
+    pw.Widget valueCell(ReceiptItemLine line, String key) {
+      if (key == 'showParticulars') {
+        return _cellLines(
+          [
+            ...line.nameLines,
+            if (line.hasWarranty && warranty.isNotEmpty) warranty,
+          ],
+          fonts.small,
+          align: pw.TextAlign.left,
+        );
+      }
+      final value = line.valueFor(key);
+      return _cellLines(
+        [moneyKeys.contains(key) ? _money(value, currency) : value],
+        fonts.small,
+        align: pw.TextAlign.center,
+      );
     }
 
     final tableRows = <pw.TableRow>[
       pw.TableRow(
+        repeat: true,
         decoration: pw.BoxDecoration(color: accent),
-        children: columns
-            .map((column) => _cell(column.heading, fonts.tableHeader,
-                align: pw.TextAlign.center))
-            .toList(),
+        children: [
+          for (final column in columns)
+            _cellLines(
+              [column.label.arabic, column.label.english],
+              fonts.tableHeader,
+              align: pw.TextAlign.center,
+            ),
+        ],
       ),
-      for (var index = 0; index < params.cartItems.length; index++)
+      for (var index = 0; index < lines.length; index++)
         pw.TableRow(
           decoration: pw.BoxDecoration(
             color: index.isEven
                 ? PdfColors.white
                 : const PdfColor.fromInt(0xFFF5F7FA),
           ),
-          children: columns
-              .map((column) => _cell(
-                    column.value(params.cartItems[index], index),
-                    fonts.small,
-                    align: column.key == 'showParticulars'
-                        ? pw.TextAlign.left
-                        : pw.TextAlign.center,
-                  ))
-              .toList(),
+          children: [
+            for (final column in columns) valueCell(lines[index], column.key),
+          ],
         ),
     ];
 
-    final widths = <int, pw.TableColumnWidth>{};
-    for (var i = 0; i < columns.length; i++) {
-      widths[i] = pw.FlexColumnWidth(columns[i].flex.toDouble());
-    }
     return <pw.Widget>[
       _sectionTitle(
-        params.textForMode(english: 'Items', arabic: 'الأصناف'),
+        params.rendererText(english: 'Items', arabic: 'الأصناف'),
         fonts.section,
         accent,
         scale,
       ),
       pw.Table(
         border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
-        columnWidths: widths,
+        columnWidths: {
+          for (var i = 0; i < columns.length; i++)
+            i: pw.FlexColumnWidth(
+                columns[i].key == 'showParticulars' ? 3 : 1),
+        },
         children: tableRows,
-      ),
-      pw.SizedBox(height: 8 * scale),
-    ];
-  }
-
-  List<pw.Widget> _buildWarrantySection(
-    ReceiptLayoutParams params,
-    _PdfFonts fonts,
-    PdfColor accent,
-    double scale,
-    Set<String> visibleKeys,
-  ) {
-    if (!_contains(visibleKeys, 'showWarranty')) {
-      return const <pw.Widget>[];
-    }
-    final warrantyRows = <pw.Widget>[];
-    for (final item in params.cartItems) {
-      if (!_hasWarranty(item)) continue;
-      final name = _itemName(params, item);
-      final warranty = _text(
-        _field(item, const ['warranty', 'warranty_period', 'warrantyPeriod']),
-      );
-      warrantyRows.add(_labelValue(
-        params.labelFor(
-          'showWarranty',
-          englishFallback: 'Warranty',
-          arabicFallback: 'الضمان',
-        ),
-        warranty.isEmpty ? name : '$name: $warranty',
-        fonts.small,
-      ));
-    }
-    if (warrantyRows.isEmpty) return const <pw.Widget>[];
-    return <pw.Widget>[
-      _sectionBox(
-        warrantyRows,
-        accent,
-        scale,
-        heading: params.labelFor(
-          'showWarranty',
-          englishFallback: 'Warranty',
-          arabicFallback: 'الضمان',
-        ),
-        fonts: fonts,
       ),
       pw.SizedBox(height: 8 * scale),
     ];
@@ -841,180 +424,49 @@ class ContractStandardPdfRenderer {
     PdfColor accent,
     String currency,
     double scale,
-    Set<String> visibleKeys,
   ) {
     final rows = <pw.Widget>[];
-    final total = _number(params.formattedTotal);
-    final saved = _number(params.savedTotal);
-    final discount = _number(params.discountAmount);
-    final totalMrp = params.cartItems.fold<double>(
-      0,
-      (sum, item) =>
-          sum +
-          (_number(_field(item, const ['mrp', 'maximum_retail_price'])) *
-              _number(_field(item, const ['quantity', 'qty']))),
-    );
-    final netExcTax =
-        _number(params.netExcTax).isFinite && _number(params.netExcTax) != 0
-            ? _number(params.netExcTax)
-            : total - params.totalTax;
-
-    void add(String key, String label, String value) {
-      if (_contains(visibleKeys, key)) {
-        rows.add(_labelValue(label, value, fonts.body));
-      }
-    }
-
-    if (_contains(visibleKeys, 'showItemsCount')) {
-      add(
-          'showItemsCount',
-          params.labelFor('showItemsCount',
-              englishFallback: 'Items', arabicFallback: 'العدد'),
-          '${params.cartItems.length}');
-    }
-    if (_contains(visibleKeys, 'showQuantityCount')) {
-      add(
-          'showQuantityCount',
-          params.labelFor('showQuantityCount',
-              englishFallback: 'Total Qty', arabicFallback: 'إجمالي الكمية'),
-          _quantity(params.totalQuantity));
-    }
-    if (_contains(visibleKeys, 'showMRPTotal') ||
-        _contains(visibleKeys, 'showTotalMRP')) {
-      add(
-          'showMRPTotal',
-          params.labelFor('showMRPTotal',
-              englishFallback: 'Total MRP',
-              arabicFallback: 'إجمالي سعر التجزئة'),
-          _money(totalMrp, currency));
-    }
-    if (_contains(visibleKeys, 'showSubTotal') ||
-        _contains(visibleKeys, 'showMRPTotal')) {
-      rows.add(_labelValue(
-          params.labelFor('showSubTotal',
-              englishFallback: 'Subtotal', arabicFallback: 'المجموع الفرعي'),
-          _money(netExcTax, currency),
-          fonts.body));
-    }
-    if (_contains(visibleKeys, 'showDiscount') && discount != 0) {
-      add(
-          'showDiscount',
-          params.labelFor('showDiscount',
-              englishFallback: 'Discount', arabicFallback: 'الخصم'),
-          _money(discount, currency));
-    }
-    if (_contains(visibleKeys, 'showSaved') && saved > 0) {
-      add(
-          'showSaved',
-          params.labelFor('showSaved',
-              englishFallback: 'You Saved', arabicFallback: 'لقد وفرت'),
-          _money(saved, currency));
-    }
-    if (_contains(visibleKeys, 'showTax')) {
-      add(
-          'showTax',
-          params.labelFor('showTax',
-              englishFallback: 'VAT', arabicFallback: 'الضريبة'),
-          _money(params.totalTax, currency));
-    }
-    if (_contains(visibleKeys, 'showNetAmount')) {
-      rows.add(
-        pw.Container(
-          margin: pw.EdgeInsets.only(top: 3 * scale),
-          padding: pw.EdgeInsets.symmetric(
-              vertical: 5 * scale, horizontal: 7 * scale),
-          decoration: pw.BoxDecoration(
-            color: accent,
-            borderRadius: pw.BorderRadius.circular(2),
+    for (final row in params.totalsRows) {
+      final value = row.text ?? _money(row.amount, currency);
+      if (row.key == 'showNetAmount') {
+        rows.add(
+          pw.Container(
+            margin: pw.EdgeInsets.only(top: 3 * scale),
+            padding: pw.EdgeInsets.symmetric(
+                vertical: 5 * scale, horizontal: 7 * scale),
+            decoration: pw.BoxDecoration(
+              color: accent,
+              borderRadius: pw.BorderRadius.circular(2),
+            ),
+            child: _labelValue(row.label.joined(inline: true), value,
+                fonts.bodyBold.copyWith(color: PdfColors.white)),
           ),
-          child: _labelValue(
-            params.labelFor('showNetAmount',
-                englishFallback: 'Grand Total',
-                arabicFallback: 'المبلغ الاجمالي'),
-            _money(total, currency),
-            fonts.bodyBold.copyWith(color: PdfColors.white),
-          ),
-        ),
-      );
-    }
-    if (_contains(visibleKeys, 'showAmountInWords')) {
-      final words = _amountInWords(params, currency, total);
-      if (words.isNotEmpty) {
-        rows.add(_labelValue(
-          params.labelFor('showAmountInWords',
-              englishFallback: 'Amount in Words',
-              arabicFallback: 'المبلغ كتابة'),
-          words,
-          fonts.small,
-        ));
+        );
+      } else {
+        rows.add(_labelValue(row.label.joined(inline: true), value, fonts.body));
       }
     }
-    if (_contains(visibleKeys, 'showPaymentBreaked') ||
-        _contains(visibleKeys, 'showPaymentBreakdown')) {
-      final rawBreakdown = params.paymentBreakdown;
-      final nestedAmounts = rawBreakdown?['amounts'];
-      final breakdown = nestedAmounts is Map
-          ? Map<String, dynamic>.from(nestedAmounts)
-          : rawBreakdown;
-      final entries = breakdown?.entries
-              .where((entry) => _number(entry.value) > 0)
-              .toList() ??
-          const [];
-      if (entries.isNotEmpty) {
-        rows.add(_sectionTitle(
-          params.labelFor('showPaymentBreaked',
-              englishFallback: 'Payment Breakdown',
-              arabicFallback: 'تفاصيل الدفع'),
-          fonts.bodyBold,
-          accent,
-          scale,
-        ));
-        for (final entry in entries) {
-          rows.add(_labelValue(
-            switch (entry.key.toUpperCase()) {
-              'CASH' => params.textForMode(english: 'Cash', arabic: 'نقدي'),
-              'CARD' => params.textForMode(english: 'Card', arabic: 'بطاقة'),
-              _ => entry.key,
-            },
-            _money(_number(entry.value), currency),
-            fonts.small,
-          ));
-        }
+    final saved = params.savedLabel;
+    if (saved.isNotEmpty) {
+      rows.add(_labelValue(
+          saved, _money(params.savedAmountValue, currency), fonts.body));
+    }
+    if (params.isVisible('showAmountInWords')) {
+      for (final line in params.amountInWordsLines(params.netAmountValue,
+          currency: currency)) {
+        rows.add(_textLine(line, fonts.small));
       }
     }
-    final showBalances = _contains(visibleKeys, 'showCustomerBalance') &&
-        !params.isDefaultCustomer;
-    if (showBalances &&
-        _contains(visibleKeys, 'showCustomerPrevBalance') &&
-        params.customerOldBalance != null) {
-      rows.add(_labelValue(
-        params.labelFor('showCustomerPrevBalance',
-            englishFallback: 'Previous Balance',
-            arabicFallback: 'الرصيد السابق'),
-        _money(params.customerOldBalance, currency),
-        fonts.body,
-      ));
+    final payments = params.paymentBreakdownRows;
+    if (payments.isNotEmpty) {
+      rows.add(pw.Divider(color: PdfColors.grey300, height: 6 * scale));
+      for (final row in payments) {
+        rows.add(_labelValue(row.$1, _money(row.$2, currency), fonts.small));
+      }
     }
-    if (showBalances &&
-        _contains(visibleKeys, 'showCustomerCurrentBalance') &&
-        params.customerCurrentBalance != null) {
-      rows.add(_labelValue(
-        params.labelFor('showCustomerCurrentBalance',
-            englishFallback: 'Current Balance',
-            arabicFallback: 'الرصيد الحالي'),
-        _money(params.customerCurrentBalance, currency),
-        fonts.body,
-      ));
-    }
-    if (showBalances &&
-        _contains(visibleKeys, 'showCustomerPaidAmount') &&
-        params.paidAmount != null) {
-      rows.add(_labelValue(
-        params.labelFor('showCustomerPaidAmount',
-            englishFallback: 'Paid Amount', arabicFallback: 'المبلغ المدفوع'),
-        _money(params.paidAmount, currency),
-        fonts.body,
-      ));
+    for (final row in params.customerBalanceRows) {
+      rows.add(_labelValue(row.$1, _money(row.$2, currency),
+          row.$3 ? fonts.bodyBold : fonts.body));
     }
     if (rows.isEmpty) return const <pw.Widget>[];
     return <pw.Widget>[
@@ -1022,7 +474,7 @@ class ContractStandardPdfRenderer {
         rows,
         accent,
         scale,
-        heading: params.textForMode(english: 'Summary', arabic: 'الملخص'),
+        heading: params.rendererText(english: 'Summary', arabic: 'الملخص'),
         fonts: fonts,
       ),
       pw.SizedBox(height: 8 * scale),
@@ -1035,71 +487,89 @@ class ContractStandardPdfRenderer {
     PdfColor accent,
     String currency,
     double scale,
-    Set<String> visibleKeys,
   ) {
-    final returns = params.orderReturns?.returnItems;
-    if (returns == null || returns.isEmpty) return const <pw.Widget>[];
-    final showName = params.isVisible('showReturnParticulars');
-    final showQty = params.isVisible('showReturnQty');
-    final showTotal = params.isVisible('showReturnTotal');
-    if (!showName && !showQty && !showTotal) return const <pw.Widget>[];
-
-    final rows = <pw.TableRow>[
-      pw.TableRow(
-        decoration: pw.BoxDecoration(color: accent),
-        children: [
-          if (showName)
-            _cell(
-                params.labelFor('showParticulars',
-                    englishFallback: 'PARTICULARS', arabicFallback: 'البيان'),
-                fonts.tableHeader,
-                align: pw.TextAlign.center),
-          if (showQty)
-            _cell(
-                params.labelFor('showQty',
-                    englishFallback: 'QTY', arabicFallback: 'الكمية'),
-                fonts.tableHeader,
-                align: pw.TextAlign.center),
-          if (showTotal)
-            _cell(
-                params.labelFor('showTotal',
-                    englishFallback: 'TOTAL', arabicFallback: 'الإجمالي'),
-                fonts.tableHeader,
-                align: pw.TextAlign.center),
-        ],
-      ),
-      for (var i = 0; i < returns.length; i++)
-        pw.TableRow(children: [
-          if (showName) _cell(_returnName(params, returns[i]), fonts.small),
-          if (showQty)
-            _cell(_quantity(_field(returns[i], const ['quantity', 'qty'])),
-                fonts.small,
-                align: pw.TextAlign.center),
-          if (showTotal) _cell('', fonts.small, align: pw.TextAlign.center),
-        ]),
-    ];
-    final returnTotal = _number(params.orderReturns?.returnTotalAmount);
-    final widgets = <pw.Widget>[
-      _sectionTitle(params.returnsSectionHeading, fonts.section, accent, scale),
-      pw.Table(
+    final section = params.returnsSection;
+    if (section == null) return const <pw.Widget>[];
+    final widgets = <pw.Widget>[];
+    if (section.heading.isNotEmpty) {
+      widgets.add(_sectionTitle(section.heading, fonts.section, accent, scale));
+    }
+    if (section.creditNoteRows.isNotEmpty) {
+      widgets.add(_sectionTitle(
+          section.creditNoteHeading, fonts.bodyBold, accent, scale));
+      for (final row in section.creditNoteRows) {
+        widgets.add(_labelValue(row.$1, row.$2, fonts.body));
+      }
+    }
+    if (section.customerRows.isNotEmpty) {
+      widgets.add(
+          _sectionTitle(section.customerHeading, fonts.bodyBold, accent, scale));
+      for (final row in section.customerRows) {
+        widgets.add(_labelValue(row.$1, row.$2, fonts.body));
+      }
+    }
+    if (section.itemsHeading.isNotEmpty) {
+      widgets
+          .add(_sectionTitle(section.itemsHeading, fonts.bodyBold, accent, scale));
+    }
+    if (section.columns.isNotEmpty) {
+      widgets.add(pw.Table(
         border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
         columnWidths: {
-          if (showName) 0: const pw.FlexColumnWidth(3),
-          if (showQty) showName ? 1 : 0: const pw.FlexColumnWidth(1),
-          if (showTotal)
-            (showName ? 1 : 0) + (showQty ? 1 : 0):
-                const pw.FlexColumnWidth(1.4),
+          for (var i = 0; i < section.columns.length; i++)
+            i: pw.FlexColumnWidth(
+                section.columns[i].key == 'showReturnParticulars' ? 3 : 1),
         },
-        children: rows,
-      ),
-    ];
-    if (params.isVisible('showReturnTotalAmount') && returnTotal != 0) {
-      widgets.add(_labelValue(
-        params.labelFor('showReturnTotalAmount',
-            englishFallback: 'Return Total', arabicFallback: 'إجمالي المرتجع'),
-        _money(returnTotal, currency),
-        fonts.bodyBold,
+        children: [
+          pw.TableRow(
+            repeat: true,
+            decoration: pw.BoxDecoration(color: accent),
+            children: [
+              for (final column in section.columns)
+                _cellLines([column.label.joined(inline: true)],
+                    fonts.tableHeader,
+                    align: pw.TextAlign.center),
+            ],
+          ),
+          for (final line in section.lines)
+            pw.TableRow(children: [
+              for (final column in section.columns)
+                _cellLines([line[column.key] ?? ''], fonts.small,
+                    align: column.key == 'showReturnParticulars'
+                        ? pw.TextAlign.left
+                        : pw.TextAlign.center),
+            ]),
+        ],
       ));
+    }
+    if (section.countRow != null) {
+      widgets.add(_labelValue(
+          section.countRow!.$1, section.countRow!.$2, fonts.bodyBold));
+    }
+    for (final row in section.totalRows) {
+      widgets.add(_labelValue(row.$1, _money(row.$2, currency), fonts.bodyBold));
+    }
+    final words = params.returnsWordsLines(currency);
+    if (words.isNotEmpty) {
+      widgets.add(_textLine(section.wordsHeading, fonts.bodyBold));
+      for (final line in words) {
+        widgets.add(_textLine(line, fonts.small));
+      }
+    }
+
+    final finalRows = params.isReturnOnly
+        ? const <ReceiptAmountRow>[]
+        : params.finalSummaryRows;
+    if (finalRows.isNotEmpty) {
+      widgets.add(pw.SizedBox(height: 6 * scale));
+      for (final row in finalRows) {
+        widgets.add(_labelValue(row.label.joined(inline: true),
+            _money(row.amount, currency),
+            row.emphasised ? fonts.bodyBold : fonts.body));
+      }
+      for (final line in params.finalSummaryWordsLines(currency)) {
+        widgets.add(_textLine(line, fonts.small));
+      }
     }
     widgets.add(pw.SizedBox(height: 8 * scale));
     return widgets;
@@ -1109,66 +579,47 @@ class ContractStandardPdfRenderer {
     ReceiptLayoutParams params,
     _PdfFonts fonts,
     PdfColor accent,
-    String currency,
     double scale,
-    Set<String> visibleKeys,
   ) {
     final children = <pw.Widget>[];
-    // Footer order is bank -> QR -> VAT footer -> terms/thank-you/order
-    // metadata.  Comment, payment, balances, and warranty are rendered in
-    // their canonical sections earlier in the document.
-    children
-        .addAll(_buildBankSection(params, fonts, accent, scale, visibleKeys));
+    final bankRows = params.bankDetailRows;
+    if (bankRows.isNotEmpty) {
+      children.add(_sectionTitle(
+          params.bankDetailsHeading, fonts.bodyBold, accent, scale));
+      for (final row in bankRows) {
+        children.add(_labelValue(row.$1, row.$2, fonts.small));
+      }
+    }
 
-    if (_contains(visibleKeys, 'showQRCode')) {
+    if (params.isVisible('showQRCode')) {
       final qr = _qrData(params);
       if (qr.isNotEmpty) {
         children.add(pw.SizedBox(height: 5 * scale));
+        if (params.qrCaption.isNotEmpty) {
+          children.add(_centerLines(params.qrCaption, fonts.small));
+          children.add(pw.SizedBox(height: 2 * scale));
+        }
         children.add(
-          pw.Column(
-            children: [
-              pw.BarcodeWidget(
-                barcode: pw.Barcode.qrCode(),
-                data: qr,
-                width: 82 * scale,
-                height: 82 * scale,
-              ),
-              pw.SizedBox(height: 2 * scale),
-              _centerText(
-                params.labelFor('showQRCode',
-                    englishFallback: params.hasZatcaCredentials
-                        ? 'ZATCA E-Invoice QR'
-                        : 'Scan to Pay',
-                    arabicFallback: params.hasZatcaCredentials
-                        ? 'فاتورة الكترونية'
-                        : 'امسح للدفع'),
-                fonts.small,
-              ),
-            ],
+          pw.BarcodeWidget(
+            barcode: pw.Barcode.qrCode(),
+            data: qr,
+            width: 82 * scale,
+            height: 82 * scale,
           ),
         );
       }
     }
-    if (_contains(visibleKeys, 'showVATFooter') &&
-        _clean(params.zatcaVatNumber).isNotEmpty) {
-      children.add(_labelValue(
-        params.labelFor('showVATFooter',
-            englishFallback: 'VAT No', arabicFallback: 'الرقم الضريبي'),
-        params.documentText(params.zatcaVatNumber),
-        fonts.small,
-      ));
+    if (params.vatFooterText.isNotEmpty) {
+      children.add(_centerLines(params.vatFooterText, fonts.small));
     }
     final terms = params.termsText;
-    if (terms.isNotEmpty) children.add(_centerText(terms, fonts.small));
+    if (terms.isNotEmpty) children.add(_centerLines(terms, fonts.small));
     final thankYou = params.thankYouText;
     if (thankYou.isNotEmpty) {
-      children.add(_centerText(thankYou, fonts.bodyBold));
+      children.add(_centerLines(thankYou, fonts.bodyBold));
     }
-    if (_contains(visibleKeys, 'showOrderNumberInFooter')) {
-      children.add(_centerText(
-        '${params.labelFor('showOrderNumberInFooter', englishFallback: 'Invoice No', arabicFallback: 'رقم الفاتورة', inlineBilingual: true)}: ${params.printableOrderNumberComponent}',
-        fonts.small,
-      ));
+    if (params.orderNumberFooterText.isNotEmpty) {
+      children.add(_centerLines(params.orderNumberFooterText, fonts.small));
     }
     if (children.isEmpty) return const <pw.Widget>[];
     return <pw.Widget>[
@@ -1181,45 +632,6 @@ class ContractStandardPdfRenderer {
         ),
         child: pw.Column(children: children),
       ),
-    ];
-  }
-
-  List<pw.Widget> _buildBankSection(
-    ReceiptLayoutParams params,
-    _PdfFonts fonts,
-    PdfColor accent,
-    double scale,
-    Set<String> visibleKeys,
-  ) {
-    if (!_contains(visibleKeys, 'showBankInfo')) return const <pw.Widget>[];
-    final bank = params.primaryBank;
-    final account = params.primaryBankAccount;
-    if (bank == null && account == null) return const <pw.Widget>[];
-    final lines = <pw.Widget>[];
-    void add(String key, String label, String? value) {
-      if (!_contains(visibleKeys, key) || _clean(value).isEmpty) return;
-      lines.add(_labelValue(
-        params.textForMode(english: label, arabic: _bankArabicLabel(label)),
-        params.documentText(value),
-        fonts.small,
-      ));
-    }
-
-    add('showBankName', 'Bank Name', bank?.bankName);
-    add('showAccountName', 'Account Name', account?.accountHolderName);
-    add('showAccountNumber', 'Account Number', account?.accountNumber);
-    add('showIBAN', 'IBAN', account?.iban);
-    add('showSwiftCode', 'SWIFT Code', account?.swiftCode);
-    if (lines.isEmpty) return const <pw.Widget>[];
-    return <pw.Widget>[
-      _sectionTitle(
-        params.labelFor('showBankInfo',
-            englishFallback: 'Bank Details', arabicFallback: 'تفاصيل البنك'),
-        fonts.bodyBold,
-        accent,
-        scale,
-      ),
-      ...lines,
     ];
   }
 
@@ -1267,7 +679,12 @@ class ContractStandardPdfRenderer {
   pw.TextDirection? _dir(String text) =>
       pdfHasArabic(text) ? pw.TextDirection.rtl : null;
 
+  /// Shared label/value row: a label with no text leaves its cell empty.
+  pw.Widget _infoRow(ReceiptInfoRow row, pw.TextStyle style) =>
+      _labelValue(row.label.joined(inline: true), row.value, style);
+
   pw.Widget _labelValue(String label, String value, pw.TextStyle style) {
+    final cleanLabel = ReceiptConfigurationContract.withoutTrailingColon(label);
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(vertical: 1.7),
       child: pw.Row(
@@ -1275,9 +692,9 @@ class ContractStandardPdfRenderer {
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Expanded(
-            child: pdfText(label,
+            child: pdfText(cleanLabel,
                 style: style,
-                textDirection: _dir(label),
+                textDirection: _dir(cleanLabel),
                 textAlign: _pageRtl ? null : pw.TextAlign.left),
           ),
           pw.SizedBox(width: 8),
@@ -1285,54 +702,59 @@ class ContractStandardPdfRenderer {
             child: pdfText(value,
                 style: style,
                 textAlign: pw.TextAlign.right,
-                textDirection: _dir(value)),
+                textDirection: _dir(value) ?? pw.TextDirection.ltr),
           ),
         ],
       ),
     );
   }
 
-  pw.Widget _centerText(String text, pw.TextStyle style) {
+  /// A standalone line (comment, amount in words).
+  pw.Widget _textLine(String text, pw.TextStyle style) => pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(vertical: 1.5),
+        child: pdfText(text,
+            style: style,
+            textDirection: _dir(text),
+            textAlign: _pageRtl ? null : pw.TextAlign.left),
+      );
+
+  /// Centred text; a bilingual `Arabic\nEnglish` string becomes one Text per
+  /// line so each script keeps its own direction.
+  pw.Widget _centerLines(String text, pw.TextStyle style) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(vertical: 1.5),
-      child: pdfText(text,
-          style: style,
-          textAlign: pw.TextAlign.center,
-          textDirection: _dir(text)),
+      child: pw.Column(
+        children: [
+          for (final line in text.split('\n'))
+            if (line.trim().isNotEmpty)
+              pdfText(line,
+                  style: style,
+                  textAlign: pw.TextAlign.center,
+                  textDirection: _dir(line)),
+        ],
+      ),
     );
   }
 
-  pw.Widget _cell(String value, pw.TextStyle style, {pw.TextAlign? align}) {
+  /// Table cell with one Text per line (item names, two-line headers).
+  pw.Widget _cellLines(List<String> lines, pw.TextStyle style,
+      {pw.TextAlign? align}) {
+    final visible = lines.where((line) => line.trim().isNotEmpty).toList();
     return pw.Padding(
       padding: const pw.EdgeInsets.all(3),
-      child: pdfText(value,
-          style: style,
-          textAlign: align ?? pw.TextAlign.left,
-          textDirection: _dir(value)),
+      child: pw.Column(
+        crossAxisAlignment: align == pw.TextAlign.left
+            ? pw.CrossAxisAlignment.start
+            : pw.CrossAxisAlignment.center,
+        children: [
+          for (final line in visible)
+            pdfText(line,
+                style: style,
+                textAlign: align ?? pw.TextAlign.left,
+                textDirection: _dir(line) ?? pw.TextDirection.ltr),
+        ],
+      ),
     );
-  }
-
-  bool _contains(Set<String> visibleKeys, String key) {
-    // All membership values were produced by ReceiptLayoutParams.isVisible,
-    // which resolves canonical aliases and uses strict `visible == true`.
-    return visibleKeys.contains(key) ||
-        (key == 'showTotalMRP' && visibleKeys.contains('showMRPTotal')) ||
-        (key == 'showTaxableAmount' && visibleKeys.contains('showSubTotal')) ||
-        (key == 'showNetTotal' && visibleKeys.contains('showNetAmount')) ||
-        (key == 'showPaymentBreakdown' &&
-            visibleKeys.contains('showPaymentBreaked')) ||
-        (key == 'showPaidAmount' &&
-            visibleKeys.contains('showCustomerPaidAmount')) ||
-        (key == 'showBankDetails' && visibleKeys.contains('showBankInfo')) ||
-        (key == 'showBankAccountName' &&
-            visibleKeys.contains('showAccountName')) ||
-        (key == 'showBankAccountNumber' &&
-            visibleKeys.contains('showAccountNumber')) ||
-        (key == 'showBankIban' && visibleKeys.contains('showIBAN')) ||
-        (key == 'showBankSwiftCode' && visibleKeys.contains('showSwiftCode')) ||
-        (key == 'showTerms' && visibleKeys.contains('showTermsConditions')) ||
-        (key == 'showInvoiceTitleB2B' &&
-            visibleKeys.contains('showInvoiceTitleB2b'));
   }
 
   PdfPageFormat _pageFormat(String paperSize) {
@@ -1393,31 +815,17 @@ class ContractStandardPdfRenderer {
         : PdfColor.fromInt(parsed);
   }
 
-  String _formatDate(String raw) {
-    final trimmed = _clean(raw);
-    if (trimmed.isEmpty) return '';
-    return DateHelper.formatISODateToIST(trimmed);
-  }
-
-  String _amountInWords(
-      ReceiptLayoutParams params, String currency, double amount) {
-    final english = AmountHelper().convertNumberToWords(
-      amount,
-      currency: currency.isEmpty ? 'INR' : currency,
-      language: 'en',
-    );
-    final arabic = AmountHelper().convertNumberToWords(
-      amount,
-      currency: currency.isEmpty ? 'INR' : currency,
-      language: 'ar',
-    );
-    return params.textForMode(
-        english: '$english Only.', arabic: '$arabic فقط.');
-  }
-
   String _qrData(ReceiptLayoutParams params) {
-    final zatca = _zatcaQr(params);
-    if (zatca.isNotEmpty) return zatca;
+    if (params.hasZatcaCredentials) {
+      final zatca = ZatcaQrHelper().generateQrForInvoice(
+        sellerName: params.zatcaCompanyName,
+        vatNumber: params.zatcaVatNumber,
+        invoiceDate: params.orderDate,
+        totalAmount: params.netAmountValue,
+        vatAmount: params.totalTax,
+      );
+      if (zatca.isNotEmpty) return zatca;
+    }
 
     // Non-ZATCA documents can still use the configured manual/payment QR.
     // Provider lookup is optional so offline PDF generation remains safe.
@@ -1426,320 +834,35 @@ class ContractStandardPdfRenderer {
         params.context,
         listen: false,
       ).paymentGateways;
-      final gateway = gateways.firstWhere(
-        (item) => item.code == 'MANUAL_PAYMENT_GATEWAY',
-        orElse: () => PaymentGateway(
-          id: 0,
-          name: '',
-          code: '',
-          label: '',
-          link: '',
-          image: '',
-          status: '',
-          isWebActive: 0,
-          isAndroidActive: 0,
-          isIosActive: 0,
-          contactEmail: '',
-          contactPhone: '',
-          createdAt: '',
-          updatedAt: '',
-        ),
-      );
-      var link = gateway.link.trim();
-      if (link.isEmpty) return '';
-      link = link
-          .replaceAll('{formattedTotal}', params.formattedTotal)
-          .replaceAll('{orderNumber}', params.orderNumber);
-      if (link.contains('@')) {
-        link =
-            'upi://pay?pa=$link&am=${params.formattedTotal}&tn=${params.orderNumber}&cu=INR';
-      }
-      return link;
-    } catch (_) {
-      return '';
-    }
-  }
-
-  String _zatcaQr(ReceiptLayoutParams params) {
-    if (!params.hasZatcaCredentials) return '';
-    return ZatcaQrHelper().generateQrForInvoice(
-      sellerName: params.zatcaCompanyName,
-      vatNumber: params.zatcaVatNumber,
-      invoiceDate: params.orderDate,
-      totalAmount: params.totalAmountAsDouble,
-      vatAmount: params.totalTax,
-    );
-  }
-
-  String _itemName(ReceiptLayoutParams params, dynamic item) {
-    final names = _field(item, const [
-      'productNames',
-      'product_names',
-      'names',
-      'translations',
-    ]);
-    final direct = _text(_field(item, const [
-      'displayName',
-      'productName',
-      'product_name',
-      'name',
-      'particulars',
-    ]));
-    final explicitEnglish = _text(_field(item, const [
-      'displayNameEn',
-      'display_name_en',
-      'productNameEn',
-      'product_name_en',
-      'nameEn',
-      'name_en',
-    ]));
-    final explicitArabic = _text(_field(item, const [
-      'displayNameAr',
-      'display_name_ar',
-      'productNameAr',
-      'product_name_ar',
-      'nameAr',
-      'name_ar',
-    ]));
-    final english = _firstText([
-      explicitEnglish,
-      _localizedField(names, const ['en', 'english', 'default']),
-      if (!pdfHasArabic(direct)) direct,
-    ]);
-    final arabic = _firstText([
-      explicitArabic,
-      _localizedField(names, const ['ar', 'arabic']),
-      if (pdfHasArabic(direct)) direct,
-    ]);
-    final localized = switch (params.receiptLanguageMode) {
-      ReceiptLanguageMode.english => english.isEmpty ? direct : english,
-      ReceiptLanguageMode.arabic => arabic.isEmpty ? direct : arabic,
-      ReceiptLanguageMode.bilingual =>
-        english.isEmpty || arabic.isEmpty || english == arabic
-            ? _firstText([arabic, english, direct])
-            : params.textForMode(english: english, arabic: arabic),
-    };
-    final attrs = _field(item, const ['formattedVariantAttributes']);
-    final attrText = _text(attrs);
-    if (localized.isEmpty) return attrText;
-    return attrText.isEmpty || localized.contains(attrText)
-        ? localized
-        : '$localized ($attrText)';
-  }
-
-  String _returnName(ReceiptLayoutParams params, dynamic item) =>
-      _itemName(params, item) +
-      (_text(_field(item, const ['reason'])).isEmpty
-          ? ''
-          : ' (${_text(_field(item, const ['reason']))})');
-
-  bool _hasWarranty(dynamic item) {
-    final enabled = _field(item, const ['warrantyEnabled', 'warranty_enabled']);
-    final text =
-        _field(item, const ['warranty', 'warranty_period', 'warrantyPeriod']);
-    return _truthy(enabled) || _text(text).isNotEmpty;
-  }
-
-  dynamic _field(dynamic object, Iterable<String> keys) {
-    if (object == null) return null;
-    if (object is Map) {
-      for (final key in keys) {
-        if (object.containsKey(key)) return object[key];
-        final found = object.keys.cast<dynamic>().firstWhere(
-              (candidate) =>
-                  candidate.toString().toLowerCase() == key.toLowerCase(),
-              orElse: () => null,
-            );
-        if (found != null) return object[found];
-      }
-      return null;
-    }
-    for (final key in keys) {
-      try {
-        switch (key) {
-          case 'displayName':
-            final value = object.displayName;
-            if (value != null) return value;
-            break;
-          case 'productName':
-            final value = object.productName;
-            if (value != null) return value;
-            break;
-          case 'product_name':
-            final value = object.productName;
-            if (value != null) return value;
-            break;
-          case 'names':
-            final value = object.names;
-            if (value != null) return {'en': value.en, 'ar': value.ar};
-            break;
-          case 'quantity':
-          case 'qty':
-            final value = object.quantity;
-            if (value != null) return value;
-            break;
-          case 'unitPrice':
-          case 'unit_price':
-          case 'price':
-            final value = object.unitPrice;
-            if (value != null) return value;
-            break;
-          case 'mrp':
-          case 'maximum_retail_price':
-            final value = object.mrp;
-            if (value != null) return value;
-            break;
-          case 'totalPrice':
-          case 'total_price':
-          case 'amount':
-          case 'total':
-            final value = object.totalPrice;
-            if (value != null) return value;
-            break;
-          case 'taxAmount':
-          case 'tax_amount':
-          case 'tax':
-            final value = object.taxAmount;
-            if (value != null) return value;
-            break;
-          case 'saleUnitName':
-          case 'sale_unit_name':
-            final value = object.saleUnitName;
-            if (value != null) return value;
-            break;
-          case 'productUnit':
-          case 'product_unit':
-          case 'unit':
-            final value = object.productUnit;
-            if (value != null) return value;
-            break;
-          case 'formattedVariantAttributes':
-            final value = object.formattedVariantAttributes;
-            if (value != null) return value;
-            break;
-          case 'warrantyEnabled':
-          case 'warranty_enabled':
-            final value = object.warrantyEnabled;
-            if (value != null) return value;
-            break;
-          case 'reason':
-            final value = object.reason;
-            if (value != null) return value;
-            break;
-          case 'warranty':
-          case 'warranty_period':
-          case 'warrantyPeriod':
-            // These fields are present on some API map payloads only.
-            break;
+      for (final gateway in gateways) {
+        if (gateway.code != 'MANUAL_PAYMENT_GATEWAY') continue;
+        var link = gateway.link.trim();
+        if (link.isEmpty) return '';
+        if (link.contains('{formattedTotal}') ||
+            link.contains('{orderNumber}')) {
+          return link
+              .replaceAll('{formattedTotal}', params.formattedTotal)
+              .replaceAll('{orderNumber}', params.orderNumber);
         }
-      } catch (_) {
-        // A different cart model is allowed to omit an optional field.
+        if (link.contains('@')) {
+          link =
+              'upi://pay?pa=$link&am=${params.formattedTotal}&tn=${params.orderNumber}&cu=INR';
+        }
+        return link;
       }
-    }
-    return null;
-  }
-
-  double _number(dynamic value) {
-    if (value is num) return value.toDouble();
-    final raw =
-        _clean(value).replaceAll(',', '').replaceAll(RegExp(r'[^0-9.\-]'), '');
-    return double.tryParse(raw) ?? 0;
-  }
-
-  double _rateExcTax(ReceiptLayoutParams params, dynamic item) {
-    final explicit = _field(item, const [
-      'rateExcTax',
-      'rate_exc_tax',
-      'unit_price_exc_tax',
-      'unitPriceExcTax',
-      'priceExcludingTax',
-      'price_excluding_tax',
-    ]);
-    if (_clean(explicit).isNotEmpty) return _number(explicit);
-
-    final unitPrice =
-        _number(_field(item, const ['unitPrice', 'unit_price', 'price']));
-    final tax = _number(_field(item, const ['taxAmount', 'tax_amount', 'tax']));
-    if (tax == 0) return unitPrice;
-
-    // Every caller passes tax_amount as a LINE total (params.totalTax sums it
-    // as such), so the per-unit tax is always line tax / quantity.
-    final quantity = _number(_field(item, const ['quantity', 'qty']));
-    final taxPerUnit = quantity <= 0 ? tax : tax / quantity;
-    return unitPrice - taxPerUnit;
+    } catch (_) {}
+    return '';
   }
 
   String _money(dynamic value, String currency) {
-    final amount = _number(value);
+    final amount = value is num
+        ? value.toDouble()
+        : double.tryParse(_clean(value).replaceAll(',', '')) ?? 0;
     final formatted = amount.toStringAsFixed(2);
     return currency.trim().isEmpty ? formatted : '$currency $formatted';
   }
 
-  String _quantity(dynamic value) {
-    final amount = _number(value);
-    return amount == amount.roundToDouble()
-        ? amount.toInt().toString()
-        : amount.toStringAsFixed(2);
-  }
-
-  String _text(dynamic value) => value?.toString().trim() ?? '';
-
-  String _localizedField(dynamic source, Iterable<String> keys) {
-    if (source is! Map) return '';
-    for (final key in keys) {
-      if (source.containsKey(key)) return _text(source[key]);
-      final found = source.keys.cast<dynamic>().firstWhere(
-            (candidate) =>
-                candidate.toString().toLowerCase() == key.toLowerCase(),
-            orElse: () => null,
-          );
-      if (found != null) return _text(source[found]);
-    }
-    return '';
-  }
-
-  String _firstText(Iterable<String> values) {
-    for (final value in values) {
-      if (value.trim().isNotEmpty) return value.trim();
-    }
-    return '';
-  }
-
   String _clean(dynamic value) => value?.toString().trim() ?? '';
-
-  String _nonEmpty(String? value, String fallback) =>
-      _clean(value).isEmpty ? fallback : _clean(value);
-
-  bool _truthy(dynamic value) {
-    if (value is bool) return value;
-    if (value is num) return value != 0;
-    final normalized = _clean(value).toLowerCase();
-    return normalized == '1' || normalized == 'true' || normalized == 'yes';
-  }
-
-  String _bankArabicLabel(String english) =>
-      const <String, String>{
-        'Bank Name': 'اسم البنك',
-        'Account Name': 'اسم الحساب',
-        'Account Number': 'رقم الحساب',
-        'IBAN': 'الآيبان',
-        'SWIFT Code': 'رمز سويفت',
-      }[english] ??
-      english;
-}
-
-class _PdfColumn {
-  final String key;
-  final String heading;
-  final String Function(dynamic item, int index) value;
-  final int flex;
-
-  const _PdfColumn({
-    required this.key,
-    required this.heading,
-    required this.value,
-    this.flex = 1,
-  });
 }
 
 class _PdfFonts {

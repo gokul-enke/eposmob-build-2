@@ -7,7 +7,6 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:provider/provider.dart';
 import 'package:image/image.dart' as img;
 import 'dart:ui' as ui;
-import 'dart:convert';
 
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -24,6 +23,7 @@ import 'receipt_layout.dart';
 import 'receipt_configuration_contract.dart';
 import 'receipt_layout_params.dart';
 import 'receipt_pdf_builder.dart';
+import 'receipt_sections.dart';
 import 'common/layout_rows.dart';
 import '../thermal/printer_utils.dart';
 import '../thermal/debug_image_saver.dart';
@@ -305,13 +305,8 @@ class StandardReceiptLayout implements ReceiptLayout {
 
     // Store Name - Large, centered, clean
     if (displayConfig?['showStoreName']?.visible == true) {
-      final storeNameText = params.labelFor(
-        'showStoreName',
-        englishFallback: params.storeName?.isNotEmpty == true
-            ? params.storeName!
-            : 'STORE NAME',
-        arabicFallback: 'اسم المتجر',
-      );
+      // Shared registry: typed text, else the active store's name.
+      final storeNameText = params.fieldLabel('showStoreName');
 
       // Dynamic scaling based on name length
       double storeNameScale = 1.6;
@@ -335,11 +330,7 @@ class StandardReceiptLayout implements ReceiptLayout {
 
     // Description/Subheader - Arabic subtitle style
     if (displayConfig?['showDescription']?.visible == true) {
-      final descriptionText = params.labelFor(
-        'showDescription',
-        englishFallback: '',
-        arabicFallback: 'وصف المتجر',
-      );
+      final descriptionText = params.fieldLabel('showDescription');
 
       if (descriptionText.isNotEmpty) {
         rows.add(SpacingRow(2));
@@ -469,21 +460,9 @@ class StandardReceiptLayout implements ReceiptLayout {
 
     String? invoiceNumberText;
     if (showInvoiceNumber) {
-      // Extract first significant number sequence (strip leading zeros and non-numeric prefixes)
-      // For "ORD-000430", this extracts "430"
-      final regex = RegExp(r'[1-9]\d*');
-      final match = regex.firstMatch(params.orderNumber);
-      final strippedNumber =
-          match != null ? match.group(0)! : params.orderNumber;
-
-      final String invoicePrefix = ReceiptConfigurationContract.numberPrefix(
-        params.billDocumentConfig.numberPrefix,
-        params.receiptLanguageMode,
-        englishFallback: 'INV-',
-        arabicFallback: 'رقم الفاتورة: ',
-      );
-
-      invoiceNumberText = '$invoicePrefix$strippedNumber';
+      // Shared contract: number_prefix + printable order-number component
+      // ("ORD-000430" -> "430"; stable offline references stay whole).
+      invoiceNumberText = params.invoiceNumberText;
     }
 
     String? tokenText;
@@ -593,9 +572,7 @@ class StandardReceiptLayout implements ReceiptLayout {
             params.customerPhone != null &&
             params.customerPhone!.isNotEmpty &&
             !(params.isDefaultCustomer && params.hideDefaultCustomerPhone)) ||
-        (showPayment &&
-            params.paymentMethod != null &&
-            params.paymentMethod!.isNotEmpty) ||
+        (showPayment && params.paymentMethodSummary.isNotEmpty) ||
         (showCustomerAddress &&
             params.customerAddress != null &&
             params.customerAddress!.isNotEmpty) ||
@@ -693,13 +670,11 @@ class StandardReceiptLayout implements ReceiptLayout {
         ]));
       }
 
-      if (showPayment &&
-          params.paymentMethod != null &&
-          params.paymentMethod!.isNotEmpty) {
+      if (showPayment && params.paymentMethodSummary.isNotEmpty) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(paymentLabel,
               weight: 0.35, align: TextAlign.left, isBold: true, scale: scale),
-          ReceiptTableColumn(params.paymentMethod!,
+          ReceiptTableColumn(params.paymentMethodSummary,
               weight: 0.65, align: TextAlign.left, scale: scale),
         ]));
       }
@@ -819,10 +794,8 @@ class StandardReceiptLayout implements ReceiptLayout {
         rows.add(customerInfoRow(phoneText, phoneLabel));
       }
 
-      if (showPayment &&
-          params.paymentMethod != null &&
-          params.paymentMethod!.isNotEmpty) {
-        rows.add(customerInfoRow(params.paymentMethod!, paymentLabel));
+      if (showPayment && params.paymentMethodSummary.isNotEmpty) {
+        rows.add(customerInfoRow(params.paymentMethodSummary, paymentLabel));
       }
 
       if (showComment &&
@@ -874,63 +847,20 @@ class StandardReceiptLayout implements ReceiptLayout {
     Map<String, DisplayOption>? displayConfig,
     bool isEnglish,
   ) {
-    final resolvedLabels = params.billDocumentConfig.resolvedLabels;
     final bool isDualLanguage = params.isBilingual;
 
-    final String particularsLabel = isDualLanguage
-        ? _getBilingualLabel(
-            displayConfig,
-            'showParticulars',
-            resolvedLabels?.particulars,
-            resolvedLabels?.particularsDefault,
-            'Item',
-            'Item')
-        : _getLabel(displayConfig, 'showParticulars',
-            resolvedLabels?.particulars, isEnglish ? 'Item' : 'Item');
-    final String mrpLabel = isDualLanguage
-        ? _getBilingualLabel(
-            displayConfig, 'showMRP', resolvedLabels?.mrp, null, 'MRP', 'MRP')
-        : _getLabel(displayConfig, 'showMRP', resolvedLabels?.mrp, 'MRP');
-    final String qtyLabel = isDualLanguage
-        ? _getBilingualLabel(displayConfig, 'showQty', resolvedLabels?.qty,
-            resolvedLabels?.qtyDefault, 'Qty', 'Qty')
-        : _getLabel(displayConfig, 'showQty', resolvedLabels?.qty,
-            isEnglish ? 'Qty' : 'Qty');
-    final String rateLabel = isDualLanguage
-        ? _getBilingualLabel(displayConfig, 'showRate', resolvedLabels?.rate,
-            resolvedLabels?.rateDefault, 'Rate', 'Rate')
-        : _getLabel(displayConfig, 'showRate', resolvedLabels?.rate,
-            isEnglish ? 'Rate' : 'Rate');
-    final String rateExcTaxLabel = isDualLanguage
-        ? _getBilingualLabel(displayConfig, 'showRateExcTax', null, null,
-            'Rate Ex Tax', 'Rate Ex Tax')
-        : _getLabel(displayConfig, 'showRateExcTax', null,
-            isEnglish ? 'Rate Ex Tax' : 'Rate Ex Tax');
-    final String unitLabel = isDualLanguage
-        ? _getBilingualLabel(displayConfig, 'showUnit',
-            resolvedLabels?.unitName, null, 'Unit', 'Unit')
-        : _getLabel(displayConfig, 'showUnit', resolvedLabels?.unitName,
-            isEnglish ? 'Unit' : 'Unit');
-    final String totalLabel = isDualLanguage
-        ? _getBilingualLabel(displayConfig, 'showTotal', resolvedLabels?.total,
-            resolvedLabels?.totalDefault, 'Total', 'Total')
-        : _getLabel(displayConfig, 'showTotal', resolvedLabels?.total,
-            isEnglish ? 'Total' : 'Total');
-    final String taxHeaderLabel = isDualLanguage
-        ? _getBilingualLabel(displayConfig, 'showTaxHeader',
-            resolvedLabels?.tax, resolvedLabels?.taxDefault, 'Tax', 'Tax')
-        : _getLabel(displayConfig, 'showTaxHeader', resolvedLabels?.tax,
-            isEnglish ? 'Tax' : 'Tax');
-    final String slLabel = isDualLanguage
-        ? _getBilingualLabel(
-            displayConfig,
-            'showSLNumber',
-            resolvedLabels?.slNumber,
-            resolvedLabels?.slNumberDefault,
-            '#',
-            'SL#')
-        : _getLabel(displayConfig, 'showSLNumber', resolvedLabels?.slNumber,
-            isEnglish ? 'SL#' : '#');
+    // Shared item-header text (same as the A4/A5 PDFs): the typed label for
+    // this language, else the built-in text of this language; a bilingual
+    // header is the Arabic line plus the English line only when typed.
+    final String particularsLabel = params.fieldLabel('showParticulars');
+    final String mrpLabel = params.fieldLabel('showMRP');
+    final String qtyLabel = params.fieldLabel('showQty');
+    final String rateLabel = params.fieldLabel('showRate');
+    final String rateExcTaxLabel = params.fieldLabel('showRateExcTax');
+    final String unitLabel = params.fieldLabel('showUnit');
+    final String totalLabel = params.fieldLabel('showTotal');
+    final String taxHeaderLabel = params.fieldLabel('showTaxHeader');
+    final String slLabel = params.fieldLabel('showSLNumber');
 
     final tableWeights = _buildNormalizedTableWeights(displayConfig);
     final tableColumnCount = tableWeights.length;
@@ -1384,7 +1314,6 @@ class StandardReceiptLayout implements ReceiptLayout {
     rows.add(SpacingRow(_itemGap));
 
     final resolvedLabels = params.billDocumentConfig.resolvedLabels;
-    final bool isDualLanguage = params.isBilingual;
     final String? currencySymbol =
         currency.trim().toUpperCase() == 'INR' ? '\u20B9' : null;
     final ui.Image? currencyIcon = currencySymbol == null ? sarSymbol : null;
@@ -1399,14 +1328,9 @@ class StandardReceiptLayout implements ReceiptLayout {
         double.tryParse(params.discountAmount ?? '0.0') ?? 0.0;
     double taxAmount = params.totalTax;
 
-    // Calculate subtotal
-    double subtotal;
-    if (params.netExcTax != null) {
-      subtotal =
-          double.tryParse(params.netExcTax!) ?? (total + discountAmountValue);
-    } else {
-      subtotal = total;
-    }
+    // Taxable amount shared by every template: the API net excluding tax,
+    // else the item lines' totals minus their tax.
+    final double subtotal = params.subtotalExcTax;
 
     // Visibility settings
     final showMRPTotal =
@@ -1452,13 +1376,6 @@ class StandardReceiptLayout implements ReceiptLayout {
     final grandTotalLabel = _getLabel(displayConfig, 'showNetAmount', null,
         isEnglish ? "GRAND TOTAL" : "المبلغ الاجمالي");
 
-    final cashLabel = ReceiptConfigurationContract.label(
-      options: displayConfig,
-      key: 'showCash',
-      mode: params.receiptLanguageMode,
-      englishFallback: 'Cash',
-      arabicFallback: 'نقدي',
-    );
 
     // Prepare boxed items
     List<StandardBoxedLineItem> boxedItems = [];
@@ -1515,100 +1432,20 @@ class StandardReceiptLayout implements ReceiptLayout {
     // Only show if paidAmount is provided (not null) and showPaymentBreaked is true or missing (default true)
     final bool showPaymentBreaked = params.isVisible('showPaymentBreaked');
 
-    if (params.paidAmount != null && showPaymentBreaked) {
+    // Shared rows: per-method amounts (breakdown map or multi-payment JSON),
+    // else the single method with the paid amount, named in the document
+    // language (`showCash` label for cash).
+    final paymentRows = params.paymentBreakdownRows;
+    if (params.paidAmount != null &&
+        showPaymentBreaked &&
+        paymentRows.isNotEmpty) {
       boxedItems.add(StandardBoxedLineItem(isSeparator: true));
-
-      bool isMultiPayment = false;
-
-      // Check if paymentBreakdown is provided (preferred)
-      if (params.paymentBreakdown != null &&
-          params.paymentBreakdown!.isNotEmpty) {
-        isMultiPayment = true;
-        params.paymentBreakdown!.forEach((method, amount) {
-          double amt = double.tryParse(amount.toString()) ?? 0.0;
-          if (amt > 0) {
-            // Map method code to label if possible
-            String label = method;
-            if (method == 'CASH') {
-              label = params.textForMode(english: 'Cash', arabic: 'نقدي');
-            } else if (method == 'CARD') {
-              label = params.textForMode(english: 'Card', arabic: 'بطاقة');
-            } else if (method == 'UPI') {
-              label = params.textForMode(english: 'UPI', arabic: 'UPI');
-            }
-
-            boxedItems.add(StandardBoxedLineItem(
-              label: label,
-              value: amt.toStringAsFixed(2),
-              isBold: true,
-              scale: 1,
-              icon: currencyIcon,
-              currencySymbol: currencySymbol,
-            ));
-          }
-        });
-      }
-      // Fallback to parsing paymentMethod string if it looks like JSON
-      else if (params.paymentMethod != null &&
-          params.paymentMethod!.startsWith('{')) {
-        try {
-          final Map<String, dynamic> paymentData =
-              json.decode(params.paymentMethod!);
-          if (paymentData['isMultiPayment'] == true) {
-            isMultiPayment = true;
-            final Map<String, dynamic> amounts = paymentData['amounts'];
-            amounts.forEach((method, amount) {
-              double amt = double.tryParse(amount.toString()) ?? 0.0;
-              if (amt > 0) {
-                String label = method;
-                if (method == 'CASH') {
-                  label = params.textForMode(english: 'Cash', arabic: 'نقدي');
-                } else if (method == 'CARD') {
-                  label = params.textForMode(english: 'Card', arabic: 'بطاقة');
-                } else if (method == 'UPI') {
-                  label = params.textForMode(english: 'UPI', arabic: 'UPI');
-                }
-
-                boxedItems.add(StandardBoxedLineItem(
-                  label: label,
-                  value: amt.toStringAsFixed(2),
-                  isBold: true,
-                  scale: 1,
-                  icon: currencyIcon,
-                  currencySymbol: currencySymbol,
-                ));
-              }
-            });
-          }
-        } catch (e) {
-          debugPrint("Error parsing multi-payment: $e");
-        }
-      }
-
-      if (!isMultiPayment) {
-        // Single payment
-        String label = cashLabel;
-        if (params.paymentMethod != null && params.paymentMethod!.isNotEmpty) {
-          switch (params.paymentMethod!.trim().toUpperCase()) {
-            case 'CASH':
-              label = cashLabel;
-              break;
-            case 'CARD':
-              label = params.textForMode(english: 'Card', arabic: 'بطاقة');
-              break;
-            case 'UPI':
-              label = params.textForMode(english: 'UPI', arabic: 'UPI');
-              break;
-            default:
-              label = params.paymentMethod!;
-          }
-        }
-
+      for (final row in paymentRows) {
         boxedItems.add(StandardBoxedLineItem(
-          label: label,
-          value: params.paidAmount!.toStringAsFixed(2),
+          label: row.$1,
+          value: row.$2.toStringAsFixed(2),
           isBold: true,
-          scale: 1.1,
+          scale: paymentRows.length == 1 ? 1.1 : 1,
           icon: currencyIcon,
           currencySymbol: currencySymbol,
         ));
@@ -1621,26 +1458,8 @@ class StandardReceiptLayout implements ReceiptLayout {
     // Amount in Words
     if (displayConfig?['showAmountInWords']?.visible == true) {
       rows.add(SpacingRow(_itemGap));
-
-      if (isDualLanguage) {
-        final arabicText = AmountHelper()
-            .convertNumberToWords(total, currency: currency, language: 'ar');
-        final englishText = AmountHelper()
-            .convertNumberToWords(total, currency: currency, language: 'en');
-
-        rows.add(TextRow('$arabicText فقط.',
-            scale: is58mm ? 0.7 : 0.85, isBold: true));
-        rows.add(TextRow('$englishText Only.',
-            scale: is58mm ? 0.7 : 0.85,
-            isBold: true,
-            textDirectionOverride: TextDirection.ltr));
-      } else {
-        final language = params.amountInWordsLanguage;
-        final amountText = AmountHelper().convertNumberToWords(total,
-            currency: currency, language: language);
-        final suffix = language == 'ar' ? ' فقط.' : ' Only.';
-        rows.add(TextRow('$amountText$suffix',
-            scale: is58mm ? 0.7 : 0.85, isBold: true));
+      for (final line in params.amountInWordsLines(total, currency: currency)) {
+        rows.add(TextRow(line, scale: is58mm ? 0.7 : 0.85, isBold: true));
       }
     }
 
@@ -1931,34 +1750,12 @@ class StandardReceiptLayout implements ReceiptLayout {
         displayConfig?['showOrderNumberInFooter']?.visible == true;
 
     if (showFooterInvoice) {
-      // Extract number sequence (e.g., "1149" from "INV-1149")
-      final regex = RegExp(r'[1-9]\d*');
-      final match = regex.firstMatch(params.orderNumber);
-      final strippedNumber =
-          match != null ? match.group(0)! : params.orderNumber;
-
-      final String fallbackPrefix = ReceiptConfigurationContract.numberPrefix(
-        params.billDocumentConfig.numberPrefix,
-        params.receiptLanguageMode,
-        englishFallback: 'INV NO:',
-        arabicFallback: 'رقم الفاتورة:',
-      );
-      final String invoicePrefix = params.labelFor(
-        'showOrderNumberInFooter',
-        englishFallback: fallbackPrefix,
-        arabicFallback: fallbackPrefix,
-      );
-
+      // Shared "<showOrderNumberInFooter label> 1149" line.
       rows.add(SpacingRow(3));
-      if (showFooterInvoice) {
-        rows.add(SpacingRow(5));
-        rows.add(StandardThinDividerRow());
-        rows.add(SpacingRow(5));
-        rows.add(TextRow('$invoicePrefix $strippedNumber',
-            scale: 0.85, isBold: true));
-      } else {
-        rows.add(TextRow('$invoicePrefix $strippedNumber', scale: 0.85));
-      }
+      rows.add(SpacingRow(5));
+      rows.add(StandardThinDividerRow());
+      rows.add(SpacingRow(5));
+      rows.add(TextRow(params.orderNumberFooterText, scale: 0.85, isBold: true));
     }
 
     rows.add(SpacingRow(_itemGap));
@@ -2002,42 +1799,24 @@ class StandardReceiptLayout implements ReceiptLayout {
     }
   }
 
-  /// Get a label with priority: displayConfig value > resolvedLabel > default
+  /// Label with priority: typed text for this language > resolvedLabel >
+  /// [defaultLabel]. Callers pass the default of the document's language
+  /// (`isEnglish ? English : Arabic`), so a neutral default such as "MRP" or
+  /// "#" is kept on Arabic and bilingual receipts too.
   String _getLabel(
     Map<String, DisplayOption>? displayConfig,
     String key,
     String? resolvedLabel,
     String defaultLabel,
   ) {
-    final arabicFallback = _hasArabic(defaultLabel) ? defaultLabel : '';
-    final englishFallback = _hasArabic(defaultLabel) ? '' : defaultLabel;
+    final english = _languageMode.isEnglish;
     return ReceiptConfigurationContract.label(
       options: displayConfig,
       key: key,
       mode: _languageMode,
-      englishFallback: englishFallback,
-      arabicFallback: arabicFallback,
+      englishFallback: english ? defaultLabel : '',
+      arabicFallback: english ? '' : defaultLabel,
       resolvedArabic: resolvedLabel,
-    );
-  }
-
-  /// Get bilingual label using DisplayOption defaultValue for English part
-  String _getBilingualLabel(
-    Map<String, DisplayOption>? displayConfig,
-    String key,
-    String? resolvedLabelArabic,
-    String? resolvedLabelEnglish,
-    String defaultArabic,
-    String defaultEnglish,
-  ) {
-    return ReceiptConfigurationContract.label(
-      options: displayConfig,
-      key: key,
-      mode: ReceiptLanguageMode.bilingual,
-      englishFallback: defaultEnglish,
-      arabicFallback: defaultArabic,
-      resolvedEnglish: resolvedLabelEnglish,
-      resolvedArabic: resolvedLabelArabic,
     );
   }
 
@@ -2094,7 +1873,8 @@ class StandardReceiptLayout implements ReceiptLayout {
     if (retLabels?.creditNoteNumber != null ||
         retLabels?.creditNoteDate != null) {
       final detailsHeading = _getLabel(retDc, 'showCreditNoteOrder',
-          retLabels?.detailsHeading, 'CREDIT NOTE DETAILS');
+          retLabels?.detailsHeading,
+          isEnglish ? 'CREDIT NOTE DETAILS' : 'تفاصيل إشعار الائتمان');
       rows.add(TextRow(detailsHeading, isBold: true, scale: scale));
       rows.add(SpacingRow(_itemGap));
       if (retLabels?.creditNoteNumber != null) {
@@ -2407,7 +2187,11 @@ class StandardReceiptLayout implements ReceiptLayout {
             currency: currency, language: language);
         final suffix = language == 'ar' ? ' فقط.' : ' Only.';
         rows.add(SpacingRow(_itemGap));
-        rows.add(TextRow('Amount in Words:', isBold: true, scale: 0.9));
+        rows.add(TextRow(
+            params.rendererText(
+                english: 'Amount in Words:', arabic: 'المبلغ كتابة:'),
+            isBold: true,
+            scale: 0.9));
         rows.add(TextRow('$amountText$suffix', isBold: false, scale: 0.85));
       }
     }

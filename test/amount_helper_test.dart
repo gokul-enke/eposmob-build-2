@@ -110,4 +110,43 @@ void main() {
       expect(helper.convertNumberToWords(0, language: 'ar'), 'صفر روبية');
     });
   });
+
+  // Deliberate behaviour (not characterization): Arabic joins every part with
+  // "و" attached to the following word, as the backend preview prints it.
+  group('AmountHelper.convertNumberToWords — Arabic conjunction', () {
+    final helper = AmountHelper();
+    String sar(double amount) =>
+        helper.convertNumberToWords(amount, currency: 'SAR', language: 'ar');
+
+    test('units join the tens word with an attached "و"', () {
+      expect(sar(21), 'واحد وعشرون ريال');
+      expect(sar(22), 'اثنان وعشرون ريال');
+      expect(sar(46), 'ستة وأربعون ريال');
+      expect(sar(59), 'تسعة وخمسون ريال');
+      expect(sar(99), 'تسعة وتسعون ريال');
+    });
+
+    test('round tens and teens need no conjunction', () {
+      expect(sar(30), 'ثلاثون ريال');
+      expect(sar(19), 'تسعة عشر ريال');
+    });
+
+    test('hundreds join their remainder with an attached "و"', () {
+      expect(sar(146), 'مائة وستة وأربعون ريال');
+    });
+
+    test('number groups join with an attached "و"', () {
+      expect(sar(1059), 'ألف وتسعة وخمسون ريال');
+      expect(sar(2500000), 'مليونان وخمسمائة ألف ريال');
+      expect(
+        helper.convertNumberToWords(123456, language: 'ar'),
+        'واحد لاك وثلاثة وعشرون ألف وأربعمائة وستة وخمسون روبية',
+      );
+    });
+
+    test('the fraction joins the whole amount with an attached "و"', () {
+      expect(sar(19.5), 'تسعة عشر ريال وخمسون هللة');
+      expect(sar(0.5), 'خمسون هللة');
+    });
+  });
 }
