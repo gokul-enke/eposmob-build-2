@@ -625,8 +625,12 @@ class StandardReceiptLayout implements ReceiptLayout {
         englishFallback: '',
         arabicFallback: '',
       );
+      // A word-like prefix ("رقم الرمز", "Token") needs a separator before the
+      // number; symbol prefixes ("#", "T-") are kept attached.
+      final separator =
+          RegExp(r'[A-Za-z؀-ۿ]$').hasMatch(tokenPrefix) ? ': ' : '';
       tokenText = tokenPrefix.isNotEmpty
-          ? '$tokenPrefix${params.tokenNumber!}'
+          ? '$tokenPrefix$separator${params.tokenNumber!}'
           : params.tokenNumber!;
     }
 
@@ -661,12 +665,14 @@ class StandardReceiptLayout implements ReceiptLayout {
 
       final dateLabel =
           _getLabel(displayConfig, 'showDate', resolvedLabels?.date, "");
+      // Isolate the date/time as LTR so an RTL receipt does not reorder it to
+      // "AM 09:40 23-09-2026".
+      final dateTimeText = '\u2066$formattedDate  $formattedTime\u2069';
       rows.add(SpacingRow(3));
       if (dateLabel.isNotEmpty) {
-        rows.add(
-            TextRow("$dateLabel: $formattedDate  $formattedTime", scale: 0.85));
+        rows.add(TextRow("$dateLabel: $dateTimeText", scale: 0.85));
       } else {
-        rows.add(TextRow("$formattedDate  $formattedTime", scale: 0.85));
+        rows.add(TextRow(dateTimeText, scale: 0.85));
       }
     }
 
@@ -1955,8 +1961,6 @@ class StandardReceiptLayout implements ReceiptLayout {
   ) {
     rows.add(SpacingRow(_sectionGap));
 
-    final bool isDualLanguage = params.isBilingual;
-
     _buildBankSection(rows, params);
 
     // QR Code - Use ZATCA QR if credentials available, otherwise fallback to payment QR
@@ -1983,9 +1987,11 @@ class StandardReceiptLayout implements ReceiptLayout {
           vatAmount: params.totalTax,
         );
 
-        qrMessage = isDualLanguage
-            ? 'فاتورة الكترونية\nZATCA E-Invoice QR'
-            : (isEnglish ? 'ZATCA E-Invoice QR' : 'فاتورة الكترونية');
+        qrMessage = params.labelFor(
+          'showQRCode',
+          englishFallback: 'ZATCA E-Invoice QR',
+          arabicFallback: 'فاتورة الكترونية',
+        );
 
         debugPrint('[StandardLayout] ZATCA QR generated: ${qrData.isNotEmpty}');
       } else {
@@ -2026,8 +2032,11 @@ class StandardReceiptLayout implements ReceiptLayout {
           }
         }
 
-        qrMessage = displayConfig?['showQRCode']?.value as String? ??
-            (isEnglish ? 'Scan to Pay' : 'امسح للدفع');
+        qrMessage = params.labelFor(
+          'showQRCode',
+          englishFallback: 'Scan to Pay',
+          arabicFallback: 'امسح للدفع',
+        );
       }
 
       // Display QR code if data is available

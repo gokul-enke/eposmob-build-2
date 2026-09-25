@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_configuration_contract.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_factory.dart';
+import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 
 void main() {
   group('DisplayOption API parsing', () {
@@ -237,8 +238,7 @@ void main() {
       );
     });
 
-    test('keeps the primary English fallback when both API labels are empty',
-        () {
+    test('uses only the Arabic fallback when both API labels are empty', () {
       expect(
         ReceiptConfigurationContract.label(
           options: const {},
@@ -248,7 +248,50 @@ void main() {
           arabicFallback: 'الضريبة',
           resolvedArabic: 'ضريبة المبيعات',
         ),
-        'VAT',
+        'ضريبة المبيعات',
+      );
+      expect(
+        ReceiptConfigurationContract.label(
+          options: {'showCustomerName': DisplayOption(visible: true)},
+          key: 'showCustomerName',
+          mode: ReceiptLanguageMode.bilingual,
+          englishFallback: 'Customer:',
+          arabicFallback: 'العميل:',
+        ),
+        'العميل:',
+      );
+    });
+
+    test('prints no English line when only the Arabic value is typed', () {
+      // Clients fill every Arabic value but type English (`default`) only
+      // where they want it. A missing `default` must not be replaced by a
+      // renderer placeholder or a resolved_labels master default.
+      final arabicOnly = <String, DisplayOption>{
+        'showNetAmount': DisplayOption(visible: true, value: 'الصافي'),
+        'showParticulars': DisplayOption(visible: true, value: 'الصنف'),
+      };
+
+      expect(
+        ReceiptConfigurationContract.label(
+          options: arabicOnly,
+          key: 'showNetAmount',
+          mode: ReceiptLanguageMode.bilingual,
+          englishFallback: 'GRAND TOTAL',
+          arabicFallback: 'المبلغ الاجمالي',
+        ),
+        'الصافي',
+      );
+      expect(
+        ReceiptConfigurationContract.label(
+          options: arabicOnly,
+          key: 'showParticulars',
+          mode: ReceiptLanguageMode.bilingual,
+          englishFallback: 'Item',
+          arabicFallback: 'Item',
+          resolvedEnglish: 'PARTICULARS',
+          resolvedArabic: 'الصنف',
+        ),
+        'الصنف',
       );
     });
 
@@ -325,5 +368,14 @@ void main() {
       expect(layout.layoutId, theme);
     }
     expect(ReceiptLayoutFactory.availableThemes.length, 17);
+  });
+
+  test('customer address drops empty and literal "null" parts', () {
+    expect(ReceiptLayoutParams.printableAddress('177, 897, null, null'),
+        '177, 897');
+    expect(ReceiptLayoutParams.printableAddress('null, , NULL'), isNull);
+    expect(ReceiptLayoutParams.printableAddress('Riyadh, Saudi Arabia'),
+        'Riyadh, Saudi Arabia');
+    expect(ReceiptLayoutParams.printableAddress(null), isNull);
   });
 }
