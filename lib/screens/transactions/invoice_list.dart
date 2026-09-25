@@ -1919,7 +1919,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                       Expanded(
                         flex: 2,
                         child: Text(
-                          item.quantity.toString(),
+                          item.displayQuantity,
                           style: TextStyle(
                             fontSize: FontSize.s12,
                             color: ColorManager.textColor,
