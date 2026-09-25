@@ -2507,7 +2507,7 @@
     "loading_product_details": "جاري تحميل تفاصيل المنتج...",
     "product_not_found": "المنتج غير موجود",
     "retry": "إعادة المحاولة",
-    "status_out_of_stock": "نفدت الكمية",
+    "status_out_of_stock": "نفاد المخزون",
     "status_at_reorder_level": "عند مستوى إعادة الطلب",
     "status_low_stock": "مخزون منخفض",
     "offer_price": "سعر العرض",
