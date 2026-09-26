@@ -209,10 +209,12 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         if (row.key != 'showDate' && row.key != 'showInvoiceNumber') row,
     ];
     final titleLines = _lines(params.invoiceTitleText);
-    final storeName =
-        params.headerTextParts('showStoreName').joined(inline: true);
-    // One seller line per key: description, registration numbers, address,
-    // contact details, then the extra headings.
+    // Each language is its own line (Arabic above English) so the two
+    // scripts never share one bidi run.
+    final storeNameLines =
+        _lines(params.headerTextParts('showStoreName').joined());
+    // One seller line per key and language: description, registration
+    // numbers, address, contact details, then the extra headings.
     final sellerLines = [
       params.headerTextParts('showDescription'),
       for (final key in const [
@@ -230,8 +232,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       ])
         params.headerTextParts(key),
     ]
-        .map((parts) => parts.joined(inline: true))
-        .where((line) => line.isNotEmpty)
+        .expand((parts) => _lines(parts.joined()))
         .toList();
     final customerRows = params.customerInfoRows;
     final commentText = params.commentText;
@@ -256,17 +257,17 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
 
     List<pw.Widget> buildContent() {
       final partyBoxes = <(pw.Widget, double)>[
-        if (storeName.isNotEmpty || sellerLines.isNotEmpty)
+        if (storeNameLines.isNotEmpty || sellerLines.isNotEmpty)
           (
             _partyBox(
               params.rendererText(
                   english: 'Seller Details', arabic: 'تفاصيل البائع'),
               headingStyle,
               [
-                if (storeName.isNotEmpty)
-                  _partyLine(pdfText(storeName, style: bodyBold)),
+                for (final line in storeNameLines)
+                  _partyLine(_scriptText(line, bodyBold)),
                 for (final line in sellerLines)
-                  _partyLine(pdfText(line, style: bodyStyle)),
+                  _partyLine(_scriptText(line, bodyStyle)),
               ],
             ),
             1.0,
@@ -441,29 +442,25 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         pw.SizedBox(height: 4),
 
         // Terms, thank-you message, VAT and order-number footers.
+        // One run per line: terms aligned to their own script, the
+        // thank-you message centred.
         if (termsLines.isNotEmpty) ...[
-          pw.Wrap(
-            spacing: 4,
-            runSpacing: 1,
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
             children: [
-              for (final line in termsLines)
-                pdfText(line, style: captionStyle),
+              for (final line in termsLines) _scriptText(line, captionStyle),
             ],
           ),
           pw.SizedBox(height: 2),
         ],
         if (thankYouLines.isNotEmpty)
-          pw.Center(
-            child: pw.Wrap(
-              alignment: pw.WrapAlignment.center,
-              spacing: 4,
-              runSpacing: 1,
-              children: [
-                for (final line in thankYouLines)
-                  pdfText(line,
-                      style: bodyBold, textAlign: pw.TextAlign.center),
-              ],
-            ),
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              for (final line in thankYouLines)
+                pdfText(line,
+                    style: bodyBold, textAlign: pw.TextAlign.center),
+            ],
           ),
         for (final line in footerLines)
           pw.Center(
@@ -512,6 +509,15 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           if (line.trim().isNotEmpty) line,
       ];
 
+  /// One line of text aligned to its own script: Arabic right, else left.
+  static pw.Widget _scriptText(String line, pw.TextStyle style) => pdfText(
+        line,
+        style: style,
+        softWrap: true,
+        textAlign:
+            pdfHasArabic(line) ? pw.TextAlign.right : pw.TextAlign.left,
+      );
+
   /// ZATCA QR when the store is registered, else the manual payment gateway.
   String _qrData(
       ReceiptLayoutParams params, List<PaymentGateway> paymentGateways) {
@@ -527,7 +533,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     }
     for (final gateway in paymentGateways) {
       if (gateway.code != 'MANUAL_PAYMENT_GATEWAY') continue;
-      final link = gateway.link;
+      final link = gateway.link.trim();
       if (link.isEmpty) return '';
       if (link.contains('{formattedTotal}') || link.contains('{orderNumber}')) {
         return link
@@ -881,7 +887,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             alignment: alignment,
             child: pdfText(text,
                 style: bodyStyle,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: pw.TextOverflow.clip,
                 textDirection: pw.TextDirection.ltr),
           ),

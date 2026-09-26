@@ -127,7 +127,7 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
       document: pdf,
       selectedPrinter: params.selectedPrinter,
       paperSize: params.selectedPaperSize,
-      jobName: 'Simplified Tax Invoice ${params.orderNumber}',
+      jobName: 'Centered Simplified Tax Invoice ${params.orderNumber}',
     )) {
       return;
     }
@@ -176,6 +176,11 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
     // ── Shared section data ─────────────────────────────────────────
     final arabicHeaderLines = params.headerColumnLines(arabic: true);
     final englishHeaderLines = params.headerColumnLines(arabic: false);
+    // Only the store name gets the heading style — when it is hidden the
+    // first header line is a detail line.
+    final nameParts = params.headerTextParts('showStoreName');
+    final hasArabicColumn = arabicHeaderLines.isNotEmpty;
+    final hasEnglishColumn = englishHeaderLines.isNotEmpty;
     final documentLines = [
       params.documentText(config.header),
       params.documentText(config.subheader),
@@ -196,6 +201,15 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
     final balanceRows = params.customerBalanceRows;
     final savedLabel = params.savedLabel;
     final totalsRows = params.totalsRows;
+    final totalsShowEnglish =
+        totalsRows.any((row) => row.label.english.trim().isNotEmpty);
+    final totalsShowArabic =
+        totalsRows.any((row) => row.label.arabic.trim().isNotEmpty);
+    final totalsFlex = <double>[
+      if (totalsShowEnglish) 2.2,
+      if (totalsShowArabic) 2.0,
+      1.8,
+    ];
     final termsText = params.termsText;
     final thankYouText = params.thankYouText;
     final bankRows = params.bankDetailRows;
@@ -308,37 +322,44 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
             // ═══════════════════════════════════════════════════════
             pw.Row(
               crossAxisAlignment: pw.CrossAxisAlignment.center,
+              // Empty columns are dropped so the remaining text gets their
+              // width instead of wrapping inside a third of the page.
               children: [
-                pw.Expanded(
-                  child: _configuredHeaderBlock(
-                    arabicHeaderLines,
-                    headingStyle: headerCompanyStyle,
-                    detailStyle: headerDetailStyle,
-                    alignment: pw.CrossAxisAlignment.start,
-                    textAlign: pw.TextAlign.left,
+                if (hasArabicColumn)
+                  pw.Expanded(
+                    flex: hasEnglishColumn ? 1 : 2,
+                    child: _configuredHeaderBlock(
+                      arabicHeaderLines,
+                      hasHeading: nameParts.arabic.trim().isNotEmpty,
+                      headingStyle: headerCompanyStyle,
+                      detailStyle: headerDetailStyle,
+                      alignment: pw.CrossAxisAlignment.start,
+                      textAlign: pw.TextAlign.left,
+                    ),
                   ),
-                ),
-                pw.Expanded(
-                  child: pw.Align(
-                    alignment: pw.Alignment.center,
-                    child: logoImage == null
-                        ? pw.SizedBox()
-                        : pw.Container(
-                            height: isA5 ? 52 : 72,
-                            width: isA5 ? 72 : 100,
-                            child: pw.Image(logoImage, fit: pw.BoxFit.contain),
-                          ),
+                if (logoImage != null)
+                  pw.Expanded(
+                    child: pw.Align(
+                      alignment: pw.Alignment.center,
+                      child: pw.Container(
+                        height: isA5 ? 52 : 72,
+                        width: isA5 ? 72 : 100,
+                        child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+                      ),
+                    ),
                   ),
-                ),
-                pw.Expanded(
-                  child: _configuredHeaderBlock(
-                    englishHeaderLines,
-                    headingStyle: headerCompanyStyle,
-                    detailStyle: headerDetailStyle,
-                    alignment: pw.CrossAxisAlignment.end,
-                    textAlign: pw.TextAlign.right,
+                if (hasEnglishColumn)
+                  pw.Expanded(
+                    flex: hasArabicColumn ? 1 : 2,
+                    child: _configuredHeaderBlock(
+                      englishHeaderLines,
+                      hasHeading: nameParts.english.trim().isNotEmpty,
+                      headingStyle: headerCompanyStyle,
+                      detailStyle: headerDetailStyle,
+                      alignment: pw.CrossAxisAlignment.end,
+                      textAlign: pw.TextAlign.right,
+                    ),
                   ),
-                ),
               ],
             ),
             // Document-level header / subheader text.
@@ -396,7 +417,8 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
                           for (final row in customerRows)
-                            _infoRow(row, infoLabel, infoValue),
+                            _infoRow(row, infoLabel, infoValue,
+                                labelWidth: isA5 ? 64 : 96),
                         ],
                       ),
                     ),
@@ -407,7 +429,8 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
                           for (final row in orderRows)
-                            _infoRow(row, infoLabel, infoValue),
+                            _infoRow(row, infoLabel, infoValue,
+                                labelWidth: isA5 ? 64 : 96),
                         ],
                       ),
                     ),
@@ -493,25 +516,33 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
                     flex: 4,
                     child: totalsRows.isEmpty
                         ? pw.SizedBox()
-                        : pw.Table(
-                            border: pw.TableBorder.all(width: 0.5),
-                            columnWidths: const {
-                              0: pw.FlexColumnWidth(2.2),
-                              1: pw.FlexColumnWidth(2.0),
-                              2: pw.FlexColumnWidth(1.8),
-                            },
-                            children: [
-                              for (final row in totalsRows)
-                                _totalsRow(
-                                  row.label,
-                                  row.text ?? _formatMoney(currency, row.amount),
-                                  totalsLabelEn,
-                                  totalsLabelAr,
-                                  row.emphasised
-                                      ? totalsValueBold
-                                      : totalsValueStyle,
-                                ),
-                            ],
+                        : pw.Padding(
+                            // 0.01pt slack: the pdf Table's flex widths can round a hair
+                            // past the Expanded extent and trip Flex's size assertion.
+                            padding: const pw.EdgeInsets.only(right: 0.01),
+                            child: pw.Table(
+                              border: pw.TableBorder.all(width: 0.5),
+                              // A language column that is empty on every row
+                              // (English / Arabic document) is dropped.
+                              columnWidths: {
+                                for (var i = 0; i < totalsFlex.length; i++)
+                                  i: pw.FlexColumnWidth(totalsFlex[i]),
+                              },
+                              children: [
+                                for (final row in totalsRows)
+                                  _totalsRow(
+                                    row.label,
+                                    row.text ?? _formatMoney(currency, row.amount),
+                                    totalsLabelEn,
+                                    totalsLabelAr,
+                                    row.emphasised
+                                        ? totalsValueBold
+                                        : totalsValueStyle,
+                                    showEnglish: totalsShowEnglish,
+                                    showArabic: totalsShowArabic,
+                                  ),
+                              ],
+                            ),
                           ),
                   ),
                 ],
@@ -605,7 +636,7 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
     }
     for (final gateway in paymentGateways) {
       if (gateway.code != 'MANUAL_PAYMENT_GATEWAY') continue;
-      final link = gateway.link;
+      final link = gateway.link.trim();
       if (link.isEmpty) return '';
       if (link.contains('{formattedTotal}') || link.contains('{orderNumber}')) {
         return link
@@ -620,10 +651,12 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
     return '';
   }
 
-  /// Renders one side of the three-column header. The first line is treated
-  /// as the company name; remaining lines use compact detail styling.
+  /// Renders one side of the three-column header. The first line is the
+  /// company name when [hasHeading] (store name shown in this language);
+  /// every other line uses compact detail styling. Lines wrap freely.
   pw.Widget _configuredHeaderBlock(
     List<String> lines, {
+    required bool hasHeading,
     required pw.TextStyle headingStyle,
     required pw.TextStyle detailStyle,
     required pw.CrossAxisAlignment alignment,
@@ -637,9 +670,8 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
             width: double.infinity,
             child: pdfText(
               lines[i],
-              style: i == 0 ? headingStyle : detailStyle,
+              style: hasHeading && i == 0 ? headingStyle : detailStyle,
               textAlign: textAlign,
-              maxLines: 2,
             ),
           ),
           if (i < lines.length - 1) pw.SizedBox(height: 2),
@@ -666,8 +698,6 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
     ];
     final valueText = pdfText(value,
         style: valueStyle,
-        maxLines: 2,
-        overflow: pw.TextOverflow.clip,
         // Arabic values run RTL; keep every value flush left like the rest.
         textAlign: pw.TextAlign.left,
         textDirection: pw.TextDirection.ltr);
@@ -686,8 +716,7 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
                       for (final line in labelLines)
                         pdfText(line,
                             style: labelStyle,
-                            maxLines: 1,
-                            softWrap: false,
+                            maxLines: 2,
                             overflow: pw.TextOverflow.clip,
                             textDirection: pdfTextDirectionOf(line)),
                     ],
@@ -711,36 +740,59 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
     final labelText = pdfText('$clean:', style: labelStyle);
     final valueText = pdfText(value,
         style: valueStyle, textDirection: pw.TextDirection.ltr);
+    // Both runs are Flexible so a long label or value wraps instead of
+    // overflowing the column.
     return pw.Row(
       mainAxisSize: pw.MainAxisSize.min,
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: arabicLabel
-          ? [valueText, pw.SizedBox(width: 4), labelText]
-          : [labelText, pw.SizedBox(width: 4), valueText],
+          ? [
+              pw.Flexible(child: valueText),
+              pw.SizedBox(width: 4),
+              pw.Flexible(child: labelText),
+            ]
+          : [
+              pw.Flexible(child: labelText),
+              pw.SizedBox(width: 4),
+              pw.Flexible(child: valueText),
+            ],
     );
   }
 
-  /// Totals box row: English label | Arabic label | value.
+  /// Totals box row: English label | Arabic label | value. A language column
+  /// empty on every row is omitted ([showEnglish] / [showArabic]); the value
+  /// scales down rather than wrapping when the box is narrow (A5).
   pw.TableRow _totalsRow(ReceiptLabelParts label, String value,
-      pw.TextStyle enStyle, pw.TextStyle arStyle, pw.TextStyle valueStyle) {
+      pw.TextStyle enStyle, pw.TextStyle arStyle, pw.TextStyle valueStyle,
+      {bool showEnglish = true, bool showArabic = true}) {
     return pw.TableRow(children: [
-      pw.Padding(
-        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-        child: pdfText(label.english, style: enStyle),
-      ),
-      pw.Padding(
-        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-        child: pw.Align(
-          alignment: pw.Alignment.centerRight,
-          child: pdfText(label.arabic,
-              style: arStyle, textDirection: pdfTextDirectionOf(label.arabic)),
+      if (showEnglish)
+        pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+          child: pdfText(label.english, style: enStyle),
         ),
-      ),
+      if (showArabic)
+        pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+          child: pw.Align(
+            alignment: pw.Alignment.centerRight,
+            child: pdfText(label.arabic,
+                style: arStyle,
+                textDirection: pdfTextDirectionOf(label.arabic)),
+          ),
+        ),
       pw.Padding(
         padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
         child: pw.Align(
           alignment: pw.Alignment.centerRight,
-          child: pdfText(value,
-              style: valueStyle, textDirection: pw.TextDirection.ltr),
+          child: pdfScaleDown(
+            value,
+            alignment: pw.Alignment.centerRight,
+            pdfText(value,
+                style: valueStyle,
+                softWrap: false,
+                textDirection: pw.TextDirection.ltr),
+          ),
         ),
       ),
     ]);
@@ -820,8 +872,6 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
             for (final name in line.nameLines)
               pdfText(name,
                   style: bodyStyle,
-                  maxLines: 2,
-                  overflow: pw.TextOverflow.clip,
                   textAlign: textAlign,
                   textDirection: pdfTextDirectionOf(name)),
             if (line.hasWarranty && warranty.isNotEmpty)

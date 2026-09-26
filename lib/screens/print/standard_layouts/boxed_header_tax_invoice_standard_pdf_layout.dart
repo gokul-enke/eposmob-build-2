@@ -231,6 +231,20 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     // ── Shared section data ─────────────────────────────────────────
     final englishHeaderLines = params.headerColumnLines(arabic: false);
     final arabicHeaderLines = params.headerColumnLines(arabic: true);
+    // Line 0 of a column is the company name only when the store name is
+    // actually printed in that column's language.
+    final storeNameParts = params.headerTextParts('showStoreName');
+    // A single-language document fills only one column: give it the width of
+    // both instead of leaving an empty column opposite.
+    final singleLanguage = !params.isBilingual;
+    final showEnglishHeader = !(singleLanguage &&
+        englishHeaderLines.isEmpty &&
+        arabicHeaderLines.isNotEmpty);
+    final showArabicHeader = !(singleLanguage &&
+        arabicHeaderLines.isEmpty &&
+        englishHeaderLines.isNotEmpty);
+    final englishHeaderFlex = showArabicHeader ? 4 : 8;
+    final arabicHeaderFlex = showEnglishHeader ? 4 : 8;
     final extraHeading2 =
         params.headerTextParts('showExtraHeading2').joined(inline: true);
     final storeFssai =
@@ -267,16 +281,18 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         pw.Row(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
-            pw.Expanded(
-              flex: 4,
-              child: _configuredHeaderBlock(
-                englishHeaderLines,
-                headingStyle: englishHeaderCompanyStyle,
-                detailStyle: headerDetailStyle,
-                alignment: pw.CrossAxisAlignment.start,
-                textAlign: pw.TextAlign.left,
+            if (showEnglishHeader)
+              pw.Expanded(
+                flex: englishHeaderFlex,
+                child: _configuredHeaderBlock(
+                  englishHeaderLines,
+                  hasHeading: storeNameParts.english.trim().isNotEmpty,
+                  headingStyle: englishHeaderCompanyStyle,
+                  detailStyle: headerDetailStyle,
+                  alignment: pw.CrossAxisAlignment.start,
+                  textAlign: pw.TextAlign.left,
+                ),
               ),
-            ),
             pw.Expanded(
               flex: 2,
               child: pw.Align(
@@ -290,16 +306,18 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                       ),
               ),
             ),
-            pw.Expanded(
-              flex: 4,
-              child: _configuredHeaderBlock(
-                arabicHeaderLines,
-                headingStyle: headerCompanyStyle,
-                detailStyle: headerDetailStyle,
-                alignment: pw.CrossAxisAlignment.end,
-                textAlign: pw.TextAlign.right,
+            if (showArabicHeader)
+              pw.Expanded(
+                flex: arabicHeaderFlex,
+                child: _configuredHeaderBlock(
+                  arabicHeaderLines,
+                  hasHeading: storeNameParts.arabic.trim().isNotEmpty,
+                  headingStyle: headerCompanyStyle,
+                  detailStyle: headerDetailStyle,
+                  alignment: pw.CrossAxisAlignment.end,
+                  textAlign: pw.TextAlign.right,
+                ),
               ),
-            ),
           ],
         ),
         pw.SizedBox(height: 6),
@@ -400,19 +418,26 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         // SECTION 5: BANK DETAILS | QR CODE | TOTALS
         if (!params.isReturnOnly) ...[
           pw.Table(
-            columnWidths: hasLeftSummaryContent
-                ? const {
-                    0: pw.FlexColumnWidth(5),
-                    1: pw.FixedColumnWidth(8),
-                    2: pw.FlexColumnWidth(3),
-                    3: pw.FixedColumnWidth(8),
-                    4: pw.FlexColumnWidth(6),
-                  }
-                : const {
-                    0: pw.FlexColumnWidth(3),
-                    1: pw.FixedColumnWidth(8),
-                    2: pw.FlexColumnWidth(6),
-                  },
+            // Optional bank/comment box and QR box, each followed by a gap,
+            // then the totals box.
+            columnWidths: {
+              for (final (i, width) in <pw.TableColumnWidth>[
+                if (hasLeftSummaryContent) ...[
+                  const pw.FlexColumnWidth(5),
+                  const pw.FixedColumnWidth(8),
+                ],
+                if (showQr) ...[
+                  const pw.FlexColumnWidth(3),
+                  const pw.FixedColumnWidth(8),
+                ],
+                // Nothing beside the totals: keep them right-aligned at the
+                // usual width with a blank (borderless) spacer.
+                if (!hasLeftSummaryContent && !showQr)
+                  const pw.FlexColumnWidth(3),
+                const pw.FlexColumnWidth(6),
+              ].indexed)
+                i: width,
+            },
             children: [
               pw.TableRow(
                 verticalAlignment: pw.TableCellVerticalAlignment.full,
@@ -452,33 +477,34 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     ),
                     pw.SizedBox(),
                   ],
-                  pw.Container(
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(width: 0.5),
+                  if (showQr) ...[
+                    pw.Container(
+                      decoration: pw.BoxDecoration(
+                        border: pw.Border.all(width: 0.5),
+                      ),
+                      padding: const pw.EdgeInsets.all(4),
+                      alignment: pw.Alignment.center,
+                      child: pw.Column(
+                        mainAxisSize: pw.MainAxisSize.min,
+                        children: [
+                          if (params.qrCaption.isNotEmpty) ...[
+                            pdfText(params.qrCaption,
+                                style: smallStyle,
+                                textAlign: pw.TextAlign.center),
+                            pw.SizedBox(height: 2),
+                          ],
+                          pw.BarcodeWidget(
+                            barcode: pw.Barcode.qrCode(),
+                            data: qrData,
+                            width: summaryQrSize,
+                            height: summaryQrSize,
+                          ),
+                        ],
+                      ),
                     ),
-                    padding: const pw.EdgeInsets.all(4),
-                    alignment: pw.Alignment.center,
-                    child: showQr
-                        ? pw.Column(
-                            mainAxisSize: pw.MainAxisSize.min,
-                            children: [
-                              if (params.qrCaption.isNotEmpty) ...[
-                                pdfText(params.qrCaption,
-                                    style: smallStyle,
-                                    textAlign: pw.TextAlign.center),
-                                pw.SizedBox(height: 2),
-                              ],
-                              pw.BarcodeWidget(
-                                barcode: pw.Barcode.qrCode(),
-                                data: qrData,
-                                width: summaryQrSize,
-                                height: summaryQrSize,
-                              ),
-                            ],
-                          )
-                        : pw.SizedBox(),
-                  ),
-                  pw.SizedBox(),
+                    pw.SizedBox(),
+                  ],
+                  if (!hasLeftSummaryContent && !showQr) pw.SizedBox(),
                   pw.Container(
                     decoration: pw.BoxDecoration(
                       border: pw.Border.all(width: 0.5),
@@ -488,11 +514,16 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                         horizontalInside: pw.BorderSide(width: 0.5),
                         verticalInside: pw.BorderSide(width: 0.5),
                       ),
-                      columnWidths: const {
-                        0: pw.FlexColumnWidth(2.2),
-                        1: pw.FlexColumnWidth(2.0),
-                        2: pw.FlexColumnWidth(1.8),
-                      },
+                      columnWidths: singleLanguage
+                          ? const {
+                              0: pw.FlexColumnWidth(3.2),
+                              1: pw.FlexColumnWidth(2.2),
+                            }
+                          : const {
+                              0: pw.FlexColumnWidth(2.2),
+                              1: pw.FlexColumnWidth(2.0),
+                              2: pw.FlexColumnWidth(1.8),
+                            },
                       children: [
                         for (final row in totalsRows)
                           _totalsRow(
@@ -501,6 +532,8 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                             totalsLabelEn,
                             totalsLabelAr,
                             row.emphasised ? totalsValueBold : totalsValueStyle,
+                            bilingual: !singleLanguage,
+                            arabicOnly: params.isRtl,
                           ),
                       ],
                     ),
@@ -645,7 +678,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     }
     for (final gateway in paymentGateways) {
       if (gateway.code != 'MANUAL_PAYMENT_GATEWAY') continue;
-      final link = gateway.link;
+      final link = gateway.link.trim();
       if (link.isEmpty) return '';
       if (link.contains('{formattedTotal}') || link.contains('{orderNumber}')) {
         return link
@@ -660,21 +693,26 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     return '';
   }
 
-  /// One side of the three-column header. The first line is the company name
-  /// (one line, shrunk to fit); the rest use compact detail styling.
+  /// One side of the three-column header. When [hasHeading] the first line is
+  /// the company name (one line, shrunk to fit); every other line uses
+  /// compact detail styling.
   pw.Widget _configuredHeaderBlock(
     List<String> lines, {
+    required bool hasHeading,
     required pw.TextStyle headingStyle,
     required pw.TextStyle detailStyle,
     required pw.CrossAxisAlignment alignment,
     required pw.TextAlign textAlign,
   }) {
+    bool isHeading(int i) => hasHeading && i == 0;
     pw.Widget line(int i) => pdfText(
-          i == 0 ? lines[i].replaceAll(RegExp(r'\s+'), ' ').trim() : lines[i],
-          style: i == 0 ? headingStyle : detailStyle,
+          isHeading(i)
+              ? lines[i].replaceAll(RegExp(r'\s+'), ' ').trim()
+              : lines[i],
+          style: isHeading(i) ? headingStyle : detailStyle,
           textAlign: textAlign,
-          maxLines: i == 0 ? 1 : 2,
-          softWrap: i != 0,
+          maxLines: isHeading(i) ? 1 : 2,
+          softWrap: !isHeading(i),
         );
 
     return pw.Column(
@@ -683,14 +721,13 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         for (var i = 0; i < lines.length; i++) ...[
           pw.Container(
             width: double.infinity,
-            child: i == 0
+            child: isHeading(i)
                 // Shrink an over-long heading rather than run off the page.
                 ? pw.Align(
                     alignment: textAlign == pw.TextAlign.right
                         ? pw.Alignment.centerRight
                         : pw.Alignment.centerLeft,
-                    child: pw.FittedBox(
-                        fit: pw.BoxFit.scaleDown, child: line(i)),
+                    child: pdfScaleDown(lines[i], line(i)),
                   )
                 : line(i),
           ),
@@ -733,9 +770,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     pw.Widget valueCell(String value, pw.TextAlign align) => pw.Expanded(
           child: pdfText(value,
               style: valueStyle,
-              maxLines: 2,
               textAlign: align,
-              overflow: pw.TextOverflow.clip,
               textDirection: pw.TextDirection.ltr),
         );
 
@@ -785,38 +820,52 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     if (clean.isEmpty) return pdfText(value, style: valueStyle);
     final arabicLabel = pdfHasArabic(clean);
     final labelText = pdfText('$clean:', style: labelStyle);
-    final valueText = pdfText(value,
-        style: valueStyle, textDirection: pw.TextDirection.ltr);
+    // The value wraps inside the remaining width instead of overflowing a
+    // narrow (A5) box.
+    final valueText = pw.Flexible(
+      child: pdfText(value,
+          style: valueStyle, textDirection: pw.TextDirection.ltr),
+    );
     return pw.Row(
       mainAxisSize: pw.MainAxisSize.min,
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: arabicLabel
           ? [valueText, pw.SizedBox(width: 4), labelText]
           : [labelText, pw.SizedBox(width: 4), valueText],
     );
   }
 
-  /// Totals box row: English label | Arabic label | value.
+  /// Totals box row: English label | Arabic label | value on bilingual
+  /// documents; a single-language document has one label column. The amount
+  /// stays on one line, shrunk to fit a narrow (A5) cell.
   pw.TableRow _totalsRow(ReceiptLabelParts label, String value,
-      pw.TextStyle enStyle, pw.TextStyle arStyle, pw.TextStyle valueStyle) {
+      pw.TextStyle enStyle, pw.TextStyle arStyle, pw.TextStyle valueStyle,
+      {required bool bilingual, required bool arabicOnly}) {
+    const padding = pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3);
+    pw.Widget englishCell() =>
+        pw.Padding(padding: padding, child: pdfText(label.english, style: enStyle));
+    pw.Widget arabicCell() => pw.Padding(
+          padding: padding,
+          child: pw.Align(
+            alignment: pw.Alignment.centerRight,
+            child: pdfText(label.arabic,
+                style: arStyle, textDirection: pw.TextDirection.rtl),
+          ),
+        );
     return pw.TableRow(children: [
+      if (bilingual || !arabicOnly) englishCell(),
+      if (bilingual || arabicOnly) arabicCell(),
       pw.Padding(
-        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-        child: pdfText(label.english, style: enStyle),
-      ),
-      pw.Padding(
-        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+        padding: padding,
         child: pw.Align(
           alignment: pw.Alignment.centerRight,
-          child: pdfText(label.arabic,
-              style: arStyle, textDirection: pw.TextDirection.rtl),
-        ),
-      ),
-      pw.Padding(
-        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-        child: pw.Align(
-          alignment: pw.Alignment.centerRight,
-          child: pdfText(value,
-              style: valueStyle, textDirection: pw.TextDirection.ltr),
+          child: pdfScaleDown(
+            value,
+            pdfText(value,
+                style: valueStyle,
+                maxLines: 1,
+                textDirection: pw.TextDirection.ltr),
+          ),
         ),
       ),
     ]);

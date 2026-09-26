@@ -152,10 +152,10 @@ class ReceiptLayoutParams {
       merged['showInvoiceTitle'] = DisplayOption(
         visible: true,
         value: titleOverride,
-        // With no configured English title the override is the whole title,
-        // so bilingual mode must not pair it with the 'INVOICE' fallback.
-        defaultValue:
-            options['showInvoiceTitle']?.defaultValue ?? titleOverride,
+        // The override is the whole title in every language mode: storing it
+        // in both fields keeps English documents from printing the store's
+        // English title and bilingual documents from printing both.
+        defaultValue: titleOverride,
       );
       return merged;
     }
@@ -175,8 +175,7 @@ class ReceiptLayoutParams {
         merged['showInvoiceTitle'] = DisplayOption(
           visible: true,
           value: titleOverride,
-          defaultValue:
-              options['showInvoiceTitle']?.defaultValue ?? titleOverride,
+          defaultValue: titleOverride,
         );
         return merged;
       }
@@ -189,7 +188,7 @@ class ReceiptLayoutParams {
             ? DisplayOption(
                 visible: true,
                 value: titleOverride,
-                defaultValue: b2bInvoiceTitle.defaultValue,
+                defaultValue: titleOverride,
               )
             : b2bInvoiceTitle;
     return merged;
@@ -333,6 +332,19 @@ class ReceiptLayoutParams {
     return isVisible('showCustomerPhoneMasked')
         ? StringHelper.maskStringShowLast4(phone)
         : phone;
+  }
+
+  /// Customer phone line: [customerPhoneText] plus the alternate phone, both
+  /// masked when `showCustomerPhoneMasked` is on. Empty when the primary
+  /// phone is hidden.
+  String get customerPhoneLineText {
+    final phone = customerPhoneText;
+    final alternate = customerAlternatePhone?.trim() ?? '';
+    if (phone.isEmpty || alternate.isEmpty) return phone;
+    final shownAlternate = isVisible('showCustomerPhoneMasked')
+        ? StringHelper.maskStringShowLast4(alternate)
+        : alternate;
+    return '$phone, $shownAlternate';
   }
 
   /// Printed invoice number: the literal configured prefix (or the primary

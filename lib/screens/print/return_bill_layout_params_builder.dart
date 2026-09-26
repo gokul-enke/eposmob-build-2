@@ -128,9 +128,11 @@ class ReturnBillLayoutParamsBuilder {
     final configuredText =
         '${option?.value ?? ''}${option?.defaultValue ?? ''}'.trim();
     if (configuredText.isNotEmpty) return null;
-    return ReceiptConfigurationContract.languageMode(config.language).isArabic
-        ? 'مرتجع مبيعات'
-        : 'Sales Return';
+    // Only English documents get the English title; Arabic and bilingual
+    // documents never print English the store did not type.
+    return ReceiptConfigurationContract.languageMode(config.language).isEnglish
+        ? 'Sales Return'
+        : 'مرتجع مبيعات';
   }
 
   static List<OrderDetailsModelDataCartItem> _returnItemsToCartItems(

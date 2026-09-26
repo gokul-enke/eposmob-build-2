@@ -227,10 +227,7 @@ extension ReceiptSections on ReceiptLayoutParams {
 
     add('showCustomerName', customerName,
         gate: isVisible('showCustomerName'));
-    var phone = customerPhoneText;
-    final alternate = customerAlternatePhone?.trim() ?? '';
-    if (phone.isNotEmpty && alternate.isNotEmpty) phone = '$phone, $alternate';
-    add('showCustomerPhone', phone);
+    add('showCustomerPhone', customerPhoneLineText);
     add('showCustomerAddress', customerAddress,
         gate: isVisible('showCustomerAddress'));
     add('showCustomerVatNumber', customerVatNumber,
@@ -343,15 +340,20 @@ extension ReceiptSections on ReceiptLayoutParams {
   }
 
   /// Whether the line prints the `showWarranty` label.
+  /// Accepts the same truthy values as the thermal StandardReceiptLayout
+  /// (`true`, `1`, `"1"`), plus the string `"true"`.
   bool itemHasWarranty(dynamic item) {
+    bool truthy(dynamic value) {
+      if (value == true) return true;
+      final text = value?.toString().trim().toLowerCase();
+      return text == '1' || text == 'true';
+    }
+
     if (item is Map) {
-      return item['warranty_enabled'] == true ||
-          item['warrantyEnabled'] == true ||
-          item['warranty_enabled'] == 1 ||
-          item['warrantyEnabled'] == 1;
+      return truthy(item['warranty_enabled']) || truthy(item['warrantyEnabled']);
     }
     try {
-      return item.warrantyEnabled == true;
+      return truthy(item.warrantyEnabled);
     } catch (_) {
       return false;
     }
@@ -465,7 +467,7 @@ extension ReceiptSections on ReceiptLayoutParams {
       if (name == item.productName && rate != 0.0) return (rate, mrp);
     }
     final returns = orderReturns;
-    final total = double.tryParse(returns?.returnTotalAmount ?? '0') ?? 0.0;
+    final total = double.tryParse((returns?.returnTotalAmount ?? '0').replaceAll(',', '')) ?? 0.0;
     num quantity = 0;
     for (final returned in returns?.returnItems ?? const <OrderReturnItem>[]) {
       quantity += returned.quantity ?? 0;
@@ -609,7 +611,7 @@ extension ReceiptSections on ReceiptLayoutParams {
       );
     }
 
-    final returnTotal = double.tryParse(returns.returnTotalAmount ?? '0') ?? 0.0;
+    final returnTotal = double.tryParse((returns.returnTotalAmount ?? '0').replaceAll(',', '')) ?? 0.0;
     final totalRows = <(String, double)>[
       if (isVisible('showReturnTotalAmount'))
         (
@@ -640,11 +642,15 @@ extension ReceiptSections on ReceiptLayoutParams {
       creditNoteRows: creditNoteRows,
       customerHeading: customerRows.isEmpty
           ? ''
-          : (retLabels?.customerHeading?.trim().isNotEmpty == true
-              ? retLabels!.customerHeading!.trim()
-              : rendererText(english: 'CUSTOMER DETAILS', arabic: 'بيانات العميل')),
+          : retLabel('showCreditNoteCustomerHeading', retLabels?.customerHeading,
+              'CUSTOMER DETAILS', 'بيانات العميل'),
       customerRows: customerRows,
-      itemsHeading: retLabels?.itemsHeading?.trim() ?? '',
+      // Printed only when the config supplies an items heading; the built-in
+      // text replaces it when it is in the wrong language for this document.
+      itemsHeading: retLabels?.itemsHeading?.trim().isNotEmpty == true
+          ? retLabel('showCreditNoteItemsHeading', retLabels?.itemsHeading,
+              'RETURNED ITEMS', 'العناصر المرتجعة')
+          : '',
       columns: columns,
       lines: lines,
       countRow: countRow,
@@ -661,7 +667,7 @@ extension ReceiptSections on ReceiptLayoutParams {
     final section = returnsSection;
     if (section == null || section.wordsHeading.isEmpty) return const [];
     final total =
-        double.tryParse(orderReturns?.returnTotalAmount ?? '0') ?? 0.0;
+        double.tryParse((orderReturns?.returnTotalAmount ?? '0').replaceAll(',', '')) ?? 0.0;
     return amountInWordsLines(total, currency: currency);
   }
 
@@ -669,10 +675,15 @@ extension ReceiptSections on ReceiptLayoutParams {
   List<ReceiptAmountRow> get finalSummaryRows {
     final section = returnsSection;
     if (section == null) return const [];
-    var returnTotal = 0.0;
+    // The API's return total is what the returns block prints, so the final
+    // summary uses it too; the per-line sum is only a fallback.
+    var lineSum = 0.0;
     for (final item in orderReturns!.returnItems!) {
-      returnTotal += (item.quantity ?? 0) * returnItemRate(item).$1;
+      lineSum += (item.quantity ?? 0) * returnItemRate(item).$1;
     }
+    final returnTotal = double.tryParse(
+            (orderReturns!.returnTotalAmount ?? '').replaceAll(',', '')) ??
+        lineSum;
     final orderTotal = netAmountValue;
     ReceiptLabelParts label(String key, String english, String arabic) =>
         ReceiptConfigurationContract.labelParts(

@@ -74,3 +74,13 @@ pw.Widget pdfText(
     );
   });
 }
+
+/// Shrinks [child] to fit a narrow cell instead of wrapping or clipping it.
+/// Empty [text] skips the FittedBox: the pdf package asserts on a
+/// zero-width child.
+pw.Widget pdfScaleDown(String text, pw.Widget child,
+    {pw.Alignment alignment = pw.Alignment.center}) {
+  if (text.trim().isEmpty) return child;
+  return pw.FittedBox(
+      fit: pw.BoxFit.scaleDown, alignment: alignment, child: child);
+}

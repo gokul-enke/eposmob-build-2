@@ -108,6 +108,19 @@ class _SalesScreenState extends State<SalesScreen> {
         docConfigProvider.getDocumentConfig("Bill");
   }
 
+  /// Credit-note config for the return section, resolved like the print flow
+  /// (PrintPage.autoPrint); null when the order has no returns.
+  DocumentConfig? _resolveReturnBillDocumentConfig(
+    DocumentConfigProvider docConfigProvider,
+    OrderDetailsModelData? orderData,
+  ) {
+    final hasReturns =
+        orderData?.orderReturns?.returnItems?.isNotEmpty ?? false;
+    if (!hasReturns) return null;
+    return docConfigProvider.getDocumentConfig("Credit Note") ??
+        docConfigProvider.getDocumentConfig("Return Bill");
+  }
+
   bool initLoading = false;
 
   /// Debounces the per-keystroke filter searches so typing fires one request
@@ -409,6 +422,20 @@ class _SalesScreenState extends State<SalesScreen> {
         customerVatNumber: orderData.kycInfo?.vatNumber,
         customerCrNumber: orderData.kycInfo?.crNumber,
         customerType: orderData.customerDetails?.customerType,
+        // Same values the print path (PrintService) passes.
+        paymentBreakdown: orderData.payments,
+        paidAmount: PrintService.paidAmountFromPayments(orderData.payments),
+        customerCurrentBalance: orderData.customerDetails?.customerBalance,
+        isDefaultCustomer: PrintService.isDefaultCustomerPhone(
+            context, orderData.customerDetails?.phone),
+        hideDefaultCustomerPhone: appSettings.hideDefaultPhone,
+        netExcTax: orderData.cart?.priceSummary?.netExcTax?.toString(),
+        apiTotalTax: orderData.priceSummary?.totalTax?.toDouble(),
+        tokenNumber: orderData.tokenNumber,
+        deliveryPhone: orderData.getDeliveryPhoneForDisplay(),
+        returnBillDocumentConfig:
+            _resolveReturnBillDocumentConfig(docConfigProvider, orderData),
+        storeName: orderData.cart?.storeName,
         storeLocation: storeForPdfShare1?.location,
         storePhone: storeForPdfShare1?.phone,
         storeEmail: storeForPdfShare1?.email,
@@ -806,9 +833,7 @@ class _SalesScreenState extends State<SalesScreen> {
         customerName: orderData.customerDetails?.name,
         customerPhone: orderData.customerDetails?.phone,
         customerEmail: orderData.customerDetails?.email,
-        customerAddress: orderData.customerDetails?.address?.isNotEmpty == true
-            ? orderData.customerDetails!.address!.join(', ')
-            : null,
+        customerAddress: orderData.getCustomerAddressForDisplay(),
         orderReturns: orderData.orderReturns,
         customerAlternatePhone: customerAlternatePhone,
         paymentMethod: paymentMethod,
@@ -817,6 +842,20 @@ class _SalesScreenState extends State<SalesScreen> {
         customerVatNumber: orderData.kycInfo?.vatNumber,
         customerCrNumber: orderData.kycInfo?.crNumber,
         customerType: orderData.customerDetails?.customerType,
+        // Same values the print path (PrintService) passes.
+        paymentBreakdown: orderData.payments,
+        paidAmount: PrintService.paidAmountFromPayments(orderData.payments),
+        customerCurrentBalance: orderData.customerDetails?.customerBalance,
+        isDefaultCustomer: PrintService.isDefaultCustomerPhone(
+            context, orderData.customerDetails?.phone),
+        hideDefaultCustomerPhone: appSettings.hideDefaultPhone,
+        netExcTax: orderData.cart?.priceSummary?.netExcTax?.toString(),
+        apiTotalTax: orderData.priceSummary?.totalTax?.toDouble(),
+        tokenNumber: orderData.tokenNumber,
+        deliveryPhone: orderData.getDeliveryPhoneForDisplay(),
+        returnBillDocumentConfig:
+            _resolveReturnBillDocumentConfig(docConfigProvider, orderData),
+        storeName: orderData.cart?.storeName,
         storeLocation: storeForPdfShare2?.location,
         storePhone: storeForPdfShare2?.phone,
         storeEmail: storeForPdfShare2?.email,

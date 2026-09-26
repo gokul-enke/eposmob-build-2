@@ -17,6 +17,7 @@ import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/whatsapp_provider.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/screens/print/print_standard.dart';
+import 'package:pos_machine/services/print_service.dart';
 import 'package:pos_machine/screens/sales/widgets/buid_order_details_widget.dart';
 import 'package:pos_machine/screens/sales/widgets/buid_order_return_details_widget.dart';
 import 'package:pos_machine/screens/sales/widgets/change_order_status_modal.dart';
@@ -69,6 +70,18 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
 
     return docConfigProvider.getDocumentConfig("Bill A4") ??
         docConfigProvider.getDocumentConfig("Bill");
+  }
+
+  /// Credit-note config for the return section, resolved like the print flow
+  /// (PrintPage.autoPrint); null when the order has no returns.
+  DocumentConfig? _resolveReturnBillDocumentConfig(
+    DocumentConfigProvider docConfigProvider,
+  ) {
+    final hasReturns =
+        orderDetailsModelData?.orderReturns?.returnItems?.isNotEmpty ?? false;
+    if (!hasReturns) return null;
+    return docConfigProvider.getDocumentConfig("Credit Note") ??
+        docConfigProvider.getDocumentConfig("Return Bill");
   }
 
   @override
@@ -464,31 +477,17 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                   }
                 }
 
-                // Calculate Paid Amount from payments map
-                double paidAmount = 0.0;
-                if (orderDetailsModelData?.payments != null) {
-                  orderDetailsModelData!.payments!.forEach((key, value) {
-                    paidAmount += double.tryParse(value.toString()) ?? 0.0;
-                  });
-                }
+                // Paid amount excluding DEBIT / CREDIT / BALANCE ledger keys,
+                // exactly as PrintService computes it.
+                final double? paidAmount = PrintService.paidAmountFromPayments(
+                    orderDetailsModelData?.payments);
 
-                // Calculate Balance from orderProps
-                double? customerCurrentBalance;
-                if (orderDetailsModelData?.orderProps != null) {
-                  try {
-                    final balanceProp =
-                        orderDetailsModelData!.orderProps!.firstWhere(
-                      (prop) => prop.propsCode == "BALANCE",
-                      orElse: () => OrderDetailsModelDataOrderProp(),
-                    );
-                    if (balanceProp.propsValue != null) {
-                      customerCurrentBalance =
-                          double.tryParse(balanceProp.propsValue.toString());
-                    }
-                  } catch (e) {
-                    debugPrint("Error extracting balance: $e");
-                  }
-                }
+                // Customer ledger balance, as PrintService uses. The stale
+                // order_props.BALANCE is deliberately not used.
+                final double? customerCurrentBalance =
+                    customerDetails?.customerBalance;
+                final String? deliveryPhone =
+                    orderDetailsModelData?.getDeliveryPhoneForDisplay();
 
                 // Try auto-print with default printer first
                 final _hasReturns =
@@ -518,8 +517,9 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                   customerType: customerType,
                   orderComment: orderComment,
                   deliveryMethod: deliveryMethod,
+                  deliveryPhone: deliveryPhone,
                   orderReturns: orderDetailsModelData?.orderReturns,
-                  paidAmount: paidAmount > 0 ? paidAmount : null,
+                  paidAmount: paidAmount,
                   customerCurrentBalance: customerCurrentBalance,
                   isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
                   netExcTax: orderDetailsModelData
@@ -557,8 +557,9 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                         customerType: customerType,
                         orderComment: orderComment,
                         deliveryMethod: deliveryMethod,
+                        deliveryPhone: deliveryPhone,
                         orderReturns: orderDetailsModelData?.orderReturns,
-                        paidAmount: paidAmount > 0 ? paidAmount : null,
+                        paidAmount: paidAmount,
                         customerCurrentBalance: customerCurrentBalance,
                         isDefaultCustomer:
                             _isDefaultCustomerPhone(customerPhone),
@@ -960,6 +961,21 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         customerVatNumber: orderDetailsModelData?.kycInfo?.vatNumber,
         customerCrNumber: orderDetailsModelData?.kycInfo?.crNumber,
         customerType: orderDetailsModelData?.customerDetails?.customerType,
+        // Same values the print path (PrintService) passes.
+        paymentBreakdown: orderDetailsModelData?.payments,
+        paidAmount:
+            PrintService.paidAmountFromPayments(orderDetailsModelData?.payments),
+        customerCurrentBalance: customerDetails?.customerBalance,
+        isDefaultCustomer: _isDefaultCustomerPhone(customerDetails?.phone),
+        hideDefaultCustomerPhone: appSettings.hideDefaultPhone,
+        netExcTax:
+            orderDetailsModelData?.cart?.priceSummary?.netExcTax?.toString(),
+        apiTotalTax: orderDetailsModelData?.priceSummary?.totalTax?.toDouble(),
+        tokenNumber: tokenNumber,
+        deliveryPhone: orderDetailsModelData?.getDeliveryPhoneForDisplay(),
+        returnBillDocumentConfig:
+            _resolveReturnBillDocumentConfig(docConfigProvider),
+        storeName: orderDetailsModelData?.cart?.storeName,
         storeLocation: storeForShare?.location,
         storePhone: storeForShare?.phone,
         storeEmail: storeForShare?.email,

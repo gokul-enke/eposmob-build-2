@@ -53,13 +53,39 @@ class PrintService {
   }
 
   /// Helper method to check if a phone number matches the default customer phone from app settings
-  bool _isDefaultCustomerPhone(BuildContext context, String? phone) {
+  bool _isDefaultCustomerPhone(BuildContext context, String? phone) =>
+      isDefaultCustomerPhone(context, phone);
+
+  /// Whether [phone] is the store's auto-assigned default (walk-in) customer
+  /// phone. Shared by the print and Share-PDF paths.
+  static bool isDefaultCustomerPhone(BuildContext context, String? phone) {
     if (phone == null || phone.isEmpty) return false;
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final defaultPhone =
         appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
     return defaultPhone.isNotEmpty && phone == defaultPhone;
+  }
+
+  /// Total actually paid from an order's `payments` map, excluding the ledger
+  /// keys (DEBIT / CREDIT / BALANCE); null when nothing was paid. Shared by
+  /// the print and Share-PDF paths so both show the same Paid amount.
+  static double? paidAmountFromPayments(Map<String, dynamic>? payments) {
+    if (payments == null) return null;
+    const excludedKeys = {'DEBIT', 'CREDIT', 'BALANCE'};
+    final totalPaid = payments.entries
+        .where((e) => !excludedKeys.contains(e.key.trim().toUpperCase()))
+        .fold<double>(
+      0.0,
+      (sum, e) {
+        final val = e.value;
+        return sum +
+            (val is num
+                ? val.toDouble()
+                : double.tryParse(val.toString()) ?? 0.0);
+      },
+    );
+    return totalPaid > 0 ? totalPaid : null;
   }
 
   /// Shows print options when the order has sales returns; otherwise prints combined.
@@ -314,18 +340,10 @@ class PrintService {
         return false;
       }
 
-      final customerBalance = () {
-        if (orderDetails.data?.orderProps == null) return null;
-        try {
-          final balanceProp = orderDetails.data!.orderProps!.firstWhere(
-            (prop) => prop.propsCode == 'BALANCE',
-            orElse: () => OrderDetailsModelDataOrderProp(),
-          );
-          return balanceProp.propsValue?.toString();
-        } catch (_) {
-          return null;
-        }
-      }();
+      // Customer ledger balance, as the sales path uses. order_props.BALANCE
+      // is deliberately not used: it has been observed stale.
+      final customerBalance =
+          orderDetails.data?.customerDetails?.customerBalance?.toString();
 
       Navigator.push(
         context,
@@ -378,11 +396,11 @@ class PrintService {
     final formattedTotal = isSalesOnly
         ? _calculateTotalFromCartItems(cartItems)
         : orderDetails.data?.cart?.priceSummary?.netPayable?.toString() ??
-            orderDetails.data?.cart?.priceSummary?.netTotal.toString() ??
+            orderDetails.data?.cart?.priceSummary?.netTotal?.toString() ??
             '0.00';
     final savedTotal = isSalesOnly
         ? _calculateSavedTotalFromCartItems(cartItems)
-        : orderDetails.data?.cart?.priceSummary?.savedTotal.toString() ??
+        : orderDetails.data?.cart?.priceSummary?.savedTotal?.toString() ??
             '0.00';
 
     final storeName = cart.storeName ?? '';
@@ -402,23 +420,7 @@ class PrintService {
         orderDetails.data?.paymentDetails?.paymentMethod ?? 'N/A';
     final Map<String, dynamic>? paymentBreakdown = orderDetails.data?.payments;
 
-    double? paidAmount;
-    if (paymentBreakdown != null) {
-      const excludedKeys = {'DEBIT', 'CREDIT', 'BALANCE'};
-      final totalPaid = paymentBreakdown.entries
-          .where((e) => !excludedKeys.contains(e.key.trim().toUpperCase()))
-          .fold<double>(
-        0.0,
-        (sum, e) {
-          final val = e.value;
-          return sum +
-              (val is num
-                  ? val.toDouble()
-                  : double.tryParse(val.toString()) ?? 0.0);
-        },
-      );
-      if (totalPaid > 0) paidAmount = totalPaid;
-    }
+    final double? paidAmount = paidAmountFromPayments(paymentBreakdown);
 
     String? orderComment;
     double? customerOldBalance;

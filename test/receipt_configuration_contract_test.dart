@@ -30,6 +30,11 @@ void main() {
           ReceiptLanguageMode.bilingual);
       expect(ReceiptConfigurationContract.languageMode('ar_en'),
           ReceiptLanguageMode.bilingual);
+      for (final raw in ['en-ar', 'AR-EN', ' bilingual ']) {
+        expect(ReceiptConfigurationContract.languageMode(raw),
+            ReceiptLanguageMode.bilingual,
+            reason: raw);
+      }
     });
 
     test('keeps unset language compatible with existing English fallback', () {
@@ -407,8 +412,9 @@ void main() {
             arabicFallback: 'رقم الفاتورة: ',
           );
       expect(prefix(ReceiptLanguageMode.english), 'INV-');
-      expect(prefix(ReceiptLanguageMode.arabic), 'رقم الفاتورة:');
-      expect(prefix(ReceiptLanguageMode.bilingual), 'رقم الفاتورة:');
+      // Untrimmed, so the number is not glued to the colon.
+      expect(prefix(ReceiptLanguageMode.arabic), 'رقم الفاتورة: ');
+      expect(prefix(ReceiptLanguageMode.bilingual), 'رقم الفاتورة: ');
     });
   });
 

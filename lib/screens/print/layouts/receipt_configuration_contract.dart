@@ -113,11 +113,13 @@ class ReceiptConfigurationContract {
 
   static ReceiptLanguageMode languageMode(String? raw) {
     if (raw == null) return ReceiptLanguageMode.english;
-    switch (raw.trim().toLowerCase()) {
+    // The admin UI also stores `en-ar`, `ar-en` and `bilingual`.
+    switch (raw.toLowerCase().trim().replaceAll('-', '_')) {
       case 'ar':
         return ReceiptLanguageMode.arabic;
       case 'en_ar':
       case 'ar_en':
+      case 'bilingual':
         return ReceiptLanguageMode.bilingual;
       case 'en':
         return ReceiptLanguageMode.english;
@@ -144,11 +146,10 @@ class ReceiptConfigurationContract {
       option(options, key)?.visible == true;
 
   /// Resolves a configured label according to the API's current semantics:
-  /// `default` is English and `value` is Arabic. A same-script value is always
-  /// preferred, but configured text is never dropped for being in the other
-  /// script: when a store configures only Arabic on an English document, that
-  /// Arabic is what prints. Renderer fallbacks apply only to keys the store
-  /// left empty.
+  /// `default` is English and `value` is Arabic. A single-language document
+  /// prints only its own language: the typed text for that language, else the
+  /// built-in text of that language. English templates store their typed
+  /// English in `value`, so an English document still reads Latin text there.
   ///
   /// [resolvedEnglish]/[resolvedArabic] come from the response's
   /// `resolved_labels`, which are master-data defaults keyed by concept rather
@@ -358,7 +359,9 @@ class ReceiptConfigurationContract {
     final prefix = _clean(configured);
     if (prefix.isNotEmpty) return prefix;
     // Bilingual documents add no English the store did not type.
-    return mode.isEnglish ? _clean(englishFallback) : _clean(arabicFallback);
+    // Fallbacks are returned untrimmed: a trailing space separates the
+    // built-in prefix (e.g. 'رقم الفاتورة: ') from the number.
+    return mode.isEnglish ? englishFallback : arabicFallback;
   }
 
   static String _clean(dynamic value) => value?.toString().trim() ?? '';

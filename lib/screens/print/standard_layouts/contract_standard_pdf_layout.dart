@@ -345,13 +345,6 @@ class ContractStandardPdfRenderer {
     }
     final lines = params.itemLines;
     final warranty = params.warrantyLabel;
-    const moneyKeys = {
-      'showMRP',
-      'showRate',
-      'showRateExcTax',
-      'showTaxHeader',
-      'showTotal',
-    };
 
     pw.Widget valueCell(ReceiptItemLine line, String key) {
       if (key == 'showParticulars') {
@@ -361,23 +354,26 @@ class ContractStandardPdfRenderer {
             if (line.hasWarranty && warranty.isNotEmpty) warranty,
           ],
           fonts.small,
-          align: pw.TextAlign.left,
+          align: _pageRtl ? pw.TextAlign.right : pw.TextAlign.left,
         );
       }
-      final value = line.valueFor(key);
       return _cellLines(
-        [moneyKeys.contains(key) ? _money(value, currency) : value],
+        [line.valueFor(key)],
         fonts.small,
         align: pw.TextAlign.center,
       );
     }
+
+    // pw.Table ignores the page direction, so Arabic documents reverse the
+    // column order themselves (first column on the right).
+    final ordered = _pageRtl ? columns.reversed.toList() : columns;
 
     final tableRows = <pw.TableRow>[
       pw.TableRow(
         repeat: true,
         decoration: pw.BoxDecoration(color: accent),
         children: [
-          for (final column in columns)
+          for (final column in ordered)
             _cellLines(
               [column.label.arabic, column.label.english],
               fonts.tableHeader,
@@ -393,7 +389,7 @@ class ContractStandardPdfRenderer {
                 : const PdfColor.fromInt(0xFFF5F7FA),
           ),
           children: [
-            for (final column in columns) valueCell(lines[index], column.key),
+            for (final column in ordered) valueCell(lines[index], column.key),
           ],
         ),
     ];
@@ -408,9 +404,9 @@ class ContractStandardPdfRenderer {
       pw.Table(
         border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
         columnWidths: {
-          for (var i = 0; i < columns.length; i++)
+          for (var i = 0; i < ordered.length; i++)
             i: pw.FlexColumnWidth(
-                columns[i].key == 'showParticulars' ? 3 : 1),
+                ordered[i].key == 'showParticulars' ? 3 : 1),
         },
         children: tableRows,
       ),
@@ -513,19 +509,22 @@ class ContractStandardPdfRenderer {
           .add(_sectionTitle(section.itemsHeading, fonts.bodyBold, accent, scale));
     }
     if (section.columns.isNotEmpty) {
+      // pw.Table ignores the page direction; mirror the columns on Arabic.
+      final columns =
+          _pageRtl ? section.columns.reversed.toList() : section.columns;
       widgets.add(pw.Table(
         border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
         columnWidths: {
-          for (var i = 0; i < section.columns.length; i++)
+          for (var i = 0; i < columns.length; i++)
             i: pw.FlexColumnWidth(
-                section.columns[i].key == 'showReturnParticulars' ? 3 : 1),
+                columns[i].key == 'showReturnParticulars' ? 3 : 1),
         },
         children: [
           pw.TableRow(
             repeat: true,
             decoration: pw.BoxDecoration(color: accent),
             children: [
-              for (final column in section.columns)
+              for (final column in columns)
                 _cellLines([column.label.joined(inline: true)],
                     fonts.tableHeader,
                     align: pw.TextAlign.center),
@@ -533,10 +532,10 @@ class ContractStandardPdfRenderer {
           ),
           for (final line in section.lines)
             pw.TableRow(children: [
-              for (final column in section.columns)
+              for (final column in columns)
                 _cellLines([line[column.key] ?? ''], fonts.small,
                     align: column.key == 'showReturnParticulars'
-                        ? pw.TextAlign.left
+                        ? (_pageRtl ? pw.TextAlign.right : pw.TextAlign.left)
                         : pw.TextAlign.center),
             ]),
         ],
@@ -600,11 +599,13 @@ class ContractStandardPdfRenderer {
           children.add(pw.SizedBox(height: 2 * scale));
         }
         children.add(
-          pw.BarcodeWidget(
-            barcode: pw.Barcode.qrCode(),
-            data: qr,
-            width: 82 * scale,
-            height: 82 * scale,
+          pw.Center(
+            child: pw.BarcodeWidget(
+              barcode: pw.Barcode.qrCode(),
+              data: qr,
+              width: 82 * scale,
+              height: 82 * scale,
+            ),
           ),
         );
       }
@@ -613,7 +614,10 @@ class ContractStandardPdfRenderer {
       children.add(_centerLines(params.vatFooterText, fonts.small));
     }
     final terms = params.termsText;
-    if (terms.isNotEmpty) children.add(_centerLines(terms, fonts.small));
+    // One widget per line so a long terms block can break across pages.
+    for (final line in terms.split('\n')) {
+      if (line.trim().isNotEmpty) children.add(_centerLines(line, fonts.small));
+    }
     final thankYou = params.thankYouText;
     if (thankYou.isNotEmpty) {
       children.add(_centerLines(thankYou, fonts.bodyBold));
@@ -621,18 +625,55 @@ class ContractStandardPdfRenderer {
     if (params.orderNumberFooterText.isNotEmpty) {
       children.add(_centerLines(params.orderNumberFooterText, fonts.small));
     }
-    if (children.isEmpty) return const <pw.Widget>[];
+
+    // Signatures: `Caption: ____` on English documents; otherwise the caption
+    // sits on the right of the line.
+    children.add(pw.SizedBox(height: 14 * scale));
+    children.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          _signature(params.customerSignatureLabel, fonts.body,
+              captionRight: !params.receiptLanguageMode.isEnglish),
+          _signature(params.salesmanSignatureLabel, fonts.body,
+              captionRight: !params.receiptLanguageMode.isEnglish),
+        ],
+      ),
+    );
+
+    // The divider and each footer line are separate page widgets so long
+    // terms can break across pages.
     return <pw.Widget>[
       pw.SizedBox(height: 4 * scale),
       pw.Container(
         width: double.infinity,
-        padding: pw.EdgeInsets.only(top: 7 * scale),
+        height: 7 * scale,
         decoration: pw.BoxDecoration(
           border: pw.Border(top: pw.BorderSide(color: accent, width: 1)),
         ),
-        child: pw.Column(children: children),
       ),
+      ...children,
     ];
+  }
+
+  pw.Widget _signature(String caption, pw.TextStyle style,
+      {required bool captionRight}) {
+    const line = '____________________';
+    if (!captionRight) {
+      return pw.Row(children: [
+        pdfText('$caption: ', style: style),
+        pdfText(line, style: style),
+      ]);
+    }
+    // A Row runs right-to-left on an Arabic page, so the first child is the
+    // rightmost one there.
+    final lineText = pdfText(line, style: style);
+    final captionText = pdfText(caption, style: style);
+    return pw.Row(
+      children: _pageRtl
+          ? [captionText, pw.SizedBox(width: 6), lineText]
+          : [lineText, pw.SizedBox(width: 6), captionText],
+    );
   }
 
   pw.Widget _sectionBox(
@@ -667,7 +708,7 @@ class ContractStandardPdfRenderer {
       child: pdfText(
         title,
         style: style.copyWith(color: accent),
-        textAlign: pw.TextAlign.left,
+        textAlign: _pageRtl ? pw.TextAlign.right : pw.TextAlign.left,
         textDirection: _dir(title),
       ),
     );
@@ -701,7 +742,7 @@ class ContractStandardPdfRenderer {
           pw.Expanded(
             child: pdfText(value,
                 style: style,
-                textAlign: pw.TextAlign.right,
+                textAlign: _pageRtl ? pw.TextAlign.left : pw.TextAlign.right,
                 textDirection: _dir(value) ?? pw.TextDirection.ltr),
           ),
         ],
@@ -721,7 +762,9 @@ class ContractStandardPdfRenderer {
   /// Centred text; a bilingual `Arabic\nEnglish` string becomes one Text per
   /// line so each script keeps its own direction.
   pw.Widget _centerLines(String text, pw.TextStyle style) {
-    return pw.Padding(
+    // Full width so the lines stay centred even as a top-level page widget.
+    return pw.Container(
+      width: double.infinity,
       padding: const pw.EdgeInsets.symmetric(vertical: 1.5),
       child: pw.Column(
         children: [
@@ -743,9 +786,16 @@ class ContractStandardPdfRenderer {
     return pw.Padding(
       padding: const pw.EdgeInsets.all(3),
       child: pw.Column(
-        crossAxisAlignment: align == pw.TextAlign.left
-            ? pw.CrossAxisAlignment.start
-            : pw.CrossAxisAlignment.center,
+        // Column cross-axis start/end follow the page direction.
+        crossAxisAlignment: switch (align) {
+          pw.TextAlign.left => _pageRtl
+              ? pw.CrossAxisAlignment.end
+              : pw.CrossAxisAlignment.start,
+          pw.TextAlign.right => _pageRtl
+              ? pw.CrossAxisAlignment.start
+              : pw.CrossAxisAlignment.end,
+          _ => pw.CrossAxisAlignment.center,
+        },
         children: [
           for (final line in visible)
             pdfText(line,
@@ -784,7 +834,7 @@ class ContractStandardPdfRenderer {
     final source = _clean(params.billDocumentConfig.logo);
     if (source.isEmpty) return null;
     try {
-      return PrintLogoLoader.loadPdfLogo(
+      return await PrintLogoLoader.loadPdfLogo(
         source,
         tag: '[ContractStandardPdfRenderer]',
       );
@@ -859,7 +909,9 @@ class ContractStandardPdfRenderer {
         ? value.toDouble()
         : double.tryParse(_clean(value).replaceAll(',', '')) ?? 0;
     final formatted = amount.toStringAsFixed(2);
-    return currency.trim().isEmpty ? formatted : '$currency $formatted';
+    final prefix =
+        currency.trim().toUpperCase() == 'INR' ? 'Rs.' : currency.trim();
+    return prefix.isEmpty ? formatted : '$prefix $formatted';
   }
 
   String _clean(dynamic value) => value?.toString().trim() ?? '';

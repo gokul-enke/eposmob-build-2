@@ -45,6 +45,14 @@ class AmountHelper {
   // Add this utility function to convert numbers to words
   String convertNumberToWords(double number,
       {String currency = 'INR', String language = 'en'}) {
+    // Negative amounts (e.g. a final total after returns) are spelled as the
+    // absolute value with a leading minus word, never as empty words.
+    if (number < 0) {
+      final isArabic = language.toLowerCase() == 'ar';
+      final words =
+          convertNumberToWords(-number, currency: currency, language: language);
+      return isArabic ? 'سالب $words' : 'Minus $words';
+    }
     // Route to language-specific implementations
     if (language.toLowerCase() == 'ar') {
       return _convertNumberToWordsArabic(number, currency: currency);

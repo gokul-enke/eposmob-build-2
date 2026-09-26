@@ -1034,7 +1034,8 @@ class _CommonReceiptPreviewState extends State<_CommonReceiptPreview> {
       deliveryPhone: '+966 50 123 4567',
       customerAlternatePhone: '+966 50 123 4567',
       paymentMethod: 'Cash',
-      paymentBreakdown: const {'Cash': 30.0, 'Card': 20.0},
+      // Sums to paidAmount; old 100 + total 50 - paid 30 = current 120.
+      paymentBreakdown: const {'Cash': 10.0, 'Card': 20.0},
       customerVatNumber: '310000000000003',
       customerCrNumber: '1010123456',
       customerType: widget.isB2B ? 'B2B' : 'B2C',
