@@ -13,6 +13,7 @@
     "hint_refund_amount": "Enter refund amount",
     "title": "Cancel Order",
     "description": "Select a payment method and refund amount for this order.",
+    "unpaid_cod_description": "This unpaid Cash on Delivery order can be cancelled without refund details.",
     "refund_amount": "Refund Amount",
     "original_total": "Original total: @amount",
     "delivery_charge_refundable": "Delivery Charge Refundable",

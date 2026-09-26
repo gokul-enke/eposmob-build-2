@@ -2308,6 +2308,7 @@ Powered by CloudPOS''',
                             showDialog(
                               context: context,
                               builder: (dialogCtx) => CancelOrderModal(
+                                isUnpaidCod: order.isUnpaidCod,
                                 initialRefundAmount:
                                     order.priceSummary?.grandTotal ??
                                         order.grantTotal ??
