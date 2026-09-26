@@ -684,7 +684,6 @@ class CategoryProvider extends ChangeNotifier {
       ..headers['X-Tenant'] = apiKey
       ..fields['name'] = categoryName
       ..fields['slug'] = slug
-      ..fields['sort_order'] = '0'
       ..fields['is_sellable'] = isSellable ? '1' : '0'
       ..fields['is_purchasable'] = isPurchasable ? '1' : '0';
 
@@ -875,8 +874,7 @@ class CategoryProvider extends ChangeNotifier {
       ..headers['Authorization'] = 'Bearer $accessToken'
       ..headers['X-Tenant'] = apiKey
       ..fields['name'] = categoryName
-      ..fields['slug'] = slug
-            ..fields['sort_order'] = '0';
+      ..fields['slug'] = slug;
 
     request.fields['is_sellable'] = isSellable ? '1' : '0';
     request.fields['is_purchasable'] = isPurchasable ? '1' : '0';
