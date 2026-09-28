@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -384,23 +385,42 @@ class MultiLineReceiptTableRow extends ReceiptRow {
     }
   }
 
+  /// Bilingual headers arrive as "Arabic\nEnglish". Shrink the font (down to
+  /// the column's minScale) until each typed line fits on one line; if a line
+  /// is still too wide, let it wrap instead of truncating, so a narrow column
+  /// never splits a word into a clipped second line or drops the English line.
   TextPainter _createPainter(ReceiptTableColumn col, double totalWidth,
       double fontSize, TextDirection textDirection) {
-    return TextPainter(
-      text: TextSpan(
-        text: col.text,
-        style: TextStyle(
-          color: Colors.black,
-          fontSize: fontSize * col.scale,
-          fontWeight: col.isBold ? FontWeight.bold : FontWeight.normal,
-          fontFamily: ArabicPrinterHelper.fontFamily,
-        ),
-      ),
-      textDirection: textDirection,
-      textAlign: col.align,
-      maxLines: maxLines,
-    )..layout(
-        maxWidth: ((totalWidth * col.weight) - (col.horizontalPadding * 2))
-            .clamp(0.0, double.infinity));
+    final maxWidth = ((totalWidth * col.weight) - (col.horizontalPadding * 2))
+        .clamp(0.0, double.infinity);
+    final explicitLines = '\n'.allMatches(col.text).length + 1;
+    final minSize = fontSize * math.min(col.minScale, col.scale);
+    // Give each language line its own direction so an English line such as
+    // "E-RATE+" inside an RTL column keeps its punctuation in place.
+    final text = col.text.split('\n').map((line) {
+      final isolate = RegExp(r'[؀-ۿ]').hasMatch(line) ? '\u2067' : '\u2066';
+      return '$isolate$line\u2069';
+    }).join('\n');
+
+    TextPainter build(double size, int? lines) => TextPainter(
+          text: TextSpan(
+            text: text,
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: size,
+              fontWeight: col.isBold ? FontWeight.bold : FontWeight.normal,
+              fontFamily: ArabicPrinterHelper.fontFamily,
+            ),
+          ),
+          textDirection: col.textDirection ?? textDirection,
+          textAlign: col.align,
+          maxLines: lines,
+        )..layout(maxWidth: maxWidth);
+
+    for (var size = fontSize * col.scale; size >= minSize; size -= 0.5) {
+      final painter = build(size, explicitLines);
+      if (!painter.didExceedMaxLines) return painter;
+    }
+    return build(minSize, null);
   }
 }

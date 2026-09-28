@@ -63,7 +63,7 @@ class ReceiptLayoutParams {
   final bool isReturnOnly;
   final DocumentConfig? returnBillDocumentConfig;
 
-  const ReceiptLayoutParams({
+  ReceiptLayoutParams({
     required this.context,
     required this.selectedPrinter,
     required this.cartItems,
@@ -81,7 +81,7 @@ class ReceiptLayoutParams {
     this.customerName,
     this.customerPhone,
     this.customerEmail,
-    this.customerAddress,
+    String? customerAddress,
     this.orderReturns,
     this.customerOldBalance,
     this.customerCurrentBalance,
@@ -110,7 +110,20 @@ class ReceiptLayoutParams {
     this.apiTotalTax,
     this.isReturnOnly = false,
     this.returnBillDocumentConfig,
-  });
+  }) : customerAddress = printableAddress(customerAddress);
+
+  /// Saved addresses can carry empty parts rendered as the literal text
+  /// "null" (e.g. "177, 897, null, null"). Drop those parts so every layout
+  /// prints only the address the customer actually has.
+  static String? printableAddress(String? raw) {
+    if (raw == null) return null;
+    final parts = raw
+        .split(',')
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty && part.toLowerCase() != 'null')
+        .toList();
+    return parts.isEmpty ? null : parts.join(', ');
+  }
 
   /// Get the display configuration options from the document config
   Map<String, DisplayOption>? get displayConfig {
