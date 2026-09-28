@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/components/filter_toggle_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/report_provider.dart';
@@ -174,6 +175,27 @@ class _StockReportScreenState extends State<StockReportScreen> {
     loadInitData();
   }
 
+  bool _hasActiveFilters() =>
+      selectedStoreId != null ||
+      selectedCategoryId != null ||
+      selectedProductName != null ||
+      (selectedStockLevel != null && selectedStockLevel != 'All') ||
+      (selectedExpiryFilter != null && selectedExpiryFilter != 'All') ||
+      selectedFromDate != null ||
+      selectedUntilDate != null ||
+      selectedSnapshotDate != null;
+
+  Widget _buildFilterToggleButton() {
+    return FilterToggleButton(
+      key: const ValueKey('stock-report-filter-toggle'),
+      showFilters: _showFilters,
+      hasActiveFilters: _hasActiveFilters(),
+      onPressed: () => setState(() => _showFilters = !_showFilters),
+      showTooltip: 'stock_report.filters'.tr,
+      hideTooltip: 'stock_report.hide'.tr,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     ReportsProvider reportsProvider = Provider.of<ReportsProvider>(context);
@@ -183,7 +205,11 @@ class _StockReportScreenState extends State<StockReportScreen> {
       children: [
         _buildHeader(),
         const SizedBox(height: 15),
-        if (_showFilters) _buildFilters(),
+        if (_showFilters)
+          KeyedSubtree(
+            key: const ValueKey('stock-report-filters'),
+            child: _buildFilters(),
+          ),
         if (_showFilters) const SizedBox(height: 15),
         _buildSummaryBlock(reportsProvider),
         const SizedBox(height: 15),
@@ -242,28 +268,7 @@ class _StockReportScreenState extends State<StockReportScreen> {
             ),
           ),
         ),
-        Row(
-          children: [
-            if (_isMobile(context))
-              TextButton.icon(
-                onPressed: () => setState(() => _showFilters = !_showFilters),
-                icon: Icon(
-                  _showFilters ? Icons.filter_list_off : Icons.filter_list,
-                  size: 18,
-                  color: ColorManager.kPrimaryColor,
-                ),
-                label: Text(
-                  _showFilters
-                      ? 'stock_report.hide'.tr
-                      : 'stock_report.filters'.tr,
-                  style: const TextStyle(
-                    color: ColorManager.kPrimaryColor,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-          ],
-        ),
+        _buildFilterToggleButton(),
       ],
     );
   }

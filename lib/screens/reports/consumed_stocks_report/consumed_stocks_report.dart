@@ -5,6 +5,7 @@ import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_border.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/components/filter_toggle_button.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
@@ -129,6 +130,30 @@ class _ConsumedStocksReportScreenState
     loadInitData(page: 1);
   }
 
+  bool _hasActiveFilters() =>
+      searchController.text.isNotEmpty ||
+      fromDateController.text.isNotEmpty ||
+      untilDateController.text.isNotEmpty ||
+      selectedProductId != null ||
+      selectedStoreId != null;
+
+  Widget _buildFilterToggleButton() {
+    return FilterToggleButton(
+      key: const ValueKey('consumed-stocks-report-filter-toggle'),
+      showFilters: _showFilters,
+      hasActiveFilters: _hasActiveFilters(),
+      activeFiltersListenable: Listenable.merge([
+        searchController,
+        fromDateController,
+        untilDateController,
+      ]),
+      activeFiltersBuilder: _hasActiveFilters,
+      onPressed: () => setState(() => _showFilters = !_showFilters),
+      showTooltip: 'consumed_stocks_report.filters'.tr,
+      hideTooltip: 'consumed_stocks_report.hide'.tr,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     ReportsProvider reportsProvider = Provider.of<ReportsProvider>(context);
@@ -164,7 +189,11 @@ class _ConsumedStocksReportScreenState
             children: [
               _buildPageHeader(),
               const SizedBox(height: 15),
-              if (_showFilters) _buildFilters(reportData, productProvider),
+              if (_showFilters)
+                KeyedSubtree(
+                  key: const ValueKey('consumed-stocks-report-filters'),
+                  child: _buildFilters(reportData, productProvider),
+                ),
               if (_showFilters) const SizedBox(height: 15),
               _buildReportContent(reportData, pagination),
             ],
@@ -189,20 +218,7 @@ class _ConsumedStocksReportScreenState
             ),
           ),
         ),
-        if (_isMobile(context))
-          TextButton.icon(
-            onPressed: () => setState(() => _showFilters = !_showFilters),
-            icon: Icon(
-              _showFilters ? Icons.filter_list_off : Icons.filter_list,
-              size: 18,
-              color: ColorManager.kPrimaryColor,
-            ),
-            label: Text(
-              _showFilters ? 'consumed_stocks_report.hide'.tr : 'consumed_stocks_report.filters'.tr,
-              style: const TextStyle(
-                  color: ColorManager.kPrimaryColor, fontSize: 12),
-            ),
-          ),
+        _buildFilterToggleButton(),
       ],
     );
   }

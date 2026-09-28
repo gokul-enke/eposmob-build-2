@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/components/filter_toggle_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/supplier.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -372,6 +373,29 @@ class _SupplierTransactionReportScreenState
     loadInitData();
   }
 
+  bool _hasActiveFilters() =>
+      _supplierController.text.isNotEmpty ||
+      _fromDateController.text.isNotEmpty ||
+      _toDateController.text.isNotEmpty ||
+      selectedSupplierId != null;
+
+  Widget _buildFilterToggleButton() {
+    return FilterToggleButton(
+      key: const ValueKey('supplier-transactions-report-filter-toggle'),
+      showFilters: _showFilters,
+      hasActiveFilters: _hasActiveFilters(),
+      activeFiltersListenable: Listenable.merge([
+        _supplierController,
+        _fromDateController,
+        _toDateController,
+      ]),
+      activeFiltersBuilder: _hasActiveFilters,
+      onPressed: () => setState(() => _showFilters = !_showFilters),
+      showTooltip: 'supplier_transaction_report.filters'.tr,
+      hideTooltip: 'supplier_transaction_report.hide'.tr,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
@@ -406,7 +430,12 @@ class _SupplierTransactionReportScreenState
               children: [
                 _buildHeader(size),
                 const SizedBox(height: 15),
-                if (_showFilters) _buildFilters(),
+                if (_showFilters)
+                  KeyedSubtree(
+                    key: const ValueKey(
+                        'supplier-transactions-report-filters'),
+                    child: _buildFilters(),
+                  ),
                 if (_showFilters) const SizedBox(height: 20),
                 _buildReportTable(),
                 const SizedBox(height: 10),
@@ -434,20 +463,7 @@ class _SupplierTransactionReportScreenState
             ),
           ),
         ),
-        if (_isMobile(context))
-          TextButton.icon(
-            onPressed: () => setState(() => _showFilters = !_showFilters),
-            icon: Icon(
-              _showFilters ? Icons.filter_list_off : Icons.filter_list,
-              size: 18,
-              color: ColorManager.kPrimaryColor,
-            ),
-            label: Text(
-              _showFilters ? 'supplier_transaction_report.hide'.tr : 'supplier_transaction_report.filters'.tr,
-              style: const TextStyle(
-                  color: ColorManager.kPrimaryColor, fontSize: 12),
-            ),
-          ),
+        _buildFilterToggleButton(),
       ],
     );
   }
