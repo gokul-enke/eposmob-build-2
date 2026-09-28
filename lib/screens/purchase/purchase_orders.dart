@@ -4,6 +4,7 @@ import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/components/filter_toggle_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -288,46 +289,20 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
   }
 
   Widget _buildFilterToggleButton() {
-    final hasFilters = _hasActiveFilters();
-
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          IconButton(
-            icon: Icon(
-              _showFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
-              color: ColorManager.kPrimaryColor,
-            ),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(
-              minWidth: 44,
-              minHeight: 44,
-            ),
-            onPressed: () {
-              setState(() {
-                _showFilters = !_showFilters;
-              });
-            },
-            tooltip: _showFilters ? 'purchase_order.hide_filters'.tr : 'purchase_order.show_filters'.tr,
-          ),
-          if (hasFilters)
-            PositionedDirectional(
-              end: 6,
-              top: 6,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-        ],
-      ),
+    return FilterToggleButton(
+      key: const ValueKey('purchase-order-filter-toggle'),
+      showFilters: _showFilters,
+      hasActiveFilters: _hasActiveFilters(),
+      activeFiltersListenable: Listenable.merge([
+        supplierController,
+        storeController,
+        fromDateController,
+        toDateController,
+      ]),
+      activeFiltersBuilder: _hasActiveFilters,
+      onPressed: () => setState(() => _showFilters = !_showFilters),
+      showTooltip: 'purchase_order.show_filters'.tr,
+      hideTooltip: 'purchase_order.hide_filters'.tr,
     );
   }
 
@@ -363,8 +338,9 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
         children: [
           _buildHeader(provider),
           const SizedBox(height: 12),
-          if (!isPhone || _showFilters) ...[
+          if (_showFilters) ...[
             ConstrainedBox(
+              key: const ValueKey('purchase-order-filters'),
               constraints: BoxConstraints(
                 maxHeight: MediaQuery.of(context).size.height * 0.55,
               ),
@@ -413,27 +389,38 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
 
   Widget _buildHeader(PurchaseProvider provider) {
     final isPhone = purchaseOrdersIsPhone(context);
+    final createButton = SizedBox(
+      width: isPhone ? double.infinity : 180,
+      child: CustomRoundButton(
+        key: const ValueKey('purchase-order-create-action'),
+        title: 'purchase_order.create_purchase_order_btn'.tr,
+        fct: () {
+          provider.activePurchaseOrderDetails = null;
+          provider.voucherDetails = null;
+          provider.listPurchaseItemView = [];
+          final SideBarController sideBarController = Get.find();
+          sideBarController.index.value = 82;
+        },
+        fontSize: 12,
+        height: 44,
+        width: isPhone ? double.infinity : 180,
+      ),
+    );
 
     return PurchaseOrdersPageHeader(
       title: 'purchase_order.title'.tr,
       subtitle: 'purchase_order.subtitle'.tr,
       leading: isPhone ? _buildFilterToggleButton() : null,
-      trailing: SizedBox(
-        width: isPhone ? double.infinity : 180,
-        child: CustomRoundButton(
-          title: 'purchase_order.create_purchase_order_btn'.tr,
-          fct: () {
-            provider.activePurchaseOrderDetails = null;
-            provider.voucherDetails = null;
-            provider.listPurchaseItemView = [];
-            final SideBarController sideBarController = Get.find();
-            sideBarController.index.value = 82;
-          },
-          fontSize: 12,
-          height: 44,
-          width: isPhone ? double.infinity : 180,
-        ),
-      ),
+      trailing: isPhone
+          ? createButton
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildFilterToggleButton(),
+                const SizedBox(width: 8),
+                createButton,
+              ],
+            ),
     );
   }
 

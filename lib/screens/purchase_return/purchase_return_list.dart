@@ -8,6 +8,7 @@ import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/components/filter_toggle_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/purchase_return_model.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -171,40 +172,19 @@ class _PurchaseReturnListScreenState extends State<PurchaseReturnListScreen> {
   }
 
   Widget _buildFilterToggleButton() {
-    final hasFilters = _hasActiveFilters();
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          IconButton(
-            icon: Icon(
-              _showFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
-              color: ColorManager.kPrimaryColor,
-            ),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-            onPressed: () => setState(() => _showFilters = !_showFilters),
-            tooltip: _showFilters
-                ? 'purchase_order.hide_filters'.tr
-                : 'purchase_order.show_filters'.tr,
-          ),
-          if (hasFilters)
-            PositionedDirectional(
-              end: 6,
-              top: 6,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-        ],
-      ),
+    return FilterToggleButton(
+      key: const ValueKey('purchase-return-filter-toggle'),
+      showFilters: _showFilters,
+      hasActiveFilters: _hasActiveFilters(),
+      activeFiltersListenable: Listenable.merge([
+        supplierController,
+        fromDateController,
+        toDateController,
+      ]),
+      activeFiltersBuilder: _hasActiveFilters,
+      onPressed: () => setState(() => _showFilters = !_showFilters),
+      showTooltip: 'purchase_order.show_filters'.tr,
+      hideTooltip: 'purchase_order.hide_filters'.tr,
     );
   }
 
@@ -212,6 +192,16 @@ class _PurchaseReturnListScreenState extends State<PurchaseReturnListScreen> {
   Widget build(BuildContext context) {
     final provider = Provider.of<PurchaseProvider>(context);
     final isPhone = purchaseOrdersIsPhone(context);
+    final createButton = CustomRoundButton(
+      key: const ValueKey('purchase-return-create-action'),
+      title: 'purchase_return.create_btn'.tr,
+      fct: () {
+        sideBarController.index.value = 100;
+      },
+      fontSize: 12,
+      height: 44,
+      width: isPhone ? double.infinity : 200,
+    );
 
     return PurchaseOrdersListShell(
       onRefresh: _resetFilters,
@@ -222,19 +212,21 @@ class _PurchaseReturnListScreenState extends State<PurchaseReturnListScreen> {
             title: 'purchase_return.title'.tr,
             subtitle: 'purchase_return.subtitle'.tr,
             leading: isPhone ? _buildFilterToggleButton() : null,
-            trailing: CustomRoundButton(
-              title: 'purchase_return.create_btn'.tr,
-              fct: () {
-                sideBarController.index.value = 100;
-              },
-              fontSize: 12,
-              height: 44,
-              width: isPhone ? double.infinity : 200,
-            ),
+            trailing: isPhone
+                ? createButton
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildFilterToggleButton(),
+                      const SizedBox(width: 8),
+                      createButton,
+                    ],
+                  ),
           ),
           const SizedBox(height: 12),
-          if (!isPhone || _showFilters) ...[
+          if (_showFilters) ...[
             ConstrainedBox(
+              key: const ValueKey('purchase-return-filters'),
               constraints: BoxConstraints(
                 maxHeight: MediaQuery.of(context).size.height * 0.55,
               ),
