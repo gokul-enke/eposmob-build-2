@@ -190,17 +190,29 @@ class QuotationDetailsData {
         json['customer_name']?.toString();
     final customerPhone =
         customerMap?['phone']?.toString() ?? json['customer_phone']?.toString();
-    // Orders return customer KYC as a top-level `kyc_info`; accept the same
-    // shape here so quotation reprints can show the customer's VAT / CR.
+    // Orders return customer KYC as a top-level `kyc_info` and the full
+    // customer as `customer_details`; accept the same shapes here, added
+    // alongside `customer`, so quotation prints match the order receipt.
     final kycInfo = json['kyc_info'] is Map
         ? Map<String, dynamic>.from(json['kyc_info'] as Map)
         : null;
-    final quotationCustomer = customerMap != null
+    final customerDetailsMap = json['customer_details'] is Map
+        ? Map<String, dynamic>.from(json['customer_details'] as Map)
+        : null;
+    final quotationCustomer = customerMap != null || customerDetailsMap != null
         ? QuotationCustomer.fromJson({
-            ...customerMap,
-            if (json['customer_id'] != null && customerMap['id'] == null)
+            // `customer` wins; `customer_details` fills what it leaves out.
+            ...?customerDetailsMap,
+            if (customerDetailsMap?['customer_id'] != null)
+              'id': customerDetailsMap!['customer_id'],
+            for (final entry in customerMap?.entries ??
+                const <MapEntry<String, dynamic>>[])
+              if (entry.value != null) entry.key: entry.value,
+            if (customerMap?['id'] == null &&
+                customerDetailsMap?['customer_id'] == null &&
+                json['customer_id'] != null)
               'id': json['customer_id'],
-            if (kycInfo != null && customerMap['kyc_info'] == null)
+            if (kycInfo != null && customerMap?['kyc_info'] == null)
               'kyc_info': kycInfo,
           })
         : (customerName != null || customerPhone != null
@@ -243,12 +255,50 @@ class QuotationDetailsData {
       items: parsedItems,
     );
   }
+
+  /// Printable customer address, same priority as the order receipt: the
+  /// quotation's delivery `address` first, then the customer's own address.
+  String? get customerAddressForDisplay =>
+      formatQuotationAddress(address) ?? customer?.address;
+}
+
+/// Formats an address the way the order receipt does for
+/// `customer_details.address`: address, landmark, city, state, pincode.
+/// Accepts a plain string, an address map, or a list of either (first
+/// non-empty entry wins).
+String? formatQuotationAddress(dynamic raw) {
+  if (raw == null) return null;
+  if (raw is List) {
+    for (final entry in raw) {
+      final formatted = formatQuotationAddress(entry);
+      if (formatted != null) return formatted;
+    }
+    return null;
+  }
+  if (raw is! Map) return _nonEmpty(raw);
+
+  final parts = <String>[];
+  void addPart(dynamic value) {
+    final text = _nonEmpty(value is Map ? value['name'] : value);
+    if (text != null && !parts.contains(text)) parts.add(text);
+  }
+
+  addPart(raw['address']);
+  addPart(raw['landmark']);
+  addPart(raw['city']);
+  addPart(raw['state']);
+  final pincode = raw['pincode'];
+  addPart(pincode is Map ? pincode['pin_code'] : pincode);
+  return parts.isEmpty ? null : parts.join(', ');
 }
 
 class QuotationCustomer {
   final int? id;
   final String? name;
   final String? phone;
+  final String? email;
+  final String? alternatePhone;
+  final String? address;
   final String? customerType;
   final String? vatNumber;
   final String? crNumber;
@@ -258,6 +308,9 @@ class QuotationCustomer {
     this.id,
     this.name,
     this.phone,
+    this.email,
+    this.alternatePhone,
+    this.address,
     this.customerType,
     this.vatNumber,
     this.crNumber,
@@ -283,6 +336,12 @@ class QuotationCustomer {
       phone: json['phone']?.toString() ??
           json['customer_phone']?.toString() ??
           user?['phone']?.toString(),
+      email: _nonEmpty(json['email'] ?? user?['email']),
+      alternatePhone: _nonEmpty(json['alternate_phone'] ??
+          json['alt_phone'] ??
+          user?['alternate_phone'] ??
+          user?['alt_phone']),
+      address: formatQuotationAddress(json['address'] ?? json['addresses']),
       customerType: _nonEmpty(json['customer_type'] ?? user?['customer_type']),
       vatNumber: _nonEmpty(json['vat_number']) ??
           _nonEmpty(kycInfo?['vat_number']) ??

@@ -48,6 +48,99 @@ void main() {
     });
   });
 
+  group('order-style customer_details on quotation details', () {
+    const service = QuotationPrintService();
+
+    // Current quotation-details shape, as returned by the API today.
+    Map<String, dynamic> currentResponse() => {
+          'id': 170,
+          'quotation_number': 'QTN-00126',
+          'customer': {
+            'id': 294,
+            'name': 'Gokul VAT Test',
+            'phone': '3213213212',
+            'is_inline': false,
+          },
+          'kyc_info': {'cr_number': '1234567890', 'vat_number': '654654546546'},
+          'address_id': null,
+          'address': null,
+          'delivery_method_name': 'Store Takeaway',
+        };
+
+    // Proposed shape: the current keys unchanged, plus the order-details
+    // `customer_details` block.
+    Map<String, dynamic> proposedResponse() => {
+          ...currentResponse(),
+          'customer_details': {
+            'name': 'Gokul VAT Test',
+            'email': 'accounts@example.com',
+            'phone': '3213213212',
+            'alternate_phone': '3232656532',
+            'customer_id': 294,
+            'customer_type': 'B2B',
+            'address': [
+              {
+                'id': 28,
+                'address': 'Calicut',
+                'city': null,
+                'landmark': 'Poolakode',
+                'state_id': 37,
+              },
+            ],
+            'customer_balance': -232,
+          },
+        };
+
+    test('current response still parses and prints VAT / CR, no address', () {
+      final payload = service
+          .buildPrintPayload(QuotationDetailsData.fromJson(currentResponse()));
+
+      expect(payload['customerName'], 'Gokul VAT Test');
+      expect(payload['customerVatNumber'], '654654546546');
+      expect(payload['customerCrNumber'], '1234567890');
+      expect(payload['customerAddress'], isNull);
+      expect(payload['customerEmail'], isNull);
+    });
+
+    test('customer_details adds address, email, alternate phone and type', () {
+      final details = QuotationDetailsData.fromJson(proposedResponse());
+      final payload = service.buildPrintPayload(details);
+
+      expect(details.customer?.id, 294);
+      expect(details.customer?.isInline, isFalse);
+      expect(payload['customerAddress'], 'Calicut, Poolakode');
+      expect(payload['customerEmail'], 'accounts@example.com');
+      expect(payload['customerAlternatePhone'], '3232656532');
+      expect(payload['customerType'], 'B2B');
+      expect(payload['customerVatNumber'], '654654546546');
+    });
+
+    test('customer_details alone (no customer block) is enough', () {
+      final json = proposedResponse()..remove('customer');
+      final details = QuotationDetailsData.fromJson(json);
+
+      expect(details.customer?.id, 294);
+      expect(details.customer?.name, 'Gokul VAT Test');
+      expect(details.customerAddressForDisplay, 'Calicut, Poolakode');
+    });
+
+    test('the quotation delivery address wins over the customer address', () {
+      final details = QuotationDetailsData.fromJson({
+        ...proposedResponse(),
+        'address_id': 31,
+        'address': {
+          'address': 'King Fahd Road',
+          'city': 'Riyadh',
+          'state': {'id': 1, 'name': 'Riyadh Region'},
+          'pincode': {'pin_code': '12211'},
+        },
+      });
+
+      expect(details.customerAddressForDisplay,
+          'King Fahd Road, Riyadh, Riyadh Region, 12211');
+    });
+  });
+
   group('QuotationPrintService payload', () {
     const service = QuotationPrintService();
 
