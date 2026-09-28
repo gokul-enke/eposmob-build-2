@@ -19,6 +19,8 @@ class SupplierListMobileView extends StatefulWidget {
   final VoidCallback onAddSupplier;
   final Function({String name, String email, String phone, String balance})
       onSearch;
+  final bool showFilters;
+  final Widget filterAction;
 
   const SupplierListMobileView({
     super.key,
@@ -30,6 +32,8 @@ class SupplierListMobileView extends StatefulWidget {
     required this.onReset,
     required this.onAddSupplier,
     required this.onSearch,
+    required this.showFilters,
+    required this.filterAction,
   });
 
   @override
@@ -37,16 +41,19 @@ class SupplierListMobileView extends StatefulWidget {
 }
 
 class _SupplierListMobileViewState extends State<SupplierListMobileView> {
-  bool _filtersExpanded = false;
-
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         _buildHeader(),
-        const SizedBox(height: 8),
-        _buildFiltersPanel(),
-        const SizedBox(height: 8),
+        if (widget.showFilters) ...[
+          const SizedBox(height: 8),
+          KeyedSubtree(
+            key: const ValueKey('supplier-list-mobile-filters'),
+            child: _buildFiltersPanel(),
+          ),
+          const SizedBox(height: 8),
+        ],
         Expanded(child: _buildList()),
       ],
     );
@@ -56,22 +63,34 @@ class _SupplierListMobileViewState extends State<SupplierListMobileView> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          'supplier_list_mobile.title'.tr,
-          style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s18,
-              0.25, ColorManager.textColor),
-        ),
-        ElevatedButton.icon(
-          onPressed: widget.onAddSupplier,
-          icon: const Icon(Icons.add, size: 16),
-          label: Text('supplier_list_mobile.btn_add_new'.tr, style: const TextStyle(fontSize: 12)),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: ColorManager.kPrimaryColor,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6)),
+        Expanded(
+          child: Text(
+            'supplier_list_mobile.title'.tr,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s18,
+                0.25, ColorManager.textColor),
           ),
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            widget.filterAction,
+            const SizedBox(width: 4),
+            ElevatedButton.icon(
+              onPressed: widget.onAddSupplier,
+              icon: const Icon(Icons.add, size: 16),
+              label: Text('supplier_list_mobile.btn_add_new'.tr,
+                  style: const TextStyle(fontSize: 12)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ColorManager.kPrimaryColor,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6)),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -90,76 +109,77 @@ class _SupplierListMobileViewState extends State<SupplierListMobileView> {
               offset: const Offset(0, 2)),
         ],
       ),
-      child: ExpansionTile(
-        onExpansionChanged: (v) => setState(() => _filtersExpanded = v),
-        leading: const Icon(Icons.filter_list, size: 18),
-        title: Text(
-          _filtersExpanded ? 'supplier_list_mobile.hide_filters'.tr : 'supplier_list_mobile.show_filters'.tr,
-          style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
-              0.18, ColorManager.textColor),
-        ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: Column(
-              children: [
-                _inputField(widget.nameController, 'supplier_list_mobile.hint_name'.tr, (v) {
-                  widget.onSearch(
-                    name: v,
-                    email: widget.emailController.text,
-                    phone: widget.phoneController.text,
-                    balance: widget.selectedBalanceFilter,
-                  );
-                }),
-                const SizedBox(height: 8),
-                _inputField(widget.emailController, 'supplier_list_mobile.hint_email'.tr, (v) {
-                  widget.onSearch(
-                    name: widget.nameController.text,
-                    email: v,
-                    phone: widget.phoneController.text,
-                    balance: widget.selectedBalanceFilter,
-                  );
-                }),
-                const SizedBox(height: 8),
-                _inputField(widget.phoneController, 'supplier_list_mobile.hint_phone'.tr, (v) {
-                  widget.onSearch(
-                    name: widget.nameController.text,
-                    email: widget.emailController.text,
-                    phone: v,
-                    balance: widget.selectedBalanceFilter,
-                  );
-                }),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: widget.selectedBalanceFilter,
-                  items: ['All', 'Positive (+ve)', 'Negative (-ve)', 'Zero (0)']
-                      .map((s) => DropdownMenuItem(
-                          value: s,
-                          child: Text(s, style: const TextStyle(fontSize: 12))))
-                      .toList(),
-                  onChanged: widget.onBalanceChanged,
-                  decoration: _inputDecoration('supplier_list_mobile.hint_balance'.tr),
-                  isExpanded: true,
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: widget.onReset,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: ColorManager.kPrimaryColor,
-                      side:
-                          const BorderSide(color: ColorManager.kPrimaryColor),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6)),
-                    ),
-                    child: Text('supplier_list_mobile.btn_reset'.tr),
-                  ),
-                ),
-              ],
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            _inputField(
+              widget.nameController,
+              'supplier_list_mobile.hint_name'.tr,
+              (v) {
+                widget.onSearch(
+                  name: v,
+                  email: widget.emailController.text,
+                  phone: widget.phoneController.text,
+                  balance: widget.selectedBalanceFilter,
+                );
+              },
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            _inputField(
+              widget.emailController,
+              'supplier_list_mobile.hint_email'.tr,
+              (v) {
+                widget.onSearch(
+                  name: widget.nameController.text,
+                  email: v,
+                  phone: widget.phoneController.text,
+                  balance: widget.selectedBalanceFilter,
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+            _inputField(
+              widget.phoneController,
+              'supplier_list_mobile.hint_phone'.tr,
+              (v) {
+                widget.onSearch(
+                  name: widget.nameController.text,
+                  email: widget.emailController.text,
+                  phone: v,
+                  balance: widget.selectedBalanceFilter,
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: widget.selectedBalanceFilter,
+              items: ['All', 'Positive (+ve)', 'Negative (-ve)', 'Zero (0)']
+                  .map((s) => DropdownMenuItem(
+                      value: s,
+                      child: Text(s, style: const TextStyle(fontSize: 12))))
+                  .toList(),
+              onChanged: widget.onBalanceChanged,
+              decoration:
+                  _inputDecoration('supplier_list_mobile.hint_balance'.tr),
+              isExpanded: true,
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: widget.onReset,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: ColorManager.kPrimaryColor,
+                  side: const BorderSide(color: ColorManager.kPrimaryColor),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6)),
+                ),
+                child: Text('supplier_list_mobile.btn_reset'.tr),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

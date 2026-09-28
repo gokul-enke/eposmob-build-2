@@ -8,6 +8,7 @@ import '../../components/build_dialog_box.dart';
 import '../../components/build_pagination_control.dart';
 import '../../components/build_round_button.dart';
 import '../../components/build_text_fields.dart';
+import '../../components/filter_toggle_button.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../models/supplier.dart';
 import '../../providers/auth_model.dart';
@@ -32,13 +33,49 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
   final TextEditingController searchPhoneController = TextEditingController();
   String selectedBalanceFilter = 'All';
   bool initLoading = false;
+  bool _showFilters = true;
+  bool _filterVisibilityInitialized = false;
+  late final Listenable _activeFilterInputs;
+
+  bool get _hasActiveFilters =>
+      searchTextController.text.isNotEmpty ||
+      searchEmailController.text.isNotEmpty ||
+      searchPhoneController.text.isNotEmpty ||
+      selectedBalanceFilter != 'All';
+
+  Widget _buildFilterToggleButton() {
+    return FilterToggleButton(
+      key: const ValueKey('supplier-list-filter-toggle'),
+      showFilters: _showFilters,
+      hasActiveFilters: _hasActiveFilters,
+      activeFiltersListenable: _activeFilterInputs,
+      activeFiltersBuilder: () => _hasActiveFilters,
+      showTooltip: 'supplier_list_mobile.show_filters'.tr,
+      hideTooltip: 'supplier_list_mobile.hide_filters'.tr,
+      onPressed: () => setState(() => _showFilters = !_showFilters),
+    );
+  }
 
   @override
   void initState() {
     super.initState();
+    _activeFilterInputs = Listenable.merge([
+      searchTextController,
+      searchEmailController,
+      searchPhoneController,
+    ]);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       loadInitData();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_filterVisibilityInitialized) {
+      _showFilters = MediaQuery.sizeOf(context).width >= 700;
+      _filterVisibilityInitialized = true;
+    }
   }
 
   void loadInitData() async {
@@ -156,6 +193,8 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: SupplierListMobileView(
+            showFilters: _showFilters,
+            filterAction: _buildFilterToggleButton(),
             nameController: searchTextController,
             emailController: searchEmailController,
             phoneController: searchPhoneController,
@@ -217,9 +256,14 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(),
-              const SizedBox(height: 15),
-              _buildSearchBar(size),
-              const SizedBox(height: 15),
+              if (_showFilters) ...[
+                const SizedBox(height: 15),
+                KeyedSubtree(
+                  key: const ValueKey('supplier-list-desktop-filters'),
+                  child: _buildSearchBar(size),
+                ),
+                const SizedBox(height: 15),
+              ],
               Expanded(
                 child: Consumer<SupplierProvider>(
                   builder: (context, supplierProvider, child) {
@@ -634,21 +678,28 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
               0.30, ColorManager.textColor),
         ),
-        CustomRoundButton(
-          title: 'suppliers.add'.tr,
-          fct: () async {
-            // Show the add supplier modal
-            final result = await showAddSupplierModal(
-                context, MediaQuery.of(context).size);
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildFilterToggleButton(),
+            const SizedBox(width: 8),
+            CustomRoundButton(
+              title: 'suppliers.add'.tr,
+              fct: () async {
+                // Show the add supplier modal
+                final result = await showAddSupplierModal(
+                    context, MediaQuery.of(context).size);
 
-            // If the supplier was added successfully, refresh the list
-            if (result != null && result["status"] == "success") {
-              refreshData();
-            }
-          },
-          fontSize: 12,
-          height: 45,
-          width: 150,
+                // If the supplier was added successfully, refresh the list
+                if (result != null && result["status"] == "success") {
+                  refreshData();
+                }
+              },
+              fontSize: 12,
+              height: 45,
+              width: 150,
+            ),
+          ],
         ),
       ],
     );
