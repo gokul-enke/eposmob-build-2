@@ -6872,9 +6872,12 @@ class BillingPageState extends State<BillingPage>
       );
       final attemptServerSync =
           Provider.of<BillingProvider>(context, listen: false).hasInternet;
+      final mode = Provider.of<AppSettingsProvider>(context, listen: false)
+          .saleConfirmationMode;
       final result =
           await LocalFirstSaleCoordinator(outbox).confirm<SavedOrder>(
         surface: LocalSaleSurface.supermarketDesktop,
+        mode: mode,
         sourceCartSessionId: sourceCartSessionId,
         payload: payload,
         accessToken: accessToken,
@@ -6925,20 +6928,13 @@ class BillingPageState extends State<BillingPage>
       );
 
       if (mounted) {
-        showScaffold(
-          context: context,
-          message: attemptServerSync
-              ? 'Order confirmed locally. Server sync will continue in the background.'
-              : 'Order confirmed locally. Offline Mode prevented the server request; review it in Sync attention.',
-        );
+        (result.needsAttention || !result.printSucceeded
+            ? showScaffoldError
+            : showScaffold)(context: context, message: result.message);
       }
-
-      if (!result.printSucceeded && mounted) {
-        showScaffoldError(
-          context: context,
-          message:
-              'Order is safe locally, but the receipt could not be printed.',
-        );
+    } on OnlineSaleNotConfirmed catch (error) {
+      if (mounted) {
+        showScaffoldError(context: context, message: error.message);
       }
     } catch (error, stackTrace) {
       debugPrint('[LocalSale] confirmation failed: $error\n$stackTrace');

@@ -349,11 +349,14 @@ class CheckoutService {
       totalPaid: billingProvider.getTotalPaidAmount(),
     );
     final attemptServerSync = billingProvider.hasInternet;
+    final mode = Provider.of<AppSettingsProvider>(context, listen: false)
+        .saleConfirmationMode;
 
     final result = await LocalFirstSaleCoordinator(
       LocalSaleSyncService.instance,
     ).confirm<SavedOrder>(
       surface: LocalSaleSurface.mobileBilling,
+      mode: mode,
       sourceCartSessionId: sourceCartSessionId,
       payload: payload,
       accessToken: accessToken,
@@ -413,11 +416,9 @@ class CheckoutService {
     );
 
     if (context.mounted) {
-      showScaffold(
+      (result.needsAttention ? showScaffoldError : showScaffold)(
         context: context,
-        message: attemptServerSync
-            ? 'Order confirmed locally. Server sync continues in the background.'
-            : 'Order confirmed locally. Offline Mode prevented the server request; review it in Sync attention.',
+        message: result.message,
       );
     }
     return result;
@@ -432,6 +433,11 @@ class CheckoutService {
     billingDebugCheckout('confirmOrder', 'started');
     try {
       return await _confirmLocalFirst(printReceipt: false) != null;
+    } on OnlineSaleNotConfirmed catch (error) {
+      if (context.mounted) {
+        showScaffoldError(context: context, message: error.message);
+      }
+      return false;
     } catch (error) {
       billingDebugCheckout(
         'confirmOrder',
@@ -458,6 +464,11 @@ class CheckoutService {
     billingDebugCheckout('createOrderAndPrint', 'started');
     try {
       return await _confirmLocalFirst(printReceipt: true);
+    } on OnlineSaleNotConfirmed catch (error) {
+      if (context.mounted) {
+        showScaffoldError(context: context, message: error.message);
+      }
+      return null;
     } catch (error) {
       billingDebugCheckout(
         'createOrderAndPrint',

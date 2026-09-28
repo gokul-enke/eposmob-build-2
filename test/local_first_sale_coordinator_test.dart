@@ -287,4 +287,138 @@ void main() {
     expect(events, ['flush', 'outbox:queued', 'rollback', 'flush']);
     expect(sends, 0);
   });
+
+  group('online-first', () {
+    Future<LocalFirstSaleResult<String>> confirmOnline(
+      LocalSaleSyncService outbox,
+      List<String> events, {
+      bool attemptServerSync = true,
+    }) {
+      return LocalFirstSaleCoordinator(outbox).confirm<String>(
+        surface: LocalSaleSurface.supermarketDesktop,
+        mode: SaleConfirmationMode.onlineFirst,
+        sourceCartSessionId: 'cart-online',
+        payload: _payload(),
+        accessToken: 'token',
+        tenantKey: 'tenant',
+        attemptServerSync: attemptServerSync,
+        persistLocalSale: () {
+          events.add('persist');
+          return const LocalSaleIdentity(
+            value: 'sale',
+            localOrderId: 'local-online-1',
+            localOrderNumber: 'CONF-1',
+          );
+        },
+        flushLocalPersistence: () async => events.add('flush'),
+        commitLocalWorkspace: (_) => events.add('commit'),
+        rollbackLocalSale: (_) => events.add('rollback'),
+        printLocalReceipt: (_) => events.add('print'),
+        onSyncFinished: (record) => events.add('finished:${record.state.name}'),
+      );
+    }
+
+    LocalSaleSyncService outboxReplying(
+      List<String> events,
+      http.Response response,
+    ) {
+      return LocalSaleSyncService(
+        store: _MemoryOutbox(events),
+        sender: (_, __, ___) async {
+          events.add('send');
+          return response;
+        },
+      );
+    }
+
+    test('waits for the server before clearing the cart and printing',
+        () async {
+      final events = <String>[];
+      final outbox = outboxReplying(
+        events,
+        http.Response('{"order_id":5,"order_number":"INV-5"}', 201),
+      );
+
+      final result = await confirmOnline(outbox, events);
+
+      expect(
+        events,
+        [
+          'persist',
+          'flush',
+          'outbox:queued',
+          'outbox:sending',
+          'send',
+          'outbox:synced',
+          'commit',
+          'flush',
+          'finished:synced',
+          'print',
+        ],
+      );
+      expect((await result.backgroundSync).state, LocalSaleSyncState.synced);
+      expect(result.needsAttention, isFalse);
+      expect(result.printSucceeded, isTrue);
+      expect(result.message, 'Order placed successfully.');
+    });
+
+    test('a rejected sale is removed and the cart is left intact', () async {
+      final events = <String>[];
+      final outbox = outboxReplying(
+        events,
+        http.Response('{"message":"Out of stock"}', 422),
+      );
+
+      await expectLater(
+        confirmOnline(outbox, events),
+        throwsA(
+          isA<OnlineSaleNotConfirmed>().having(
+            (e) => e.message,
+            'message',
+            contains('Out of stock'),
+          ),
+        ),
+      );
+
+      expect(events, isNot(contains('commit')));
+      expect(events, isNot(contains('print')));
+      expect(events.sublist(events.length - 2), ['rollback', 'flush']);
+      expect(outbox.records, isEmpty);
+      expect(outbox.hasRecordedCartSession('cart-online'), isFalse);
+    });
+
+    test('an unverifiable result keeps the sale for review without printing',
+        () async {
+      final events = <String>[];
+      final outbox = outboxReplying(events, http.Response('oops', 500));
+
+      final result = await confirmOnline(outbox, events);
+
+      expect(events, contains('commit'));
+      expect(events, isNot(contains('print')));
+      expect(events, isNot(contains('rollback')));
+      expect(result.needsAttention, isTrue);
+      expect(result.printSucceeded, isFalse);
+      expect(
+        outbox.recordFor('local-online-1')?.state,
+        LocalSaleSyncState.needsReview,
+      );
+    });
+
+    test('no connection fails before anything is saved or sent', () async {
+      final events = <String>[];
+      final outbox = outboxReplying(
+        events,
+        http.Response('{"order_id":5}', 201),
+      );
+
+      await expectLater(
+        confirmOnline(outbox, events, attemptServerSync: false),
+        throwsA(isA<OnlineSaleNotConfirmed>()),
+      );
+
+      expect(events, isEmpty);
+      expect(outbox.records, isEmpty);
+    });
+  });
 }

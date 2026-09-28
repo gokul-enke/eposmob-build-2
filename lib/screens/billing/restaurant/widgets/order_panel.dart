@@ -7816,6 +7816,7 @@ class OrderPanelState extends State<OrderPanel> {
         LocalSaleSyncService.instance,
       ).confirm<SavedOrder>(
         surface: LocalSaleSurface.restaurant,
+        mode: appSettingsProvider.saleConfirmationMode,
         sourceCartSessionId: sourceCartSessionId,
         payload: payload,
         accessToken: accessToken,
@@ -7876,17 +7877,16 @@ class OrderPanelState extends State<OrderPanel> {
         },
       );
 
-      showScaffold(
+      (result.needsAttention ? showScaffoldError : showScaffold)(
         context: context,
-        message: !attemptServerSync
-            ? (result.printSucceeded
-                ? 'Order confirmed locally. Offline Mode prevented the server request; review it in Sync attention.'
-                : 'Order confirmed locally, but printing failed. Offline Mode prevented the server request; review it in Sync attention.')
-            : (result.printSucceeded
-                ? 'Order confirmed locally. Server sync continues in the background.'
-                : 'Order confirmed locally, but printing failed. Server sync continues in the background.'),
+        message: result.message,
       );
       return true;
+    } on OnlineSaleNotConfirmed catch (error) {
+      if (mounted) {
+        showScaffoldError(context: context, message: error.message);
+      }
+      return false;
     } catch (e) {
       debugPrint('Error confirming counter order: $e');
       showScaffoldError(
@@ -7994,6 +7994,8 @@ class OrderPanelState extends State<OrderPanel> {
       );
       final attemptServerSync =
           Provider.of<BillingProvider>(context, listen: false).hasInternet;
+      final mode = Provider.of<AppSettingsProvider>(context, listen: false)
+          .saleConfirmationMode;
 
       final result = await LocalFirstSaleCoordinator(
         LocalSaleSyncService.instance,
@@ -8002,6 +8004,7 @@ class OrderPanelState extends State<OrderPanel> {
             ? LocalSaleSurface.restaurant
             : LocalSaleSurface.attender,
         operation: LocalSaleOperation.confirmExistingOrder,
+        mode: mode,
         sourceCartSessionId: localProducts.cartSessionId,
         payload: payload,
         accessToken: accessToken,
@@ -8055,18 +8058,17 @@ class OrderPanelState extends State<OrderPanel> {
       );
 
       if (mounted) {
-        showScaffold(
+        (result.needsAttention ? showScaffoldError : showScaffold)(
           context: context,
-          message: !attemptServerSync
-              ? (result.printSucceeded
-                  ? 'Order confirmed locally. Offline Mode prevented the server request; review it in Sync attention.'
-                  : 'Order confirmed locally, but printing failed. Offline Mode prevented the server request; review it in Sync attention.')
-              : (result.printSucceeded
-                  ? 'Order confirmed locally. Server sync continues in the background.'
-                  : 'Order confirmed locally, but printing failed. Server sync continues in the background.'),
+          message: result.message,
         );
       }
       return true;
+    } on OnlineSaleNotConfirmed catch (error) {
+      if (mounted) {
+        showScaffoldError(context: context, message: error.message);
+      }
+      return false;
     } catch (error) {
       debugPrint('Error confirming restaurant order locally: $error');
       if (mounted) {

@@ -21,9 +21,39 @@ page or tab cannot cancel it. Closing the process during a queued or sending
 state changes that record to `needs_review` on the next start; it is not sent a
 second time automatically.
 
-There is intentionally no automatic or manual retry in this version. The API
-does not yet accept an idempotency key, so a timeout or lost response is
-ambiguous and retrying could create a duplicate sale.
+There is intentionally no automatic retry. The API does not yet accept an
+idempotency key, so a timeout or lost response is ambiguous and retrying could
+create a duplicate sale. A `needs_review` sale can be retried once from
+Confirmed Orders only after the operator confirms ("I verified — Retry") that
+it is absent from the backend.
+
+When Offline Mode is on or the device has no internet, the offline-first path
+saves the sale and marks it `needs_review` without sending it.
+
+## Online-first mode (`OFFLINE_FIRST_SALES` app setting)
+
+The tenant app setting `OFFLINE_FIRST_SALES` selects the mode, read through
+`AppSettingsProvider.saleConfirmationMode`:
+
+| Setting | Mode |
+| --- | --- |
+| row missing, status true, or settings not loaded | offline-first (described above) |
+| status false | online-first |
+
+Online-first uses the same coordinator, snapshot and outbox, but the confirm
+button waits (with its loading state) for the one API attempt:
+
+1. No internet, Offline Mode or no login → error; nothing is saved and the
+   cart is unchanged.
+2. Save the snapshot and outbox record exactly as offline-first does, so a
+   crash mid-request is still recovered as `needs_review` on restart.
+3. Send the request and wait for it.
+4. `synced` → clear the cart, refresh post-sync caches, then print.
+5. `rejected` (400/422) → discard the outbox record and the local snapshot;
+   show the server message; the cart is unchanged so the cashier can fix it.
+6. Ambiguous (timeout, 5xx, unreadable response) → clear the cart so it cannot
+   be confirmed twice, do **not** print, and keep the sale as `needs_review`
+   in Confirmed Orders.
 
 ## Shared code versus surface adapters
 

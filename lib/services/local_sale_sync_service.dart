@@ -496,6 +496,21 @@ class LocalSaleSyncService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Removes a sale the server clearly rejected so the cashier can correct the
+  /// still-intact cart and confirm it again. Used only by online-first
+  /// confirmation, where the rejected sale never left the checkout screen.
+  Future<void> discardRejected(String localOrderId) async {
+    await hydrate();
+    final record = _records[localOrderId];
+    if (record == null) return;
+    if (record.state != LocalSaleSyncState.rejected) {
+      throw StateError('Only a rejected sale can be discarded.');
+    }
+    await _store.remove(localOrderId);
+    _records.remove(localOrderId);
+    notifyListeners();
+  }
+
   static Future<http.Response> _defaultSender(
     Uri endpoint,
     Map<String, String> headers,
