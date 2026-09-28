@@ -8,7 +8,6 @@ import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/bank_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
-import 'package:pos_machine/screens/print/layouts/receipt_configuration_contract.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 
 /// Builds [ReceiptLayoutParams] for return-only bills so they can reuse the
@@ -24,6 +23,8 @@ class ReturnBillLayoutParamsBuilder {
     required String returnTotalAmount,
     required String orderDate,
     required String orderNumber,
+    String? originalInvoiceNumber,
+    String? originalInvoiceDate,
     required String selectedPaperSize,
     required DocumentConfig returnBillDocumentConfig,
     String? customerName,
@@ -57,8 +58,7 @@ class ReturnBillLayoutParamsBuilder {
         (originalCartItems != null && originalCartItems.isNotEmpty)
             ? originalCartItems
             : fallbackCartItems;
-    final totalAmount = double.tryParse(returnTotalAmount) ?? 0.0;
-    final documentTitle = _resolveDocumentTitle(returnBillDocumentConfig);
+    final totalAmount = double.tryParse(returnTotalAmount.replaceAll(',', '').trim()) ?? 0.0;
     final orderReturns = OrderReturns(
       returnTotalAmount: totalAmount.toStringAsFixed(2),
       returnItems: returnItems,
@@ -81,6 +81,8 @@ class ReturnBillLayoutParamsBuilder {
       discountAmount: '0.00',
       orderDate: orderDate,
       orderNumber: orderNumber,
+      originalInvoiceNumber: originalInvoiceNumber,
+      originalInvoiceDate: originalInvoiceDate,
       isFromLocalStorage: false,
       selectedPaperSize: selectedPaperSize,
       billDocumentConfig: returnBillDocumentConfig,
@@ -95,7 +97,6 @@ class ReturnBillLayoutParamsBuilder {
       customerType: customerType,
       orderReturns: orderReturns,
       customerCurrentBalance: customerCurrentBalance,
-      documentTitleOverride: documentTitle,
       zatcaVatNumber: zatcaVatNumber,
       zatcaCrNumber: zatcaCrNumber,
       zatcaCompanyName: zatcaCompanyName,
@@ -116,30 +117,11 @@ class ReturnBillLayoutParamsBuilder {
     );
   }
 
-  /// Supplies a title only when the Credit Note config shows the title but
-  /// left its text empty. A title override forces the title visible and
-  /// replaces the B2B title, so a hidden or configured title must win.
-  static String? _resolveDocumentTitle(DocumentConfig config) {
-    final option = ReceiptConfigurationContract.option(
-      config.displayConfiguration?.options,
-      'showInvoiceTitle',
-    );
-    if (option?.visible != true) return null;
-    final configuredText =
-        '${option?.value ?? ''}${option?.defaultValue ?? ''}'.trim();
-    if (configuredText.isNotEmpty) return null;
-    // Only English documents get the English title; Arabic and bilingual
-    // documents never print English the store did not type.
-    return ReceiptConfigurationContract.languageMode(config.language).isEnglish
-        ? 'Sales Return'
-        : 'مرتجع مبيعات';
-  }
-
   static List<OrderDetailsModelDataCartItem> _returnItemsToCartItems(
     List<OrderReturnItem> returnItems,
     String returnTotalAmount,
   ) {
-    final totalAmount = double.tryParse(returnTotalAmount) ?? 0.0;
+    final totalAmount = double.tryParse(returnTotalAmount.replaceAll(',', '').trim()) ?? 0.0;
     final totalQty = returnItems.fold<num>(
       0,
       (sum, item) => sum + (item.quantity ?? 0),
@@ -147,15 +129,16 @@ class ReturnBillLayoutParamsBuilder {
 
     return returnItems.map((item) {
       final qty = item.quantity ?? 0;
-      final lineTotal = totalQty > 0 ? totalAmount * qty / totalQty : 0.0;
-      final unitPrice = qty > 0 ? lineTotal / qty : 0.0;
+      final fallbackRate = totalQty > 0 ? totalAmount / totalQty : 0.0;
+      final unitPrice = double.tryParse(item.unitPrice ?? '') ?? fallbackRate;
+      final lineTotal = unitPrice * qty;
 
       return OrderDetailsModelDataCartItem(
         productName: item.productName,
         quantity: qty,
         unitPrice: unitPrice.toStringAsFixed(2),
         totalPrice: lineTotal.toStringAsFixed(2),
-        mrp: unitPrice.toStringAsFixed(2),
+        mrp: item.mrp ?? unitPrice.toStringAsFixed(2),
         taxAmount: '0.00',
       );
     }).toList();

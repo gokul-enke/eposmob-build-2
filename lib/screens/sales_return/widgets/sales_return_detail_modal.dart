@@ -290,6 +290,8 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                             orderDate: order.createdAt.toString(),
                             orderNumber: order.order?.orderNumber ??
                                 order.orderId.toString(),
+                            originalInvoiceNumber: order.order?.orderNumber,
+                            originalInvoiceDate: order.order?.orderDate,
                             customerName: order.order?.customer?.user?.name,
                           ),
                         ),

@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'pdf_bidi_text.dart';
+import 'return_pdf_support_sections.dart';
 import 'package:open_file/open_file.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -258,8 +259,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final documentHeader = params.documentText(config.header);
     final documentSubheader = params.documentText(config.subheader);
     final storeName = params.headerTextParts('showStoreName').joined();
-    final storeDescription =
-        params.headerTextParts('showDescription').joined();
+    final storeDescription = params.headerTextParts('showDescription').joined();
     // Store sub-details, one centred line per language. Address and
     // telephone share a line, as the design has always had them.
     final storeAddress = params.storeLineParts('showStoreAddress');
@@ -530,8 +530,10 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                         if (commentText.isNotEmpty)
                           pdfText(commentText, style: wordsStyle),
                         for (final row in paymentRows)
-                          _labelValueLine(row.$1,
-                              _formatMoney(currency, row.$2), wordsStyle,
+                          _labelValueLine(
+                              row.$1,
+                              _formatMoney(currency, row.$2),
+                              wordsStyle,
                               wordsStyle),
                         for (final row in balanceRows)
                           _labelValueLine(
@@ -568,7 +570,9 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                               row.text ?? _formatMoney(currency, row.amount),
                               totalsLabelEn,
                               totalsLabelAr,
-                              row.emphasised ? totalsValueBold : totalsValueStyle,
+                              row.emphasised
+                                  ? totalsValueBold
+                                  : totalsValueStyle,
                               englishColumn: totalsEnglish,
                               arabicColumn: totalsArabic,
                             ),
@@ -585,6 +589,15 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             // SECTION 5b: RETURNS TABLE + FINAL SUMMARY
             // ═══════════════════════════════════════════════════════
             ..._buildReturnsPdfSection(params, currency, font, fontBold, isA5),
+            ...buildReturnPdfSupportSections(
+              params: params,
+              style: pw.TextStyle(font: font, fontSize: isA5 ? 7 : 9),
+              headingStyle:
+                  pw.TextStyle(font: fontBold, fontSize: isA5 ? 7 : 9),
+              qrData: qrData,
+              includeBank: false,
+              includeQr: false,
+            ),
             if (!params.isReturnOnly)
               ..._buildFinalSummaryPdfSection(
                   params, currency, font, fontBold, isA5),
@@ -715,8 +728,8 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final widgets = <pw.Widget>[];
     for (var i = 0; i < lines.length; i++) {
       if (i > 0) widgets.add(pw.SizedBox(height: 2.5));
-      widgets.add(
-          pdfText(lines[i], style: style, textAlign: pw.TextAlign.center));
+      widgets
+          .add(pdfText(lines[i], style: style, textAlign: pw.TextAlign.center));
     }
     return widgets;
   }
@@ -1048,6 +1061,10 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         pdfText(section.heading, style: titleStyle),
         pw.SizedBox(height: 4),
       ],
+      if (section.subtitle.isNotEmpty) ...[
+        pdfText(section.subtitle, style: labelStyle),
+        pw.SizedBox(height: 4),
+      ],
       if (section.creditNoteRows.isNotEmpty) ...[
         pdfText(section.creditNoteHeading, style: sectionHeadingStyle),
         pw.SizedBox(height: 2),
@@ -1107,6 +1124,11 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         pdfText(section.wordsHeading, style: labelStyle),
         for (final line in wordsLines) pdfText(line, style: valueStyle),
       ],
+      if (section.signatory.isNotEmpty) ...[
+        pw.SizedBox(height: 20),
+        pdfText('____________________', style: labelStyle),
+        pdfText(section.signatory, style: labelStyle),
+      ],
     ];
   }
 
@@ -1118,7 +1140,8 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     bool isA5,
   ) {
     final rows = params.finalSummaryRows;
-    if (rows.isEmpty) return const [];
+    final words = params.finalSummaryWordsLines(currency);
+    if (rows.isEmpty && words.isEmpty) return const [];
     double fs(double v) => isA5 ? v * 0.78 : v;
 
     final labelStyle = pw.TextStyle(
@@ -1134,7 +1157,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       pw.SizedBox(height: 6),
       pw.Divider(height: 0, thickness: 0.8),
       pw.SizedBox(height: 4),
-      pw.Table(
+      if (rows.isNotEmpty) pw.Table(
         border: pw.TableBorder.all(width: 0.5),
         columnWidths: const {
           0: pw.FlexColumnWidth(3),
@@ -1146,7 +1169,8 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               pw.Padding(
                 padding:
                     const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                child: pdfText(row.label.joined(inline: true), style: labelStyle),
+                child:
+                    pdfText(row.label.joined(inline: true), style: labelStyle),
               ),
               pw.Padding(
                 padding:
@@ -1161,7 +1185,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             ]),
         ],
       ),
-      for (final line in params.finalSummaryWordsLines(currency))
+      for (final line in words)
         pdfText(line, style: wordsBold),
     ];
   }

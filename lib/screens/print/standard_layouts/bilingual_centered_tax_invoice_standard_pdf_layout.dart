@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'pdf_bidi_text.dart';
+import 'return_pdf_support_sections.dart';
 import 'package:open_file/open_file.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -403,7 +404,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                 child: pw.Align(
                   alignment: pw.Alignment.centerRight,
                   child: storeFssai.isNotEmpty
-                      ? modeText(storeFssai, bandStyle, pw.CrossAxisAlignment.end)
+                      ? modeText(
+                          storeFssai, bandStyle, pw.CrossAxisAlignment.end)
                       : pw.SizedBox(),
                 ),
               ),
@@ -513,7 +515,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                             if (savedLabel.isNotEmpty)
                               _labelValueLine(
                                   savedLabel,
-                                  _formatMoney(currency, params.savedAmountValue),
+                                  _formatMoney(
+                                      currency, params.savedAmountValue),
                                   wordsBold,
                                   wordsBold),
                           ],
@@ -598,6 +601,12 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
 
           // SECTION 5b: RETURNS TABLE + FINAL SUMMARY
           ..._buildReturnsPdfSection(params, currency, font, fontBold, isA5),
+          ...buildReturnPdfSupportSections(
+            params: params,
+            style: pw.TextStyle(font: font, fontSize: isA5 ? 7 : 9),
+            headingStyle: pw.TextStyle(font: fontBold, fontSize: isA5 ? 7 : 9),
+            qrData: qrData,
+          ),
           if (!params.isReturnOnly)
             ..._buildFinalSummaryPdfSection(
                 params, currency, font, fontBold, isA5),
@@ -1040,6 +1049,10 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
         pdfText(section.heading, style: titleStyle),
         pw.SizedBox(height: 4),
       ],
+      if (section.subtitle.isNotEmpty) ...[
+        pdfText(section.subtitle, style: labelStyle),
+        pw.SizedBox(height: 4),
+      ],
       if (section.creditNoteRows.isNotEmpty) ...[
         pdfText(section.creditNoteHeading, style: sectionHeadingStyle),
         pw.SizedBox(height: 2),
@@ -1099,6 +1112,11 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
         pdfText(section.wordsHeading, style: labelStyle),
         for (final line in wordsLines) pdfText(line, style: valueStyle),
       ],
+      if (section.signatory.isNotEmpty) ...[
+        pw.SizedBox(height: 20),
+        pdfText('____________________', style: labelStyle),
+        pdfText(section.signatory, style: labelStyle),
+      ],
     ];
   }
 
@@ -1110,7 +1128,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     bool isA5,
   ) {
     final rows = params.finalSummaryRows;
-    if (rows.isEmpty) return const [];
+    final words = params.finalSummaryWordsLines(currency);
+    if (rows.isEmpty && words.isEmpty) return const [];
     double fs(double v) => isA5 ? v * 0.78 : v;
 
     final labelStyle = pw.TextStyle(
@@ -1126,7 +1145,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
       pw.SizedBox(height: 6),
       pw.Divider(height: 0, thickness: 0.8),
       pw.SizedBox(height: 4),
-      pw.Table(
+      if (rows.isNotEmpty) pw.Table(
         border: pw.TableBorder.all(width: 0.5),
         columnWidths: const {
           0: pw.FlexColumnWidth(3),
@@ -1138,7 +1157,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
               pw.Padding(
                 padding:
                     const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                child: pdfText(row.label.joined(inline: true), style: labelStyle),
+                child:
+                    pdfText(row.label.joined(inline: true), style: labelStyle),
               ),
               pw.Padding(
                 padding:
@@ -1153,7 +1173,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
             ]),
         ],
       ),
-      for (final line in params.finalSummaryWordsLines(currency))
+      for (final line in words)
         pdfText(line, style: wordsBold),
     ];
   }

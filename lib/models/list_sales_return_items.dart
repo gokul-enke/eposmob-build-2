@@ -74,6 +74,7 @@ class SalesReturnOrderInfo {
 
 // Model class for each item in the return order
 class SalesReturnCart {
+  final bool hasUnitPrice;
   final int cartItemId;
   final int returnOrderId;
   final String productName;
@@ -89,6 +90,7 @@ class SalesReturnCart {
   final Map<String, dynamic>? variantAttributes;
 
   SalesReturnCart({
+    this.hasUnitPrice = true,
     required this.cartItemId,
     required this.returnOrderId,
     required this.productName,
@@ -171,6 +173,7 @@ class SalesReturnCart {
         : const <String, dynamic>{};
 
     return SalesReturnCart(
+      hasUnitPrice: json['unit_price'] != null || json['price'] != null,
       cartItemId: _parseInt(json['cart_item_id'] ?? json['id']),
       returnOrderId: _parseInt(json['return_order_id']),
       productName: (json['product_name'] ??

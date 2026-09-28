@@ -3,8 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_machine/models/bank.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/document_configurations.dart';
+import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_configuration_contract.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
+import 'package:pos_machine/screens/print/layouts/receipt_sections.dart';
 
 /// The shared field-text helpers every template (thermal and A4/A5 PDF) uses.
 /// The fixture follows the bilingual audit brief: every option carries an
@@ -52,12 +54,16 @@ ReceiptLayoutParams _params(
   double? paidAmount = 100,
   List<dynamic> cartItems = const [],
   String? numberPrefix,
+  String? savedTotal,
+  String? netExcTax,
 }) {
   return ReceiptLayoutParams(
     context: context,
     selectedPrinter: BluetoothPrinter.development(),
     cartItems: cartItems,
     formattedTotal: '100.00',
+    savedTotal: savedTotal,
+    netExcTax: netExcTax,
     orderDate: '2026-09-24T09:40:00Z',
     orderNumber: 'ORD-000015',
     tokenNumber: '286',
@@ -106,6 +112,50 @@ void main() {
           return const SizedBox.shrink();
         }),
       );
+
+  testWidgets('MRP and ex-tax subtotal retain separate labels, amounts and switches',
+      (tester) async {
+    await pump(tester);
+    for (final subtotal in [false, true]) {
+      for (final mrp in [false, true]) {
+        final params = _params(context, language: 'en_ar',
+            savedTotal: '20', netExcTax: '90', options: {
+          'showSubTotal': DisplayOption(visible: subtotal,
+              value: 'صافي', defaultValue: 'EX TAX'),
+          'showMRPTotal': DisplayOption(visible: mrp,
+              value: 'تجزئة', defaultValue: 'RETAIL'),
+        });
+        final rows = params.totalsRows.where((r) =>
+            r.key == 'showSubTotal' || r.key == 'showMRPTotal').toList();
+        expect(rows.map((r) => r.key), [
+          if (subtotal) 'showSubTotal', if (mrp) 'showMRPTotal',
+        ]);
+        expect(rows.map((r) => r.amount), [
+          if (subtotal) 90.0, if (mrp) 120.0,
+        ]);
+        expect(rows.map((r) => r.label.english), [
+          if (subtotal) 'EX TAX', if (mrp) 'RETAIL',
+        ]);
+      }
+    }
+  });
+
+  testWidgets('token labels ending in digits cannot merge with the token value',
+      (tester) async {
+    await pump(tester);
+    for (final language in ['en', 'ar', 'en_ar']) {
+      final params = _params(context, language: language, options: {
+        'showTokenNumber': DisplayOption(visible: true,
+            value: language == 'en' ? 'Counter 8' : 'عداد 8',
+            defaultValue: ''),
+      });
+      expect(params.tokenText, endsWith(': 286'));
+      expect(params.tokenText, isNot(contains('8286')));
+    }
+    expect(_params(context, language: 'en', options: {
+      'showTokenNumber': DisplayOption(visible: true, value: '#'),
+    }).tokenText, '#286');
+  });
 
   testWidgets(
       'en_ar: only typed English defaults reach the English slot; the rest '
@@ -221,6 +271,20 @@ void main() {
       _params(context, language: 'ar').itemNameLines({'product_name': 'Kitkat'}),
       ['Kitkat'],
     );
+  });
+
+  testWidgets('typed return items retain variants once in every language', (tester) async {
+    await pump(tester);
+    for (final language in ['en', 'ar', 'en_ar']) {
+      final params = _params(context, language: language);
+      for (final name in ['Coffee', 'Coffee (Large | Blue)']) {
+        final item = OrderReturnItem(productName: name,
+            variantAttributes: {'Size': 'Large', 'Colour': 'Blue'});
+        expect(params.itemNameLines(item), ['Coffee (Large | Blue)']);
+      }
+      expect(params.itemNameLines(OrderReturnItem(productName: 'Tea')),
+          ['Tea']);
+    }
   });
 
   testWidgets('order date/time is one left-to-right value', (tester) async {

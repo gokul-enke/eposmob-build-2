@@ -342,10 +342,9 @@ void main() {
       isTrue,
       reason: 'customer master switch must gate the complete section',
     );
-    expect(source.contains("key: 'showCreditNoteReason'"), isTrue,
-        reason: 'configured credit-note reason label');
-    expect(source.contains('item.reason?.trim()'), isTrue,
-        reason: 'credit-note reason value from returned items');
+    expect(source.contains('appendReturnMetadataRows(rows, params'), isTrue,
+        reason: 'return metadata must use the shared, visibility-aware section; '
+            'field behavior is covered by receipt_return_controls_test');
   });
 
   test('direct legacy layout entry points cannot bypass the contract delegate',

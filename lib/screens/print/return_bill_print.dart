@@ -28,6 +28,8 @@ class ReturnBillPrintPage extends StatefulWidget {
   final String returnTotalAmount;
   final String orderDate;
   final String orderNumber;
+  final String? originalInvoiceNumber;
+  final String? originalInvoiceDate;
   final String? customerName;
   final String? customerPhone;
   final String? customerEmail;
@@ -45,6 +47,8 @@ class ReturnBillPrintPage extends StatefulWidget {
     this.storeName,
     required this.orderDate,
     required this.orderNumber,
+    this.originalInvoiceNumber,
+    this.originalInvoiceDate,
     this.customerName,
     this.customerPhone,
     this.customerEmail,
@@ -476,6 +480,8 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
       returnTotalAmount: widget.returnTotalAmount,
       orderDate: widget.orderDate,
       orderNumber: widget.orderNumber,
+      originalInvoiceNumber: widget.originalInvoiceNumber,
+      originalInvoiceDate: widget.originalInvoiceDate,
       selectedPaperSize: selectedPaperSize,
       returnBillDocumentConfig: _returnBillDocumentConfig,
       customerCareNumber: customerCareNumber,
@@ -503,6 +509,8 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
       returnTotalAmount: widget.returnTotalAmount,
       orderDate: widget.orderDate,
       orderNumber: widget.orderNumber,
+      originalInvoiceNumber: widget.originalInvoiceNumber,
+      originalInvoiceDate: widget.originalInvoiceDate,
       selectedPaperSize: selectedPaperSize,
       returnBillDocumentConfig: _returnBillDocumentConfig,
       customerCareNumber: customerCareNumber,

@@ -490,6 +490,9 @@ class ContractStandardPdfRenderer {
     if (section.heading.isNotEmpty) {
       widgets.add(_sectionTitle(section.heading, fonts.section, accent, scale));
     }
+    if (section.subtitle.isNotEmpty) {
+      widgets.add(_centerLines(section.subtitle, fonts.small));
+    }
     if (section.creditNoteRows.isNotEmpty) {
       widgets.add(_sectionTitle(
           section.creditNoteHeading, fonts.bodyBold, accent, scale));
@@ -556,17 +559,25 @@ class ContractStandardPdfRenderer {
       }
     }
 
+    if (section.signatory.isNotEmpty) {
+      widgets.add(pw.SizedBox(height: 20 * scale));
+      widgets.add(_centerLines('____________________', fonts.small));
+      widgets.add(_centerLines(section.signatory, fonts.small));
+    }
+
     final finalRows = params.isReturnOnly
         ? const <ReceiptAmountRow>[]
         : params.finalSummaryRows;
-    if (finalRows.isNotEmpty) {
+    final finalWords = params.isReturnOnly
+        ? const <String>[] : params.finalSummaryWordsLines(currency);
+    if (finalRows.isNotEmpty || finalWords.isNotEmpty) {
       widgets.add(pw.SizedBox(height: 6 * scale));
       for (final row in finalRows) {
         widgets.add(_labelValue(row.label.joined(inline: true),
             _money(row.amount, currency),
             row.emphasised ? fonts.bodyBold : fonts.body));
       }
-      for (final line in params.finalSummaryWordsLines(currency)) {
+      for (final line in finalWords) {
         widgets.add(_textLine(line, fonts.small));
       }
     }

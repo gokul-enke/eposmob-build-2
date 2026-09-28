@@ -26,6 +26,8 @@ class ReceiptLayoutParams {
   final String? discountAmount;
   final String orderDate;
   final String orderNumber;
+  final String? originalInvoiceNumber;
+  final String? originalInvoiceDate;
   final String? tokenNumber;
   final bool isFromLocalStorage;
   final String selectedPaperSize;
@@ -80,6 +82,8 @@ class ReceiptLayoutParams {
     this.discountAmount,
     required this.orderDate,
     required this.orderNumber,
+    this.originalInvoiceNumber,
+    this.originalInvoiceDate,
     this.tokenNumber,
     required this.isFromLocalStorage,
     required this.selectedPaperSize,
@@ -325,9 +329,14 @@ class ReceiptLayoutParams {
   /// Customer phone exactly as every template must print it: empty when the
   /// toggle is off, the phone is missing, or the walk-in default customer is
   /// hidden; masked when `showCustomerPhoneMasked` is on.
-  String get customerPhoneText {
+  String get customerPhoneText =>
+      customerPhoneForVisibility(isVisible('showCustomerPhone'));
+
+  /// Credit notes expose one customer-block switch. Keep masking and walk-in
+  /// privacy identical to receipts with a separate phone switch.
+  String customerPhoneForVisibility(bool visible) {
     final phone = customerPhone?.trim() ?? '';
-    if (!isVisible('showCustomerPhone') || phone.isEmpty) return '';
+    if (!visible || phone.isEmpty) return '';
     if (isDefaultCustomer && hideDefaultCustomerPhone) return '';
     return isVisible('showCustomerPhoneMasked')
         ? StringHelper.maskStringShowLast4(phone)
@@ -434,6 +443,8 @@ class ReceiptLayoutParams {
     'showTotal': ('Total', 'الإجمالي'),
     'showWarranty': ('Warranty', 'الضمان'),
     'showSubTotal': ('NET TOTAL (Exc Tax)', 'المجموع'),
+    'showMRPTotal': ('MRP TOTAL', 'إجمالي سعر التجزئة'),
+    'showUnitPrice': ('Unit Price', 'سعر الوحدة'),
     'showDiscount': ('DISCOUNTS', 'الخصم'),
     'showTax': ('VAT', 'الضريبة'),
     'showNetAmount': ('GRAND TOTAL', 'المبلغ الاجمالي'),
@@ -490,6 +501,7 @@ class ReceiptLayoutParams {
             ? fallback(name, name)
             : fallback('STORE NAME', 'اسم المتجر');
       case 'showInvoiceTitle':
+        if (isReturnOnly) return fallback('CREDIT NOTE', 'إشعار دائن');
         return fallback(_printTitle ?? 'INVOICE', 'فاتورة');
       case 'showQRCode':
         return hasZatcaCredentials
@@ -646,7 +658,7 @@ class ReceiptLayoutParams {
       fieldLabel('showTokenNumber', inlineBilingual: true),
     );
     if (prefix.isEmpty) return token;
-    final separator = RegExp(r'[A-Za-z؀-ۿ]$').hasMatch(prefix) ? ': ' : '';
+    final separator = RegExp(r'[A-Za-z0-9؀-ۿ]$').hasMatch(prefix) ? ': ' : '';
     return '$prefix$separator$token';
   }
 

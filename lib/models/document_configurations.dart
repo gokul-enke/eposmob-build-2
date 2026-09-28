@@ -337,6 +337,10 @@ class DisplayOption {
 }
 
 class ResolvedLabels {
+  /// Preserve credit-note labels beyond the historical typed subset.
+  final Map<String, dynamic> additionalLabels;
+
+  String? text(String key) => additionalLabels[key]?.toString();
   final String? itemName;
   final String? unitName;
   final String? priceName;
@@ -393,6 +397,7 @@ class ResolvedLabels {
   final String? taxDefault;
 
   ResolvedLabels({
+    this.additionalLabels = const {},
     this.itemName,
     this.unitName,
     this.priceName,
@@ -444,6 +449,7 @@ class ResolvedLabels {
   });
 
   factory ResolvedLabels.fromJson(Map<String, dynamic> json) => ResolvedLabels(
+        additionalLabels: Map<String, dynamic>.unmodifiable(json),
         itemName: json["item_name"],
         unitName: json["unit_name"] ?? json["unit"],
         priceName: json["price_name"],
@@ -496,6 +502,7 @@ class ResolvedLabels {
       );
 
   Map<String, dynamic> toJson() => {
+        ...additionalLabels,
         "item_name": itemName,
         "unit_name": unitName,
         "price_name": priceName,

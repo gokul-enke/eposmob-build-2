@@ -347,6 +347,9 @@ class MultiLineReceiptTableRow extends ReceiptRow {
   final List<ReceiptTableColumn> columns;
   final int? maxLines;
 
+  // Adjacent RTL labels otherwise touch when both cells align to their edge.
+  double _padding(ReceiptTableColumn col) => math.max(4.0, col.horizontalPadding);
+
   MultiLineReceiptTableRow(this.columns, {this.maxLines = 2});
 
   @override
@@ -367,17 +370,18 @@ class MultiLineReceiptTableRow extends ReceiptRow {
 
     for (var col in columns) {
       final colWidth = width * col.weight;
+      final padding = _padding(col);
       final tp = _createPainter(col, width, fontSize, textDirection);
       final contentWidth =
-          (colWidth - (col.horizontalPadding * 2)).clamp(0.0, double.infinity);
+          (colWidth - (padding * 2)).clamp(0.0, double.infinity);
 
-      double xOffset = col.horizontalPadding;
+      double xOffset = padding;
       if (col.align == TextAlign.center) {
-        xOffset = col.horizontalPadding + ((contentWidth - tp.width) / 2);
+        xOffset = padding + ((contentWidth - tp.width) / 2);
       } else if (col.align == TextAlign.right) {
-        xOffset = col.horizontalPadding + contentWidth - tp.width;
+        xOffset = padding + contentWidth - tp.width;
       } else if (col.align == TextAlign.left) {
-        xOffset = col.horizontalPadding;
+        xOffset = padding;
       }
 
       tp.paint(canvas, Offset(currentX + xOffset, y + 2));
@@ -391,7 +395,7 @@ class MultiLineReceiptTableRow extends ReceiptRow {
   /// never splits a word into a clipped second line or drops the English line.
   TextPainter _createPainter(ReceiptTableColumn col, double totalWidth,
       double fontSize, TextDirection textDirection) {
-    final maxWidth = ((totalWidth * col.weight) - (col.horizontalPadding * 2))
+    final maxWidth = ((totalWidth * col.weight) - (_padding(col) * 2))
         .clamp(0.0, double.infinity);
     final explicitLines = '\n'.allMatches(col.text).length + 1;
     final minSize = fontSize * math.min(col.minScale, col.scale);

@@ -355,6 +355,8 @@ class PrintService {
             storeName: cart.storeName,
             orderDate: orderDetails.data?.orderDate ?? '',
             orderNumber: orderDetails.data?.customerReceiptNumber ?? '',
+            originalInvoiceNumber: orderDetails.data?.customerReceiptNumber,
+            originalInvoiceDate: orderDetails.data?.orderDate,
             customerName: orderDetails.data?.customerDetails?.name,
             customerPhone: orderDetails.data?.customerDetails?.phone,
             customerEmail: orderDetails.data?.customerDetails?.email,

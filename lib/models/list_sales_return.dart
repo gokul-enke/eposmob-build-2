@@ -184,7 +184,8 @@ class SalesReturnItem {
     final cartItemPayload = <String, dynamic>{
       ...json,
       ...cartItem,
-      if (cartItem['unit_price'] == null && json['price'] != null)
+      if (cartItem['unit_price'] == null &&
+          json['unit_price'] == null && json['price'] != null)
         'unit_price': json['price'],
       if (cartItem['total_price'] == null && json['total_price'] != null)
         'total_price': json['total_price'],
@@ -215,12 +216,16 @@ class SalesReturnItem {
       updatedAt: json['updated_at'] != null
           ? DateTime.tryParse(json['updated_at'].toString()) ?? DateTime.now()
           : DateTime.now(),
-      cartItem: CartItem.fromJson(cartItemPayload),
+      cartItem: CartItem.fromJson(cartItemPayload,
+          hasUnitPrice: cartItem['unit_price'] != null || json['unit_price'] != null),
     );
   }
 }
 
 class CartItem {
+  /// Distinguishes an explicitly free item from a missing API price.
+  final bool hasUnitPrice;
+  final String? mrp;
   final int id;
   final int cartId;
   final int categoryId;
@@ -230,6 +235,7 @@ class CartItem {
   final String unitPrice;
   final String totalPrice;
   final String taxRate;
+  final bool hasTaxRate;
   final String taxAmount;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -237,6 +243,8 @@ class CartItem {
   final String? productName;
 
   CartItem({
+    this.hasUnitPrice = true,
+    this.mrp,
     required this.id,
     required this.cartId,
     required this.categoryId,
@@ -246,6 +254,7 @@ class CartItem {
     required this.unitPrice,
     required this.totalPrice,
     required this.taxRate,
+    this.hasTaxRate = true,
     required this.taxAmount,
     required this.createdAt,
     required this.updatedAt,
@@ -259,8 +268,10 @@ class CartItem {
           ? productName!
           : 'Unknown Product');
 
-  factory CartItem.fromJson(Map<String, dynamic> json) {
+  factory CartItem.fromJson(Map<String, dynamic> json, {bool? hasUnitPrice}) {
     return CartItem(
+      hasUnitPrice: hasUnitPrice ?? json['unit_price'] != null,
+      mrp: json['mrp']?.toString(),
       id: json['id'] is int
           ? json['id']
           : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
@@ -282,6 +293,7 @@ class CartItem {
       unitPrice: json['unit_price']?.toString() ?? '0.00',
       totalPrice: json['total_price']?.toString() ?? '0.00',
       taxRate: json['tax_rate']?.toString() ?? '0.00',
+      hasTaxRate: json['tax_rate'] != null,
       taxAmount: json['tax_amount']?.toString() ?? '0.00',
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
@@ -307,6 +319,7 @@ class Product {
   final int active;
   final String price;
   final String mrp;
+  final String? hsnCode;
   final String? purchasePrice; // Make this field nullable
   final String unit;
   final String? sku; // Add this missing field as nullable
@@ -326,6 +339,7 @@ class Product {
     required this.active,
     required this.price,
     required this.mrp,
+    this.hsnCode,
     this.purchasePrice, // Nullable
     required this.unit,
     this.sku, // Nullable
@@ -355,6 +369,7 @@ class Product {
           : int.tryParse(json['active']?.toString() ?? '0') ?? 0,
       price: json['price']?.toString() ?? '0.00',
       mrp: json['mrp']?.toString() ?? '0.00',
+      hsnCode: json['hsn_code']?.toString(),
       purchasePrice: json['purchase_price']?.toString(),
       unit: json['unit']?.toString() ?? '',
       sku: json['sku']?.toString(),

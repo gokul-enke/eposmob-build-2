@@ -2,12 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/components/build_dialog_box.dart'
-    hide
-        showScaffold,
-        showScaffoldError,
-        showLoadingOverlay,
-        hideLoadingOverlay;
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
@@ -17,7 +11,7 @@ import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/screens/sales_return/widgets/sales_return_detail_modal.dart';
 import 'package:pos_machine/screens/sales_return/widgets/sales_return_responsive.dart';
 import 'package:pos_machine/screens/print/return_bill_print.dart';
-import 'package:pos_machine/models/order_details.dart';
+import 'package:pos_machine/helpers/sales_return_detail_helper.dart';
 import 'package:provider/provider.dart';
 import '../../components/build_pagination_control.dart';
 import '../../resources/color_manager.dart';
@@ -392,14 +386,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                 iconColor: Colors.white,
                 tooltip: 'sales_return.print_bill_tooltip'.tr,
                 onPressed: () {
-                  List<OrderReturnItem> returnItems = order.items.map((item) {
-                    return OrderReturnItem(
-                      id: item.id,
-                      productName: item.cartItem.product?.name ?? 'general.unknown'.tr,
-                      quantity: item.quantity,
-                      reason: item.reason,
-                    );
-                  }).toList();
+                  final returnItems = buildTransactionReturnPrintItems(order.items, const []);
 
                   Navigator.push(
                     context,
@@ -410,6 +397,8 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                         orderDate: order.createdAt.toString(),
                         orderNumber: order.order?.orderNumber ??
                             order.orderId.toString(),
+                        originalInvoiceNumber: order.order?.orderNumber,
+                        originalInvoiceDate: order.order?.orderDate,
                         customerName: order.order?.customer?.user?.name,
                       ),
                     ),
@@ -659,15 +648,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                     iconColor: Colors.white,
                     tooltip: 'sales_return.print_bill_tooltip'.tr,
                     onPressed: () {
-                      List<OrderReturnItem> returnItems =
-                          order.items.map((item) {
-                        return OrderReturnItem(
-                          id: item.id,
-                          productName: item.cartItem.product?.name ?? 'general.unknown'.tr,
-                          quantity: item.quantity,
-                          reason: item.reason,
-                        );
-                      }).toList();
+                      final returnItems = buildTransactionReturnPrintItems(order.items, const []);
 
                       Navigator.push(
                         context,
@@ -678,6 +659,8 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                             orderDate: order.createdAt.toString(),
                             orderNumber: order.order?.orderNumber ??
                                 order.orderId.toString(),
+                            originalInvoiceNumber: order.order?.orderNumber,
+                            originalInvoiceDate: order.order?.orderDate,
                             customerName: order.order?.customer?.user?.name,
                           ),
                         ),

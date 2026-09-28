@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'pdf_bidi_text.dart';
+import 'return_pdf_support_sections.dart';
 import 'package:open_file/open_file.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -209,6 +210,10 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         if (row.key != 'showDate' && row.key != 'showInvoiceNumber') row,
     ];
     final titleLines = _lines(params.invoiceTitleText);
+    final documentHeaderLines =
+        _lines(params.documentText(params.billDocumentConfig.header));
+    final documentSubheaderLines =
+        _lines(params.documentText(params.billDocumentConfig.subheader));
     // Each language is its own line (Arabic above English) so the two
     // scripts never share one bidi run.
     final storeNameLines =
@@ -231,9 +236,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         'showFssaiInfo',
       ])
         params.headerTextParts(key),
-    ]
-        .expand((parts) => _lines(parts.joined()))
-        .toList();
+    ].expand((parts) => _lines(parts.joined())).toList();
     final customerRows = params.customerInfoRows;
     final commentText = params.commentText;
     final bankRows = params.bankDetailRows;
@@ -293,8 +296,8 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       final summaryBoxes = <(pw.Widget, double)>[
         if (bankRows.isNotEmpty)
           (
-            _bankBox(params.bankDetailsHeading, bankRows, valueBold,
-                detailBold, detailStyle),
+            _bankBox(params.bankDetailsHeading, bankRows, valueBold, detailBold,
+                detailStyle),
             4.2,
           ),
         if (showQr)
@@ -383,6 +386,13 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             ),
           ),
 
+        for (final line in documentHeaderLines)
+          pw.Center(child: pdfText(line, style: headingStyle)),
+        for (final line in documentSubheaderLines)
+          pw.Center(child: pdfText(line, style: bodyStyle)),
+        if (documentHeaderLines.isNotEmpty || documentSubheaderLines.isNotEmpty)
+          pw.SizedBox(height: 4),
+
         // Metadata strip: invoice date | invoice number.
         if (metadataRows.isNotEmpty)
           _metadataStrip(metadataRows, valueBold, captionStyle, valueStyle),
@@ -423,19 +433,28 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               savedLabel.isNotEmpty)
             pw.SizedBox(height: 4),
           for (final row in paymentRows)
-            _labelValueLine(row.$1, _formatMoney(currency, row.$2), infoStyle,
-                infoStyle),
+            _labelValueLine(
+                row.$1, _formatMoney(currency, row.$2), infoStyle, infoStyle),
           for (final row in balanceRows)
             _labelValueLine(row.$1, _formatMoney(currency, row.$2),
                 row.$3 ? infoBold : infoStyle, row.$3 ? infoBold : infoStyle),
           if (savedLabel.isNotEmpty)
-            _labelValueLine(savedLabel,
-                _formatMoney(currency, params.savedAmountValue), infoBold,
+            _labelValueLine(
+                savedLabel,
+                _formatMoney(currency, params.savedAmountValue),
+                infoBold,
                 infoBold),
         ],
 
         // Returns table and final summary.
         ..._buildReturnsPdfSection(params, currency, font, fontBold, isA5),
+        ...buildReturnPdfSupportSections(
+          params: params,
+          style: pw.TextStyle(font: font, fontSize: isA5 ? 7 : 9),
+          headingStyle: pw.TextStyle(font: fontBold, fontSize: isA5 ? 7 : 9),
+          qrData: qrData,
+          includeComment: false,
+        ),
         if (!params.isReturnOnly)
           ..._buildFinalSummaryPdfSection(
               params, currency, font, fontBold, isA5),
@@ -458,8 +477,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
               for (final line in thankYouLines)
-                pdfText(line,
-                    style: bodyBold, textAlign: pw.TextAlign.center),
+                pdfText(line, style: bodyBold, textAlign: pw.TextAlign.center),
             ],
           ),
         for (final line in footerLines)
@@ -514,8 +532,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         line,
         style: style,
         softWrap: true,
-        textAlign:
-            pdfHasArabic(line) ? pw.TextAlign.right : pw.TextAlign.left,
+        textAlign: pdfHasArabic(line) ? pw.TextAlign.right : pw.TextAlign.left,
       );
 
   /// ZATCA QR when the store is registered, else the manual payment gateway.
@@ -813,9 +830,11 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           if (english.isNotEmpty) pdfText(english, style: enStyle),
           if (english.isNotEmpty && arabic.isNotEmpty) pw.SizedBox(width: 3),
           if (arabic.isNotEmpty)
-            pdfText(arabic, style: arStyle, textDirection: pw.TextDirection.rtl),
+            pdfText(arabic,
+                style: arStyle, textDirection: pw.TextDirection.rtl),
           pw.Spacer(),
-          pdfText(value, style: valueStyle, textDirection: pw.TextDirection.ltr),
+          pdfText(value,
+              style: valueStyle, textDirection: pw.TextDirection.ltr),
         ],
       ),
     );
@@ -916,7 +935,8 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     pw.Widget bodyCell(ReceiptItemColumn column, ReceiptItemLine line) =>
         switch (column.key) {
           'showParticulars' => nameCell(line),
-          'showSLNumber' || 'showUnit' =>
+          'showSLNumber' ||
+          'showUnit' =>
             cell(line.valueFor(column.key), pw.Alignment.topCenter),
           _ => cell(line.valueFor(column.key), pw.Alignment.topRight),
         };
@@ -994,6 +1014,10 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         pdfText(section.heading, style: titleStyle),
         pw.SizedBox(height: 4),
       ],
+      if (section.subtitle.isNotEmpty) ...[
+        pdfText(section.subtitle, style: labelStyle),
+        pw.SizedBox(height: 4),
+      ],
       if (section.creditNoteRows.isNotEmpty) ...[
         pdfText(section.creditNoteHeading, style: sectionHeadingStyle),
         pw.SizedBox(height: 2),
@@ -1053,6 +1077,11 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         pdfText(section.wordsHeading, style: labelStyle),
         for (final line in wordsLines) pdfText(line, style: valueStyle),
       ],
+      if (section.signatory.isNotEmpty) ...[
+        pw.SizedBox(height: 20),
+        pdfText('____________________', style: labelStyle),
+        pdfText(section.signatory, style: labelStyle),
+      ],
     ];
   }
 
@@ -1064,7 +1093,8 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     bool isA5,
   ) {
     final rows = params.finalSummaryRows;
-    if (rows.isEmpty) return const [];
+    final words = params.finalSummaryWordsLines(currency);
+    if (rows.isEmpty && words.isEmpty) return const [];
     double fs(double v) => isA5 ? v * 0.78 : v;
 
     final labelStyle = pw.TextStyle(
@@ -1080,7 +1110,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       pw.SizedBox(height: 6),
       pw.Divider(height: 0, thickness: 0.8),
       pw.SizedBox(height: 4),
-      pw.Table(
+      if (rows.isNotEmpty) pw.Table(
         border: pw.TableBorder.all(width: 0.5),
         columnWidths: const {
           0: pw.FlexColumnWidth(3),
@@ -1092,7 +1122,8 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               pw.Padding(
                 padding:
                     const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                child: pdfText(row.label.joined(inline: true), style: labelStyle),
+                child:
+                    pdfText(row.label.joined(inline: true), style: labelStyle),
               ),
               pw.Padding(
                 padding:
@@ -1107,7 +1138,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             ]),
         ],
       ),
-      for (final line in params.finalSummaryWordsLines(currency))
+      for (final line in words)
         pdfText(line, style: wordsBold),
     ];
   }

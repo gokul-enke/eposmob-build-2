@@ -1438,6 +1438,11 @@ class OrderReturns {
 }
 
 class OrderReturnItem {
+  final int? cartItemId;
+  final String? unitPrice;
+  final String? mrp;
+  final String? hsnCode;
+  final String? taxRate;
   final int? id;
   final String? productName;
   final num? quantity;
@@ -1446,6 +1451,11 @@ class OrderReturnItem {
   final Map<String, dynamic>? variantAttributes;
 
   OrderReturnItem({
+    this.cartItemId,
+    this.unitPrice,
+    this.mrp,
+    this.hsnCode,
+    this.taxRate,
     this.id,
     this.productName,
     this.quantity,
@@ -1473,6 +1483,12 @@ class OrderReturnItem {
 
   factory OrderReturnItem.fromJson(Map<String, dynamic> json) =>
       OrderReturnItem(
+        cartItemId: OrderDetailsModelDataCartItem._parseNullableInt(
+            json['cart_item_id']),
+        unitPrice: json['unit_price']?.toString(),
+        mrp: json['mrp']?.toString(),
+        hsnCode: json['hsn_code']?.toString(),
+        taxRate: json['tax_rate']?.toString(),
         id: json["id"],
         productName: json["product_name"],
         quantity: json["quantity"] is num
@@ -1487,6 +1503,11 @@ class OrderReturnItem {
       );
 
   Map<String, dynamic> toJson() => {
+        if (cartItemId != null) 'cart_item_id': cartItemId,
+        if (unitPrice != null) 'unit_price': unitPrice,
+        if (mrp != null) 'mrp': mrp,
+        if (hsnCode != null) 'hsn_code': hsnCode,
+        if (taxRate != null) 'tax_rate': taxRate,
         "id": id,
         "product_name": productName,
         "quantity": quantity,
