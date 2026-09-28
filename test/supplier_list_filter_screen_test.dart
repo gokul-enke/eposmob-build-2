@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/components/export_share_button.dart';
 import 'package:pos_machine/components/filter_toggle_button.dart';
 import 'package:pos_machine/models/supplier.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -27,6 +28,11 @@ class _TestTranslations extends Translations {
           'supplier_list_mobile.btn_add_new': 'Add New',
           'supplier_list_mobile.show_filters': 'Show Filters',
           'supplier_list_mobile.hide_filters': 'Hide Filters',
+          'supplier_list.export': 'Export',
+          'supplier_list.exporting': 'Exporting...',
+          'supplier_list.export_tooltip': 'Export and share suppliers',
+          'supplier_list.export_failed': 'Could not export suppliers',
+          'supplier_list.share_text': 'Supplier list exported from CloudPOS',
         },
       };
 }
@@ -76,6 +82,7 @@ void main() {
 
     expect(toggle, findsOneWidget);
     expect(filters, findsOneWidget);
+    expect(find.byType(ExportShareButton), findsOneWidget);
 
     await tester.enterText(find.byType(TextField).first, 'Acme');
     await tester.pump();
@@ -108,6 +115,7 @@ void main() {
 
     expect(toggle, findsOneWidget);
     expect(filters, findsNothing);
+    expect(find.byType(ExportShareButton), findsOneWidget);
 
     await tester.tap(toggle);
     await tester.pump();
@@ -118,5 +126,14 @@ void main() {
     await tester.pump();
     expect(filters, findsNothing);
     expect(find.text('Add New'), findsOneWidget);
+  });
+
+  testWidgets('Supplier List export action fits a narrow mobile header',
+      (tester) async {
+    await pumpSupplierList(tester, size: const Size(320, 568));
+
+    expect(find.byKey(const ValueKey('supplier-list-export')), findsOneWidget);
+    expect(find.byType(FilterToggleButton), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

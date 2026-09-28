@@ -21,6 +21,7 @@ class SupplierListMobileView extends StatefulWidget {
       onSearch;
   final bool showFilters;
   final Widget filterAction;
+  final Widget exportAction;
 
   const SupplierListMobileView({
     super.key,
@@ -34,6 +35,7 @@ class SupplierListMobileView extends StatefulWidget {
     required this.onSearch,
     required this.showFilters,
     required this.filterAction,
+    required this.exportAction,
   });
 
   @override
@@ -75,7 +77,7 @@ class _SupplierListMobileViewState extends State<SupplierListMobileView> {
           mainAxisSize: MainAxisSize.min,
           children: [
             widget.filterAction,
-            const SizedBox(width: 4),
+            widget.exportAction,
             ElevatedButton.icon(
               onPressed: widget.onAddSupplier,
               icon: const Icon(Icons.add, size: 16),

@@ -1504,7 +1504,12 @@
     "error_fetching": "Error fetching suppliers",
     "error_searching": "Error searching suppliers",
     "no_suppliers_desktop": "No suppliers found",
-    "try_adjusting_search": "Try adjusting your search criteria"
+    "try_adjusting_search": "Try adjusting your search criteria",
+    "export": "Export",
+    "exporting": "Exporting...",
+    "export_tooltip": "Export and share suppliers",
+    "export_failed": "Could not export suppliers",
+    "share_text": "Supplier list exported from CloudPOS"
   },
   "delivery": {
     "select_delivery_method": "Select Delivery Method",

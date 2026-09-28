@@ -1504,7 +1504,12 @@
     "error_fetching": "خطأ في جلب الموردين",
     "error_searching": "خطأ في البحث عن الموردين",
     "no_suppliers_desktop": "لم يتم العثور على موردين",
-    "try_adjusting_search": "حاول تعديل معايير البحث"
+    "try_adjusting_search": "حاول تعديل معايير البحث",
+    "export": "تصدير",
+    "exporting": "جارٍ التصدير...",
+    "export_tooltip": "تصدير ومشاركة الموردين",
+    "export_failed": "تعذر تصدير الموردين",
+    "share_text": "قائمة الموردين المصدرة من CloudPOS"
   },
   "delivery": {
     "select_delivery_method": "اختر طريقة التسليم",
