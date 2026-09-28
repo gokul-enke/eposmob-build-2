@@ -190,17 +190,26 @@ class QuotationDetailsData {
         json['customer_name']?.toString();
     final customerPhone =
         customerMap?['phone']?.toString() ?? json['customer_phone']?.toString();
+    // Orders return customer KYC as a top-level `kyc_info`; accept the same
+    // shape here so quotation reprints can show the customer's VAT / CR.
+    final kycInfo = json['kyc_info'] is Map
+        ? Map<String, dynamic>.from(json['kyc_info'] as Map)
+        : null;
     final quotationCustomer = customerMap != null
         ? QuotationCustomer.fromJson({
             ...customerMap,
             if (json['customer_id'] != null && customerMap['id'] == null)
               'id': json['customer_id'],
+            if (kycInfo != null && customerMap['kyc_info'] == null)
+              'kyc_info': kycInfo,
           })
         : (customerName != null || customerPhone != null
             ? QuotationCustomer(
                 id: _parseInt(json['customer_id']),
                 name: customerName,
                 phone: customerPhone,
+                vatNumber: _nonEmpty(kycInfo?['vat_number']),
+                crNumber: _nonEmpty(kycInfo?['cr_number']),
                 isInline: true,
               )
             : null);
@@ -240,14 +249,32 @@ class QuotationCustomer {
   final int? id;
   final String? name;
   final String? phone;
+  final String? customerType;
+  final String? vatNumber;
+  final String? crNumber;
   final bool isInline;
 
-  QuotationCustomer({this.id, this.name, this.phone, this.isInline = false});
+  QuotationCustomer({
+    this.id,
+    this.name,
+    this.phone,
+    this.customerType,
+    this.vatNumber,
+    this.crNumber,
+    this.isInline = false,
+  });
+
+  static const vatKycKeys = {'VAT', 'VAT NUMBER'};
+  static const crKycKeys = {'CR', 'CR NUMBER', 'COMMERCIAL REGISTRATION'};
 
   factory QuotationCustomer.fromJson(Map<String, dynamic> json) {
     final user = json['user'] is Map
         ? Map<String, dynamic>.from(json['user'] as Map)
         : null;
+    final kycInfo = json['kyc_info'] is Map
+        ? Map<String, dynamic>.from(json['kyc_info'] as Map)
+        : null;
+    final kycList = json['kyc'] ?? user?['kyc'];
     return QuotationCustomer(
       id: _parseInt(json['id']),
       name: json['name']?.toString() ??
@@ -256,9 +283,37 @@ class QuotationCustomer {
       phone: json['phone']?.toString() ??
           json['customer_phone']?.toString() ??
           user?['phone']?.toString(),
+      customerType: _nonEmpty(json['customer_type'] ?? user?['customer_type']),
+      vatNumber: _nonEmpty(json['vat_number']) ??
+          _nonEmpty(kycInfo?['vat_number']) ??
+          kycValue(kycList, vatKycKeys),
+      crNumber: _nonEmpty(json['cr_number']) ??
+          _nonEmpty(kycInfo?['cr_number']) ??
+          kycValue(kycList, crKycKeys),
       isInline: json['is_inline'] == true,
     );
   }
+
+  /// First non-empty value in a customer `kyc` list (`[{key, value}]`) whose
+  /// key, normalised to upper case with `_` as space, is in [acceptedKeys].
+  static String? kycValue(dynamic kycList, Set<String> acceptedKeys) {
+    if (kycList is! List) return null;
+    for (final item in kycList) {
+      if (item is! Map) continue;
+      final key =
+          item['key']?.toString().trim().toUpperCase().replaceAll('_', ' ');
+      final value = _nonEmpty(item['value']);
+      if (key != null && acceptedKeys.contains(key) && value != null) {
+        return value;
+      }
+    }
+    return null;
+  }
+}
+
+String? _nonEmpty(dynamic value) {
+  final text = value?.toString().trim();
+  return text == null || text.isEmpty ? null : text;
 }
 
 class QuotationStore {
