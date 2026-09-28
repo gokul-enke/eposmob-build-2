@@ -528,110 +528,113 @@ class _CustomerTransactionListScreenState
               offset: const Offset(0, 2)),
         ],
       ),
-      child: ExpansionTile(
-        leading: const Icon(Icons.filter_list, size: 18),
-        title: Text('party_accounts.filters'.tr,
-            style: buildCustomStyle(FontWeightManager.medium,
-                FontSize.s12, 0.18, ColorManager.textColor)),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: Column(
-              children: [
-                TextFormField(
-                  controller: amountRefController,
-                  onChanged: (value) {
-                    setState(() {
-                      searchAmount = value;
-                      currentPage = 1;
-                    });
-                    applyFilters();
-                  },
-                  decoration: _mobileInputDecoration('party_accounts.amount'.tr),
-                ),
-                const SizedBox(height: 8),
-                CustomerAutocomplete(
-                  size: size,
-                  customerList: getCustomerSuggestions(),
-                  controller: customerSearchController,
-                  onSelected: (String selectedCustomer) {
-                    setState(() {
-                      searchCustomer = selectedCustomer;
-                      final match = allTransactions?.firstWhere(
-                        (t) => (t.customerName ?? '').toLowerCase() ==
-                            selectedCustomer.toLowerCase(),
-                        orElse: () => ListTransaction(),
-                      );
-                      if (match != null && match.customerId != null) {
-                        selectedCustomerId = match.customerId.toString();
-                      }
-                      currentPage = 1;
-                    });
-                    _fetchServer(page: 1);
-                  },
-                ),
-                const SizedBox(height: 8),
-                _mobileDropdown(
-                  value: searchType.isEmpty ? 'All' : searchType,
-                  hint: 'party_accounts.hint_select_type'.tr,
-                  items: const ['All', 'Credit', 'Debit'],
-                  onChanged: (String? value) {
-                    setState(() {
-                      searchType = value == 'All' ? '' : (value ?? '');
-                      currentPage = 1;
-                    });
-                    _fetchServer(page: 1);
-                  },
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: referenceSearchController,
-                  onChanged: (value) {
-                    setState(() {
-                      searchReference = value;
-                      currentPage = 1;
-                    });
-                    applyFilters();
-                  },
-                  decoration: _mobileInputDecoration('party_accounts.reference_id'.tr),
-                ),
-                const SizedBox(height: 8),
-                BuildBoxShadowContainer(
-                  circleRadius: 7,
-                  height: 45,
-                  width: double.infinity,
-                  child: Center(
-                    child: CalendarPickerTableCell(
-                      key: ValueKey(_calendarKey),
-                      initialDate: selectedDate,
-                      onDateSelected: (DateTime date) {
-                        setState(() {
-                          selectedDate = date;
-                          currentPage = 1;
-                        });
-                        _fetchServer(page: 1);
-                      },
+      child: Material(
+        type: MaterialType.transparency,
+        child: ExpansionTile(
+          leading: const Icon(Icons.filter_list, size: 18),
+          title: Text('party_accounts.filters'.tr,
+              style: buildCustomStyle(FontWeightManager.medium,
+                  FontSize.s12, 0.18, ColorManager.textColor)),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: amountRefController,
+                    onChanged: (value) {
+                      setState(() {
+                        searchAmount = value;
+                        currentPage = 1;
+                      });
+                      applyFilters();
+                    },
+                    decoration: _mobileInputDecoration('party_accounts.amount'.tr),
+                  ),
+                  const SizedBox(height: 8),
+                  CustomerAutocomplete(
+                    size: size,
+                    customerList: getCustomerSuggestions(),
+                    controller: customerSearchController,
+                    onSelected: (String selectedCustomer) {
+                      setState(() {
+                        searchCustomer = selectedCustomer;
+                        final match = allTransactions?.firstWhere(
+                          (t) => (t.customerName ?? '').toLowerCase() ==
+                              selectedCustomer.toLowerCase(),
+                          orElse: () => ListTransaction(),
+                        );
+                        if (match != null && match.customerId != null) {
+                          selectedCustomerId = match.customerId.toString();
+                        }
+                        currentPage = 1;
+                      });
+                      _fetchServer(page: 1);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _mobileDropdown(
+                    value: searchType.isEmpty ? 'All' : searchType,
+                    hint: 'party_accounts.hint_select_type'.tr,
+                    items: const ['All', 'Credit', 'Debit'],
+                    onChanged: (String? value) {
+                      setState(() {
+                        searchType = value == 'All' ? '' : (value ?? '');
+                        currentPage = 1;
+                      });
+                      _fetchServer(page: 1);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: referenceSearchController,
+                    onChanged: (value) {
+                      setState(() {
+                        searchReference = value;
+                        currentPage = 1;
+                      });
+                      applyFilters();
+                    },
+                    decoration: _mobileInputDecoration('party_accounts.reference_id'.tr),
+                  ),
+                  const SizedBox(height: 8),
+                  BuildBoxShadowContainer(
+                    circleRadius: 7,
+                    height: 45,
+                    width: double.infinity,
+                    child: Center(
+                      child: CalendarPickerTableCell(
+                        key: ValueKey(_calendarKey),
+                        initialDate: selectedDate,
+                        onDateSelected: (DateTime date) {
+                          setState(() {
+                            selectedDate = date;
+                            currentPage = 1;
+                          });
+                          _fetchServer(page: 1);
+                        },
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: resetSearch,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: ColorManager.kPrimaryColor,
-                      side: const BorderSide(color: ColorManager.kPrimaryColor),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6)),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: resetSearch,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: ColorManager.kPrimaryColor,
+                        side: const BorderSide(color: ColorManager.kPrimaryColor),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6)),
+                      ),
+                      child: Text('party_accounts.btn_reset_filters'.tr),
                     ),
-                    child: Text('party_accounts.btn_reset_filters'.tr),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

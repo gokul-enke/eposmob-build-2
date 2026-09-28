@@ -927,77 +927,80 @@ class _TransactionScreenState extends State<TransactionScreen> {
               offset: const Offset(0, 2)),
         ],
       ),
-      child: ExpansionTile(
-        leading: const Icon(Icons.filter_list, size: 18),
-        title: Text('supplier_transactions.filters'.tr,
-            style: buildCustomStyle(FontWeightManager.medium,
-                FontSize.s12, 0.18, ColorManager.textColor)),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: Column(
-              children: [
-                // Search
-                TextFormField(
-                  controller: searchController,
-                  onChanged: (_) => searchTransactions(),
-                  decoration: _mobileInputDecoration('supplier_transactions.hint_search'.tr),
-                ),
-                const SizedBox(height: 8),
-                // Supplier autocomplete — reuse existing field in a box
-                TextFormField(
-                  controller: supplierSearchController,
-                  onChanged: (_) => searchTransactions(),
-                  decoration: _mobileInputDecoration('supplier_transactions.supplier'.tr),
-                ),
-                const SizedBox(height: 8),
-                _mobileDropdown(
-                  value: transactionTypeController.text,
-                  hint: 'supplier_transactions.trans_type'.tr,
-                  items: const ['All', 'Invoice', 'Voucher'],
-                  onChanged: (v) {
-                    setState(() => transactionTypeController.text = v!);
-                    searchTransactions();
-                  },
-                ),
-                const SizedBox(height: 8),
-                _mobileDropdown(
-                  value: typeController.text,
-                  hint: 'supplier_transactions.type'.tr,
-                  items: const ['All Types', 'Credit', 'Debit'],
-                  onChanged: (v) {
-                    setState(() => typeController.text = v!);
-                    searchTransactions();
-                  },
-                ),
-                const SizedBox(height: 8),
-                _mobileDropdown(
-                  value: statusController.text,
-                  hint: 'supplier_transactions.status'.tr,
-                  items: transactionProvider.getStatusOptions(),
-                  onChanged: (v) {
-                    setState(() => statusController.text = v!);
-                    searchTransactions();
-                  },
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: resetSearch,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: ColorManager.kPrimaryColor,
-                      side: const BorderSide(color: ColorManager.kPrimaryColor),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6)),
-                    ),
-                    child: Text('supplier_transactions.btn_reset_filters'.tr),
+      child: Material(
+        type: MaterialType.transparency,
+        child: ExpansionTile(
+          leading: const Icon(Icons.filter_list, size: 18),
+          title: Text('supplier_transactions.filters'.tr,
+              style: buildCustomStyle(FontWeightManager.medium,
+                  FontSize.s12, 0.18, ColorManager.textColor)),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: Column(
+                children: [
+                  // Search
+                  TextFormField(
+                    controller: searchController,
+                    onChanged: (_) => searchTransactions(),
+                    decoration: _mobileInputDecoration('supplier_transactions.hint_search'.tr),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  // Supplier autocomplete — reuse existing field in a box
+                  TextFormField(
+                    controller: supplierSearchController,
+                    onChanged: (_) => searchTransactions(),
+                    decoration: _mobileInputDecoration('supplier_transactions.supplier'.tr),
+                  ),
+                  const SizedBox(height: 8),
+                  _mobileDropdown(
+                    value: transactionTypeController.text,
+                    hint: 'supplier_transactions.trans_type'.tr,
+                    items: const ['All', 'Invoice', 'Voucher'],
+                    onChanged: (v) {
+                      setState(() => transactionTypeController.text = v!);
+                      searchTransactions();
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _mobileDropdown(
+                    value: typeController.text,
+                    hint: 'supplier_transactions.type'.tr,
+                    items: const ['All Types', 'Credit', 'Debit'],
+                    onChanged: (v) {
+                      setState(() => typeController.text = v!);
+                      searchTransactions();
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _mobileDropdown(
+                    value: statusController.text,
+                    hint: 'supplier_transactions.status'.tr,
+                    items: transactionProvider.getStatusOptions(),
+                    onChanged: (v) {
+                      setState(() => statusController.text = v!);
+                      searchTransactions();
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: resetSearch,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: ColorManager.kPrimaryColor,
+                        side: const BorderSide(color: ColorManager.kPrimaryColor),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6)),
+                      ),
+                      child: Text('supplier_transactions.btn_reset_filters'.tr),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

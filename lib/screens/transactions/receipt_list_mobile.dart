@@ -151,59 +151,62 @@ class _ReceiptMobileViewState extends State<ReceiptMobileView> {
           BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4, offset: const Offset(0, 2)),
         ],
       ),
-      child: ExpansionTile(
-        initiallyExpanded: false,
-        onExpansionChanged: (v) => setState(() => _filtersExpanded = v),
-        leading: const Icon(Icons.filter_list, size: 18),
-        title: Text(
-          _filtersExpanded ? 'receipt.hide_filters'.tr : 'receipt.show_filters'.tr,
-          style: buildCustomStyle(FontWeightManager.medium, FontSize.s12, 0.18, ColorManager.textColor),
-        ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: Column(
-              children: [
-                _filterField(widget.receiptNumberController, widget.receiptNoFocusNode, 'receipt.receipt_no_hint'.tr),
-                const SizedBox(height: 8),
-                _filterField(widget.paymentReferenceController, widget.referenceNoFocusNode, 'receipt.reference_no_hint'.tr),
-                const SizedBox(height: 8),
-                _filterField(widget.searchTextController, widget.nameFocusNode, 'receipt.name_hint'.tr),
-                const SizedBox(height: 8),
-                _filterField(widget.phoneController, widget.phoneFocusNode, 'receipt.phone_hint'.tr),
-                const SizedBox(height: 8),
-                _filterField(widget.emailController, widget.emailFocusNode, 'receipt.email_hint'.tr),
-                const SizedBox(height: 8),
-                _dropdownField(
-                  hint: 'receipt.hint_all_status'.tr,
-                  value: widget.selectedStatus,
-                  items: widget.statusOptions,
-                  onChanged: widget.onStatusChanged,
-                ),
-                const SizedBox(height: 8),
-                _dropdownField(
-                  hint: 'receipt.hint_all_payment'.tr,
-                  value: widget.selectedPaymentMethod,
-                  items: widget.paymentMethodOptions,
-                  onChanged: widget.onPaymentMethodChanged,
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: widget.onReset,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: ColorManager.kPrimaryColor,
-                      side: BorderSide(color: ColorManager.kPrimaryColor),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                    ),
-                    child: Text('receipt.reset_filters_button'.tr),
-                  ),
-                ),
-              ],
-            ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: ExpansionTile(
+          initiallyExpanded: false,
+          onExpansionChanged: (v) => setState(() => _filtersExpanded = v),
+          leading: const Icon(Icons.filter_list, size: 18),
+          title: Text(
+            _filtersExpanded ? 'receipt.hide_filters'.tr : 'receipt.show_filters'.tr,
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s12, 0.18, ColorManager.textColor),
           ),
-        ],
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: Column(
+                children: [
+                  _filterField(widget.receiptNumberController, widget.receiptNoFocusNode, 'receipt.receipt_no_hint'.tr),
+                  const SizedBox(height: 8),
+                  _filterField(widget.paymentReferenceController, widget.referenceNoFocusNode, 'receipt.reference_no_hint'.tr),
+                  const SizedBox(height: 8),
+                  _filterField(widget.searchTextController, widget.nameFocusNode, 'receipt.name_hint'.tr),
+                  const SizedBox(height: 8),
+                  _filterField(widget.phoneController, widget.phoneFocusNode, 'receipt.phone_hint'.tr),
+                  const SizedBox(height: 8),
+                  _filterField(widget.emailController, widget.emailFocusNode, 'receipt.email_hint'.tr),
+                  const SizedBox(height: 8),
+                  _dropdownField(
+                    hint: 'receipt.hint_all_status'.tr,
+                    value: widget.selectedStatus,
+                    items: widget.statusOptions,
+                    onChanged: widget.onStatusChanged,
+                  ),
+                  const SizedBox(height: 8),
+                  _dropdownField(
+                    hint: 'receipt.hint_all_payment'.tr,
+                    value: widget.selectedPaymentMethod,
+                    items: widget.paymentMethodOptions,
+                    onChanged: widget.onPaymentMethodChanged,
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: widget.onReset,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: ColorManager.kPrimaryColor,
+                        side: BorderSide(color: ColorManager.kPrimaryColor),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                      child: Text('receipt.reset_filters_button'.tr),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

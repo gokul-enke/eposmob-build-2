@@ -198,8 +198,11 @@ void main() {
     final refresh = tester.state<RefreshIndicatorState>(
       find.byType(RefreshIndicator),
     );
-    await refresh.show();
+    // show() completes only after the refresh animation runs, and frames
+    // advance only when the test pumps, so awaiting it here would deadlock.
+    final refreshDone = refresh.show();
     await tester.pumpAndSettle();
+    await refreshDone;
 
     expect(supplierProvider.lastSupplierName, 'Acme');
     expect(supplierProvider.lastSupplierEmail, 'accounts@acme.test');
