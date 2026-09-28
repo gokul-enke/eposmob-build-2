@@ -25,6 +25,7 @@ import 'package:provider/provider.dart';
 
 import '../../components/build_container_box.dart';
 import '../../components/build_round_button.dart';
+import '../../components/filter_toggle_button.dart';
 
 import '../../models/list_stock.dart';
 import '../../resources/color_manager.dart';
@@ -80,7 +81,11 @@ class _AddStockScreenState extends State<AddStockScreen> {
     // the initial fetch until this screen has completed its first build so
     // the provider cannot mark the tree dirty during the build phase.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) loadInitData();
+      if (!mounted) return;
+      setState(() {
+        _showFilters = !stockIsPhone(context);
+      });
+      loadInitData();
     });
   }
 
@@ -495,7 +500,11 @@ class _AddStockScreenState extends State<AddStockScreen> {
                     children: [
                       _buildMobileHeader(sideBarController),
                       const SizedBox(height: 10),
-                      _buildMobileFiltersSection(size),
+                      if (_showFilters)
+                        KeyedSubtree(
+                          key: const ValueKey('stock-mobile-filters'),
+                          child: _buildMobileFiltersSection(size),
+                        ),
                       const SizedBox(height: 10),
                       initLoading ||
                               Provider.of<StockProvider>(context, listen: true)
@@ -535,8 +544,13 @@ class _AddStockScreenState extends State<AddStockScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildDesktopHeader(sideBarController),
-                    const SizedBox(height: 10),
-                    _buildDesktopFilters(size),
+                    if (_showFilters) ...[
+                      const SizedBox(height: 10),
+                      KeyedSubtree(
+                        key: const ValueKey('stock-desktop-filters'),
+                        child: _buildDesktopFilters(size),
+                      ),
+                    ],
                     const SizedBox(height: 10),
                     Expanded(
                       child: Column(
@@ -589,11 +603,17 @@ class _AddStockScreenState extends State<AddStockScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          'stock.title'.tr,
-          style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
-              0.30, ColorManager.textColor),
+        Expanded(
+          child: Text(
+            'stock.title'.tr,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
+                0.30, ColorManager.textColor),
+          ),
         ),
+        _buildFilterToggleButton(),
+        const SizedBox(width: 8),
         CustomRoundButton(
           title: 'stock.add'.tr,
           fct: () async {
@@ -626,45 +646,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                 ),
               ),
             ),
-            SizedBox(
-              width: 44,
-              height: 44,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      _showFilters
-                          ? Icons.filter_alt
-                          : Icons.filter_alt_outlined,
-                      color: ColorManager.kPrimaryColor,
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 44,
-                      minHeight: 44,
-                    ),
-                    onPressed: () {
-                      setState(() => _showFilters = !_showFilters);
-                    },
-                    tooltip: _showFilters ? 'stock.hide_filters'.tr : 'stock.show_filters'.tr,
-                  ),
-                  if (_hasActiveFilters())
-                    PositionedDirectional(
-                      end: 6,
-                      top: 6,
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
+            _buildFilterToggleButton(),
           ],
         ),
         const SizedBox(height: 12),
@@ -678,6 +660,26 @@ class _AddStockScreenState extends State<AddStockScreen> {
           width: double.infinity,
         ),
       ],
+    );
+  }
+
+  Widget _buildFilterToggleButton() {
+    return FilterToggleButton(
+      key: const Key('stock-filter-toggle'),
+      showFilters: _showFilters,
+      hasActiveFilters: _hasActiveFilters(),
+      activeFiltersListenable: Listenable.merge([
+        stockNameController,
+        categoryController,
+        barcodeController,
+        rackController,
+        storeController,
+        stockStatusController,
+      ]),
+      activeFiltersBuilder: _hasActiveFilters,
+      onPressed: () => setState(() => _showFilters = !_showFilters),
+      showTooltip: 'stock.show_filters'.tr,
+      hideTooltip: 'stock.hide_filters'.tr,
     );
   }
 
