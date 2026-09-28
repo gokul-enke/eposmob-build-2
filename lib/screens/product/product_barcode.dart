@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
+import 'package:pos_machine/components/filter_toggle_button.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 
@@ -768,6 +769,23 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
         categoryController.text != "All Categories";
   }
 
+  Widget _buildFilterToggleButton() {
+    return FilterToggleButton(
+      key: const Key('product-barcode-filter-toggle'),
+      showFilters: _showFilters,
+      hasActiveFilters: _hasActiveFilters(),
+      activeFiltersListenable: Listenable.merge([
+        productNameController,
+        barcodeController,
+        categoryController,
+      ]),
+      activeFiltersBuilder: _hasActiveFilters,
+      onPressed: () => setState(() => _showFilters = !_showFilters),
+      showTooltip: 'product_barcode.show_filters'.tr,
+      hideTooltip: 'product_barcode.hide_filters'.tr,
+    );
+  }
+
   Widget _buildCategoryDropdown() {
     return BuildDropDownWithSearch<String>(
       title: null,
@@ -944,54 +962,65 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
   }
 
   Widget _buildFilterSection(Size size, bool isMobile) {
-    if (isMobile && !_showFilters) {
+    if (!_showFilters) {
       return const SizedBox.shrink();
     }
 
     if (isMobile) {
-      return BarcodeMobileFilters(
-        productNameController: productNameController,
-        barcodeController: barcodeController,
-        categoryField: _buildCategoryDropdown(),
-        onSearch: (value) {
-          searchProducts(1);
-        },
-        onReset: resetSearch,
+      return ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: size.height * 0.45),
+        child: SingleChildScrollView(
+          child: KeyedSubtree(
+            key: const ValueKey('product-barcode-mobile-filters'),
+            child: BarcodeMobileFilters(
+              productNameController: productNameController,
+              barcodeController: barcodeController,
+              categoryField: _buildCategoryDropdown(),
+              onSearch: (value) {
+                searchProducts(1);
+              },
+              onReset: resetSearch,
+            ),
+          ),
+        ),
       );
     }
 
-    return ProductBarcodeFilterLayout(
-      children: [
-        _buildCategoryDropdown(),
-        buildColumnWidgetForTextFields(
-          height: 45,
-          onchanged: (value) {
-            searchProducts(1);
-          },
-          controller: productNameController,
-          size: size,
-          hintText: 'product_barcode.product_name'.tr,
-        ),
-        buildColumnWidgetForTextFields(
-          height: 45,
-          onchanged: (value) {
-            searchProducts(1);
-          },
-          controller: barcodeController,
-          size: size,
-          hintText: 'product_barcode.barcode'.tr,
-        ),
-        CustomRoundButton(
-          title: 'product_barcode.reset'.tr,
-          boxColor: Colors.white,
-          textColor: ColorManager.kPrimaryColor,
-          borderColor: ColorManager.kPrimaryColor,
-          fct: resetSearch,
-          height: 45,
-          width: double.infinity,
-          fontSize: FontSize.s12,
-        ),
-      ],
+    return KeyedSubtree(
+      key: const ValueKey('product-barcode-desktop-filters'),
+      child: ProductBarcodeFilterLayout(
+        children: [
+          _buildCategoryDropdown(),
+          buildColumnWidgetForTextFields(
+            height: 45,
+            onchanged: (value) {
+              searchProducts(1);
+            },
+            controller: productNameController,
+            size: size,
+            hintText: 'product_barcode.product_name'.tr,
+          ),
+          buildColumnWidgetForTextFields(
+            height: 45,
+            onchanged: (value) {
+              searchProducts(1);
+            },
+            controller: barcodeController,
+            size: size,
+            hintText: 'product_barcode.barcode'.tr,
+          ),
+          CustomRoundButton(
+            title: 'product_barcode.reset'.tr,
+            boxColor: Colors.white,
+            textColor: ColorManager.kPrimaryColor,
+            borderColor: ColorManager.kPrimaryColor,
+            fct: resetSearch,
+            height: 45,
+            width: double.infinity,
+            fontSize: FontSize.s12,
+          ),
+        ],
+      ),
     );
   }
 
@@ -1549,22 +1578,47 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                         subtitle: 'product_barcode.subtitle'.tr,
                       ),
                     ),
-                    ProductBarcodeFilterToggle(
-                      showFilters: _showFilters,
-                      hasActiveFilters: _hasActiveFilters(),
-                      onToggle: () {
-                        setState(() {
-                          _showFilters = !_showFilters;
-                        });
-                      },
-                    ),
+                    _buildFilterToggleButton(),
                   ],
                 )
               else
-                ProductBarcodePageHeader(
-                  title: 'product_barcode.title'.tr,
-                  subtitle: 'product_barcode.subtitle'.tr,
-                  trailing: _buildHeaderActions(false),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final hasSelection = _selectedProductKeys.isNotEmpty;
+                    final stackActions =
+                        hasSelection && constraints.maxWidth < 600;
+
+                    if (stackActions) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          ProductBarcodePageHeader(
+                            title: 'product_barcode.title'.tr,
+                            subtitle: 'product_barcode.subtitle'.tr,
+                            trailing: _buildFilterToggleButton(),
+                          ),
+                          const SizedBox(height: 10),
+                          Align(
+                            alignment: AlignmentDirectional.centerEnd,
+                            child: _buildHeaderActions(false),
+                          ),
+                        ],
+                      );
+                    }
+
+                    return ProductBarcodePageHeader(
+                      title: 'product_barcode.title'.tr,
+                      subtitle: 'product_barcode.subtitle'.tr,
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildFilterToggleButton(),
+                          const SizedBox(width: 8),
+                          _buildHeaderActions(false),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               if (isMobile) ...[
                 const SizedBox(height: 12),

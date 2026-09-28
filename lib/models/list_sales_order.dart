@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
+import 'payment_method_registry.dart';
+
 class ListSalesOrderModel {
   final String? status;
   final String? message;
@@ -85,6 +87,7 @@ class ListOrderModelData {
   final String? orderNumber;
   final String? grantTotal;
   final String? paymentStatus;
+  final List<String> paymentMethods;
   final String? status;
   final CustomerDetails? customerDetails;
   final PriceSummary? priceSummary;
@@ -101,6 +104,7 @@ class ListOrderModelData {
     this.orderNumber,
     this.grantTotal,
     this.paymentStatus,
+    this.paymentMethods = const [],
     this.status,
     this.customerDetails,
     this.priceSummary,
@@ -144,6 +148,7 @@ class ListOrderModelData {
         orderNumber: _asString(json["order_number"]),
         grantTotal: _asString(json["grand_total"]),
         paymentStatus: _asString(json["payment_status"]),
+        paymentMethods: _asStringList(json["payment_method"]),
         status: _asString(json["status"]),
         customerName: _asString(json["customer_name"]),
         customerDetails:
@@ -189,6 +194,48 @@ class ListOrderModelData {
     return value.toString();
   }
 
+  static List<String> _asStringList(dynamic value) {
+    if (value == null) return const [];
+    if (value is List) {
+      return value
+          .where((item) => item != null)
+          .map((item) => item.toString().trim())
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false);
+    }
+    if (value is String) {
+      final trimmed = value.trim();
+      if (trimmed.isEmpty) return const [];
+      if (trimmed.startsWith('[')) {
+        try {
+          return _asStringList(jsonDecode(trimmed));
+        } catch (_) {
+          // Fall back to treating malformed JSON as a single method value.
+        }
+      }
+      return [trimmed];
+    }
+    return [value.toString()];
+  }
+
+  bool get isUnpaidCod {
+    // Only a purely COD order can skip refund details. If COD appears alongside
+    // another method, that paid portion may still need to be refunded.
+    final isCodOnly = paymentMethods.length == 1 &&
+        _isCodPaymentMethod(paymentMethods.single);
+    final normalizedStatus = paymentStatus?.trim().toLowerCase();
+    return isCodOnly &&
+        (normalizedStatus == 'pending' || normalizedStatus == 'unpaid');
+  }
+
+  static bool _isCodPaymentMethod(String method) {
+    final resolvedCode = PaymentMethodRegistry.find(method)?.code;
+    final candidate = resolvedCode ?? method;
+    final normalized =
+        candidate.toUpperCase().replaceAll(RegExp(r'[^A-Z]'), '');
+    return normalized == 'COD' || normalized == 'CASHONDELIVERY';
+  }
+
   Map<String, dynamic> toJson() => {
         "id": id,
         "cart_id": cartId,
@@ -196,6 +243,7 @@ class ListOrderModelData {
         "order_number": orderNumber,
         "grant_total": grantTotal,
         "payment_status": paymentStatus,
+        "payment_method": paymentMethods,
         "status": status,
         "customer_name": customerName,
         "orderProps": customerDetails?.toJson(),

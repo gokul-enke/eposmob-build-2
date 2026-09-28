@@ -20,6 +20,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../components/build_container_box.dart';
 import '../../components/build_dropdown_with_search.dart';
+import '../../components/filter_toggle_button.dart';
 import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../providers/auth_model.dart';
@@ -50,6 +51,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
   final TextEditingController dateToController = TextEditingController();
   String? selectedType;
   String? selectedStatus;
+  bool _showFilters = true;
 
   final FocusNode nameFocusNode = FocusNode();
   final FocusNode voucherNoFocusNode = FocusNode();
@@ -509,9 +511,13 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(size),
-                // const SizedBox(height: 10),
-                _buildSearchBar(size),
-                const SizedBox(height: 10),
+                if (_showFilters) ...[
+                  KeyedSubtree(
+                    key: const ValueKey('customer-voucher-desktop-filters'),
+                    child: _buildSearchBar(size),
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 _buildVoucherTable(),
                 const SizedBox(height: 10),
                 _buildPaginationControls(),
@@ -524,16 +530,52 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
   }
 
   Widget _buildHeader(Size size) {
+    final hasActiveFilters = searchTextController.text.isNotEmpty ||
+        voucherNumberController.text.isNotEmpty ||
+        dateFromController.text.isNotEmpty ||
+        dateToController.text.isNotEmpty ||
+        selectedType != null ||
+        selectedStatus != null;
+
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'customer_voucher.list_title'.tr,
-              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
-                  0.30, ColorManager.textColor),
+            Expanded(
+              child: Text(
+                'customer_voucher.list_title'.tr,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s20,
+                    0.30,
+                    ColorManager.textColor),
+              ),
             ),
+            const SizedBox(width: 8),
+            FilterToggleButton(
+              showFilters: _showFilters,
+              hasActiveFilters: hasActiveFilters,
+              activeFiltersListenable: Listenable.merge([
+                searchTextController,
+                voucherNumberController,
+                dateFromController,
+                dateToController,
+              ]),
+              activeFiltersBuilder: () =>
+                  searchTextController.text.isNotEmpty ||
+                  voucherNumberController.text.isNotEmpty ||
+                  dateFromController.text.isNotEmpty ||
+                  dateToController.text.isNotEmpty ||
+                  selectedType != null ||
+                  selectedStatus != null,
+              onPressed: () => setState(() => _showFilters = !_showFilters),
+              showTooltip: 'customer_voucher.show_filters'.tr,
+              hideTooltip: 'customer_voucher.hide_filters'.tr,
+            ),
+            const SizedBox(width: 8),
             CustomRoundButton(
               title: 'customer_voucher.create_voucher_button'.tr,
               fct: () {

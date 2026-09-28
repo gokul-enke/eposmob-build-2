@@ -879,9 +879,9 @@ class SalesProvider with ChangeNotifier {
   Future<void> cancelOrder({
     required String accessToken,
     required String orderId,
-    required String paymentMethod,
-    required String refundAmount,
-    required bool deliveryChargeRefundable,
+    String? paymentMethod,
+    String? refundAmount,
+    bool? deliveryChargeRefundable,
   }) async {
     final url = Uri.parse(APPUrl.cancelOrderUrl);
 
@@ -892,11 +892,12 @@ class SalesProvider with ChangeNotifier {
       throw const HttpException("API key not found. Please restart the app.");
     }
 
-    final requestBody = {
+    final requestBody = <String, dynamic>{
       'order_id': orderId,
-      'refund_method': paymentMethod,
-      'refund_amount': refundAmount,
-      'delivery_charge_refundable': deliveryChargeRefundable,
+      if (paymentMethod != null) 'refund_method': paymentMethod,
+      if (refundAmount != null) 'refund_amount': refundAmount,
+      if (deliveryChargeRefundable != null)
+        'delivery_charge_refundable': deliveryChargeRefundable,
     };
 
     debugPrint("🔴 CANCEL ORDER API REQUEST BODY: ${jsonEncode(requestBody)}");

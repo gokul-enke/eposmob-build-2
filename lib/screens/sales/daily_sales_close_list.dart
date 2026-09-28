@@ -10,6 +10,7 @@ import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
+import 'package:pos_machine/components/filter_toggle_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -45,6 +46,17 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
   Key calendarPickerKey = UniqueKey();
   bool isLoading = false;
   DayClosePendingStatus? pendingStatus;
+
+  Widget _buildFilterToggleButton(SalesProvider salesProvider) {
+    return FilterToggleButton(
+      key: const ValueKey('day-close-filter-toggle'),
+      showFilters: salesProvider.showFilters,
+      hasActiveFilters: selectedDate != null,
+      onPressed: salesProvider.toggleFilters,
+      showTooltip: 'daily_sales_close.show_filters'.tr,
+      hideTooltip: 'daily_sales_close.hide_filters'.tr,
+    );
+  }
 
   @override
   void initState() {
@@ -704,40 +716,8 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                               ),
                               Consumer<SalesProvider>(
                                 builder: (context, salesProvider, child) {
-                                  final hasFilters = selectedDate != null;
-
-                                  return Stack(
-                                    children: [
-                                      IconButton(
-                                        icon: Icon(
-                                          salesProvider.showFilters
-                                              ? Icons.filter_alt
-                                              : Icons.filter_alt_outlined,
-                                          color: ColorManager.kPrimaryColor,
-                                        ),
-                                        onPressed: () {
-                                          salesProvider.toggleFilters();
-                                        },
-                                        tooltip: salesProvider.showFilters
-                                            ? 'daily_sales_close.hide_filters'
-                                                  .tr
-                                            : 'daily_sales_close.show_filters'
-                                                  .tr,
-                                      ),
-                                      if (hasFilters)
-                                        Positioned(
-                                          right: 8,
-                                          top: 8,
-                                          child: Container(
-                                            width: 8,
-                                            height: 8,
-                                            decoration: BoxDecoration(
-                                              color: Colors.red,
-                                              shape: BoxShape.circle,
-                                            ),
-                                          ),
-                                        ),
-                                    ],
+                                  return _buildFilterToggleButton(
+                                    salesProvider,
                                   );
                                 },
                               ),
@@ -821,40 +801,8 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                               const SizedBox(width: 10),
                               Consumer<SalesProvider>(
                                 builder: (context, salesProvider, child) {
-                                  final hasFilters = selectedDate != null;
-
-                                  return Stack(
-                                    children: [
-                                      IconButton(
-                                        icon: Icon(
-                                          salesProvider.showFilters
-                                              ? Icons.filter_alt
-                                              : Icons.filter_alt_outlined,
-                                          color: ColorManager.kPrimaryColor,
-                                        ),
-                                        onPressed: () {
-                                          salesProvider.toggleFilters();
-                                        },
-                                        tooltip: salesProvider.showFilters
-                                            ? 'daily_sales_close.hide_filters'
-                                                  .tr
-                                            : 'daily_sales_close.show_filters'
-                                                  .tr,
-                                      ),
-                                      if (hasFilters)
-                                        Positioned(
-                                          right: 8,
-                                          top: 8,
-                                          child: Container(
-                                            width: 8,
-                                            height: 8,
-                                            decoration: BoxDecoration(
-                                              color: Colors.red,
-                                              shape: BoxShape.circle,
-                                            ),
-                                          ),
-                                        ),
-                                    ],
+                                  return _buildFilterToggleButton(
+                                    salesProvider,
                                   );
                                 },
                               ),
@@ -872,6 +820,7 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                     }
 
                     return Column(
+                      key: const ValueKey('day-close-filters'),
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // First row of filters

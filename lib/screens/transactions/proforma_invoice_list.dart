@@ -13,6 +13,7 @@ import '../../components/build_dialog_box.dart'
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import '../../components/build_round_button.dart';
 import '../../components/build_text_fields.dart';
+import '../../components/filter_toggle_button.dart';
 import '../../components/build_title.dart';
 import '../../providers/auth_model.dart';
 import '../../providers/quotations_provider.dart';
@@ -21,6 +22,14 @@ import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import 'widgets/common_details_dialog.dart';
 import 'package:pos_machine/helpers/ui_code_labels.dart';
+
+@visibleForTesting
+const double proformaMobileBreakpoint = 700;
+
+@visibleForTesting
+bool useProformaMobileLayout(double width) {
+  return width < proformaMobileBreakpoint;
+}
 
 class ProformaInvoiceListScreen extends StatefulWidget {
   const ProformaInvoiceListScreen({super.key});
@@ -38,6 +47,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
   String _selectedStatus = 'All';
   bool _isLoading = false;
   bool _showFilters = false;
+  bool _showDesktopFilters = true;
   String? _errorMessage;
   int _currentPage = 1;
   int _lastPage = 1;
@@ -619,7 +629,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final bool isMobile = size.width < 700;
+    final bool isMobile = useProformaMobileLayout(size.width);
 
     return SafeArea(
       child: RefreshIndicator(
@@ -696,8 +706,10 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
                     children: [
                       _buildHeader(false),
                       const SizedBox(height: 16),
-                      _buildFilters(),
-                      const SizedBox(height: 16),
+                      if (_showDesktopFilters) ...[
+                        _buildFilters(),
+                        const SizedBox(height: 16),
+                      ],
                       Expanded(
                         child: BuildBoxShadowContainer(
                           circleRadius: 7,
@@ -725,6 +737,10 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
   }
 
   Widget _buildHeader(bool isMobile) {
+    final hasActiveFilters = _invoiceNumberController.text.isNotEmpty ||
+        _customerSearchController.text.isNotEmpty ||
+        _selectedStatus.toLowerCase() != 'all';
+
     if (isMobile) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -738,45 +754,63 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
               ColorManager.textColor,
             ),
           ),
-          IconButton(
-            icon: Icon(
-              _showFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
-              color: ColorManager.kPrimaryColor,
-            ),
-            onPressed: () {
-              setState(() {
-                _showFilters = !_showFilters;
-              });
-            },
-            tooltip: _showFilters
-                ? 'proforma_invoice.hide_filters'.tr
-                : 'proforma_invoice.show_filters'.tr,
+          FilterToggleButton(
+            showFilters: _showFilters,
+            hasActiveFilters: hasActiveFilters,
+            activeFiltersListenable: Listenable.merge([
+              _invoiceNumberController,
+              _customerSearchController,
+            ]),
+            activeFiltersBuilder: () =>
+                _invoiceNumberController.text.isNotEmpty ||
+                _customerSearchController.text.isNotEmpty ||
+                _selectedStatus.toLowerCase() != 'all',
+            onPressed: () => setState(() => _showFilters = !_showFilters),
+            showTooltip: 'proforma_invoice.show_filters'.tr,
+            hideTooltip: 'proforma_invoice.hide_filters'.tr,
           ),
         ],
       );
     }
-    return Text(
-      'proforma_invoice.title'.tr,
-      style: buildCustomStyle(
-        FontWeightManager.semiBold,
-        FontSize.s20,
-        0.30,
-        ColorManager.textColor,
-      ),
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            'proforma_invoice.title'.tr,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s20,
+              0.30,
+              ColorManager.textColor,
+            ),
+          ),
+        ),
+        FilterToggleButton(
+          showFilters: _showDesktopFilters,
+          hasActiveFilters: hasActiveFilters,
+          activeFiltersListenable: Listenable.merge([
+            _invoiceNumberController,
+            _customerSearchController,
+          ]),
+          activeFiltersBuilder: () =>
+              _invoiceNumberController.text.isNotEmpty ||
+              _customerSearchController.text.isNotEmpty ||
+              _selectedStatus.toLowerCase() != 'all',
+          onPressed: () => setState(
+            () => _showDesktopFilters = !_showDesktopFilters,
+          ),
+          showTooltip: 'proforma_invoice.show_filters'.tr,
+          hideTooltip: 'proforma_invoice.hide_filters'.tr,
+        ),
+      ],
     );
   }
 
   Widget _buildFilters() {
     final size = MediaQuery.of(context).size;
-    if (size.width < 900) {
-      return const SizedBox.shrink();
-    }
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(
-          child: buildColumnWidgetForTextFields(
+    Widget invoiceNumberFilter() => buildColumnWidgetForTextFields(
             title: 'proforma_invoice.invoice_number_label'.tr,
             height: 45,
             width: double.infinity,
@@ -785,11 +819,8 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
             hintText: 'proforma_invoice.search_invoice_number_hint'.tr,
             margin: const EdgeInsets.symmetric(horizontal: 0),
             onchanged: (_) => _fetchInvoices(),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: buildColumnWidgetForTextFields(
+          );
+    Widget customerFilter() => buildColumnWidgetForTextFields(
             title: 'proforma_invoice.customer_label'.tr,
             height: 45,
             width: double.infinity,
@@ -798,11 +829,8 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
             hintText: 'proforma_invoice.name_or_phone_hint'.tr,
             margin: const EdgeInsets.symmetric(horizontal: 0),
             onchanged: (_) => _fetchInvoices(),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: BuildDropDownStatic(
+          );
+    Widget statusFilter() => BuildDropDownStatic(
             title: 'proforma_invoice.status_label'.tr,
             size: size,
             items: _statusOptions,
@@ -816,10 +844,8 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
               setState(() => _selectedStatus = value ?? 'All');
               _fetchInvoices();
             },
-          ),
-        ),
-        const SizedBox(width: 10),
-        CustomRoundButton(
+          );
+    Widget resetButton() => CustomRoundButton(
           title: 'general.reset'.tr,
           boxColor: Colors.white,
           textColor: ColorManager.kPrimaryColor,
@@ -827,8 +853,47 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
           height: 45,
           width: 120,
           fontSize: FontSize.s12,
-        ),
-      ],
+        );
+
+    return LayoutBuilder(
+      key: const ValueKey('proforma-desktop-filters'),
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 900) {
+          return Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(child: invoiceNumberFilter()),
+                  const SizedBox(width: 10),
+                  Expanded(child: customerFilter()),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(child: statusFilter()),
+                  const SizedBox(width: 10),
+                  Expanded(child: resetButton()),
+                ],
+              ),
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(child: invoiceNumberFilter()),
+            const SizedBox(width: 10),
+            Expanded(child: customerFilter()),
+            const SizedBox(width: 10),
+            Expanded(child: statusFilter()),
+            const SizedBox(width: 10),
+            resetButton(),
+          ],
+        );
+      },
     );
   }
 
