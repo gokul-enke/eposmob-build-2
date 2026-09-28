@@ -157,6 +157,21 @@ void main() {
     );
   }
 
+  Future<Object?> verifyMobileExpansion(
+    WidgetTester tester, {
+    required Widget screen,
+    required Key toggleKey,
+    required Key panelKey,
+  }) async {
+    await pumpScreen(tester, screen, size: const Size(390, 650));
+
+    await tester.tap(find.byKey(toggleKey));
+    await tester.pump();
+
+    expect(find.byKey(panelKey), findsOneWidget);
+    return tester.takeException();
+  }
+
   testWidgets('Purchase Order collapses its real desktop filter panel',
       (tester) async {
     await verifyDesktopCollapse(
@@ -197,5 +212,31 @@ void main() {
       toggleKey: const ValueKey('purchase-return-filter-toggle'),
       panelKey: const ValueKey('purchase-return-filters'),
     );
+  });
+
+  testWidgets('purchase filters expand without overflow on a short phone',
+      (tester) async {
+    final failures = <String>[];
+    final orderException = await verifyMobileExpansion(
+      tester,
+      screen: const AddPurchaseOrderScreen(),
+      toggleKey: const ValueKey('purchase-order-filter-toggle'),
+      panelKey: const ValueKey('purchase-order-filters'),
+    );
+    if (orderException != null) {
+      failures.add('Purchase Order: $orderException');
+    }
+
+    final returnException = await verifyMobileExpansion(
+      tester,
+      screen: const PurchaseReturnListScreen(),
+      toggleKey: const ValueKey('purchase-return-filter-toggle'),
+      panelKey: const ValueKey('purchase-return-filters'),
+    );
+    if (returnException != null) {
+      failures.add('Purchase Return: $returnException');
+    }
+
+    expect(failures, isEmpty);
   });
 }

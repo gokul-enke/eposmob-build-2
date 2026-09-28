@@ -188,4 +188,63 @@ void main() {
 
     expect(find.text(selectedDateLabel), findsOneWidget);
   });
+
+  testWidgets('party account filters expand without overflow on a short phone',
+      (tester) async {
+    final cases = <(Widget, Key, Key)>[
+      (
+        const CustomerTransactionListScreen(),
+        const ValueKey('customer-transactions-filter-toggle'),
+        const ValueKey('customer-transactions-mobile-filters'),
+      ),
+      (
+        const TransactionScreen(),
+        const ValueKey('supplier-transactions-filter-toggle'),
+        const ValueKey('supplier-transactions-mobile-filters'),
+      ),
+    ];
+    final failures = <String>[];
+
+    for (final testCase in cases) {
+      tester.view.physicalSize = const Size(390, 650);
+      tester.view.devicePixelRatio = 1;
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => AuthModel()),
+            ChangeNotifierProvider<InvoiceProvider>(
+              create: (_) => _FakeInvoiceProvider(),
+            ),
+            ChangeNotifierProvider<TransactionProvider>(
+              create: (_) => _FakeTransactionProvider(),
+            ),
+          ],
+          child: GetMaterialApp(
+            translations: _TestTranslations(),
+            locale: const Locale('en', 'US'),
+            home: Scaffold(body: testCase.$1),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      if (find.byKey(testCase.$3).evaluate().isEmpty) {
+        await tester.tap(find.byKey(testCase.$2));
+        await tester.pump();
+      }
+      expect(find.byKey(testCase.$3), findsOneWidget);
+
+      await tester.tap(find.byType(ExpansionTile));
+      await tester.pumpAndSettle();
+      final exception = tester.takeException();
+      if (exception != null) {
+        failures.add('${testCase.$1.runtimeType}: $exception');
+      }
+    }
+
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    expect(failures, isEmpty);
+  });
 }

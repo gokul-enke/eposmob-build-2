@@ -44,6 +44,36 @@ class _FakePurchaseProvider extends PurchaseProvider {
   Future<void> listAllStores(String accessToken, String? storeName) async {}
 }
 
+class _ProductTestTranslations extends Translations {
+  @override
+  Map<String, Map<String, String>> get keys => {
+        'en_US': {
+          'product.reset_filters': 'Reset Filters',
+          'product_barcode.title': 'Product Barcode',
+          'product_barcode.subtitle': 'Select products to print',
+          'product_barcode.selected_count': '@count selected',
+          'product_barcode.print_selected': 'Print @count',
+          'product_barcode.clear_selected': 'Clear',
+          'product_barcode.select_all_page': 'Select page',
+          'product_barcode.no_products_found': 'No products found',
+          'product_barcode.col_no': 'No.',
+          'product_barcode.product_name': 'Product',
+          'product_barcode.barcode': 'Barcode',
+          'product_barcode.category': 'Category',
+          'product_barcode.qty': 'Qty',
+          'product_barcode.col_price': 'Price',
+          'product_barcode.mrp': 'MRP',
+          'product_barcode.col_sku': 'SKU',
+          'product_barcode.col_action': 'Action',
+          'product_barcode.na': 'N/A',
+          'pagination.previous': 'Previous',
+          'pagination.page': 'Page',
+          'pagination.of': 'of',
+          'pagination.next': 'Next',
+        },
+      };
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -123,7 +153,11 @@ void main() {
         ),
         ChangeNotifierProvider<RoleProvider>(create: (_) => RoleProvider()),
       ],
-      child: GetMaterialApp(home: Scaffold(body: content)),
+      child: GetMaterialApp(
+        translations: _ProductTestTranslations(),
+        locale: const Locale('en', 'US'),
+        home: Scaffold(body: content),
+      ),
     );
   }
 
@@ -186,6 +220,21 @@ void main() {
     );
   }
 
+  Future<void> verifyMobileExpansion(
+    WidgetTester tester, {
+    required Widget screen,
+    required Key toggleKey,
+    required Key panelKey,
+  }) async {
+    await pumpScreen(tester, screen, size: const Size(390, 650));
+
+    await tester.tap(find.byKey(toggleKey));
+    await tester.pump();
+
+    expect(find.byKey(panelKey), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  }
+
   testWidgets('Product List collapses its real desktop filter panel',
       (tester) async {
     await verifyDesktopCollapse(
@@ -204,6 +253,36 @@ void main() {
       toggleKey: const ValueKey('product-filter-toggle'),
       panelKey: const ValueKey('product-mobile-filters'),
     );
+  });
+
+  testWidgets('Product List expanded mobile filters scroll without overflow',
+      (tester) async {
+    await pumpScreen(
+      tester,
+      const AddProductScreen(),
+      size: const Size(390, 650),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('product-filter-toggle')));
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('product-mobile-filters')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('product-mobile-filter-scroll')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.drag(
+      find.byKey(const ValueKey('product-mobile-filter-scroll')),
+      const Offset(0, -600),
+    );
+    await tester.pump();
+    expect(find.text('Reset Filters'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Product Stock collapses its real desktop filter panel',
@@ -239,6 +318,22 @@ void main() {
   testWidgets('Product Barcode starts with mobile filters collapsed',
       (tester) async {
     await verifyMobileStartsCollapsed(
+      tester,
+      screen: const ProductBarcodeScreen(),
+      toggleKey: const ValueKey('product-barcode-filter-toggle'),
+      panelKey: const ValueKey('product-barcode-mobile-filters'),
+    );
+  });
+
+  testWidgets('Stock and Barcode filters expand without overflow on a phone',
+      (tester) async {
+    await verifyMobileExpansion(
+      tester,
+      screen: const AddStockScreen(),
+      toggleKey: const ValueKey('stock-filter-toggle'),
+      panelKey: const ValueKey('stock-mobile-filters'),
+    );
+    await verifyMobileExpansion(
       tester,
       screen: const ProductBarcodeScreen(),
       toggleKey: const ValueKey('product-barcode-filter-toggle'),

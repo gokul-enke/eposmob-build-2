@@ -529,31 +529,41 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     if (isMobile && !_showFilters)
                       const SizedBox.shrink()
                     else if (isMobile)
-                      ProductMobileFilters(
-                        key: const ValueKey('product-mobile-filters'),
-                        productNameController: productNameController,
-                        amountController: amountController,
-                        barcodeController: barcodeController,
-                        hsnCodeController: hsnCodeController,
-                        itemCodeController: itemCodeController,
-                        propertySearchController: propertySearchController,
-                        selectedProperty: selectedProperty,
-                        propertyList: propertyList,
-                        categoryField: Consumer<CategoryProvider>(
-                          builder: (context, categoryProvider, child) {
-                            return _buildCategoryDropdown(categoryProvider);
-                          },
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: size.height * 0.45,
                         ),
-                        onSearch: (value) {
-                          searchProducts(1);
-                        },
-                        onPropertyChanged: (String? newValue) {
-                          setState(() {
-                            selectedProperty = newValue;
-                          });
-                          searchProducts(1);
-                        },
-                        onReset: resetSearch,
+                        child: SingleChildScrollView(
+                          key: const ValueKey(
+                            'product-mobile-filter-scroll',
+                          ),
+                          child: ProductMobileFilters(
+                            key: const ValueKey('product-mobile-filters'),
+                            productNameController: productNameController,
+                            amountController: amountController,
+                            barcodeController: barcodeController,
+                            hsnCodeController: hsnCodeController,
+                            itemCodeController: itemCodeController,
+                            propertySearchController: propertySearchController,
+                            selectedProperty: selectedProperty,
+                            propertyList: propertyList,
+                            categoryField: Consumer<CategoryProvider>(
+                              builder: (context, categoryProvider, child) {
+                                return _buildCategoryDropdown(categoryProvider);
+                              },
+                            ),
+                            onSearch: (value) {
+                              searchProducts(1);
+                            },
+                            onPropertyChanged: (String? newValue) {
+                              setState(() {
+                                selectedProperty = newValue;
+                              });
+                              searchProducts(1);
+                            },
+                            onReset: resetSearch,
+                          ),
+                        ),
                       )
                     else if (!_showFilters)
                       const SizedBox.shrink()

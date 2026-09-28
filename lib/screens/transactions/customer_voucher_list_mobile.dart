@@ -108,11 +108,16 @@ class _CustomerVoucherMobileViewState
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          'customer_voucher.mobile_list_title'.tr,
-          style: buildCustomStyle(
-              FontWeightManager.semiBold, FontSize.s16, 0.25, ColorManager.textColor),
+        Expanded(
+          child: Text(
+            'customer_voucher.mobile_list_title'.tr,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s16,
+                0.25, ColorManager.textColor),
+          ),
         ),
+        const SizedBox(width: 8),
         ElevatedButton.icon(
           onPressed: widget.onCreateVoucher,
           icon: const Icon(Icons.add, size: 16),

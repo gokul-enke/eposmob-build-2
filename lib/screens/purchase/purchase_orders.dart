@@ -342,7 +342,8 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
             ConstrainedBox(
               key: const ValueKey('purchase-order-filters'),
               constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.55,
+                maxHeight: MediaQuery.of(context).size.height *
+                    (isPhone ? 0.42 : 0.55),
               ),
               child: SingleChildScrollView(
                 child: _buildFiltersCard(),
@@ -553,12 +554,17 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
   Widget _buildEmptyState() {
     final hasFilters = _hasActiveFilters();
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsetsDirectional.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsetsDirectional.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
             Icon(
               Icons.receipt_long_outlined,
               size: 48,
@@ -587,7 +593,10 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                 width: 140,
               ),
             ],
-          ],
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

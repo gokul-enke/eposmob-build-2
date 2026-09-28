@@ -35,7 +35,6 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
   bool initLoading = false;
   bool _showFilters = true;
   bool _filterVisibilityInitialized = false;
-  late final Listenable _activeFilterInputs;
 
   bool get _hasActiveFilters =>
       searchTextController.text.isNotEmpty ||
@@ -48,7 +47,11 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
       key: const ValueKey('supplier-list-filter-toggle'),
       showFilters: _showFilters,
       hasActiveFilters: _hasActiveFilters,
-      activeFiltersListenable: _activeFilterInputs,
+      activeFiltersListenable: Listenable.merge([
+        searchTextController,
+        searchEmailController,
+        searchPhoneController,
+      ]),
       activeFiltersBuilder: () => _hasActiveFilters,
       showTooltip: 'supplier_list_mobile.show_filters'.tr,
       hideTooltip: 'supplier_list_mobile.hide_filters'.tr,
@@ -59,11 +62,6 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
   @override
   void initState() {
     super.initState();
-    _activeFilterInputs = Listenable.merge([
-      searchTextController,
-      searchEmailController,
-      searchPhoneController,
-    ]);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       loadInitData();
     });

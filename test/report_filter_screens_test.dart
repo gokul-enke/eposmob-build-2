@@ -140,6 +140,18 @@ class _FakeReportsProvider extends ReportsProvider {
   }) async {}
 }
 
+class _ReportTestTranslations extends Translations {
+  @override
+  Map<String, Map<String, String>> get keys => {
+        'en_US': {
+          'pagination.previous': 'Previous',
+          'pagination.page': 'Page',
+          'pagination.of': 'of',
+          'pagination.next': 'Next',
+        },
+      };
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -218,7 +230,11 @@ void main() {
         ChangeNotifierProvider(create: (_) => StoreSessionProvider()),
         ChangeNotifierProvider(create: (_) => RoleProvider()),
       ],
-      child: GetMaterialApp(home: Scaffold(body: screen)),
+      child: GetMaterialApp(
+        translations: _ReportTestTranslations(),
+        locale: const Locale('en', 'US'),
+        home: Scaffold(body: screen),
+      ),
     );
   }
 
@@ -226,8 +242,9 @@ void main() {
     WidgetTester tester,
     Widget screen, {
     CustomerProvider? customerProvider,
+    Size size = const Size(1440, 900),
   }) async {
-    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -254,6 +271,24 @@ void main() {
 
     expect(find.byKey(panelKey), findsNothing);
     expect(find.byKey(toggleKey), findsOneWidget);
+  }
+
+  Future<void> verifyMobileExpansion(
+    WidgetTester tester, {
+    required Widget screen,
+    required Key toggleKey,
+    required Key panelKey,
+  }) async {
+    await pumpScreen(tester, screen, size: const Size(390, 650));
+
+    expect(find.byKey(toggleKey), findsOneWidget);
+    expect(find.byKey(panelKey), findsNothing);
+
+    await tester.tap(find.byKey(toggleKey));
+    await tester.pump();
+
+    expect(find.byKey(panelKey), findsOneWidget);
+    expect(tester.takeException(), isNull);
   }
 
   testWidgets('Sales Executive Report collapses its desktop filters',
@@ -312,6 +347,51 @@ void main() {
       toggleKey: const ValueKey('consumed-stocks-report-filter-toggle'),
       panelKey: const ValueKey('consumed-stocks-report-filters'),
     );
+  });
+
+  testWidgets('report filters expand without overflow on a short phone',
+      (tester) async {
+    final cases = <(Widget, Key, Key)>[
+      (
+        const SalesExecutiveReportScreen(),
+        const ValueKey('sales-executive-report-filter-toggle'),
+        const ValueKey('sales-executive-report-filters'),
+      ),
+      (
+        const CustomerTransactionsReportScreen(),
+        const ValueKey('customer-transactions-report-filter-toggle'),
+        const ValueKey('customer-transactions-report-filters'),
+      ),
+      (
+        const SupplierTransactionReportScreen(),
+        const ValueKey('supplier-transactions-report-filter-toggle'),
+        const ValueKey('supplier-transactions-report-filters'),
+      ),
+      (
+        const StockReportScreen(),
+        const ValueKey('stock-report-filter-toggle'),
+        const ValueKey('stock-report-filters'),
+      ),
+      (
+        const NonStockReportScreen(),
+        const ValueKey('non-stock-report-filter-toggle'),
+        const ValueKey('non-stock-report-filters'),
+      ),
+      (
+        const ConsumedStocksReportScreen(),
+        const ValueKey('consumed-stocks-report-filter-toggle'),
+        const ValueKey('consumed-stocks-report-filters'),
+      ),
+    ];
+
+    for (final testCase in cases) {
+      await verifyMobileExpansion(
+        tester,
+        screen: testCase.$1,
+        toggleKey: testCase.$2,
+        panelKey: testCase.$3,
+      );
+    }
   });
 
   testWidgets('Customer selection marks filters active and reset clears it',

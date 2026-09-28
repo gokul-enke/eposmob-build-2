@@ -98,7 +98,12 @@ class _ReceiptMobileViewState extends State<ReceiptMobileView> {
         children: [
           _buildHeader(),
           const SizedBox(height: 8),
-          _buildFiltersPanel(),
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * 0.55,
+            ),
+            child: SingleChildScrollView(child: _buildFiltersPanel()),
+          ),
           const SizedBox(height: 8),
           Expanded(child: _buildList()),
           const SizedBox(height: 8),

@@ -967,16 +967,21 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     }
 
     if (isMobile) {
-      return KeyedSubtree(
-        key: const ValueKey('product-barcode-mobile-filters'),
-        child: BarcodeMobileFilters(
-          productNameController: productNameController,
-          barcodeController: barcodeController,
-          categoryField: _buildCategoryDropdown(),
-          onSearch: (value) {
-            searchProducts(1);
-          },
-          onReset: resetSearch,
+      return ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: size.height * 0.45),
+        child: SingleChildScrollView(
+          child: KeyedSubtree(
+            key: const ValueKey('product-barcode-mobile-filters'),
+            child: BarcodeMobileFilters(
+              productNameController: productNameController,
+              barcodeController: barcodeController,
+              categoryField: _buildCategoryDropdown(),
+              onSearch: (value) {
+                searchProducts(1);
+              },
+              onReset: resetSearch,
+            ),
+          ),
         ),
       );
     }

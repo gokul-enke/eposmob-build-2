@@ -308,6 +308,7 @@ class _StockReportScreenState extends State<StockReportScreen> {
                 'stock_report.total_stocked_units'.tr,
                 totalUnits,
                 Icons.inventory_2_outlined,
+                expandText: isNarrow,
               ),
               if (canShowPurchaseCosts && isNarrow) const Divider(height: 16),
               if (canShowPurchaseCosts)
@@ -315,12 +316,14 @@ class _StockReportScreenState extends State<StockReportScreen> {
                   'stock_report.total_stock_value'.tr,
                   "$totalStockValue",
                   Icons.monetization_on_outlined,
+                  expandText: isNarrow,
                 ),
               if (canShowPurchaseCosts && isNarrow) const Divider(height: 16),
               _buildSummaryItem(
                 'stock_report.total_retail_value'.tr,
                 "$totalRetailValue",
                 Icons.shopping_bag_outlined,
+                expandText: isNarrow,
               ),
             ],
           );
@@ -329,37 +332,46 @@ class _StockReportScreenState extends State<StockReportScreen> {
     );
   }
 
-  Widget _buildSummaryItem(String title, String value, IconData icon) {
-    return Row(
+  Widget _buildSummaryItem(
+    String title,
+    String value,
+    IconData icon, {
+    bool expandText = false,
+  }) {
+    final text = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s11,
+            0.15,
+            Colors.black54,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: buildCustomStyle(
+            FontWeightManager.bold,
+            FontSize.s16,
+            0.20,
+            ColorManager.textColor,
+          ),
+        ),
+      ],
+    );
+
+    return Row(
+      mainAxisSize: expandText ? MainAxisSize.max : MainAxisSize.min,
       children: [
         Icon(icon, size: 24, color: ColorManager.kPrimaryColor),
         const SizedBox(width: 10),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              title,
-              style: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s11,
-                0.15,
-                Colors.black54,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              value,
-              style: buildCustomStyle(
-                FontWeightManager.bold,
-                FontSize.s16,
-                0.20,
-                ColorManager.textColor,
-              ),
-            ),
-          ],
-        ),
+        if (expandText) Expanded(child: text) else text,
       ],
     );
   }

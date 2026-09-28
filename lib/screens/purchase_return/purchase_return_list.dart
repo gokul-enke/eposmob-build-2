@@ -228,7 +228,8 @@ class _PurchaseReturnListScreenState extends State<PurchaseReturnListScreen> {
             ConstrainedBox(
               key: const ValueKey('purchase-return-filters'),
               constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.55,
+                maxHeight: MediaQuery.of(context).size.height *
+                    (isPhone ? 0.42 : 0.55),
               ),
               child: SingleChildScrollView(child: _buildFiltersCard()),
             ),

@@ -99,7 +99,7 @@ void main() {
   });
 
   testWidgets('Supplier List toggles its mobile filter panel', (tester) async {
-    await pumpSupplierList(tester, size: const Size(360, 800));
+    await pumpSupplierList(tester, size: const Size(390, 650));
 
     final toggle = find.byType(FilterToggleButton);
     final filters = find.byKey(
@@ -112,6 +112,7 @@ void main() {
     await tester.tap(toggle);
     await tester.pump();
     expect(filters, findsOneWidget);
+    expect(tester.takeException(), isNull);
 
     await tester.tap(toggle);
     await tester.pump();
