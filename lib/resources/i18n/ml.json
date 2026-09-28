@@ -4573,6 +4573,7 @@
   "party_accounts": {
     "title": "കസ്റ്റമർ ട്രാൻസാക്ഷൻ",
     "filters": "ഫിൽട്ടറുകൾ",
+    "hide_filters": "ഫിൽട്ടറുകൾ മറയ്ക്കുക",
     "amount": "തുക",
     "customer_name": "കസ്റ്റമർ പേര്",
     "type": "തരം",
@@ -4934,6 +4935,7 @@
     "col_action": "ആക്ഷൻ",
     "ref_copied": "റഫറൻസ് ക്ലിപ്ബോർഡിലേക്ക് പകർത്തി",
     "filters": "ഫിൽട്ടറുകൾ",
+    "hide_filters": "ഫിൽട്ടറുകൾ മറയ്ക്കുക",
     "ref_prefix": "Ref:",
     "btn_view": "കാണുക",
     "dialog_title": "ട്രാൻസാക്ഷൻ വിവരങ്ങൾ",

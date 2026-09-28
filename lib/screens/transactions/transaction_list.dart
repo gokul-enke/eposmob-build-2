@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
+import 'package:pos_machine/components/filter_toggle_button.dart';
 import 'package:pos_machine/screens/transactions/widgets/customer_auto_complete.dart';
 import 'package:provider/provider.dart';
 
@@ -54,6 +55,7 @@ class _CustomerTransactionListScreenState
       []; // This should be populated with your customer names
   List<String> filteredSuggestions = [];
   bool initLoading = false;
+  bool _showFilters = true;
   List<ListTransaction>? listTransaction = [];
   List<ListTransaction>? allTransactions =
       []; // Store all transactions for filtering
@@ -64,6 +66,25 @@ class _CustomerTransactionListScreenState
   int _calendarKey = 0;
   final int itemsPerPage = 20;
   String? selectedCustomerId; // for API param
+
+  bool get _hasActiveFilters =>
+      searchAmount.isNotEmpty ||
+      searchCustomer.isNotEmpty ||
+      selectedCustomerId != null ||
+      (searchType.isNotEmpty && searchType != 'All') ||
+      searchReference.isNotEmpty ||
+      selectedDate != null;
+
+  Widget _buildFilterToggleButton() {
+    return FilterToggleButton(
+      key: const ValueKey('customer-transactions-filter-toggle'),
+      showFilters: _showFilters,
+      hasActiveFilters: _hasActiveFilters,
+      showTooltip: 'party_accounts.filters'.tr,
+      hideTooltip: 'party_accounts.hide_filters'.tr,
+      onPressed: () => setState(() => _showFilters = !_showFilters),
+    );
+  }
 
   List<String> getCustomerSuggestions() {
     if (allTransactions == null) return [];
@@ -582,6 +603,7 @@ class _CustomerTransactionListScreenState
                   child: Center(
                     child: CalendarPickerTableCell(
                       key: ValueKey(_calendarKey),
+                      initialDate: selectedDate,
                       onDateSelected: (DateTime date) {
                         setState(() {
                           selectedDate = date;
@@ -788,14 +810,28 @@ class _CustomerTransactionListScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'party_accounts.title'.tr,
-                  style: buildCustomStyle(FontWeightManager.semiBold,
-                      FontSize.s18, 0.25, ColorManager.textColor),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'party_accounts.title'.tr,
+                        overflow: TextOverflow.ellipsis,
+                        style: buildCustomStyle(FontWeightManager.semiBold,
+                            FontSize.s18, 0.25, ColorManager.textColor),
+                      ),
+                    ),
+                    _buildFilterToggleButton(),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                _buildMobileFilters(size),
-                const SizedBox(height: 8),
+                if (_showFilters) ...[
+                  const SizedBox(height: 10),
+                  KeyedSubtree(
+                    key: const ValueKey('customer-transactions-mobile-filters'),
+                    child: _buildMobileFilters(size),
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 Expanded(
                   child: initLoading
                       ? const Center(child: CircularProgressIndicator.adaptive())
@@ -841,11 +877,14 @@ class _CustomerTransactionListScreenState
                       style: buildCustomStyle(FontWeightManager.semiBold,
                           FontSize.s20, 0.30, ColorManager.textColor),
                     ),
+                    _buildFilterToggleButton(),
                   ],
                 ),
-                const SizedBox(height: 15),
-                Column(
-                  children: [
+                if (_showFilters) ...[
+                  const SizedBox(height: 15),
+                  Column(
+                    key: const ValueKey('customer-transactions-desktop-filters'),
+                    children: [
                     // First row with 4 filters
                     Row(
                       children: [
@@ -1069,6 +1108,7 @@ class _CustomerTransactionListScreenState
                                 child: Center(
                                   child: CalendarPickerTableCell(
                                     key: ValueKey(_calendarKey),
+                                    initialDate: selectedDate,
                                     onDateSelected: (DateTime date) {
                                       setState(() {
                                         selectedDate = date;
@@ -1110,9 +1150,10 @@ class _CustomerTransactionListScreenState
                         ),
                       ],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 20),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                ],
                 Expanded(
                   child: Column(
                     children: [

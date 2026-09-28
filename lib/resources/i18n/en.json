@@ -4573,6 +4573,7 @@
   "party_accounts": {
     "title": "Customer Transaction",
     "filters": "Filters",
+    "hide_filters": "Hide Filters",
     "amount": "Amount",
     "customer_name": "Customer Name",
     "type": "Type",
@@ -4934,6 +4935,7 @@
     "col_action": "Action",
     "ref_copied": "Reference copied to clipboard",
     "filters": "Filters",
+    "hide_filters": "Hide Filters",
     "ref_prefix": "Ref:",
     "btn_view": "View",
     "dialog_title": "Transaction Details",

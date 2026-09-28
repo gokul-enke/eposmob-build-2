@@ -6,6 +6,7 @@ import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/screens/transactions/widgets/supplier_auto_complete_search.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
+import 'package:pos_machine/components/filter_toggle_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/ui_code_labels.dart';
 import '../../../providers/auth_model.dart';
@@ -38,6 +39,27 @@ class _TransactionScreenState extends State<TransactionScreen> {
   TransactionModel? selectedTransaction;
   bool initLoading = false;
   bool isInitialized = false;
+  bool _showFilters = true;
+
+  bool get _hasActiveFilters =>
+      searchController.text.isNotEmpty ||
+      supplierSearchController.text.isNotEmpty ||
+      transactionTypeController.text != 'All' ||
+      typeController.text != 'All Types' ||
+      statusController.text != 'All Status' ||
+      paymentModeController.text != 'All Payment Modes' ||
+      supplierController.text != 'All Suppliers';
+
+  Widget _buildFilterToggleButton() {
+    return FilterToggleButton(
+      key: const ValueKey('supplier-transactions-filter-toggle'),
+      showFilters: _showFilters,
+      hasActiveFilters: _hasActiveFilters,
+      showTooltip: 'supplier_transactions.filters'.tr,
+      hideTooltip: 'supplier_transactions.hide_filters'.tr,
+      onPressed: () => setState(() => _showFilters = !_showFilters),
+    );
+  }
 
   @override
   void initState() {
@@ -388,14 +410,28 @@ class _TransactionScreenState extends State<TransactionScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'supplier_transactions.title'.tr,
-                  style: buildCustomStyle(FontWeightManager.semiBold,
-                      FontSize.s18, 0.25, ColorManager.textColor),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'supplier_transactions.title'.tr,
+                        overflow: TextOverflow.ellipsis,
+                        style: buildCustomStyle(FontWeightManager.semiBold,
+                            FontSize.s18, 0.25, ColorManager.textColor),
+                      ),
+                    ),
+                    _buildFilterToggleButton(),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                _buildMobileFilters(size, transactionProvider),
-                const SizedBox(height: 8),
+                if (_showFilters) ...[
+                  const SizedBox(height: 10),
+                  KeyedSubtree(
+                    key: const ValueKey('supplier-transactions-mobile-filters'),
+                    child: _buildMobileFilters(size, transactionProvider),
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 Expanded(
                   child: initLoading || transactionProvider.transactionIsLoading
                       ? const Center(child: CircularProgressIndicator.adaptive())
@@ -447,14 +483,18 @@ class _TransactionScreenState extends State<TransactionScreen> {
                         ColorManager.textColor,
                       ),
                     ),
+                    _buildFilterToggleButton(),
                   ],
                 ),
 
-                const SizedBox(height: 15),
-
-                /// First Row (Filters)
-                Row(
-                  children: [
+                if (_showFilters) ...[
+                  const SizedBox(height: 15),
+                  Column(
+                    key: const ValueKey('supplier-transactions-desktop-filters'),
+                    children: [
+                      /// First Row (Filters)
+                      Row(
+                        children: [
                     Expanded(
                       child: _buildSearchField(
                         title: 'supplier_transactions.search'.tr,
@@ -530,15 +570,14 @@ class _TransactionScreenState extends State<TransactionScreen> {
                         isSmallScreen: isSmallScreen,
                       ),
                     ),
-                  ],
-                ),
+                        ],
+                      ),
 
-                const SizedBox(height: 15),
+                      const SizedBox(height: 15),
 
-                /// Second Row (Reset button aligned right)
-
-                Row(
-                  children: [
+                      /// Second Row (Reset button aligned right)
+                      Row(
+                        children: [
                     // Empty space to push reset button to the end
                     Expanded(
                       flex: 3,
@@ -560,10 +599,12 @@ class _TransactionScreenState extends State<TransactionScreen> {
                         ),
                       ),
                     ),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                ],
 
                 /// Table + Pagination
                 Expanded(

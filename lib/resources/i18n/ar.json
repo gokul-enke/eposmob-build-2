@@ -4406,6 +4406,7 @@
   "party_accounts": {
     "title": "معاملات العملاء",
     "filters": "الفلاتر",
+    "hide_filters": "إخفاء الفلاتر",
     "amount": "المبلغ",
     "customer_name": "اسم العميل",
     "type": "النوع",
@@ -4767,6 +4768,7 @@
     "col_action": "الإجراء",
     "ref_copied": "تم نسخ المرجع إلى الحافظة",
     "filters": "الفلاتر",
+    "hide_filters": "إخفاء الفلاتر",
     "ref_prefix": "مرجع:",
     "btn_view": "عرض",
     "dialog_title": "تفاصيل المعاملة",
