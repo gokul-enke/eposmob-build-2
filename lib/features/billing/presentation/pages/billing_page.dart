@@ -8414,6 +8414,10 @@ class BillingPageState extends State<BillingPage>
       paymentMethod: null,
       paymentBreakdown: null,
       customerType: selectedCustomer?.customerType,
+      customerVatNumber:
+          QuotationPrintService.vatNumberFromKyc(selectedCustomer?.kyc),
+      customerCrNumber:
+          QuotationPrintService.crNumberFromKyc(selectedCustomer?.kyc),
       deliveryMethod: deliveryMethod,
       isDefaultCustomer: _isDefaultCustomer(selectedCustomer),
     );

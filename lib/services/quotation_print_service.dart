@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/quotation_model.dart';
 import 'package:pos_machine/screens/print/print.dart';
 
@@ -16,6 +17,8 @@ class QuotationPrintService {
     double? paidAmount,
     String? deliveryMethod,
     String? customerType,
+    String? customerVatNumber,
+    String? customerCrNumber,
     bool isDefaultCustomer = false,
     double? customerOldBalance,
   }) async {
@@ -26,6 +29,8 @@ class QuotationPrintService {
       paidAmount: paidAmount,
       deliveryMethod: deliveryMethod,
       customerType: customerType,
+      customerVatNumber: customerVatNumber,
+      customerCrNumber: customerCrNumber,
       isDefaultCustomer: isDefaultCustomer,
       customerOldBalance: customerOldBalance,
     );
@@ -50,6 +55,8 @@ class QuotationPrintService {
       paymentBreakdown:
           printPayload['paymentBreakdown'] as Map<String, dynamic>?,
       customerType: printPayload['customerType'] as String?,
+      customerVatNumber: printPayload['customerVatNumber'] as String?,
+      customerCrNumber: printPayload['customerCrNumber'] as String?,
       documentConfigType: printPayload['documentConfigType'] as String?,
       orderComment: printPayload['orderComment'] as String?,
       deliveryMethod: printPayload['deliveryMethod'] as String?,
@@ -77,6 +84,8 @@ class QuotationPrintService {
             paymentBreakdown:
                 printPayload['paymentBreakdown'] as Map<String, dynamic>?,
             customerType: printPayload['customerType'] as String?,
+            customerVatNumber: printPayload['customerVatNumber'] as String?,
+            customerCrNumber: printPayload['customerCrNumber'] as String?,
             documentConfigType: printPayload['documentConfigType'] as String?,
             orderComment: printPayload['orderComment'] as String?,
             deliveryMethod: printPayload['deliveryMethod'] as String?,
@@ -90,6 +99,24 @@ class QuotationPrintService {
     return autoPrintSuccess;
   }
 
+  /// Customer VAT number from a billing customer's KYC entries.
+  static String? vatNumberFromKyc(List<Kyc>? kyc) =>
+      QuotationCustomer.kycValue(_kycMaps(kyc), QuotationCustomer.vatKycKeys);
+
+  /// Customer CR number from a billing customer's KYC entries.
+  static String? crNumberFromKyc(List<Kyc>? kyc) =>
+      QuotationCustomer.kycValue(_kycMaps(kyc), QuotationCustomer.crKycKeys);
+
+  static List<Map<String, dynamic>>? _kycMaps(List<Kyc>? kyc) =>
+      kyc?.map((item) => {'key': item.key, 'value': item.value}).toList();
+
+  static String? _firstNonEmpty(String? primary, String? fallback) {
+    final value = primary?.trim();
+    if (value != null && value.isNotEmpty) return value;
+    final other = fallback?.trim();
+    return other == null || other.isEmpty ? null : other;
+  }
+
   Map<String, dynamic> buildPrintPayload(
     QuotationDetailsData details, {
     String? paymentMethod,
@@ -97,6 +124,8 @@ class QuotationPrintService {
     double? paidAmount,
     String? deliveryMethod,
     String? customerType,
+    String? customerVatNumber,
+    String? customerCrNumber,
     bool isDefaultCustomer = false,
     double? customerOldBalance,
   }) {
@@ -124,6 +153,10 @@ class QuotationPrintService {
         ? details.quotationDate!.trim()
         : DateFormat('yyyy-MM-dd').format(DateTime.now());
 
+    // Caller values come from the live billing customer; the quotation's own
+    // customer covers reprints from the quotation list.
+    final customer = details.customer;
+
     return {
       'cartItems': cartItems,
       'formattedTotal': details.grandTotal ?? '0.00',
@@ -131,13 +164,16 @@ class QuotationPrintService {
       'orderDate': quotationDate,
       'orderNumber': quotationNumber,
       'storeName': details.store?.name,
-      'customerName': details.customer?.name,
-      'customerPhone': details.customer?.phone,
+      'customerName': customer?.name,
+      'customerPhone': customer?.phone,
       'customerOldBalance': customerOldBalance,
       'paidAmount': paidAmount,
       'paymentMethod': paymentMethod,
       'paymentBreakdown': paymentBreakdown,
-      'customerType': customerType,
+      'customerType': _firstNonEmpty(customerType, customer?.customerType),
+      'customerVatNumber':
+          _firstNonEmpty(customerVatNumber, customer?.vatNumber),
+      'customerCrNumber': _firstNonEmpty(customerCrNumber, customer?.crNumber),
       'documentConfigType': 'Quotation',
       'orderComment': details.expiryDate?.trim().isNotEmpty == true
           ? 'Valid until: ${details.expiryDate}'
