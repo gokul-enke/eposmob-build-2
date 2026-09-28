@@ -10,6 +10,7 @@ import '../../newcomponents/custom_dialog_box.dart';
 import '../../newcomponents/custom_round_button.dart';
 import '../../newcomponents/custom_dropdown_with_search.dart';
 import '../../components/build_pagination_control.dart';
+import '../../components/filter_toggle_button.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../providers/auth_model.dart';
 import '../../providers/expense_provider.dart';
@@ -22,6 +23,18 @@ import '../../models/expense.dart';
 import '../../providers/master_data_provider.dart';
 import '../dashboard/widgets/dashboard_responsive.dart';
 import 'widgets/expense_list_responsive.dart';
+
+@visibleForTesting
+bool isMeaningfulExpenseFilterSelection(
+  String? value, {
+  required String allLabel,
+}) {
+  final normalizedValue = value?.trim().toLowerCase();
+  if (normalizedValue == null || normalizedValue.isEmpty) return false;
+
+  final normalizedAllLabel = allLabel.trim().toLowerCase();
+  return normalizedValue != 'all' && normalizedValue != normalizedAllLabel;
+}
 
 class ExpenseListScreen extends StatefulWidget {
   const ExpenseListScreen({super.key});
@@ -43,6 +56,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
   String? selectedCategory;
   String? selectedDebitAccount;
   String? selectedStatus;
+  bool _showFilters = true;
 
   @override
   void initState() {
@@ -110,9 +124,19 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
   }
 
   bool _hasActiveFilters() {
-    return selectedCategory != null ||
-        selectedDebitAccount != null ||
-        selectedStatus != null ||
+    final allLabel = 'common.all'.tr;
+    return isMeaningfulExpenseFilterSelection(
+          selectedCategory,
+          allLabel: allLabel,
+        ) ||
+        isMeaningfulExpenseFilterSelection(
+          selectedDebitAccount,
+          allLabel: allLabel,
+        ) ||
+        isMeaningfulExpenseFilterSelection(
+          selectedStatus,
+          allLabel: allLabel,
+        ) ||
         searchTextController.text.trim().isNotEmpty;
   }
 
@@ -126,8 +150,11 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
         children: [
           _buildHeader(isPhone),
           const SizedBox(height: 12),
-          if (!isPhone) ...[
-            _buildFilterSection(isPhone),
+          if (!isPhone && _showFilters) ...[
+            KeyedSubtree(
+              key: const ValueKey('expense-desktop-filters'),
+              child: _buildFilterSection(isPhone),
+            ),
             const SizedBox(height: 12),
           ],
           Expanded(child: _buildExpenseTable()),
@@ -169,13 +196,17 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
     return ExpenseListPageHeader(
       title: 'expense.title'.tr,
       breadcrumb: _buildBreadcrumb(),
-      filterAction: isPhone
-          ? ExpenseListFilterToggle(
-              showFilters: false,
-              hasActiveFilters: _hasActiveFilters(),
-              onPressed: _openMobileFilterSheet,
-            )
-          : null,
+      filterAction: FilterToggleButton(
+        showFilters: isPhone ? false : _showFilters,
+        hasActiveFilters: _hasActiveFilters(),
+        activeFiltersListenable: searchTextController,
+        activeFiltersBuilder: _hasActiveFilters,
+        onPressed: isPhone
+            ? _openMobileFilterSheet
+            : () => setState(() => _showFilters = !_showFilters),
+        showTooltip: 'expense.show_filters'.tr,
+        hideTooltip: 'expense.hide_filters'.tr,
+      ),
       trailing: SizedBox(
         width: isPhone ? 108 : 140,
         child: CustomRoundButtonAdvanced(
