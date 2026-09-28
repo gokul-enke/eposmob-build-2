@@ -10,12 +10,38 @@ import 'package:pos_machine/screens/suppliers/supplier_list.dart';
 import 'package:provider/provider.dart';
 
 class _FakeSupplierProvider extends SupplierProvider {
+  String? lastSupplierName;
+  String? lastSupplierEmail;
+  String? lastSupplierPhone;
+  String? lastFilterBalance;
+
   @override
   Future<List<Supplier>?> fetchSuppliers({
     required String accessToken,
     String? supplierName,
   }) async =>
       <Supplier>[];
+
+  @override
+  void applyFiltersLocally({
+    String? supplierName,
+    String? supplierEmail,
+    String? supplierPhone,
+    String? filterBalance,
+    int page = 1,
+  }) {
+    lastSupplierName = supplierName;
+    lastSupplierEmail = supplierEmail;
+    lastSupplierPhone = supplierPhone;
+    lastFilterBalance = filterBalance;
+    super.applyFiltersLocally(
+      supplierName: supplierName,
+      supplierEmail: supplierEmail,
+      supplierPhone: supplierPhone,
+      filterBalance: filterBalance,
+      page: page,
+    );
+  }
 }
 
 class _TestTranslations extends Translations {
@@ -44,18 +70,23 @@ void main() {
   Future<void> pumpSupplierList(
     WidgetTester tester, {
     required Size size,
+    _FakeSupplierProvider? supplierProvider,
+    bool authenticated = false,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
+    final authModel = AuthModel();
+    if (authenticated) authModel.login('test-token', 1);
+
     await tester.pumpWidget(
       MultiProvider(
         providers: [
-          ChangeNotifierProvider(create: (_) => AuthModel()),
+          ChangeNotifierProvider.value(value: authModel),
           ChangeNotifierProvider<SupplierProvider>(
-            create: (_) => _FakeSupplierProvider(),
+            create: (_) => supplierProvider ?? _FakeSupplierProvider(),
           ),
         ],
         child: GetMaterialApp(
@@ -135,5 +166,44 @@ void main() {
     expect(find.byKey(const ValueKey('supplier-list-export')), findsOneWidget);
     expect(find.byType(FilterToggleButton), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('refresh reapplies every visible supplier filter',
+      (tester) async {
+    final supplierProvider = _FakeSupplierProvider();
+    await pumpSupplierList(
+      tester,
+      size: const Size(1440, 900),
+      supplierProvider: supplierProvider,
+      authenticated: true,
+    );
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'Acme');
+    await tester.enterText(fields.at(1), 'accounts@acme.test');
+    await tester.enterText(fields.at(2), '555');
+    await tester.pump();
+
+    final balanceDropdown = tester.widget<DropdownButton<String>>(
+      find.byType(DropdownButton<String>),
+    );
+    balanceDropdown.onChanged!('Positive (+ve)');
+    await tester.pump();
+
+    supplierProvider.lastSupplierName = null;
+    supplierProvider.lastSupplierEmail = null;
+    supplierProvider.lastSupplierPhone = null;
+    supplierProvider.lastFilterBalance = null;
+
+    final refresh = tester.state<RefreshIndicatorState>(
+      find.byType(RefreshIndicator),
+    );
+    await refresh.show();
+    await tester.pumpAndSettle();
+
+    expect(supplierProvider.lastSupplierName, 'Acme');
+    expect(supplierProvider.lastSupplierEmail, 'accounts@acme.test');
+    expect(supplierProvider.lastSupplierPhone, '555');
+    expect(supplierProvider.lastFilterBalance, 'Positive (+ve)');
   });
 }

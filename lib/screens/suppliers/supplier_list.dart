@@ -166,16 +166,21 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
   }
 
   Future<void> refreshData() async {
-    setState(() {
-      searchTextController.clear();
-    });
-
-    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+    final accessToken = context.read<AuthModel>().token;
     if (accessToken == null || accessToken.isEmpty) return;
 
-    await Provider.of<SupplierProvider>(context, listen: false).fetchSuppliers(
+    final supplierProvider = context.read<SupplierProvider>();
+    await supplierProvider.fetchSuppliers(
       accessToken: accessToken,
       supplierName: null,
+    );
+    if (!mounted) return;
+
+    supplierProvider.applyFiltersLocally(
+      supplierName: searchTextController.text,
+      supplierEmail: searchEmailController.text,
+      supplierPhone: searchPhoneController.text,
+      filterBalance: selectedBalanceFilter,
     );
   }
 
