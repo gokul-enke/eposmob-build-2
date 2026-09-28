@@ -116,11 +116,16 @@ class _SupplierVoucherMobileViewState
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          'supplier_voucher.mobile_header_title'.tr,
-          style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s16,
-              0.25, ColorManager.textColor),
+        Expanded(
+          child: Text(
+            'supplier_voucher.mobile_header_title'.tr,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s16,
+                0.25, ColorManager.textColor),
+          ),
         ),
+        const SizedBox(width: 8),
         ElevatedButton.icon(
           onPressed: widget.onCreateVoucher,
           icon: const Icon(Icons.add, size: 16),
@@ -151,56 +156,59 @@ class _SupplierVoucherMobileViewState
               offset: const Offset(0, 2)),
         ],
       ),
-      child: ExpansionTile(
-        onExpansionChanged: (v) => setState(() => _filtersExpanded = v),
-        leading: const Icon(Icons.filter_list, size: 18),
-        title: Text(
-          _filtersExpanded ? 'supplier_voucher.hide_filters'.tr : 'supplier_voucher.show_filters'.tr,
-          style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
-              0.18, ColorManager.textColor),
-        ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: Column(
-              children: [
-                // Supplier dropdown
-                _supplierDropdown(),
-                const SizedBox(height: 8),
-                _filterField(widget.voucherNumberController, 'supplier_voucher.mobile_voucher_no_hint'.tr),
-                const SizedBox(height: 8),
-                _dropdownField(
-                  hint: 'supplier_voucher.hint_all_types'.tr,
-                  value: widget.selectedType,
-                  items: widget.typeOptions,
-                  onChanged: widget.onTypeChanged,
-                ),
-                const SizedBox(height: 8),
-                _dropdownField(
-                  hint: 'supplier_voucher.hint_all_status'.tr,
-                  value: widget.selectedStatus,
-                  items: widget.statusOptions,
-                  onChanged: widget.onStatusChanged,
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: widget.onReset,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: ColorManager.kPrimaryColor,
-                      side: const BorderSide(
-                          color: ColorManager.kPrimaryColor),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6)),
-                    ),
-                    child: Text('supplier_voucher.reset_filters_button'.tr),
-                  ),
-                ),
-              ],
-            ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: ExpansionTile(
+          onExpansionChanged: (v) => setState(() => _filtersExpanded = v),
+          leading: const Icon(Icons.filter_list, size: 18),
+          title: Text(
+            _filtersExpanded ? 'supplier_voucher.hide_filters'.tr : 'supplier_voucher.show_filters'.tr,
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
+                0.18, ColorManager.textColor),
           ),
-        ],
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: Column(
+                children: [
+                  // Supplier dropdown
+                  _supplierDropdown(),
+                  const SizedBox(height: 8),
+                  _filterField(widget.voucherNumberController, 'supplier_voucher.mobile_voucher_no_hint'.tr),
+                  const SizedBox(height: 8),
+                  _dropdownField(
+                    hint: 'supplier_voucher.hint_all_types'.tr,
+                    value: widget.selectedType,
+                    items: widget.typeOptions,
+                    onChanged: widget.onTypeChanged,
+                  ),
+                  const SizedBox(height: 8),
+                  _dropdownField(
+                    hint: 'supplier_voucher.hint_all_status'.tr,
+                    value: widget.selectedStatus,
+                    items: widget.statusOptions,
+                    onChanged: widget.onStatusChanged,
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: widget.onReset,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: ColorManager.kPrimaryColor,
+                        side: const BorderSide(
+                            color: ColorManager.kPrimaryColor),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6)),
+                      ),
+                      child: Text('supplier_voucher.reset_filters_button'.tr),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

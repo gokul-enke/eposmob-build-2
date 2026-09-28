@@ -22,6 +22,7 @@ import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
+import 'package:pos_machine/components/filter_toggle_button.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/ui_code_labels.dart';
@@ -83,6 +84,41 @@ class _SalesScreenState extends State<SalesScreen> {
   final TextEditingController _toDateController = TextEditingController();
   DateTime? selectedBusinessDate;
   Key businessCalendarPickerKey = UniqueKey();
+
+  bool get _hasActiveFilters =>
+      orderNumberController.text.isNotEmpty ||
+      customerNameController.text.isNotEmpty ||
+      amountController.text.isNotEmpty ||
+      emailController.text.isNotEmpty ||
+      phoneController.text.isNotEmpty ||
+      storeController.text.isNotEmpty ||
+      (selectedStatus != null && selectedStatus != 'all') ||
+      _fromDateController.text.isNotEmpty ||
+      _toDateController.text.isNotEmpty ||
+      selectedBusinessDate != null;
+
+  Widget _buildFilterToggleButton(SalesProvider salesProvider) {
+    return FilterToggleButton(
+      key: const ValueKey('orders-list-filter-toggle'),
+      showFilters: salesProvider.showFilters,
+      hasActiveFilters: _hasActiveFilters,
+      activeFiltersListenable: Listenable.merge([
+        orderNumberController,
+        customerNameController,
+        amountController,
+        emailController,
+        phoneController,
+        storeController,
+        statusController,
+        _fromDateController,
+        _toDateController,
+      ]),
+      activeFiltersBuilder: () => _hasActiveFilters,
+      onPressed: salesProvider.toggleFilters,
+      showTooltip: 'sales.show_filters'.tr,
+      hideTooltip: 'sales.hide_filters'.tr,
+    );
+  }
 
   bool isInitLoading = false;
   String orderNumber = "";
@@ -2308,6 +2344,7 @@ Powered by CloudPOS''',
                             showDialog(
                               context: context,
                               builder: (dialogCtx) => CancelOrderModal(
+                                isUnpaidCod: order.isUnpaidCod,
                                 initialRefundAmount:
                                     order.priceSummary?.grandTotal ??
                                         order.grantTotal ??
@@ -2581,15 +2618,7 @@ Powered by CloudPOS''',
 
   Widget _buildEmptyState(
       SalesProvider provider, List<ListOrderModelData> displayedOrders) {
-    final hasFilters = orderNumberController.text.isNotEmpty ||
-        customerNameController.text.isNotEmpty ||
-        amountController.text.isNotEmpty ||
-        emailController.text.isNotEmpty ||
-        phoneController.text.isNotEmpty ||
-        storeController.text.isNotEmpty ||
-        statusController.text.isNotEmpty ||
-        _fromDateController.text.isNotEmpty ||
-        _toDateController.text.isNotEmpty;
+    final hasFilters = _hasActiveFilters;
 
     return Center(
       child: SingleChildScrollView(
@@ -2961,58 +2990,7 @@ Powered by CloudPOS''',
                     ),
                     Consumer<SalesProvider>(
                       builder: (context, salesProvider, child) {
-                        final hasFilters =
-                            orderNumberController.text.isNotEmpty ||
-                                customerNameController.text.isNotEmpty ||
-                                amountController.text.isNotEmpty ||
-                                emailController.text.isNotEmpty ||
-                                phoneController.text.isNotEmpty ||
-                                storeController.text.isNotEmpty ||
-                                statusController.text.isNotEmpty ||
-                                _fromDateController.text.isNotEmpty ||
-                                _toDateController.text.isNotEmpty;
-
-                        return SizedBox(
-                          width: 44,
-                          height: 44,
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              IconButton(
-                                icon: Icon(
-                                  salesProvider.showFilters
-                                      ? Icons.filter_alt
-                                      : Icons.filter_alt_outlined,
-                                  color: ColorManager.kPrimaryColor,
-                                ),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(
-                                  minWidth: 44,
-                                  minHeight: 44,
-                                ),
-                                onPressed: () {
-                                  salesProvider.toggleFilters();
-                                },
-                                tooltip: salesProvider.showFilters
-                                    ? 'sales.hide_filters'.tr
-                                    : 'sales.show_filters'.tr,
-                              ),
-                              if (hasFilters)
-                                PositionedDirectional(
-                                  end: 6,
-                                  top: 6,
-                                  child: Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: const BoxDecoration(
-                                      color: Colors.red,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        );
+                        return _buildFilterToggleButton(salesProvider);
                       },
                     ),
                   ],
@@ -3027,6 +3005,7 @@ Powered by CloudPOS''',
                     }
 
                     return ConstrainedBox(
+                      key: const ValueKey('orders-list-filters'),
                       constraints: BoxConstraints(
                         maxHeight: size.height * 0.45,
                       ),

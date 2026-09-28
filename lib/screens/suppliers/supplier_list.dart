@@ -1,13 +1,17 @@
+import 'dart:io';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
-import 'dart:ui';
 
 import '../../components/build_container_box.dart';
 import '../../components/build_dialog_box.dart';
 import '../../components/build_pagination_control.dart';
 import '../../components/build_round_button.dart';
 import '../../components/build_text_fields.dart';
+import '../../components/export_share_button.dart';
+import '../../components/filter_toggle_button.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../models/supplier.dart';
 import '../../providers/auth_model.dart';
@@ -15,6 +19,7 @@ import '../../providers/supplier_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import '../../services/list_excel_export_service.dart';
 import 'add_supplier_modal.dart';
 import 'supplier_list_mobile.dart';
 
@@ -32,6 +37,84 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
   final TextEditingController searchPhoneController = TextEditingController();
   String selectedBalanceFilter = 'All';
   bool initLoading = false;
+  bool _showFilters = true;
+  bool _filterVisibilityInitialized = false;
+
+  bool get _hasActiveFilters =>
+      searchTextController.text.isNotEmpty ||
+      searchEmailController.text.isNotEmpty ||
+      searchPhoneController.text.isNotEmpty ||
+      selectedBalanceFilter != 'All';
+
+  Widget _buildFilterToggleButton() {
+    return FilterToggleButton(
+      key: const ValueKey('supplier-list-filter-toggle'),
+      showFilters: _showFilters,
+      hasActiveFilters: _hasActiveFilters,
+      activeFiltersListenable: Listenable.merge([
+        searchTextController,
+        searchEmailController,
+        searchPhoneController,
+      ]),
+      activeFiltersBuilder: () => _hasActiveFilters,
+      showTooltip: 'supplier_list_mobile.show_filters'.tr,
+      hideTooltip: 'supplier_list_mobile.hide_filters'.tr,
+      onPressed: () => setState(() => _showFilters = !_showFilters),
+    );
+  }
+
+  Future<File> _createSupplierExport() {
+    final suppliers = context.read<SupplierProvider>().filteredSuppliers;
+    return ListExcelExportService.export<Supplier>(
+      items: suppliers,
+      fileNamePrefix: 'suppliers',
+      sheetName: 'suppliers.list'.tr,
+      columns: [
+        ListExportColumn(
+          label: 'suppliers.number'.tr,
+          value: (_, index) => index + 1,
+        ),
+        ListExportColumn(
+          label: 'suppliers.name'.tr,
+          value: (supplier, _) => supplier.name,
+        ),
+        ListExportColumn(
+          label: 'suppliers.email'.tr,
+          value: (supplier, _) => supplier.email,
+        ),
+        ListExportColumn(
+          label: 'suppliers.phone'.tr,
+          value: (supplier, _) => supplier.phone,
+        ),
+        ListExportColumn(
+          label: 'suppliers.address'.tr,
+          value: (supplier, _) => supplier.address,
+        ),
+        ListExportColumn(
+          label: 'suppliers.current_balance'.tr,
+          value: (supplier, _) => supplier.currentBalance,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildExportButton({bool compact = false}) {
+    return Consumer<SupplierProvider>(
+      builder: (context, provider, child) => ExportShareButton(
+        key: const ValueKey('supplier-list-export'),
+        compact: compact,
+        enabled: !provider.isLoading && provider.hasFilteredSuppliers,
+        createFile: _createSupplierExport,
+        label: 'supplier_list.export'.tr,
+        loadingLabel: 'supplier_list.exporting'.tr,
+        tooltip: 'supplier_list.export_tooltip'.tr,
+        errorMessage: 'supplier_list.export_failed'.tr,
+        mimeType:
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        shareText: 'supplier_list.share_text'.tr,
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -39,6 +122,15 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       loadInitData();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_filterVisibilityInitialized) {
+      _showFilters = MediaQuery.sizeOf(context).width >= 700;
+      _filterVisibilityInitialized = true;
+    }
   }
 
   void loadInitData() async {
@@ -74,16 +166,21 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
   }
 
   Future<void> refreshData() async {
-    setState(() {
-      searchTextController.clear();
-    });
-
-    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+    final accessToken = context.read<AuthModel>().token;
     if (accessToken == null || accessToken.isEmpty) return;
 
-    await Provider.of<SupplierProvider>(context, listen: false).fetchSuppliers(
+    final supplierProvider = context.read<SupplierProvider>();
+    await supplierProvider.fetchSuppliers(
       accessToken: accessToken,
       supplierName: null,
+    );
+    if (!mounted) return;
+
+    supplierProvider.applyFiltersLocally(
+      supplierName: searchTextController.text,
+      supplierEmail: searchEmailController.text,
+      supplierPhone: searchPhoneController.text,
+      filterBalance: selectedBalanceFilter,
     );
   }
 
@@ -156,6 +253,9 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: SupplierListMobileView(
+            showFilters: _showFilters,
+            filterAction: _buildFilterToggleButton(),
+            exportAction: _buildExportButton(compact: true),
             nameController: searchTextController,
             emailController: searchEmailController,
             phoneController: searchPhoneController,
@@ -217,9 +317,14 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(),
-              const SizedBox(height: 15),
-              _buildSearchBar(size),
-              const SizedBox(height: 15),
+              if (_showFilters) ...[
+                const SizedBox(height: 15),
+                KeyedSubtree(
+                  key: const ValueKey('supplier-list-desktop-filters'),
+                  child: _buildSearchBar(size),
+                ),
+                const SizedBox(height: 15),
+              ],
               Expanded(
                 child: Consumer<SupplierProvider>(
                   builder: (context, supplierProvider, child) {
@@ -634,21 +739,30 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
           style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
               0.30, ColorManager.textColor),
         ),
-        CustomRoundButton(
-          title: 'suppliers.add'.tr,
-          fct: () async {
-            // Show the add supplier modal
-            final result = await showAddSupplierModal(
-                context, MediaQuery.of(context).size);
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildFilterToggleButton(),
+            const SizedBox(width: 8),
+            _buildExportButton(),
+            const SizedBox(width: 8),
+            CustomRoundButton(
+              title: 'suppliers.add'.tr,
+              fct: () async {
+                // Show the add supplier modal
+                final result = await showAddSupplierModal(
+                    context, MediaQuery.of(context).size);
 
-            // If the supplier was added successfully, refresh the list
-            if (result != null && result["status"] == "success") {
-              refreshData();
-            }
-          },
-          fontSize: 12,
-          height: 45,
-          width: 150,
+                // If the supplier was added successfully, refresh the list
+                if (result != null && result["status"] == "success") {
+                  refreshData();
+                }
+              },
+              fontSize: 12,
+              height: 45,
+              width: 150,
+            ),
+          ],
         ),
       ],
     );

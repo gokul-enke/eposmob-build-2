@@ -263,57 +263,6 @@ class ExpenseListMobileFilterFields extends StatelessWidget {
   }
 }
 
-/// Filter icon on the right of the title row (matches sales.dart).
-class ExpenseListFilterToggle extends StatelessWidget {
-  final bool showFilters;
-  final bool hasActiveFilters;
-  final VoidCallback onPressed;
-
-  const ExpenseListFilterToggle({
-    super.key,
-    required this.showFilters,
-    required this.hasActiveFilters,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          IconButton(
-            icon: Icon(
-              showFilters
-                  ? Icons.filter_alt
-                  : Icons.filter_alt_outlined,
-              color: ColorManager.kPrimaryColor,
-            ),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-            onPressed: onPressed,
-          ),
-          if (hasActiveFilters)
-            PositionedDirectional(
-              end: 6,
-              top: 6,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 /// Horizontally scrollable table wrapper for narrow-but-not-phone widths.
 class ExpenseListResponsiveTable extends StatelessWidget {
   final Widget table;

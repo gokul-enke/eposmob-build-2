@@ -169,7 +169,9 @@ class ProductBarcodeSelectionBadge extends StatelessWidget {
         ),
       ),
       child: Text(
-        'product_barcode.selected_count'.tr.replaceAll('@count', count.toString()),
+        'product_barcode.selected_count'
+            .tr
+            .replaceAll('@count', count.toString()),
         style: buildCustomStyle(
           FontWeightManager.medium,
           FontSize.s11,
@@ -379,7 +381,9 @@ class ProductBarcodeInfoChip extends StatelessWidget {
                   ),
                 ),
               ),
-              if (copyable && value.isNotEmpty && value != 'product_barcode.na'.tr) ...[
+              if (copyable &&
+                  value.isNotEmpty &&
+                  value != 'product_barcode.na'.tr) ...[
                 const SizedBox(width: 6),
                 Builder(
                   builder: (context) => GestureDetector(
@@ -387,7 +391,9 @@ class ProductBarcodeInfoChip extends StatelessWidget {
                       Clipboard.setData(ClipboardData(text: value));
                       showScaffold(
                         context: context,
-                        message: 'product_barcode.copied_to_clipboard'.tr.replaceAll('@label', label),
+                        message: 'product_barcode.copied_to_clipboard'
+                            .tr
+                            .replaceAll('@label', label),
                       );
                     },
                     child: const Icon(
@@ -453,13 +459,17 @@ class ProductBarcodeEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsetsDirectional.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsetsDirectional.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
             Container(
               height: 88,
               width: 88,
@@ -499,58 +509,11 @@ class ProductBarcodeEmptyState extends StatelessWidget {
                 ),
               ),
             ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Filter toggle with active-indicator dot.
-class ProductBarcodeFilterToggle extends StatelessWidget {
-  final bool showFilters;
-  final bool hasActiveFilters;
-  final VoidCallback onToggle;
-
-  const ProductBarcodeFilterToggle({
-    super.key,
-    required this.showFilters,
-    required this.hasActiveFilters,
-    required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          IconButton(
-            icon: Icon(
-              showFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
-              color: ColorManager.kPrimaryColor,
-            ),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-            onPressed: onToggle,
-            tooltip: showFilters ? 'product_barcode.hide_filters'.tr : 'product_barcode.show_filters'.tr,
-          ),
-          if (hasActiveFilters)
-            PositionedDirectional(
-              end: 6,
-              top: 6,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                ),
+                ],
               ),
             ),
-        ],
+          ),
+        ),
       ),
     );
   }

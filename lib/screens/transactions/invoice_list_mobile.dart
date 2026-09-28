@@ -165,97 +165,100 @@ class InvoiceMobileView extends StatelessWidget {
       child: BuildBoxShadowContainer(
         circleRadius: 10,
         width: double.infinity,
-        child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 12),
-          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          title: Text(
-            'invoice.filters'.tr,
-            style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,
-                0.20, ColorManager.textColor),
-          ),
-          leading: const Icon(Icons.filter_list,
-              color: ColorManager.kPrimaryColor, size: 20),
-          children: [
-            _mobileTextField(
-              controller: invoiceNumberController,
-              focusNode: invoiceNoFocusNode,
-              hint: 'invoice.invoice_no'.tr,
+        child: Material(
+          type: MaterialType.transparency,
+          child: ExpansionTile(
+            tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+            childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            title: Text(
+              'invoice.filters'.tr,
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,
+                  0.20, ColorManager.textColor),
             ),
-            const SizedBox(height: 10),
-            _mobileTextField(
-              controller: searchTextController,
-              focusNode: nameFocusNode,
-              hint: 'invoice.name'.tr,
-            ),
-            const SizedBox(height: 10),
-            _mobileTextField(
-              controller: phoneController,
-              focusNode: phoneFocusNode,
-              hint: 'invoice.phone'.tr,
-              keyboardType: TextInputType.phone,
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: _mobileDateField(
-                    controller: dateFromController,
-                    focusNode: dateFromFocusNode,
-                    isFromDate: true,
+            leading: const Icon(Icons.filter_list,
+                color: ColorManager.kPrimaryColor, size: 20),
+            children: [
+              _mobileTextField(
+                controller: invoiceNumberController,
+                focusNode: invoiceNoFocusNode,
+                hint: 'invoice.invoice_no'.tr,
+              ),
+              const SizedBox(height: 10),
+              _mobileTextField(
+                controller: searchTextController,
+                focusNode: nameFocusNode,
+                hint: 'invoice.name'.tr,
+              ),
+              const SizedBox(height: 10),
+              _mobileTextField(
+                controller: phoneController,
+                focusNode: phoneFocusNode,
+                hint: 'invoice.phone'.tr,
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _mobileDateField(
+                      controller: dateFromController,
+                      focusNode: dateFromFocusNode,
+                      isFromDate: true,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _mobileDateField(
-                    controller: dateToController,
-                    focusNode: dateToFocusNode,
-                    isFromDate: false,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _mobileDateField(
+                      controller: dateToController,
+                      focusNode: dateToFocusNode,
+                      isFromDate: false,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            BuildDropDownWithSearch<String>(
-              title: null,
-              showName: false,
-              hintText: 'invoice.all_status'.tr,
-              value: selectedStatus,
-              items: statusOptions.where((s) => s != "All Status").toList(),
-              onChanged: onStatusChanged,
-              displayText: (status) => UiCodeLabels.status(status),
-              height: 45,
-              margin: EdgeInsets.zero,
-            ),
-            if (showZatcaControls) ...[
+                ],
+              ),
               const SizedBox(height: 10),
               BuildDropDownWithSearch<String>(
                 title: null,
                 showName: false,
-                hintText: 'invoice.all_zatca_status'.tr,
-                value: selectedZatcaStatus,
-                items: zatcaStatusOptions
-                    .where((s) => s != "All ZATCA Status")
-                    .toList(),
-                onChanged: onZatcaStatusChanged,
-                displayText: (status) => UiCodeLabels.zatca(status),
+                hintText: 'invoice.all_status'.tr,
+                value: selectedStatus,
+                items: statusOptions.where((s) => s != "All Status").toList(),
+                onChanged: onStatusChanged,
+                displayText: (status) => UiCodeLabels.status(status),
                 height: 45,
                 margin: EdgeInsets.zero,
               ),
-            ],
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: CustomRoundButton(
-                title: "general.reset".tr,
-                boxColor: Colors.white,
-                textColor: ColorManager.kPrimaryColor,
-                fct: onReset,
-                height: 42,
+              if (showZatcaControls) ...[
+                const SizedBox(height: 10),
+                BuildDropDownWithSearch<String>(
+                  title: null,
+                  showName: false,
+                  hintText: 'invoice.all_zatca_status'.tr,
+                  value: selectedZatcaStatus,
+                  items: zatcaStatusOptions
+                      .where((s) => s != "All ZATCA Status")
+                      .toList(),
+                  onChanged: onZatcaStatusChanged,
+                  displayText: (status) => UiCodeLabels.zatca(status),
+                  height: 45,
+                  margin: EdgeInsets.zero,
+                ),
+              ],
+              const SizedBox(height: 10),
+              SizedBox(
                 width: double.infinity,
-                fontSize: FontSize.s12,
+                child: CustomRoundButton(
+                  title: "general.reset".tr,
+                  boxColor: Colors.white,
+                  textColor: ColorManager.kPrimaryColor,
+                  fct: onReset,
+                  height: 42,
+                  width: double.infinity,
+                  fontSize: FontSize.s12,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

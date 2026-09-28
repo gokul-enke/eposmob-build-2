@@ -108,11 +108,16 @@ class _CustomerVoucherMobileViewState
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          'customer_voucher.mobile_list_title'.tr,
-          style: buildCustomStyle(
-              FontWeightManager.semiBold, FontSize.s16, 0.25, ColorManager.textColor),
+        Expanded(
+          child: Text(
+            'customer_voucher.mobile_list_title'.tr,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s16,
+                0.25, ColorManager.textColor),
+          ),
         ),
+        const SizedBox(width: 8),
         ElevatedButton.icon(
           onPressed: widget.onCreateVoucher,
           icon: const Icon(Icons.add, size: 16),
@@ -141,56 +146,59 @@ class _CustomerVoucherMobileViewState
               offset: const Offset(0, 2)),
         ],
       ),
-      child: ExpansionTile(
-        onExpansionChanged: (v) => setState(() => _filtersExpanded = v),
-        leading: const Icon(Icons.filter_list, size: 18),
-        title: Text(
-          _filtersExpanded ? 'customer_voucher.hide_filters'.tr : 'customer_voucher.show_filters'.tr,
-          style: buildCustomStyle(FontWeightManager.medium, FontSize.s12, 0.18,
-              ColorManager.textColor),
-        ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: Column(
-              children: [
-                _filterField(widget.searchTextController, widget.nameFocusNode,
-                    'customer_voucher.customer_name_hint'.tr),
-                const SizedBox(height: 8),
-                _filterField(widget.voucherNumberController,
-                    widget.voucherNoFocusNode, 'customer_voucher.mobile_voucher_no_hint'.tr),
-                const SizedBox(height: 8),
-                _dropdownField(
-                  hint: 'customer_voucher.hint_all_types'.tr,
-                  value: widget.selectedType,
-                  items: widget.typeOptions,
-                  onChanged: widget.onTypeChanged,
-                ),
-                const SizedBox(height: 8),
-                _dropdownField(
-                  hint: 'customer_voucher.hint_all_status'.tr,
-                  value: widget.selectedStatus,
-                  items: widget.statusOptions,
-                  onChanged: widget.onStatusChanged,
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: widget.onReset,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: ColorManager.kPrimaryColor,
-                      side: const BorderSide(color: ColorManager.kPrimaryColor),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6)),
-                    ),
-                    child: Text('customer_voucher.reset_filters_button'.tr),
-                  ),
-                ),
-              ],
-            ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: ExpansionTile(
+          onExpansionChanged: (v) => setState(() => _filtersExpanded = v),
+          leading: const Icon(Icons.filter_list, size: 18),
+          title: Text(
+            _filtersExpanded ? 'customer_voucher.hide_filters'.tr : 'customer_voucher.show_filters'.tr,
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s12, 0.18,
+                ColorManager.textColor),
           ),
-        ],
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: Column(
+                children: [
+                  _filterField(widget.searchTextController, widget.nameFocusNode,
+                      'customer_voucher.customer_name_hint'.tr),
+                  const SizedBox(height: 8),
+                  _filterField(widget.voucherNumberController,
+                      widget.voucherNoFocusNode, 'customer_voucher.mobile_voucher_no_hint'.tr),
+                  const SizedBox(height: 8),
+                  _dropdownField(
+                    hint: 'customer_voucher.hint_all_types'.tr,
+                    value: widget.selectedType,
+                    items: widget.typeOptions,
+                    onChanged: widget.onTypeChanged,
+                  ),
+                  const SizedBox(height: 8),
+                  _dropdownField(
+                    hint: 'customer_voucher.hint_all_status'.tr,
+                    value: widget.selectedStatus,
+                    items: widget.statusOptions,
+                    onChanged: widget.onStatusChanged,
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: widget.onReset,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: ColorManager.kPrimaryColor,
+                        side: const BorderSide(color: ColorManager.kPrimaryColor),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6)),
+                      ),
+                      child: Text('customer_voucher.reset_filters_button'.tr),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

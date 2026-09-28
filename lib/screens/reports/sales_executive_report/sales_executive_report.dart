@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/components/filter_toggle_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/sales_executive_report.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
@@ -166,6 +167,23 @@ class _SalesExecutiveReportScreenState
     fetchSalesExecutiveReport();
   }
 
+  bool _hasActiveFilters() =>
+      fromDateController.text.isNotEmpty || toDateController.text.isNotEmpty;
+
+  Widget _buildFilterToggleButton() {
+    return FilterToggleButton(
+      key: const ValueKey('sales-executive-report-filter-toggle'),
+      showFilters: _showFilters,
+      hasActiveFilters: _hasActiveFilters(),
+      activeFiltersListenable:
+          Listenable.merge([fromDateController, toDateController]),
+      activeFiltersBuilder: _hasActiveFilters,
+      onPressed: () => setState(() => _showFilters = !_showFilters),
+      showTooltip: 'sales_executive_report.filters'.tr,
+      hideTooltip: 'sales_executive_report.hide'.tr,
+    );
+  }
+
   // Combined Date and Time selection method
   Future<void> _selectDateTime(BuildContext context,
       {required bool isFromDate}) async {
@@ -253,7 +271,11 @@ class _SalesExecutiveReportScreenState
               children: [
                 _buildHeader(size),
                 const SizedBox(height: 15),
-                if (_showFilters) _buildSearchBar(size),
+                if (_showFilters)
+                  KeyedSubtree(
+                    key: const ValueKey('sales-executive-report-filters'),
+                    child: _buildSearchBar(size),
+                  ),
                 if (_showFilters) const SizedBox(height: 20),
                 _buildExecutiveTable(),
               ],
@@ -275,20 +297,7 @@ class _SalesExecutiveReportScreenState
                 0.30, ColorManager.textColor),
           ),
         ),
-        if (_isMobile(context))
-          TextButton.icon(
-            onPressed: () => setState(() => _showFilters = !_showFilters),
-            icon: Icon(
-              _showFilters ? Icons.filter_list_off : Icons.filter_list,
-              size: 18,
-              color: ColorManager.kPrimaryColor,
-            ),
-            label: Text(
-              _showFilters ? 'sales_executive_report.hide'.tr : 'sales_executive_report.filters'.tr,
-              style: const TextStyle(
-                  color: ColorManager.kPrimaryColor, fontSize: 12),
-            ),
-          ),
+        _buildFilterToggleButton(),
       ],
     );
   }

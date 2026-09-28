@@ -12,6 +12,7 @@ import 'package:pos_machine/newcomponents/custom_dialog_box.dart' as new_dialog;
 
 import '../../components/build_container_box.dart';
 import '../../components/build_dialog_box.dart';
+import '../../components/filter_toggle_button.dart';
 import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../helpers/date_helper.dart';
@@ -55,6 +56,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
   final FocusNode paymentMethodFocusNode = FocusNode();
 
   bool isInitialized = false;
+  bool _showFilters = true;
 
   @override
   void initState() {
@@ -311,11 +313,16 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
             child: ListView(
               children: [
                 _buildHeader(size),
-                const SizedBox(height: 10),
-                _buildSearchBar(size),
+                if (_showFilters) ...[
+                  const SizedBox(height: 10),
+                  KeyedSubtree(
+                    key: const ValueKey('receipt-desktop-filters'),
+                    child: _buildSearchBar(size),
+                  ),
+                ],
                 // const SizedBox(height: 10),
                 SizedBox(
-                  height: size.height * 0.6,
+                  height: size.height * (_showFilters ? 0.6 : 0.78),
                   child: _buildReceiptTable(),
                 ),
                 const SizedBox(height: 15),
@@ -329,14 +336,56 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
   }
 
   Widget _buildHeader(Size size) {
+    final hasActiveFilters = receiptNumberController.text.isNotEmpty ||
+        paymentReferenceController.text.isNotEmpty ||
+        searchTextController.text.isNotEmpty ||
+        phoneController.text.isNotEmpty ||
+        emailController.text.isNotEmpty ||
+        dateFromController.text.isNotEmpty ||
+        dateToController.text.isNotEmpty ||
+        selectedStatus != null ||
+        paymentMethod != null;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          'receipt.list_title'.tr,
-          style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
-              0.30, ColorManager.textColor),
+        Expanded(
+          child: Text(
+            'receipt.list_title'.tr,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
+                0.30, ColorManager.textColor),
+          ),
         ),
+        const SizedBox(width: 8),
+        FilterToggleButton(
+          showFilters: _showFilters,
+          hasActiveFilters: hasActiveFilters,
+          activeFiltersListenable: Listenable.merge([
+            receiptNumberController,
+            paymentReferenceController,
+            searchTextController,
+            phoneController,
+            emailController,
+            dateFromController,
+            dateToController,
+          ]),
+          activeFiltersBuilder: () =>
+              receiptNumberController.text.isNotEmpty ||
+              paymentReferenceController.text.isNotEmpty ||
+              searchTextController.text.isNotEmpty ||
+              phoneController.text.isNotEmpty ||
+              emailController.text.isNotEmpty ||
+              dateFromController.text.isNotEmpty ||
+              dateToController.text.isNotEmpty ||
+              selectedStatus != null ||
+              paymentMethod != null,
+          onPressed: () => setState(() => _showFilters = !_showFilters),
+          showTooltip: 'receipt.show_filters'.tr,
+          hideTooltip: 'receipt.hide_filters'.tr,
+        ),
+        const SizedBox(width: 8),
         CustomRoundButton(
           title: 'receipt.create_receipt_button'.tr,
           fct: () async {

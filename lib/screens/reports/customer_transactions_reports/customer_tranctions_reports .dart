@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/components/filter_toggle_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/list_transaction.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -423,6 +424,11 @@ class _CustomerTransactionsReportScreenState
     _fromDateController.clear();
     _toDateController.clear();
 
+    final customerProvider =
+        Provider.of<CustomerProvider>(context, listen: false);
+    customerProvider.setSelectedCustomerId(null);
+    customerProvider.setSelectedCustomerName('');
+
     // Reset the search variables
     setState(() {
       searchCustomer = '';
@@ -435,6 +441,32 @@ class _CustomerTransactionsReportScreenState
     loadInitDataWithFilters(
       dateFrom: _fromDateController.text,
       dateTo: _toDateController.text,
+    );
+  }
+
+  bool _hasActiveFilters() =>
+      (Provider.of<CustomerProvider>(context, listen: false)
+                  .selectedCustomerId
+                  ?.isNotEmpty ??
+              false) ||
+      _customerController.text.isNotEmpty ||
+      _fromDateController.text.isNotEmpty ||
+      _toDateController.text.isNotEmpty;
+
+  Widget _buildFilterToggleButton() {
+    return FilterToggleButton(
+      key: const ValueKey('customer-transactions-report-filter-toggle'),
+      showFilters: _showFilters,
+      hasActiveFilters: _hasActiveFilters(),
+      activeFiltersListenable: Listenable.merge([
+        _customerController,
+        _fromDateController,
+        _toDateController,
+      ]),
+      activeFiltersBuilder: _hasActiveFilters,
+      onPressed: () => setState(() => _showFilters = !_showFilters),
+      showTooltip: 'customer_transaction_report.filters'.tr,
+      hideTooltip: 'customer_transaction_report.hide'.tr,
     );
   }
 
@@ -479,7 +511,12 @@ class _CustomerTransactionsReportScreenState
               children: [
                 _buildHeader(size),
                 const SizedBox(height: 15),
-                if (_showFilters) _buildFilters(),
+                if (_showFilters)
+                  KeyedSubtree(
+                    key: const ValueKey(
+                        'customer-transactions-report-filters'),
+                    child: _buildFilters(),
+                  ),
                 if (_showFilters) const SizedBox(height: 20),
                 _buildReportTable(),
                 const SizedBox(height: 10),
@@ -507,20 +544,7 @@ class _CustomerTransactionsReportScreenState
             ),
           ),
         ),
-        if (_isMobile(context))
-          TextButton.icon(
-            onPressed: () => setState(() => _showFilters = !_showFilters),
-            icon: Icon(
-              _showFilters ? Icons.filter_list_off : Icons.filter_list,
-              size: 18,
-              color: ColorManager.kPrimaryColor,
-            ),
-            label: Text(
-              _showFilters ? 'customer_transaction_report.hide'.tr : 'customer_transaction_report.filters'.tr,
-              style: const TextStyle(
-                  color: ColorManager.kPrimaryColor, fontSize: 12),
-            ),
-          ),
+        _buildFilterToggleButton(),
       ],
     );
   }
@@ -545,6 +569,7 @@ class _CustomerTransactionsReportScreenState
           ),
           const SizedBox(height: 8),
           CustomRoundButton(
+            key: const ValueKey('customer-transactions-report-reset'),
             title: 'customer_transaction_report.reset'.tr,
             boxColor: Colors.white,
             textColor: ColorManager.kPrimaryColor,
@@ -588,6 +613,7 @@ class _CustomerTransactionsReportScreenState
                 child: Padding(
                   padding: const EdgeInsets.only(top: 45, left: 10),
                   child: CustomRoundButton(
+                    key: const ValueKey('customer-transactions-report-reset'),
                     title: 'customer_transaction_report.reset'.tr,
                     boxColor: Colors.white,
                     textColor: ColorManager.kPrimaryColor,
