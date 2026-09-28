@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
+import 'payment_method_registry.dart';
+
 class ListSalesOrderModel {
   final String? status;
   final String? message;
@@ -227,7 +229,10 @@ class ListOrderModelData {
   }
 
   static bool _isCodPaymentMethod(String method) {
-    final normalized = method.toUpperCase().replaceAll(RegExp(r'[^A-Z]'), '');
+    final resolvedCode = PaymentMethodRegistry.find(method)?.code;
+    final candidate = resolvedCode ?? method;
+    final normalized =
+        candidate.toUpperCase().replaceAll(RegExp(r'[^A-Z]'), '');
     return normalized == 'COD' || normalized == 'CASHONDELIVERY';
   }
 
