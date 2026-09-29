@@ -240,6 +240,51 @@ class GridSelectionProvider extends ChangeNotifier {
     }
   }
 
+  /// Loads every sellable product page without changing the paginated product
+  /// list used by the sales and product screens.
+  Future<List<GetProduct>> listAllProductsForReportFilter() async {
+    final prefs = await SharedPreferences.getInstance();
+    final apiKey = prefs.getString('api_key');
+    final activeStoreId = prefs.getInt('active_store_id');
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException('API key not found. Please restart the app.');
+    }
+
+    final productsById = <int, GetProduct>{};
+    var page = 1;
+    var lastPage = 1;
+
+    do {
+      final baseUri = Uri.parse(APPUrl.getSellableProductUrl);
+      final uri = baseUri.replace(
+        queryParameters: {
+          ...baseUri.queryParameters,
+          'page': page.toString(),
+          if (activeStoreId != null) 'store_id': activeStoreId.toString(),
+        },
+      );
+      final response = await http.get(
+        uri,
+        headers: {'X-Tenant': apiKey},
+      ).timeout(const Duration(seconds: 20));
+      if (response.statusCode != 200) {
+        throw HttpException(
+          'Product filter list failed (${response.statusCode}).',
+        );
+      }
+
+      final model = GetProductModel.fromJson(json.decode(response.body));
+      for (final product in model.product ?? const <GetProduct>[]) {
+        final id = product.productId;
+        if (id != null) productsById[id] = product;
+      }
+      lastPage = model.meta?.lastPage ?? model.pagination?.lastPage ?? 1;
+      page++;
+    } while (page <= lastPage);
+
+    return sortProductsForDisplay(productsById.values.toList());
+  }
+
   // List Quick Access Products
 
   Future<void> listQuickAccessProducts({

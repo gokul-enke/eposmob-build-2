@@ -1,22 +1,31 @@
-import 'package:dropdown_button2/dropdown_button2.dart';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:pos_machine/components/build_calendar_selection.dart';
-import 'package:pos_machine/components/build_container_border.dart';
-import 'package:pos_machine/components/build_container_box.dart';
-import 'package:pos_machine/components/build_round_button.dart';
-import 'package:pos_machine/helpers/amount_helper.dart';
-import 'package:pos_machine/models/category_list.dart';
-import 'package:pos_machine/models/get_product.dart';
-import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/category_providers.dart';
-import 'package:pos_machine/providers/grid_provider.dart';
-import 'package:pos_machine/providers/report_provider.dart';
-import 'package:pos_machine/resources/color_manager.dart';
-import 'package:pos_machine/resources/font_manager.dart';
-import 'package:pos_machine/resources/style_manager.dart';
 import 'package:provider/provider.dart';
+
+import '../../../components/build_calendar_selection.dart';
+import '../../../components/build_dialog_box.dart';
+import '../../../components/build_container_border.dart';
+import '../../../components/build_container_box.dart';
+import '../../../components/build_dropdown_with_search.dart';
+import '../../../components/build_pagination_control.dart';
+import '../../../components/export_share_button.dart';
+import '../../../components/filter_toggle_button.dart';
+import '../../../models/category_list.dart';
+import '../../../models/customer_list.dart';
+import '../../../models/get_product.dart';
+import '../../../models/get_product_sales_report_model.dart';
+import '../../../providers/auth_model.dart';
+import '../../../providers/category_providers.dart';
+import '../../../providers/customer_provider.dart';
+import '../../../providers/grid_provider.dart';
+import '../../../providers/report_provider.dart';
+import '../../../resources/color_manager.dart';
+import '../../../resources/font_manager.dart';
+import '../../../resources/style_manager.dart';
+import '../../../services/list_excel_export_service.dart';
 
 class ProductSalesReportScreen extends StatefulWidget {
   const ProductSalesReportScreen({super.key});
@@ -26,126 +35,337 @@ class ProductSalesReportScreen extends StatefulWidget {
       _ProductSalesReportScreenState();
 }
 
+class _ProductSalesReportRequest {
+  const _ProductSalesReportRequest({
+    required this.generation,
+    required this.page,
+    required this.categoryId,
+    required this.productId,
+    required this.customerId,
+    required this.startDate,
+    required this.endDate,
+  });
+
+  final int generation;
+  final int page;
+  final String? categoryId;
+  final String? productId;
+  final String? customerId;
+  final String startDate;
+  final String endDate;
+}
+
 class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
-  final TextEditingController amountController = TextEditingController();
-  final TextEditingController startDateController = TextEditingController();
-  final TextEditingController endDateController = TextEditingController();
-  final TextEditingController textEditingController = TextEditingController();
-  final TextEditingController idController = TextEditingController(text: "0");
-  final TextEditingController categoryIdController = TextEditingController();
-  GetProduct? selectedValue;
+  static const int _pageSize = 25;
 
-  bool initLoading = false;
+  final _fromController = TextEditingController();
+  final _toController = TextEditingController();
+  final _tableScrollController = ScrollController();
+  final _categoryFocus = FocusNode(debugLabel: 'product-sales-category');
+  final _productFocus = FocusNode(debugLabel: 'product-sales-product');
+  late final FocusNode _fromDateFocus;
+  late final FocusNode _toDateFocus;
+  final _customerFocus = FocusNode(debugLabel: 'product-sales-customer');
+  final _resetFocus = FocusNode(debugLabel: 'product-sales-reset');
 
-  void _showLoadError(Object error) {
-    debugPrint('Product sales report unavailable: $error');
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('product_sales_report.error_unavailable'.tr),
-      backgroundColor: Colors.red,
-    ));
-  }
+  Category? _selectedCategory;
+  GetProduct? _selectedProduct;
+  CustomerListModelData? _selectedCustomer;
+  GetProductSalesReportResponse? _report;
+  List<GetProduct> _productOptions = const [];
+  List<CustomerListModelData> _customerOptions = const [];
+  bool _isLoading = false;
+  bool _loadFailed = false;
+  bool _invalidDateRange = false;
+  bool _requestWorkerRunning = false;
+  int _requestGeneration = 0;
+  _ProductSalesReportRequest? _pendingRequest;
+  bool _showFilters = true;
+  bool _layoutInitialized = false;
+  int _currentPage = 1;
+
+  bool _isMobile(BuildContext context) =>
+      MediaQuery.sizeOf(context).width < 768;
 
   @override
   void initState() {
-    loadInitData();
     super.initState();
-  }
-
-  void loadInitData() async {
-    try {
-      setState(() {
-        initLoading = true;
-      });
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      ReportsProvider reportsProvider =
-          Provider.of<ReportsProvider>(context, listen: false);
-
-      await reportsProvider.fetchProductSalesReport(
-        accessToken: accessToken ?? "",
-      );
-    } catch (error) {
-      _showLoadError(error);
-    } finally {
-      if (mounted) {
-        setState(() {
-          initLoading = false;
-        });
-      }
-    }
-  }
-
-  void searchAccountBook() async {
-    try {
-      setState(() {
-        initLoading = true;
-      });
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      ReportsProvider reportsProvider =
-          Provider.of<ReportsProvider>(context, listen: false);
-
-      // debugPrint(categoryIdController.text.toString());
-
-      await reportsProvider.fetchProductSalesReport(
-        accessToken: accessToken ?? "",
-        categoryId: categoryIdController.text,
-        productId: selectedValue?.productId.toString(),
-        startDate: startDateController.text,
-        endDate: endDateController.text,
-        amount: amountController.text,
-      );
-    } catch (error) {
-      _showLoadError(error);
-    } finally {
-      if (mounted) {
-        setState(() {
-          initLoading = false;
-        });
-      }
-    }
-  }
-
-  void resetSearch() {
-    setState(() {
-      idController.clear();
-      categoryIdController.clear();
-      selectedValue = null;
-      amountController.clear();
-      startDateController.clear();
-      endDateController.clear();
+    _fromDateFocus = FocusNode(debugLabel: 'product-sales-from-date');
+    _toDateFocus = FocusNode(debugLabel: 'product-sales-to-date');
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await Future.wait([_loadReport(), _loadFilterOptions()]);
     });
-    loadInitData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_layoutInitialized) {
+      _showFilters = !_isMobile(context);
+      _layoutInitialized = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    _fromController.dispose();
+    _toController.dispose();
+    _tableScrollController.dispose();
+    _categoryFocus.dispose();
+    _productFocus.dispose();
+    _fromDateFocus.dispose();
+    _toDateFocus.dispose();
+    _customerFocus.dispose();
+    _resetFocus.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadFilterOptions() async {
+    try {
+      final token = context.read<AuthModel>().token ?? '';
+      await Future.wait([
+        context.read<CategoryProvider>().listAllCategory(),
+        context
+            .read<CustomerProvider>()
+            .listAllCustomersForReportFilter(accessToken: token)
+            .then((customers) {
+          if (mounted) setState(() => _customerOptions = customers);
+        }),
+        context
+            .read<GridSelectionProvider>()
+            .listAllProductsForReportFilter()
+            .then((products) {
+          if (mounted) setState(() => _productOptions = products);
+        }),
+      ]);
+    } catch (error) {
+      debugPrint('Could not load product report filter options: $error');
+    }
+  }
+
+  Future<void> _loadReport({int page = 1}) async {
+    if (!_isDateRangeValid()) {
+      _requestGeneration++;
+      _pendingRequest = null;
+      if (mounted) {
+        setState(() {
+          _report = null;
+          _loadFailed = false;
+          _invalidDateRange = true;
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
+    final request = _ProductSalesReportRequest(
+      generation: ++_requestGeneration,
+      page: page,
+      categoryId: _selectedCategory?.categoryId?.toString(),
+      productId: _selectedProduct?.productId?.toString(),
+      customerId: _selectedCustomer?.id?.toString(),
+      startDate: _fromController.text,
+      endDate: _toController.text,
+    );
+    _pendingRequest = request;
+    setState(() {
+      _report = null;
+      _isLoading = true;
+      _loadFailed = false;
+      _invalidDateRange = false;
+    });
+    if (_requestWorkerRunning) return;
+    await _drainReportRequests();
+  }
+
+  Future<void> _drainReportRequests() async {
+    _requestWorkerRunning = true;
+    try {
+      while (mounted && _pendingRequest != null) {
+        final request = _pendingRequest!;
+        _pendingRequest = null;
+        try {
+          final report =
+              await context.read<ReportsProvider>().fetchProductSalesReport(
+                    accessToken: context.read<AuthModel>().token ?? '',
+                    categoryId: request.categoryId,
+                    productId: request.productId,
+                    customerId: request.customerId,
+                    startDate: request.startDate,
+                    endDate: request.endDate,
+                    page: request.page,
+                    perPage: _pageSize,
+                    updateState: false,
+                  );
+          if (!mounted || request.generation != _requestGeneration) continue;
+          setState(() {
+            _report = report;
+            _currentPage = request.page;
+            _loadFailed = false;
+          });
+        } catch (error) {
+          debugPrint('Product sales report unavailable: $error');
+          if (!mounted || request.generation != _requestGeneration) continue;
+          setState(() {
+            _report = null;
+            _loadFailed = true;
+          });
+          showScaffoldError(
+            context: context,
+            message: 'product_sales_report.error_unavailable'.tr,
+          );
+        }
+      }
+    } finally {
+      _requestWorkerRunning = false;
+      if (mounted && _pendingRequest == null) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  bool _isDateRangeValid({bool showError = true}) {
+    if (_fromController.text.isEmpty || _toController.text.isEmpty) return true;
+    final from = DateTime.tryParse(_fromController.text);
+    final to = DateTime.tryParse(_toController.text);
+    if (from == null || to == null || !from.isAfter(to)) return true;
+    if (showError) {
+      showScaffoldError(
+        context: context,
+        message: 'product_sales_report.invalid_date_range'.tr,
+      );
+    }
+    return false;
+  }
+
+  bool _hasActiveFilters() =>
+      _selectedCategory != null ||
+      _selectedProduct != null ||
+      _selectedCustomer != null ||
+      _fromController.text.isNotEmpty ||
+      _toController.text.isNotEmpty;
+
+  void _resetFilters() {
+    setState(() {
+      _selectedCategory = null;
+      _selectedProduct = null;
+      _selectedCustomer = null;
+      _fromController.clear();
+      _toController.clear();
+      _currentPage = 1;
+    });
+    _loadReport();
+  }
+
+  Future<File> _createExportFile() async {
+    if (!_isDateRangeValid(showError: false)) {
+      throw StateError('Invalid date range.');
+    }
+
+    final provider = context.read<ReportsProvider>();
+    final token = context.read<AuthModel>().token ?? '';
+    final categoryId = _selectedCategory?.categoryId?.toString();
+    final productId = _selectedProduct?.productId?.toString();
+    final customerId = _selectedCustomer?.id?.toString();
+    final startDate = _fromController.text;
+    final endDate = _toController.text;
+    const exportPageSize = 250;
+    final entries = <ProductSalesReportEntry>[];
+    var page = 1;
+    var lastPage = 1;
+
+    do {
+      final response = await provider.fetchProductSalesReport(
+        accessToken: token,
+        categoryId: categoryId,
+        productId: productId,
+        customerId: customerId,
+        startDate: startDate,
+        endDate: endDate,
+        page: page,
+        perPage: exportPageSize,
+        updateState: false,
+      );
+      entries.addAll(response.data.entries);
+      lastPage = response.data.pagination.lastPage;
+      page++;
+    } while (page <= lastPage);
+
+    return ListExcelExportService.export<ProductSalesReportEntry>(
+      items: entries,
+      fileNamePrefix: 'product-sales-report',
+      sheetName: 'Product Sales',
+      columns: [
+        ListExportColumn(
+          label: 'product_sales_report.col_category_name'.tr,
+          value: (item, _) => item.category,
+        ),
+        ListExportColumn(
+          label: 'product_sales_report.col_product_name'.tr,
+          value: (item, _) => item.productName,
+        ),
+        ListExportColumn(
+          label: 'product_sales_report.col_price'.tr,
+          value: (item, _) => item.price,
+        ),
+        ListExportColumn(
+          label: 'product_sales_report.col_total_amount'.tr,
+          value: (item, _) => item.totalPrice,
+        ),
+        ListExportColumn(
+          label: 'product_sales_report.col_products_sold'.tr,
+          value: (item, _) => item.salesCount,
+        ),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
-    ReportsProvider reportsProvider = Provider.of<ReportsProvider>(context);
-    // Access the CategoryProvider
-    CategoryProvider categoryProvider = Provider.of<CategoryProvider>(
-      context,
+    final report = _report;
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildHeader(report),
+        if (_showFilters) ...[
+          const SizedBox(height: 16),
+          KeyedSubtree(
+            key: const ValueKey('product-sales-report-filters'),
+            child: _buildFilters(),
+          ),
+        ],
+        if (report != null) ...[
+          const SizedBox(height: 18),
+          _buildSummary(report),
+          const SizedBox(height: 14),
+        ] else
+          const SizedBox(height: 18),
+        if (_isLoading)
+          const Center(child: CircularProgressIndicator())
+        else
+          _buildResults(report),
+        const SizedBox(height: 12),
+        if (report != null && report.data.pagination.lastPage > 1)
+          PaginationControl(
+            currentPage: report.data.pagination.currentPage,
+            totalPages: report.data.pagination.lastPage,
+            onPageChanged: (page) => _loadReport(page: page),
+          ),
+      ],
     );
-    // Access the CategoryProvider
-    GridSelectionProvider gridSelectionProvider =
-        Provider.of<GridSelectionProvider>(
-      context,
-    );
 
-    // Access the category list
-
-    List<GetProduct>? productList =
-        gridSelectionProvider.getCategoryProductList;
-
-    String? parentCategory;
-    // Access the category list
-    List<Category>? categoryList = categoryProvider.category;
     return SafeArea(
-      child: Container(
-        margin: const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
+      child: RefreshIndicator(
+        onRefresh: () => _loadReport(page: _currentPage),
+        child: Container(
+          margin: EdgeInsets.symmetric(
+            horizontal: _isMobile(context) ? 5 : 10,
+            vertical: _isMobile(context) ? 10 : 20,
+          ),
+          padding: EdgeInsets.all(_isMobile(context) ? 12 : 28),
+          decoration: BoxDecoration(
+            color: Colors.white,
             borderRadius: BorderRadius.circular(22),
             boxShadow: const [
               BoxShadow(
@@ -154,539 +374,569 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
                 offset: Offset(1, 1),
               ),
             ],
-            color: Colors.white),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-          child: RefreshIndicator(
-            onRefresh: () async => loadInitData(),
-            child: ListView(
+          ),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: content,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(GetProductSalesReportResponse? report) {
+    final exportButton = ExportShareButton(
+      createFile: _createExportFile,
+      label: 'product_sales_report.export'.tr,
+      loadingLabel: 'product_sales_report.exporting'.tr,
+      tooltip: 'product_sales_report.export'.tr,
+      errorMessage: 'product_sales_report.export_error'.tr,
+      mimeType:
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      shareText: 'product_sales_report.share_text'.tr,
+      compact: _isMobile(context),
+      enabled: !_isLoading &&
+          !_invalidDateRange &&
+          (report?.data.entries.isNotEmpty ?? false),
+    );
+
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            'product_sales_report.page_title'.tr,
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s20,
+              0.30,
+              ColorManager.textColor,
+            ),
+          ),
+        ),
+        FilterToggleButton(
+          key: const ValueKey('product-sales-report-filter-toggle'),
+          showFilters: _showFilters,
+          hasActiveFilters: _hasActiveFilters(),
+          onPressed: () => setState(() => _showFilters = !_showFilters),
+          showTooltip: 'product_sales_report.show_filters'.tr,
+          hideTooltip: 'product_sales_report.hide_filters'.tr,
+        ),
+        const SizedBox(width: 8),
+        exportButton,
+      ],
+    );
+  }
+
+  Widget _buildFilters() {
+    final categories = context.watch<CategoryProvider>().category ?? const [];
+    final allProducts = _productOptions;
+    final products = _selectedCategory == null
+        ? allProducts
+        : allProducts
+            .where((item) => item.categoryId == _selectedCategory?.categoryId)
+            .toList();
+    final customers = _customerOptions;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = _isMobile(context)
+            ? constraints.maxWidth >= 600
+                ? 2
+                : 1
+            : 4;
+        const gap = 12.0;
+        final width = columns == 1
+            ? constraints.maxWidth
+            : (constraints.maxWidth - gap * (columns - 1)) / columns;
+
+        return FocusTraversalGroup(
+          policy: OrderedTraversalPolicy(),
+          child: Wrap(
+            key: const ValueKey('product-sales-report-filter-fields'),
+            spacing: gap,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.end,
             children: [
-              Text(
-                'product_sales_report.page_title'.tr,
-                style: buildCustomStyle(FontWeightManager.semiBold,
-                    FontSize.s20, 0.30, ColorManager.textColor),
-              ),
-              const SizedBox(
-                height: 15,
-              ),
-              SizedBox(
-                height: 90,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            'product_sales_report.filter_categories'.tr,
-                            style: buildCustomStyle(
-                              FontWeightManager.regular,
-                              FontSize.s14,
-                              0.27,
-                              Colors.black.withOpacity(0.6),
-                            ),
-                          ),
-                        ),
-                        BuildBorderContainer(
-                          margin: const EdgeInsets.only(left: 8),
-                          height: 45,
-                          width: 150, //size.width * 0.5,
-                          child: DropdownButtonFormField<Category>(
-                            decoration: const InputDecoration(
-                              border: InputBorder.none, // Remove the underline
-                            ),
-                            value: categoryProvider.selectedCategoryIndex >= 0
-                                ? categoryList![
-                                    categoryProvider.selectedCategoryIndex]
-                                : null,
-                            hint: Text(
-                              'product_sales_report.hint_select_category'.tr,
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s12,
-                                0.27,
-                                ColorManager.textColor.withOpacity(.5),
-                              ),
-                            ),
-                            items: categoryList!
-                                .map((Category category) {
-                                  return DropdownMenuItem<Category>(
-                                      value: category,
-                                      child: category.categoryName == "ALL"
-                                          ? Text(
-                                              'product_sales_report.option_please_select'.tr,
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.27,
-                                                ColorManager.textColor
-                                                    .withOpacity(.5),
-                                              ),
-                                            )
-                                          : Text(
-                                              category.categoryName ?? '',
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.27,
-                                                ColorManager.textColor
-                                                    .withOpacity(.5),
-                                              ),
-                                            ));
-                                })
-                                .toSet()
-                                .toList(),
-                            onChanged: (Category? selectedCategory) async {
-                              if (selectedCategory != null) {
-                                categoryProvider.selectCategory(
-                                  categoryList.indexOf(selectedCategory),
-                                  selectedCategory.categoryName ?? '',
-                                  selectedCategory.productsCount ?? 0,
-                                );
-
-                                parentCategory =
-                                    "${selectedCategory.categoryId ?? 0}";
-                                // debugPrint(parentCategory);
-
-                                gridSelectionProvider.updateCategory(
-                                    selectedCategory.categoryId ?? 0);
-
-                                setState(() {
-                                  productList = gridSelectionProvider
-                                      .selectedProductsUpOnCategory;
-                                  categoryIdController.text =
-                                      selectedCategory.categoryId.toString();
-                                });
-
-                                await categoryProvider.setParentCategory(
-                                    "${selectedCategory.categoryId ?? 0}");
-                              }
-                            },
-                          ),
-                        ),
-                      ],
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(1),
+                child: SizedBox(
+                  key: const ValueKey('product-sales-report-category-filter'),
+                  width: width,
+                  child: _buildLabeledFilter(
+                    label: 'product_sales_report.filter_category'.tr,
+                    child: BuildDropDownWithSearch<Category>(
+                      title: null,
+                      hintText: 'product_sales_report.all'.tr,
+                      value: _selectedCategory,
+                      items: categories
+                          .where((item) => (item.categoryId ?? 0) > 0)
+                          .toList(),
+                      displayText: (item) => item.categoryName ?? '',
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCategory = value;
+                          if (_selectedProduct?.categoryId !=
+                              value?.categoryId) {
+                            _selectedProduct = null;
+                          }
+                        });
+                        _loadReport();
+                      },
+                      width: width,
+                      height: 45,
+                      margin: EdgeInsets.zero,
+                      focusNode: _categoryFocus,
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            'product_sales_report.filter_select_product'.tr,
-                            style: buildCustomStyle(
-                              FontWeightManager.regular,
-                              FontSize.s14,
-                              0.27,
-                              Colors.black.withOpacity(0.6),
-                            ),
-                          ),
-                        ),
-                        BuildBorderContainer(
-                          margin: const EdgeInsets.only(left: 8),
-                          height: 45,
-                          width: 150, //size.width * 0.5,
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton2<GetProduct>(
-                              isExpanded: true,
-                              hint: Text(
-                                'product_sales_report.hint_select_product'.tr,
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                              items: productList!
-                                  .map((item) => DropdownMenuItem(
-                                      value: item,
-                                      child: Text(
-                                        item.productName ?? "",
-                                        style: buildCustomStyle(
-                                          FontWeightManager.regular,
-                                          FontSize.s14,
-                                          0.27,
-                                          Colors.black.withOpacity(0.6),
-                                        ),
-                                      )))
-                                  .toList(),
-                              value: selectedValue,
-                              onChanged: (value) {
-                                // debugPrint("${value?.productProps.toString()}");
-                                setState(() {
-                                  selectedValue = value;
-                                });
-                                idController.text = value == null
-                                    ? ""
-                                    : "${value.productId ?? 0}";
-                                // debugPrint(idController.text);
-                              },
-                              buttonStyleData: ButtonStyleData(
-                                height: size.height * .07,
-                                width: size.width / 3, //3.05,
-                                padding:
-                                    const EdgeInsets.only(left: 14, right: 14),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(7),
-                                  // border: Border.all(
-                                  //   color: Colors.grey.withOpacity(0.4),
-                                  // ),
-                                  color: Colors.white,
-                                ),
-                                //  elevation: 1,
-                              ),
-                              dropdownStyleData: const DropdownStyleData(
-                                maxHeight: 300,
-                              ),
-                              menuItemStyleData: const MenuItemStyleData(
-                                height: 40,
-                              ),
-                              dropdownSearchData: DropdownSearchData(
-                                searchController: textEditingController,
-                                searchInnerWidgetHeight: 50,
-                                searchInnerWidget: Container(
-                                  height: 50,
-                                  padding: const EdgeInsets.only(
-                                    top: 8,
-                                    bottom: 4,
-                                    right: 8,
-                                    left: 8,
-                                  ),
-                                  child: TextFormField(
-                                    expands: true,
-                                    maxLines: null,
-                                    style: buildCustomStyle(
-                                      FontWeightManager.regular,
-                                      FontSize.s14,
-                                      0.27,
-                                      Colors.black.withOpacity(0.6),
-                                    ),
-                                    controller: textEditingController,
-                                    cursorColor: ColorManager.kPrimaryColor,
-                                    decoration: decoration.copyWith(
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 8,
-                                      ),
-                                      hintText: '',
-                                      hintStyle: buildCustomStyle(
-                                        FontWeightManager.regular,
-                                        FontSize.s14,
-                                        0.27,
-                                        Colors.black.withOpacity(0.6),
-                                      ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(7),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                searchMatchFn: (item, searchValue) {
-                                  return item.value!.productName
-                                      .toString()
-                                      .toLowerCase()
-                                      .contains(searchValue.toLowerCase());
-                                },
-                              ),
-                              //This to clear the search value when you close the menu
-                              onMenuStateChange: (isOpen) {
-                                if (!isOpen) {
-                                  textEditingController.clear();
-                                }
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            'product_sales_report.filter_from_date'.tr,
-                            style: buildCustomStyle(
-                              FontWeightManager.regular,
-                              FontSize.s14,
-                              0.27,
-                              Colors.black.withOpacity(0.6),
-                            ),
-                          ),
-                        ),
-                        BuildBorderContainer(
-                          margin: const EdgeInsets.only(left: 8),
-                          height: 45,
-                          width: 150, //size.width * 0.5,
-                          child: CalendarPickerTableCell(
-                            onDateSelected: (date) {
-                              // debugPrint(date.toString());
-                              startDateController.text =
-                                  DateFormat('yyyy-MM-dd').format(date);
-                              debugPrint(DateFormat('yyyy-MM-dd')
-                                  .format(date)
-                                  .toString());
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            'product_sales_report.filter_to_date'.tr,
-                            style: buildCustomStyle(
-                              FontWeightManager.regular,
-                              FontSize.s14,
-                              0.27,
-                              Colors.black.withOpacity(0.6),
-                            ),
-                          ),
-                        ),
-                        BuildBorderContainer(
-                          margin: const EdgeInsets.only(left: 8),
-                          height: 45,
-                          width: 150, //size.width * 0.5,
-                          child: Container(
-                            height: size.height * .06,
-                            width: size.width / 4.3,
-                            margin: const EdgeInsets.only(left: 8),
-                            child: CalendarPickerTableCell(
-                              onDateSelected: (date) {
-                                // debugPrint(date.toString());
-                                endDateController.text =
-                                    DateFormat('yyyy-MM-dd').format(date);
-                                debugPrint(DateFormat('yyyy-MM-dd')
-                                    .format(date)
-                                    .toString());
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 10.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              'product_sales_report.filter_amount'.tr,
-                              style: buildCustomStyle(
-                                FontWeightManager.regular,
-                                FontSize.s14,
-                                0.27,
-                                Colors.black.withOpacity(0.6),
-                              ),
-                            ),
-                          ),
-                          SizedBox(
-                            height: 45,
-                            width: 120, //size.width * 0.5,
-                            child: TextFormField(
-                              onChanged: (value) {
-                                setState(() {
-                                  // searchAmount = value;
-                                });
-                              },
-                              cursorColor: ColorManager.kPrimaryColor,
-                              cursorHeight: 13,
-                              controller: amountController,
-                              style: buildCustomStyle(FontWeightManager.medium,
-                                  FontSize.s10, 0.18, ColorManager.textColor),
-                              decoration: decoration.copyWith(
-                                  hintText: 'product_sales_report.hint_amount'.tr,
-                                  hintStyle: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s10,
-                                      0.18,
-                                      ColorManager.textColor),
-                                  // prefixIcon: const Icon(
-                                  //   Icons.search,
-                                  //   color: Colors.black,
-                                  //   size: 35,
-                                  // ),
-                                  prefixIconColor: Colors.black),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 10.0, top: 30),
-                      child: CustomRoundButton(
-                        title: 'product_sales_report.btn_search'.tr,
-                        fct: searchAccountBook,
-                        height: 45,
-                        width: size.width * 0.09,
-                        fontSize: FontSize.s12,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 10.0, top: 30),
-                      child: CustomRoundButton(
-                        title: 'general.reset'.tr,
-                        boxColor: Colors.white,
-                        textColor: ColorManager.kPrimaryColor,
-                        fct: resetSearch,
-                        height: 45,
-                        width: size.width * 0.09,
-                        fontSize: FontSize.s12,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(top: 18.0),
-                child: Text(
-                  'product_sales_report.section_title'.tr,
-                  style: buildCustomStyle(FontWeightManager.semiBold,
-                      FontSize.s20, 0.30, ColorManager.textColor),
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(2),
+                child: SizedBox(
+                  key: const ValueKey('product-sales-report-product-filter'),
+                  width: width,
+                  child: _buildLabeledFilter(
+                    label: 'product_sales_report.filter_product'.tr,
+                    child: BuildDropDownWithSearch<GetProduct>(
+                      title: null,
+                      hintText: 'product_sales_report.all'.tr,
+                      value: _selectedProduct,
+                      items: products,
+                      displayText: (item) => item.productName ?? '',
+                      onChanged: (value) {
+                        setState(() => _selectedProduct = value);
+                        _loadReport();
+                      },
+                      width: width,
+                      height: 45,
+                      margin: EdgeInsets.zero,
+                      focusNode: _productFocus,
+                    ),
+                  ),
                 ),
               ),
-              const Divider(thickness: 0.5),
-              BuildBoxShadowContainer(
-                margin: const EdgeInsets.only(top: 20),
-                circleRadius: 7,
-                offsetValue: const Offset(1, 1),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Table(
-                  columnWidths: const {
-                    0: FractionColumnWidth(0.06),
-                    1: FractionColumnWidth(0.15),
-                    2: FractionColumnWidth(0.15),
-                    3: FractionColumnWidth(0.15),
-                    4: FractionColumnWidth(0.15),
-                    5: FractionColumnWidth(0.15),
-                    6: FractionColumnWidth(0.10),
-                  },
-                  border: const TableBorder.symmetric(
-                      outside: BorderSide(
-                          color: ColorManager.tableBOrderColor, width: 0.3),
-                      inside: BorderSide(
-                          color: ColorManager.tableBOrderColor, width: 0.8)),
-                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                  children: [
-                    TableRow(
-                      decoration:
-                          const BoxDecoration(color: ColorManager.tableBGColor),
-                      children: [
-                        _buildTableHeader('product_sales_report.col_no'.tr),
-                        _buildTableHeader('product_sales_report.col_product_name'.tr),
-                        _buildTableHeader('product_sales_report.col_category_name'.tr),
-                        _buildTableHeader('product_sales_report.col_products_sold'.tr),
-                        _buildTableHeader('product_sales_report.col_unit_price'.tr),
-                        _buildTableHeader('product_sales_report.col_total_amount'.tr),
-                        _buildTableHeader('product_sales_report.col_action'.tr),
-                      ],
-                    ),
-                    if (reportsProvider.productSalesReport != null)
-                      ...reportsProvider.productSalesReport!.data
-                          .asMap()
-                          .entries
-                          .map((entry) {
-                        final index = entry.key;
-                        final item = entry.value;
-                        return TableRow(
-                          children: [
-                            _buildTableCell("${index + 1}"),
-                            _buildTableCell(item.productName),
-                            _buildTableCell(item.categoryName),
-                            _buildTableCell(item.totalQuantity),
-                            _buildTableCell(
-                                AmountHelper.formatAmount(item.unitPrice)
-                                    .toString()),
-                            _buildTableCell(
-                                AmountHelper.formatAmount(item.totalAmount)
-                                    .toString()),
-                            TableCell(
-                              verticalAlignment:
-                                  TableCellVerticalAlignment.middle,
-                              child: Padding(
-                                padding: const EdgeInsets.all(15.0),
-                                child: Center(
-                                  child: BuildBoxShadowContainer(
-                                    margin: const EdgeInsets.only(
-                                        left: 5, right: 5),
-                                    circleRadius: 5,
-                                    child: IconButton(
-                                      icon: Icon(
-                                        Icons.visibility,
-                                        size: 18,
-                                        color: ColorManager.kPrimaryColor
-                                            .withOpacity(0.9),
-                                      ),
-                                      onPressed: () {
-                                        // Implement view action
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      }).toList(),
-                  ],
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(3),
+                child: SizedBox(
+                  key: const ValueKey('product-sales-report-from-filter'),
+                  width: width,
+                  child: _buildDateField(
+                    label: 'product_sales_report.filter_from'.tr,
+                    controller: _fromController,
+                    focusNode: _fromDateFocus,
+                  ),
                 ),
+              ),
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(4),
+                child: SizedBox(
+                  key: const ValueKey('product-sales-report-to-filter'),
+                  width: width,
+                  child: _buildDateField(
+                    label: 'product_sales_report.filter_to'.tr,
+                    controller: _toController,
+                    focusNode: _toDateFocus,
+                  ),
+                ),
+              ),
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(5),
+                child: SizedBox(
+                  key: const ValueKey('product-sales-report-customer-filter'),
+                  width: width,
+                  child: _buildLabeledFilter(
+                    label: 'product_sales_report.filter_customer'.tr,
+                    child: BuildDropDownWithSearch<CustomerListModelData>(
+                      title: null,
+                      hintText: 'product_sales_report.select_customer'.tr,
+                      value: _selectedCustomer,
+                      items: customers,
+                      displayText: (item) => item.name ?? '',
+                      onChanged: (value) {
+                        setState(() => _selectedCustomer = value);
+                        _loadReport();
+                      },
+                      width: width,
+                      height: 45,
+                      margin: EdgeInsets.zero,
+                      focusNode: _customerFocus,
+                    ),
+                  ),
+                ),
+              ),
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(6),
+                child: SizedBox(
+                  key: const ValueKey('product-sales-report-reset-button'),
+                  width: width,
+                  height: 45,
+                  child: OutlinedButton(
+                    focusNode: _resetFocus,
+                    onPressed: _isLoading ? null : _resetFilters,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: ColorManager.kPrimaryColor,
+                      side: const BorderSide(color: ColorManager.kPrimaryColor),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                    ),
+                    child: Text('general.reset'.tr),
+                  ),
                 ),
               ),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDateField({
+    required String label,
+    required TextEditingController controller,
+    required FocusNode focusNode,
+  }) {
+    return _buildLabeledFilter(
+      label: label,
+      child: BuildBorderContainer(
+        height: 45,
+        width: double.infinity,
+        child: CalendarPickerTableCell(
+          key: ValueKey('product-sales-$label-${controller.text}'),
+          initialDate: DateTime.tryParse(controller.text),
+          focusNode: focusNode,
+          openOnFocus: false,
+          onDateSelected: (date) {
+            setState(() {
+              controller.text = DateFormat('yyyy-MM-dd').format(date);
+            });
+            _loadReport();
+          },
         ),
-      ),
       ),
     );
   }
 
-  Widget _buildTableHeader(String text) {
-    return TableCell(
-      verticalAlignment: TableCellVerticalAlignment.middle,
-      child: Padding(
-        padding: const EdgeInsets.all(15.0),
-        child: Center(
+  Widget _buildLabeledFilter({
+    required String label,
+    required Widget child,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8),
           child: Text(
-            text,
+            label,
             style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s12,
-              0.18,
-              ColorManager.kPrimaryColor,
+              FontWeightManager.regular,
+              FontSize.s14,
+              0.27,
+              Colors.black.withValues(alpha: 0.6),
             ),
           ),
+        ),
+        const SizedBox(height: 8),
+        child,
+      ],
+    );
+  }
+
+  Widget _buildSummary(GetProductSalesReportResponse? report) {
+    final data = report?.data;
+    return Container(
+      key: const ValueKey('product-sales-report-summary'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: ColorManager.kPrimaryColor.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Wrap(
+        spacing: 32,
+        runSpacing: 12,
+        children: [
+          _buildSummaryMetric(
+            title: 'product_sales_report.total_revenue'.tr,
+            value: _money(
+              data?.summary.totalRevenue ?? 0,
+              data?.currency,
+            ),
+            icon: Icons.monetization_on_outlined,
+          ),
+          _buildSummaryMetric(
+            title: 'product_sales_report.total_quantity'.tr,
+            value: _quantity(data?.summary.totalQuantity ?? 0),
+            icon: Icons.inventory_2_outlined,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryMetric({
+    required String title,
+    required String value,
+    required IconData icon,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 24, color: ColorManager.kPrimaryColor),
+        const SizedBox(width: 10),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              title,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s11,
+                0.15,
+                Colors.black54,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: buildCustomStyle(
+                FontWeightManager.bold,
+                FontSize.s16,
+                0.20,
+                ColorManager.textColor,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildResults(GetProductSalesReportResponse? report) {
+    if (_invalidDateRange) {
+      return Padding(
+        key: const ValueKey('product-sales-report-invalid-date'),
+        padding: const EdgeInsets.symmetric(vertical: 60),
+        child: Center(
+          child: Text('product_sales_report.invalid_date_range'.tr),
+        ),
+      );
+    }
+    if (report == null && _loadFailed) {
+      return Padding(
+        key: const ValueKey('product-sales-report-error'),
+        padding: const EdgeInsets.symmetric(vertical: 60),
+        child: Center(
+          child: Text('product_sales_report.error_unavailable'.tr),
+        ),
+      );
+    }
+    final entries = report?.data.entries ?? const <ProductSalesReportEntry>[];
+    if (entries.isEmpty) {
+      return Padding(
+        key: const ValueKey('product-sales-report-empty'),
+        padding: const EdgeInsets.symmetric(vertical: 60),
+        child: Center(child: Text('product_sales_report.no_data'.tr)),
+      );
+    }
+
+    if (_isMobile(context)) {
+      return Column(
+        children: [
+          for (final item in entries)
+            _buildMobileCard(item, report?.data.currency),
+        ],
+      );
+    }
+
+    return BuildBoxShadowContainer(
+      margin: const EdgeInsets.only(top: 5),
+      circleRadius: 7,
+      offsetValue: const Offset(2, 2),
+      blurRadius: 8,
+      color: Colors.white,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final tableWidth =
+              constraints.maxWidth > 700 ? constraints.maxWidth : 700.0;
+          const columnWidths = <int, TableColumnWidth>{
+            0: FlexColumnWidth(1.2),
+            1: FlexColumnWidth(1.6),
+            2: FlexColumnWidth(1),
+            3: FlexColumnWidth(1),
+            4: FlexColumnWidth(1.1),
+          };
+
+          return Scrollbar(
+            controller: _tableScrollController,
+            thumbVisibility: true,
+            trackVisibility: true,
+            child: SingleChildScrollView(
+              controller: _tableScrollController,
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                key: const ValueKey('product-sales-report-table-width'),
+                width: tableWidth,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: ColorManager.tableBGColor,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black12,
+                            offset: Offset(0, 2),
+                            blurRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Table(
+                        columnWidths: columnWidths,
+                        defaultVerticalAlignment:
+                            TableCellVerticalAlignment.middle,
+                        children: [
+                          TableRow(
+                            children: [
+                              _buildReportHeader(
+                                  'product_sales_report.col_category_name'.tr),
+                              _buildReportHeader(
+                                  'product_sales_report.col_product_name'.tr),
+                              _buildReportHeader(
+                                  'product_sales_report.col_price'.tr),
+                              _buildReportHeader(
+                                  'product_sales_report.col_total_amount'.tr),
+                              _buildReportHeader(
+                                  'product_sales_report.col_products_sold'.tr),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Table(
+                      columnWidths: columnWidths,
+                      defaultVerticalAlignment:
+                          TableCellVerticalAlignment.middle,
+                      children: [
+                        for (final entry in entries.asMap().entries)
+                          TableRow(
+                            decoration: BoxDecoration(
+                              color: entry.key.isEven
+                                  ? Colors.white
+                                  : Colors.grey.withValues(alpha: 0.05),
+                            ),
+                            children: [
+                              _buildReportCell(entry.value.category),
+                              _buildReportCell(entry.value.productName),
+                              _buildReportCell(_money(
+                                  entry.value.price, report?.data.currency)),
+                              _buildReportCell(_money(entry.value.totalPrice,
+                                  report?.data.currency)),
+                              _buildReportCell(
+                                  _quantity(entry.value.salesCount)),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildReportHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      child: Text(
+        title,
+        textAlign: TextAlign.center,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s12,
+          0.18,
+          ColorManager.kPrimaryColor,
         ),
       ),
     );
   }
 
-  Widget _buildTableCell(String text) {
-    return TableCell(
-      verticalAlignment: TableCellVerticalAlignment.middle,
-      child: Padding(
-        padding: const EdgeInsets.all(15.0),
-        child: Center(
-          child: Text(
-            text,
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s9,
-              0.13,
-              Colors.black,
-            ),
-          ),
+  Widget _buildReportCell(String value) {
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: SelectableText(
+        value,
+        textAlign: TextAlign.center,
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s9,
+          0.13,
+          Colors.black,
         ),
       ),
     );
+  }
+
+  Widget _buildMobileCard(ProductSalesReportEntry item, String? currency) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              item.productName,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            _mobileRow(
+                'product_sales_report.col_category_name'.tr, item.category),
+            _mobileRow(
+              'product_sales_report.col_price'.tr,
+              _money(item.price, currency),
+            ),
+            _mobileRow(
+              'product_sales_report.col_total_amount'.tr,
+              _money(item.totalPrice, currency),
+            ),
+            _mobileRow(
+              'product_sales_report.col_products_sold'.tr,
+              _quantity(item.salesCount),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _mobileRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Expanded(
+              child:
+                  Text(label, style: const TextStyle(color: Colors.black54))),
+          const SizedBox(width: 12),
+          Flexible(child: Text(value, textAlign: TextAlign.end)),
+        ],
+      ),
+    );
+  }
+
+  String _money(double value, String? currency) {
+    final code = (currency == null || currency.isEmpty) ? '' : '$currency ';
+    return '$code${value.toStringAsFixed(2)}';
+  }
+
+  String _quantity(double value) {
+    return value == value.truncateToDouble()
+        ? value.toInt().toString()
+        : value.toStringAsFixed(3);
   }
 }

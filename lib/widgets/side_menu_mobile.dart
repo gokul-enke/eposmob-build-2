@@ -515,6 +515,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
         final hasSupplierTransactionsPermission =
             roleProvider.currentUserHasPermissionSync(
                 'menu.reports.supplier_transactions.access');
+        final hasProductSalesPermission = roleProvider
+            .currentUserHasPermissionSync('menu.reports.product_sales.access');
         final hasNonStockPermission = roleProvider
             .currentUserHasPermissionSync('menu.reports.non_stock.access');
         final hasConsumedStockPermission = roleProvider
@@ -529,6 +531,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
         if (!hasSalesExecutiveReportsPermission &&
             !hasCustomerTransactionsPermission &&
             !hasSupplierTransactionsPermission &&
+            !hasProductSalesPermission &&
             !canViewExecutiveSummary &&
             !hasStockReportPermission &&
             !hasNonStockPermission &&
@@ -581,6 +584,11 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                     _MobileDrawerSubItem(
                       title: 'nav.supplier_transaction_reports'.tr,
                       onTap: () => navigate(67),
+                    ),
+                  if (hasProductSalesPermission)
+                    _MobileDrawerSubItem(
+                      title: 'nav.product_sales_report'.tr,
+                      onTap: () => navigate(40),
                     ),
                   if (hasStockReportPermission)
                     _MobileDrawerSubItem(

@@ -189,6 +189,66 @@ class CustomerProvider extends ChangeNotifier {
     }
   }
 
+  /// Loads the complete customer directory for report filters without
+  /// changing the paginated customer-list screen state.
+  Future<List<CustomerListModelData>> listAllCustomersForReportFilter({
+    required String accessToken,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final apiKey = prefs.getString('api_key');
+    final activeStoreId = prefs.getInt('active_store_id');
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException('API key not found. Please restart the app.');
+    }
+
+    final customersById = <int, CustomerListModelData>{};
+    var page = 1;
+    var lastPage = 1;
+
+    do {
+      final uri = Uri.parse(APPUrl.customerListUrl).replace(
+        queryParameters: {
+          'page': page.toString(),
+          if (activeStoreId != null) 'store_id': activeStoreId.toString(),
+        },
+      );
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
+        },
+      ).timeout(const Duration(seconds: 20));
+      if (response.statusCode != 200) {
+        throw HttpException(
+          'Customer filter list failed (${response.statusCode}).',
+        );
+      }
+
+      final jsonData = json.decode(response.body) as Map<String, dynamic>;
+      final model = CustomerListModel.fromJson(jsonData);
+      for (final customer in model.data ?? const <CustomerListModelData>[]) {
+        final id = customer.id;
+        if (id != null) customersById[id] = customer;
+      }
+      final pagination = jsonData['pagination'] ?? jsonData['meta'];
+      final rawLastPage = pagination is Map ? pagination['last_page'] : null;
+      lastPage = rawLastPage is int
+          ? rawLastPage
+          : int.tryParse(rawLastPage?.toString() ?? '') ?? 1;
+      page++;
+    } while (page <= lastPage);
+
+    final customers = customersById.values.toList();
+    customers.sort(
+      (left, right) => (left.name ?? '').toLowerCase().compareTo(
+            (right.name ?? '').toLowerCase(),
+          ),
+    );
+    return customers;
+  }
+
   // Change page
   void goToPage(int page) {
     if (page < 1 || page > _totalPages) return;
