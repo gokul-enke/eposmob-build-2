@@ -108,6 +108,20 @@ class SalesReturnOrder {
   final List<SalesReturnItem> items;
   final Order? order; // Add nested order object
 
+  /// Backend order number, e.g. `ORD-004689`.
+  String get originalOrderNumber {
+    final value = order?.orderNumber.trim() ?? '';
+    return value.isNotEmpty ? value : orderId.toString();
+  }
+
+  /// Receipt number issued on the POS device, e.g. `2-01-260929-0002`.
+  /// Null for orders created before device receipt numbers existed.
+  String? get receiptNumber => order?.receiptNumber;
+
+  /// The number a cashier or customer recognises: the receipt number when
+  /// the sale has one, otherwise the backend order number.
+  String get displayNumber => receiptNumber ?? originalOrderNumber;
+
   SalesReturnOrder({
     required this.id,
     required this.orderId,
@@ -413,6 +427,7 @@ class Order {
   final int? addressId;
   final String orderDate;
   final String orderNumber;
+  final String? receiptNumber;
   final int? paymentId;
   final List<String>? paymentMethod;
   final String? paymentStatus;
@@ -436,6 +451,7 @@ class Order {
     this.addressId,
     required this.orderDate,
     required this.orderNumber,
+    this.receiptNumber,
     this.paymentId,
     this.paymentMethod,
     this.paymentStatus,
@@ -467,6 +483,7 @@ class Order {
           : int.tryParse(json['address_id']?.toString() ?? '0'),
       orderDate: json['order_date']?.toString() ?? '',
       orderNumber: json['order_number']?.toString() ?? '',
+      receiptNumber: _nonEmpty(json['receipt_number']),
       // Handling possible List for payment_id
       paymentId: json['payment_id'] is List
           ? (json['payment_id'].isNotEmpty
@@ -554,4 +571,9 @@ class OrderCustomerUser {
       name: json['name']?.toString() ?? '',
     );
   }
+}
+
+String? _nonEmpty(Object? value) {
+  final text = value?.toString().trim() ?? '';
+  return text.isEmpty ? null : text;
 }

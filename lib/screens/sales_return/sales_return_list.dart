@@ -256,6 +256,17 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
     );
   }
 
+  /// Copies the number shown first: the receipt number when present.
+  void _copyNumber(SalesReturnOrder order) {
+    Clipboard.setData(ClipboardData(text: order.displayNumber));
+    showScaffold(
+      context: context,
+      message: order.receiptNumber != null
+          ? 'sales_return.receipt_copy_success'.tr
+          : 'sales_return.copy_success'.tr,
+    );
+  }
+
   Widget _buildMobileReturnCard(SalesReturnOrder order) {
     final totalQuantity = order.items.fold<int>(
       0,
@@ -263,7 +274,8 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
     );
     final bool isCompleted =
         order.status.toString() == '1' || order.status.toString() == 'true';
-    final orderNumber = order.order?.orderNumber ?? order.orderId.toString();
+    final orderNumber = order.displayNumber;
+    final receiptNumber = order.receiptNumber;
 
     return Container(
       padding: const EdgeInsetsDirectional.all(14),
@@ -300,14 +312,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                         if (orderNumber.isNotEmpty) ...[
                           const SizedBox(width: 6),
                           GestureDetector(
-                            onTap: () {
-                              Clipboard.setData(
-                                  ClipboardData(text: orderNumber));
-                              showScaffold(
-                                context: context,
-                                message: 'sales_return.copy_success'.tr,
-                              );
-                            },
+                            onTap: () => _copyNumber(order),
                             child: const Icon(
                               Icons.copy,
                               size: 14,
@@ -317,6 +322,20 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                         ],
                       ],
                     ),
+                    if (receiptNumber != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        order.originalOrderNumber,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s12,
+                          0.13,
+                          Colors.black54,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 4),
                     Text(
                       DateHelper.formatISODate(order.createdAt.toString()),
@@ -552,30 +571,40 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Flexible(
-                  child: Text(
-                    order.order?.orderNumber ?? order.orderId.toString(),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s12,
-                      0.13,
-                      Colors.black,
-                    ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        order.displayNumber,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s12,
+                          0.13,
+                          Colors.black,
+                        ),
+                      ),
+                      if (order.receiptNumber != null)
+                        Text(
+                          order.originalOrderNumber,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: buildCustomStyle(
+                            FontWeightManager.regular,
+                            FontSize.s10,
+                            0.13,
+                            Colors.black54,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 6),
                 GestureDetector(
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(
-                        text: order.order?.orderNumber ??
-                            order.orderId.toString()));
-                    showScaffold(
-                      context: context,
-                      message: 'sales_return.copy_success'.tr,
-                    );
-                  },
+                  onTap: () => _copyNumber(order),
                   child: const Icon(
                     Icons.copy,
                     size: 14,
