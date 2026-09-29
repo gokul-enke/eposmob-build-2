@@ -70,6 +70,9 @@ class ReceiptIdentityService {
   static const int maximumCounterNumber = 999;
   static const int defaultCounterNumber = 1;
 
+  /// Highest daily sequence an operator may enter as the last bill sold.
+  static const int maximumSequence = 99999;
+
   static const Uuid _uuid = Uuid();
   static Future<void> _allocationTail = Future<void>.value();
 
@@ -115,9 +118,9 @@ class ReceiptIdentityService {
     return _serialized(() async {
       final prefs = await SharedPreferences.getInstance();
       final configuration = await configurationForStore(storeId);
-      final businessNow = DateHelper.nowInConfiguredTimeZone();
-      final dateCode = DateFormat('yyMMdd').format(businessNow);
-      final sequenceKey = '$storeId:${configuration.counterNumber}:$dateCode';
+      final dateCode = todayDateCode();
+      final sequenceKey =
+          _sequenceKey(storeId, configuration.counterNumber, dateCode);
       final sequences = _readIntMap(prefs.getString(sequenceMapPreferenceKey));
       final nextSequence = (sequences[sequenceKey] ?? 0) + 1;
       sequences[sequenceKey] = nextSequence;
@@ -139,6 +142,94 @@ class ReceiptIdentityService {
         counterNumber: configuration.counterNumber,
       );
     });
+  }
+
+  /// Today's date part of a bill number, in the business timezone.
+  static String todayDateCode() =>
+      DateFormat('yyMMdd').format(DateHelper.nowInConfiguredTimeZone());
+
+  static String _sequenceKey(int storeId, int counterNumber, String dateCode) =>
+      '$storeId:$counterNumber:$dateCode';
+
+  /// The last daily sequence this device issued today for [counterNumber] in
+  /// [storeId], or 0 when it has issued none.
+  Future<int> lastIssuedSequenceToday({
+    required int storeId,
+    required int counterNumber,
+  }) async {
+    _validateStoreId(storeId);
+    final prefs = await SharedPreferences.getInstance();
+    final sequences = _readIntMap(prefs.getString(sequenceMapPreferenceKey));
+    return sequences[_sequenceKey(storeId, counterNumber, todayDateCode())] ??
+        0;
+  }
+
+  /// Today's last issued sequence for every counter of [storeId] on this
+  /// device, keyed by counter number. Counters with no bills today are absent.
+  Future<Map<int, int>> lastIssuedSequencesToday({required int storeId}) async {
+    _validateStoreId(storeId);
+    final prefs = await SharedPreferences.getInstance();
+    final sequences = _readIntMap(prefs.getString(sequenceMapPreferenceKey));
+    final prefix = '$storeId:';
+    final suffix = ':${todayDateCode()}';
+    final result = <int, int>{};
+    sequences.forEach((key, value) {
+      if (!key.startsWith(prefix) || !key.endsWith(suffix)) return;
+      final counter = int.tryParse(
+        key.substring(prefix.length, key.length - suffix.length),
+      );
+      if (counter != null) result[counter] = value;
+    });
+    return result;
+  }
+
+  /// Makes the next bill for [counterNumber] follow [lastSoldSequence], for
+  /// example after a reinstall restarted the count at 0001. The sequence can
+  /// only move forward, so this can never make a number be issued twice.
+  Future<int> raiseLastIssuedSequenceToday({
+    required int storeId,
+    required int counterNumber,
+    required int lastSoldSequence,
+  }) {
+    _validateStoreId(storeId);
+    if (lastSoldSequence < 1 || lastSoldSequence > maximumSequence) {
+      throw ArgumentError.value(
+        lastSoldSequence,
+        'lastSoldSequence',
+        'The last bill number must be between 1 and $maximumSequence.',
+      );
+    }
+    return _serialized(() async {
+      final prefs = await SharedPreferences.getInstance();
+      final key = _sequenceKey(storeId, counterNumber, todayDateCode());
+      final sequences = _readIntMap(prefs.getString(sequenceMapPreferenceKey));
+      final current = sequences[key] ?? 0;
+      if (lastSoldSequence < current) {
+        throw StateError(
+          'Bill numbers can only move forward. This counter already issued '
+          '$current today.',
+        );
+      }
+      sequences[key] = lastSoldSequence;
+      await prefs.setString(sequenceMapPreferenceKey, jsonEncode(sequences));
+      return lastSoldSequence;
+    });
+  }
+
+  /// The bill number the next sale on this counter will get.
+  Future<String> nextReceiptNumber(
+    ReceiptCounterConfiguration configuration,
+  ) async {
+    final last = await lastIssuedSequenceToday(
+      storeId: configuration.storeId,
+      counterNumber: configuration.counterNumber,
+    );
+    return formatReceiptNumber(
+      storeId: configuration.storeId,
+      counterNumber: configuration.counterNumber,
+      dateCode: todayDateCode(),
+      sequence: last + 1,
+    );
   }
 
   String previewReceiptNumber(ReceiptCounterConfiguration configuration) {

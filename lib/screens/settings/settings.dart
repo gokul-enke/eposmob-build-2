@@ -368,22 +368,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     final service = ReceiptIdentityService.instance;
     final configuration = await service.configurationForStore(storeId);
+    final lastByCounter =
+        await service.lastIssuedSequencesToday(storeId: storeId);
     if (!mounted) return;
 
     final controller =
         TextEditingController(text: '${configuration.counterNumber}');
+    final lastSoldController = TextEditingController();
+    final dateCode = ReceiptIdentityService.todayDateCode();
+    String billNumber(int counter, int sequence) =>
+        ReceiptIdentityService.formatReceiptNumber(
+          storeId: storeId,
+          counterNumber: counter,
+          dateCode: dateCode,
+          sequence: sequence,
+        );
     String? validationError;
+    String? lastSoldError;
     final saved = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) {
           final parsed = int.tryParse(controller.text.trim());
-          final previewConfiguration = ReceiptCounterConfiguration(
-            storeId: storeId,
-            counterNumber: parsed ?? configuration.counterNumber,
-            deviceId: configuration.deviceId,
-            isConfigured: configuration.isConfigured,
-          );
+          final counter = parsed ?? configuration.counterNumber;
+          final issuedToday = lastByCounter[counter] ?? 0;
+          final enteredLastSold = int.tryParse(lastSoldController.text.trim());
+          final nextSequence = (enteredLastSold != null &&
+                      enteredLastSold > issuedToday
+                  ? enteredLastSold
+                  : issuedToday) +
+              1;
           return AlertDialog(
             backgroundColor: Colors.white,
             title: Text('settings_ui.counter_title'.tr),
@@ -411,13 +425,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     onChanged: (_) => setDialogState(() {
                       validationError = null;
+                      lastSoldError = null;
+                    }),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    issuedToday > 0
+                        ? 'settings_ui.counter_last_today'.trParams({
+                            'number': billNumber(counter, issuedToday),
+                          })
+                        : 'settings_ui.counter_none_today'.tr,
+                    style: TextStyle(color: Colors.grey.shade800),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: lastSoldController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: InputDecoration(
+                      labelText: 'settings_ui.counter_last_sold'.tr,
+                      helperText: 'settings_ui.counter_last_sold_helper'
+                          .trParams({'example': billNumber(counter, 10)}),
+                      helperMaxLines: 3,
+                      errorText: lastSoldError,
+                      errorMaxLines: 3,
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: (_) => setDialogState(() {
+                      lastSoldError = null;
                     }),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'settings_ui.counter_preview'.trParams({
-                      'number':
-                          service.previewReceiptNumber(previewConfiguration),
+                      'number': billNumber(counter, nextSequence),
                     }),
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
@@ -460,6 +501,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     });
                     return;
                   }
+                  final lastSoldText = lastSoldController.text.trim();
+                  if (lastSoldText.isNotEmpty) {
+                    final lastSold = int.tryParse(lastSoldText);
+                    final issued = lastByCounter[value] ?? 0;
+                    if (lastSold == null ||
+                        lastSold < 1 ||
+                        lastSold > ReceiptIdentityService.maximumSequence) {
+                      setDialogState(() {
+                        lastSoldError =
+                            'settings_ui.counter_last_sold_invalid'.trParams({
+                          'max': '${ReceiptIdentityService.maximumSequence}',
+                        });
+                      });
+                      return;
+                    }
+                    if (lastSold < issued) {
+                      setDialogState(() {
+                        lastSoldError =
+                            'settings_ui.counter_last_sold_too_low'.trParams({
+                          'number': billNumber(value, issued),
+                        });
+                      });
+                      return;
+                    }
+                  }
                   Navigator.of(dialogContext).pop(true);
                 },
                 child: Text('general.save'.tr),
@@ -470,6 +536,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
 
+    final lastSoldText = lastSoldController.text.trim();
+    lastSoldController.dispose();
     if (saved != true) {
       controller.dispose();
       return;
@@ -477,16 +545,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     final counterNumber = int.parse(controller.text.trim());
     controller.dispose();
-    await service.setCounterNumber(
+    final savedConfiguration = await service.setCounterNumber(
       storeId: storeId,
       counterNumber: counterNumber,
     );
+    if (lastSoldText.isNotEmpty) {
+      try {
+        await service.raiseLastIssuedSequenceToday(
+          storeId: storeId,
+          counterNumber: counterNumber,
+          lastSoldSequence: int.parse(lastSoldText),
+        );
+      } on StateError catch (error) {
+        // A sale issued a number while the dialog was open.
+        if (!mounted) return;
+        showScaffoldError(context: context, message: error.message);
+        return;
+      }
+    }
+    final next = await service.nextReceiptNumber(savedConfiguration);
     if (!mounted) return;
     setState(() {});
     showScaffold(
       context: context,
       message: 'settings_ui.counter_saved'.trParams({
         'number': counterNumber.toString().padLeft(2, '0'),
+        'next': next,
       }),
     );
   }

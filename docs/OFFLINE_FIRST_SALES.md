@@ -140,6 +140,14 @@ The bill number format is `store-counter-YYMMDD-dailySequence`:
   saved before use, so a number is never issued twice, but gaps are expected
   (a failed or rejected confirmation skips a number).
 
+The sequence lives only on the device. A reinstall or cleared app data restarts
+it at `0001`, which clashes with bills already sold that day (the backend
+answers 409). To resume, open **Settings → POS Counter Identity**, look up the
+counter's last bill today in the admin panel and enter its last digits in
+**Last bill sold today**. The dialog shows the last bill this device issued
+today and the next bill number. The sequence can only be raised, never
+lowered, so this cannot cause duplicates.
+
 The API field is `receipt_number`. It is unrelated to the Receipts (payment
 voucher) module's `receipt_number`; the UI calls it **Bill No.** to avoid that
 confusion. The backend order number (`ORD-…`) is kept separately and shown as

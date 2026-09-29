@@ -81,4 +81,76 @@ void main() {
       throwsArgumentError,
     );
   });
+
+  test('after a reinstall the operator can resume from the last bill sold',
+      () async {
+    final service = ReceiptIdentityService.instance;
+    await service.setCounterNumber(storeId: 2, counterNumber: 1);
+    expect(
+      await service.lastIssuedSequenceToday(storeId: 2, counterNumber: 1),
+      0,
+    );
+
+    await service.raiseLastIssuedSequenceToday(
+      storeId: 2,
+      counterNumber: 1,
+      lastSoldSequence: 10,
+    );
+
+    final config = await service.configurationForStore(2);
+    expect(await service.nextReceiptNumber(config), matches(r'^2-01-\d{6}-0011$'));
+    final next = await service.issue(storeId: 2);
+    expect(next.receiptNumber, matches(r'^2-01-\d{6}-0011$'));
+    expect(
+      await service.lastIssuedSequencesToday(storeId: 2),
+      {1: 11},
+    );
+  });
+
+  test('the last bill sold can never move the sequence backwards', () async {
+    final service = ReceiptIdentityService.instance;
+    await service.setCounterNumber(storeId: 2, counterNumber: 4);
+    await service.issue(storeId: 2);
+    await service.issue(storeId: 2);
+    await service.issue(storeId: 2);
+
+    expect(
+      () => service.raiseLastIssuedSequenceToday(
+        storeId: 2,
+        counterNumber: 4,
+        lastSoldSequence: 2,
+      ),
+      throwsStateError,
+    );
+    expect(
+      () => service.raiseLastIssuedSequenceToday(
+        storeId: 2,
+        counterNumber: 4,
+        lastSoldSequence: 0,
+      ),
+      throwsArgumentError,
+    );
+
+    // Equal is allowed and changes nothing.
+    await service.raiseLastIssuedSequenceToday(
+      storeId: 2,
+      counterNumber: 4,
+      lastSoldSequence: 3,
+    );
+    final next = await service.issue(storeId: 2);
+    expect(next.receiptNumber, matches(r'^2-04-\d{6}-0004$'));
+  });
+
+  test('raising one counter does not affect another', () async {
+    final service = ReceiptIdentityService.instance;
+    await service.raiseLastIssuedSequenceToday(
+      storeId: 2,
+      counterNumber: 2,
+      lastSoldSequence: 50,
+    );
+    await service.setCounterNumber(storeId: 2, counterNumber: 1);
+
+    final next = await service.issue(storeId: 2);
+    expect(next.receiptNumber, matches(r'^2-01-\d{6}-0001$'));
+  });
 }
