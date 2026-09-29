@@ -50,6 +50,100 @@ extension LocalSaleSyncStateValue on LocalSaleSyncState {
       };
 }
 
+/// One HTTP attempt for a local sale, kept so an operator can see exactly what
+/// was sent and what the server answered. Auth headers are never stored.
+class LocalSaleSyncAttempt {
+  const LocalSaleSyncAttempt({
+    required this.number,
+    required this.startedAt,
+    required this.endpoint,
+    required this.requestBody,
+    this.finishedAt,
+    this.httpStatus,
+    this.responseBody,
+    this.error,
+    this.outcome,
+  });
+
+  /// Responses beyond this length are cut so one large reply cannot bloat the
+  /// outbox box.
+  static const int maxResponseLength = 100000;
+
+  final int number;
+  final String startedAt;
+  final String endpoint;
+
+  /// The exact JSON string sent as the request body.
+  final String requestBody;
+  final String? finishedAt;
+  final int? httpStatus;
+
+  /// The raw response body, or null when no response arrived.
+  final String? responseBody;
+
+  /// Transport failure (timeout, no connection, app closed) when no response
+  /// was received.
+  final String? error;
+
+  /// The sync state this attempt produced, e.g. `synced` or `rejected`.
+  final String? outcome;
+
+  bool get isFinished => finishedAt != null;
+
+  LocalSaleSyncAttempt finish({
+    required LocalSaleSyncState outcome,
+    int? httpStatus,
+    String? responseBody,
+    String? error,
+  }) {
+    final body = responseBody != null &&
+            responseBody.length > maxResponseLength
+        ? '${responseBody.substring(0, maxResponseLength)}\n…[truncated]'
+        : responseBody;
+    return LocalSaleSyncAttempt(
+      number: number,
+      startedAt: startedAt,
+      endpoint: endpoint,
+      requestBody: requestBody,
+      finishedAt: DateTime.now().toUtc().toIso8601String(),
+      httpStatus: httpStatus,
+      responseBody: body,
+      error: error,
+      outcome: outcome.value,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'number': number,
+        'started_at': startedAt,
+        'endpoint': endpoint,
+        'request_body': requestBody,
+        if (finishedAt != null) 'finished_at': finishedAt,
+        if (httpStatus != null) 'http_status': httpStatus,
+        if (responseBody != null) 'response_body': responseBody,
+        if (error != null) 'error': error,
+        if (outcome != null) 'outcome': outcome,
+      };
+
+  factory LocalSaleSyncAttempt.fromJson(Map<String, dynamic> json) {
+    return LocalSaleSyncAttempt(
+      number: json['number'] is int
+          ? json['number'] as int
+          : int.tryParse(json['number']?.toString() ?? '') ?? 0,
+      startedAt: json['started_at']?.toString() ?? '',
+      endpoint: json['endpoint']?.toString() ?? '',
+      requestBody: json['request_body']?.toString() ?? '',
+      finishedAt: json['finished_at']?.toString(),
+      httpStatus: json['http_status'] is int
+          ? json['http_status'] as int
+          : int.tryParse(json['http_status']?.toString() ?? ''),
+      responseBody: json['response_body']?.toString(),
+      error: json['error']?.toString(),
+      outcome: json['outcome']?.toString(),
+    );
+  }
+}
+
 class LocalSaleSyncRecord {
   const LocalSaleSyncRecord({
     required this.localOrderId,
@@ -65,6 +159,7 @@ class LocalSaleSyncRecord {
     this.serverOrderId,
     this.serverOrderNumber,
     this.httpStatus,
+    this.attempts = const [],
   });
 
   final String localOrderId;
@@ -81,8 +176,16 @@ class LocalSaleSyncRecord {
   final String? serverOrderNumber;
   final int? httpStatus;
 
+  /// Every server attempt, oldest first.
+  final List<LocalSaleSyncAttempt> attempts;
+
   bool get requestMayHaveReachedServer =>
       state == LocalSaleSyncState.needsReview;
+
+  /// A sale the operator may send again from Sales → Confirmed Orders.
+  bool get canRetry =>
+      state == LocalSaleSyncState.needsReview ||
+      state == LocalSaleSyncState.rejected;
 
   LocalSaleSyncRecord copyWith({
     LocalSaleSyncState? state,
@@ -91,6 +194,7 @@ class LocalSaleSyncRecord {
     String? serverOrderId,
     String? serverOrderNumber,
     int? httpStatus,
+    List<LocalSaleSyncAttempt>? attempts,
   }) {
     return LocalSaleSyncRecord(
       localOrderId: localOrderId,
@@ -106,7 +210,27 @@ class LocalSaleSyncRecord {
       serverOrderId: serverOrderId ?? this.serverOrderId,
       serverOrderNumber: serverOrderNumber ?? this.serverOrderNumber,
       httpStatus: httpStatus ?? this.httpStatus,
+      attempts: attempts ?? this.attempts,
     );
+  }
+
+  /// Closes the newest attempt with its result.
+  List<LocalSaleSyncAttempt> attemptsWithLastFinished({
+    required LocalSaleSyncState outcome,
+    int? httpStatus,
+    String? responseBody,
+    String? error,
+  }) {
+    if (attempts.isEmpty || attempts.last.isFinished) return attempts;
+    return [
+      ...attempts.take(attempts.length - 1),
+      attempts.last.finish(
+        outcome: outcome,
+        httpStatus: httpStatus,
+        responseBody: responseBody,
+        error: error,
+      ),
+    ];
   }
 
   Map<String, dynamic> toJson() => {
@@ -123,6 +247,8 @@ class LocalSaleSyncRecord {
         if (serverOrderId != null) 'server_order_id': serverOrderId,
         if (serverOrderNumber != null) 'server_order_number': serverOrderNumber,
         if (httpStatus != null) 'http_status': httpStatus,
+        if (attempts.isNotEmpty)
+          'attempts': attempts.map((attempt) => attempt.toJson()).toList(),
       };
 
   factory LocalSaleSyncRecord.fromJson(Map<String, dynamic> json) {
@@ -149,6 +275,11 @@ class LocalSaleSyncRecord {
       httpStatus: json['http_status'] is int
           ? json['http_status'] as int
           : int.tryParse(json['http_status']?.toString() ?? ''),
+      attempts: (json['attempts'] as List? ?? const [])
+          .whereType<Map>()
+          .map((value) =>
+              LocalSaleSyncAttempt.fromJson(Map<String, dynamic>.from(value)))
+          .toList(),
     );
   }
 }
@@ -241,6 +372,10 @@ class LocalSaleSyncService extends ChangeNotifier {
           updatedAt: DateTime.now().toUtc().toIso8601String(),
           message: 'The app closed before the server response was verified. '
               'Check the admin panel before trying this sale again.',
+          attempts: record.attemptsWithLastFinished(
+            outcome: LocalSaleSyncState.needsReview,
+            error: 'The app closed before a response arrived.',
+          ),
         );
         await _store.write(record.toJson());
       } else if (record.state == LocalSaleSyncState.queued) {
@@ -310,10 +445,12 @@ class LocalSaleSyncService extends ChangeNotifier {
     return result;
   }
 
-  /// Reopens an ambiguous sale for exactly one new attempt after an operator
-  /// has verified that it is absent from the backend. This only changes the
-  /// durable state to [LocalSaleSyncState.queued]; callers must then invoke
-  /// [submitOnce] and must not retry automatically.
+  /// Reopens a needs-review or rejected sale for exactly one new attempt,
+  /// sending the same stored payload. An ambiguous sale must first be verified
+  /// as absent from the backend; a rejected one is retried after its cause is
+  /// fixed. This only changes the durable state to
+  /// [LocalSaleSyncState.queued]; callers must then invoke [submitOnce] and
+  /// must not retry automatically.
   Future<LocalSaleSyncRecord> authorizeRetryAfterVerification(
     String localOrderId,
   ) async {
@@ -322,17 +459,19 @@ class LocalSaleSyncService extends ChangeNotifier {
     if (record == null) {
       throw StateError('Local sale sync record was not found.');
     }
-    if (record.state != LocalSaleSyncState.needsReview) {
+    if (!record.canRetry) {
       throw StateError(
-        'Only a sale needing review can be retried after verification.',
+        'Only a sale needing review or rejected by the server can be retried.',
       );
     }
     return _update(
       record.copyWith(
         state: LocalSaleSyncState.queued,
         updatedAt: DateTime.now().toUtc().toIso8601String(),
-        message: 'Retry authorized after the operator verified that the sale '
-            'is not present in the backend.',
+        message: record.state == LocalSaleSyncState.rejected
+            ? 'Retry requested by the operator after a server rejection.'
+            : 'Retry authorized after the operator verified that the sale '
+                'is not present in the backend.',
       ),
     );
   }
@@ -363,23 +502,43 @@ class LocalSaleSyncService extends ChangeNotifier {
       );
     }
 
+    // A retry from Confirmed Orders passes no endpoint, so it must follow the
+    // operation: confirming an existing order is an update, not a new order.
+    final target = endpoint ??
+        Uri.parse(original.operation == LocalSaleOperation.confirmExistingOrder
+            ? APPUrl.updateOrderUrl
+            : APPUrl.addToOrderUrl);
+    final requestBody = jsonEncode(original.payload);
+    final now = DateTime.now().toUtc().toIso8601String();
+
+    // The attempt is stored before the request so an app crash mid-request
+    // still shows what was sent.
     final sending = await _update(
       original.copyWith(
         state: LocalSaleSyncState.sending,
-        updatedAt: DateTime.now().toUtc().toIso8601String(),
+        updatedAt: now,
         message: 'Sending to the server…',
+        attempts: [
+          ...original.attempts,
+          LocalSaleSyncAttempt(
+            number: original.attempts.length + 1,
+            startedAt: now,
+            endpoint: target.toString(),
+            requestBody: requestBody,
+          ),
+        ],
       ),
     );
 
     try {
       final response = await _sender(
-        endpoint ?? Uri.parse(APPUrl.addToOrderUrl),
+        target,
         {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
           'X-Tenant': apiKey,
         },
-        jsonEncode(sending.payload),
+        requestBody,
       ).timeout(requestTimeout);
 
       Map<String, dynamic> data = const {};
@@ -415,6 +574,11 @@ class LocalSaleSyncService extends ChangeNotifier {
             serverOrderId: orderId?.toString(),
             serverOrderNumber: orderNumber?.toString(),
             httpStatus: response.statusCode,
+            attempts: sending.attemptsWithLastFinished(
+              outcome: LocalSaleSyncState.synced,
+              httpStatus: response.statusCode,
+              responseBody: response.body,
+            ),
           ),
         );
       }
@@ -427,6 +591,11 @@ class LocalSaleSyncService extends ChangeNotifier {
             message: data['message']?.toString() ??
                 'The server rejected this sale. Review its details.',
             httpStatus: response.statusCode,
+            attempts: sending.attemptsWithLastFinished(
+              outcome: LocalSaleSyncState.rejected,
+              httpStatus: response.statusCode,
+              responseBody: response.body,
+            ),
           ),
         );
       }
@@ -437,6 +606,7 @@ class LocalSaleSyncService extends ChangeNotifier {
             'The server result could not be verified. Check the admin panel '
                 'before trying this sale again.',
         httpStatus: response.statusCode,
+        responseBody: response.body,
       );
     } catch (error) {
       debugPrint(
@@ -447,6 +617,9 @@ class LocalSaleSyncService extends ChangeNotifier {
         sending,
         message: 'The server result could not be verified. The sale is safe '
             'on this device; check the admin panel before trying it again.',
+        error: error is TimeoutException
+            ? 'No response within ${requestTimeout.inSeconds}s (timeout).'
+            : error.toString(),
       );
     }
   }
@@ -455,6 +628,8 @@ class LocalSaleSyncService extends ChangeNotifier {
     LocalSaleSyncRecord record, {
     required String message,
     int? httpStatus,
+    String? responseBody,
+    String? error,
   }) {
     return _update(
       record.copyWith(
@@ -462,6 +637,12 @@ class LocalSaleSyncService extends ChangeNotifier {
         updatedAt: DateTime.now().toUtc().toIso8601String(),
         message: message,
         httpStatus: httpStatus,
+        attempts: record.attemptsWithLastFinished(
+          outcome: LocalSaleSyncState.needsReview,
+          httpStatus: httpStatus,
+          responseBody: responseBody,
+          error: error,
+        ),
       ),
     );
   }

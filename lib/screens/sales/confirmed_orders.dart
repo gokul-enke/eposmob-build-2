@@ -15,6 +15,7 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/services/print_service.dart';
 import 'package:pos_machine/screens/sales/widgets/confirmed_order_detail_modal.dart';
+import 'package:pos_machine/screens/sales/widgets/local_sale_sync_log_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/services/local_sale_sync_service.dart';
 
@@ -110,7 +111,8 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
     required SavedOrder order,
     required LocalSaleSyncRecord? syncRecord,
   }) {
-    final isRetryable = syncRecord?.state == LocalSaleSyncState.needsReview;
+    final isRetryable = syncRecord?.canRetry ?? false;
+    final isRejected = syncRecord?.state == LocalSaleSyncState.rejected;
     final currency = Provider.of<AppSettingsProvider>(context, listen: false)
             .appSettings
             ?.currency ??
@@ -122,8 +124,9 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
         'Saved safely on this device. The first server attempt is waiting.',
       LocalSaleSyncState.sending =>
         'Saved safely on this device. Waiting for the server response.',
-      LocalSaleSyncState.rejected =>
-        'The server rejected this sale. Open details before taking action.',
+      LocalSaleSyncState.rejected => syncRecord?.message?.isNotEmpty == true
+          ? 'Rejected: ${syncRecord!.message}'
+          : 'The server rejected this sale. Open details before taking action.',
       _ => 'This local sale needs your attention.',
     };
 
@@ -217,35 +220,49 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
-                    width: double.infinity,
                     height: 38,
-                    child: isRetryable
-                        ? FilledButton.icon(
-                            onPressed: () => _confirmAndRetry(context, order),
-                            icon: const Icon(Icons.replay, size: 17),
-                            label: const Text('Review & retry'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFFB45309),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(9),
-                              ),
-                            ),
-                          )
-                        : OutlinedButton.icon(
-                            onPressed: () =>
-                                _showOrderDetailsModal(context, order),
-                            icon:
-                                const Icon(Icons.visibility_outlined, size: 17),
-                            label: const Text('View details'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF334155),
-                              side: const BorderSide(color: Color(0xFFCBD5E1)),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(9),
-                              ),
-                            ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: isRetryable
+                              ? FilledButton.icon(
+                                  onPressed: () =>
+                                      _confirmAndRetry(context, order),
+                                  icon: const Icon(Icons.replay, size: 17),
+                                  label: Text(
+                                    isRejected ? 'Retry' : 'Review & retry',
+                                  ),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: isRejected
+                                        ? const Color(0xFFB42318)
+                                        : const Color(0xFFB45309),
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(9),
+                                    ),
+                                  ),
+                                )
+                              : OutlinedButton.icon(
+                                  onPressed: () =>
+                                      _showOrderDetailsModal(context, order),
+                                  icon: const Icon(Icons.visibility_outlined,
+                                      size: 17),
+                                  label: const Text('View details'),
+                                  style: _secondaryButtonStyle,
+                                ),
+                        ),
+                        if (syncRecord != null) ...[
+                          const SizedBox(width: 8),
+                          OutlinedButton.icon(
+                            onPressed: () => _showSyncLog(context, order.id),
+                            icon: const Icon(Icons.receipt_long_outlined,
+                                size: 17),
+                            label: Text('Log (${syncRecord.attempts.length})'),
+                            style: _secondaryButtonStyle,
                           ),
+                        ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -276,7 +293,33 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
     }
   }
 
+  static final ButtonStyle _secondaryButtonStyle = OutlinedButton.styleFrom(
+    foregroundColor: const Color(0xFF334155),
+    side: const BorderSide(color: Color(0xFFCBD5E1)),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+  );
+
+  void _showSyncLog(BuildContext context, String localOrderId) {
+    showDialog(
+      context: context,
+      builder: (_) => ChangeNotifierProvider<LocalSaleSyncService>.value(
+        value: Provider.of<LocalSaleSyncService>(context, listen: false),
+        child: LocalSaleSyncLogDialog(localOrderId: localOrderId),
+      ),
+    );
+  }
+
   Future<void> _confirmAndRetry(BuildContext context, SavedOrder order) async {
+    final record = Provider.of<LocalSaleSyncService>(context, listen: false)
+        .recordFor(order.id);
+    final isRejected = record?.state == LocalSaleSyncState.rejected;
+    final warning = isRejected
+        ? 'The server rejected this sale${record?.message?.isNotEmpty == true ? ': ${record!.message}' : '.'}\n\n'
+            'The same data will be sent again, so fix the cause on the server '
+            'first (for example stock or customer details). Check the log to '
+            'see the exact request and response.'
+        : 'First check the backend Sales list. Retry only when this order is '
+            'not there; otherwise a duplicate sale can be created.';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -311,15 +354,16 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: const Color(0xFFF5D49B)),
               ),
-              child: const Row(
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline, size: 18, color: Color(0xFF9A5B07)),
-                  SizedBox(width: 9),
+                  const Icon(Icons.info_outline,
+                      size: 18, color: Color(0xFF9A5B07)),
+                  const SizedBox(width: 9),
                   Expanded(
                     child: Text(
-                      'First check the backend Sales list. Retry only when this order is not there; otherwise a duplicate sale can be created.',
-                      style: TextStyle(
+                      warning,
+                      style: const TextStyle(
                         color: Color(0xFF7C4A03),
                         fontSize: 13,
                         height: 1.35,
@@ -338,7 +382,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('I verified — Retry'),
+            child: Text(isRejected ? 'Retry' : 'I verified — Retry'),
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFFB45309),
               foregroundColor: Colors.white,
