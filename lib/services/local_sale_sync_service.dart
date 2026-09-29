@@ -69,6 +69,10 @@ class LocalSaleSyncAttempt {
   /// outbox box.
   static const int maxResponseLength = 100000;
 
+  /// A successful response is only kept for reference, so it is stored much
+  /// shorter. Rejections and failures keep up to [maxResponseLength].
+  static const int maxSyncedResponseLength = 2000;
+
   final int number;
   final String startedAt;
   final String endpoint;
@@ -96,9 +100,11 @@ class LocalSaleSyncAttempt {
     String? responseBody,
     String? error,
   }) {
-    final body = responseBody != null &&
-            responseBody.length > maxResponseLength
-        ? '${responseBody.substring(0, maxResponseLength)}\n…[truncated]'
+    final limit = outcome == LocalSaleSyncState.synced
+        ? maxSyncedResponseLength
+        : maxResponseLength;
+    final body = responseBody != null && responseBody.length > limit
+        ? '${responseBody.substring(0, limit)}\n…[truncated]'
         : responseBody;
     return LocalSaleSyncAttempt(
       number: number,
@@ -378,7 +384,43 @@ class LocalSaleSyncService extends ChangeNotifier {
           record.state != LocalSaleSyncState.synced && !record.isDismissed)
       .length;
 
+  /// How long a synced sale stays on the device after its last update. It is
+  /// kept for reprints and for investigating disputes during rollout.
+  static const Duration syncedRetention = Duration(days: 30);
+
   Future<void> hydrate() => _hydration ??= _load();
+
+  /// Deletes synced records last updated more than [retention] ago and
+  /// returns their local order ids, so the caller can delete the matching
+  /// local sale snapshots. Records that are not synced, or were removed by an
+  /// operator, are never pruned.
+  Future<List<String>> pruneSynced({
+    Duration retention = syncedRetention,
+    DateTime? now,
+  }) async {
+    await hydrate();
+    final cutoff = (now ?? DateTime.now()).toUtc().subtract(retention);
+    final expired = _records.values
+        .where((record) {
+          if (record.state != LocalSaleSyncState.synced ||
+              record.isDismissed) {
+            return false;
+          }
+          final updated =
+              DateTime.tryParse(record.updatedAt ?? record.createdAt);
+          return updated != null && updated.toUtc().isBefore(cutoff);
+        })
+        .map((record) => record.localOrderId)
+        .toList();
+    if (expired.isEmpty) return const [];
+
+    for (final id in expired) {
+      await _store.remove(id);
+      _records.remove(id);
+    }
+    notifyListeners();
+    return expired;
+  }
 
   Future<void> _load() async {
     final stored = await _store.readAll();
@@ -536,6 +578,10 @@ class LocalSaleSyncService extends ChangeNotifier {
     final apiKey = tenantKey ??
         (await SharedPreferences.getInstance()).getString('api_key');
     if (accessToken.trim().isEmpty || apiKey == null || apiKey.trim().isEmpty) {
+      debugPrint(
+        '[LocalSaleSync] not sent bill=${original.localOrderNumber} '
+        'reason=missing ${accessToken.trim().isEmpty ? 'login token' : 'tenant key'}',
+      );
       return _update(
         original.copyWith(
           state: LocalSaleSyncState.needsReview,
@@ -574,6 +620,36 @@ class LocalSaleSyncService extends ChangeNotifier {
       ),
     );
 
+    final attemptNumber = sending.attempts.length;
+    debugPrint(
+      '[LocalSaleSync] → POST $target '
+      'bill=${original.localOrderNumber} attempt=$attemptNumber',
+    );
+    debugPrint('[LocalSaleSync]   body: ${_debugSnippet(requestBody)}');
+    final stopwatch = Stopwatch()..start();
+
+    // Prints the outcome line once the record is classified and stored.
+    Future<LocalSaleSyncRecord> logged(
+      Future<LocalSaleSyncRecord> result,
+    ) async {
+      final record = await result;
+      final last = record.attempts.isEmpty ? null : record.attempts.last;
+      debugPrint(
+        '[LocalSaleSync] ← ${last?.httpStatus ?? 'no response'} '
+        'in ${stopwatch.elapsedMilliseconds}ms '
+        'bill=${record.localOrderNumber} attempt=$attemptNumber '
+        'outcome=${record.state.value}',
+      );
+      if (last?.responseBody != null) {
+        debugPrint(
+          '[LocalSaleSync]   response: ${_debugSnippet(last!.responseBody!)}',
+        );
+      } else if (last?.error != null) {
+        debugPrint('[LocalSaleSync]   error: ${last!.error}');
+      }
+      return record;
+    }
+
     try {
       final response = await _sender(
         target,
@@ -610,7 +686,7 @@ class LocalSaleSyncService extends ChangeNotifier {
 
       if ((response.statusCode == 200 || response.statusCode == 201) &&
           (orderId != null || updateSucceeded)) {
-        return _update(
+        return logged(_update(
           sending.copyWith(
             state: LocalSaleSyncState.synced,
             updatedAt: DateTime.now().toUtc().toIso8601String(),
@@ -624,11 +700,11 @@ class LocalSaleSyncService extends ChangeNotifier {
               responseBody: response.body,
             ),
           ),
-        );
+        ));
       }
 
       if (response.statusCode == 400 || response.statusCode == 422) {
-        return _update(
+        return logged(_update(
           sending.copyWith(
             state: LocalSaleSyncState.rejected,
             updatedAt: DateTime.now().toUtc().toIso8601String(),
@@ -641,32 +717,41 @@ class LocalSaleSyncService extends ChangeNotifier {
               responseBody: response.body,
             ),
           ),
-        );
+        ));
       }
 
-      return _needsReview(
+      return logged(_needsReview(
         sending,
         message: data['message']?.toString() ??
             'The server result could not be verified. Check the admin panel '
                 'before trying this sale again.',
         httpStatus: response.statusCode,
         responseBody: response.body,
-      );
+      ));
     } catch (error) {
       debugPrint(
         '[LocalSaleSync] outcome_unverified localOrder=$localOrderId '
         'type=${error.runtimeType}',
       );
-      return _needsReview(
+      return logged(_needsReview(
         sending,
         message: 'The server result could not be verified. The sale is safe '
             'on this device; check the admin panel before trying it again.',
         error: error is TimeoutException
             ? 'No response within ${requestTimeout.inSeconds}s (timeout).'
             : error.toString(),
-      );
+      ));
     }
   }
+
+  /// Console output is capped so large bodies do not flood the log. The full
+  /// bodies remain in the attempt log.
+  static const int debugSnippetLength = 1000;
+
+  static String _debugSnippet(String text) => text.length <= debugSnippetLength
+      ? text
+      : '${text.substring(0, debugSnippetLength)}… '
+          '[${text.length - debugSnippetLength} more chars]';
 
   Future<LocalSaleSyncRecord> _needsReview(
     LocalSaleSyncRecord record, {

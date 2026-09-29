@@ -1846,7 +1846,6 @@
     "online_orders_list": "Online Orders List",
     "order_number_short": "Order #",
     "order_number_hint": "Order or receipt number",
-    "receipt_reference": "Receipt ref",
     "backend_order_number": "Backend order",
     "customer_name_hint": "Customer Name",
     "phone": "Phone",

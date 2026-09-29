@@ -4700,6 +4700,16 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
+  /// Deletes several confirmed orders with a single persistence write.
+  void deleteConfirmedOrders(Set<String> orderIds) {
+    if (orderIds.isEmpty) return;
+    final before = _confirmedOrders.length;
+    _confirmedOrders.removeWhere((o) => orderIds.contains(o.id));
+    if (_confirmedOrders.length == before) return;
+    _saveConfirmedOrdersToHive();
+    notifyListeners();
+  }
+
   /// Deletes a confirmed order
   void deleteConfirmedOrder(String orderId) {
     _confirmedOrders.removeWhere((o) => o.id == orderId);

@@ -2896,7 +2896,7 @@ Powered by CloudPOS''',
                                                             .isNotEmpty ==
                                                         true)
                                                       Text(
-                                                        '${'sales.receipt_reference'.tr}: ${order.receiptNumber}',
+                                                        order.receiptNumber!.trim(),
                                                         textAlign:
                                                             TextAlign.center,
                                                         overflow: TextOverflow

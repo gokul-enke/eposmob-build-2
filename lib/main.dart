@@ -228,6 +228,18 @@ Future<Widget> _bootstrap(ValueChanged<String> reportStage) async {
         localProducts.clearCurrentOrder();
         await localProducts.flushPersistence();
       }
+      // Runs after the check above, which needs the current cart session's
+      // record. Housekeeping must never block startup.
+      try {
+        final pruned = await localSales.pruneSynced();
+        if (pruned.isNotEmpty) {
+          localProducts.deleteConfirmedOrders(pruned.toSet());
+          await localProducts.flushPersistence();
+          debugPrint('[Startup] pruned_synced_sales count=${pruned.length}');
+        }
+      } catch (error) {
+        debugPrint('[Startup] synced sale cleanup failed: $error');
+      }
     } catch (_) {
       // timeout does not cancel hydration. Dispose only after its source has
       // stopped notifying, without mounting this failed startup attempt.

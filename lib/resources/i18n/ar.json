@@ -1952,7 +1952,6 @@
     "select_refund_payment_method": "يرجى اختيار طريقة دفع الاسترداد",
     "valid_amount_minimum_zero": "يرجى إدخال مبلغ صالح (الحد الأدنى 0)",
     "valid_refund_amount": "يرجى إدخال مبلغ استرداد صالح",
-    "receipt_reference": "مرجع الإيصال",
     "backend_order_number": "طلب الخادم"
   },
   "kitchen": {

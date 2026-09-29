@@ -527,7 +527,7 @@ class MobileOrderCard extends StatelessWidget {
               if (order.receiptNumber?.trim().isNotEmpty == true) ...[
                 const SizedBox(height: 5),
                 SelectableText(
-                  '${'sales.receipt_reference'.tr}: ${order.receiptNumber}',
+                  order.receiptNumber!.trim(),
                   style: buildCustomStyle(
                     FontWeightManager.medium,
                     FontSize.s11,

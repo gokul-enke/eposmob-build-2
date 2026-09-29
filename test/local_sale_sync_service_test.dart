@@ -449,6 +449,86 @@ void main() {
     );
   });
 
+  test('prunes only synced sales older than the retention period', () async {
+    Map<String, dynamic> row(String id, String state, String updatedAt,
+            {bool dismissed = false}) =>
+        {
+          'local_order_id': id,
+          'local_order_number': id,
+          'source_cart_session_id': 'cart-$id',
+          'surface': 'supermarketDesktop',
+          'operation': 'confirmedSale',
+          'state': state,
+          'payload': {'items': []},
+          'created_at': updatedAt,
+          'updated_at': updatedAt,
+          if (dismissed) 'dismissed_at': updatedAt,
+        };
+    final store = _MemoryOutbox();
+    store.rows['old-synced'] = row('old-synced', 'synced', '2026-08-01T00:00:00Z');
+    store.rows['new-synced'] = row('new-synced', 'synced', '2026-09-20T00:00:00Z');
+    store.rows['old-rejected'] =
+        row('old-rejected', 'rejected', '2026-08-01T00:00:00Z');
+    store.rows['old-review'] =
+        row('old-review', 'needs_review', '2026-08-01T00:00:00Z');
+    store.rows['old-removed'] = row(
+        'old-removed', 'needs_review', '2026-08-01T00:00:00Z',
+        dismissed: true);
+    final service = LocalSaleSyncService(
+      store: store,
+      sender: (_, __, ___) async => http.Response('{}', 500),
+    );
+
+    final pruned = await service.pruneSynced(
+      now: DateTime.utc(2026, 9, 29),
+    );
+
+    expect(pruned, ['old-synced']);
+    expect(store.rows.keys, isNot(contains('old-synced')));
+    expect(service.recordFor('old-synced'), isNull);
+    expect(
+      store.rows.keys,
+      containsAll(['new-synced', 'old-rejected', 'old-review', 'old-removed']),
+    );
+  });
+
+  test('stores a shorter response for synced attempts only', () async {
+    final longTail = 'x' * 5000;
+    var sends = 0;
+    final service = LocalSaleSyncService(
+      store: _MemoryOutbox(),
+      sender: (_, __, ___) async {
+        sends++;
+        return sends == 1
+            ? http.Response('{"message":"bad","pad":"$longTail"}', 422)
+            : http.Response('{"order_id":94,"pad":"$longTail"}', 201);
+      },
+    );
+    await _enqueue(service);
+    await service.submitOnce(
+      localOrderId: 'local-1',
+      accessToken: 'token',
+      tenantKey: 'tenant',
+      endpoint: Uri.parse(_endpoint),
+    );
+    await service.authorizeRetryAfterVerification('local-1');
+    final result = await service.submitOnce(
+      localOrderId: 'local-1',
+      accessToken: 'token',
+      tenantKey: 'tenant',
+      endpoint: Uri.parse(_endpoint),
+    );
+
+    final rejected = result.attempts[0].responseBody!;
+    final synced = result.attempts[1].responseBody!;
+    expect(rejected.length, greaterThan(5000));
+    expect(synced, endsWith('[truncated]'));
+    expect(
+      synced.length,
+      lessThan(LocalSaleSyncAttempt.maxSyncedResponseLength + 20),
+    );
+  });
+
   test('a retried existing-order confirmation goes to update-order', () async {
     late Uri sentTo;
     final service = LocalSaleSyncService(
