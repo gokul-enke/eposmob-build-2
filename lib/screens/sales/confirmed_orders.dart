@@ -230,8 +230,15 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                                   onPressed: () =>
                                       _confirmAndRetry(context, order),
                                   icon: const Icon(Icons.replay, size: 17),
-                                  label: Text(
-                                    isRejected ? 'Retry' : 'Review & retry',
+                                  // One line on narrow cards; the dialog
+                                  // explains what "review" means.
+                                  label: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      isRejected ? 'Retry' : 'Review & retry',
+                                      maxLines: 1,
+                                      softWrap: false,
+                                    ),
                                   ),
                                   style: FilledButton.styleFrom(
                                     backgroundColor: isRejected
