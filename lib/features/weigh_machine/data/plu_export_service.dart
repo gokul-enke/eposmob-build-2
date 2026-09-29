@@ -8,6 +8,19 @@ import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// PLU.csv exists but cannot be replaced, usually because another program
+/// (Excel, the scale software) has it open.
+class PluFileBusyException implements Exception {
+  const PluFileBusyException(this.path, this.cause);
+
+  final String path;
+  final FileSystemException cause;
+
+  @override
+  String toString() => '$path is open in another program (Excel or the '
+      'weigh machine software). Close it there and try again.';
+}
+
 class PluExportService {
   PluExportService._();
   static final instance = PluExportService._();
@@ -181,7 +194,8 @@ class PluExportService {
   /// Writes PLU.csv. Products without an SKU are never written, whatever
   /// the caller passes; see [PluCsv.isWeighted].
   Future<File> export(Iterable<GetProduct> products) async {
-    final items = PluCsv.weighted(products, storeId: await activeStoreId());
+    final storeId = await activeStoreId();
+    final items = PluCsv.weighted(products, storeId: storeId);
     if (items.isEmpty) {
       throw StateError('Select at least one product with an SKU.');
     }
@@ -191,14 +205,33 @@ class PluExportService {
     }
     final output =
         File('${directory.path}${Platform.pathSeparator}${PluCsv.fileName}');
-    final content = PluCsv.build(items);
+    final content = PluCsv.build(items, storeId: storeId);
     final temporary = File('${output.path}.tmp');
     try {
       await temporary.writeAsString(content, flush: true);
-      await temporary.copy(output.path);
-      return output;
+      return await _replace(temporary, output);
     } finally {
       if (await temporary.exists()) await temporary.delete();
+    }
+  }
+
+  /// Moves [temporary] over [output] in one step.
+  ///
+  /// On Windows an existing PLU.csv can refuse to be replaced: scale import
+  /// tools often mark it read-only, and Excel or the scale software may hold
+  /// it open. A read-only flag on our own file is cleared and the move
+  /// retried; a file held open gets a message saying what to close.
+  Future<File> _replace(File temporary, File output) async {
+    try {
+      return await temporary.rename(output.path);
+    } on FileSystemException catch (error) {
+      if (!Platform.isWindows || !await output.exists()) rethrow;
+      await Process.run('attrib', ['-r', output.path]);
+      try {
+        return await temporary.rename(output.path);
+      } on FileSystemException {
+        throw PluFileBusyException(output.path, error);
+      }
     }
   }
 
@@ -230,16 +263,14 @@ class PluExportService {
   Future<void> _autoWrite(LocalProductProvider catalog, int generation) async {
     if (!await autoEnabled()) return;
     // Every SKU product; ticks on the page are for Excel only.
-    final items = PluCsv.weighted(
-      catalog.products,
-      storeId: await activeStoreId(),
-    );
+    final storeId = await activeStoreId();
+    final items = PluCsv.weighted(catalog.products, storeId: storeId);
     if (items.isEmpty) return;
     _writing = true;
     try {
       final path = await directoryPath();
       final file = File('$path${Platform.pathSeparator}${PluCsv.fileName}');
-      final next = PluCsv.build(items);
+      final next = PluCsv.build(items, storeId: storeId);
       if (generation != _generation) return; // discarded meanwhile
       if (!await file.exists() || await file.readAsString() != next) {
         await export(items);
