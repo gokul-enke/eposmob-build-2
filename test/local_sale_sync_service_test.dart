@@ -404,6 +404,51 @@ void main() {
     expect(attempt.requestBody, '{"items":[]}');
   });
 
+  test('a verified sale can be removed from the list but keeps its log',
+      () async {
+    final store = _MemoryOutbox();
+    final service = LocalSaleSyncService(
+      store: store,
+      requestTimeout: const Duration(milliseconds: 5),
+      sender: (_, __, ___) => Completer<http.Response>().future,
+    );
+    await _enqueue(service);
+    await service.submitOnce(
+      localOrderId: 'local-1',
+      accessToken: 'token',
+      tenantKey: 'tenant',
+      endpoint: Uri.parse(_endpoint),
+    );
+    expect(service.unresolvedCount, 1);
+
+    final dismissed =
+        await service.dismiss('local-1', note: 'Found in admin panel.');
+
+    expect(dismissed.isDismissed, isTrue);
+    expect(dismissed.state, LocalSaleSyncState.needsReview);
+    expect(dismissed.attempts, hasLength(1));
+    expect(service.unresolvedCount, 0);
+    expect(store.rows['local-1']?['dismiss_note'], 'Found in admin panel.');
+    expect(
+      () => service.authorizeRetryAfterVerification('local-1'),
+      throwsStateError,
+    );
+  });
+
+  test('a sale still waiting for its first attempt cannot be removed',
+      () async {
+    final service = LocalSaleSyncService(
+      store: _MemoryOutbox(),
+      sender: (_, __, ___) async => http.Response('{}', 500),
+    );
+    await _enqueue(service);
+
+    expect(
+      () => service.dismiss('local-1', note: 'x'),
+      throwsStateError,
+    );
+  });
+
   test('a retried existing-order confirmation goes to update-order', () async {
     late Uri sentTo;
     final service = LocalSaleSyncService(

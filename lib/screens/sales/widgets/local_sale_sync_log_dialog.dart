@@ -13,6 +13,8 @@ class LocalSaleSyncLogDialog extends StatelessWidget {
 
   final String localOrderId;
 
+  static String _time(String iso) => _AttemptTile._time(iso);
+
   @override
   Widget build(BuildContext context) {
     final record = context.watch<LocalSaleSyncService>().recordFor(
@@ -65,6 +67,17 @@ class LocalSaleSyncLogDialog extends StatelessWidget {
                   'Current status: ${record!.state.value} — ${record.message}',
                   style: const TextStyle(
                     color: Color(0xFF475569),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+              if (record?.isDismissed == true) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Removed ${LocalSaleSyncLogDialog._time(record!.dismissedAt!)}'
+                  ' — ${record.dismissNote ?? ''}',
+                  style: const TextStyle(
+                    color: Color(0xFFB42318),
                     fontSize: 12,
                   ),
                 ),

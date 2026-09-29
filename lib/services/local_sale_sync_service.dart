@@ -160,6 +160,8 @@ class LocalSaleSyncRecord {
     this.serverOrderNumber,
     this.httpStatus,
     this.attempts = const [],
+    this.dismissedAt,
+    this.dismissNote,
   });
 
   final String localOrderId;
@@ -179,6 +181,13 @@ class LocalSaleSyncRecord {
   /// Every server attempt, oldest first.
   final List<LocalSaleSyncAttempt> attempts;
 
+  /// Set when an operator removed the sale from Sales → Confirmed Orders. The
+  /// record and its attempt log stay on the device for audit.
+  final String? dismissedAt;
+  final String? dismissNote;
+
+  bool get isDismissed => dismissedAt != null;
+
   bool get requestMayHaveReachedServer =>
       state == LocalSaleSyncState.needsReview;
 
@@ -195,6 +204,8 @@ class LocalSaleSyncRecord {
     String? serverOrderNumber,
     int? httpStatus,
     List<LocalSaleSyncAttempt>? attempts,
+    String? dismissedAt,
+    String? dismissNote,
   }) {
     return LocalSaleSyncRecord(
       localOrderId: localOrderId,
@@ -211,6 +222,8 @@ class LocalSaleSyncRecord {
       serverOrderNumber: serverOrderNumber ?? this.serverOrderNumber,
       httpStatus: httpStatus ?? this.httpStatus,
       attempts: attempts ?? this.attempts,
+      dismissedAt: dismissedAt ?? this.dismissedAt,
+      dismissNote: dismissNote ?? this.dismissNote,
     );
   }
 
@@ -249,6 +262,8 @@ class LocalSaleSyncRecord {
         if (httpStatus != null) 'http_status': httpStatus,
         if (attempts.isNotEmpty)
           'attempts': attempts.map((attempt) => attempt.toJson()).toList(),
+        if (dismissedAt != null) 'dismissed_at': dismissedAt,
+        if (dismissNote != null) 'dismiss_note': dismissNote,
       };
 
   factory LocalSaleSyncRecord.fromJson(Map<String, dynamic> json) {
@@ -280,6 +295,8 @@ class LocalSaleSyncRecord {
           .map((value) =>
               LocalSaleSyncAttempt.fromJson(Map<String, dynamic>.from(value)))
           .toList(),
+      dismissedAt: json['dismissed_at']?.toString(),
+      dismissNote: json['dismiss_note']?.toString(),
     );
   }
 }
@@ -357,7 +374,8 @@ class LocalSaleSyncService extends ChangeNotifier {
       );
 
   int get unresolvedCount => _records.values
-      .where((record) => record.state != LocalSaleSyncState.synced)
+      .where((record) =>
+          record.state != LocalSaleSyncState.synced && !record.isDismissed)
       .length;
 
   Future<void> hydrate() => _hydration ??= _load();
@@ -459,7 +477,7 @@ class LocalSaleSyncService extends ChangeNotifier {
     if (record == null) {
       throw StateError('Local sale sync record was not found.');
     }
-    if (!record.canRetry) {
+    if (!record.canRetry || record.isDismissed) {
       throw StateError(
         'Only a sale needing review or rejected by the server can be retried.',
       );
@@ -472,6 +490,32 @@ class LocalSaleSyncService extends ChangeNotifier {
             ? 'Retry requested by the operator after a server rejection.'
             : 'Retry authorized after the operator verified that the sale '
                 'is not present in the backend.',
+      ),
+    );
+  }
+
+  /// Takes a needs-review or rejected sale off the attention list after the
+  /// operator resolved it outside the app, e.g. found it already in the admin
+  /// panel after a timeout. Nothing is deleted: the sale, its state and the
+  /// attempt log remain for audit, and it is never sent again.
+  Future<LocalSaleSyncRecord> dismiss(
+    String localOrderId, {
+    required String note,
+  }) async {
+    await hydrate();
+    final record = _records[localOrderId];
+    if (record == null) {
+      throw StateError('Local sale sync record was not found.');
+    }
+    if (!record.canRetry) {
+      throw StateError(
+        'Only a sale needing review or rejected by the server can be removed.',
+      );
+    }
+    return _update(
+      record.copyWith(
+        dismissedAt: DateTime.now().toUtc().toIso8601String(),
+        dismissNote: note,
       ),
     );
   }
