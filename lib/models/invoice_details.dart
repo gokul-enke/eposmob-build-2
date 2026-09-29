@@ -12,7 +12,7 @@ class InvoiceDetails {
   final int createdBy;
   final String createdAt;
   final String updatedAt;
-  
+
   final Customer customer;
   final Company company;
   final List<InvoiceItem> invoiceItems;
@@ -32,7 +32,7 @@ class InvoiceDetails {
     required this.createdAt,
     required this.updatedAt,
     required this.customer,
-     required this.company,
+    required this.company,
     required this.invoiceItems,
   });
 
@@ -61,7 +61,6 @@ class InvoiceDetails {
     );
   }
 }
-
 
 class Company {
   int id;
@@ -103,8 +102,6 @@ class Company {
   }
 }
 
-
-
 class Customer {
   final int id;
   final int? userId;
@@ -134,7 +131,9 @@ class Customer {
     return Customer(
       id: json['id'] ?? 0,
       userId: json['user_id'],
-      name: userMap != null ? (userMap['name']?.toString() ?? "Walk-in Customer") : "Walk-in Customer",
+      name: userMap != null
+          ? (userMap['name']?.toString() ?? "Walk-in Customer")
+          : "Walk-in Customer",
       email: userMap != null ? (userMap['email']?.toString() ?? "") : "",
       phone: userMap != null ? (userMap['phone']?.toString() ?? "") : "",
     );
@@ -145,10 +144,14 @@ class InvoiceItem {
   final int id;
   final int invoiceId;
   final String itemName;
-  final int quantity;
+  final double quantity;
   final String unitAmount;
   final String tax;
   final String totalAmount;
+
+  String get displayQuantity => quantity == quantity.truncateToDouble()
+      ? quantity.toInt().toString()
+      : quantity.toString();
 
   InvoiceItem({
     required this.id,
@@ -165,7 +168,7 @@ class InvoiceItem {
       id: json['id'] ?? 0,
       invoiceId: json['invoice_id'] ?? 0,
       itemName: json['item_name']?.toString() ?? "",
-      quantity: json['quantity'] ?? 0,
+      quantity: double.tryParse(json['quantity']?.toString() ?? '') ?? 0,
       unitAmount: json['unit_amount']?.toString() ?? "0.00",
       tax: json['tax']?.toString() ?? "0.00",
       totalAmount: json['total_amount']?.toString() ?? "0.00",

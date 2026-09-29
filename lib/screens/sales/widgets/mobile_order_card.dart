@@ -207,6 +207,7 @@ class MobileOrderCard extends StatelessWidget {
                     showDialog(
                       context: context,
                       builder: (dialogCtx) => CancelOrderModal(
+                        isUnpaidCod: order.isUnpaidCod,
                         initialRefundAmount: order.priceSummary?.grandTotal ??
                             order.grantTotal ??
                             '',

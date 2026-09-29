@@ -600,10 +600,13 @@ class Address {
   final String? name;
   final String? address;
   final String? city;
+  final String? state;
   final int? stateId;
+  final String? district;
   final int? districtId;
   final int? pincodeId;
   final String? pincode;
+  final String? pincodeArea;
   final String? phone;
   final String? type;
   final String? landmark;
@@ -615,10 +618,13 @@ class Address {
     this.name,
     this.address,
     this.city,
+    this.state,
     this.stateId,
+    this.district,
     this.districtId,
     this.pincodeId,
     this.pincode,
+    this.pincodeArea,
     this.phone,
     this.type,
     this.landmark,
@@ -635,9 +641,12 @@ class Address {
         name: json["name"],
         address: json["address"],
         city: json["city"]?.toString(),
+        state: _parseLookupLabel(json["state"], const ["name", "state"]),
         stateId: json["state_id"] is int
             ? json["state_id"]
             : int.tryParse(json["state_id"].toString()),
+        district: _parseLookupLabel(
+            json["district"], const ["name", "district", "city"]),
         districtId: json["district_id"] is int
             ? json["district_id"]
             : int.tryParse(json["district_id"].toString()),
@@ -645,6 +654,8 @@ class Address {
             ? json["pincode_id"]
             : int.tryParse(json["pincode_id"].toString()),
         pincode: _parsePincodeLabel(json["pincode"] ?? json["pin_code"]),
+        pincodeArea:
+            _parseLookupLabel(json["pincode_area"], const ["name", "area"]),
         phone: json["phone"],
         type: json["type"],
         landmark: json["landmark"],
@@ -657,10 +668,13 @@ class Address {
         "name": name,
         "address": address,
         "city": city,
+        "state": state,
         "state_id": stateId,
+        "district": district,
         "district_id": districtId,
         "pincode_id": pincodeId,
         "pincode": pincode,
+        "pincode_area": pincodeArea,
         "phone": phone,
         "type": type,
         "landmark": landmark,
@@ -673,10 +687,13 @@ class Address {
         name: name,
         address: address,
         city: city,
+        state: state,
         stateId: stateId,
+        district: district,
         districtId: districtId,
         pincodeId: pincodeId,
         pincode: value,
+        pincodeArea: pincodeArea,
         phone: phone,
         type: type,
         landmark: landmark,
@@ -688,6 +705,23 @@ class Address {
     final raw = value is Map
         ? (value["pin_code"] ?? value["pincode"] ?? value["name"])
         : value;
+    final text = raw?.toString().trim() ?? '';
+    return text.isEmpty || text == 'null' ? null : text;
+  }
+
+  static String? _parseLookupLabel(dynamic value, List<String> keys) {
+    dynamic raw = value;
+    if (value is Map) {
+      raw = null;
+      for (final key in keys) {
+        final candidate = value[key];
+        if (candidate != null && candidate.toString().trim().isNotEmpty) {
+          raw = candidate;
+          break;
+        }
+      }
+    }
+
     final text = raw?.toString().trim() ?? '';
     return text.isEmpty || text == 'null' ? null : text;
   }

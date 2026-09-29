@@ -493,7 +493,7 @@ class InvoiceTemplatePdfBuilder {
       data: items.map((item) {
         return [
           item.itemName,
-          item.quantity.toString(),
+          item.displayQuantity,
           '$currency ${item.unitAmount}',
           '${item.tax}%',
           '$currency ${item.totalAmount}',

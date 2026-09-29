@@ -6,6 +6,7 @@ import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
+import 'package:pos_machine/components/filter_toggle_button.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/models/get_suppliers.dart';
@@ -383,54 +384,36 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   bool _hasActiveFilters() {
     return productNameController.text.isNotEmpty ||
+        createdByController.text.isNotEmpty ||
+        storeController.text.isNotEmpty ||
         amountController.text.isNotEmpty ||
         barcodeController.text.isNotEmpty ||
         hsnCodeController.text.isNotEmpty ||
         itemCodeController.text.isNotEmpty ||
+        supplierIdController.text.isNotEmpty ||
         selectedCategoryId != null ||
         selectedProperty != null;
   }
 
   Widget _buildFilterToggleButton() {
-    final hasFilters = _hasActiveFilters();
-
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          IconButton(
-            icon: Icon(
-              _showFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
-              color: ColorManager.kPrimaryColor,
-            ),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-            onPressed: () {
-              setState(() {
-                _showFilters = !_showFilters;
-              });
-            },
-            tooltip: _showFilters
-                ? 'product.hide_filters'.tr
-                : 'product.show_filters'.tr,
-          ),
-          if (hasFilters)
-            PositionedDirectional(
-              end: 6,
-              top: 6,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-        ],
-      ),
+    return FilterToggleButton(
+      key: const Key('product-filter-toggle'),
+      showFilters: _showFilters,
+      hasActiveFilters: _hasActiveFilters(),
+      activeFiltersListenable: Listenable.merge([
+        productNameController,
+        createdByController,
+        storeController,
+        amountController,
+        barcodeController,
+        hsnCodeController,
+        supplierIdController,
+        itemCodeController,
+      ]),
+      activeFiltersBuilder: _hasActiveFilters,
+      onPressed: () => setState(() => _showFilters = !_showFilters),
+      showTooltip: 'product.show_filters'.tr,
+      hideTooltip: 'product.hide_filters'.tr,
     );
   }
 
@@ -525,6 +508,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                   ),
                                 ),
                               ),
+                              _buildFilterToggleButton(),
+                              const SizedBox(width: 8),
                               CustomRoundButton(
                                 title: 'product.add'.tr,
                                 fct: () async {
@@ -544,34 +529,49 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     if (isMobile && !_showFilters)
                       const SizedBox.shrink()
                     else if (isMobile)
-                      ProductMobileFilters(
-                        productNameController: productNameController,
-                        amountController: amountController,
-                        barcodeController: barcodeController,
-                        hsnCodeController: hsnCodeController,
-                        itemCodeController: itemCodeController,
-                        propertySearchController: propertySearchController,
-                        selectedProperty: selectedProperty,
-                        propertyList: propertyList,
-                        categoryField: Consumer<CategoryProvider>(
-                          builder: (context, categoryProvider, child) {
-                            return _buildCategoryDropdown(categoryProvider);
-                          },
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: size.height * 0.45,
                         ),
-                        onSearch: (value) {
-                          searchProducts(1);
-                        },
-                        onPropertyChanged: (String? newValue) {
-                          setState(() {
-                            selectedProperty = newValue;
-                          });
-                          searchProducts(1);
-                        },
-                        onReset: resetSearch,
+                        child: SingleChildScrollView(
+                          key: const ValueKey(
+                            'product-mobile-filter-scroll',
+                          ),
+                          child: ProductMobileFilters(
+                            key: const ValueKey('product-mobile-filters'),
+                            productNameController: productNameController,
+                            amountController: amountController,
+                            barcodeController: barcodeController,
+                            hsnCodeController: hsnCodeController,
+                            itemCodeController: itemCodeController,
+                            propertySearchController: propertySearchController,
+                            selectedProperty: selectedProperty,
+                            propertyList: propertyList,
+                            categoryField: Consumer<CategoryProvider>(
+                              builder: (context, categoryProvider, child) {
+                                return _buildCategoryDropdown(categoryProvider);
+                              },
+                            ),
+                            onSearch: (value) {
+                              searchProducts(1);
+                            },
+                            onPropertyChanged: (String? newValue) {
+                              setState(() {
+                                selectedProperty = newValue;
+                              });
+                              searchProducts(1);
+                            },
+                            onReset: resetSearch,
+                          ),
+                        ),
                       )
+                    else if (!_showFilters)
+                      const SizedBox.shrink()
                     else
-                      LayoutBuilder(
-                        builder: (context, constraints) {
+                      KeyedSubtree(
+                        key: const ValueKey('product-desktop-filters'),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
                           final bool stackFilters = constraints.maxWidth < 700;
                           Widget wrapField(Widget child) => stackFilters
                               ? Padding(
@@ -862,7 +862,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               ),
                             ],
                           );
-                        },
+                          },
+                        ),
                       ),
                     if (isMobile && _showFilters) const SizedBox(height: 20),
                   ],

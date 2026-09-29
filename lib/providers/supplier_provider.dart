@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class SupplierProvider with ChangeNotifier {
   List<Supplier>? _supplierList;
   List<Supplier>? _allSuppliers = []; // Store all suppliers for local filtering
+  List<Supplier> _filteredSuppliers = [];
   bool _isLoading = false;
   Supplier? _selectedSupplier;
   String? _selectedSupplierName; // For supplier transaction report
@@ -26,6 +27,9 @@ class SupplierProvider with ChangeNotifier {
 
   List<Supplier>? get supplierList => _supplierList;
   List<Supplier>? get allSuppliers => _allSuppliers; // Getter for all suppliers
+  List<Supplier> get filteredSuppliers =>
+      List<Supplier>.unmodifiable(_filteredSuppliers);
+  bool get hasFilteredSuppliers => _filteredSuppliers.isNotEmpty;
   bool get isLoading => _isLoading;
   Supplier? get selectedSupplier => _selectedSupplier;
   String? get selectedSupplierName => _selectedSupplierName;
@@ -38,6 +42,7 @@ class SupplierProvider with ChangeNotifier {
   SupplierProvider() {
     _supplierList = [];
     _allSuppliers = [];
+    _filteredSuppliers = [];
   }
 
   // Select a supplier
@@ -79,6 +84,7 @@ class SupplierProvider with ChangeNotifier {
   void clearCachedSuppliers() {
     _supplierList = [];
     _allSuppliers = [];
+    _filteredSuppliers = [];
     _currentPage = 1;
     _totalPages = 1;
     _filterName = null;
@@ -99,6 +105,7 @@ class SupplierProvider with ChangeNotifier {
   }) {
     if (_allSuppliers == null || _allSuppliers!.isEmpty) {
       _supplierList = [];
+      _filteredSuppliers = [];
       _currentPage = 1;
       _totalPages = 1;
       notifyListeners();
@@ -157,6 +164,8 @@ class SupplierProvider with ChangeNotifier {
       }).toList();
     }
 
+    _filteredSuppliers = filteredList;
+
     // Calculate pagination
     _totalPages = (filteredList.length / _itemsPerPage).ceil();
     _totalPages = _totalPages == 0 ? 1 : _totalPages;
@@ -194,6 +203,7 @@ class SupplierProvider with ChangeNotifier {
       _supplierList = [];
 
       List<Supplier> filteredList = [..._allSuppliers!];
+      _filteredSuppliers = filteredList;
 
       // Calculate pagination
       _totalPages = (filteredList.length / _itemsPerPage).ceil();
@@ -210,6 +220,9 @@ class SupplierProvider with ChangeNotifier {
             endIndex > filteredList.length ? filteredList.length : endIndex;
         _supplierList = filteredList.sublist(startIndex, endIndex);
       }
+    } else {
+      _supplierList = [];
+      _filteredSuppliers = [];
     }
 
     notifyListeners();

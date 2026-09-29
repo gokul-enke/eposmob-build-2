@@ -111,7 +111,7 @@ class ViewInvoiceDetailsWidget extends StatelessWidget {
                                   return DataRow(cells: [
                                     DataCell(Text(item.invoiceId.toString())),
                                     DataCell(Text(item.itemName)),
-                                    DataCell(Text(item.quantity.toString())),
+                                    DataCell(Text(item.displayQuantity)),
                                     DataCell(Text(item.unitAmount)),
                                     DataCell(Text(item.tax)),
                                     DataCell(Text(item.totalAmount)),

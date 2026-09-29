@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 
 import '../../components/build_container_box.dart';
 import '../../components/build_dropdown_with_search.dart';
+import '../../components/filter_toggle_button.dart';
 import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../providers/auth_model.dart';
@@ -39,6 +40,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
   String? selectedType;
   String? selectedStatus;
   int? selectedSupplierId;
+  bool _showFilters = true;
 
   final FocusNode supplierFocusNode = FocusNode();
   final FocusNode typeFocusNode = FocusNode();
@@ -210,9 +212,14 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(size),
-                const SizedBox(height: 10),
-                _buildSearchBar(size),
-                const SizedBox(height: 10),
+                if (_showFilters) ...[
+                  const SizedBox(height: 10),
+                  KeyedSubtree(
+                    key: const ValueKey('supplier-voucher-desktop-filters'),
+                    child: _buildSearchBar(size),
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 _buildVoucherTable(),
                 const SizedBox(height: 10),
                 _buildPaginationControls(),
@@ -225,14 +232,38 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
   }
 
   Widget _buildHeader(Size size) {
+    final hasActiveFilters = voucherNumberController.text.isNotEmpty ||
+        selectedSupplierId != null ||
+        selectedType != null ||
+        selectedStatus != null;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          'supplier_voucher.list_title'.tr,
-          style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
-              0.30, ColorManager.textColor),
+        Expanded(
+          child: Text(
+            'supplier_voucher.list_title'.tr,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
+                0.30, ColorManager.textColor),
+          ),
         ),
+        const SizedBox(width: 8),
+        FilterToggleButton(
+          showFilters: _showFilters,
+          hasActiveFilters: hasActiveFilters,
+          activeFiltersListenable: voucherNumberController,
+          activeFiltersBuilder: () =>
+              voucherNumberController.text.isNotEmpty ||
+              selectedSupplierId != null ||
+              selectedType != null ||
+              selectedStatus != null,
+          onPressed: () => setState(() => _showFilters = !_showFilters),
+          showTooltip: 'supplier_voucher.show_filters'.tr,
+          hideTooltip: 'supplier_voucher.hide_filters'.tr,
+        ),
+        const SizedBox(width: 8),
         CustomRoundButton(
           title: 'supplier_voucher.create_voucher_button'.tr,
           fct: () {

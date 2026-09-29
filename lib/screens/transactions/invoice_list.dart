@@ -17,6 +17,7 @@ import 'package:url_launcher/url_launcher_string.dart';
 
 import '../../components/build_calendar_selection.dart';
 import '../../components/build_container_box.dart';
+import '../../components/filter_toggle_button.dart';
 import '../transactions/create_invoice_modal.dart';
 import '../../components/build_dropdown_with_search.dart';
 import '../../components/build_round_button.dart';
@@ -57,6 +58,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   String? activeBulkSyncType;
   Timer? _invoiceSearchDebounce;
   bool _zatcaCleanupScheduled = false;
+  bool _showFilters = true;
 
   final FocusNode invoiceNoFocusNode = FocusNode();
   final FocusNode nameFocusNode = FocusNode();
@@ -973,14 +975,50 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   }
 
   Widget _buildHeader(Size size) {
+    final hasActiveFilters = invoiceNumberController.text.isNotEmpty ||
+        searchTextController.text.isNotEmpty ||
+        phoneController.text.isNotEmpty ||
+        dateFromController.text.isNotEmpty ||
+        dateToController.text.isNotEmpty ||
+        selectedStatus != null ||
+        selectedZatcaStatus != null;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          'invoice.list_title'.tr,
-          style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
-              0.30, ColorManager.textColor),
+        Expanded(
+          child: Text(
+            'invoice.list_title'.tr,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
+                0.30, ColorManager.textColor),
+          ),
         ),
+        const SizedBox(width: 8),
+        FilterToggleButton(
+          showFilters: _showFilters,
+          hasActiveFilters: hasActiveFilters,
+          activeFiltersListenable: Listenable.merge([
+            invoiceNumberController,
+            searchTextController,
+            phoneController,
+            dateFromController,
+            dateToController,
+          ]),
+          activeFiltersBuilder: () =>
+              invoiceNumberController.text.isNotEmpty ||
+              searchTextController.text.isNotEmpty ||
+              phoneController.text.isNotEmpty ||
+              dateFromController.text.isNotEmpty ||
+              dateToController.text.isNotEmpty ||
+              selectedStatus != null ||
+              selectedZatcaStatus != null,
+          onPressed: () => setState(() => _showFilters = !_showFilters),
+          showTooltip: 'invoice.show_filters'.tr,
+          hideTooltip: 'invoice.hide_filters'.tr,
+        ),
+        const SizedBox(width: 8),
         CustomRoundButton(
           title: 'invoice.create_invoice_button'.tr,
           fct: () async {
@@ -1008,82 +1046,85 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   }) {
     return Column(
       children: [
-        // First row of search fields
-        SizedBox(
-          height: 55,
-          child: Row(
-            children: [
-              Expanded(
-                flex: 1,
-                child: _buildInvoiceNumberSearch(),
-              ),
-              // Name Search Field
-              Expanded(
-                flex: 1,
-                child: _buildSearchTextField(),
-              ),
-
-              // Invoice Number Search Field
-
-              // // Order Number Search Field
-              // Expanded(
-              //   flex: 1,
-              //   child: _buildOrderNumberSearch(),
-              // ),
-
-              // Phone Search Field
-              Expanded(
-                flex: 1,
-                child: _buildPhoneSearch(),
-              ),
-
-              if (showZatcaControls)
+        if (_showFilters) ...[
+          // First row of search fields
+          SizedBox(
+            key: const ValueKey('invoice-desktop-filters'),
+            height: 55,
+            child: Row(
+              children: [
                 Expanded(
                   flex: 1,
-                  child: _buildZatcaStatusFilter(),
+                  child: _buildInvoiceNumberSearch(),
                 ),
-            ],
+                // Name Search Field
+                Expanded(
+                  flex: 1,
+                  child: _buildSearchTextField(),
+                ),
+
+                // Invoice Number Search Field
+
+                // // Order Number Search Field
+                // Expanded(
+                //   flex: 1,
+                //   child: _buildOrderNumberSearch(),
+                // ),
+
+                // Phone Search Field
+                Expanded(
+                  flex: 1,
+                  child: _buildPhoneSearch(),
+                ),
+
+                if (showZatcaControls)
+                  Expanded(
+                    flex: 1,
+                    child: _buildZatcaStatusFilter(),
+                  ),
+              ],
+            ),
           ),
-        ),
-        // Second row of search fields
-        SizedBox(
-          height: 55,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Status Filter
-              Expanded(
-                flex: 1,
-                child: _buildStatusFilter(),
-              ),
+          // Second row of search fields
+          SizedBox(
+            height: 55,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Status Filter
+                Expanded(
+                  flex: 1,
+                  child: _buildStatusFilter(),
+                ),
 
-              // Date Range Search
-              Expanded(
-                flex: 2,
-                child: _buildDateRangeSearch(),
-              ),
+                // Date Range Search
+                Expanded(
+                  flex: 2,
+                  child: _buildDateRangeSearch(),
+                ),
 
-              //SizedBox(width: 10),
+                //SizedBox(width: 10),
 
-              // Reset Button
-              Expanded(
-                flex: 1,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 10),
-                  child: CustomRoundButton(
-                    title: 'general.reset'.tr,
-                    boxColor: Colors.white,
-                    textColor: ColorManager.kPrimaryColor,
-                    fct: resetSearch,
-                    height: 45,
-                    width: double.infinity,
-                    fontSize: FontSize.s12,
+                // Reset Button
+                Expanded(
+                  flex: 1,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 10),
+                    child: CustomRoundButton(
+                      title: 'general.reset'.tr,
+                      boxColor: Colors.white,
+                      textColor: ColorManager.kPrimaryColor,
+                      fct: resetSearch,
+                      height: 45,
+                      width: double.infinity,
+                      fontSize: FontSize.s12,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
         if (showZatcaControls) _buildSelectionActions(),
         const SizedBox(height: 10),
       ],
@@ -1919,7 +1960,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                       Expanded(
                         flex: 2,
                         child: Text(
-                          item.quantity.toString(),
+                          item.displayQuantity,
                           style: TextStyle(
                             fontSize: FontSize.s12,
                             color: ColorManager.textColor,

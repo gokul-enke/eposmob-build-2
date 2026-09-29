@@ -318,6 +318,13 @@ class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
                                                 _buildInfoRow(
                                                     icon: Icons
                                                         .location_city_outlined,
+                                                    label: 'customer_address.label_district'.tr,
+                                                    value: addr.district ??
+                                                        'customer_address.not_provided'.tr),
+                                                const SizedBox(height: 12),
+                                                _buildInfoRow(
+                                                    icon: Icons
+                                                        .location_city_outlined,
                                                     label: 'customer_address.label_city'.tr,
                                                     value: addr.city ??
                                                         'customer_address.not_provided'.tr),
@@ -326,7 +333,8 @@ class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
                                                     icon:
                                                         Icons.pin_drop_outlined,
                                                     label: 'customer_address.label_pincode'.tr,
-                                                    value: addr.pincodeId
+                                                    value: addr.pincode ??
+                                                        addr.pincodeId
                                                             ?.toString() ??
                                                         'customer_address.not_provided'.tr),
                                               ],
