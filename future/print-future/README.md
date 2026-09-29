@@ -6,6 +6,7 @@ report for tested behavior and the future-work checklist for remaining work.
 
 | Document | Purpose / status |
 | --- | --- |
+| [receipt-mixed-script-rendering-fix-2026-09-29.md](receipt-mixed-script-rendering-fix-2026-09-29.md) | Follow-up client fix for mixed Arabic/English captions and separate business-value rendering. |
 | [FUTURE_WORKS.md](FUTURE_WORKS.md) | Remaining API/configuration gaps, client metadata mapping and physical-printer verification. |
 | [document-configuration-label-value-sources.md](document-configuration-label-value-sources.md) | Current field-by-field guide: five configurations, 290 display options, English / Arabic / bilingual label and value sources. |
 | [receipt-verification-final-2026-09-29.md](receipt-verification-final-2026-09-29.md) | Latest concise result: tested rendered matrix passed; full source completeness remains blocked. |

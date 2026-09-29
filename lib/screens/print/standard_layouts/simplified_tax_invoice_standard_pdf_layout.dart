@@ -260,26 +260,17 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final documentSubheader = params.documentText(config.subheader);
     final storeName = params.headerTextParts('showStoreName').joined();
     final storeDescription = params.headerTextParts('showDescription').joined();
-    // Store sub-details, one centred line per language. Address and
-    // telephone share a line, as the design has always had them.
-    final storeAddress = params.storeLineParts('showStoreAddress');
-    final storeTel = params.storeLineParts('showTel');
-    String sameLine(List<String> parts) =>
-        parts.where((part) => part.trim().isNotEmpty).join(' . ');
-    final headerInfoLines = <String>[
-      for (final text in [
-        sameLine([storeAddress.arabic, storeTel.arabic]),
-        sameLine([storeAddress.english, storeTel.english]),
-        params.storeLineParts('showEmail').joined(),
-        params.headerTextParts('showExtraHeading1').joined(),
-      ])
-        for (final line in text.split('\n'))
-          if (line.trim().isNotEmpty) line.trim(),
-    ];
+    // Keep each configured caption separate from its business value.
+    final headerInfoLines = [
+      params.storeLineParts('showStoreAddress'),
+      params.storeLineParts('showTel'),
+      params.storeLineParts('showEmail'),
+      params.headerTextParts('showExtraHeading1'),
+    ].expand((parts) => parts.lines).toList();
     // Title band: the store CR / VAT slots, with extra heading 2 and FSSAI
     // printed once each beside them (never in the header as well).
-    final storeCr = params.storeLineParts('showCRNumber').joined();
-    final storeVat = params.storeLineParts('showVatNumber').joined();
+    final storeCr = params.storeLineParts('showCRNumber');
+    final storeVat = params.storeLineParts('showVatNumber');
     final extraHeading2 =
         params.headerTextParts('showExtraHeading2').joined(inline: true);
     final storeFssai =
@@ -430,8 +421,8 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      ..._textLines(storeCr, crVatStyle,
-                          textAlign: pw.TextAlign.left),
+                      pdfReceiptParts(storeCr,
+                          style: crVatStyle, textAlign: pw.TextAlign.left),
                       ..._textLines(extraHeading2, crVatStyle,
                           textAlign: pw.TextAlign.left),
                     ],
@@ -447,8 +438,8 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
-                      ..._textLines(storeVat, crVatStyle,
-                          textAlign: pw.TextAlign.right),
+                      pdfReceiptParts(storeVat,
+                          style: crVatStyle, textAlign: pw.TextAlign.right),
                       ..._textLines(storeFssai, crVatStyle,
                           textAlign: pw.TextAlign.right),
                     ],
@@ -528,7 +519,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                           pdfText(line, style: wordsBold),
                         pw.SizedBox(height: 4),
                         if (commentText.isNotEmpty)
-                          pdfText(commentText, style: wordsStyle),
+                          pdfReceiptLine(params.commentLine, style: wordsStyle),
                         for (final row in paymentRows)
                           _labelValueLine(
                               row.$1,
@@ -656,9 +647,9 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 ],
               ),
             if (params.vatFooterText.isNotEmpty)
-              pdfText(params.vatFooterText, style: footerStyle),
+              pdfReceiptLine(params.vatFooterLine, style: footerStyle),
             if (params.orderNumberFooterText.isNotEmpty)
-              pdfText(params.orderNumberFooterText, style: footerStyle),
+              pdfReceiptLine(params.orderNumberFooterLine, style: footerStyle),
           ];
         },
       ),
@@ -726,12 +717,13 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
 
   /// Renders header sub-detail lines centered with an even vertical rhythm
   /// (a small gap between each, none before the first).
-  List<pw.Widget> _headerInfoLines(List<String> lines, pw.TextStyle style) {
+  List<pw.Widget> _headerInfoLines(
+      List<ReceiptTextLine> lines, pw.TextStyle style) {
     final widgets = <pw.Widget>[];
     for (var i = 0; i < lines.length; i++) {
       if (i > 0) widgets.add(pw.SizedBox(height: 2.5));
-      widgets
-          .add(pdfText(lines[i], style: style, textAlign: pw.TextAlign.center));
+      widgets.add(pdfReceiptLine(lines[i],
+          style: style, textAlign: pw.TextAlign.center));
     }
     return widgets;
   }
@@ -764,10 +756,13 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         padding: const pw.EdgeInsets.symmetric(vertical: 1.5),
         child: pw.Align(
           alignment: valueAlignment,
-          child: pdfText(row.value,
-              style: valueStyle,
-              textAlign: valueTextAlign,
-              textDirection: pw.TextDirection.ltr),
+          child: row.field != null
+              ? pdfReceiptLine(row.field!,
+                  style: valueStyle, textAlign: valueTextAlign)
+              : pdfText(row.value,
+                  style: valueStyle,
+                  textAlign: valueTextAlign,
+                  textDirection: pw.TextDirection.ltr),
         ),
       );
     }
@@ -780,10 +775,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             pw.SizedBox(
               width: labelWidth,
               child: pdfText(english,
-                  style: labelStyle,
-                  maxLines: 2,
-                  overflow: pw.TextOverflow.clip,
-                  textDirection: pw.TextDirection.ltr),
+                  style: labelStyle, textDirection: pw.TextDirection.ltr),
             ),
             pw.SizedBox(width: 6),
           ],
@@ -802,9 +794,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               width: labelWidth,
               child: pdfText(arabic,
                   style: labelStyle,
-                  maxLines: 2,
                   textAlign: pw.TextAlign.right,
-                  overflow: pw.TextOverflow.clip,
                   textDirection: pw.TextDirection.rtl),
             ),
           ],
@@ -1029,9 +1019,8 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final section = params.returnsSection;
     if (section == null) return const [];
     // Tables do not inherit page direction; mirror return fields on Arabic.
-    final columns = params.isRtl
-        ? section.columns.reversed.toList()
-        : section.columns;
+    final columns =
+        params.isRtl ? section.columns.reversed.toList() : section.columns;
     double fs(double v) => isA5 ? v * 0.78 : v;
 
     final labelStyle = pw.TextStyle(
@@ -1136,10 +1125,13 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         pw.Align(
           alignment: pw.Alignment.centerRight,
           child: _labelValueLine(
-              row.$1, row.$2 == null ? '' : _formatMoney(currency, row.$2!), labelStyle, valueStyle),
+              row.$1,
+              row.$2 == null ? '' : _formatMoney(currency, row.$2!),
+              labelStyle,
+              valueStyle),
         ),
-      ...buildReturnTaxSummaryPdf(params: params,
-          style: valueStyle, headingStyle: labelStyle),
+      ...buildReturnTaxSummaryPdf(
+          params: params, style: valueStyle, headingStyle: labelStyle),
       if (wordsLines.isNotEmpty) ...[
         pw.SizedBox(height: 4),
         pdfText(section.wordsHeading, style: labelStyle),
@@ -1183,36 +1175,36 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       pw.SizedBox(height: 6),
       pw.Divider(height: 0, thickness: 0.8),
       pw.SizedBox(height: 4),
-      if (rows.isNotEmpty) pw.Table(
-        border: pw.TableBorder.all(width: 0.5),
-        columnWidths: const {
-          0: pw.FlexColumnWidth(3),
-          1: pw.FlexColumnWidth(2),
-        },
-        children: [
-          for (final row in rows)
-            pw.TableRow(children: [
-              pw.Padding(
-                padding:
-                    const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                child:
-                    pdfText(row.label.joined(inline: true), style: labelStyle),
-              ),
-              pw.Padding(
-                padding:
-                    const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                child: pw.Align(
-                  alignment: pw.Alignment.centerRight,
-                  child: pdfText(_formatMoney(currency, row.amount),
-                      style: row.emphasised ? valueBold : valueStyle,
-                      textDirection: pw.TextDirection.ltr),
+      if (rows.isNotEmpty)
+        pw.Table(
+          border: pw.TableBorder.all(width: 0.5),
+          columnWidths: const {
+            0: pw.FlexColumnWidth(3),
+            1: pw.FlexColumnWidth(2),
+          },
+          children: [
+            for (final row in rows)
+              pw.TableRow(children: [
+                pw.Padding(
+                  padding:
+                      const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                  child: pdfText(row.label.joined(inline: true),
+                      style: labelStyle),
                 ),
-              ),
-            ]),
-        ],
-      ),
-      for (final line in words)
-        pdfText(line, style: wordsBold),
+                pw.Padding(
+                  padding:
+                      const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                  child: pw.Align(
+                    alignment: pw.Alignment.centerRight,
+                    child: pdfText(_formatMoney(currency, row.amount),
+                        style: row.emphasised ? valueBold : valueStyle,
+                        textDirection: pw.TextDirection.ltr),
+                  ),
+                ),
+              ]),
+          ],
+        ),
+      for (final line in words) pdfText(line, style: wordsBold),
     ];
   }
 }

@@ -10,11 +10,12 @@ import 'receipt_layout_params.dart';
 /// English lines separately so two-column templates can place each language
 /// in its own cell; [value] is data and must be drawn as its own text run.
 class ReceiptInfoRow {
-  const ReceiptInfoRow(this.key, this.label, this.value);
+  const ReceiptInfoRow(this.key, this.label, this.value, {this.field});
 
   final String key;
   final ReceiptLabelParts label;
   final String value;
+  final ReceiptTextLine? field;
 }
 
 /// One amount row (totals, final summary). [text] replaces the money value
@@ -128,8 +129,11 @@ class ReceiptReturnsSection {
 
 /// Explicit returned-line tax allocations grouped by their supplied rate.
 class ReceiptReturnTaxSummary {
-  const ReceiptReturnTaxSummary({required this.heading, required this.headers,
-    required this.rows, required this.totalRow});
+  const ReceiptReturnTaxSummary(
+      {required this.heading,
+      required this.headers,
+      required this.rows,
+      required this.totalRow});
 
   final String heading;
   final List<String> headers;
@@ -137,12 +141,13 @@ class ReceiptReturnTaxSummary {
   final (String, String, String) totalRow;
 }
 
-double? _returnAllocationSum(Iterable<OrderReturnItem> items,
-    String? Function(OrderReturnItem) value) {
+double? _returnAllocationSum(
+    Iterable<OrderReturnItem> items, String? Function(OrderReturnItem) value) {
   if (items.isEmpty) return null;
   var total = 0.0;
   for (final item in items) {
-    final parsed = double.tryParse(value(item)?.replaceAll(',', '').trim() ?? '');
+    final parsed =
+        double.tryParse(value(item)?.replaceAll(',', '').trim() ?? '');
     if (parsed == null || !parsed.isFinite) return null;
     total += parsed;
   }
@@ -160,10 +165,11 @@ extension ReceiptSections on ReceiptLayoutParams {
     required int number,
     required bool showSerial,
     required bool showParticulars,
-  }) => [
-    if (showSerial) '$number.',
-    if (showParticulars && name.trim().isNotEmpty) name.trim(),
-  ].join(' ');
+  }) =>
+      [
+        if (showSerial) '$number.',
+        if (showParticulars && name.trim().isNotEmpty) name.trim(),
+      ].join(' ');
 
   static const itemColumnKeys = <String>[
     'showSLNumber',
@@ -253,6 +259,41 @@ extension ReceiptSections on ReceiptLayoutParams {
     return lines;
   }
 
+  /// Header content with explicit field boundaries, so mixed-script captions
+  /// cannot reorder the address/phone/registration appended by a renderer.
+  List<ReceiptTextLine> headerColumnFields({
+    required bool arabic,
+    List<String> keys = const [
+      'showStoreName',
+      'showDescription',
+      'showStoreAddress',
+      'showExtraHeading1',
+      'showVatNumber',
+      'showCRNumber',
+      'showTel',
+      'showEmail'
+    ],
+  }) =>
+      [
+        for (final key in keys)
+          ...(() {
+            final parts = const [
+              'showStoreAddress',
+              'showTel',
+              'showEmail',
+              'showVatNumber',
+              'showCRNumber'
+            ].contains(key)
+                ? storeLineParts(key)
+                : headerTextParts(key);
+            final line = parts.line(arabic: arabic);
+            return line.text.trim().isEmpty ? <ReceiptTextLine>[] : [line];
+          })(),
+      ];
+
+  ReceiptTextLine get commentLine =>
+      fieldLine(commentConfigKey, orderComment?.trim() ?? '');
+
   /// Invoice title (B2B/B2C resolved by [displayConfig]); empty when hidden.
   /// A bilingual title is two lines (Arabic, then English) — draw each line
   /// as its own text so the scripts do not reorder each other.
@@ -290,7 +331,8 @@ extension ReceiptSections on ReceiptLayoutParams {
     final rows = <ReceiptInfoRow>[];
     if (isVisible('showInvoiceNumber')) {
       rows.add(ReceiptInfoRow(
-          'showInvoiceNumber', const ReceiptLabelParts(), invoiceNumberText));
+          'showInvoiceNumber', const ReceiptLabelParts(), invoiceNumberText,
+          field: invoiceNumberLine));
     }
     final token = tokenNumber?.trim() ?? '';
     if (isVisible('showTokenNumber') && token.isNotEmpty) {
@@ -552,16 +594,16 @@ extension ReceiptSections on ReceiptLayoutParams {
       }
       if (address.isNotEmpty) {
         supplierRows.add((
-          retLabel('showSupplierAddress', retLabels?.text('address'),
-              'Address', 'العنوان'),
+          retLabel('showSupplierAddress', retLabels?.text('address'), 'Address',
+              'العنوان'),
           address,
         ));
       }
       if (ReceiptConfigurationContract.isVisible(retDc, 'showSupplierGstin') &&
           taxId.isNotEmpty) {
         supplierRows.add((
-          retLabel('showSupplierGstin', retLabels?.text('gstin'),
-              'GSTIN', 'الرقم الضريبي'),
+          retLabel('showSupplierGstin', retLabels?.text('gstin'), 'GSTIN',
+              'الرقم الضريبي'),
           taxId,
         ));
       }
@@ -630,8 +672,8 @@ extension ReceiptSections on ReceiptLayoutParams {
     if (showCustomer) {
       if (name.isNotEmpty) {
         customerRows.add((
-          retLabel('showCreditNoteCustomerName', retLabels?.text('customer_name'),
-              'Customer Name', 'اسم العميل'),
+          retLabel('showCreditNoteCustomerName',
+              retLabels?.text('customer_name'), 'Customer Name', 'اسم العميل'),
           name,
         ));
       }
@@ -675,12 +717,37 @@ extension ReceiptSections on ReceiptLayoutParams {
       ),
       ('showReturnMRP', labels?.returnMrp, 'MRP', 'MRP'),
       ('showHsnCode', retLabels?.text('hsn'), 'HSN', 'رمز الصنف'),
-      ('showTaxRateColumn', retLabels?.text('tax_rate_column'), 'Tax Rate', 'نسبة الضريبة'),
-      ('showTaxAmountColumn', retLabels?.text('tax_column'), 'Tax Amount', 'مبلغ الضريبة'),
-      ('showTaxableColumn', retLabels?.text('taxable_value'), 'Taxable Value', 'القيمة الخاضعة للضريبة'),
+      (
+        'showTaxRateColumn',
+        retLabels?.text('tax_rate_column'),
+        'Tax Rate',
+        'نسبة الضريبة'
+      ),
+      (
+        'showTaxAmountColumn',
+        retLabels?.text('tax_column'),
+        'Tax Amount',
+        'مبلغ الضريبة'
+      ),
+      (
+        'showTaxableColumn',
+        retLabels?.text('taxable_value'),
+        'Taxable Value',
+        'القيمة الخاضعة للضريبة'
+      ),
       if (isReturnOnly)
-        ('showSubTotal', retLabels?.text('sub_total_header'), 'Sub Total', 'المجموع الفرعي'),
-      ('showUnitPrice', retLabels?.text('unit_price'), 'Unit Price', 'سعر الوحدة'),
+        (
+          'showSubTotal',
+          retLabels?.text('sub_total_header'),
+          'Sub Total',
+          'المجموع الفرعي'
+        ),
+      (
+        'showUnitPrice',
+        retLabels?.text('unit_price'),
+        'Unit Price',
+        'سعر الوحدة'
+      ),
       ('showReturnQty', labels?.returnQty, 'QTY', 'الكمية'),
       ('showReturnRate', labels?.returnRate, 'RATE', 'السعر'),
       (
@@ -735,11 +802,8 @@ extension ReceiptSections on ReceiptLayoutParams {
     if (isVisible('showReturnItemsCount')) {
       countRow = (
         retLabels?.creditNoteItemsCount != null
-            ? retLabel(
-                'showReturnItemsCount',
-                retLabels?.creditNoteItemsCount,
-                'Total Items',
-                'إجمالي العناصر')
+            ? retLabel('showReturnItemsCount', retLabels?.creditNoteItemsCount,
+                'Total Items', 'إجمالي العناصر')
             : billLabel(
                 'showReturnItemsCount', null, 'Return Items', 'عناصر المرتجع'),
         // Credit-note admin previews count returned units, including weighted
@@ -781,10 +845,11 @@ extension ReceiptSections on ReceiptLayoutParams {
 
     return ReceiptReturnsSection(
       remarksRow: isReturnOnly &&
-              ReceiptConfigurationContract.isVisible(retDc, 'showCreditNoteRemarks')
+              ReceiptConfigurationContract.isVisible(
+                  retDc, 'showCreditNoteRemarks')
           ? (
-              retLabel('showCreditNoteRemarks', retLabels?.remarks,
-                  'Remarks', 'ملاحظات'),
+              retLabel('showCreditNoteRemarks', retLabels?.remarks, 'Remarks',
+                  'ملاحظات'),
               documentText(retLabels?.text('remarks_text')),
             )
           : null,
@@ -797,7 +862,8 @@ extension ReceiptSections on ReceiptLayoutParams {
           ? retLabel('showGstSubtitle', retLabels?.text('subtitle'),
               'Credit Note', 'إشعار دائن')
           : '',
-      signatory: ReceiptConfigurationContract.isVisible(retDc, 'showAuthorizedSignatory')
+      signatory: ReceiptConfigurationContract.isVisible(
+              retDc, 'showAuthorizedSignatory')
           ? retLabel('showAuthorizedSignatory', retLabels?.signatory,
               'Authorized Signatory', 'المفوض بالتوقيع')
           : '',
@@ -861,16 +927,36 @@ extension ReceiptSections on ReceiptLayoutParams {
   List<(String, double?)> get returnAllocationTotalRows {
     if (!isReturnOnly) return const [];
     final items = orderReturns?.returnItems ?? const <OrderReturnItem>[];
-    final definitions = <(String, String, String, String,
-        String? Function(OrderReturnItem))>[
-      ('showSubTotal', 'sub_total', 'Sub Total', 'المجموع الفرعي',
-          (item) => item.subTotal),
-      ('showDiscount', 'discount', 'Discount', 'الخصم',
-          (item) => item.discount),
-      ('showGstBreakdown', 'taxable_total', 'Taxable Total',
-          'الإجمالي الخاضع للضريبة', (item) => item.taxableValue),
-      ('showTaxRow', 'tax_row', 'Total Tax', 'إجمالي الضريبة',
-          (item) => item.taxAmount),
+    final definitions =
+        <(String, String, String, String, String? Function(OrderReturnItem))>[
+      (
+        'showSubTotal',
+        'sub_total',
+        'Sub Total',
+        'المجموع الفرعي',
+        (item) => item.subTotal
+      ),
+      (
+        'showDiscount',
+        'discount',
+        'Discount',
+        'الخصم',
+        (item) => item.discount
+      ),
+      (
+        'showGstBreakdown',
+        'taxable_total',
+        'Taxable Total',
+        'الإجمالي الخاضع للضريبة',
+        (item) => item.taxableValue
+      ),
+      (
+        'showTaxRow',
+        'tax_row',
+        'Total Tax',
+        'إجمالي الضريبة',
+        (item) => item.taxAmount
+      ),
     ];
     return [
       for (final definition in definitions)
@@ -898,7 +984,8 @@ extension ReceiptSections on ReceiptLayoutParams {
     String label(String key, String resolved, String english, String arabic) =>
         ReceiptConfigurationContract.withoutTrailingColon(labelFor(key,
             resolvedArabic: labels?.text(resolved),
-            englishFallback: english, arabicFallback: arabic,
+            englishFallback: english,
+            arabicFallback: arabic,
             inlineBilingual: true));
     String amount(Iterable<OrderReturnItem> values,
             String? Function(OrderReturnItem) field) =>
@@ -909,23 +996,30 @@ extension ReceiptSections on ReceiptLayoutParams {
     }
     final rows = <(String, String, String)>[
       for (final group in groups.entries)
-        (group.key, amount(group.value, (item) => item.taxableValue),
-          amount(group.value, (item) => item.taxAmount)),
+        (
+          group.key,
+          amount(group.value, (item) => item.taxableValue),
+          amount(group.value, (item) => item.taxAmount)
+        ),
     ];
     return ReceiptReturnTaxSummary(
-      heading: label('showTaxSummary', 'tax_summary_heading',
-          'TAX SUMMARY', 'ملخص الضريبة'),
+      heading: label('showTaxSummary', 'tax_summary_heading', 'TAX SUMMARY',
+          'ملخص الضريبة'),
       headers: [
         label('showTaxSummaryRate', 'tax_rate', 'Tax Rate', 'نسبة الضريبة'),
         label('showTaxSummaryTaxableValue', 'tax_taxable_value',
             'Taxable Value', 'القيمة الخاضعة للضريبة'),
         label('showTaxSummaryTax', 'tax_total', 'Total Tax', 'إجمالي الضريبة'),
       ],
-      rows: rows.where((row) => row.$1.isNotEmpty || row.$2.isNotEmpty ||
-          row.$3.isNotEmpty).toList(),
-      totalRow: (label('showTaxSummaryTotal', 'tax_summary_total',
-          'Total', 'الإجمالي'), amount(items, (item) => item.taxableValue),
-          amount(items, (item) => item.taxAmount)),
+      rows: rows
+          .where((row) =>
+              row.$1.isNotEmpty || row.$2.isNotEmpty || row.$3.isNotEmpty)
+          .toList(),
+      totalRow: (
+        label('showTaxSummaryTotal', 'tax_summary_total', 'Total', 'الإجمالي'),
+        amount(items, (item) => item.taxableValue),
+        amount(items, (item) => item.taxAmount)
+      ),
     );
   }
 
@@ -945,8 +1039,10 @@ extension ReceiptSections on ReceiptLayoutParams {
       inlineBilingual: true,
     ));
     final amount = (orderReturns?.returnItems ?? const <OrderReturnItem>[])
-        .fold<double>(0,
-            (sum, item) => sum + (item.quantity ?? 0) * returnItemRate(item).$2);
+        .fold<double>(
+            0,
+            (sum, item) =>
+                sum + (item.quantity ?? 0) * returnItemRate(item).$2);
     return (label, amount);
   }
 
@@ -988,10 +1084,12 @@ extension ReceiptSections on ReceiptLayoutParams {
   /// Final-summary amount in words (after returns).
   List<String> finalSummaryWordsLines(String currency) {
     final items = orderReturns?.returnItems;
-    if (items == null || items.isEmpty ||
+    if (items == null ||
+        items.isEmpty ||
         !isVisible('showFinalAmountInWords')) {
       return const [];
     }
-    return amountInWordsLines(netAmountValue - returnTotalValue, currency: currency);
+    return amountInWordsLines(netAmountValue - returnTotalValue,
+        currency: currency);
   }
 }

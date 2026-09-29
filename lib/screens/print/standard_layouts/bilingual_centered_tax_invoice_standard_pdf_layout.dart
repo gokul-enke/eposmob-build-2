@@ -177,15 +177,27 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
       params.documentText(config.header),
       params.documentText(config.subheader),
     ];
-    final arabicHeaderLines = params.headerColumnLines(arabic: true);
-    final englishHeaderLines = params.headerColumnLines(arabic: false);
+    // Registration numbers belong beside the title in this theme, so omit
+    // them from both upper language columns to avoid printing them twice.
+    const headerKeys = [
+      'showStoreName',
+      'showDescription',
+      'showStoreAddress',
+      'showExtraHeading1',
+      'showExtraHeading2',
+      'showFssaiInfo',
+      'showTel',
+      'showEmail',
+    ];
+    final arabicHeaderLines =
+        params.headerColumnFields(arabic: true, keys: headerKeys);
+    final englishHeaderLines =
+        params.headerColumnFields(arabic: false, keys: headerKeys);
     // The first header line is the store name only when the store name
     // prints in that column's language.
     final storeNameParts = params.headerTextParts('showStoreName');
-    final extraHeading2 =
-        params.headerTextParts('showExtraHeading2').joined(inline: true);
-    final storeFssai =
-        params.headerTextParts('showFssaiInfo').joined(inline: true);
+    final storeCr = params.storeLineParts('showCRNumber');
+    final storeVat = params.storeLineParts('showVatNumber');
     final invoiceTitle = params.invoiceTitleText.toUpperCase();
     final customerRows = params.customerInfoRows;
     final orderRows = params.orderInfoRows;
@@ -346,13 +358,18 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
             crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
               pw.Expanded(
-                child: _configuredHeaderBlock(
-                  arabicHeaderLines,
-                  hasHeading: storeNameParts.arabic.trim().isNotEmpty,
-                  headingStyle: headerCompanyStyle,
-                  detailStyle: headerDetailStyle,
-                  alignment: pw.CrossAxisAlignment.start,
-                  textAlign: pw.TextAlign.left,
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    _configuredHeaderBlock(
+                      arabicHeaderLines,
+                      hasHeading: storeNameParts.arabic.trim().isNotEmpty,
+                      headingStyle: headerCompanyStyle,
+                      detailStyle: headerDetailStyle,
+                      alignment: pw.CrossAxisAlignment.start,
+                      textAlign: pw.TextAlign.left,
+                    ),
+                  ],
                 ),
               ),
               pw.Expanded(
@@ -368,14 +385,19 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                 ),
               ),
               pw.Expanded(
-                child: _configuredHeaderBlock(
-                  englishHeaderLines,
-                  hasHeading: storeNameParts.english.trim().isNotEmpty,
-                  headingStyle: englishHeaderCompanyStyle,
-                  detailStyle: headerDetailStyle,
-                  alignment: pw.CrossAxisAlignment.end,
-                  textAlign: pw.TextAlign.right,
-                  singleLineHeading: true,
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    _configuredHeaderBlock(
+                      englishHeaderLines,
+                      hasHeading: storeNameParts.english.trim().isNotEmpty,
+                      headingStyle: englishHeaderCompanyStyle,
+                      detailStyle: headerDetailStyle,
+                      alignment: pw.CrossAxisAlignment.end,
+                      textAlign: pw.TextAlign.right,
+                      singleLineHeading: true,
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -385,7 +407,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
           pw.SizedBox(height: 4),
 
           // ═══════════════════════════════════════════════════════
-          // SECTION 2: TITLE BAND — extra heading 2 | title | FSSAI
+          // SECTION 2: TITLE BAND — CR registration | title | VAT registration
           // ═══════════════════════════════════════════════════════
           pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.center,
@@ -393,9 +415,9 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
               pw.Expanded(
                 child: pw.Align(
                   alignment: pw.Alignment.centerLeft,
-                  child: extraHeading2.isNotEmpty
-                      ? modeText(
-                          extraHeading2, bandStyle, pw.CrossAxisAlignment.start)
+                  child: !storeCr.isEmpty
+                      ? pdfReceiptParts(storeCr,
+                          style: bandStyle, textAlign: pw.TextAlign.left)
                       : pw.SizedBox(),
                 ),
               ),
@@ -403,9 +425,9 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
               pw.Expanded(
                 child: pw.Align(
                   alignment: pw.Alignment.centerRight,
-                  child: storeFssai.isNotEmpty
-                      ? modeText(
-                          storeFssai, bandStyle, pw.CrossAxisAlignment.end)
+                  child: !storeVat.isEmpty
+                      ? pdfReceiptParts(storeVat,
+                          style: bandStyle, textAlign: pw.TextAlign.right)
                       : pw.SizedBox(),
                 ),
               ),
@@ -501,7 +523,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                             ],
                             if (commentText.isNotEmpty) ...[
                               if (bankRows.isNotEmpty) pw.SizedBox(height: 4),
-                              pdfText(commentText, style: wordsStyle),
+                              pdfReceiptLine(params.commentLine,
+                                  style: wordsStyle),
                             ],
                             for (final row in paymentRows)
                               _labelValueLine(
@@ -624,10 +647,13 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
           if (thankYouText.isNotEmpty)
             pw.Center(child: modeText(thankYouText, footerBold)),
           if (vatFooterText.isNotEmpty)
-            pw.Center(child: pdfText(vatFooterText, style: footerStyle)),
+            pw.Center(
+                child:
+                    pdfReceiptLine(params.vatFooterLine, style: footerStyle)),
           if (orderNumberFooterText.isNotEmpty)
             pw.Center(
-                child: pdfText(orderNumberFooterText, style: footerStyle)),
+                child: pdfReceiptLine(params.orderNumberFooterLine,
+                    style: footerStyle)),
           pw.SizedBox(height: 10),
 
           // ═══════════════════════════════════════════════════════
@@ -694,7 +720,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
   /// (the store name prints in this column) the first line is the company
   /// name; every other line uses compact detail styling.
   pw.Widget _configuredHeaderBlock(
-    List<String> lines, {
+    List<ReceiptTextLine> lines, {
     required bool hasHeading,
     required pw.TextStyle headingStyle,
     required pw.TextStyle detailStyle,
@@ -703,9 +729,10 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     bool singleLineHeading = false,
   }) {
     bool isHeading(int i) => hasHeading && i == 0;
-    pw.Widget line(int i) => pdfText(
+    pw.Widget line(int i) => pdfReceiptLine(
           isHeading(i)
-              ? lines[i].replaceAll(RegExp(r'\s+'), ' ').trim()
+              ? ReceiptTextLine.text(
+                  lines[i].text.replaceAll(RegExp(r'\s+'), ' ').trim())
               : lines[i],
           style: isHeading(i) ? headingStyle : detailStyle,
           textAlign: textAlign,
@@ -725,7 +752,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                     alignment: textAlign == pw.TextAlign.right
                         ? pw.Alignment.centerRight
                         : pw.Alignment.centerLeft,
-                    child: pdfScaleDown(lines[i], line(i)),
+                    child: pdfScaleDown(lines[i].text, line(i)),
                   )
                 : line(i),
           ),
@@ -760,9 +787,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
           width: labelWidth,
           child: pdfText(text,
               style: labelStyle,
-              maxLines: 2,
               textAlign: arabic ? pw.TextAlign.right : pw.TextAlign.left,
-              overflow: pw.TextOverflow.clip,
               textDirection:
                   arabic ? pw.TextDirection.rtl : pw.TextDirection.ltr),
         );
@@ -775,6 +800,12 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
         );
 
     pw.Widget infoRow(ReceiptInfoRow row) {
+      if (row.field != null) {
+        return pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 0.5),
+            child: pdfReceiptLine(row.field!,
+                style: valueStyle, textAlign: pw.TextAlign.center));
+      }
       final List<pw.Widget> children;
       if (bothSides) {
         children = [
@@ -795,7 +826,12 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
           valueCell(row.value, pw.TextAlign.left),
         ];
       } else {
-        children = [valueCell(row.value, pw.TextAlign.center)];
+        children = [
+          row.field == null
+              ? valueCell(row.value, pw.TextAlign.center)
+              : pdfReceiptLine(row.field!,
+                  style: valueStyle, textAlign: pw.TextAlign.center)
+        ];
       }
       return pw.Padding(
         padding: const pw.EdgeInsets.symmetric(vertical: 0.5),
@@ -1021,9 +1057,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     final section = params.returnsSection;
     if (section == null) return const [];
     // Tables do not inherit page direction; mirror return fields on Arabic.
-    final columns = params.isRtl
-        ? section.columns.reversed.toList()
-        : section.columns;
+    final columns =
+        params.isRtl ? section.columns.reversed.toList() : section.columns;
     double fs(double v) => isA5 ? v * 0.78 : v;
 
     final labelStyle = pw.TextStyle(
@@ -1128,10 +1163,13 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
         pw.Align(
           alignment: pw.Alignment.centerRight,
           child: _labelValueLine(
-              row.$1, row.$2 == null ? '' : _formatMoney(currency, row.$2!), labelStyle, valueStyle),
+              row.$1,
+              row.$2 == null ? '' : _formatMoney(currency, row.$2!),
+              labelStyle,
+              valueStyle),
         ),
-      ...buildReturnTaxSummaryPdf(params: params,
-          style: valueStyle, headingStyle: labelStyle),
+      ...buildReturnTaxSummaryPdf(
+          params: params, style: valueStyle, headingStyle: labelStyle),
       if (wordsLines.isNotEmpty) ...[
         pw.SizedBox(height: 4),
         pdfText(section.wordsHeading, style: labelStyle),
@@ -1175,36 +1213,36 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
       pw.SizedBox(height: 6),
       pw.Divider(height: 0, thickness: 0.8),
       pw.SizedBox(height: 4),
-      if (rows.isNotEmpty) pw.Table(
-        border: pw.TableBorder.all(width: 0.5),
-        columnWidths: const {
-          0: pw.FlexColumnWidth(3),
-          1: pw.FlexColumnWidth(2),
-        },
-        children: [
-          for (final row in rows)
-            pw.TableRow(children: [
-              pw.Padding(
-                padding:
-                    const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                child:
-                    pdfText(row.label.joined(inline: true), style: labelStyle),
-              ),
-              pw.Padding(
-                padding:
-                    const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                child: pw.Align(
-                  alignment: pw.Alignment.centerRight,
-                  child: pdfText(_formatMoney(currency, row.amount),
-                      style: row.emphasised ? valueBold : valueStyle,
-                      textDirection: pw.TextDirection.ltr),
+      if (rows.isNotEmpty)
+        pw.Table(
+          border: pw.TableBorder.all(width: 0.5),
+          columnWidths: const {
+            0: pw.FlexColumnWidth(3),
+            1: pw.FlexColumnWidth(2),
+          },
+          children: [
+            for (final row in rows)
+              pw.TableRow(children: [
+                pw.Padding(
+                  padding:
+                      const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                  child: pdfText(row.label.joined(inline: true),
+                      style: labelStyle),
                 ),
-              ),
-            ]),
-        ],
-      ),
-      for (final line in words)
-        pdfText(line, style: wordsBold),
+                pw.Padding(
+                  padding:
+                      const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                  child: pw.Align(
+                    alignment: pw.Alignment.centerRight,
+                    child: pdfText(_formatMoney(currency, row.amount),
+                        style: row.emphasised ? valueBold : valueStyle,
+                        textDirection: pw.TextDirection.ltr),
+                  ),
+                ),
+              ]),
+          ],
+        ),
+      for (final line in words) pdfText(line, style: wordsBold),
     ];
   }
 }

@@ -348,7 +348,8 @@ class MultiLineReceiptTableRow extends ReceiptRow {
   final int? maxLines;
 
   // Adjacent RTL labels otherwise touch when both cells align to their edge.
-  double _padding(ReceiptTableColumn col) => math.max(4.0, col.horizontalPadding);
+  double _padding(ReceiptTableColumn col) =>
+      math.max(4.0, col.horizontalPadding);
 
   MultiLineReceiptTableRow(this.columns, {this.maxLines = 2});
 
@@ -357,6 +358,12 @@ class MultiLineReceiptTableRow extends ReceiptRow {
       double width, double fontSize, TextDirection textDirection) {
     double maxHeight = 0;
     for (var col in columns) {
+      if (col.field != null) {
+        final height = col.fieldRow.calculateHeight(
+            width * col.weight - _padding(col) * 2, fontSize, textDirection);
+        if (height > maxHeight) maxHeight = height;
+        continue;
+      }
       final tp = _createPainter(col, width, fontSize, textDirection);
       if (tp.height > maxHeight) maxHeight = tp.height;
     }
@@ -371,6 +378,15 @@ class MultiLineReceiptTableRow extends ReceiptRow {
     for (var col in columns) {
       final colWidth = width * col.weight;
       final padding = _padding(col);
+      if (col.field != null) {
+        canvas.save();
+        canvas.translate(currentX + padding, 0);
+        col.fieldRow.render(
+            canvas, y + 2, colWidth - padding * 2, fontSize, textDirection);
+        canvas.restore();
+        currentX += colWidth;
+        continue;
+      }
       final tp = _createPainter(col, width, fontSize, textDirection);
       final contentWidth =
           (colWidth - (padding * 2)).clamp(0.0, double.infinity);

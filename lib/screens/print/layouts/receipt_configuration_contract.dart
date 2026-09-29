@@ -1,4 +1,6 @@
 import 'package:pos_machine/models/document_configurations.dart';
+import 'receipt_text_line.dart';
+export 'receipt_text_line.dart';
 
 /// The only language modes a receipt renderer is allowed to consume.
 ///
@@ -523,10 +525,25 @@ class ReceiptConfigurationContract {
 /// a bilingual document leaves [english] empty unless the store typed an
 /// English `default`, and single-language documents fill only their own slot.
 class ReceiptLabelParts {
-  const ReceiptLabelParts({this.arabic = '', this.english = ''});
+  const ReceiptLabelParts(
+      {this.arabic = '',
+      this.english = '',
+      this.arabicField,
+      this.englishField});
 
   final String arabic;
   final String english;
+  final ReceiptTextLine? arabicField;
+  final ReceiptTextLine? englishField;
+
+  ReceiptTextLine line({required bool arabic}) => arabic
+      ? arabicField ?? ReceiptTextLine.text(this.arabic)
+      : englishField ?? ReceiptTextLine.text(english);
+
+  List<ReceiptTextLine> get lines => [
+        if (arabic.isNotEmpty) line(arabic: true),
+        if (english.isNotEmpty) line(arabic: false),
+      ];
 
   bool get isEmpty => arabic.isEmpty && english.isEmpty;
 

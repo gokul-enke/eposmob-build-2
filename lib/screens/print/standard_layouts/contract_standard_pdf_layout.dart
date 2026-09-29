@@ -112,7 +112,7 @@ class ContractStandardPdfLayout implements StandardPdfLayout {
           if (params.context.mounted) {
             showScaffold(
               context: params.context,
-            message: 'print.pdf_saved'.trParams({'path': file.path}),
+              message: 'print.pdf_saved'.trParams({'path': file.path}),
             );
           }
         }
@@ -123,8 +123,8 @@ class ContractStandardPdfLayout implements StandardPdfLayout {
       if (params.context.mounted) {
         showScaffoldError(
           context: params.context,
-          message: 'print.pdf_generation_failed'.trParams(
-              {'error': error.toString()}),
+          message: 'print.pdf_generation_failed'
+              .trParams({'error': error.toString()}),
         );
       }
       if (params.selectedPrinter.isDevelopment) rethrow;
@@ -174,7 +174,8 @@ class ContractStandardPdfRenderer {
     body.addAll(_buildHeaderSection(params, fonts, accent, logo, scale));
     body.addAll(_buildCustomerSection(params, fonts, accent, scale));
     if (!params.isReturnOnly) {
-      body.addAll(_buildCartItemsSection(params, fonts, accent, currency, scale));
+      body.addAll(
+          _buildCartItemsSection(params, fonts, accent, currency, scale));
       body.addAll(_buildTotalsSection(params, fonts, accent, currency, scale));
     }
     body.addAll(_buildReturnSection(params, fonts, accent, currency, scale));
@@ -225,7 +226,8 @@ class ContractStandardPdfRenderer {
     final header = params.documentText(config.header);
     final subheader = params.documentText(config.subheader);
     if (header.isNotEmpty) children.add(_centerLines(header, fonts.section));
-    if (subheader.isNotEmpty) children.add(_centerLines(subheader, fonts.small));
+    if (subheader.isNotEmpty)
+      children.add(_centerLines(subheader, fonts.small));
 
     final store = params.headerTextParts('showStoreName').joined();
     if (store.isNotEmpty) children.add(_centerLines(store, fonts.title));
@@ -250,8 +252,9 @@ class ContractStandardPdfRenderer {
           : params.storeLineParts(key);
       final text = parts.joined();
       if (text.isNotEmpty) {
-        children.add(_centerLines(
-            text, key == 'showStoreAddress' ? fonts.body : fonts.small));
+        children.add(pdfReceiptParts(parts,
+            style: key == 'showStoreAddress' ? fonts.body : fonts.small,
+            textAlign: pw.TextAlign.center));
       }
     }
 
@@ -316,7 +319,8 @@ class ContractStandardPdfRenderer {
         if (!_metaKeys.contains(row.key)) _infoRow(row, fonts.body),
     ];
     final comment = params.commentText;
-    if (comment.isNotEmpty) rows.add(_textLine(comment, fonts.body));
+    if (comment.isNotEmpty)
+      rows.add(pdfReceiptLine(params.commentLine, style: fonts.body));
     if (rows.isEmpty) return const <pw.Widget>[];
     return <pw.Widget>[
       _sectionBox(
@@ -406,8 +410,7 @@ class ContractStandardPdfRenderer {
         border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
         columnWidths: {
           for (var i = 0; i < ordered.length; i++)
-            i: pw.FlexColumnWidth(
-                ordered[i].key == 'showParticulars' ? 3 : 1),
+            i: pw.FlexColumnWidth(ordered[i].key == 'showParticulars' ? 3 : 1),
         },
         children: tableRows,
       ),
@@ -440,7 +443,8 @@ class ContractStandardPdfRenderer {
           ),
         );
       } else {
-        rows.add(_labelValue(row.label.joined(inline: true), value, fonts.body));
+        rows.add(
+            _labelValue(row.label.joined(inline: true), value, fonts.body));
       }
     }
     final saved = params.savedLabel;
@@ -509,15 +513,15 @@ class ContractStandardPdfRenderer {
       }
     }
     if (section.customerRows.isNotEmpty) {
-      widgets.add(
-          _sectionTitle(section.customerHeading, fonts.bodyBold, accent, scale));
+      widgets.add(_sectionTitle(
+          section.customerHeading, fonts.bodyBold, accent, scale));
       for (final row in section.customerRows) {
         widgets.add(_labelValue(row.$1, row.$2, fonts.body));
       }
     }
     if (section.itemsHeading.isNotEmpty) {
-      widgets
-          .add(_sectionTitle(section.itemsHeading, fonts.bodyBold, accent, scale));
+      widgets.add(
+          _sectionTitle(section.itemsHeading, fonts.bodyBold, accent, scale));
     }
     if (section.columns.isNotEmpty) {
       // pw.Table ignores the page direction; mirror the columns on Arabic.
@@ -536,8 +540,8 @@ class ContractStandardPdfRenderer {
             decoration: pw.BoxDecoration(color: accent),
             children: [
               for (final column in columns)
-                _cellLines([column.label.joined(inline: true)],
-                    fonts.tableHeader,
+                _cellLines(
+                    [column.label.joined(inline: true)], fonts.tableHeader,
                     align: pw.TextAlign.center),
             ],
           ),
@@ -557,10 +561,11 @@ class ContractStandardPdfRenderer {
           section.countRow!.$1, section.countRow!.$2, fonts.bodyBold));
     }
     for (final row in section.totalRows) {
-      widgets.add(_labelValue(row.$1, row.$2 == null ? '' : _money(row.$2!, currency), fonts.bodyBold));
+      widgets.add(_labelValue(row.$1,
+          row.$2 == null ? '' : _money(row.$2!, currency), fonts.bodyBold));
     }
-    widgets.addAll(buildReturnTaxSummaryPdf(params: params,
-        style: fonts.small, headingStyle: fonts.bodyBold));
+    widgets.addAll(buildReturnTaxSummaryPdf(
+        params: params, style: fonts.small, headingStyle: fonts.bodyBold));
     final words = params.returnsWordsLines(currency);
     if (words.isNotEmpty) {
       widgets.add(_textLine(section.wordsHeading, fonts.bodyBold));
@@ -570,8 +575,8 @@ class ContractStandardPdfRenderer {
     }
 
     if (section.remarksRow != null) {
-      widgets.add(_labelValue(section.remarksRow!.$1,
-          section.remarksRow!.$2, fonts.body));
+      widgets.add(_labelValue(
+          section.remarksRow!.$1, section.remarksRow!.$2, fonts.body));
     }
     if (section.signatory.isNotEmpty) {
       widgets.add(pw.SizedBox(height: 20 * scale));
@@ -583,11 +588,13 @@ class ContractStandardPdfRenderer {
         ? const <ReceiptAmountRow>[]
         : params.finalSummaryRows;
     final finalWords = params.isReturnOnly
-        ? const <String>[] : params.finalSummaryWordsLines(currency);
+        ? const <String>[]
+        : params.finalSummaryWordsLines(currency);
     if (finalRows.isNotEmpty || finalWords.isNotEmpty) {
       widgets.add(pw.SizedBox(height: 6 * scale));
       for (final row in finalRows) {
-        widgets.add(_labelValue(row.label.joined(inline: true),
+        widgets.add(_labelValue(
+            row.label.joined(inline: true),
             _money(row.amount, currency),
             row.emphasised ? fonts.bodyBold : fonts.body));
       }
@@ -636,7 +643,8 @@ class ContractStandardPdfRenderer {
       }
     }
     if (params.vatFooterText.isNotEmpty) {
-      children.add(_centerLines(params.vatFooterText, fonts.small));
+      children.add(pdfReceiptLine(params.vatFooterLine,
+          style: fonts.small, textAlign: pw.TextAlign.center));
     }
     final terms = params.termsText;
     // One widget per line so a long terms block can break across pages.
@@ -648,7 +656,8 @@ class ContractStandardPdfRenderer {
       children.add(_centerLines(thankYou, fonts.bodyBold));
     }
     if (params.orderNumberFooterText.isNotEmpty) {
-      children.add(_centerLines(params.orderNumberFooterText, fonts.small));
+      children.add(pdfReceiptLine(params.orderNumberFooterLine,
+          style: fonts.small, textAlign: pw.TextAlign.center));
     }
 
     // Signatures: `Caption: ____` on English documents; otherwise the caption
@@ -747,7 +756,9 @@ class ContractStandardPdfRenderer {
 
   /// Shared label/value row: a label with no text leaves its cell empty.
   pw.Widget _infoRow(ReceiptInfoRow row, pw.TextStyle style) =>
-      _labelValue(row.label.joined(inline: true), row.value, style);
+      row.field != null
+          ? pdfReceiptLine(row.field!, style: style)
+          : _labelValue(row.label.joined(inline: true), row.value, style);
 
   pw.Widget _labelValue(String label, String value, pw.TextStyle style) {
     final cleanLabel = ReceiptConfigurationContract.withoutTrailingColon(label);
@@ -813,12 +824,10 @@ class ContractStandardPdfRenderer {
       child: pw.Column(
         // Column cross-axis start/end follow the page direction.
         crossAxisAlignment: switch (align) {
-          pw.TextAlign.left => _pageRtl
-              ? pw.CrossAxisAlignment.end
-              : pw.CrossAxisAlignment.start,
-          pw.TextAlign.right => _pageRtl
-              ? pw.CrossAxisAlignment.start
-              : pw.CrossAxisAlignment.end,
+          pw.TextAlign.left =>
+            _pageRtl ? pw.CrossAxisAlignment.end : pw.CrossAxisAlignment.start,
+          pw.TextAlign.right =>
+            _pageRtl ? pw.CrossAxisAlignment.start : pw.CrossAxisAlignment.end,
           _ => pw.CrossAxisAlignment.center,
         },
         children: [

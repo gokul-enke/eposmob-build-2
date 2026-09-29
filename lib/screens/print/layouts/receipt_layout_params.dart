@@ -284,6 +284,46 @@ class ReceiptLayoutParams {
   /// configuration owns only its label and visibility switch.
   String get storeAddressValue => storeLocation?.trim() ?? '';
 
+  /// Structured equivalents for renderers; legacy text getters stay readable
+  /// for exports/tests, while PDF and canvas painters keep the two runs apart.
+  ReceiptTextLine fieldLine(String key, String value,
+          {String separator = ': ', bool inlineBilingual = true}) =>
+      ReceiptTextLine.field(
+          ReceiptConfigurationContract.withoutTrailingColon(
+              fieldLabel(key, inlineBilingual: inlineBilingual)),
+          value,
+          separator: separator);
+
+  String storeFieldValue(String key) => switch (key) {
+        'showStoreAddress' => storeAddressValue,
+        'showTel' || 'showEmail' => storeContactValue(key),
+        'showVatNumber' => zatcaVatNumber?.trim() ?? '',
+        'showCRNumber' => zatcaCrNumber?.trim() ?? '',
+        _ => '',
+      };
+
+  ReceiptTextLine storeFieldLine(String key, {bool inlineBilingual = true}) =>
+      fieldLine(key, storeFieldValue(key), inlineBilingual: inlineBilingual);
+
+  ReceiptTextLine get vatFooterLine =>
+      fieldLine('showVATFooter', zatcaVatNumber?.trim() ?? '', separator: ' ');
+  ReceiptTextLine get orderNumberFooterLine =>
+      fieldLine('showOrderNumberInFooter', printableOrderNumberComponent,
+          separator: ' ');
+  ReceiptTextLine get tokenLine {
+    final prefix = ReceiptConfigurationContract.withoutTrailingColon(
+        fieldLabel('showTokenNumber', inlineBilingual: true));
+    return ReceiptTextLine.field(prefix, tokenNumber?.trim() ?? '',
+        separator: RegExp(r'[A-Za-z0-9؀-ۿ]$').hasMatch(prefix) ? ': ' : '');
+  }
+
+  ReceiptTextLine get invoiceNumberLine => ReceiptTextLine.field(
+      ReceiptConfigurationContract.numberPrefix(
+          billDocumentConfig.numberPrefix, receiptLanguageMode,
+          englishFallback: 'INV-', arabicFallback: 'رقم الفاتورة: '),
+      printableOrderNumberComponent,
+      separator: '');
+
   /// Resolves the complete store-address line with one shared contract for all
   /// thermal and standard-PDF themes. This prevents individual layouts from accidentally
   /// printing the configured label as though it were the address value.
@@ -609,11 +649,14 @@ class ReceiptLayoutParams {
           ? ReceiptLabelParts(english: value)
           : ReceiptLabelParts(arabic: value);
     }
-    String join(String label) =>
-        label.isEmpty ? '' : ReceiptConfigurationContract.labelled(label, value);
+    ReceiptTextLine line(String label) => ReceiptTextLine.field(
+        ReceiptConfigurationContract.withoutTrailingColon(label), value);
+    String join(String label) => label.isEmpty ? '' : line(label).text;
     return ReceiptLabelParts(
       arabic: join(parts.arabic),
       english: join(parts.english),
+      arabicField: parts.arabic.isEmpty ? null : line(parts.arabic),
+      englishField: parts.english.isEmpty ? null : line(parts.english),
     );
   }
 
@@ -665,9 +708,8 @@ class ReceiptLayoutParams {
   /// Store VAT / CR registration line (`showVatNumber` / `showCRNumber`). The
   /// number always comes from the store's ZATCA registration.
   String storeTaxText(String key) {
-    final number = (key == 'showCRNumber' ? zatcaCrNumber : zatcaVatNumber)
-            ?.trim() ??
-        '';
+    final number =
+        (key == 'showCRNumber' ? zatcaCrNumber : zatcaVatNumber)?.trim() ?? '';
     if (!isVisible(key) || number.isEmpty) return '';
     return labelledField(key, number);
   }
@@ -803,8 +845,9 @@ class ReceiptLayoutParams {
     if (customerOldBalance == null && customerCurrentBalance == null) {
       return const [];
     }
-    String label(String key) => ReceiptConfigurationContract.withoutTrailingColon(
-        fieldLabel(key, inlineBilingual: true));
+    String label(String key) =>
+        ReceiptConfigurationContract.withoutTrailingColon(
+            fieldLabel(key, inlineBilingual: true));
     return [
       if (isVisible('showCustomerPrevBalance') && customerOldBalance != null)
         (label('showCustomerPrevBalance'), customerOldBalance!, false),
@@ -852,8 +895,8 @@ class ReceiptLayoutParams {
         text(item['productName']),
         text(item['product_name']),
       ].firstWhere((name) => name.isNotEmpty, orElse: () => '');
-      attributes = _variantText(
-          item['variant_attributes'] ?? item['variantAttributes']);
+      attributes =
+          _variantText(item['variant_attributes'] ?? item['variantAttributes']);
     } else {
       try {
         arabic = text(item.names?.ar);

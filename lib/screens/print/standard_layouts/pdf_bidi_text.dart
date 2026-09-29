@@ -1,5 +1,101 @@
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import '../layouts/receipt_configuration_contract.dart';
+
+/// Render field parts as independent text widgets. A number/address must never
+/// participate in the Arabic caption's Unicode bidi ordering.
+pw.Widget pdfReceiptLine(
+  ReceiptTextLine line, {
+  pw.TextStyle? style,
+  pw.TextAlign? textAlign,
+  int? maxLines,
+  bool? softWrap,
+}) {
+  if (!line.hasLabel) {
+    return pdfText(line.value,
+        style: style,
+        textAlign: textAlign,
+        maxLines: maxLines,
+        softWrap: softWrap,
+        textDirection: pdfTextDirectionOf(line.value));
+  }
+  final label = pw.Column(
+      mainAxisSize: pw.MainAxisSize.min,
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        for (final part in line.label.split('\n'))
+          pw.Row(mainAxisSize: pw.MainAxisSize.min, children: [
+            if (pdfHasArabic(part) && line.separator.trim().isNotEmpty)
+              pdfText(line.separator.trimRight(),
+                  style: style, textDirection: pw.TextDirection.ltr),
+            pw.Flexible(
+                child: pdfText(part,
+                    style: style, textDirection: pdfTextDirectionOf(part))),
+            if (!pdfHasArabic(part) && line.separator.trim().isNotEmpty)
+              pdfText(line.separator.trimRight(),
+                  style: style, textDirection: pw.TextDirection.ltr),
+          ]),
+      ]);
+  final value = pdfText(line.value,
+      style: style, textDirection: pdfTextDirectionOf(line.value));
+  // RTL shaping can discard the trailing space of a literal invoice prefix.
+  final gap =
+      line.separator.endsWith(' ') || line.label.endsWith(' ') ? 3.0 : 0.0;
+  final alignment = textAlign == pw.TextAlign.center
+      ? pw.CrossAxisAlignment.center
+      : textAlign == pw.TextAlign.right
+          ? pw.CrossAxisAlignment.end
+          : pw.CrossAxisAlignment.start;
+  return pw.Directionality(
+      textDirection: pw.TextDirection.ltr,
+      child: pw.LayoutBuilder(builder: (context, constraints) {
+        final width = constraints?.maxWidth ?? double.infinity;
+        final loose = pw.BoxConstraints(maxWidth: width);
+        label.layout(context, loose);
+        value.layout(context, loose);
+        if (label.box!.width + value.box!.width + gap > width) {
+          return pw.Column(
+              mainAxisSize: pw.MainAxisSize.min,
+              crossAxisAlignment: alignment,
+              children: [label, pw.SizedBox(height: 1), value]);
+        }
+        return pw.Wrap(
+          alignment: textAlign == pw.TextAlign.center
+              ? pw.WrapAlignment.center
+              : textAlign == pw.TextAlign.right
+                  ? pw.WrapAlignment.end
+                  : pw.WrapAlignment.start,
+          spacing: gap,
+          runSpacing: 1,
+          children: pdfHasArabic(line.label) ? [value, label] : [label, value],
+        );
+      }));
+}
+
+pw.Widget pdfReceiptParts(
+  ReceiptLabelParts parts, {
+  pw.TextStyle? style,
+  pw.TextAlign? textAlign,
+}) =>
+    pw.Column(
+        mainAxisSize: pw.MainAxisSize.min,
+        crossAxisAlignment: textAlign == pw.TextAlign.right
+            ? pw.CrossAxisAlignment.end
+            : textAlign == pw.TextAlign.center
+                ? pw.CrossAxisAlignment.center
+                : pw.CrossAxisAlignment.start,
+        children: [
+          for (final line in parts.lines)
+            pdfReceiptLine(line, style: style, textAlign: textAlign)
+        ]);
+
+pw.Widget pdfLabelValue(String label, String value,
+        {pw.TextStyle? style, pw.TextAlign? textAlign}) =>
+    pdfReceiptLine(
+        ReceiptTextLine.field(
+            ReceiptConfigurationContract.withoutTrailingColon(label), value),
+        style: style,
+        textAlign: textAlign);
 
 // The `pdf` package only shapes Arabic (joins letters into presentation forms
 // and reorders them) when a Text widget's resolved direction is RTL. Arabic

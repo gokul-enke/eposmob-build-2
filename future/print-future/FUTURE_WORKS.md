@@ -10,6 +10,10 @@ Client fixes listed in the [final report](receipt-verification-final-2026-09-29.
 were retested. Backend code was not changed, and physical printer delivery was
 not verified.
 
+The subsequently reported mixed-script caption/value rendering bug has a
+separate [fix and verification report](receipt-mixed-script-rendering-fix-2026-09-29.md).
+The earlier matrix above did not detect that visual issue.
+
 | Work item | Confirmed gap / limitation | Next action | Acceptance check |
 | --- | --- | --- | --- |
 | Bill / Bill A4 bank captions | Saved bank heading, bank name, account holder, account number, IBAN and SWIFT captions are missing from the captured API display options for records 1102 / 802. | Investigate the admin-save to API-response mapping and ensure typed captions reach the client. The precise backend cause has not been established in this repository. | Distinct configured English and Arabic markers survive the API response and appear in PDF/thermal output. Bank/account values still come from bank data, independently of the labels. |

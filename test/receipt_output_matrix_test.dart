@@ -128,6 +128,7 @@ void main() {
   const controlFilter = String.fromEnvironment('RECEIPT_CONTROL_FILTER');
   const controlKind = String.fromEnvironment('RECEIPT_CONTROL_KIND', defaultValue: 'pdf');
   const traceThermal = bool.fromEnvironment('RECEIPT_TRACE_THERMAL');
+  const pdfOnly = bool.fromEnvironment('RECEIPT_PDF_ONLY');
   const dateCase = String.fromEnvironment('RECEIPT_DATE_CASE');
   const paymentGatewayFixture = bool.fromEnvironment('RECEIPT_PAYMENT_GATEWAY_FIXTURE');
   testWidgets('render every registered theme in all five language scenarios',
@@ -159,9 +160,10 @@ void main() {
         : (jsonDecode(File(snapshotPath).readAsStringSync())
                 as Map<String, dynamic>)['document_configurations']
             as Map<String, dynamic>;
-    final outputRoot = snapshot == null
+    final baseOutputRoot = snapshot == null
             ? 'build/receipt_output_matrix_full${hideReturnNames ? '_hidden_return_names' : ''}'
             : 'build/receipt_live_render_${File(snapshotPath).uri.pathSegments.last.replaceAll('.json', '')}${emptyCustomerName ? '_no_customer_name' : ''}';
+    final outputRoot = '$baseOutputRoot${pdfOnly ? '_pdf_only' : ''}';
     final controlBase = controlKind == 'thermal' ? '_thermal_control_sweep' : '_control_sweep';
     final controlSuffix = !controlSweep ? '' : controlFilter.isEmpty
         ? controlBase
@@ -224,6 +226,7 @@ void main() {
       ]) {
         if (documentFilter.isNotEmpty && documentType != documentFilter) continue;
         for (final thermal in [false, true]) {
+          if (pdfOnly && thermal) continue;
           if (controlSweep && thermal != (controlKind == 'thermal')) continue;
           if (documentType.endsWith('A4') && thermal) continue;
           if (!documentType.endsWith('A4') &&
@@ -564,9 +567,9 @@ void main() {
       }
     }
     final expectedPerScenario = documentFilter.isEmpty
-        ? 3 * 17 + 3 * 6
-        : documentFilter == 'Return Bill' ? 17 + 6
-        : documentFilter.endsWith('A4') ? 6 : 17;
+        ? (pdfOnly ? 0 : 3 * 17) + 3 * 6
+        : documentFilter == 'Return Bill' ? (pdfOnly ? 0 : 17) + 6
+        : documentFilter.endsWith('A4') ? 6 : pdfOnly ? 0 : 17;
     final expectedControlCount = controlSweep
         ? ((snapshot![documentFilter] as Map<String, dynamic>)['display_configuration']
             as Map<String, dynamic>).keys.where((key) => controlFilter.isEmpty ||

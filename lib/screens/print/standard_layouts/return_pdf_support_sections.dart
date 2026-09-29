@@ -14,10 +14,11 @@ List<pw.Widget> buildReturnTaxSummaryPdf({
   if (summary == null) return const [];
   final rtl = !params.receiptLanguageMode.isEnglish;
   List<pw.Widget> cells(List<String> values, pw.TextStyle textStyle) => [
-    for (final value in rtl ? values.reversed : values)
-      pw.Padding(padding: const pw.EdgeInsets.all(3),
-        child: pw.Center(child: pdfText(value, style: textStyle))),
-  ];
+        for (final value in rtl ? values.reversed : values)
+          pw.Padding(
+              padding: const pw.EdgeInsets.all(3),
+              child: pw.Center(child: pdfText(value, style: textStyle))),
+      ];
   return [
     pw.SizedBox(height: 4),
     pdfText(summary.heading, style: headingStyle),
@@ -25,8 +26,10 @@ List<pw.Widget> buildReturnTaxSummaryPdf({
       pw.TableRow(repeat: true, children: cells(summary.headers, headingStyle)),
       for (final row in summary.rows)
         pw.TableRow(children: cells([row.$1, row.$2, row.$3], style)),
-      pw.TableRow(children: cells([summary.totalRow.$1,
-          summary.totalRow.$2, summary.totalRow.$3], headingStyle)),
+      pw.TableRow(
+          children: cells(
+              [summary.totalRow.$1, summary.totalRow.$2, summary.totalRow.$3],
+              headingStyle)),
     ]),
   ];
 }
@@ -49,12 +52,12 @@ List<pw.Widget> buildReturnPdfSupportSections({
   return [
     if (comment.isNotEmpty) ...[
       pw.SizedBox(height: 4),
-      pdfText(comment, style: style),
+      pdfReceiptLine(params.commentLine, style: style),
     ],
     if (bankRows.isNotEmpty) ...[
       pw.SizedBox(height: 4),
       pdfText(params.bankDetailsHeading, style: headingStyle),
-      for (final row in bankRows) pdfText('${row.$1}: ${row.$2}', style: style),
+      for (final row in bankRows) pdfLabelValue(row.$1, row.$2, style: style),
     ],
     if (includeQr && params.isVisible('showQRCode') && qrData.isNotEmpty) ...[
       pw.SizedBox(height: 4),

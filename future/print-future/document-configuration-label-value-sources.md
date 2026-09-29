@@ -4,6 +4,11 @@ Checked against the current client code on `integrate/b2b-plus-gokul-dev` and th
 
 **Read each row as two separate things:** the document configuration chooses the caption/text and visibility; store, customer, sale and return records provide business values. Some rows are free text or switches, so they have no separate business value. Changing document language does not translate addresses, customer names, bank names or numbers automatically.
 
+PDF and thermal renderers keep captions and business values in separate text
+runs, including mixed captions such as `Tel Phone عربي`. Numbers and dates
+retain their own direction, and narrow fields wrap rather than insert a value
+inside its caption. See the [rendering fix report](receipt-mixed-script-rendering-fix-2026-09-29.md).
+
 ## Which document configuration is selected?
 
 | Print request | Primary document configuration | Where English / Arabic text comes from |

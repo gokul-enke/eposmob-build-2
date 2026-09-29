@@ -346,7 +346,8 @@ class StandardReceiptLayout implements ReceiptLayout {
     // The option supplies visibility/label; the active store supplies value.
     final addressText = params.storeAddressText();
     if (addressText.isNotEmpty) {
-      rows.add(TextRow(addressText, scale: 0.85, isBold: true));
+      rows.add(FieldTextRow(params.storeFieldLine('showStoreAddress'),
+          scale: 0.85, isBold: true));
     }
 
     // Invoice Title (Moved above Tax/Fssai Info)
@@ -405,12 +406,14 @@ class StandardReceiptLayout implements ReceiptLayout {
     // Store tax registration details
     final storeVatText = params.storeTaxText('showVatNumber');
     if (storeVatText.isNotEmpty) {
-      rows.add(TextRow(storeVatText, scale: 0.85));
+      rows.add(
+          FieldTextRow(params.storeFieldLine('showVatNumber'), scale: 0.85));
     }
 
     final storeCrText = params.storeTaxText('showCRNumber');
     if (storeCrText.isNotEmpty) {
-      rows.add(TextRow(storeCrText, scale: 0.85));
+      rows.add(
+          FieldTextRow(params.storeFieldLine('showCRNumber'), scale: 0.85));
     }
 
     // Contact info
@@ -419,7 +422,10 @@ class StandardReceiptLayout implements ReceiptLayout {
           params.storeContactText('showTel', inlineBilingual: false);
       if (telephoneText.isNotEmpty) {
         rows.add(SpacingRow(5));
-        rows.add(TextRow(telephoneText, scale: 0.9, isBold: true));
+        rows.add(FieldTextRow(
+            params.storeFieldLine('showTel', inlineBilingual: false),
+            scale: 0.9,
+            isBold: true));
       }
     }
 
@@ -427,7 +433,10 @@ class StandardReceiptLayout implements ReceiptLayout {
       final emailText =
           params.storeContactText('showEmail', inlineBilingual: false);
       if (emailText.isNotEmpty) {
-        rows.add(TextRow(emailText, scale: 0.9, isBold: true));
+        rows.add(FieldTextRow(
+            params.storeFieldLine('showEmail', inlineBilingual: false),
+            scale: 0.9,
+            isBold: true));
       }
     }
 
@@ -461,9 +470,17 @@ class StandardReceiptLayout implements ReceiptLayout {
       final invoiceAlign = isEnglish ? TextAlign.left : TextAlign.right;
       final tokenAlign = isEnglish ? TextAlign.right : TextAlign.left;
       final invoiceCol = ReceiptTableColumn(invoiceNumberText,
-          weight: 0.58, align: invoiceAlign, isBold: true, scale: 0.9);
+          field: params.invoiceNumberLine,
+          weight: 0.58,
+          align: invoiceAlign,
+          isBold: true,
+          scale: 0.9);
       final tokenCol = ReceiptTableColumn(tokenText,
-          weight: 0.38, align: tokenAlign, isBold: true, scale: 1.1);
+          field: params.tokenLine,
+          weight: 0.38,
+          align: tokenAlign,
+          isBold: true,
+          scale: 1.1);
       final spacerCol =
           ReceiptTableColumn('', weight: 0.04, align: TextAlign.center);
 
@@ -473,9 +490,10 @@ class StandardReceiptLayout implements ReceiptLayout {
           ? [invoiceCol, spacerCol, tokenCol]
           : [tokenCol, spacerCol, invoiceCol]));
     } else if (invoiceNumberText != null) {
-      rows.add(TextRow(invoiceNumberText, scale: 0.9, isBold: true));
+      rows.add(
+          FieldTextRow(params.invoiceNumberLine, scale: 0.9, isBold: true));
     } else if (tokenText != null) {
-      rows.add(TextRow(tokenText, scale: 1.4, isBold: true));
+      rows.add(FieldTextRow(params.tokenLine, scale: 1.4, isBold: true));
     }
 
     // Date and Time - moved to top section
@@ -484,10 +502,14 @@ class StandardReceiptLayout implements ReceiptLayout {
           withoutTrailingLabelColons(params.fieldLabel('showDate')));
       // Isolate the date/time as LTR so an RTL receipt does not reorder it to
       // "AM 09:40 23-09-2026".
-      final dateTimeText = '\u2066${params.orderDateTimeText}\u2069';
+      final dateTimeText = params.orderDateTimeText;
       rows.add(SpacingRow(3));
       if (dateLabel.isNotEmpty) {
-        rows.add(TextRow("$dateLabel: $dateTimeText", scale: 0.85));
+        rows.add(FieldTextRow(
+            ReceiptTextLine.field(
+                ReceiptConfigurationContract.withoutTrailingColon(dateLabel),
+                dateTimeText),
+            scale: 0.85));
       } else {
         rows.add(TextRow(dateTimeText, scale: 0.85));
       }
@@ -1269,8 +1291,7 @@ class StandardReceiptLayout implements ReceiptLayout {
     debugPrint("  total: $total");
 
     debugPrint("Visibility Flags:");
-    debugPrint(
-        "  showSubTotal: $showSubTotal; showMRPTotal: $showMRPTotal");
+    debugPrint("  showSubTotal: $showSubTotal; showMRPTotal: $showMRPTotal");
     debugPrint(
         "  showDiscount: $showDiscount (API: ${displayConfig?['showDiscount']?.visible})");
     debugPrint(
@@ -1395,8 +1416,10 @@ class StandardReceiptLayout implements ReceiptLayout {
 
       if (itemsCountText.isNotEmpty) {
         rows.add(SpacingRow(_itemGap));
-        rows.add(TextRow('$itemsCountText: ${params.cartItems.length}',
-            scale: is58mm ? 0.75 : 0.85, isBold: true));
+        rows.add(FieldTextRow(
+            ReceiptTextLine.field(itemsCountText, '${params.cartItems.length}'),
+            scale: is58mm ? 0.75 : 0.85,
+            isBold: true));
       }
     }
 
@@ -1407,8 +1430,9 @@ class StandardReceiptLayout implements ReceiptLayout {
 
       if (quantityCountText.isNotEmpty) {
         rows.add(SpacingRow(_itemGap));
-        rows.add(TextRow(
-            '$quantityCountText: ${ReceiptSections.formatQuantity(params.totalQuantity)}',
+        rows.add(FieldTextRow(
+            ReceiptTextLine.field(quantityCountText,
+                ReceiptSections.formatQuantity(params.totalQuantity)),
             scale: is58mm ? 0.75 : 0.85,
             isBold: true));
       }
@@ -1419,8 +1443,9 @@ class StandardReceiptLayout implements ReceiptLayout {
     final savedLabel = params.savedLabel;
     if (savedLabel.isNotEmpty) {
       rows.add(SpacingRow(5));
-      rows.add(TextRow(
-        "$savedLabel: ${params.savedAmountValue.toStringAsFixed(2)}",
+      rows.add(FieldTextRow(
+        ReceiptTextLine.field(
+            savedLabel, params.savedAmountValue.toStringAsFixed(2)),
         isBold: true,
         scale: 0.9,
       ));
@@ -1534,7 +1559,11 @@ class StandardReceiptLayout implements ReceiptLayout {
       scale: 0.9,
     ));
     for (final detail in details) {
-      rows.add(TextRow('${detail.$1}: ${detail.$2}', scale: 0.8));
+      rows.add(FieldTextRow(
+          ReceiptTextLine.field(
+              ReceiptConfigurationContract.withoutTrailingColon(detail.$1),
+              detail.$2),
+          scale: 0.8));
     }
   }
 
@@ -1626,7 +1655,7 @@ class StandardReceiptLayout implements ReceiptLayout {
     final vatFooterText = params.vatFooterText;
     if (vatFooterText.isNotEmpty) {
       rows.add(SpacingRow(5));
-      rows.add(TextRow(vatFooterText, scale: 0.8));
+      rows.add(FieldTextRow(params.vatFooterLine, scale: 0.8));
     }
 
     rows.add(SpacingRow(_headerGap));
@@ -1641,8 +1670,8 @@ class StandardReceiptLayout implements ReceiptLayout {
       rows.add(SpacingRow(5));
       rows.add(StandardThinDividerRow());
       rows.add(SpacingRow(5));
-      rows.add(
-          TextRow(params.orderNumberFooterText, scale: 0.85, isBold: true));
+      rows.add(FieldTextRow(params.orderNumberFooterLine,
+          scale: 0.85, isBold: true));
     }
 
     rows.add(SpacingRow(_itemGap));
@@ -1783,8 +1812,11 @@ class StandardReceiptLayout implements ReceiptLayout {
         resolvedLabels?.returnQty, isEnglish ? 'QTY' : 'الكمية');
     final rateLabel = _getLabel(displayConfig, 'showReturnRate',
         resolvedLabels?.returnRate, isEnglish ? 'RATE' : 'السعر');
-    final totalLabel = _getLabel(displayConfig, 'showReturnTotal',
-        retLabels?.text('grand_total_header') ?? resolvedLabels?.returnTotal, isEnglish ? 'TOTAL' : 'الإجمالي');
+    final totalLabel = _getLabel(
+        displayConfig,
+        'showReturnTotal',
+        retLabels?.text('grand_total_header') ?? resolvedLabels?.returnTotal,
+        isEnglish ? 'TOTAL' : 'الإجمالي');
 
     final bool showSl = displayConfig?['showReturnSLNumber']?.visible == true;
     final bool showParticulars =
@@ -1796,20 +1828,33 @@ class StandardReceiptLayout implements ReceiptLayout {
     final showTaxRate = params.isVisible('showTaxRateColumn');
     final showTaxAmount = params.isVisible('showTaxAmountColumn');
     final showTaxableValue = params.isVisible('showTaxableColumn');
-    final showReturnSubtotal = params.isReturnOnly && params.isVisible('showSubTotal');
+    final showReturnSubtotal =
+        params.isReturnOnly && params.isVisible('showSubTotal');
     final returnSubtotalLabel = params.labelFor('showSubTotal',
-        englishFallback: 'Sub Total', arabicFallback: 'المجموع الفرعي',
-        resolvedArabic: retLabels?.text('sub_total_header'), inlineBilingual: true);
+        englishFallback: 'Sub Total',
+        arabicFallback: 'المجموع الفرعي',
+        resolvedArabic: retLabels?.text('sub_total_header'),
+        inlineBilingual: true);
     final taxAmountLabel = params.labelFor('showTaxAmountColumn',
-        englishFallback: 'Tax Amount', arabicFallback: 'مبلغ الضريبة',
-        resolvedArabic: retLabels?.text('tax_column'), inlineBilingual: true);
+        englishFallback: 'Tax Amount',
+        arabicFallback: 'مبلغ الضريبة',
+        resolvedArabic: retLabels?.text('tax_column'),
+        inlineBilingual: true);
     final taxableValueLabel = params.labelFor('showTaxableColumn',
-        englishFallback: 'Taxable Value', arabicFallback: 'القيمة الخاضعة للضريبة',
-        resolvedArabic: retLabels?.text('taxable_value'), inlineBilingual: true);
-    final hsnLabel = params.labelFor('showHsnCode', englishFallback: 'HSN',
-        arabicFallback: 'رمز الصنف', resolvedArabic: retLabels?.text('hsn'), inlineBilingual: true);
-    final taxRateLabel = params.labelFor('showTaxRateColumn', englishFallback: 'Tax Rate',
-        arabicFallback: 'نسبة الضريبة', resolvedArabic: retLabels?.text('tax_rate_column'), inlineBilingual: true);
+        englishFallback: 'Taxable Value',
+        arabicFallback: 'القيمة الخاضعة للضريبة',
+        resolvedArabic: retLabels?.text('taxable_value'),
+        inlineBilingual: true);
+    final hsnLabel = params.labelFor('showHsnCode',
+        englishFallback: 'HSN',
+        arabicFallback: 'رمز الصنف',
+        resolvedArabic: retLabels?.text('hsn'),
+        inlineBilingual: true);
+    final taxRateLabel = params.labelFor('showTaxRateColumn',
+        englishFallback: 'Tax Rate',
+        arabicFallback: 'نسبة الضريبة',
+        resolvedArabic: retLabels?.text('tax_rate_column'),
+        inlineBilingual: true);
 
     final bool showQty = displayConfig?['showReturnQty']?.visible == true;
     final bool showRate = displayConfig?['showReturnRate']?.visible == true;
@@ -1916,7 +1961,9 @@ class StandardReceiptLayout implements ReceiptLayout {
           if (column.$1) {
             headerCols.add(ReceiptTableColumn(column.$3,
                 weight: weights[column.$2] ?? 0,
-                align: TextAlign.right, isBold: true, scale: scale));
+                align: TextAlign.right,
+                isBold: true,
+                scale: scale));
           }
         }
         final orderedHeaderCols =
@@ -1938,8 +1985,10 @@ class StandardReceiptLayout implements ReceiptLayout {
         final double itemTotal = itemQty * itemRate;
         if (showParticulars || showSl) {
           final itemText = ReceiptSections.returnItemHeading(
-              name: productName, number: i + 1,
-              showSerial: showSl, showParticulars: showParticulars);
+              name: productName,
+              number: i + 1,
+              showSerial: showSl,
+              showParticulars: showParticulars);
           final itemIsArabic = _hasArabic(itemText);
           rows.add(ReceiptTableRow([
             ReceiptTableColumn(itemText,
@@ -1990,14 +2039,27 @@ class StandardReceiptLayout implements ReceiptLayout {
               align: TextAlign.right,
               scale: scale));
         for (final column in [
-          (showTaxAmount, 'taxAmount', params.returnItemMoneyText(returnItem.taxAmount)),
-          (showTaxableValue, 'taxableValue', params.returnItemMoneyText(returnItem.taxableValue)),
-          (showReturnSubtotal, 'returnSubtotal', params.returnItemMoneyText(returnItem.subTotal)),
+          (
+            showTaxAmount,
+            'taxAmount',
+            params.returnItemMoneyText(returnItem.taxAmount)
+          ),
+          (
+            showTaxableValue,
+            'taxableValue',
+            params.returnItemMoneyText(returnItem.taxableValue)
+          ),
+          (
+            showReturnSubtotal,
+            'returnSubtotal',
+            params.returnItemMoneyText(returnItem.subTotal)
+          ),
         ]) {
           if (column.$1) {
             priceCols.add(ReceiptTableColumn(column.$3,
                 weight: weights[column.$2] ?? 0,
-                align: TextAlign.right, scale: scale));
+                align: TextAlign.right,
+                scale: scale));
           }
         }
         if (priceCols.any((c) => c.text.isNotEmpty))
@@ -2006,7 +2068,6 @@ class StandardReceiptLayout implements ReceiptLayout {
         if (i < orderReturns.returnItems!.length - 1)
           rows.add(StandardThinDividerRow());
       }
-
     }
 
     rows.add(SpacingRow(_itemGap));
@@ -2027,7 +2088,10 @@ class StandardReceiptLayout implements ReceiptLayout {
         displayConfig?['showReturnNetAmount']?.visible == true;
     final mrpTotalRow = params.returnMrpTotalRow;
     final allocationRows = params.returnAllocationTotalRows;
-    if (showReturnTotalAmt || showReturnNetAmt || mrpTotalRow != null || allocationRows.isNotEmpty) {
+    if (showReturnTotalAmt ||
+        showReturnNetAmt ||
+        mrpTotalRow != null ||
+        allocationRows.isNotEmpty) {
       final String? currencySymbol = currency.trim().toUpperCase() == 'INR'
           ? '₹'
           : _currencyCodeText(currency, sarSymbol);
@@ -2121,7 +2185,9 @@ class StandardReceiptLayout implements ReceiptLayout {
     final bool showFinalNetAmount = params.isVisible('showFinalNetAmount');
     final bool showFinalAmountInWords =
         displayConfig?['showFinalAmountInWords']?.visible == true;
-    if (!showFinalPurchase && !showFinalReturn && !showFinalNetAmount &&
+    if (!showFinalPurchase &&
+        !showFinalReturn &&
+        !showFinalNetAmount &&
         !showFinalAmountInWords) return;
 
     final String? currencySymbol = currency.trim().toUpperCase() == 'INR'

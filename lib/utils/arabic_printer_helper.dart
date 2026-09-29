@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:qr/qr.dart';
+import 'package:pos_machine/screens/print/layouts/receipt_text_line.dart';
 
 class ArabicPrinterHelper {
   static const String fontFamily = 'NotoSansArabic';
@@ -132,6 +133,81 @@ class TextRow extends ReceiptRow {
   }
 }
 
+/// Canvas counterpart of the PDF field renderer. Each field part is measured
+/// and painted independently; narrow paper stacks the parts without clipping.
+class FieldTextRow extends TextRow {
+  FieldTextRow(this.line,
+      {super.align,
+      super.isBold,
+      super.scale,
+      super.verticalPadding,
+      super.verticalOffset})
+      : super(line.text);
+
+  final ReceiptTextLine line;
+
+  TextPainter _part(String text, double width, double fontSize) => TextPainter(
+        text: TextSpan(
+            text: text,
+            style: TextStyle(
+                color: Colors.black,
+                fontFamily: ArabicPrinterHelper.fontFamily,
+                fontSize: fontSize * scale,
+                fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
+        textDirection:
+            RegExp(r'[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff]').hasMatch(text)
+                ? TextDirection.rtl
+                : TextDirection.ltr,
+      )..layout(maxWidth: width);
+
+  (TextPainter, TextPainter, bool, double) _parts(
+      double width, double fontSize) {
+    final label = _part(
+        line.hasLabel ? '${line.label}${line.separator.trimRight()}' : '',
+        width,
+        fontSize);
+    final value = _part(line.value, width, fontSize);
+    final gap = line.hasLabel && line.separator.endsWith(' ')
+        ? fontSize * scale * .2
+        : 0.0;
+    return (label, value, label.width + value.width + gap > width, gap);
+  }
+
+  @override
+  double calculateHeight(
+      double width, double fontSize, TextDirection textDirection) {
+    final (label, value, stacked, _) = _parts(width, fontSize);
+    return (stacked
+            ? label.height + value.height + 2
+            : (label.height > value.height ? label.height : value.height)) +
+        verticalPadding;
+  }
+
+  @override
+  void render(Canvas canvas, double y, double width, double fontSize,
+      TextDirection textDirection) {
+    final (label, value, stacked, gap) = _parts(width, fontSize);
+    double offset(double used) => align == TextAlign.center
+        ? (width - used) / 2
+        : align == TextAlign.right
+            ? width - used
+            : 0;
+    final top = y + verticalOffset;
+    if (stacked) {
+      label.paint(canvas, Offset(offset(label.width), top));
+      value.paint(canvas, Offset(offset(value.width), top + label.height + 2));
+      return;
+    }
+    final rtlLabel = RegExp(r'[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff]')
+        .hasMatch(line.label);
+    final first = rtlLabel ? value : label;
+    final second = rtlLabel ? label : value;
+    final x = offset(label.width + value.width + gap);
+    first.paint(canvas, Offset(x, top));
+    second.paint(canvas, Offset(x + first.width + gap, top));
+  }
+}
+
 class ReceiptTableRow extends ReceiptRow {
   final List<ReceiptTableColumn> columns;
 
@@ -142,6 +218,14 @@ class ReceiptTableRow extends ReceiptRow {
       double width, double fontSize, TextDirection textDirection) {
     double maxHeight = 0;
     for (var col in columns) {
+      if (col.field != null) {
+        final height = col.fieldRow.calculateHeight(
+            width * col.weight - col.horizontalPadding * 2,
+            fontSize,
+            textDirection);
+        if (height > maxHeight) maxHeight = height;
+        continue;
+      }
       final tp = col.createPainter(width, fontSize, textDirection);
       if (tp.height > maxHeight) maxHeight = tp.height;
     }
@@ -167,6 +251,15 @@ class ReceiptTableRow extends ReceiptRow {
 
     for (var col in columns) {
       final colWidth = width * col.weight;
+      if (col.field != null) {
+        canvas.save();
+        canvas.translate(currentX + col.horizontalPadding, 0);
+        col.fieldRow.render(canvas, y + 5, colWidth - col.horizontalPadding * 2,
+            fontSize, textDirection);
+        canvas.restore();
+        currentX += colWidth;
+        continue;
+      }
       final tp = col.createPainter(width, fontSize, textDirection);
       final contentWidth =
           (colWidth - (col.horizontalPadding * 2)).clamp(0.0, double.infinity);
@@ -187,6 +280,9 @@ class ReceiptTableRow extends ReceiptRow {
 }
 
 class ReceiptTableColumn {
+  final ReceiptTextLine? field;
+  FieldTextRow get fieldRow => FieldTextRow(field!,
+      align: align, isBold: isBold, scale: scale, verticalPadding: 0);
   final String text;
   final double weight; // percentage of width (0.0 to 1.0)
   final TextAlign align;
@@ -200,6 +296,7 @@ class ReceiptTableColumn {
 
   ReceiptTableColumn(this.text,
       {required this.weight,
+      this.field,
       this.align = TextAlign.right,
       this.isBold = false,
       this.scale = 1.0,
