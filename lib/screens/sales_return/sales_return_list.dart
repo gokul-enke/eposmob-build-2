@@ -256,13 +256,13 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
     );
   }
 
-  /// Copies the number shown first: the receipt number when present.
+  /// Copies the number shown first: the bill number when present.
   void _copyNumber(SalesReturnOrder order) {
     Clipboard.setData(ClipboardData(text: order.displayNumber));
     showScaffold(
       context: context,
       message: order.receiptNumber != null
-          ? 'sales_return.receipt_copy_success'.tr
+          ? 'sales_return.bill_copy_success'.tr
           : 'sales_return.copy_success'.tr,
     );
   }

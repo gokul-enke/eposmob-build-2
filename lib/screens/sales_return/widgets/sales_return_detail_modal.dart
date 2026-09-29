@@ -165,7 +165,7 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                             const SizedBox(height: 14),
                             if (order.receiptNumber != null)
                               _buildInfoRow(
-                                'sales_return.receipt_number'.tr,
+                                'sales_return.bill_number'.tr,
                                 order.receiptNumber!,
                               ),
                             _buildInfoRow(

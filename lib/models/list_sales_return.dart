@@ -114,11 +114,13 @@ class SalesReturnOrder {
     return value.isNotEmpty ? value : orderId.toString();
   }
 
-  /// Receipt number issued on the POS device, e.g. `2-01-260929-0002`.
+  /// Bill number issued on the POS device, e.g. `2-01-260929-0002`. Shown as
+  /// "Bill No."; the API field is `receipt_number`, which is unrelated to the
+  /// Receipts (payment voucher) module.
   /// Null for orders created before device receipt numbers existed.
   String? get receiptNumber => order?.receiptNumber;
 
-  /// The number a cashier or customer recognises: the receipt number when
+  /// The number a cashier or customer recognises: the bill number when
   /// the sale has one, otherwise the backend order number.
   String get displayNumber => receiptNumber ?? originalOrderNumber;
 
