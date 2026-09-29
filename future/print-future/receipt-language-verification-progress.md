@@ -283,7 +283,7 @@ Run63721 completed69 outputs. Correctfixture arithmetic is pre-discount subtotal
 - ActualadminReturn28 customerGSTswitchenabledwith LIVE CUSTOMER TAX ID thenoffwithlabelretained. Captured return_customer_tax_on/off.json, each69renderswithnew --dart-define=RECEIPT_CUSTOMER_NAME_EMPTY=true; outputroot suffix_no_customer_name avoidsoverwritingnormalfixtures. TwelvePDFchecks passedtaxlabelonceon/zerooff, phone+addresspresent, QACustomerabsent. Reportcustomer_tax_pdf_audit.json. Standard80mm onPNGvisuallyverifiedreadablephone,address,taxrowwithoutname.
 - Originaltaxlabel(empty) andswitchfalse restored; return_customer_tax_restored.json differsfrombill_a4_restored.json onlyReturn.updated_at. Othersunchanged. Noexternallysavedtestsettingsremain.
 - Fullmatrix now includesmarker78showCustomerGstin, verifierrequires78forreturnen/both; run33221 currentlyliveinreceipt-customer-full-matrix.log. Pollthenrunverifier; nootherpendingprocess.
-- Added docs/receipt-backend-contract-gaps.md withconfirmedpayloadfailures, sourcepairsemantics and retestgates. Distinguishesbackendconfirmedmissingtypedvaluesfromdatafieldsstillunderinvestigation. No backendpath/userstoreoverrideanswer received.
+- Added future/print-future/receipt-backend-contract-gaps.md withconfirmedpayloadfailures, sourcepairsemantics and retestgates. Distinguishesbackendconfirmedmissingtypedvaluesfromdatafieldsstillunderinvestigation. No backendpath/userstoreoverrideanswer received.
 AdditionalflatAPIpricefix: SalesReturnItemparser no longer overwritesexplicitflatunit_price withsummarypricewhen nestedcartunitpriceabsent. Addedassert5unitpricevs60lineprice;8price/modeltests passed inreceipt-flat-price-tests.log. Fullmatrix33221 doesnotexerciseparser directly; dedicatedtestsproveparserfix.
 
 ### Current Bill1102 live sequence
@@ -385,7 +385,7 @@ Run11604completed115real-builderoutputs. verify_return_builder_title.py passed30
 - VisuallyinspectedlivePremium2thermalMRP24/refund21/count3. No physical printjob, no printersettingschanged. Fullgoalactive; returntax/discount/HSNandbackendmissingbilingualmetadata plusotherdocumentlivecases/restoration/devicechecks remain. BilingualMRPtypedEnglishmissingfromAPI remainsacontractgapdespitesyntheticlanguageproof.
 
 ### Return HSN/rate source preservation and financial-source evidence
-- Previous turn progress. Read existing return creation/calculation code and live GET projections. Current list-return-orders has original tax_rate/tax_amount/product.hsn_code but lacks return refund_breakdown/tax allocation. Redacted financial projection saved to build/receipt_live_audit/return_financial_source_audit.json and concrete discrepancies documented in docs/receipt-backend-contract-gaps.md. Return717 prediscountline25/tax3.814 vsdiscount5/refund20/ordertax3.050 proves original tax cannot blindly be used. Return758 is2of7units. Return772 quantity14/price1445/unit100 vsoriginal14.450 reveals stored-data inconsistency. No returns were created/changed.
+- Previous turn progress. Read existing return creation/calculation code and live GET projections. Current list-return-orders has original tax_rate/tax_amount/product.hsn_code but lacks return refund_breakdown/tax allocation. Redacted financial projection saved to build/receipt_live_audit/return_financial_source_audit.json and concrete discrepancies documented in future/print-future/receipt-backend-contract-gaps.md. Return717 prediscountline25/tax3.814 vsdiscount5/refund20/ordertax3.050 proves original tax cannot blindly be used. Return758 is2of7units. Return772 quantity14/price1445/unit100 vsoriginal14.450 reveals stored-data inconsistency. No returns were created/changed.
 - Inspected actual order-details endpoint forORD004682. It has percartline discounted_total/base/tax andline_discount, butnoHSN/taxrate; returnitems containonlyid/name/quantity/reason, withoutcartid. Thisroute needsenrichment/backenddata before sameclassificationcoveragecanbeclaimed. Docs describeconfirmedkeys; existingbackend-requestmarkdownnotassumeddeployed.
 - Added nullable HSN/taxRate toOrderReturnItem withJSONroundtrip, productHSN andtaxratepresence to salesreturnlistmodels, andforwardingfrom buildTransactionReturnPrintItems. Explicit0ratepreserved;missing/invalid/nonfinite/negativeratesrenderblank. HSNremainsstringpreserving leadingzeros. No speculative return-tax amount/discount computation added.
 - Implemented showHsnCode/showTaxRateColumn in sharedPDFreturncolumnsandall3thermalfamilies. Harnessmarkers82/83 appended, fixtureHSN090121/090240andrates18%/0%.115outputsrenderedthroughproductionbuilderall5cases; tool/verify_return_tax_fields.py verifiesvaluesexactlyonceandEnglishheadingpresence/absenceinall30PDFs. Passed. Initialverifierassumedheadingexactlyonce; correctedforlegitimate repeated multipage tableheaders (data remains exactlyonce).
@@ -448,3 +448,282 @@ Run11604completed115real-builderoutputs. verify_return_builder_title.py passed30
 - Chrome listTabs againfailedbeforepageaccesswithsame 'Unable to load browser request-header policy' error. Previouskernelresetandfreshinventoryalsodidnotrecover. Threeconsecutivegoalturnsnowconfirmthissameexternalblocker;notthreecallsinoneturn.
 - Completionauditfails:SalesReturn27/843livefive-languageconfigurationsequencesremainunperformed;backend/source-labelandfinancialallocationissuesremainunresolved;physical/nativeandfullvisualverificationremainunproven. Userhasauthorizedtemplateeditswithoutrestoration;permissionisnotblocking. Existinglocalrenders/testsdo notsubstituteforremainingliveevidence.
 - No runningtest/renderprocesses.No liveadminchangesduringtheseconnectionfailures. Markgoalblockedpendingbrowserconnectionrecovery/externalinput,notcomplete. Preserveallworktreechangesandcurrentevidence. Onresume,recheckbrowseraccessandproceedwith27then843livecaseswithoutaskingeditpermissionagain.
+
+### Access restored and current branch retested — 29 September 2026
+- Connected new VM URI on port58638; Chrome admin access restored. Branch integrate/b2b-plus-gokul-dev was clean initially and includes newer customer-information/PDF changes. Backend code and unrelated business records remain untouched.
+- Fresh27/843 live five-case sequences completed and corrected after an audit caught partially retained Arabic fields in the first bilingual saves. Active language is now en_ar, Arabic content filled, English limited to13 sale/return table headers; all65 switches enabled for both documents. Source captures have47 Arabic fields, with return-title fields4/5 absent from API. English bilingual header/subheader/footer are also absent. No restoration requested or performed.
+- 85thermal/30PDF live outputs completed; visible table markers consistent across themes, no unwanted English in Arabic/English-empty cases;115geometry checks passed. Source-field audit deliberately fails for missing typed fields. Separate rich-text Terms was not populated; plain Terms and Conditions was. Do not claim exhaustive field/polarity/hardware coverage.
+- Actual app Open PDF routes tested for fully returned ORD-004682 and partial ORD-004460:60 refund/0 final, sales-only blocked for fully returned; partial360refund,1440remaining, combined1800-360=1440. Saved nativePDFs. Resync Doc refreshed initially stale cached configurations. Six route/control/title tests and41focused tests passed.
+- Found native PDF regression: long bilingual balance label forced SAR1800 vertically and overlapped SAR341. Reproduced in independent six-theme glyph-position audit before the fix (152-point height). Wrapped both label and value in three affected PDF layouts. The second full 345-output run then caught a clipped saved row in Bilingual Centered. Changed its summary table to natural panel heights, regenerated all 60 affected synthetic PDFs and all 30 live A4 PDFs, and repeated the final audit: 90 PDF label checks with no theme differences, 345 geometry checks passed. Added an explicit saved-label assertion. Twelve final large-balance renders (six A4 and six A5) pass horizontal-amount and geometry checks. Final native reprint after hot reload visibly retains SAR1800, SAR341 and SAR160. Analyzer: no issues in the three changed production layouts. No test/render jobs remain running.
+- Detailed fresh report: future/print-future/receipt-verification-2026-09-29.md. All supporting captures/screenshots/outputs remain local build artifacts. Remaining source/financialallocation/countsemantics/denseheading/richTerms/freshliveother3docs/hardware limits are explicitly recorded. Fullgoal remainsincomplete.
+
+### Multiline Terms source and rendering audit — 29 September continuation
+
+- Previous goal turn was progress: corrected real PDF balance overflow and saved-row clipping, repeated affected renders, and verified native sale/return/combined totals. Rechecked branch and current files before this continuation; branch remains integrate/b2b-plus-gokul-dev.
+- Populated the separate Terms code editor for Sales/Return A4 843. Captured six precedence/fallback cases and generated 36 PDFs. All match supplied Terms/override text and pass geometry. English Terms print in en; Arabic Terms print in ar/en_ar; a nonempty Terms and Conditions override supersedes the separate body. Both-filled en_ar responses omit the saved English Terms body, confirmed against English capture and reopened UI. New verifier reports source-completeness failure separately from render success.
+- Empty fill did not clear CodeMirror's document; keyboard select-all/delete followed by reopening verified English Terms deletion persisted. Final 843 remains en_ar, Arabic Terms filled, English Terms empty, selected English table headers retained, Arabic Terms override empty. Saved proof PNG. No restoration required by user.
+- Added Arabic Terms fallback to thermal27; all17 outputs generated and pass geometry. All15 Standard aliases match pixels. Full bottom images of the three active families show both lines. Initial Premium omission suspicion was disproved by full-image inspection; no production edit made for it.
+- Extended live model/cache preservation assertions for Terms/footer/number prefix. Test passed for all five configs in latest capture; missing English Terms is already absent before parsing. No backend code or unrelated business-data changes.
+- All test/render sessions are terminal. Full objective remains active: source omissions (now including English Terms), return financial/source gaps, count semantics, dense thermal readability, fresh live repetitions of the other three documents, Terms coverage outside these two docs, and physical device delivery are not proven complete. See detailed current report rather than treating narrow Terms passes as overall completion.
+
+### Five-record language matrix extended and return defects fixed
+- Fresh Return Bill 28: all five live cases, 57 language text fields plus Terms,
+  all42 visibility flags enabled. Production builder generated115 outputs;
+  30PDF label checks and115 geometry checks passed. All15 Standard aliases
+  match. Source audit fails: Remarks Text54 absent in both languages;26
+  entered English fields absent in both-filled bilingual response; selective
+  English Grand Total40 andSub Total42 headings lost before client parsing.
+- Added optional explicit return tax amount/taxable/subtotal properties and
+  corresponding columns to allPDF/thermal families. No tax allocation math
+  invented; missing/invalid inputs stay blank, zero/signed inputs preserved.
+  Subtotal column is return-only; combined sales-summary behavior preserved.
+- Dense thermal item tables now print label/value rows when columns exceed
+  available width. Visual checks show full values instead of vertical number
+  fragments; focused8 tests pass. Additional23 cases cover58mm andA5 with
+  geometry passing. Return render analyzer has53 existing infos, no errors
+  orwarnings; route analyzer15 existing infos, no errors orwarnings.
+- API now contains separate Credit Note1103 andReturn Bill28 records. Native
+  return print used the former even afterresync. Fixed client preference to
+  Return Bill with Credit Note fallback;5 resolver tests pass. Actual native
+  Open PDF confirmsReturn Bill, ten supplied selected English headings,360
+  refund. No backend edit.
+- Fresh Bill1102/BillA4802 allfive livecases complete,51 fields andTerms,
+  visibility enabled. Eachcapture renderedall5 savedconfigs:345 additional
+  outputs in69-output batches. Geometry passesall345. Focused salesaudit:
+  30PDFs/75 Standardaliases, no label failures/themedifferences/Englishleaks.
+  Sourcefailsbecause6 bank labels missing in bothlanguages; bilingualEnglish
+  header/subheader/footer omitted. Allfive admin records leften_ar with
+  Arabiccontent andselectedEnglish tableheaders; no restoration requested.
+- Updated native partial-sale afterfinalsettings: nineEnglish headings,
+  1440total,1220.34subtotal,219.66tax,1800paid,341balance,160saved allretained.
+- 49 regressiontests pass; one livecapture test initially skipped without
+  itsflag, then explicitly rerun with currentReturncapture andpassed.
+- Remaining failures: API source omissions and unavailable live return
+  allocations/suppliermetadata, physical printer delivery, and exhaustive
+  visual/business-data coverage. Current source audits deliberatelyfail;
+  do not mark overall objective complete. Detailed report is authoritative
+  for current status; earlier browser blockers above are historical.
+
+
+### 29 September — cart identity and supplier continuation
+
+- Corrected the latest partial-sale quantities to 1, 2 and 5 using the
+  reconciled completed-return cart snapshot. Native subtotal/tax are now
+  1220.33/219.67; previous 1220.34/219.66 evidence predates this fix.
+- Native return refund 360 and combined 1800 - 360 = 1440 still pass.
+- Preserved explicit transaction-return tax/taxable/subtotal allocations;
+  nested original-cart allocations remain excluded.
+- Added available Return Bill supplier company, address and VAT fields to
+  all PDF/thermal layouts. Missing state/place-of-supply remain unavailable.
+- Current focused 27 tests and broader 56 regression tests pass.
+- Aggregate Return Bill summary and remarks coverage remains unfinished;
+  source omissions still prevent an overall pass. See the dated report.
+
+
+### 29 September — return totals and remarks continuation
+
+- Restored independently controlled Return Bill subtotal, discount, taxable
+  total and tax rows across all six PDFs and three active thermal families.
+  Missing/invalid allocations remain blank; explicit zero and signed amounts
+  are preserved. Original sale allocations are excluded.
+- Restored the enabled remarks label and body rendering when remarks_text is
+  supplied through resolved labels. The saved live body remains absent in API.
+- 115 live-config renders and 69 body-fixture renders pass geometry; 30 plus
+  18 PDF label/amount/body checks pass. 23 updated 58mm/A5 outputs also pass.
+- 63 current regression tests and 8 focused summary/price/supplier tests pass.
+- Remaining client investigation: independent tax-summary table and return
+  identity/date provenance. Native Orders route currently uses the sale date;
+  return response has id 758 but no creation date. Overall verification fails.
+
+- Final current-code full matrix: 345 renders, 90 PDF text checks, and 345 geometry checks pass. Zero checked theme differences or English marker leaks. Unresolved tax-summary and return identity/date logic remains in scope.
+
+
+29 September continuation: fixed Return Bill identity/date provenance across
+Orders and transaction print callbacks, and added the independent return tax
+summary across six PDF and three thermal families. Verified 115 live-label
+outputs plus 23 narrow-paper outputs, with 30 PDF rate/amount associations
+passing. Native sales, return and combined reprints preserve 1440/360/1440;
+return ID 758 is separate from original invoice ORD-004460 and missing return
+date prints blank. Found and fixed production-builder missing totals becoming
+zero; another 69 outputs and 18 PDF total-label associations pass for missing,
+zero and comma totals. Latest regression: 71 passed. Remaining configured
+API text and return allocation omissions still fail completeness. Backend and
+business data unchanged. Details: future/print-future/receipt-verification-2026-09-29.md.
+
+
+29 September: corrected combined-template coverage. Earlier English/Arabic
+captures had only 52/63 (27) and 8/63 (843) controls enabled. Saved fresh fully
+filled English, Arabic and bilingual cases with all 63 enabled, including
+bilingual Terms field 38. Generated 69 replacements, all geometry passes.
+Stronger audit: 30 PDFs, zero supplied-label/theme failures, zero disabled
+controls across ten cases; source audit still fails for omitted return titles
+and bilingual English header/subheader/footer. Inspected all nine thermal
+family/language combinations and 45 pixel-identical Standard alias comparisons.
+All five admin records remain bilingual; combined records now both filled.
+Marionette and Chrome access work, branch integrate/b2b-plus-gokul-dev.
+No backend edits. Full verification remains failed/unverified as detailed in
+receipt-verification-2026-09-29.md.
+
+
+29 September continuation: positioned Arabic audit now checks 72 PDFs and
+3408 supplied field instances, including all 18 Arabic-only column orders.
+Found and fixed fragmented serial headings and missing Arabic table mirroring
+in five PDF themes. Regenerated 243 outputs: all geometry passes. Six negative
+Arabic-serial checks pass; final 36 focused regression tests pass; five changed
+PDF files analyze cleanly. Refreshed language verifiers still exit 2 for source
+omissions with zero renderer failures. Resynced app and preserved fresh native
+sales, return and combined PDFs with expected totals and zero outside glyphs.
+No backend/admin/business-record edits. Full goal remains active; see latest
+report section for conditional B2C and remaining source/data coverage limits.
+
+
+29 September consumer/thermal continuation: Marionette and Chrome access work;
+branch remains integrate/b2b-plus-gokul-dev. Added five B2C sales language cases
+(115 outputs) plus bilingual 58mm (17). All 30 B2C PDFs pass active-caption,
+consumer-title, absent customer VAT/CR and 330 caption/value associations.
+Visual review found clipped bilingual token labels in Standard/Premium; fixed
+wrapping and regenerated all five B2B sales/return/combined cases (285 outputs).
+All 417 unique final outputs pass geometry; all 315 Standard-family comparisons
+match pixels. Post-change focused suite passes 34 tests; no analyzer errors or
+warnings, with existing informational findings retained. Native hot reload
+succeeded. No backend/admin/business-record edits. Source completeness still
+fails; the full goal remains active. Evidence and remaining limits are in the
+latest receipt-verification-2026-09-29.md section.
+
+29 September individual-control continuation: generated 4,980 PDFs across five
+language cases, three document types and six themes with one option disabled at
+a time. Final checks pass all witnessed captions/selected values and page bounds;
+870 checks lack a baseline witness and remain unverified. Found and fixed the
+combined return section ignoring the customer master switch. All 30 repaired PDFs
+and 85 thermal outputs pass; 75 thermal alias comparisons match. Synthetic footer
+fallback/hidden fixtures pass 414 outputs (108 PDFs) and 270 alias comparisons.
+Fixed Arabic checker attribution of a nearby numeric quantity and Windows long
+verification paths. Five marker tests, 29 focused tests and 13 final return tests
+pass (overlapping suites); analysis has no errors/warnings and three matrix infos.
+Hot reload succeeded; branch remains integrate/b2b-plus-gokul-dev. Fresh source
+capture matches the prior five configurations. No backend/admin/business-record
+changes. Full goal remains active with witness, thermal and source/data gaps.
+
+29 September witness continuation: inspected current resolved-label routing and
+actual PDFs, then closed the earlier 870 missing suppression witnesses. All five
+996-PDF resolved-label sweeps pass. Direct fixture values and spatial Arabic/Latin
+text cover dates, words, payment, comments and summary controls. Shared Arabic
+refund captions use occurrence reduction to retain the other enabled row.
+The business sweep leaves 30 inactive consumer-title cases; 30 newly generated
+active consumer title-off PDFs prove caption disappearance and unchanged currency
+amounts in all five languages/six themes. Combined coverage: 4,980 business PDFs
+plus 30 consumer PDFs, zero checked failures and zero missing witnesses. Six
+checker tests and git diff --check pass. No production/backend/admin/business
+record changes this turn. Full goal remains active: thermal individual switches,
+source/data completeness, broader financial/visual and physical output remain.
+
+29 September thermal-control continuation: added debug-only observation after
+actual canvas painting, retaining PNG output and rejecting unsupported row types.
+Bilingual Bill pilot passes 68 outputs, all three tested switches plus baseline
+in 17 themes, zero missing witnesses and 60 identical Standard comparisons.
+Observer pixel/read-only widget test, four negative marker tests and 29 existing
+regressions pass. Analysis has no errors/warnings, with 12 infos. All-on English
+sales/combined/return PNGs remain identical to prior verified baselines. Three
+full workers now render/audit 15 language/document groups and 14,365 planned
+outputs. Live handles: sales 97349, combined 39288, return 32650; last counts
+146/1054, 119/1088 and 125/731 in English. Full groups are still unverified;
+poll those handles and inspect logs before any restart. No backend/admin/business
+record changes. Full goal stays active. See report for evidence and limitations.
+
+29 September full English/QR continuation: same full workers remain live
+(97349 sales, 39288 combined, 32650 return). Full English groups pass 2,873
+outputs and 2,535 aliases. Sales has 17 inactive consumer-title cases, covered
+by separate active consumer tests: all five languages pass 170 outputs/150
+aliases, unchanged decimal amounts and 170 decoded original dated QR inputs.
+Eight checker tests pass; date-witness punctuation mismatch fixed. Found/reproduced
+real QR timestamp fabrication for missing/unparseable dates. Helper now omits
+that QR; six PDF themes preserve the result instead of substituting a payment
+QR under its caption. Six helper/identity tests and 46 negative-date PDF/thermal
+outputs pass (active synthetic payment gateway included), with 30 aliases.
+No analyzer errors/warnings; six matrix infos. Hot reload and diff check pass.
+No backend/admin/business record changes. Other language full sweeps continue;
+source/data and physical/visual limits remain. Full goal stays active.
+
+29 September access/source continuation: the supplied VM service on port 58638
+connects successfully and Marionette reads the Orders List; Chrome admin access
+works, branch integrate/b2b-plus-gokul-dev. Existing full workers remain live.
+Arabic Return Bill joins all three English groups: 3,604 fully audited outputs,
+zero checked failures. Eleven full groups remain pending; generated outputs are
+not passes. Added a progress summarizer using completed audit scope and source
+hashes. Current five records match the previous capture across all properties.
+The complete API response has 23 records and predefined shared options, with no
+alternate marked English source. Read-only Bill 1102 admin inspection confirms
+six editable populated Arabic bank captions, while the corresponding visible
+API options have null values. This establishes a source-response discrepancy,
+not its server cause. Evidence saved in admin_bank_source_comparison.json.
+No backend edits or admin saves this continuation. Full goal remains active.
+
+Arabic sales subsequently finishes 1,054 outputs/930 aliases, zero failures.
+Initial 18 extra missing witnesses were a checker issue: whitespace removal
+joined caption suffixes to VAT numbers and saved amounts. Parser preserves the
+boundary; nine tests pass. Corrected full Arabic sales audit leaves only 17
+inactive consumer titles covered by separate active B2C fixtures. Recheck the
+earlier four completed groups with the corrected checker: live session 60670.
+Full render workers remain 97349/39288/32650. The summarizer now requires the
+current checker hash and no uncovered visibility checks before counting verified
+groups. No print-code change for this correction; full goal remains active.
+
+29 September arithmetic continuation: session 60670 finished rechecking the four
+earlier full groups with the corrected marker parser. Together with Arabic sales,
+all five completed groups pass 4,658 outputs and 4,110 aliases. Three original
+full workers remain live; ten groups unfinished. Added an independent painted
+baseline amount-pair checker: 117 currently available baselines, zero failures,
+seven groups without any baseline yet. Checks sales net/MRP/saved/tax/subtotal,
+discount/counts/balances, allocated return summary/refund amounts and combined
+40-21=19. Five negative amount parser tests pass. Return summary labels are
+checked separately from item subtotal/total columns. This partial scope does not
+replace the full sweeps, PDF financial checks or unavailable real allocations.
+No production/backend/admin/business-record edits. Full goal remains active.
+
+29 September PDF/control financial continuation: all 90 baseline PDFs pass
+1,020 positioned amount pairs in all five language cases; combined refund/final
+40/21/19 rows included. Six negative/position tests pass. Extended thermal checks
+to enabled financial rows under single-switch variants: 7,336 available receipts,
+zero amount-pair failures, partial scope of 14,365 planned. Report records all
+incomplete groups. Matching full 4,980-PDF amount-preservation audit is live in
+session 95954; poll it, do not restart on observation timeout. Thermal full
+English and Arabic groups plus both-filled Return now pass 6,477 outputs/5,715
+aliases. Original three render workers still live; eight full groups pending.
+No production/backend/admin/business-record changes. Full goal remains active.
+
+29 September item-column continuation: all 90 PDF baselines pass 1,740 item
+values under their own positioned column headings, including quantities, MRP,
+unit rates, tax/line totals, allocated return data and exact HSN leading zeros.
+Six parser/position tests pass. English multiline headings required column-local
+fragment reconstruction; no printed data defect found. Evidence in the PDF item
+column audit/log. Cleared-English sales PDF spot check has Arabic captions and
+unchanged English business values; no built-in English table captions. Bank
+text is null before client parsing; no alternate source recovered.
+Both-filled sales full thermal finishes: eight full groups now pass 7,531
+outputs/6,645 aliases. Seven full groups still pending in original live workers;
+PDF control amount audit remains live session 95954. No production/backend/admin/
+business-record changes. Full goal remains active.
+
+29 September, 02:05 UTC: found and fixed thermal showParticulars name leakage in Standard/Premium/Premium2 (serial numbers and values preserved); hot reload succeeded. Bilingual pilot: 51 outputs / 816 item checks / 17 unchanged baselines. Six thermal item-column regression tests pass. All-case sales/combined repair worker 95396 is live; English sales first group: 34 receipts / 578 item checks / zero failures. PDF item baselines expanded to units: 90 PDFs / 1800 checks / zero failures. PDF full financial first run had two parallel-panel checker mispairings; corrected seven-test parser and rerun63208 active. Original thermal caption/geometry groups10/15 complete (9350 outputs), not yet body-name certified; original workers97349/39288/32650 remain active. Analysis:47 infos, no errors/warnings. Backend unchanged. Final matrix and source completeness still pending.
+
+29 September, 02:12 UTC: all Return Bill thermal cases complete:3655 outputs / 78540 independent item checks / zero financial pair failures / no pending groups. Return worker32650 terminal0. Thermal regression suite28 tests pass. Original caption/geometry matrix12/15 groups complete (11135 outputs); sales table_en and combined empty_en/table_en remain. Particulars repairs5/10 groups pass:170 outputs /3298 item checks /zero failures; originals preserved and verified replacements selected by matching snapshot hash. PDF financial rerun63208 and repair worker95396 remain active. Remaining full workers97349/39288 remain active. Reports retain selected trace provenance. Not complete overall; API source omissions unchanged.
+
+29 September expanded item continuation: all340 isolated particulars repairs pass6800 item checks, financial preservation and aliases; original baseline comparisons still pending for3 groups. Repair worker95396 terminal0. Full available thermal item audit68532 terminal0:12227 receipts /236738 item values /zero failures /3 incomplete groups. Full thermal financial worker98135 live. Hidden-name PDF pilot42092 terminal0:120 PDFs /2460 item values /zero failures. PDF baseline remains90/1800/zero. All15 PDF parser tests pass. Full PDF item audit64931 and full PDF financial63208 live. Original thermal workers97349/39288 live. Overall goal remains incomplete; source omissions unchanged and backend prohibited.
+
+29 September 02:36 UTC: thermal amount worker98135 terminal0:12380 receipts,zero amount-pair failures,3 incomplete groups. Original thermal renders13196/14365, finalized captions12/15. PDF financial63208 terminal1:1701 parser regressions from strict vertical priority; saved diagnostic report. Inspected totals correct. Corrected ownership/digit/font pairing has12 amount tests passing (20 PDF tests total), revalidates90 PDFs/1020 pairs and60 QR-off PDFs/780 pairs withzero failures. New full financial90385 live; full PDF item64931 still live. Do not poll63208/98135 again. No print/backend/admin changes for parser corrections. Overall pending.
+
+29 September 02:42 UTC: Sales thermal full scope complete5270 outputs/83130 item checks/zero financial failures/no pendinggroups. Sales workers97349,39403,93203 terminal0. Return thermal3655 complete; combined Sales+Return-only8925 fulloutputs/161670 item checks. Original full caption matrix14/15 groups/13277 outputs; onlycombined table_en worker39288 remains (134/1088 generated). Repair audit340/6800/zero failures; onlyfinalcombined baseline comparison pending,9 groups selectable. Active PDF item64931 and financial90385. All other namedpartial/repair workers terminal; do not repoll. Goalnotcomplete:remaining combined/PDF sweeps and current API source omissions.
+
+29 September full PDF closure:4980 unique switch variants /96780 item values /57360 financial pairs /zero failures. Financial90385 terminal0. Original item64931 terminal1 only22 Classic Return headings31/41 parser omissions; corrected split-slash geometry,7 Arabic position tests, full Return1260/27060/zero (16513 terminal0). Full provenance aggregate combines unchanged3720 prior sales/combined positives plus all1260 Return recheck, binds selectedPDF hashes and exact source keys. Fresh all23 API records and five configs unchanged; fresh Chrome UI confirms bankAR37–42 stillfilled whileAPIvalue/default null. SourceBank discrepancy persists beforeclient. Originalthermal14192/14365 finalized14/15; only39288 live. Finalthermalmath andlast baselinecomparison pending. No backend or admin edits.
+# Final rendered matrix closure — 29 September 2026, 03:09 UTC
+
+All workers are terminal. All 4,980 PDF switch variants pass (96,780 item values;
+57,360 financial pairs), and all 14,365 thermal variants pass (279,820 item values;
+165,410 financial checks), with zero final failures or incomplete groups.
+The 340 description-hiding repair outputs pass with 170 unchanged baselines.
+All 61 helper tests pass. Final evidence and report hashes are in
+`build/receipt_live_audit/2026-09-29_final_verification_status.json`; the concise
+result is `future/print-future/receipt-verification-final-2026-09-29.md`. All five language
+cases and every registered PDF/thermal theme are covered. Full source-field
+verification remains blocked by the documented API omissions and unavailable
+real return allocations/metadata. Backend code remains untouched.

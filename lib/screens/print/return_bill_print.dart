@@ -17,6 +17,7 @@ import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/screens/print/return_bill_print_thermal.dart';
 import 'package:pos_machine/screens/print/return_bill_print_standard.dart';
 import 'package:pos_machine/screens/print/receipt_customer_segment.dart';
+import 'package:pos_machine/screens/print/receipt_document_config_resolver.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/services/printer_permission_service.dart';
 import 'package:pos_machine/services/print_output_settings.dart';
@@ -372,8 +373,7 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
           "Loading Return Bill document configurations from provider...");
 
       _returnBillDocumentConfig =
-          docConfigProvider.getDocumentConfig("Credit Note") ??
-              docConfigProvider.getDocumentConfig("Return Bill");
+          resolveReturnDocumentConfig(lookup: docConfigProvider.getDocumentConfig);
 
       if (_returnBillDocumentConfig == null) {
         debugPrint(
@@ -413,8 +413,7 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
       debugPrint(
           "Loading 'Credit Note'/'Return Bill' configuration from API...");
       _returnBillDocumentConfig =
-          docConfigProvider.getDocumentConfig("Credit Note") ??
-              docConfigProvider.getDocumentConfig("Return Bill");
+          resolveReturnDocumentConfig(lookup: docConfigProvider.getDocumentConfig);
 
       if (_returnBillDocumentConfig != null) {
         debugPrint(

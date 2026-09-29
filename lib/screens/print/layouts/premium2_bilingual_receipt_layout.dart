@@ -1309,6 +1309,11 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
       warrantyEnabled = item.warrantyEnabled == true;
     }
 
+    if (displayConfig?['showParticulars']?.visible != true) {
+      productName = '';
+      productNameArabic = '';
+    }
+
     String slNumber = (index + 1).toString();
 
     if (isLtrLayout) {
@@ -2156,6 +2161,18 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
     final showUnitPrice = params.isVisible('showUnitPrice');
     final showHsn = params.isVisible('showHsnCode');
     final showTaxRate = params.isVisible('showTaxRateColumn');
+    final showTaxAmount = params.isVisible('showTaxAmountColumn');
+    final showTaxableValue = params.isVisible('showTaxableColumn');
+    final showReturnSubtotal = params.isReturnOnly && params.isVisible('showSubTotal');
+    final returnSubtotalLabel = params.labelFor('showSubTotal',
+        englishFallback: 'Sub Total', arabicFallback: 'المجموع الفرعي',
+        resolvedArabic: retLabels?.text('sub_total_header'), inlineBilingual: true);
+    final taxAmountLabel = params.labelFor('showTaxAmountColumn',
+        englishFallback: 'Tax Amount', arabicFallback: 'مبلغ الضريبة',
+        resolvedArabic: retLabels?.text('tax_column'), inlineBilingual: true);
+    final taxableValueLabel = params.labelFor('showTaxableColumn',
+        englishFallback: 'Taxable Value', arabicFallback: 'القيمة الخاضعة للضريبة',
+        resolvedArabic: retLabels?.text('taxable_value'), inlineBilingual: true);
     final hsnLabel = params.labelFor('showHsnCode', englishFallback: 'HSN',
         arabicFallback: 'رمز الصنف', resolvedArabic: retLabels?.text('hsn'), inlineBilingual: true);
     final taxRateLabel = params.labelFor('showTaxRateColumn', englishFallback: 'Tax Rate',
@@ -2172,6 +2189,9 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
       if (showMrp) 'mrp': 0.15,
       if (showHsn) 'hsn': 0.15,
       if (showTaxRate) 'taxRate': 0.15,
+      if (showTaxAmount) 'taxAmount': 0.15,
+      if (showTaxableValue) 'taxableValue': 0.15,
+      if (showReturnSubtotal) 'returnSubtotal': 0.15,
       if (showUnitPrice) 'unitPrice': 0.15,
       if (showQty) 'qty': 0.12,
       if (showRate) 'rate': 0.15,
@@ -2183,276 +2203,304 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
         : baseWeights;
 
     // Table header
-    if (showSl ||
-        showParticulars ||
-        showMrp ||
-        showHsn ||
-        showTaxRate ||
-        showUnitPrice ||
-        showQty ||
-        showRate ||
-        showTotal) {
-      List<ReceiptTableColumn> headerCols = [];
-      if (isLtrLayout && showSl) {
-        headerCols.add(ReceiptTableColumn(slLabel,
-            weight: weights['sl'] ?? 0,
-            align: TextAlign.left,
-            isBold: true,
-            scale: scale));
-      }
-      if (isLtrLayout && showParticulars) {
-        headerCols.add(ReceiptTableColumn(particularsLabel,
-            weight: weights['particulars'] ?? 0,
-            align: TextAlign.left,
-            isBold: true,
-            scale: scale));
-      }
-      if (isLtrLayout && showMrp) {
-        headerCols.add(ReceiptTableColumn(mrpLabel,
-            weight: weights['mrp'] ?? 0,
-            align: TextAlign.center,
-            isBold: true,
-            scale: scale));
-      }
-      if (isLtrLayout && showHsn) {
-        headerCols.add(ReceiptTableColumn(hsnLabel,
-            weight: weights['hsn'] ?? 0,
-            align: TextAlign.center,
-            isBold: true,
-            scale: scale));
-      }
-      if (isLtrLayout && showTaxRate) {
-        headerCols.add(ReceiptTableColumn(taxRateLabel,
-            weight: weights['taxRate'] ?? 0,
-            align: TextAlign.center,
-            isBold: true,
-            scale: scale));
-      }
-      if (isLtrLayout && showUnitPrice) {
-        headerCols.add(ReceiptTableColumn(unitPriceLabel,
-            weight: weights['unitPrice'] ?? 0,
-            align: TextAlign.center,
-            isBold: true,
-            scale: scale));
-      }
-      if (isLtrLayout && showQty) {
-        headerCols.add(ReceiptTableColumn(qtyLabel,
-            weight: weights['qty'] ?? 0,
-            align: TextAlign.center,
-            isBold: true,
-            scale: scale));
-      }
-      if (isLtrLayout && showRate) {
-        headerCols.add(ReceiptTableColumn(rateLabel,
-            weight: weights['rate'] ?? 0,
-            align: TextAlign.center,
-            isBold: true,
-            scale: scale));
-      }
-      if (isLtrLayout && showTotal) {
-        headerCols.add(ReceiptTableColumn(totalLabel,
-            weight: weights['total'] ?? 0,
-            align: TextAlign.right,
-            isBold: true,
-            scale: scale));
-      }
-      if (!isLtrLayout) {
-        if (showTotal) {
+    if (!appendDenseReturnItemRows(rows, params, scale: scale, gap: _itemGap)) {
+      if (showSl ||
+          showParticulars ||
+          showMrp ||
+          showHsn ||
+          showTaxRate ||
+          showTaxAmount ||
+          showTaxableValue ||
+          showReturnSubtotal ||
+          showUnitPrice ||
+          showQty ||
+          showRate ||
+          showTotal) {
+        List<ReceiptTableColumn> headerCols = [];
+        if (isLtrLayout && showSl) {
+          headerCols.add(ReceiptTableColumn(slLabel,
+              weight: weights['sl'] ?? 0,
+              align: TextAlign.left,
+              isBold: true,
+              scale: scale));
+        }
+        if (isLtrLayout && showParticulars) {
+          headerCols.add(ReceiptTableColumn(particularsLabel,
+              weight: weights['particulars'] ?? 0,
+              align: TextAlign.left,
+              isBold: true,
+              scale: scale));
+        }
+        if (isLtrLayout && showMrp) {
+          headerCols.add(ReceiptTableColumn(mrpLabel,
+              weight: weights['mrp'] ?? 0,
+              align: TextAlign.center,
+              isBold: true,
+              scale: scale));
+        }
+        if (isLtrLayout && showHsn) {
+          headerCols.add(ReceiptTableColumn(hsnLabel,
+              weight: weights['hsn'] ?? 0,
+              align: TextAlign.center,
+              isBold: true,
+              scale: scale));
+        }
+        if (isLtrLayout && showTaxRate) {
+          headerCols.add(ReceiptTableColumn(taxRateLabel,
+              weight: weights['taxRate'] ?? 0,
+              align: TextAlign.center,
+              isBold: true,
+              scale: scale));
+        }
+        if (isLtrLayout && showUnitPrice) {
+          headerCols.add(ReceiptTableColumn(unitPriceLabel,
+              weight: weights['unitPrice'] ?? 0,
+              align: TextAlign.center,
+              isBold: true,
+              scale: scale));
+        }
+        if (isLtrLayout && showQty) {
+          headerCols.add(ReceiptTableColumn(qtyLabel,
+              weight: weights['qty'] ?? 0,
+              align: TextAlign.center,
+              isBold: true,
+              scale: scale));
+        }
+        if (isLtrLayout && showRate) {
+          headerCols.add(ReceiptTableColumn(rateLabel,
+              weight: weights['rate'] ?? 0,
+              align: TextAlign.center,
+              isBold: true,
+              scale: scale));
+        }
+        if (isLtrLayout && showTotal) {
           headerCols.add(ReceiptTableColumn(totalLabel,
               weight: weights['total'] ?? 0,
               align: TextAlign.right,
               isBold: true,
               scale: scale));
         }
-        if (showRate) {
-          headerCols.add(ReceiptTableColumn(rateLabel,
-              weight: weights['rate'] ?? 0,
-              align: TextAlign.right,
-              isBold: true,
-              scale: scale));
+        if (!isLtrLayout) {
+          if (showTotal) {
+            headerCols.add(ReceiptTableColumn(totalLabel,
+                weight: weights['total'] ?? 0,
+                align: TextAlign.right,
+                isBold: true,
+                scale: scale));
+          }
+          if (showRate) {
+            headerCols.add(ReceiptTableColumn(rateLabel,
+                weight: weights['rate'] ?? 0,
+                align: TextAlign.right,
+                isBold: true,
+                scale: scale));
+          }
+          if (showQty) {
+            headerCols.add(ReceiptTableColumn(qtyLabel,
+                weight: weights['qty'] ?? 0,
+                align: TextAlign.right,
+                isBold: true,
+                scale: scale));
+          }
+          if (showUnitPrice) {
+            headerCols.add(ReceiptTableColumn(unitPriceLabel,
+                weight: weights['unitPrice'] ?? 0,
+                align: TextAlign.right,
+                isBold: true,
+                scale: scale));
+          }
+          if (showTaxRate) {
+            headerCols.add(ReceiptTableColumn(taxRateLabel,
+                weight: weights['taxRate'] ?? 0,
+                align: TextAlign.right,
+                isBold: true,
+                scale: scale));
+          }
+          if (showHsn) {
+            headerCols.add(ReceiptTableColumn(hsnLabel,
+                weight: weights['hsn'] ?? 0,
+                align: TextAlign.right,
+                isBold: true,
+                scale: scale));
+          }
+          if (showMrp) {
+            headerCols.add(ReceiptTableColumn(mrpLabel,
+                weight: weights['mrp'] ?? 0,
+                align: TextAlign.right,
+                isBold: true,
+                scale: scale));
+          }
+          if (showParticulars) {
+            headerCols.add(ReceiptTableColumn(particularsLabel,
+                weight: weights['particulars'] ?? 0,
+                align: TextAlign.right,
+                isBold: true,
+                scale: scale));
+          }
+          if (showSl) {
+            headerCols.add(ReceiptTableColumn(slLabel,
+                weight: weights['sl'] ?? 0,
+                align: TextAlign.right,
+                isBold: true,
+                scale: scale));
+          }
         }
-        if (showQty) {
-          headerCols.add(ReceiptTableColumn(qtyLabel,
-              weight: weights['qty'] ?? 0,
-              align: TextAlign.right,
-              isBold: true,
-              scale: scale));
+        for (final column in [
+          (showTaxAmount, 'taxAmount', taxAmountLabel),
+          (showTaxableValue, 'taxableValue', taxableValueLabel),
+          (showReturnSubtotal, 'returnSubtotal', returnSubtotalLabel),
+        ]) {
+          if (column.$1) {
+            headerCols.add(ReceiptTableColumn(column.$3,
+                weight: weights[column.$2] ?? 0,
+                align: TextAlign.right, isBold: true, scale: scale));
+          }
         }
-        if (showUnitPrice) {
-          headerCols.add(ReceiptTableColumn(unitPriceLabel,
-              weight: weights['unitPrice'] ?? 0,
-              align: TextAlign.right,
-              isBold: true,
-              scale: scale));
+        rows.add(MultiLineReceiptTableRow(headerCols));
+        rows.add(ThinDividerRow());
+      }
+
+      // Return items
+      for (var i = 0; i < orderReturns.returnItems!.length; i++) {
+        final returnItem = orderReturns.returnItems![i];
+        final num itemQty = returnItem.quantity ?? 0;
+        final String productName = params.itemNameLines(returnItem).join(' ');
+
+        final (itemRate, itemMrp) = params.returnItemRate(returnItem);
+        final double itemTotal = itemQty * itemRate;
+        // Product name row
+        if (showParticulars || showSl) {
+          final String nameText = ReceiptSections.returnItemHeading(
+              name: productName, number: i + 1,
+              showSerial: showSl, showParticulars: showParticulars);
+          rows.add(ReceiptTableRow([
+            ReceiptTableColumn(nameText,
+                weight: 1.0,
+                align: isLtrLayout ? TextAlign.left : TextAlign.right,
+                scale: scale,
+                textDirection:
+                    _hasArabic(nameText) ? TextDirection.rtl : TextDirection.ltr),
+          ]));
         }
-        if (showTaxRate) {
-          headerCols.add(ReceiptTableColumn(taxRateLabel,
-              weight: weights['taxRate'] ?? 0,
-              align: TextAlign.right,
-              isBold: true,
-              scale: scale));
+
+        // Price details row
+        final double detailsWeight =
+            (weights['sl'] ?? 0) + (weights['particulars'] ?? 0);
+        List<ReceiptTableColumn> priceCols = [];
+        if (isLtrLayout && detailsWeight > 0) {
+          priceCols.add(ReceiptTableColumn('', weight: detailsWeight));
         }
-        if (showHsn) {
-          headerCols.add(ReceiptTableColumn(hsnLabel,
-              weight: weights['hsn'] ?? 0,
-              align: TextAlign.right,
-              isBold: true,
-              scale: scale));
-        }
-        if (showMrp) {
-          headerCols.add(ReceiptTableColumn(mrpLabel,
+        if (isLtrLayout && showMrp) {
+          priceCols.add(ReceiptTableColumn(itemMrp.toStringAsFixed(2),
               weight: weights['mrp'] ?? 0,
-              align: TextAlign.right,
-              isBold: true,
+              align: TextAlign.center,
               scale: scale));
         }
-        if (showParticulars) {
-          headerCols.add(ReceiptTableColumn(particularsLabel,
-              weight: weights['particulars'] ?? 0,
-              align: TextAlign.right,
-              isBold: true,
-              scale: scale));
-        }
-        if (showSl) {
-          headerCols.add(ReceiptTableColumn(slLabel,
-              weight: weights['sl'] ?? 0,
-              align: TextAlign.right,
-              isBold: true,
-              scale: scale));
-        }
-      }
-      rows.add(MultiLineReceiptTableRow(headerCols));
-      rows.add(ThinDividerRow());
-    }
-
-    // Return items
-    for (var i = 0; i < orderReturns.returnItems!.length; i++) {
-      final returnItem = orderReturns.returnItems![i];
-      final num itemQty = returnItem.quantity ?? 0;
-      final String productName = params.itemNameLines(returnItem).join(' ');
-
-      final (itemRate, itemMrp) = params.returnItemRate(returnItem);
-      final double itemTotal = itemQty * itemRate;
-      // Product name row
-      if (showParticulars || showSl) {
-        final String nameText = ReceiptSections.returnItemHeading(
-            name: productName, number: i + 1,
-            showSerial: showSl, showParticulars: showParticulars);
-        rows.add(ReceiptTableRow([
-          ReceiptTableColumn(nameText,
-              weight: 1.0,
-              align: isLtrLayout ? TextAlign.left : TextAlign.right,
-              scale: scale,
-              textDirection:
-                  _hasArabic(nameText) ? TextDirection.rtl : TextDirection.ltr),
-        ]));
-      }
-
-      // Price details row
-      final double detailsWeight =
-          (weights['sl'] ?? 0) + (weights['particulars'] ?? 0);
-      List<ReceiptTableColumn> priceCols = [];
-      if (isLtrLayout && detailsWeight > 0) {
-        priceCols.add(ReceiptTableColumn('', weight: detailsWeight));
-      }
-      if (isLtrLayout && showMrp) {
-        priceCols.add(ReceiptTableColumn(itemMrp.toStringAsFixed(2),
-            weight: weights['mrp'] ?? 0,
-            align: TextAlign.center,
-            scale: scale));
-      }
-      if (isLtrLayout && showHsn) {
-        priceCols.add(ReceiptTableColumn(returnItem.hsnCode?.trim() ?? '',
-            weight: weights['hsn'] ?? 0,
-            align: TextAlign.right,
-            scale: scale));
-      }
-      if (isLtrLayout && showTaxRate) {
-        priceCols.add(ReceiptTableColumn(params.returnTaxRateText(returnItem),
-            weight: weights['taxRate'] ?? 0,
-            align: TextAlign.right,
-            scale: scale));
-      }
-      if (isLtrLayout && showUnitPrice) {
-        priceCols.add(ReceiptTableColumn(itemRate.toStringAsFixed(2),
-            weight: weights['unitPrice'] ?? 0,
-            align: TextAlign.right,
-            scale: scale));
-      }
-      if (isLtrLayout && showQty) {
-        priceCols.add(ReceiptTableColumn(
-            ReceiptSections.formatQuantity(itemQty.toDouble()),
-            weight: weights['qty'] ?? 0,
-            align: TextAlign.center,
-            scale: scale));
-      }
-      if (isLtrLayout && showRate) {
-        priceCols.add(ReceiptTableColumn(itemRate.toStringAsFixed(2),
-            weight: weights['rate'] ?? 0,
-            align: TextAlign.right,
-            scale: scale));
-      }
-      if (isLtrLayout && showTotal) {
-        priceCols.add(ReceiptTableColumn(itemTotal.toStringAsFixed(2),
-            weight: weights['total'] ?? 0,
-            align: TextAlign.right,
-            scale: scale));
-      }
-      if (!isLtrLayout) {
-        if (showTotal) {
-          priceCols.add(ReceiptTableColumn(itemTotal.toStringAsFixed(2),
-              weight: weights['total'] ?? 0,
-              align: TextAlign.right,
-              scale: scale));
-        }
-        if (showRate) {
-          priceCols.add(ReceiptTableColumn(itemRate.toStringAsFixed(2),
-              weight: weights['rate'] ?? 0,
-              align: TextAlign.right,
-              scale: scale));
-        }
-        if (showQty) {
-          priceCols.add(ReceiptTableColumn(
-              ReceiptSections.formatQuantity(itemQty.toDouble()),
-              weight: weights['qty'] ?? 0,
-              align: TextAlign.right,
-              scale: scale));
-        }
-        if (showUnitPrice) {
-          priceCols.add(ReceiptTableColumn(itemRate.toStringAsFixed(2),
-              weight: weights['unitPrice'] ?? 0,
-              align: TextAlign.right,
-              scale: scale));
-        }
-        if (showTaxRate) {
-          priceCols.add(ReceiptTableColumn(params.returnTaxRateText(returnItem),
-              weight: weights['taxRate'] ?? 0,
-              align: TextAlign.right,
-              scale: scale));
-        }
-        if (showHsn) {
+        if (isLtrLayout && showHsn) {
           priceCols.add(ReceiptTableColumn(returnItem.hsnCode?.trim() ?? '',
               weight: weights['hsn'] ?? 0,
               align: TextAlign.right,
               scale: scale));
         }
-        if (showMrp) {
-          priceCols.add(ReceiptTableColumn(itemMrp.toStringAsFixed(2),
-              weight: weights['mrp'] ?? 0,
+        if (isLtrLayout && showTaxRate) {
+          priceCols.add(ReceiptTableColumn(params.returnTaxRateText(returnItem),
+              weight: weights['taxRate'] ?? 0,
               align: TextAlign.right,
               scale: scale));
         }
-        if (detailsWeight > 0) {
-          priceCols.add(ReceiptTableColumn('', weight: detailsWeight));
+        if (isLtrLayout && showUnitPrice) {
+          priceCols.add(ReceiptTableColumn(itemRate.toStringAsFixed(2),
+              weight: weights['unitPrice'] ?? 0,
+              align: TextAlign.right,
+              scale: scale));
+        }
+        if (isLtrLayout && showQty) {
+          priceCols.add(ReceiptTableColumn(
+              ReceiptSections.formatQuantity(itemQty.toDouble()),
+              weight: weights['qty'] ?? 0,
+              align: TextAlign.center,
+              scale: scale));
+        }
+        if (isLtrLayout && showRate) {
+          priceCols.add(ReceiptTableColumn(itemRate.toStringAsFixed(2),
+              weight: weights['rate'] ?? 0,
+              align: TextAlign.right,
+              scale: scale));
+        }
+        if (isLtrLayout && showTotal) {
+          priceCols.add(ReceiptTableColumn(itemTotal.toStringAsFixed(2),
+              weight: weights['total'] ?? 0,
+              align: TextAlign.right,
+              scale: scale));
+        }
+        if (!isLtrLayout) {
+          if (showTotal) {
+            priceCols.add(ReceiptTableColumn(itemTotal.toStringAsFixed(2),
+                weight: weights['total'] ?? 0,
+                align: TextAlign.right,
+                scale: scale));
+          }
+          if (showRate) {
+            priceCols.add(ReceiptTableColumn(itemRate.toStringAsFixed(2),
+                weight: weights['rate'] ?? 0,
+                align: TextAlign.right,
+                scale: scale));
+          }
+          if (showQty) {
+            priceCols.add(ReceiptTableColumn(
+                ReceiptSections.formatQuantity(itemQty.toDouble()),
+                weight: weights['qty'] ?? 0,
+                align: TextAlign.right,
+                scale: scale));
+          }
+          if (showUnitPrice) {
+            priceCols.add(ReceiptTableColumn(itemRate.toStringAsFixed(2),
+                weight: weights['unitPrice'] ?? 0,
+                align: TextAlign.right,
+                scale: scale));
+          }
+          if (showTaxRate) {
+            priceCols.add(ReceiptTableColumn(params.returnTaxRateText(returnItem),
+                weight: weights['taxRate'] ?? 0,
+                align: TextAlign.right,
+                scale: scale));
+          }
+          if (showHsn) {
+            priceCols.add(ReceiptTableColumn(returnItem.hsnCode?.trim() ?? '',
+                weight: weights['hsn'] ?? 0,
+                align: TextAlign.right,
+                scale: scale));
+          }
+          if (showMrp) {
+            priceCols.add(ReceiptTableColumn(itemMrp.toStringAsFixed(2),
+                weight: weights['mrp'] ?? 0,
+                align: TextAlign.right,
+                scale: scale));
+          }
+          if (detailsWeight > 0) {
+            priceCols.add(ReceiptTableColumn('', weight: detailsWeight));
+          }
+        }
+        for (final column in [
+          (showTaxAmount, 'taxAmount', params.returnItemMoneyText(returnItem.taxAmount)),
+          (showTaxableValue, 'taxableValue', params.returnItemMoneyText(returnItem.taxableValue)),
+          (showReturnSubtotal, 'returnSubtotal', params.returnItemMoneyText(returnItem.subTotal)),
+        ]) {
+          if (column.$1) {
+            priceCols.add(ReceiptTableColumn(column.$3,
+                weight: weights[column.$2] ?? 0,
+                align: TextAlign.right, scale: scale));
+          }
+        }
+        if (priceCols.any((c) => c.text.isNotEmpty)) {
+          rows.add(MultiLineReceiptTableRow(priceCols));
+        }
+
+        if (i < orderReturns.returnItems!.length - 1) {
+          rows.add(ThinDividerRow());
         }
       }
-      if (priceCols.any((c) => c.text.isNotEmpty)) {
-        rows.add(MultiLineReceiptTableRow(priceCols));
-      }
 
-      if (i < orderReturns.returnItems!.length - 1) {
-        rows.add(ThinDividerRow());
-      }
     }
 
     rows.add(SpacingRow(_itemGap));
@@ -2483,7 +2531,8 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
         displayConfig?['showReturnNetAmount']?.visible == true;
 
     final mrpTotalRow = params.returnMrpTotalRow;
-    if (showReturnTotalAmt || showReturnNetAmt || mrpTotalRow != null) {
+    final allocationRows = params.returnAllocationTotalRows;
+    if (showReturnTotalAmt || showReturnNetAmt || mrpTotalRow != null || allocationRows.isNotEmpty) {
       final String currency = appSettings?.currency ?? 'INR';
       final String? currencySymbol =
           currency.trim().toUpperCase() == 'INR' ? '₹' : null;
@@ -2507,6 +2556,16 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
         ));
       }
 
+      for (final row in allocationRows) {
+        returnSummaryItems.add(BoxedLineItem(
+          label: row.$1,
+          value: row.$2?.toStringAsFixed(2) ?? '',
+          isBold: true,
+          scale: 1.1,
+          icon: row.$2 == null ? null : currencyIcon,
+          currencySymbol: row.$2 == null ? null : currencySymbol,
+        ));
+      }
       if (showReturnTotalAmt) {
         final bool useCreditNoteTotalAmount =
             retLabels?.creditNoteTotalAmount != null;
@@ -2569,6 +2628,7 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
       rows.add(SpacingRow(_itemGap));
       rows.add(BoxedTotalsRow(items: returnSummaryItems));
     }
+    appendReturnTaxSummaryRows(rows, params, scale: 0.85);
     final returnWords = params.returnsWordsLines(appSettings?.currency ?? 'INR');
     if (returnWords.isNotEmpty) {
       rows.add(SpacingRow(_itemGap));
@@ -2578,7 +2638,7 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
         rows.add(TextRow(line, isBold: false, scale: 0.85));
       }
     }
-    appendReturnSignatoryRows(rows, params);
+    appendReturnFooterRows(rows, params);
   }
 
   // ==================== FINAL SUMMARY SECTION (after returns) ====================

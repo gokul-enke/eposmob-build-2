@@ -103,6 +103,7 @@ class SalesReturnOrder {
   final int userId;
   final int status;
   final DateTime createdAt;
+  final bool hasCreatedAt;
   final DateTime updatedAt;
   final List<SalesReturnItem> items;
   final Order? order; // Add nested order object
@@ -114,12 +115,14 @@ class SalesReturnOrder {
     required this.userId,
     required this.status,
     required this.createdAt,
+    this.hasCreatedAt = true,
     required this.updatedAt,
     required this.items,
     this.order,
   });
 
   factory SalesReturnOrder.fromJson(Map<String, dynamic> json) {
+    final sourceCreatedAt = DateTime.tryParse(json['created_at']?.toString() ?? '');
     return SalesReturnOrder(
       id: json['id'] is int
           ? json['id']
@@ -127,16 +130,15 @@ class SalesReturnOrder {
       orderId: json['order_id'] is int
           ? json['order_id']
           : int.tryParse(json['order_id']?.toString() ?? '0') ?? 0,
-      totalAmount: json['total_amount']?.toString() ?? '0.00',
+      totalAmount: json['total_amount']?.toString() ?? '',
       userId: json['user_id'] is int
           ? json['user_id']
           : int.tryParse(json['user_id']?.toString() ?? '0') ?? 0,
       status: json['status'] is int
           ? json['status']
           : int.tryParse(json['status']?.toString() ?? '0') ?? 0,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
-          : DateTime.now(),
+      createdAt: sourceCreatedAt ?? DateTime.now(),
+      hasCreatedAt: sourceCreatedAt != null,
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])
           : DateTime.now(),
@@ -159,6 +161,10 @@ class SalesReturnItem {
   final DateTime createdAt;
   final DateTime updatedAt;
   final CartItem cartItem;
+  final String? taxAmount;
+  final String? taxableValue;
+  final String? subTotal;
+  final String? discount;
 
   SalesReturnItem({
     required this.id,
@@ -170,6 +176,10 @@ class SalesReturnItem {
     required this.createdAt,
     required this.updatedAt,
     required this.cartItem,
+    this.taxAmount,
+    this.taxableValue,
+    this.subTotal,
+    this.discount,
   });
 
   factory SalesReturnItem.fromJson(Map<String, dynamic> json) {
@@ -206,6 +216,10 @@ class SalesReturnItem {
           ? json['cart_item_id']
           : int.tryParse(json['cart_item_id']?.toString() ?? '0') ?? 0,
       price: json['price']?.toString() ?? '0.00',
+      taxAmount: json['tax_amount']?.toString(),
+      taxableValue: json['taxable_value']?.toString(),
+      subTotal: json['sub_total']?.toString(),
+      discount: json['discount']?.toString(),
       reason: json['reason']?.toString() ?? '',
       quantity: (json['quantity'] is String)
           ? num.tryParse(json['quantity']) ?? 0

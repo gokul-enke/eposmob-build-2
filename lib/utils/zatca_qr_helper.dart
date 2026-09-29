@@ -243,16 +243,16 @@ class ZatcaQrHelper {
     }
 
     final parsedTimestamp = _parseInvoiceTimestamp(invoiceDate);
-    final timestamp = parsedTimestamp ?? DateTime.now();
     if (parsedTimestamp == null) {
       debugPrint(
-          '[ZatcaQrHelper] Invalid invoice date "$invoiceDate", using current time');
+          '[ZatcaQrHelper] Transaction timestamp unavailable; skipping invoice QR');
+      return '';
     }
 
     return generateZatcaQrData(
       sellerName: sellerName,
       vatNumber: vatNumber,
-      timestamp: timestamp,
+      timestamp: parsedTimestamp,
       totalWithVat: totalAmount,
       vatAmount: vatAmount,
     );

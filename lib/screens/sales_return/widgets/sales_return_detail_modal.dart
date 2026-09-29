@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/sales_return_detail_helper.dart';
+import 'package:pos_machine/helpers/return_print_identity.dart';
 import 'package:pos_machine/models/list_sales_return.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -287,9 +288,8 @@ class _SalesReturnDetailModalState extends State<SalesReturnDetailModal> {
                           builder: (context) => ReturnBillPrintPage(
                             returnItems: returnItems,
                             returnTotalAmount: order.totalAmount,
-                            orderDate: order.createdAt.toString(),
-                            orderNumber: order.order?.orderNumber ??
-                                order.orderId.toString(),
+                            orderDate: ReturnPrintIdentity.fromTransaction(order).date,
+                            orderNumber: ReturnPrintIdentity.fromTransaction(order).number,
                             originalInvoiceNumber: order.order?.orderNumber,
                             originalInvoiceDate: order.order?.orderDate,
                             customerName: order.order?.customer?.user?.name,

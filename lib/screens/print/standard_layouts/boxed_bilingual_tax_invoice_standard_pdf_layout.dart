@@ -546,7 +546,9 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         totalAmount: params.netAmountValue,
         vatAmount: params.totalTax,
       );
-      if (zatca.isNotEmpty) return zatca;
+      // Registered invoice QR data must use its own known transaction date.
+      // A missing date cannot become an unrelated payment QR under this caption.
+      return zatca;
     }
     for (final gateway in paymentGateways) {
       if (gateway.code != 'MANUAL_PAYMENT_GATEWAY') continue;
@@ -768,19 +770,20 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   }
 
   /// `label: value` drawn as two runs so an Arabic label never reorders the
-  /// value next to it; an Arabic label sits right of its value. A long value
-  /// wraps instead of running past the edge.
+  /// value next to it; an Arabic label sits right of its value. Both runs
+  /// wrap so a long label cannot squeeze the value out of the panel.
   pw.Widget _labelValueLine(String label, String value, pw.TextStyle labelStyle,
       pw.TextStyle valueStyle) {
     final clean = ReceiptConfigurationContract.withoutTrailingColon(label);
     if (clean.isEmpty) return pdfText(value, style: valueStyle);
-    final labelText = pdfText('$clean:', style: labelStyle);
+    final labelText = pw.Flexible(child: pdfText('$clean:', style: labelStyle));
     final valueText = pw.Flexible(
       child: pdfText(value,
           style: valueStyle, textDirection: pw.TextDirection.ltr),
     );
     return pw.Row(
       mainAxisSize: pw.MainAxisSize.min,
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: pdfHasArabic(clean)
           ? [valueText, pw.SizedBox(width: 4), labelText]
           : [labelText, pw.SizedBox(width: 4), valueText],
@@ -868,7 +871,10 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     pw.TextStyle headerAr,
     pw.TextStyle bodyStyle,
   ) {
-    final columns = params.itemColumns;
+    // Tables need explicit column order on Arabic pages.
+    final columns = params.isRtl
+        ? params.itemColumns.reversed.toList()
+        : params.itemColumns;
     if (columns.isEmpty) return pw.SizedBox();
     const flex = <String, double>{
       'showSLNumber': 0.7,
@@ -976,6 +982,10 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   ) {
     final section = params.returnsSection;
     if (section == null) return const [];
+    // Tables do not inherit page direction; mirror return fields on Arabic.
+    final columns = params.isRtl
+        ? section.columns.reversed.toList()
+        : section.columns;
     double fs(double v) => isA5 ? v * 0.78 : v;
 
     final labelStyle = pw.TextStyle(
@@ -997,7 +1007,8 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         );
 
     const flex = <String, double>{
-      'showReturnSLNumber': 0.6,
+      // Configured bilingual captions need room even when all columns show.
+      'showReturnSLNumber': 1.0,
       'showReturnParticulars': 4.2,
       'showReturnMRP': 1.1,
       'showReturnQty': 0.9,
@@ -1018,6 +1029,13 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         pdfText(section.subtitle, style: labelStyle),
         pw.SizedBox(height: 4),
       ],
+      if (section.supplierRows.isNotEmpty) ...[
+        pdfText(section.supplierHeading, style: sectionHeadingStyle),
+        pw.SizedBox(height: 2),
+        for (final row in section.supplierRows)
+          _labelValueLine(row.$1, row.$2, labelStyle, valueStyle),
+        pw.SizedBox(height: 4),
+      ],
       if (section.creditNoteRows.isNotEmpty) ...[
         pdfText(section.creditNoteHeading, style: sectionHeadingStyle),
         pw.SizedBox(height: 2),
@@ -1036,26 +1054,28 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         pdfText(section.itemsHeading, style: sectionHeadingStyle),
         pw.SizedBox(height: 2),
       ],
-      if (section.columns.isNotEmpty) ...[
+      if (columns.isNotEmpty) ...[
         pw.Table(
           border: pw.TableBorder.all(width: 0.5),
           columnWidths: {
-            for (var i = 0; i < section.columns.length; i++)
-              i: pw.FlexColumnWidth(flex[section.columns[i].key] ?? 1.0),
+            for (var i = 0; i < columns.length; i++)
+              i: pw.FlexColumnWidth(flex[columns[i].key] ?? 1.0),
           },
           children: [
             pw.TableRow(repeat: true, children: [
-              for (final column in section.columns)
+              for (final column in columns)
                 cell(column.label.joined(inline: true), headerStyle),
             ]),
             for (final line in section.lines)
               pw.TableRow(children: [
-                for (final column in section.columns)
+                for (final column in columns)
                   cell(
                     line[column.key] ?? '',
                     valueStyle,
                     align: column.key == 'showReturnParticulars'
-                        ? pw.Alignment.centerLeft
+                        ? (params.isRtl
+                            ? pw.Alignment.centerRight
+                            : pw.Alignment.centerLeft)
                         : pw.Alignment.centerRight,
                   ),
               ]),
@@ -1070,12 +1090,19 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         pw.Align(
           alignment: pw.Alignment.centerRight,
           child: _labelValueLine(
-              row.$1, _formatMoney(currency, row.$2), labelStyle, valueStyle),
+              row.$1, row.$2 == null ? '' : _formatMoney(currency, row.$2!), labelStyle, valueStyle),
         ),
+      ...buildReturnTaxSummaryPdf(params: params,
+          style: valueStyle, headingStyle: labelStyle),
       if (wordsLines.isNotEmpty) ...[
         pw.SizedBox(height: 4),
         pdfText(section.wordsHeading, style: labelStyle),
         for (final line in wordsLines) pdfText(line, style: valueStyle),
+      ],
+      if (section.remarksRow != null) ...[
+        pw.SizedBox(height: 4),
+        _labelValueLine(section.remarksRow!.$1, section.remarksRow!.$2,
+            labelStyle, valueStyle),
       ],
       if (section.signatory.isNotEmpty) ...[
         pw.SizedBox(height: 20),

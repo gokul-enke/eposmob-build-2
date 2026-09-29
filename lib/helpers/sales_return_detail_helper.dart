@@ -84,6 +84,12 @@ List<OrderReturnItem> buildTransactionReturnPrintItems(
       cartItemId: summaryItem.cartItemId,
       hsnCode: summaryItem.cartItem.product?.hsnCode,
       taxRate: summaryItem.cartItem.hasTaxRate ? summaryItem.cartItem.taxRate : null,
+      // Only allocations on the return record belong to the refund. Nested
+      // cart tax can describe the entire original sold quantity.
+      taxAmount: summaryItem.taxAmount,
+      taxableValue: summaryItem.taxableValue,
+      subTotal: summaryItem.subTotal,
+      discount: summaryItem.discount,
       unitPrice: salesReturnItemUnitPrice(summaryItem, loadedItems),
       mrp: summaryItem.cartItem.mrp ?? summaryItem.cartItem.product?.mrp,
       id: summaryItem.id,

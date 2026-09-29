@@ -1,3 +1,4 @@
+import 'package:pos_machine/helpers/return_print_amounts.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/screens/print/print_unit_helper.dart';
@@ -88,6 +89,9 @@ class ReceiptReturnsSection {
   const ReceiptReturnsSection({
     this.subtitle = '',
     this.signatory = '',
+    this.supplierHeading = '',
+    this.supplierRows = const [],
+    this.remarksRow,
     required this.heading,
     required this.creditNoteHeading,
     required this.creditNoteRows,
@@ -106,6 +110,9 @@ class ReceiptReturnsSection {
   final String heading;
   final String subtitle;
   final String signatory;
+  final String supplierHeading;
+  final List<(String, String)> supplierRows;
+  final (String, String)? remarksRow;
   final String creditNoteHeading;
   final List<(String, String)> creditNoteRows;
   final String customerHeading;
@@ -114,9 +121,32 @@ class ReceiptReturnsSection {
   final List<ReceiptItemColumn> columns;
   final List<Map<String, String>> lines;
   final (String, String)? countRow;
-  final List<(String, double)> totalRows;
+  final List<(String, double?)> totalRows;
   final String wordsHeading;
   final List<String> wordsLines;
+}
+
+/// Explicit returned-line tax allocations grouped by their supplied rate.
+class ReceiptReturnTaxSummary {
+  const ReceiptReturnTaxSummary({required this.heading, required this.headers,
+    required this.rows, required this.totalRow});
+
+  final String heading;
+  final List<String> headers;
+  final List<(String, String, String)> rows;
+  final (String, String, String) totalRow;
+}
+
+double? _returnAllocationSum(Iterable<OrderReturnItem> items,
+    String? Function(OrderReturnItem) value) {
+  if (items.isEmpty) return null;
+  var total = 0.0;
+  for (final item in items) {
+    final parsed = double.tryParse(value(item)?.replaceAll(',', '').trim() ?? '');
+    if (parsed == null || !parsed.isFinite) return null;
+    total += parsed;
+  }
+  return total.isFinite ? total : null;
 }
 
 /// Section data shared by the thermal receipt and every A4/A5 PDF template:
@@ -471,58 +501,8 @@ extension ReceiptSections on ReceiptLayoutParams {
 
   /// Preserve a return's explicit unit price (including zero), then use its
   /// original cart line. Only legacy responses without either use an average.
-  (double, double) returnItemRate(OrderReturnItem item) {
-    final explicitRate =
-        double.tryParse(item.unitPrice?.replaceAll(',', '') ?? '');
-    if (explicitRate != null) {
-      return (
-        explicitRate,
-        double.tryParse(item.mrp?.replaceAll(',', '') ?? '') ?? explicitRate
-      );
-    }
-    for (final cartItem in cartItems) {
-      var name = '';
-      double? rate;
-      var mrp = 0.0;
-      int? cartId;
-      int? variantId;
-      if (cartItem is Map) {
-        cartId = int.tryParse(cartItem['id']?.toString() ?? '');
-        variantId =
-            int.tryParse(cartItem['product_variant_id']?.toString() ?? '');
-        name = (cartItem['product_name'] ?? cartItem['productName'] ?? '')
-            .toString();
-        rate = double.tryParse(
-            (cartItem['unit_price'] ?? cartItem['unitPrice'])?.toString() ??
-                '');
-        mrp = double.tryParse(cartItem['mrp']?.toString() ?? '0') ?? 0.0;
-      } else {
-        try {
-          cartId = int.tryParse(cartItem.id?.toString() ?? '');
-          variantId = int.tryParse(cartItem.productVariantId?.toString() ?? '');
-          name = cartItem.productName?.toString() ?? '';
-          rate = double.tryParse(cartItem.unitPrice?.toString() ?? '');
-          mrp = double.tryParse(cartItem.mrp?.toString() ?? '0') ?? 0.0;
-        } catch (_) {}
-      }
-      final matches = item.cartItemId != null && cartId != null
-          ? item.cartItemId == cartId
-          : name == item.productName &&
-              (item.productVariantId == null ||
-                  item.productVariantId == variantId);
-      if (matches && rate != null) return (rate, mrp);
-    }
-    final returns = orderReturns;
-    final total = double.tryParse(
-            (returns?.returnTotalAmount ?? '0').replaceAll(',', '')) ??
-        0.0;
-    num quantity = 0;
-    for (final returned in returns?.returnItems ?? const <OrderReturnItem>[]) {
-      quantity += returned.quantity ?? 0;
-    }
-    final average = quantity > 0 ? total / quantity : 0.0;
-    return (average, average);
-  }
+  (double, double) returnItemRate(OrderReturnItem item) =>
+      ReturnPrintAmounts.itemRate(item, cartItems, orderReturns);
 
   /// The returns block, or null when the order has no returned items.
   ReceiptReturnsSection? get returnsSection {
@@ -556,6 +536,36 @@ extension ReceiptSections on ReceiptLayoutParams {
             arabicFallback: arabic,
             resolvedArabic: resolved,
             inlineBilingual: true));
+
+    final supplierRows = <(String, String)>[];
+    if (isReturnOnly &&
+        ReceiptConfigurationContract.isVisible(retDc, 'showSupplierDetails')) {
+      final company = zatcaCompanyName?.trim() ?? '';
+      final address = storeLocation?.trim() ?? '';
+      final taxId = zatcaVatNumber?.trim() ?? '';
+      if (company.isNotEmpty) {
+        supplierRows.add((
+          retLabel('showSupplierCompanyName', retLabels?.text('company_name'),
+              'Company Name', 'اسم الشركة'),
+          company,
+        ));
+      }
+      if (address.isNotEmpty) {
+        supplierRows.add((
+          retLabel('showSupplierAddress', retLabels?.text('address'),
+              'Address', 'العنوان'),
+          address,
+        ));
+      }
+      if (ReceiptConfigurationContract.isVisible(retDc, 'showSupplierGstin') &&
+          taxId.isNotEmpty) {
+        supplierRows.add((
+          retLabel('showSupplierGstin', retLabels?.text('gstin'),
+              'GSTIN', 'الرقم الضريبي'),
+          taxId,
+        ));
+      }
+    }
 
     final creditNoteRows = <(String, String)>[];
     if (hasCreditNote) {
@@ -612,9 +622,8 @@ extension ReceiptSections on ReceiptLayoutParams {
 
     final customerRows = <(String, String)>[];
     final name = customerName?.trim() ?? '';
-    final showCustomer = hasCreditNote
-        ? isVisible('showCustomerNameAndPhone')
-        : isVisible('showCustomerName');
+    final showCustomer = isVisible('showCustomerNameAndPhone') &&
+        (hasCreditNote || isVisible('showCustomerName'));
     final returnPhone = hasCreditNote
         ? customerPhoneForVisibility(showCustomer)
         : customerPhoneText;
@@ -667,6 +676,10 @@ extension ReceiptSections on ReceiptLayoutParams {
       ('showReturnMRP', labels?.returnMrp, 'MRP', 'MRP'),
       ('showHsnCode', retLabels?.text('hsn'), 'HSN', 'رمز الصنف'),
       ('showTaxRateColumn', retLabels?.text('tax_rate_column'), 'Tax Rate', 'نسبة الضريبة'),
+      ('showTaxAmountColumn', retLabels?.text('tax_column'), 'Tax Amount', 'مبلغ الضريبة'),
+      ('showTaxableColumn', retLabels?.text('taxable_value'), 'Taxable Value', 'القيمة الخاضعة للضريبة'),
+      if (isReturnOnly)
+        ('showSubTotal', retLabels?.text('sub_total_header'), 'Sub Total', 'المجموع الفرعي'),
       ('showUnitPrice', retLabels?.text('unit_price'), 'Unit Price', 'سعر الوحدة'),
       ('showReturnQty', labels?.returnQty, 'QTY', 'الكمية'),
       ('showReturnRate', labels?.returnRate, 'RATE', 'السعر'),
@@ -708,6 +721,9 @@ extension ReceiptSections on ReceiptLayoutParams {
         'showReturnMRP': mrp.toStringAsFixed(2),
         'showHsnCode': item.hsnCode?.trim() ?? '',
         'showTaxRateColumn': returnTaxRateText(item),
+        'showTaxAmountColumn': returnItemMoneyText(item.taxAmount),
+        'showTaxableColumn': returnItemMoneyText(item.taxableValue),
+        'showSubTotal': returnItemMoneyText(item.subTotal),
         'showUnitPrice': rate.toStringAsFixed(2),
         'showReturnQty': formatQuantity(quantity),
         'showReturnRate': rate.toStringAsFixed(2),
@@ -737,8 +753,9 @@ extension ReceiptSections on ReceiptLayoutParams {
 
     final returnTotal = returnTotalValue;
     final mrpTotal = returnMrpTotalRow;
-    final totalRows = <(String, double)>[
+    final totalRows = <(String, double?)>[
       if (mrpTotal != null) mrpTotal,
+      ...returnAllocationTotalRows,
       if (isVisible('showReturnTotalAmount'))
         (
           retLabels?.creditNoteTotalAmount != null
@@ -763,6 +780,19 @@ extension ReceiptSections on ReceiptLayoutParams {
     ];
 
     return ReceiptReturnsSection(
+      remarksRow: isReturnOnly &&
+              ReceiptConfigurationContract.isVisible(retDc, 'showCreditNoteRemarks')
+          ? (
+              retLabel('showCreditNoteRemarks', retLabels?.remarks,
+                  'Remarks', 'ملاحظات'),
+              documentText(retLabels?.text('remarks_text')),
+            )
+          : null,
+      supplierHeading: supplierRows.isEmpty
+          ? ''
+          : retLabel('showSupplierDetails', retLabels?.text('supplier_heading'),
+              'SUPPLIER DETAILS', 'بيانات المورد'),
+      supplierRows: supplierRows,
       subtitle: ReceiptConfigurationContract.isVisible(retDc, 'showGstSubtitle')
           ? retLabel('showGstSubtitle', retLabels?.text('subtitle'),
               'Credit Note', 'إشعار دائن')
@@ -818,11 +848,90 @@ extension ReceiptSections on ReceiptLayoutParams {
         : '${formatQuantity(rate)}%';
   }
 
+  /// Missing return allocations must stay unknown, rather than reuse sale tax
+  /// or fabricate zero. Explicit zero and signed finite amounts are retained.
+  String returnItemMoneyText(String? source) {
+    final amount = double.tryParse(source?.replaceAll(',', '').trim() ?? '');
+    return amount == null || !amount.isFinite ? '' : amount.toStringAsFixed(2);
+  }
+
+  /// Return-only summary controls never use the original sale's allocations.
+  /// All lines must provide a finite allocation before its sum is known.
+  /// Enabled rows remain visible with a blank amount when data is unknown.
+  List<(String, double?)> get returnAllocationTotalRows {
+    if (!isReturnOnly) return const [];
+    final items = orderReturns?.returnItems ?? const <OrderReturnItem>[];
+    final definitions = <(String, String, String, String,
+        String? Function(OrderReturnItem))>[
+      ('showSubTotal', 'sub_total', 'Sub Total', 'المجموع الفرعي',
+          (item) => item.subTotal),
+      ('showDiscount', 'discount', 'Discount', 'الخصم',
+          (item) => item.discount),
+      ('showGstBreakdown', 'taxable_total', 'Taxable Total',
+          'الإجمالي الخاضع للضريبة', (item) => item.taxableValue),
+      ('showTaxRow', 'tax_row', 'Total Tax', 'إجمالي الضريبة',
+          (item) => item.taxAmount),
+    ];
+    return [
+      for (final definition in definitions)
+        if (isVisible(definition.$1))
+          (
+            ReceiptConfigurationContract.withoutTrailingColon(labelFor(
+              definition.$1,
+              englishFallback: definition.$3,
+              arabicFallback: definition.$4,
+              resolvedArabic: returnBillResolvedLabels?.text(definition.$2),
+              inlineBilingual: true,
+            )),
+            _returnAllocationSum(items, definition.$5),
+          ),
+    ];
+  }
+
+  /// The tax-summary control is independent of item columns and total rows.
+  /// Unknown rates/allocations stay blank, including in the aggregate row.
+  ReceiptReturnTaxSummary? get returnTaxSummary {
+    if (!isReturnOnly || !isVisible('showTaxSummary')) return null;
+    final items = orderReturns?.returnItems ?? const <OrderReturnItem>[];
+    if (items.isEmpty) return null;
+    final labels = returnBillResolvedLabels;
+    String label(String key, String resolved, String english, String arabic) =>
+        ReceiptConfigurationContract.withoutTrailingColon(labelFor(key,
+            resolvedArabic: labels?.text(resolved),
+            englishFallback: english, arabicFallback: arabic,
+            inlineBilingual: true));
+    String amount(Iterable<OrderReturnItem> values,
+            String? Function(OrderReturnItem) field) =>
+        _returnAllocationSum(values, field)?.toStringAsFixed(2) ?? '';
+    final groups = <String, List<OrderReturnItem>>{};
+    for (final item in items) {
+      groups.putIfAbsent(returnTaxRateText(item), () => []).add(item);
+    }
+    final rows = <(String, String, String)>[
+      for (final group in groups.entries)
+        (group.key, amount(group.value, (item) => item.taxableValue),
+          amount(group.value, (item) => item.taxAmount)),
+    ];
+    return ReceiptReturnTaxSummary(
+      heading: label('showTaxSummary', 'tax_summary_heading',
+          'TAX SUMMARY', 'ملخص الضريبة'),
+      headers: [
+        label('showTaxSummaryRate', 'tax_rate', 'Tax Rate', 'نسبة الضريبة'),
+        label('showTaxSummaryTaxableValue', 'tax_taxable_value',
+            'Taxable Value', 'القيمة الخاضعة للضريبة'),
+        label('showTaxSummaryTax', 'tax_total', 'Total Tax', 'إجمالي الضريبة'),
+      ],
+      rows: rows.where((row) => row.$1.isNotEmpty || row.$2.isNotEmpty ||
+          row.$3.isNotEmpty).toList(),
+      totalRow: (label('showTaxSummaryTotal', 'tax_summary_total',
+          'Total', 'الإجمالي'), amount(items, (item) => item.taxableValue),
+          amount(items, (item) => item.taxAmount)),
+    );
+  }
+
   /// An explicit refund, including zero, wins. Missing totals use returned lines.
-  double get returnTotalValue => double.tryParse(
-          (orderReturns?.returnTotalAmount ?? '').replaceAll(',', '').trim()) ??
-      (orderReturns?.returnItems ?? const <OrderReturnItem>[]).fold<double>(
-          0, (sum, item) => sum + (item.quantity ?? 0) * returnItemRate(item).$1);
+  double get returnTotalValue =>
+      ReturnPrintAmounts.total(orderReturns, cartItems);
 
   /// Credit-note MRP totals use only the returned quantities, not the full sale
   /// or the refund total. Match the per-item MRP fallback used by the table.

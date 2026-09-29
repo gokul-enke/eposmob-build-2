@@ -16,6 +16,7 @@ import 'package:pos_machine/features/billing/domain/receipt_customer_balance.dar
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/services/sales_only_print_helper.dart';
+import 'package:pos_machine/helpers/return_print_identity.dart';
 
 enum PrintMode { salesOnly, returnOnly, combined }
 
@@ -344,17 +345,18 @@ class PrintService {
       // is deliberately not used: it has been observed stale.
       final customerBalance =
           orderDetails.data?.customerDetails?.customerBalance?.toString();
+      final returnIdentity = ReturnPrintIdentity.fromSummary(orderReturns!);
 
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => ReturnBillPrintPage(
-            returnItems: orderReturns!.returnItems!,
+            returnItems: orderReturns.returnItems!,
             originalCartItems: cart.cartItems!,
-            returnTotalAmount: orderReturns.returnTotalAmount ?? '0.00',
+            returnTotalAmount: orderReturns.returnTotalAmount ?? '',
             storeName: cart.storeName,
-            orderDate: orderDetails.data?.orderDate ?? '',
-            orderNumber: orderDetails.data?.customerReceiptNumber ?? '',
+            orderDate: returnIdentity.date,
+            orderNumber: returnIdentity.number,
             originalInvoiceNumber: orderDetails.data?.customerReceiptNumber,
             originalInvoiceDate: orderDetails.data?.orderDate,
             customerName: orderDetails.data?.customerDetails?.name,
@@ -376,6 +378,7 @@ class PrintService {
         ? buildSalesOnlyCartItems(
             cart.cartItems!,
             orderReturns!.returnItems!,
+            completedReturnCartItems: orderDetails.data?.completedReturnCartItems,
           )
         : cart.cartItems!;
 

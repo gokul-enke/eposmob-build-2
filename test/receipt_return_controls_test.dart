@@ -208,4 +208,55 @@ void main() {
     expect(visibleExtras.subtitle, 'Subtitle marker');
     expect(visibleExtras.signatory, 'Signatory marker');
   });
+
+  testWidgets('combined return customer rows obey the customer master switch',
+      (tester) async {
+    late BuildContext context;
+    await tester.pumpWidget(MaterialApp(home: Builder(builder: (value) {
+      context = value;
+      return const SizedBox();
+    })));
+    for (final language in ['en', 'ar', 'en_ar']) {
+      for (final visible in [false, true]) {
+        final params = ReceiptLayoutParams(
+          context: context,
+          selectedPrinter: BluetoothPrinter.development(),
+          cartItems: const [],
+          formattedTotal: '11',
+          orderDate: '2026-09-26',
+          orderNumber: 'QA-COMBINED',
+          isFromLocalStorage: false,
+          selectedPaperSize: 'A4',
+          customerCareNumber: '',
+          customerCareEmail: '',
+          customerName: 'Customer',
+          customerPhone: '5551234567',
+          customerAddress: 'Address',
+          orderReturns: OrderReturns(returnTotalAmount: '11', returnItems: [
+            OrderReturnItem(productName: 'Coffee', quantity: 1, unitPrice: '11'),
+          ]),
+          billDocumentConfig: DocumentConfig.fromJson({
+            'type': 'Sales and Return Bill A4',
+            'language': language,
+            'display_configuration': {
+              'showCustomerNameAndPhone': {'visible': visible},
+              'showCustomerName': {'visible': true},
+              'showCustomerPhone': {'visible': true},
+              'showCustomerAddress': {'visible': true},
+              'showReturnTotal': {'visible': true},
+            },
+          }),
+        );
+        expect(params.returnsSection!.customerRows.map((row) => row.$2),
+            visible ? ['Customer', '5551234567', 'Address'] : isEmpty,
+            reason: '$language master=$visible');
+        expect(params.returnTotalValue, 11);
+        expect(params.returnsSection!.lines.single['showReturnTotal'], '11.00');
+        if (!visible) {
+          expect(params.returnsSection!.customerHeading, isEmpty);
+          expect(params.customerInfoRows, isEmpty);
+        }
+      }
+    }
+  });
 }

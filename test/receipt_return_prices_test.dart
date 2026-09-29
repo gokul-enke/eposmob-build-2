@@ -10,6 +10,27 @@ import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_sections.dart';
 
 void main() {
+  test('transaction print keeps explicit return allocations and excludes original-sale tax', () {
+    SalesReturnItem row({bool explicit = false}) => SalesReturnItem.fromJson({
+      'id': 1, 'cart_item_id': 10, 'quantity': 2, 'price': '20',
+      if (explicit) ...{'tax_amount': 0, 'taxable_value': '20.00', 'sub_total': '20.00', 'discount': '0'},
+      'cart_item': {'id': 10, 'quantity': 100, 'unit_price': '10',
+        'tax_amount': '999', 'taxable_value': '9999', 'sub_total': '9999', 'discount': '9999'},
+    });
+    final missing = buildTransactionReturnPrintItems([row()], []).single;
+    expect(missing.taxAmount, isNull);
+    expect(missing.taxableValue, isNull);
+    expect(missing.subTotal, isNull);
+    expect(missing.discount, isNull);
+    final explicit = buildTransactionReturnPrintItems([row(explicit: true)], []).single;
+    final restored = OrderReturnItem.fromJson(explicit.toJson());
+    expect(restored.taxAmount, '0');
+    expect(restored.taxableValue, '20.00');
+    expect(restored.subTotal, '20.00');
+    expect(restored.discount, '0');
+    expect(restored.quantity, 2);
+    expect(restored.unitPrice, '10');
+  });
   test('return print items retain API product HSN and tax-rate presence', () {
     for (final rate in [null, '0.000', '18.000']) {
       final summary = SalesReturnItem.fromJson({
@@ -36,7 +57,8 @@ void main() {
     })));
     for (final entry in <String?, double>{
       '21': 21, '0': 0, '1,200.50': 1200.50,
-      null: 21, '': 21, 'invalid': 21,
+      null: 21, '': 21, 'invalid': 21, 'NaN': 21, 'Infinity': 21,
+      '-Infinity': 21,
     }.entries) {
       final params = ReceiptLayoutParams(
         context: context, selectedPrinter: BluetoothPrinter.development(),

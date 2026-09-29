@@ -6,6 +6,12 @@ import 'package:qr/qr.dart';
 class ArabicPrinterHelper {
   static const String fontFamily = 'NotoSansArabic';
 
+  /// Test-only observation of rows after they have been painted. The callback
+  /// cannot replace rendering and is removed from release builds by assert.
+  @visibleForTesting
+  static void Function(List<ReceiptRow>, double, double, TextDirection)?
+      debugRenderedRowsObserver;
+
   /// Renders a list of rows into a single image for thermal printing.
   /// Each row can have multiple columns with specified widths and alignments.
   /// Renders a list of rows into a single image for thermal printing.
@@ -39,6 +45,12 @@ class ArabicPrinterHelper {
       row.render(canvas, drawY, width, fontSize, textDirection);
       drawY += row.calculateHeight(width, fontSize, textDirection);
     }
+
+    assert(() {
+      debugRenderedRowsObserver?.call(
+          List<ReceiptRow>.unmodifiable(rows), width, fontSize, textDirection);
+      return true;
+    }());
 
     final picture = recorder.endRecording();
     final uiImage = await picture.toImage(width.toInt(), currentY.toInt());

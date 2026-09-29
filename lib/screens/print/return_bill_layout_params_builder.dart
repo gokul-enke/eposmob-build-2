@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/order_details.dart';
+import 'package:pos_machine/helpers/return_print_amounts.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/bank_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
@@ -58,11 +59,11 @@ class ReturnBillLayoutParamsBuilder {
         (originalCartItems != null && originalCartItems.isNotEmpty)
             ? originalCartItems
             : fallbackCartItems;
-    final totalAmount = double.tryParse(returnTotalAmount.replaceAll(',', '').trim()) ?? 0.0;
     final orderReturns = OrderReturns(
-      returnTotalAmount: totalAmount.toStringAsFixed(2),
+      returnTotalAmount: returnTotalAmount,
       returnItems: returnItems,
     );
+    final totalAmount = ReturnPrintAmounts.total(orderReturns, cartItems);
 
     final defaultCustomerPhone =
         appSettings?.autoAssignDefaultCustomerPhone ?? '';
@@ -121,16 +122,12 @@ class ReturnBillLayoutParamsBuilder {
     List<OrderReturnItem> returnItems,
     String returnTotalAmount,
   ) {
-    final totalAmount = double.tryParse(returnTotalAmount.replaceAll(',', '').trim()) ?? 0.0;
-    final totalQty = returnItems.fold<num>(
-      0,
-      (sum, item) => sum + (item.quantity ?? 0),
-    );
+    final returns = OrderReturns(returnTotalAmount: returnTotalAmount,
+        returnItems: returnItems);
 
     return returnItems.map((item) {
       final qty = item.quantity ?? 0;
-      final fallbackRate = totalQty > 0 ? totalAmount / totalQty : 0.0;
-      final unitPrice = double.tryParse(item.unitPrice ?? '') ?? fallbackRate;
+      final (unitPrice, mrp) = ReturnPrintAmounts.itemRate(item, const [], returns);
       final lineTotal = unitPrice * qty;
 
       return OrderDetailsModelDataCartItem(
@@ -138,7 +135,7 @@ class ReturnBillLayoutParamsBuilder {
         quantity: qty,
         unitPrice: unitPrice.toStringAsFixed(2),
         totalPrice: lineTotal.toStringAsFixed(2),
-        mrp: item.mrp ?? unitPrice.toStringAsFixed(2),
+        mrp: mrp.toStringAsFixed(2),
         taxAmount: '0.00',
       );
     }).toList();

@@ -1,5 +1,6 @@
 """Check page/raster sizes and PDF glyph bounds, not visual readability."""
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -8,12 +9,18 @@ from PIL import Image
 
 root = Path(sys.argv[1])
 manifest = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
-assert len(manifest) == 345
+expected_count = int(sys.argv[2]) if len(sys.argv) > 2 else 345
+assert len(manifest) == expected_count, f'Expected {expected_count} outputs, got {len(manifest)}'
 results = []
 for entry in manifest:
     failures = []
     dimensions = []
     for filename in entry['files']:
+        # Dart can create long verification-artifact paths on Windows. Give
+        # Python the extended absolute path too so existing files stay readable.
+        filename = os.path.normpath(os.path.abspath(filename))
+        if os.name == 'nt' and not filename.startswith('\\\\?\\'):
+            filename = '\\\\?\\' + filename
         if entry['kind'] == 'thermal':
             with Image.open(filename) as image:
                 dimensions.append(list(image.size))

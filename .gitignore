@@ -78,3 +78,7 @@ Todo.md
 /.tools
 /.sentry-native
 /.codex-remote-attachments
+
+# Local Python verification scripts
+/tool/*.py
+/tool/__pycache__/

@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$OutputPath)
+param([Parameter(Mandatory=$true)][string]$OutputPath, [switch]$IncludeReturnAliases, [switch]$IncludeAllDocuments)
 $ErrorActionPreference = 'Stop'
 $prefs = Get-Content -LiteralPath "$env:APPDATA\com.enke\pos_machine\shared_preferences.json" -Raw | ConvertFrom-Json
 $base = $prefs.'flutter.app_url'.TrimEnd('/')
@@ -14,6 +14,14 @@ try {
 }
 $data = $response.Content | ConvertFrom-Json
 $selected = [ordered]@{}
+if ($IncludeAllDocuments) {
+    foreach ($entry in $data.document_configurations.PSObject.Properties) {
+        $selected[$entry.Name] = $entry.Value
+    }
+}
+if ($IncludeReturnAliases -and $data.document_configurations.'Credit Note') {
+    $selected['Credit Note'] = $data.document_configurations.'Credit Note'
+}
 foreach ($type in @('Bill','Bill A4','Sales and Return Bill','Sales and Return Bill A4','Return Bill')) {
     $config = $data.document_configurations.$type
     if (!$config) { throw "Missing document: $type" }

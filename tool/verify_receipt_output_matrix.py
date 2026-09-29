@@ -25,9 +25,9 @@ for entry in manifest:
                      key=lambda s: int(s[2:-1]))
     case = entry['scenario']
     if entry['document'] != 'Return Bill' and case in ('en', 'both'):
-        missing_totals = {'EN34X', 'EN49X'} - set(markers)
+        missing_totals = {'EN34X', 'EN45X', 'EN49X'} - set(markers)
         if missing_totals:
-            raise AssertionError(f"{entry['id']}: missing independent MRP/subtotal labels {sorted(missing_totals)}")
+            raise AssertionError(f"{entry['id']}: missing independent MRP/saved/subtotal labels {sorted(missing_totals)}")
     allowed_table = {'EN37X', 'EN41X', 'EN43X', 'EN46X', 'EN52X', 'EN57X', 'EN58X'}
     unexpected = markers if case in ('ar', 'empty_en') else []
     if 'Return' in entry['document'] and case in ('en', 'both'):

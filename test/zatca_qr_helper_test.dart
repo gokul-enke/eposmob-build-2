@@ -40,6 +40,16 @@ void main() {
     expect(decoded['timestamp'], '2026-09-16T04:14:00Z');
   });
 
+  test('does not invent a QR timestamp when the transaction date is unavailable', () {
+    final helper = ZatcaQrHelper();
+    for (final date in ['', '   ', 'not-a-date', 'null']) {
+      final encoded = helper.generateQrForInvoice(
+        sellerName: 'QA Supplier', vatNumber: '300000000000003',
+        invoiceDate: date, totalAmount: 21, vatAmount: 0.65);
+      expect(encoded, isEmpty, reason: 'Missing/invalid date: "$date"');
+    }
+  });
+
   test('prints a UTC offline timestamp in the configured business timezone',
       () {
     expect(

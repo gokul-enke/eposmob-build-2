@@ -12,6 +12,7 @@ import 'package:pos_machine/screens/sales_return/widgets/sales_return_detail_mod
 import 'package:pos_machine/screens/sales_return/widgets/sales_return_responsive.dart';
 import 'package:pos_machine/screens/print/return_bill_print.dart';
 import 'package:pos_machine/helpers/sales_return_detail_helper.dart';
+import 'package:pos_machine/helpers/return_print_identity.dart';
 import 'package:provider/provider.dart';
 import '../../components/build_pagination_control.dart';
 import '../../resources/color_manager.dart';
@@ -394,9 +395,8 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                       builder: (context) => ReturnBillPrintPage(
                         returnItems: returnItems,
                         returnTotalAmount: order.totalAmount,
-                        orderDate: order.createdAt.toString(),
-                        orderNumber: order.order?.orderNumber ??
-                            order.orderId.toString(),
+                        orderDate: ReturnPrintIdentity.fromTransaction(order).date,
+                        orderNumber: ReturnPrintIdentity.fromTransaction(order).number,
                         originalInvoiceNumber: order.order?.orderNumber,
                         originalInvoiceDate: order.order?.orderDate,
                         customerName: order.order?.customer?.user?.name,
@@ -656,9 +656,8 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                           builder: (context) => ReturnBillPrintPage(
                             returnItems: returnItems,
                             returnTotalAmount: order.totalAmount,
-                            orderDate: order.createdAt.toString(),
-                            orderNumber: order.order?.orderNumber ??
-                                order.orderId.toString(),
+                            orderDate: ReturnPrintIdentity.fromTransaction(order).date,
+                            orderNumber: ReturnPrintIdentity.fromTransaction(order).number,
                             originalInvoiceNumber: order.order?.orderNumber,
                             originalInvoiceDate: order.order?.orderDate,
                             customerName: order.order?.customer?.user?.name,

@@ -21,6 +21,10 @@ void main() {
         expect(model.language, raw['language'], reason: type);
         expect(model.header, raw['header'], reason: type);
         expect(model.subheader, raw['subheader'], reason: type);
+        expect(model.terms, raw['terms'], reason: '$type Terms body changed');
+        expect(model.footer, raw['footer'], reason: '$type footer changed');
+        expect(model.numberPrefix, raw['number_prefix'],
+            reason: '$type number prefix changed');
         expect(model.activeTheme, raw['theme'], reason: type);
         final labels = raw['resolved_labels'] as Map<String, dynamic>;
         final serializedLabels = model.resolvedLabels!.toJson();

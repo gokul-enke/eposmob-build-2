@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'pdf_bidi_text.dart';
+import 'return_pdf_support_sections.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
@@ -493,6 +494,13 @@ class ContractStandardPdfRenderer {
     if (section.subtitle.isNotEmpty) {
       widgets.add(_centerLines(section.subtitle, fonts.small));
     }
+    if (section.supplierRows.isNotEmpty) {
+      widgets.add(_sectionTitle(
+          section.supplierHeading, fonts.bodyBold, accent, scale));
+      for (final row in section.supplierRows) {
+        widgets.add(_labelValue(row.$1, row.$2, fonts.body));
+      }
+    }
     if (section.creditNoteRows.isNotEmpty) {
       widgets.add(_sectionTitle(
           section.creditNoteHeading, fonts.bodyBold, accent, scale));
@@ -549,8 +557,10 @@ class ContractStandardPdfRenderer {
           section.countRow!.$1, section.countRow!.$2, fonts.bodyBold));
     }
     for (final row in section.totalRows) {
-      widgets.add(_labelValue(row.$1, _money(row.$2, currency), fonts.bodyBold));
+      widgets.add(_labelValue(row.$1, row.$2 == null ? '' : _money(row.$2!, currency), fonts.bodyBold));
     }
+    widgets.addAll(buildReturnTaxSummaryPdf(params: params,
+        style: fonts.small, headingStyle: fonts.bodyBold));
     final words = params.returnsWordsLines(currency);
     if (words.isNotEmpty) {
       widgets.add(_textLine(section.wordsHeading, fonts.bodyBold));
@@ -559,6 +569,10 @@ class ContractStandardPdfRenderer {
       }
     }
 
+    if (section.remarksRow != null) {
+      widgets.add(_labelValue(section.remarksRow!.$1,
+          section.remarksRow!.$2, fonts.body));
+    }
     if (section.signatory.isNotEmpty) {
       widgets.add(pw.SizedBox(height: 20 * scale));
       widgets.add(_centerLines('____________________', fonts.small));
@@ -885,7 +899,9 @@ class ContractStandardPdfRenderer {
         totalAmount: params.netAmountValue,
         vatAmount: params.totalTax,
       );
-      if (zatca.isNotEmpty) return zatca;
+      // Registered invoice QR data must use its own known transaction date.
+      // A missing date cannot become an unrelated payment QR under this caption.
+      return zatca;
     }
 
     // Non-ZATCA documents can still use the configured manual/payment QR.
