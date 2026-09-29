@@ -1381,11 +1381,15 @@ class BillingPageState extends State<BillingPage>
                 ? CheckoutActionMode.quotation
                 : CheckoutActionMode.save);
       } else if (event.logicalKey == LogicalKeyboardKey.f9) {
-        debugPrint("⌨️ [BillingPage] Handling F9 -> save & print");
         if (_isQuotationPage) {
+          debugPrint("⌨️ [BillingPage] Handling F9 -> quotation checkout");
           _showCheckoutModal(actionMode: CheckoutActionMode.quotation);
         } else {
-          _handleSaveAndPrint();
+          // Save & Print was removed: it printed bills that never synced.
+          showScaffold(
+            context: context,
+            message: 'billing.save_and_print_removed'.tr,
+          );
         }
       } else if (event.logicalKey == LogicalKeyboardKey.f10) {
         debugPrint(
@@ -6348,200 +6352,6 @@ class BillingPageState extends State<BillingPage>
     }
   }
 
-  Future<void> _saveOrderAndPrint() async {
-    if (!_beginOrderAction()) {
-      return;
-    }
-
-    setState(() {
-      isLoadingSaveOrderAndPrint = true;
-    });
-    debugPrint("Save Order and Print pressed");
-    try {
-      if (Provider.of<LocalProductProvider>(context, listen: false)
-          .cartItems
-          .isEmpty) {
-        showScaffoldError(
-          context: context,
-          message: "billing.add_items_to_cart".tr,
-        );
-        return;
-      }
-
-      final hasCustomer = selectedCustomerID != null ||
-          (mobileNumberText?.isNotEmpty == true) ||
-          (salesExecutivemobileNumberText?.isNotEmpty == true);
-      if (!hasCustomer) {
-        showScaffoldError(
-          context: context,
-          message: "billing.select_customer".tr,
-        );
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_autocompleteFocusNode != null) {
-            FocusScope.of(context).requestFocus(_autocompleteFocusNode!);
-          } else {
-            FocusScope.of(context).requestFocus(_customerTextFieldFocus);
-          }
-        });
-        return;
-      }
-
-      if (!_ensurePaymentReadyForConfirm(_saveOrderAndPrint)) {
-        return;
-      }
-
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
-
-      // Debug: Log current cart items with custom pricing
-      debugPrint("💾 LOCAL SAVE AND PRINT - Cart items with custom pricing:");
-      for (var item in localProductProvider.cartItems) {
-        debugPrint("  📦 ${item.product.productName}");
-        debugPrint("    - Quantity: ${item.quantity}");
-        debugPrint("    - Custom Price: ${item.price}");
-        debugPrint("    - Custom MRP: ${item.mrp}");
-        debugPrint("    - Stock ID: ${item.selectedStock?.id}");
-      }
-
-      // Validate that all items have valid pricing
-      // bool hasInvalidPricing = localProductProvider.cartItems
-      //     .any((item) => item.price == null || item.price! < 0);
-
-      // if (hasInvalidPricing) {
-      //   showScaffoldError(
-      //     context: context,
-      //     message: "billing.valid_prices".tr,
-      //   );
-      //   return;
-      // }
-
-      // Check if we're editing an existing order
-      SavedOrder? currentOrder = localProductProvider.currentOrder;
-      SavedOrder? orderToUse;
-
-      if (currentOrder != null) {
-        debugPrint(
-            "💾 Promoting saved order to confirmed: ${currentOrder.orderNumber}");
-
-        String? customerNameToSave = selectedCustomer?.name;
-        String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
-
-        final paymentData = _getPaymentMethodData();
-        final currentOrderId = currentOrder.id;
-        localProductProvider.updateSavedOrder(
-          currentOrderId,
-          customerName: customerNameToSave,
-          customerPhone: customerPhoneToSave,
-          comment: _commentController.text,
-          deliveryMethod: deliveryMethod,
-          customerId: selectedCustomerID,
-          paymentMethod: paymentData["paymentMethod"],
-          paidAmount: paymentData["paidAmount"],
-          balanceAmount: _balanceAmount.toString(),
-          transactionId: _transactionNumberController.text,
-          couponId: isCouponApplied ? coupenCodeTextController.text : null,
-          deliveryMethodId: deliveryMethodId,
-          carNumber: _carNumberController.text,
-          deliveryDate: deliveryDate,
-          deliveryTime: deliveryTime,
-          toCustomerCredit: _toCustomerCreditEnabled,
-          context: context,
-          address: deliveryAddress,
-          deliveryCharge: _getDeliveryChargeForOrder(),
-          customerType: selectedCustomer?.customerType,
-        );
-
-        orderToUse = localProductProvider.moveToConfirmedOrders(currentOrderId);
-        orderToUse ??= localProductProvider.saveCurrentCartAsConfirmedOrder(
-          customerName: customerNameToSave,
-          customerPhone: customerPhoneToSave,
-          comment: _commentController.text,
-          deliveryMethod: deliveryMethod,
-          customerId: selectedCustomerID,
-          paymentMethod: paymentData["paymentMethod"],
-          paidAmount: paymentData["paidAmount"],
-          balanceAmount: _balanceAmount.toString(),
-          transactionId: _transactionNumberController.text,
-          couponId: isCouponApplied ? coupenCodeTextController.text : null,
-          deliveryMethodId: deliveryMethodId,
-          carNumber: _carNumberController.text,
-          status: "confirmed",
-          deliveryDate: deliveryDate,
-          deliveryTime: deliveryTime,
-          context: context,
-          toCustomerCredit: _toCustomerCreditEnabled,
-          address: deliveryAddress,
-          deliveryCharge: _getDeliveryChargeForOrder(),
-          customerType: selectedCustomer?.customerType,
-        );
-
-        showScaffold(
-          context: context,
-          message: "billing.order_saved_success".tr,
-        );
-      } else {
-        debugPrint("💾 Creating new confirmed order for printing");
-
-        // **FIX**: Properly determine customer info for phone-only orders
-        String? customerNameToSave = selectedCustomer?.name;
-        String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
-
-        final paymentData = _getPaymentMethodData();
-        orderToUse = localProductProvider.saveCurrentCartAsConfirmedOrder(
-          customerName: customerNameToSave,
-          customerPhone: customerPhoneToSave,
-          comment: _commentController.text,
-          deliveryMethod: deliveryMethod,
-          // Include all API-compatible fields
-          customerId: selectedCustomerID,
-          paymentMethod: paymentData["paymentMethod"],
-          paidAmount: paymentData["paidAmount"],
-          balanceAmount: _balanceAmount.toString(),
-          transactionId: _transactionNumberController.text,
-          couponId: isCouponApplied ? coupenCodeTextController.text : null,
-          deliveryMethodId: deliveryMethodId,
-          carNumber: _carNumberController.text,
-          status: "confirmed",
-          deliveryDate: deliveryDate, // Pass deliveryDate
-          deliveryTime: deliveryTime, // Pass deliveryTime
-          context: context,
-          toCustomerCredit: _toCustomerCreditEnabled,
-          address: deliveryAddress,
-          deliveryCharge: _getDeliveryChargeForOrder(),
-          customerType: selectedCustomer?.customerType,
-        );
-
-        showScaffold(
-          context: context,
-          message: "billing.order_saved_success".tr,
-        );
-      }
-
-      try {
-        await printFromSavedOrder(orderToUse);
-      } catch (error) {
-        debugPrint("Error printing saved order: ${error.toString()}");
-      }
-
-      resetAutocomplete(shouldFetchCustomers: false);
-      _clearOrderWorkspace(
-        localProductProvider: localProductProvider,
-        preserveStockDeduction: true,
-      );
-    } catch (error) {
-      debugPrint(error.toString());
-      showScaffoldError(
-        context: context,
-        message: "billing.failed_save_order".tr,
-      );
-    } finally {
-      setState(() {
-        isLoadingSaveOrderAndPrint = false;
-      });
-      _endOrderAction();
-    }
-  }
-
   Future<void> _createNewOrder() async {
     debugPrint(
         "⌨️ [BillingPage] _createNewOrder started | ${_focusDebugSummary()}");
@@ -7122,14 +6932,6 @@ class BillingPageState extends State<BillingPage>
     _showCheckoutModal(actionMode: CheckoutActionMode.confirm);
   }
 
-  Future<void> _handleSaveAndPrint() async {
-    if (_skipCheckoutOnConfirmAndPrint) {
-      await _saveAndPrintWithoutCheckoutModal();
-      return;
-    }
-    _showCheckoutModal(actionMode: CheckoutActionMode.save);
-  }
-
   bool _hasExistingPaymentState() {
     return _isCashSelected ||
         _isCardSelected ||
@@ -7303,52 +7105,6 @@ class BillingPageState extends State<BillingPage>
     );
 
     await _createOrderAndPrint();
-  }
-
-  Future<void> _saveAndPrintWithoutCheckoutModal() async {
-    if (_isOrderActionBusy) {
-      debugPrint(
-          "⌨️ [BillingPage] Direct save & print ignored because order action is busy");
-      return;
-    }
-
-    debugPrint(
-        "⌨️ [BillingPage] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct save & print");
-
-    await _prepareCheckoutDefaults(
-      applyDefaultCustomer: true,
-      applyDefaultPayment: true,
-    );
-    if (!mounted) return;
-
-    setState(() {
-      _autoFillDefaultPaymentAmounts();
-      _hasOpenedPaymentModalOnce = true;
-    });
-    _updateBalanceAmount();
-
-    final billingProvider =
-        Provider.of<BillingProvider>(context, listen: false);
-    billingProvider.updatePaymentFromModal(
-      isCash: _isCashSelected,
-      isCard: _isCardSelected,
-      isUpi: _isUpiSelected,
-      isCod: _isCodSelected,
-      isDebit: _isDebitSelected,
-      cashAmount: _cashAmountController.text,
-      cardAmount: _cardAmountController.text,
-      upiAmount: _upiAmountController.text,
-      codAmount: _codAmountController.text,
-      debitAmount: _debitAmountController.text,
-      transactionNumber: _transactionNumberController.text,
-      toCustomerCredit: _toCustomerCreditEnabled,
-      cashMethodId: billingProvider.cashPaymentMethodId,
-      cardMethodId: billingProvider.cardPaymentMethodId,
-      upiMethodId: billingProvider.upiPaymentMethodId,
-      codMethodId: billingProvider.codPaymentMethodId,
-    );
-
-    await _saveOrderAndPrint();
   }
 
   /// Opens either the full checkout flow or one selection-only checkout step.
@@ -7528,9 +7284,7 @@ class BillingPageState extends State<BillingPage>
                   : 'billing.confirm_order'.tr),
           printButtonTitle: isQuotationMode
               ? 'billing.create_and_print_quote'.tr
-              : (isSaveMode
-                  ? 'billing.save_and_print'.tr
-                  : 'billing.confirm_and_print'.tr),
+              : 'billing.confirm_and_print'.tr,
           requireCheckoutCompletion: !(isSaveMode || isQuotationMode),
           isQuotationMode: isQuotationMode,
           requireSavedCustomer: requiresSavedQuotationCustomer,
@@ -7757,26 +7511,27 @@ class BillingPageState extends State<BillingPage>
               await _confirmOrder();
             }
           },
-          onConfirmAndPrint: () async {
-            checkoutActionTriggered = true;
-            setState(() {
-              if (isSaveMode || isQuotationMode) {
-                isLoadingSaveOrderAndPrint = true;
-              } else {
-                isLoadingCreateOrder = true;
-                _hasOpenedPaymentModalOnce = true;
-              }
-            });
-            // Close modal after setting loading state
-            if (mounted) Navigator.of(dialogContext).pop();
-            if (isQuotationMode) {
-              await _createQuotationFromCheckout(shouldPrint: true);
-            } else if (isSaveMode) {
-              await _saveOrderAndPrint();
-            } else {
-              await _createOrderAndPrint();
-            }
-          },
+          // Save Order only parks a draft, so it has no print action.
+          onConfirmAndPrint: isSaveMode
+              ? null
+              : () async {
+                  checkoutActionTriggered = true;
+                  setState(() {
+                    if (isQuotationMode) {
+                      isLoadingSaveOrderAndPrint = true;
+                    } else {
+                      isLoadingCreateOrder = true;
+                      _hasOpenedPaymentModalOnce = true;
+                    }
+                  });
+                  // Close modal after setting loading state
+                  if (mounted) Navigator.of(dialogContext).pop();
+                  if (isQuotationMode) {
+                    await _createQuotationFromCheckout(shouldPrint: true);
+                  } else {
+                    await _createOrderAndPrint();
+                  }
+                },
         );
       },
     );

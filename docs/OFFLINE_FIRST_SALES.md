@@ -44,8 +44,10 @@ The tenant app setting `OFFLINE_FIRST_SALES` selects the mode, read through
 Online-first uses the same coordinator, snapshot and outbox, but the confirm
 button waits (with its loading state) for the one API attempt:
 
-1. No internet, Offline Mode or no login → error; nothing is saved and the
-   cart is unchanged. The bill number was already issued, so it is skipped.
+1. No internet or Offline Mode → the sale falls back to offline-first (saved,
+   cart cleared, printed, `needs_review`), so the till keeps selling. No login
+   while online → error; nothing is saved, the cart is unchanged and the
+   already-issued bill number is skipped.
 2. Save the snapshot and outbox record exactly as offline-first does, so a
    crash mid-request is still recovered as `needs_review` on restart.
 3. Send the request and wait for it.
@@ -82,6 +84,14 @@ retry policy or sync-result classification.
 | Restaurant counter billing | `screens/billing/restaurant/widgets/order_panel.dart` | Uses shared local-first coordinator |
 | Attender existing-order confirmation | same `OrderPanel`, attender route configuration | Uses shared local-first coordinator and existing update-order API |
 | Kiosk | `screens/kiosk/*` | Development-only; its cart is still server-backed, so it is not declared offline-capable |
+
+Going offline does not change the buttons' path: mobile shows the same Confirm
+actions, and the restaurant's offline button and F2/F5/F6/F10 shortcuts open
+the same confirm checkout (offline, a table or delivery order can also be
+confirmed from the counter panel). The old **Save & Print** was removed from
+every live surface: it put a `CONF-…` sale in Confirmed Orders with no request,
+so it could never sync. **Save Order** (F8) still parks a draft; desktop F9 now
+only points the cashier to Confirm & Print.
 
 `Send to Kitchen` remains a kitchen-order operation, not a confirmed sale. It
 must not appear as completed revenue or deduct a customer's final balance. A

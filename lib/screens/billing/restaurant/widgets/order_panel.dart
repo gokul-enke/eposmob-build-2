@@ -5940,7 +5940,6 @@ class OrderPanelState extends State<OrderPanel> {
 
   Future<void> _showCheckoutModal({
     bool forCurrentCart = false,
-    bool offlineSaveAndPrint = false,
     CheckoutModalMode mode = CheckoutModalMode.checkout,
     int? initialStep,
     String? title,
@@ -5982,8 +5981,7 @@ class OrderPanelState extends State<OrderPanel> {
         ? (localProductProvider.priceSummary?.subTotal ??
             localProductProvider.cartTotal)
         : _calculateOrderTotal();
-    final shouldNotifyParentCheckoutLoading =
-        forCurrentCart || offlineSaveAndPrint;
+    final shouldNotifyParentCheckoutLoading = forCurrentCart;
 
     await showDialog(
       context: context,
@@ -6009,19 +6007,14 @@ class OrderPanelState extends State<OrderPanel> {
 
         return CheckoutModal(
           mode: mode,
-          title: title ??
-              (offlineSaveAndPrint
-                  ? 'order_panel.save_offline_order'.tr
-                  : 'order_panel.finalize_order'.tr),
+          title: title ?? 'order_panel.finalize_order'.tr,
           initialStep: initialStep,
           cartTotal: checkoutCartTotal,
           availableCustomers: _customers,
           selectedCustomer: _selectedCustomer,
           hasOpenedPaymentModalOnce: _hasOpenedPaymentModalOnce,
-          confirmButtonTitle: offlineSaveAndPrint ? 'Save' : 'Confirm',
-          printButtonTitle: offlineSaveAndPrint
-              ? 'order_panel.save_and_print'.tr
-              : 'general.confirm_and_print'.tr,
+          confirmButtonTitle: 'Confirm',
+          printButtonTitle: 'general.confirm_and_print'.tr,
 
           // Delivery State
           enableDelivery: deliveryEnabled,
@@ -6282,9 +6275,7 @@ class OrderPanelState extends State<OrderPanel> {
             }
             Navigator.of(dialogContext).pop();
             try {
-              if (offlineSaveAndPrint) {
-                await _saveCurrentCartAsConfirmedAndPrint(printBill: false);
-              } else if (forCurrentCart) {
+              if (forCurrentCart) {
                 await _confirmCurrentCart(printBill: false);
               } else {
                 await _confirmOrder();
@@ -6317,9 +6308,7 @@ class OrderPanelState extends State<OrderPanel> {
             }
             Navigator.of(dialogContext).pop();
             try {
-              if (offlineSaveAndPrint) {
-                await _saveCurrentCartAsConfirmedAndPrint(printBill: true);
-              } else if (forCurrentCart) {
+              if (forCurrentCart) {
                 await _confirmCurrentCart(printBill: true);
               } else {
                 await _confirmOrderAndPrintBill();
@@ -7477,161 +7466,6 @@ class OrderPanelState extends State<OrderPanel> {
     widget.onEditedOrderConfirmed?.call();
   }
 
-  Future<bool> _saveCurrentCartAsConfirmedAndPrint({
-    required bool printBill,
-  }) async {
-    final hasOrderContext = widget.tableId != null ||
-        (widget.preselectedDeliveryMethodId?.isNotEmpty ?? false) ||
-        _deliveryMethodId.trim().isNotEmpty ||
-        (widget.allowCounterBilling && widget.isCounterBillingMode);
-    if (!hasOrderContext) {
-      showScaffoldError(
-        context: context,
-        message: 'restaurant.select_table_first'.tr,
-      );
-      return false;
-    }
-
-    final localProductProvider =
-        Provider.of<LocalProductProvider>(context, listen: false);
-    final cartItems = List<LocalCartItem>.from(localProductProvider.cartItems);
-    if (cartItems.isEmpty) {
-      showScaffoldError(
-          context: context, message: 'restaurant.no_items_cart'.tr);
-      return false;
-    }
-
-    final customerPhone = _selectedCustomer?.phone ?? _selectedCustomerPhone;
-    if (_selectedCustomer == null &&
-        _selectedCustomerID == null &&
-        (customerPhone == null || customerPhone.isEmpty)) {
-      showScaffoldError(
-          context: context, message: 'restaurant.select_customer'.tr);
-      return false;
-    }
-
-    setState(() {
-      _isLoadingConfirm = true;
-    });
-
-    try {
-      localProductProvider.cartTotal; // Recalculate priceSummary/discounts.
-      _balanceAmount = _calculateBalanceAmount();
-      final paymentData = _getLocalDraftPaymentData();
-      final comment = widget.tableId != null
-          ? buildTaggedDraftComment(widget.tableId!)
-          : _orderComment.trim();
-
-      SavedOrder? orderToUse;
-      if (_loadedLocalDraftId != null) {
-        localProductProvider.updateSavedOrder(
-          _loadedLocalDraftId!,
-          customerName: selectedCustomerNameForDraft,
-          customerPhone: selectedCustomerPhoneForDraft,
-          comment: comment.isNotEmpty ? comment : null,
-          deliveryMethod: deliveryMethodForDraft,
-          customerId: selectedCustomerIdForDraft,
-          paymentMethod: paymentData['paymentMethod'],
-          paidAmount: paymentData['paidAmount'],
-          balanceAmount: balanceAmountForDraft,
-          transactionId: transactionNumberForDraft,
-          couponId: couponIdForDraft,
-          deliveryMethodId: deliveryMethodIdForDraft,
-          carNumber: carNumberForDraft,
-          status: 'saved',
-          deliveryDate: deliveryDateForDraft,
-          deliveryTime: deliveryTimeForDraft,
-          toCustomerCredit: toCustomerCreditForDraft,
-          context: context,
-          tableId: widget.tableId,
-          address: deliveryAddressForDraft,
-          addressId: deliveryAddressIdForDraft,
-          pincode: deliveryPincodeForDraft,
-          deliveryCharge: deliveryChargeForDraft,
-          alternatePhone: selectedCustomerAlternatePhoneForDraft,
-          customerVatNumber: selectedCustomerVatNumberForDraft,
-          customerCrNumber: selectedCustomerCrNumberForDraft,
-          customerType: selectedCustomerTypeForDraft,
-          quotationId: localProductProvider.currentOrder?.quotationId,
-          quotationNumber: localProductProvider.currentOrder?.quotationNumber,
-        );
-        orderToUse =
-            localProductProvider.moveToConfirmedOrders(_loadedLocalDraftId!);
-      }
-
-      orderToUse ??= localProductProvider.saveCurrentCartAsConfirmedOrder(
-        customerName: selectedCustomerNameForDraft,
-        customerPhone: selectedCustomerPhoneForDraft,
-        comment: comment.isNotEmpty ? comment : null,
-        deliveryMethod: deliveryMethodForDraft,
-        customerId: selectedCustomerIdForDraft,
-        paymentMethod: paymentData['paymentMethod'],
-        paidAmount: paymentData['paidAmount'],
-        balanceAmount: balanceAmountForDraft,
-        transactionId: transactionNumberForDraft,
-        couponId: couponIdForDraft,
-        deliveryMethodId: deliveryMethodIdForDraft,
-        carNumber: carNumberForDraft,
-        status: 'confirmed',
-        deliveryDate: deliveryDateForDraft,
-        deliveryTime: deliveryTimeForDraft,
-        toCustomerCredit: toCustomerCreditForDraft,
-        context: context,
-        tableId: widget.tableId,
-        address: deliveryAddressForDraft,
-        addressId: deliveryAddressIdForDraft,
-        pincode: deliveryPincodeForDraft,
-        deliveryCharge: deliveryChargeForDraft,
-        alternatePhone: selectedCustomerAlternatePhoneForDraft,
-        customerVatNumber: selectedCustomerVatNumberForDraft,
-        customerCrNumber: selectedCustomerCrNumberForDraft,
-        customerType: selectedCustomerTypeForDraft,
-        quotationId: localProductProvider.currentOrder?.quotationId,
-        quotationNumber: localProductProvider.currentOrder?.quotationNumber,
-      );
-
-      if (printBill) {
-        await _printOfflineSavedOrderBill(orderToUse);
-
-        final appSettingsProvider =
-            Provider.of<AppSettingsProvider>(context, listen: false);
-        if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
-          await _printOfflineSavedOrderKot(orderToUse);
-        }
-      }
-
-      localProductProvider.clearCart();
-      _resetCurrentCartCheckoutState();
-      _refreshLocalDrafts();
-      if (_usesCounterOrderTabs) {
-        resetActiveOrderContext();
-        widget.onLocalDraftSaved?.call();
-      }
-
-      showScaffold(
-        context: context,
-        message: printBill
-            ? 'restaurant.offline_order_saved_printed'.tr
-            : 'restaurant.offline_order_saved'.tr,
-      );
-      return true;
-    } catch (e) {
-      debugPrint('Error saving offline order: $e');
-      showScaffoldError(
-        context: context,
-        message: 'restaurant.failed_save_offline_order'
-            .trParams({'error': e.toString()}),
-      );
-      return false;
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingConfirm = false;
-        });
-      }
-    }
-  }
-
   OrderSubmissionPayload _buildRestaurantConfirmedPayload(
     LocalProductProvider localProducts,
     ReceiptIdentity receiptIdentity, {
@@ -7734,7 +7568,16 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   Future<bool> _confirmCurrentCart({required bool printBill}) async {
-    if (!widget.allowCounterBilling || !widget.isCounterBillingMode) {
+    // Offline there is no send-to-kitchen, so a table or delivery order is
+    // confirmed here too, as the removed offline Save & Print allowed.
+    final isOffline =
+        !Provider.of<BillingProvider>(context, listen: false).hasInternet;
+    final hasOfflineOrderContext = widget.tableId != null ||
+        (widget.preselectedDeliveryMethodId?.isNotEmpty ?? false) ||
+        _deliveryMethodId.trim().isNotEmpty;
+    final isCounterBilling =
+        widget.allowCounterBilling && widget.isCounterBillingMode;
+    if (!isCounterBilling && !(isOffline && hasOfflineOrderContext)) {
       showScaffoldError(
         context: context,
         message: 'restaurant.quick_counter_disabled'.tr,
@@ -8226,65 +8069,6 @@ class OrderPanelState extends State<OrderPanel> {
     }
   }
 
-  Future<void> _saveAndPrintWithoutCheckoutModal() async {
-    if (_isLoadingConfirm) return;
-
-    debugPrint(
-      '[Restaurant] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct offline save & print',
-    );
-
-    _hydrateCustomerListFromProviderCache();
-    if (!mounted) return;
-
-    setState(() {
-      if (_deliveryMethodId.isEmpty) {
-        final defaultDeliveryMethod = _getDefaultDeliveryMethod();
-        _deliveryMethod = defaultDeliveryMethod.name;
-        _deliveryMethodId = defaultDeliveryMethod.id;
-      }
-      _applyDefaultPaymentForDirectConfirmAndPrint();
-      _hasOpenedPaymentModalOnce = true;
-      _balanceAmount = _calculateBalanceAmount();
-    });
-
-    final billingProvider =
-        Provider.of<BillingProvider>(context, listen: false);
-    billingProvider.updatePaymentFromModal(
-      isCash: _isCashSelected,
-      isCard: _isCardSelected,
-      isUpi: _isUpiSelected,
-      isCod: _isCodSelected,
-      isDebit: _isDebitSelected,
-      cashAmount: _cashAmount,
-      cardAmount: _cardAmount,
-      upiAmount: _upiAmount,
-      codAmount: _codAmount,
-      debitAmount: _debitAmount,
-      transactionNumber: _transactionNumber,
-      toCustomerCredit: _toCustomerCreditEnabled,
-      cashMethodId: billingProvider.cashPaymentMethodId,
-      cardMethodId: billingProvider.cardPaymentMethodId,
-      upiMethodId: billingProvider.upiPaymentMethodId,
-      codMethodId: billingProvider.codPaymentMethodId,
-    );
-
-    widget.onCheckoutActionLoadingChanged?.call(
-      isLoading: true,
-      printBill: true,
-    );
-    try {
-      await _saveCurrentCartAsConfirmedAndPrint(printBill: true);
-    } finally {
-      widget.onCheckoutActionLoadingChanged?.call(
-        isLoading: false,
-        printBill: true,
-      );
-      if (mounted) {
-        setState(() {});
-      }
-    }
-  }
-
   void showCurrentCartConfirmAndPrintFromParent() {
     final appSettings =
         Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
@@ -8304,22 +8088,23 @@ class OrderPanelState extends State<OrderPanel> {
     showCheckoutFromParent(forCurrentCart: true);
   }
 
-  /// Offline Save & Print entry point.
+  /// Offline confirm entry point. Offline sales use the same offline-first
+  /// confirmation as online ones, so they get a bill number and can be sent
+  /// later from Confirmed Orders.
   ///
   /// When [allowSkipCheckout] is true and the app setting is enabled, skips the
-  /// checkout modal and saves+prints with defaults. Step shortcuts (F5/F10)
+  /// checkout modal and confirms+prints with defaults. Step shortcuts (F5/F10)
   /// should pass [allowSkipCheckout]: false so the modal still opens.
-  void showOfflineSaveAndPrintCheckoutFromParent({
+  void showOfflineConfirmCheckoutFromParent({
     int? initialStep,
     bool allowSkipCheckout = true,
   }) {
     if (allowSkipCheckout && _skipCheckoutOnConfirmAndPrint) {
-      unawaited(_saveAndPrintWithoutCheckoutModal());
+      unawaited(_confirmCurrentCartAndPrintWithoutCheckoutModal());
       return;
     }
     _showCheckoutModal(
       forCurrentCart: true,
-      offlineSaveAndPrint: true,
       initialStep: initialStep ?? _resolveCurrentCartCheckoutInitialStep(),
     );
   }

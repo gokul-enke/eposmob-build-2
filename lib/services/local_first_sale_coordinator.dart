@@ -88,13 +88,11 @@ class LocalFirstSaleCoordinator {
     FutureOr<void> Function(T sale)? printLocalReceipt,
     FutureOr<void> Function(LocalSaleSyncRecord record)? onSyncFinished,
   }) async {
-    final onlineFirst = mode == SaleConfirmationMode.onlineFirst;
-    if (onlineFirst && !attemptServerSync) {
-      throw const OnlineSaleNotConfirmed(
-        'No internet connection. The order was not placed; the cart is '
-        'unchanged.',
-      );
-    }
+    // Online-first only applies while the server is reachable. With no
+    // internet or Offline Mode on, the sale falls back to offline-first so
+    // the till keeps selling; it is reviewed and sent later.
+    final onlineFirst =
+        mode == SaleConfirmationMode.onlineFirst && attemptServerSync;
     if (onlineFirst && accessToken.trim().isEmpty) {
       throw const OnlineSaleNotConfirmed(
         'Please log in again. The order was not placed; the cart is '

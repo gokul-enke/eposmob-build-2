@@ -137,7 +137,8 @@ class CheckoutModal extends StatefulWidget {
       onQuotationDatesUpdated;
 
   final Future<void> Function() onConfirmOrder;
-  final Future<void> Function() onConfirmAndPrint;
+  /// Null hides the print action, e.g. for Save Order, which never prints.
+  final Future<void> Function()? onConfirmAndPrint;
 
   /// Optional initial step the modal should open at:
   /// 0 = Customer, 1 = Delivery, 2 = Discount, 3 = Payment.
@@ -650,7 +651,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
     if (event.logicalKey == LogicalKeyboardKey.f6) {
       debugPrint("⌨️ [CheckoutModal] Handling F6 -> print");
       if (_isSelectionOnly) return true;
-      if (_canPrint && !_isPrinting) _handlePrint();
+      if (_printHandler != null && _canPrint && !_isPrinting) _handlePrint();
       return true;
     }
     if (event.logicalKey == LogicalKeyboardKey.f8) {
@@ -1675,7 +1676,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                   children: [
                                     Expanded(child: _buildCompactSummary()),
                                     _buildFooter(
-                                      onPrint: _handlePrint,
+                                      onPrint: _printHandler,
                                       onConfirm: _handleConfirm,
                                     ),
                                   ],
@@ -1810,7 +1811,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                   children: [
                                     Expanded(child: _buildCompactSummary()),
                                     _buildFooter(
-                                      onPrint: _handlePrint,
+                                      onPrint: _printHandler,
                                       onConfirm: _handleConfirm,
                                     ),
                                   ],
@@ -2958,7 +2959,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                 children: [
                                   Expanded(child: _buildCompactSummary()),
                                   _buildFooter(
-                                    onPrint: _handlePrint,
+                                    onPrint: _printHandler,
                                     onConfirm: _handleConfirm,
                                   ),
                                 ],
@@ -2999,7 +3000,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               children: [
                                 Expanded(child: _buildCompactSummary()),
                                 _buildFooter(
-                                  onPrint: _handlePrint,
+                                  onPrint: _printHandler,
                                   onConfirm: _handleConfirm,
                                 ),
                               ],
@@ -3111,7 +3112,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             children: [
                               Expanded(child: _buildCompactSummary()),
                               _buildFooter(
-                                onPrint: _handlePrint,
+                                onPrint: _printHandler,
                                 onConfirm: _handleConfirm,
                               ),
                             ],
@@ -3210,7 +3211,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             children: [
                               Expanded(child: _buildCompactSummary()),
                               _buildFooter(
-                                onPrint: _handlePrint,
+                                onPrint: _printHandler,
                                 onConfirm: _handleConfirm,
                               ),
                             ],
@@ -3381,7 +3382,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                   children: [
                                     Expanded(child: _buildCompactSummary()),
                                     _buildFooter(
-                                      onPrint: _handlePrint,
+                                      onPrint: _printHandler,
                                       onConfirm: _handleConfirm,
                                     ),
                                   ],
@@ -3500,7 +3501,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                 children: [
                                   Expanded(child: _buildCompactSummary()),
                                   _buildFooter(
-                                    onPrint: _handlePrint,
+                                    onPrint: _printHandler,
                                     onConfirm: _handleConfirm,
                                   ),
                                 ],
@@ -3556,12 +3557,15 @@ class _CheckoutModalState extends State<CheckoutModal> {
     }
   }
 
+  VoidCallback? get _printHandler =>
+      widget.onConfirmAndPrint == null ? null : _handlePrint;
+
   void _handlePrint() async {
     if (_isPrinting) return;
     _syncQuotationInlineCustomer();
     setState(() => _isPrinting = true);
     try {
-      await widget.onConfirmAndPrint();
+      await widget.onConfirmAndPrint?.call();
     } finally {
       if (mounted) setState(() => _isPrinting = false);
     }

@@ -428,14 +428,14 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                         Expanded(
                           flex: showClearSaveActions ? 2 : 1,
                           child: _buildCurrentCartFooterButton(
-                            label: 'restaurant.save_print'.tr,
+                            label: 'restaurant.confirm_and_print'.tr,
                             color: const Color(0xFFF59E0B),
                             isDisabled: cartItems.isEmpty ||
                                 !hasOfflineOrderContext ||
                                 _isLoadingConfirm,
                             isLoading: _isLoadingConfirm,
                             onTap: () =>
-                                showOfflineSaveAndPrintCheckoutFromParent(),
+                                showOfflineConfirmCheckoutFromParent(),
                           ),
                         ),
                       ],

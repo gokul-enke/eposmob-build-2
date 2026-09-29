@@ -1117,6 +1117,7 @@
     "add_to_cart": "Add To Cart",
     "added_to_cart": "Added To Cart",
     "confirm_order": "Confirm Order",
+    "save_and_print_removed": "Save & Print was removed. Use Confirm & Print (F6); offline sales sync later.",
     "save_and_print": "Save & Print",
     "clear_cart": "Clear Cart",
     "apply_save_print": "Apply & Save and Print",

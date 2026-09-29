@@ -405,20 +405,27 @@ void main() {
       );
     });
 
-    test('no connection fails before anything is saved or sent', () async {
+    test('offline falls back to offline-first instead of blocking the sale',
+        () async {
       final events = <String>[];
       final outbox = outboxReplying(
         events,
         http.Response('{"order_id":5}', 201),
       );
 
-      await expectLater(
-        confirmOnline(outbox, events, attemptServerSync: false),
-        throwsA(isA<OnlineSaleNotConfirmed>()),
+      final result = await confirmOnline(
+        outbox,
+        events,
+        attemptServerSync: false,
       );
+      await result.backgroundSync;
 
-      expect(events, isEmpty);
-      expect(outbox.records, isEmpty);
+      // Saved, cart cleared and printed like any offline-first sale; nothing
+      // is sent and the sale waits for review.
+      expect(events, containsAllInOrder(['persist', 'commit', 'print']));
+      expect(events, isNot(contains('send')));
+      expect(outbox.records.single.state, LocalSaleSyncState.needsReview);
+      expect(result.needsAttention, isFalse);
     });
   });
 }
