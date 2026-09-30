@@ -945,6 +945,7 @@
     "print": "Print",
     "confirm": "Confirm",
     "confirm_and_print": "Confirm & Print",
+    "confirm_and_whatsapp": "Confirm & Whatsapp",
     "collapse_sidebar": "Collapse Sidebar",
     "expand_sidebar": "Expand Sidebar",
     "keyboard_shortcuts": "Keyboard Shortcuts",

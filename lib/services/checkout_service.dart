@@ -285,7 +285,10 @@ class CheckoutService {
 
   Future<LocalFirstSaleResult<SavedOrder>?> _confirmLocalFirst({
     required bool printReceipt,
+    bool whatsappReceipt = false,
   }) async {
+    // Backend WhatsApp delivery will consume this intent in a follow-up.
+    billingDebugCheckout('receiptAction', 'whatsappReceipt=$whatsappReceipt');
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
     final localProducts =
@@ -427,13 +430,15 @@ class CheckoutService {
 
   /// Returns true once the sale is durable locally. Server sync is observable
   /// separately in Sales → Confirmed Orders.
-  Future<bool> confirmOrder() async {
+  Future<bool> confirmOrder({bool whatsappReceipt = false}) async {
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
     billingProvider.setLoadingConfirmOrder(true);
     billingDebugCheckout('confirmOrder', 'started');
     try {
-      return await _confirmLocalFirst(printReceipt: false) != null;
+      return await _confirmLocalFirst(
+              printReceipt: false, whatsappReceipt: whatsappReceipt) !=
+          null;
     } on OnlineSaleNotConfirmed catch (error) {
       if (context.mounted) {
         showScaffoldError(context: context, message: error.message);
