@@ -29,8 +29,19 @@ void main() {
     expect(
       PluCsv.build(items),
       'NAME,BARCODE,PRICE,UNIT,PLU\r\n'
-      '"Apples, ""red""",0000123,4.00,KG,APL-1\r\n',
+      '"Apples, ""red""",0000123,4.00,1,APL-1\r\n',
     );
+  });
+
+  test('unit is written as the weigh machine code', () {
+    for (final unit in ['KG', 'kg', ' Kg ']) {
+      expect(PluCsv.unitCode(unit), '1', reason: unit);
+    }
+    for (final unit in ['PC', 'pc', 'PCS', 'pcs']) {
+      expect(PluCsv.unitCode(unit), '2', reason: unit);
+    }
+    expect(PluCsv.unitCode('LTR'), 'LTR');
+    expect(PluCsv.unitCode(null), '');
   });
 
   test('PLU column takes the active store stock-row SKU', () {
@@ -42,7 +53,7 @@ void main() {
     );
     expect(
       PluCsv.build([product], storeId: 35),
-      'NAME,BARCODE,PRICE,UNIT,PLU\r\nMutton,,,KG,4225\r\n',
+      'NAME,BARCODE,PRICE,UNIT,PLU\r\nMutton,,,1,4225\r\n',
     );
   });
 
