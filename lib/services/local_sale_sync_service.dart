@@ -703,7 +703,9 @@ class LocalSaleSyncService extends ChangeNotifier {
         ));
       }
 
-      if (response.statusCode == 400 || response.statusCode == 422) {
+      // Validation and authorization failures are refused before an order is
+      // created, so they are definite rejections rather than ambiguous.
+      if (const [400, 401, 403, 422].contains(response.statusCode)) {
         return logged(_update(
           sending.copyWith(
             state: LocalSaleSyncState.rejected,
@@ -819,6 +821,32 @@ class LocalSaleSyncService extends ChangeNotifier {
     await _store.remove(localOrderId);
     _records.remove(localOrderId);
     notifyListeners();
+  }
+
+  /// Finishes a rejection rollback that the app closed in the middle of:
+  /// removes the rejected records of [cartSessionId] and returns their local
+  /// order ids, so the caller can delete the matching local sale snapshots
+  /// and keep the still-editable cart. Only online-first confirmation can
+  /// leave a rejected record on the cart it came from.
+  Future<List<String>> discardRejectedForCartSession(
+    String cartSessionId,
+  ) async {
+    await hydrate();
+    if (cartSessionId.isEmpty) return const [];
+    final rejected = _records.values
+        .where((record) =>
+            record.sourceCartSessionId == cartSessionId &&
+            record.state == LocalSaleSyncState.rejected)
+        .map((record) => record.localOrderId)
+        .toList();
+    if (rejected.isEmpty) return const [];
+
+    for (final id in rejected) {
+      await _store.remove(id);
+      _records.remove(id);
+    }
+    notifyListeners();
+    return rejected;
   }
 
   static Future<http.Response> _defaultSender(

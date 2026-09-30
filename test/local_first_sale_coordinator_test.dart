@@ -474,6 +474,23 @@ void main() {
       expect(outbox.hasRecordedCartSession('cart-online'), isFalse);
     });
 
+    test('an expired login keeps the cart instead of clearing it', () async {
+      final events = <String>[];
+      final outbox = outboxReplying(
+        events,
+        http.Response('{"message":"Unauthenticated."}', 401),
+      );
+
+      await expectLater(
+        confirmOnline(outbox, events),
+        throwsA(isA<OnlineSaleNotConfirmed>()),
+      );
+
+      expect(events, isNot(contains('commit')));
+      expect(events, contains('rollback'));
+      expect(outbox.hasRecordedCartSession('cart-online'), isFalse);
+    });
+
     test('an unverifiable result keeps the sale for review without printing',
         () async {
       final events = <String>[];

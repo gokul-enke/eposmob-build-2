@@ -219,6 +219,17 @@ Future<Widget> _bootstrap(ValueChanged<String> reportStage) async {
           .run(() => localProducts.hydrated)
           .timeout(_maxBoxOpenTimeout);
       final localSales = LocalSaleSyncService.instance;
+      // A sale the server rejected never cleared its cart. If the app closed
+      // before that rollback finished, finish it here and keep the cart.
+      final rolledBack = await localSales
+          .discardRejectedForCartSession(localProducts.cartSessionId);
+      if (rolledBack.isNotEmpty) {
+        localProducts.deleteConfirmedOrders(rolledBack.toSet());
+        await localProducts.flushPersistence();
+        debugPrint(
+          '[Startup] rolled_back_rejected_sales count=${rolledBack.length}',
+        );
+      }
       if (localSales.hasRecordedCartSession(localProducts.cartSessionId)) {
         final confirmedDraftId = localProducts.currentOrder?.id;
         if (confirmedDraftId != null) {
