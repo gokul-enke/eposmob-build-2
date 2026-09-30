@@ -1822,7 +1822,10 @@ Powered by CloudPOS''',
       if (mounted && loadId == _loadSeq) {
         showScaffoldError(
           context: context,
-          message: 'sales.no_orders_found'.tr,
+          message: SalesProvider.apiErrorMessage(
+            error,
+            fallback: 'sales.orders_load_failed'.tr,
+          ),
         );
       }
     } finally {
@@ -2434,20 +2437,38 @@ Powered by CloudPOS''',
                                             'sales.order_cancelled_success'.tr,
                                       );
                                       // Refresh orders
-                                      salesProvider.fetchOrders(
-                                        accessToken: authModel.token ?? "",
-                                        page: salesProvider.currentPage,
-                                        filterOnlineSales:
-                                            widget.isOnlineSales ? true : null,
-                                      );
+                                      try {
+                                        await salesProvider.fetchOrders(
+                                          accessToken: authModel.token ?? "",
+                                          page: salesProvider.currentPage,
+                                          filterOnlineSales:
+                                              widget.isOnlineSales
+                                                  ? true
+                                                  : null,
+                                        );
+                                      } catch (refreshError) {
+                                        if (context.mounted) {
+                                          showScaffoldError(
+                                            context: context,
+                                            message:
+                                                SalesProvider.apiErrorMessage(
+                                              refreshError,
+                                              fallback:
+                                                  'sales.orders_load_failed'.tr,
+                                            ),
+                                          );
+                                        }
+                                      }
                                     }
                                   } catch (e) {
                                     if (context.mounted) {
                                       showScaffoldError(
                                         context: context,
-                                        message: 'sales.failed_cancel_order'
-                                            .tr
-                                            .replaceAll('@error', e.toString()),
+                                        message: SalesProvider.apiErrorMessage(
+                                          e,
+                                          fallback:
+                                              'sales.failed_cancel_order'.tr,
+                                        ),
                                       );
                                     }
                                   }
@@ -2506,20 +2527,35 @@ Powered by CloudPOS''',
                                             .replaceAll('@status',
                                                 newStatus.toString()),
                                       );
-                                      salesProvider.fetchOrders(
-                                        accessToken: authModel.token ?? "",
-                                        page: salesProvider.currentPage,
-                                      );
+                                      try {
+                                        await salesProvider.fetchOrders(
+                                          accessToken: authModel.token ?? "",
+                                          page: salesProvider.currentPage,
+                                        );
+                                      } catch (refreshError) {
+                                        if (context.mounted) {
+                                          showScaffoldError(
+                                            context: context,
+                                            message:
+                                                SalesProvider.apiErrorMessage(
+                                              refreshError,
+                                              fallback:
+                                                  'sales.orders_load_failed'.tr,
+                                            ),
+                                          );
+                                        }
+                                      }
                                     }
                                   } catch (e) {
                                     if (context.mounted) {
                                       showScaffoldError(
                                         context: context,
-                                        message:
-                                            'sales.failed_update_order_status'
-                                                .tr
-                                                .replaceAll(
-                                                    '@error', e.toString()),
+                                        message: SalesProvider.apiErrorMessage(
+                                          e,
+                                          fallback:
+                                              'sales.failed_update_order_status'
+                                                  .tr,
+                                        ),
                                       );
                                     }
                                   }
@@ -2570,20 +2606,35 @@ Powered by CloudPOS''',
                                             .replaceAll('@status',
                                                 newStatus.toString()),
                                       );
-                                      salesProvider.fetchOrders(
-                                        accessToken: authModel.token ?? "",
-                                        page: salesProvider.currentPage,
-                                      );
+                                      try {
+                                        await salesProvider.fetchOrders(
+                                          accessToken: authModel.token ?? "",
+                                          page: salesProvider.currentPage,
+                                        );
+                                      } catch (refreshError) {
+                                        if (context.mounted) {
+                                          showScaffoldError(
+                                            context: context,
+                                            message:
+                                                SalesProvider.apiErrorMessage(
+                                              refreshError,
+                                              fallback:
+                                                  'sales.orders_load_failed'.tr,
+                                            ),
+                                          );
+                                        }
+                                      }
                                     }
                                   } catch (e) {
                                     if (context.mounted) {
                                       showScaffoldError(
                                         context: context,
-                                        message:
-                                            'sales.failed_update_payment_status'
-                                                .tr
-                                                .replaceAll(
-                                                    '@error', e.toString()),
+                                        message: SalesProvider.apiErrorMessage(
+                                          e,
+                                          fallback:
+                                              'sales.failed_update_payment_status'
+                                                  .tr,
+                                        ),
                                       );
                                     }
                                   }
@@ -2630,7 +2681,7 @@ Powered by CloudPOS''',
     );
   }
 
-  Widget _buildErrorState() {
+  Widget _buildErrorState(String message) {
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -2650,7 +2701,7 @@ Powered by CloudPOS''',
             ),
             const SizedBox(height: 18),
             Text(
-              'sales.orders_load_failed'.tr,
+              message,
               textAlign: TextAlign.center,
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
@@ -2896,7 +2947,8 @@ Powered by CloudPOS''',
                                                             .isNotEmpty ==
                                                         true)
                                                       Text(
-                                                        order.receiptNumber!.trim(),
+                                                        order.receiptNumber!
+                                                            .trim(),
                                                         textAlign:
                                                             TextAlign.center,
                                                         overflow: TextOverflow
@@ -3522,7 +3574,7 @@ Powered by CloudPOS''',
                       // clears the provider error and the list comes back.
                       if (_lastRequestFailed &&
                           orderProvider.ordersError != null) {
-                        return _buildErrorState();
+                        return _buildErrorState(orderProvider.ordersError!);
                       }
 
                       if (displayedOrders.isEmpty) {

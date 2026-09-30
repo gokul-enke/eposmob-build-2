@@ -231,7 +231,7 @@ class APPUrl {
   static String get customerLastPurchases =>
       '$baseURL/api/v1/customer/customer-last-purchases';
   static String get productSalesReport =>
-      '$baseURL/api/v1/reports/product-sales-report';
+      '$baseURL/api/v1/product-sales-report';
   static String get salesReport => '$baseURL/api/v1/reports/sales-report';
   static String get supplierSalesReport =>
       '$baseURL/api/v1/reports/supplier-sales-report';

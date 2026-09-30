@@ -750,6 +750,8 @@ class _SideMenuState extends State<SideMenu> {
                   //     'page_SupplierTransactionsReport') ||
                   roleProvider.currentUserHasPermissionSync(
                       'menu.reports.supplier_transactions.access');
+              final hasProductSalesPermission =
+                  roleProvider.currentUserCanAccessProductSalesReportSync();
               final hasNonStockPermission =
                   roleProvider.currentUserHasPermissionSync(
                       'menu.reports.non_stock.access');
@@ -774,6 +776,7 @@ class _SideMenuState extends State<SideMenu> {
               if (!hasSalesExecutiveReportsPermission &&
                   !hasCustomerTransactionsPermission &&
                   !hasSupplierTransactionsPermission &&
+                  !hasProductSalesPermission &&
                   !canViewExecutiveSummary &&
                   !hasStockReportPermission &&
                   !hasNonStockPermission &&
@@ -797,29 +800,34 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value = 67;
                     },
                     onTapTitle5: () {
-                      sideBarController.index.value = 98;
+                      sideBarController.index.value = 40;
                     },
                     onTapTitle6: () {
-                      sideBarController.index.value = 77;
+                      sideBarController.index.value = 98;
                     },
                     onTapTitle7: () {
+                      sideBarController.index.value = 77;
+                    },
+                    onTapTitle8: () {
                       sideBarController.index.value = 80;
                     },
                     listTitle1: 'nav.sales_executive_reports'.tr,
                     listTitle2: 'nav.executive_reports'.tr,
                     listTitle3: 'nav.customer_transaction_reports'.tr,
                     listTitle4: 'nav.supplier_transaction_reports'.tr,
-                    listTitle5: 'nav.stock_report'.tr,
-                    listTitle6: 'nav.non_stock_report'.tr,
-                    listTitle7: 'nav.consumed_stocks_report'.tr,
+                    listTitle5: 'nav.product_sales_report'.tr,
+                    listTitle6: 'nav.stock_report'.tr,
+                    listTitle7: 'nav.non_stock_report'.tr,
+                    listTitle8: 'nav.consumed_stocks_report'.tr,
                     // Permission-based visibility
                     showTitle1: hasSalesExecutiveReportsPermission,
                     showTitle2: canViewExecutiveSummary,
                     showTitle3: hasCustomerTransactionsPermission,
                     showTitle4: hasSupplierTransactionsPermission,
-                    showTitle5: hasStockReportPermission,
-                    showTitle6: hasNonStockPermission,
-                    showTitle7: hasConsumedStockPermission,
+                    showTitle5: hasProductSalesPermission,
+                    showTitle6: hasStockReportPermission,
+                    showTitle7: hasNonStockPermission,
+                    showTitle8: hasConsumedStockPermission,
                     icon: fa.FontAwesomeIcons.chartPie,
                     title: 'nav.reports'.tr,
                     onTap: () {

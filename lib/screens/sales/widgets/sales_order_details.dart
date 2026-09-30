@@ -138,13 +138,19 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         });
       } else {
         setState(() {
-          orderNumber = 'sales_order_details.err_order_not_found'.tr;
+          orderNumber =
+              response['message']?.toString().trim().isNotEmpty == true
+                  ? response['message'].toString().trim()
+                  : 'sales_order_details.err_order_not_found'.tr;
         });
       }
     } catch (error) {
       debugPrint("Error fetching order details: $error");
       setState(() {
-        orderNumber = "Error fetching order details";
+        orderNumber = SalesProvider.apiErrorMessage(
+          error,
+          fallback: 'sales_order_details.err_order_not_found'.tr,
+        );
       });
     } finally {
       setState(() {
@@ -698,8 +704,11 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                         if (context.mounted) {
                           showScaffoldError(
                             context: context,
-                            message:
-                                '${'sales_order_details.msg_failed_status'.tr} $e',
+                            message: SalesProvider.apiErrorMessage(
+                              e,
+                              fallback:
+                                  'sales_order_details.msg_failed_status'.tr,
+                            ),
                           );
                         }
                       }
@@ -750,8 +759,11 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                         if (context.mounted) {
                           showScaffoldError(
                             context: context,
-                            message:
-                                '${'sales_order_details.msg_failed_payment'.tr} $e',
+                            message: SalesProvider.apiErrorMessage(
+                              e,
+                              fallback:
+                                  'sales_order_details.msg_failed_payment'.tr,
+                            ),
                           );
                         }
                       }
@@ -963,8 +975,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         customerType: orderDetailsModelData?.customerDetails?.customerType,
         // Same values the print path (PrintService) passes.
         paymentBreakdown: orderDetailsModelData?.payments,
-        paidAmount:
-            PrintService.paidAmountFromPayments(orderDetailsModelData?.payments),
+        paidAmount: PrintService.paidAmountFromPayments(
+            orderDetailsModelData?.payments),
         customerCurrentBalance: customerDetails?.customerBalance,
         isDefaultCustomer: _isDefaultCustomerPhone(customerDetails?.phone),
         hideDefaultCustomerPhone: appSettings.hideDefaultPhone,

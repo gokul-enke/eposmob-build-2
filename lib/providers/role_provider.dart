@@ -134,6 +134,15 @@ class RoleProvider extends ChangeNotifier {
     return hasPermission(_currentUserRole!, permission);
   }
 
+  /// Supports both the current menu permission and the legacy permission
+  /// present in existing role payloads while those roles are migrated.
+  bool currentUserCanAccessProductSalesReportSync() {
+    return currentUserHasPermissionSync(
+          'menu.reports.product_sales.access',
+        ) ||
+        currentUserHasPermissionSync('page_ProductSalesReport');
+  }
+
   // Get all permissions for a role
   List<String> getRolePermissions(String originalRoleName) {
     final role = getRoleByOriginalName(originalRoleName);

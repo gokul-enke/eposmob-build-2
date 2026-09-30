@@ -28,6 +28,8 @@ class DrawerListTileExpandableColumn extends StatefulWidget {
   final String? listTitle6;
   final VoidCallback? onTapTitle7;
   final String? listTitle7;
+  final VoidCallback? onTapTitle8;
+  final String? listTitle8;
   // Optional: allow custom icon size per tile (kept consistent with DrawerListTile)
   final double? iconSize;
   // Optional: allow custom horizontal gap between icon and title per tile
@@ -41,6 +43,7 @@ class DrawerListTileExpandableColumn extends StatefulWidget {
   final bool? showTitle5;
   final bool? showTitle6;
   final bool? showTitle7;
+  final bool? showTitle8;
 
   const DrawerListTileExpandableColumn({
     super.key,
@@ -64,6 +67,8 @@ class DrawerListTileExpandableColumn extends StatefulWidget {
     this.onTapTitle6,
     this.listTitle7,
     this.onTapTitle7,
+    this.listTitle8,
+    this.onTapTitle8,
     // Permission defaults - show all by default for backward compatibility
     this.showTitle1 = true,
     this.showTitle2 = true,
@@ -72,6 +77,7 @@ class DrawerListTileExpandableColumn extends StatefulWidget {
     this.showTitle5 = true,
     this.showTitle6 = true,
     this.showTitle7 = true,
+    this.showTitle8 = true,
     this.iconSize,
     this.horizontalGap,
   });
@@ -347,6 +353,35 @@ class _DrawerListTileExpandableColumnState
         ),
       ));
     }
+    if (widget.listTitle8 != null && widget.showTitle8 == true) {
+      items.add(PopupMenuItem<String>(
+        value: '8',
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 4,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: ColorManager.kPrimaryColor.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                widget.listTitle8!,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 12,
+                  color: Color(0xFF2D3748),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ));
+    }
 
     final choice = await showMenu<String>(
       context: ctx,
@@ -380,6 +415,9 @@ class _DrawerListTileExpandableColumnState
         break;
       case '7':
         widget.onTapTitle7?.call();
+        break;
+      case '8':
+        widget.onTapTitle8?.call();
         break;
       default:
         break;
@@ -769,6 +807,49 @@ class _DrawerListTileExpandableColumnState
                               leading: const BubbleIcon(),
                               title: Text(
                                 widget.listTitle7 ?? '',
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s12,
+                                  0.21,
+                                  ColorManager.textColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (widget.listTitle8 != null &&
+                          widget.showTitle8 == true)
+                        Container(
+                          margin: const EdgeInsets.symmetric(vertical: 1),
+                          decoration: BoxDecoration(
+                            color: _selectedTileIndex == 7
+                                ? ColorManager.kPrimaryColor.withValues(
+                                    alpha: 0.08,
+                                  )
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: ListTile(
+                              selected: _selectedTileIndex == 7,
+                              contentPadding:
+                                  const EdgeInsets.only(left: 20, right: 10),
+                              horizontalTitleGap: 8.0,
+                              visualDensity: const VisualDensity(
+                                  vertical: -4, horizontal: 0),
+                              minVerticalPadding: 0,
+                              onTap: widget.onTapTitle8 == null
+                                  ? null
+                                  : () {
+                                      final callback = widget.onTapTitle8;
+                                      if (callback != null) {
+                                        _onTapTile(7, callback);
+                                      }
+                                    },
+                              leading: const BubbleIcon(),
+                              title: Text(
+                                widget.listTitle8 ?? '',
                                 style: buildCustomStyle(
                                   FontWeightManager.medium,
                                   FontSize.s12,
