@@ -48,11 +48,22 @@ class PluCsv {
           product.productName?.trim() ?? '',
           product.barcode ?? '',
           _money(product.price?.price),
-          product.unit ?? '',
+          unitCode(product.unit),
           skuOf(product, storeId: storeId) ?? '',
         ],
     ];
     return '${rows.map((row) => row.map(_escape).join(',')).join('\r\n')}\r\n';
+  }
+
+  /// The weigh machine reads the unit as a number: 1 for weight, 2 for
+  /// pieces, in any letter case. Other units are written as they are.
+  static String unitCode(String? unit) {
+    final value = unit?.trim() ?? '';
+    return switch (value.toUpperCase()) {
+      'KG' => '1',
+      'PC' || 'PCS' => '2',
+      _ => value,
+    };
   }
 
   static String _money(Object? value) {
