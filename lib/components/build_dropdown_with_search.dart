@@ -23,6 +23,7 @@ class BuildDropDownWithSearch<T> extends StatefulWidget {
   final EdgeInsetsGeometry? contentPadding;
   final double? width;
   final bool autofocus;
+  final bool openOnFocus;
 
   const BuildDropDownWithSearch({
     super.key,
@@ -41,6 +42,7 @@ class BuildDropDownWithSearch<T> extends StatefulWidget {
     this.contentPadding,
     this.width,
     this.autofocus = true,
+    this.openOnFocus = true,
     this.focusNode,
   });
 
@@ -56,6 +58,7 @@ class _BuildDropDownWithSearchState<T>
   late TextEditingController _searchController;
   late FocusNode _searchFocusNode;
   final GlobalKey<DropdownSearchState<T>> _dropdownKey = GlobalKey<DropdownSearchState<T>>();
+  bool _isPopupOpen = false;
 
   @override
   void initState() {
@@ -83,10 +86,17 @@ class _BuildDropDownWithSearchState<T>
   }
 
   void _handleFocusChange() {
-    if (widget.focusNode?.hasFocus ?? false) {
-      // Auto-open dropdown popup when it receives focus
-      _dropdownKey.currentState?.openDropDownSearch();
+    if (widget.openOnFocus && (widget.focusNode?.hasFocus ?? false)) {
+      _openDropdown();
     }
+  }
+
+  void _openDropdown() {
+    if (_isPopupOpen) return;
+    final dropdownState = _dropdownKey.currentState;
+    if (dropdownState == null) return;
+    _isPopupOpen = true;
+    dropdownState.openDropDownSearch();
   }
 
   KeyEventResult _onSearchKey(FocusNode node, RawKeyEvent event) {
@@ -153,6 +163,10 @@ class _BuildDropDownWithSearchState<T>
     // Enter / Return -> Jump to next box
     if (event.logicalKey == LogicalKeyboardKey.enter ||
         event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+      if (!widget.openOnFocus) {
+        _openDropdown();
+        return KeyEventResult.handled;
+      }
       FocusScope.of(context).nextFocus();
       return KeyEventResult.handled;
     }
@@ -330,6 +344,7 @@ class _BuildDropDownWithSearchState<T>
                         ),
                         // Clear the search query when popup is closed
                         onDismissed: () {
+                          _isPopupOpen = false;
                           _searchController.clear();
                         },
                         menuProps: MenuProps(

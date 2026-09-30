@@ -14,7 +14,82 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/list_sales_order.dart';
 import '../resources/app_url.dart';
 
+typedef SalesPostRequest = Future<http.Response> Function(
+  Uri url, {
+  Map<String, String>? headers,
+  Object? body,
+  Encoding? encoding,
+});
+
+class SalesApiException implements Exception {
+  const SalesApiException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 class SalesProvider with ChangeNotifier {
+  SalesProvider({SalesPostRequest? postRequest})
+      : _postRequest = postRequest ?? http.post;
+
+  final SalesPostRequest _postRequest;
+
+  static void ensureSalesActionSucceeded(
+    int statusCode,
+    String responseBody, {
+    required String fallback,
+  }) {
+    if (statusCode == 200 || statusCode == 201) {
+      try {
+        final decoded = json.decode(responseBody);
+        if (decoded is Map) {
+          final rawStatus = decoded['status'];
+          final status = rawStatus?.toString().toLowerCase();
+          final rawSuccess = decoded['success'];
+          final success = rawSuccess?.toString().toLowerCase();
+          if (rawStatus == false ||
+              rawStatus == 0 ||
+              rawSuccess == false ||
+              rawSuccess == 0 ||
+              status == 'false' ||
+              status == 'failed' ||
+              status == 'error' ||
+              status == 'failure' ||
+              success == 'false') {
+            throw SalesApiException(
+              ApiResponseHelper.messageFromBody(
+                responseBody,
+                fallback: fallback,
+              ),
+            );
+          }
+        }
+      } on FormatException {
+        // Some successful endpoints return an empty or non-JSON response.
+      }
+      return;
+    }
+
+    throw SalesApiException(
+      ApiResponseHelper.messageFromBody(
+        responseBody,
+        fallback: fallback,
+      ),
+    );
+  }
+
+  static String apiErrorMessage(
+    Object error, {
+    required String fallback,
+  }) {
+    if (error is SalesApiException && error.message.trim().isNotEmpty) {
+      return error.message.trim();
+    }
+    return fallback;
+  }
+
   bool isOnlineSalesNavigation = false;
   List<ListOrderModelData> _orders = [];
   List<SalesReturnOrder> _salesReturnOrders = [];
@@ -508,7 +583,12 @@ class SalesProvider with ChangeNotifier {
             debugPrint('Failed to parse 500 error response: $e');
           }
         }
-        throw Exception('Failed to load orders: HTTP ${response.statusCode}');
+        throw SalesApiException(
+          ApiResponseHelper.messageFromBody(
+            response.body,
+            fallback: 'Failed to load orders: HTTP ${response.statusCode}',
+          ),
+        );
       }
     } catch (error, stackTrace) {
       debugPrint('=== FETCH ORDERS EXCEPTION ===');
@@ -519,7 +599,10 @@ class SalesProvider with ChangeNotifier {
       // orders that were loaded successfully: a failed background refresh used
       // to wipe the list and surface as an empty "no orders found" screen.
       if (requestId == _ordersRequestSeq) {
-        _ordersError = error.toString();
+        _ordersError = apiErrorMessage(
+          error,
+          fallback: 'Failed to load orders',
+        );
         notifyListeners();
       }
       rethrow;
@@ -902,7 +985,7 @@ class SalesProvider with ChangeNotifier {
 
     debugPrint("🔴 CANCEL ORDER API REQUEST BODY: ${jsonEncode(requestBody)}");
 
-    final response = await http.post(
+    final response = await _postRequest(
       url,
       headers: {
         'Authorization': 'Bearer $accessToken',
@@ -920,11 +1003,12 @@ class SalesProvider with ChangeNotifier {
     debugPrint("response.statusCode ${response.statusCode}");
     debugPrint("response.body ${response.body}");
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      notifyListeners();
-    } else {
-      throw Exception('Failed to cancel order');
-    }
+    ensureSalesActionSucceeded(
+      response.statusCode,
+      response.body,
+      fallback: 'Failed to cancel order',
+    );
+    notifyListeners();
   }
 
   Future<void> changeOrderStatus({
@@ -955,7 +1039,7 @@ class SalesProvider with ChangeNotifier {
       if (deliveryLogistics != null) 'delivery_logistics': deliveryLogistics,
     };
 
-    final response = await http.post(
+    final response = await _postRequest(
       url,
       headers: {
         'Authorization': 'Bearer $accessToken',
@@ -965,12 +1049,12 @@ class SalesProvider with ChangeNotifier {
       body: jsonEncode(requestBody),
     );
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      notifyListeners();
-    } else {
-      final error = jsonDecode(response.body);
-      throw Exception(error['message'] ?? 'Failed to change order status');
-    }
+    ensureSalesActionSucceeded(
+      response.statusCode,
+      response.body,
+      fallback: 'Failed to change order status',
+    );
+    notifyListeners();
   }
 
   Future<void> changePaymentStatus({
@@ -994,7 +1078,7 @@ class SalesProvider with ChangeNotifier {
       'amount': amount,
     };
 
-    final response = await http.post(
+    final response = await _postRequest(
       url,
       headers: {
         'Authorization': 'Bearer $accessToken',
@@ -1004,12 +1088,12 @@ class SalesProvider with ChangeNotifier {
       body: jsonEncode(requestBody),
     );
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      notifyListeners();
-    } else {
-      final error = jsonDecode(response.body);
-      throw Exception(error['message'] ?? 'Failed to change payment status');
-    }
+    ensureSalesActionSucceeded(
+      response.statusCode,
+      response.body,
+      fallback: 'Failed to change payment status',
+    );
+    notifyListeners();
   }
 
   Future<void> fetchDailySalesClose({
