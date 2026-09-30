@@ -215,4 +215,65 @@ void main() {
     );
     expect(provider.allCustomers, isEmpty);
   });
+
+  test('exactly 1000 declared pages are returned successfully', () async {
+    var requests = 0;
+    final provider = CustomerProvider(httpGet: (uri, {headers}) async {
+      final page = int.parse(uri.queryParameters['page']!);
+      requests++;
+      return http.Response(
+        jsonEncode({
+          'status': 'success',
+          'data': {
+            'current_page': page,
+            'last_page': 1000,
+            'per_page': 1,
+            'total': 1000,
+            'data': [
+              {'id': page, 'name': 'Customer $page'},
+            ],
+          },
+        }),
+        200,
+      );
+    });
+
+    final customers = await provider.fetchAllCustomersSnapshot(
+      accessToken: 'token',
+    );
+
+    expect(requests, 1000);
+    expect(customers, hasLength(1000));
+    expect(customers.map((customer) => customer.id), containsAll([1, 1000]));
+  });
+
+  test('more than 1000 declared pages still fails at the safety limit',
+      () async {
+    var requests = 0;
+    final provider = CustomerProvider(httpGet: (uri, {headers}) async {
+      final page = int.parse(uri.queryParameters['page']!);
+      requests++;
+      return http.Response(
+        jsonEncode({
+          'status': 'success',
+          'data': {
+            'current_page': page,
+            'last_page': 1001,
+            'per_page': 1,
+            'total': 1001,
+            'data': [
+              {'id': page, 'name': 'Customer $page'},
+            ],
+          },
+        }),
+        200,
+      );
+    });
+
+    await expectLater(
+      provider.fetchAllCustomersSnapshot(accessToken: 'token'),
+      throwsA(isA<HttpException>()),
+    );
+    expect(requests, 1000);
+  });
 }

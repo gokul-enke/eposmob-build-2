@@ -391,7 +391,9 @@ class CustomerProvider extends ChangeNotifier {
       nextPage++;
     }
 
-    if (nextPage > _maximumCustomerPages) {
+    final hasUnfetchedPages =
+        declaredLastPage == null || nextPage <= declaredLastPage;
+    if (nextPage > _maximumCustomerPages && hasUnfetchedPages) {
       throw const HttpException('Customer pagination exceeded safe limit.');
     }
 
