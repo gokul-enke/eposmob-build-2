@@ -396,6 +396,7 @@ class CheckoutService {
               }
             }
           : null,
+      withServerOrderNumber: (sale, number) => sale.withOrderNumber(number),
       onSyncFinished: (record) async {
         if (record.state != LocalSaleSyncState.synced || accessToken.isEmpty) {
           return;

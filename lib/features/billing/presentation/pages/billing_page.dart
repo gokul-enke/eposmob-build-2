@@ -6722,6 +6722,7 @@ class BillingPageState extends State<BillingPage>
                   customerCurrentBalance: receiptBalance.currentBalance,
                 )
             : null,
+        withServerOrderNumber: (sale, number) => sale.withOrderNumber(number),
         onSyncFinished: (record) async {
           if (record.state == LocalSaleSyncState.synced &&
               accessToken.isNotEmpty) {

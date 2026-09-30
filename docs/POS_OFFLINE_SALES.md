@@ -51,7 +51,11 @@ button waits (with its loading state) for the one API attempt:
 2. Save the snapshot and outbox record exactly as offline-first does, so a
    crash mid-request is still recovered as `needs_review` on restart.
 3. Send the request and wait for it.
-4. `synced` → clear the cart, refresh post-sync caches, then print.
+4. `synced` → clear the cart, refresh post-sync caches, then print. The
+   receipt shows the backend order number (`order_number` from the response)
+   instead of the local bill number; if the response has none, the bill
+   number is printed. Offline-first receipts always show the bill number,
+   because they print before the server answers.
 5. `rejected` (400/422) → discard the outbox record and the local snapshot;
    show the server message; the cart is unchanged so the cashier can fix it.
 6. Ambiguous (timeout, 5xx, unreadable response) → clear the cart so it cannot

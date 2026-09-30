@@ -7703,6 +7703,7 @@ class OrderPanelState extends State<OrderPanel> {
                 }
               }
             : null,
+        withServerOrderNumber: (sale, number) => sale.withOrderNumber(number),
         onSyncFinished: (record) async {
           if (record.state != LocalSaleSyncState.synced ||
               accessToken.isEmpty) {
@@ -7883,6 +7884,7 @@ class OrderPanelState extends State<OrderPanel> {
                   customerCurrentBalance: receiptBalance.currentBalance,
                 )
             : null,
+        withServerOrderNumber: (sale, number) => sale.withOrderNumber(number),
         onSyncFinished: (record) async {
           if (record.state != LocalSaleSyncState.synced ||
               accessToken.isEmpty) {

@@ -318,6 +318,45 @@ class SavedOrder {
     this.quotationId,
     this.quotationNumber,
   });
+
+  /// A copy that prints [number] as its order number, e.g. the backend order
+  /// number of an online-first sale.
+  SavedOrder withOrderNumber(String number) => SavedOrder(
+        id: id,
+        orderNumber: number,
+        items: items,
+        customerName: customerName,
+        customerPhone: customerPhone,
+        comment: comment,
+        createdAt: createdAt,
+        total: total,
+        deliveryMethod: deliveryMethod,
+        customerId: customerId,
+        paymentMethod: paymentMethod,
+        paidAmount: paidAmount,
+        balanceAmount: balanceAmount,
+        transactionId: transactionId,
+        couponId: couponId,
+        deliveryMethodId: deliveryMethodId,
+        carNumber: carNumber,
+        status: status,
+        deliveryDate: deliveryDate,
+        deliveryTime: deliveryTime,
+        flatDiscount: flatDiscount,
+        percentageDiscount: percentageDiscount,
+        toCustomerCredit: toCustomerCredit,
+        tableId: tableId,
+        alternatePhone: alternatePhone,
+        address: address,
+        addressId: addressId,
+        pincode: pincode,
+        deliveryCharge: deliveryCharge,
+        customerVatNumber: customerVatNumber,
+        customerCrNumber: customerCrNumber,
+        customerType: customerType,
+        quotationId: quotationId,
+        quotationNumber: quotationNumber,
+      );
 }
 
 class PriceSummary {

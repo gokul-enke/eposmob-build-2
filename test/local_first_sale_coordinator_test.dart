@@ -96,6 +96,36 @@ void main() {
     );
   });
 
+  test('offline-first prints the local bill number', () async {
+    final printed = <String>[];
+    final outbox = LocalSaleSyncService(
+      store: _MemoryOutbox([]),
+      sender: (_, __, ___) async =>
+          http.Response('{"order_id":5,"order_number":"ORD-5"}', 201),
+    );
+
+    final result = await LocalFirstSaleCoordinator(outbox).confirm<String>(
+      surface: LocalSaleSurface.mobileBilling,
+      sourceCartSessionId: 'cart-1',
+      payload: _payload(),
+      accessToken: 'token',
+      tenantKey: 'tenant',
+      persistLocalSale: () => const LocalSaleIdentity(
+        value: '2-01-260930-0001',
+        localOrderId: 'local-1',
+        localOrderNumber: '2-01-260930-0001',
+      ),
+      flushLocalPersistence: () async {},
+      commitLocalWorkspace: (_) {},
+      rollbackLocalSale: (_) {},
+      printLocalReceipt: printed.add,
+      withServerOrderNumber: (_, number) => number,
+    );
+    await result.backgroundSync;
+
+    expect(printed, ['2-01-260930-0001']);
+  });
+
   test('a print failure does not prevent the one background attempt', () async {
     var sends = 0;
     final outbox = LocalSaleSyncService(
@@ -360,6 +390,63 @@ void main() {
       expect(result.needsAttention, isFalse);
       expect(result.printSucceeded, isTrue);
       expect(result.message, 'Order placed successfully.');
+    });
+
+    test('prints the backend order number once the server accepts the sale',
+        () async {
+      final printed = <String>[];
+      final outbox = outboxReplying(
+        [],
+        http.Response('{"order_id":5,"order_number":"ORD-5"}', 201),
+      );
+
+      await LocalFirstSaleCoordinator(outbox).confirm<String>(
+        surface: LocalSaleSurface.supermarketDesktop,
+        mode: SaleConfirmationMode.onlineFirst,
+        sourceCartSessionId: 'cart-online',
+        payload: _payload(),
+        accessToken: 'token',
+        tenantKey: 'tenant',
+        persistLocalSale: () => const LocalSaleIdentity(
+          value: '2-01-260930-0001',
+          localOrderId: 'local-online-1',
+          localOrderNumber: '2-01-260930-0001',
+        ),
+        flushLocalPersistence: () async {},
+        commitLocalWorkspace: (_) {},
+        rollbackLocalSale: (_) {},
+        printLocalReceipt: printed.add,
+        withServerOrderNumber: (_, number) => number,
+      );
+
+      expect(printed, ['ORD-5']);
+    });
+
+    test('keeps the local bill number when the response has no order number',
+        () async {
+      final printed = <String>[];
+      final outbox = outboxReplying([], http.Response('{"order_id":5}', 201));
+
+      await LocalFirstSaleCoordinator(outbox).confirm<String>(
+        surface: LocalSaleSurface.supermarketDesktop,
+        mode: SaleConfirmationMode.onlineFirst,
+        sourceCartSessionId: 'cart-online',
+        payload: _payload(),
+        accessToken: 'token',
+        tenantKey: 'tenant',
+        persistLocalSale: () => const LocalSaleIdentity(
+          value: '2-01-260930-0001',
+          localOrderId: 'local-online-1',
+          localOrderNumber: '2-01-260930-0001',
+        ),
+        flushLocalPersistence: () async {},
+        commitLocalWorkspace: (_) {},
+        rollbackLocalSale: (_) {},
+        printLocalReceipt: printed.add,
+        withServerOrderNumber: (_, number) => number,
+      );
+
+      expect(printed, ['2-01-260930-0001']);
     });
 
     test('a rejected sale is removed and the cart is left intact', () async {

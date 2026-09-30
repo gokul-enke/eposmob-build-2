@@ -87,6 +87,11 @@ class LocalFirstSaleCoordinator {
     required FutureOr<void> Function(T sale) rollbackLocalSale,
     FutureOr<void> Function(T sale)? printLocalReceipt,
     FutureOr<void> Function(LocalSaleSyncRecord record)? onSyncFinished,
+
+    /// Online-first only: returns the sale to print with the backend order
+    /// number in place of the local bill number. Offline-first receipts print
+    /// before the server answers, so they keep the local bill number.
+    T Function(T sale, String serverOrderNumber)? withServerOrderNumber,
   }) async {
     // Online-first only applies while the server is reachable. With no
     // internet or Offline Mode on, the sale falls back to offline-first so
@@ -136,6 +141,7 @@ class LocalFirstSaleCoordinator {
         rollbackLocalSale: rollbackLocalSale,
         printLocalReceipt: printLocalReceipt,
         onSyncFinished: onSyncFinished,
+        withServerOrderNumber: withServerOrderNumber,
       );
     }
 
@@ -209,6 +215,8 @@ class LocalFirstSaleCoordinator {
     required FutureOr<void> Function(T sale)? printLocalReceipt,
     required FutureOr<void> Function(LocalSaleSyncRecord record)?
         onSyncFinished,
+    required T Function(T sale, String serverOrderNumber)?
+        withServerOrderNumber,
   }) async {
     final record = await outbox.submitOnce(
       localOrderId: identity.localOrderId,
@@ -267,7 +275,14 @@ class LocalFirstSaleCoordinator {
       );
     }
 
-    final printError = await _print(printLocalReceipt, identity.value);
+    // The server accepted the sale, so the receipt carries its order number.
+    // Without one in the response, the local bill number is still printed.
+    final serverOrderNumber = record.serverOrderNumber?.trim() ?? '';
+    final printable =
+        withServerOrderNumber != null && serverOrderNumber.isNotEmpty
+            ? withServerOrderNumber(identity.value, serverOrderNumber)
+            : identity.value;
+    final printError = await _print(printLocalReceipt, printable);
     return LocalFirstSaleResult<T>(
       localSale: identity.value,
       backgroundSync: Future.value(record),
