@@ -17,8 +17,10 @@ import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/screens/print/return_bill_print_thermal.dart';
 import 'package:pos_machine/screens/print/return_bill_print_standard.dart';
 import 'package:pos_machine/screens/print/receipt_customer_segment.dart';
+import 'package:pos_machine/screens/print/receipt_document_config_resolver.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/services/printer_permission_service.dart';
+import 'package:pos_machine/services/print_output_settings.dart';
 
 class ReturnBillPrintPage extends StatefulWidget {
   final List<OrderReturnItem> returnItems;
@@ -27,6 +29,8 @@ class ReturnBillPrintPage extends StatefulWidget {
   final String returnTotalAmount;
   final String orderDate;
   final String orderNumber;
+  final String? originalInvoiceNumber;
+  final String? originalInvoiceDate;
   final String? customerName;
   final String? customerPhone;
   final String? customerEmail;
@@ -44,6 +48,8 @@ class ReturnBillPrintPage extends StatefulWidget {
     this.storeName,
     required this.orderDate,
     required this.orderNumber,
+    this.originalInvoiceNumber,
+    this.originalInvoiceDate,
     this.customerName,
     this.customerPhone,
     this.customerEmail,
@@ -123,6 +129,25 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
 
   Future<void> _checkPermissions() async {
     debugPrint('[ReturnBillPrintPage] _checkPermissions() called');
+    final prefs = await SharedPreferences.getInstance();
+    final paperSize = prefs.getString(_paperSizePrefsKey) ??
+        prefs.getString('default_paper_size') ??
+        '80mm';
+    final openPdfOutput =
+        PrintOutputSettings.isStandardPdfPaperSize(paperSize) &&
+            await PrintOutputSettings.shouldOpenPdfForTarget(
+              _printerPrefsKey,
+              fallbackPrinterPreferenceKey:
+                  _printerPrefsKey == 'default_printer'
+                      ? null
+                      : 'default_printer',
+              preferences: prefs,
+            );
+    if (openPdfOutput) {
+      debugPrint(
+          '[ReturnBillPrintPage] Open PDF selected; skipping device scan');
+      return;
+    }
     if (await _requestPermissions()) {
       debugPrint(
           '[ReturnBillPrintPage] Permissions granted. Proceeding to scan.');
@@ -245,14 +270,30 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
     debugPrint(
         '[ReturnBillPrintPage] _loadDefaultPrinter() reading from SharedPreferences');
     final prefs = await SharedPreferences.getInstance();
+    final paperSize = prefs.getString(_paperSizePrefsKey) ??
+        prefs.getString('default_paper_size') ??
+        '80mm';
+    final openPdfOutput =
+        PrintOutputSettings.isStandardPdfPaperSize(paperSize) &&
+            await PrintOutputSettings.shouldOpenPdfForTarget(
+              _printerPrefsKey,
+              fallbackPrinterPreferenceKey:
+                  _printerPrefsKey == 'default_printer'
+                      ? null
+                      : 'default_printer',
+              preferences: prefs,
+            );
     final defaultPrinterJson =
         prefs.getString(_printerPrefsKey) ?? prefs.getString('default_printer');
 
-    if (defaultPrinterJson != null) {
-      final Map<String, dynamic> printerData = json.decode(defaultPrinterJson);
-
-      setState(() {
-        selectedPrinter = BluetoothPrinter(
+    if (openPdfOutput || defaultPrinterJson != null) {
+      BluetoothPrinter printer;
+      if (openPdfOutput) {
+        printer = BluetoothPrinter.openPdf();
+      } else {
+        final Map<String, dynamic> printerData =
+            json.decode(defaultPrinterJson!);
+        printer = BluetoothPrinter(
           deviceName: printerData['deviceName'],
           address: printerData['address'],
           vendorId: printerData['vendorId'],
@@ -261,6 +302,9 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
             (e) => e.toString() == printerData['typePrinter'],
           ),
         );
+      }
+      setState(() {
+        selectedPrinter = printer;
         _isLoading = false;
       });
       debugPrint(
@@ -286,6 +330,11 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
 
   Future<void> _saveDefaultPrinter(BluetoothPrinter printer) async {
     final prefs = await SharedPreferences.getInstance();
+    await PrintOutputSettings.setOpenPdfForTarget(
+      _printerPrefsKey,
+      selected: false,
+      preferences: prefs,
+    );
     final printerData = {
       'deviceName': printer.deviceName,
       'address': printer.address,
@@ -324,8 +373,7 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
           "Loading Return Bill document configurations from provider...");
 
       _returnBillDocumentConfig =
-          docConfigProvider.getDocumentConfig("Credit Note") ??
-              docConfigProvider.getDocumentConfig("Return Bill");
+          resolveReturnDocumentConfig(lookup: docConfigProvider.getDocumentConfig);
 
       if (_returnBillDocumentConfig == null) {
         debugPrint(
@@ -365,8 +413,7 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
       debugPrint(
           "Loading 'Credit Note'/'Return Bill' configuration from API...");
       _returnBillDocumentConfig =
-          docConfigProvider.getDocumentConfig("Credit Note") ??
-              docConfigProvider.getDocumentConfig("Return Bill");
+          resolveReturnDocumentConfig(lookup: docConfigProvider.getDocumentConfig);
 
       if (_returnBillDocumentConfig != null) {
         debugPrint(
@@ -432,6 +479,8 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
       returnTotalAmount: widget.returnTotalAmount,
       orderDate: widget.orderDate,
       orderNumber: widget.orderNumber,
+      originalInvoiceNumber: widget.originalInvoiceNumber,
+      originalInvoiceDate: widget.originalInvoiceDate,
       selectedPaperSize: selectedPaperSize,
       returnBillDocumentConfig: _returnBillDocumentConfig,
       customerCareNumber: customerCareNumber,
@@ -459,6 +508,8 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
       returnTotalAmount: widget.returnTotalAmount,
       orderDate: widget.orderDate,
       orderNumber: widget.orderNumber,
+      originalInvoiceNumber: widget.originalInvoiceNumber,
+      originalInvoiceDate: widget.originalInvoiceDate,
       selectedPaperSize: selectedPaperSize,
       returnBillDocumentConfig: _returnBillDocumentConfig,
       customerCareNumber: customerCareNumber,

@@ -40,6 +40,9 @@ class OrderDetailsModelData {
   final num? deliveryCharge;
   final OrderDetailsModelDataCart? cart;
   final String? orderNumber;
+  final String? clientSaleId;
+  final String? receiptNumber;
+  final String? issuedAt;
   final String? tokenNumber;
   final String? orderStatus;
   final OrderDetailsModelDataCustomerDetails? customerDetails;
@@ -53,6 +56,7 @@ class OrderDetailsModelData {
   final String? deliveryMethodName;
   final String? deliveryPhone;
   final OrderReturns? orderReturns;
+  final Map<String, dynamic>? returnState;
   final dynamic points;
   final Map<String, dynamic>? payments;
   final String? invoiceHash;
@@ -70,6 +74,9 @@ class OrderDetailsModelData {
     this.deliveryCharge,
     this.cart,
     this.orderNumber,
+    this.clientSaleId,
+    this.receiptNumber,
+    this.issuedAt,
     this.tokenNumber,
     this.orderStatus,
     this.customerDetails,
@@ -83,6 +90,7 @@ class OrderDetailsModelData {
     this.deliveryMethodName,
     this.deliveryPhone,
     this.orderReturns,
+    this.returnState,
     this.points,
     this.payments,
     this.invoiceHash,
@@ -107,6 +115,9 @@ class OrderDetailsModelData {
             ? null
             : OrderDetailsModelDataCart.fromJson(json["cart"]),
         orderNumber: json["order_number"],
+        clientSaleId: json["client_sale_id"]?.toString(),
+        receiptNumber: json["receipt_number"]?.toString(),
+        issuedAt: json["issued_at"]?.toString(),
         tokenNumber: json["token_number"]?.toString(),
         orderStatus: json["order_status"],
         customerDetails: json["customer_details"] == null
@@ -137,6 +148,8 @@ class OrderDetailsModelData {
                 json["delivery_contact_phone"])
             ?.toString(),
         orderReturns: _parseOrderReturns(json["order_returns"]),
+        returnState: json['return_state'] is Map
+            ? Map<String, dynamic>.from(json['return_state']) : null,
         points: json["points"],
         payments: json["payments"] is Map<String, dynamic>
             ? Map<String, dynamic>.from(json["payments"])
@@ -153,6 +166,26 @@ class OrderDetailsModelData {
                 Map<String, dynamic>.from(json["external_delivery_job"]))
             : null,
       );
+
+  /// Cart-line return totals supplied by the completed-return snapshot. Draft
+  /// quantities must never remove goods from a sales-only receipt.
+  List<OrderReturnItem>? get completedReturnCartItems {
+    final state = returnState;
+    bool yes(dynamic value) => value == true || value == 1 ||
+        value?.toString().toLowerCase() == 'true';
+    if (state == null || !yes(state['has_completed_return']) ||
+        yes(state['has_draft_return']) || state['items'] is! List) return null;
+    final result = <OrderReturnItem>[];
+    for (final raw in state['items'] as List) {
+      if (raw is! Map) return null;
+      final id = int.tryParse(raw['cart_item_id']?.toString() ?? '');
+      final quantity = num.tryParse(raw['returned_quantity']?.toString() ?? '');
+      if (id == null || id <= 0 || quantity == null || !quantity.isFinite ||
+          quantity < 0) return null;
+      if (quantity > 0) result.add(OrderReturnItem(cartItemId: id, quantity: quantity));
+    }
+    return result.isEmpty ? null : result;
+  }
 
   // Helper method to handle order_returns which can be null, empty List, or Map
   static OrderReturns? _parseOrderReturns(dynamic orderReturns) {
@@ -410,6 +443,9 @@ class OrderDetailsModelData {
         "delivery_charge": deliveryCharge,
         "cart": cart?.toJson(),
         "order_number": orderNumber,
+        "client_sale_id": clientSaleId,
+        "receipt_number": receiptNumber,
+        "issued_at": issuedAt,
         "token_number": tokenNumber,
         "order_status": orderStatus,
         "customer_details": customerDetails?.toJson(),
@@ -425,12 +461,20 @@ class OrderDetailsModelData {
         "delivery_method_name": deliveryMethodName,
         "delivery_phone": deliveryPhone,
         "order_returns": orderReturns?.toJson(),
+        if (returnState != null) 'return_state': returnState,
         "points": points,
         "payments": payments,
         "invoice_hash": invoiceHash,
         "packing": packing?.toJson(),
         "delivery_address": deliveryAddress?.toJson(),
       };
+
+  String? get customerReceiptNumber {
+    final receipt = receiptNumber?.trim();
+    if (receipt != null && receipt.isNotEmpty) return receipt;
+    final server = orderNumber?.trim();
+    return server == null || server.isEmpty ? null : server;
+  }
 }
 
 class OrderDetailsModelDataCart {
@@ -1388,11 +1432,13 @@ class OrderDetailsModelDataPaymentDetails {
 
 class OrderReturns {
   final int? id;
+  final String? createdAt;
   final String? returnTotalAmount;
   final List<OrderReturnItem>? returnItems; // This can be an empty list
 
   OrderReturns({
     this.id,
+    this.createdAt,
     this.returnTotalAmount,
     this.returnItems,
   });
@@ -1400,7 +1446,8 @@ class OrderReturns {
   factory OrderReturns.fromJson(Map<String, dynamic> json) {
     // Check if return_items is a List
     return OrderReturns(
-      id: json["id"],
+      id: OrderDetailsModelDataCartItem._parseNullableInt(json['id']),
+      createdAt: json['created_at']?.toString(),
       returnTotalAmount: json["return_total_amount"],
       returnItems: json["return_items"] is List
           ? List<OrderReturnItem>.from(
@@ -1411,6 +1458,7 @@ class OrderReturns {
 
   Map<String, dynamic> toJson() => {
         "id": id,
+        if (createdAt != null) 'created_at': createdAt,
         "return_total_amount": returnTotalAmount,
         "return_items": returnItems == null
             ? []
@@ -1419,6 +1467,15 @@ class OrderReturns {
 }
 
 class OrderReturnItem {
+  final int? cartItemId;
+  final String? unitPrice;
+  final String? mrp;
+  final String? hsnCode;
+  final String? taxRate;
+  final String? taxAmount;
+  final String? taxableValue;
+  final String? subTotal;
+  final String? discount;
   final int? id;
   final String? productName;
   final num? quantity;
@@ -1427,6 +1484,15 @@ class OrderReturnItem {
   final Map<String, dynamic>? variantAttributes;
 
   OrderReturnItem({
+    this.cartItemId,
+    this.unitPrice,
+    this.mrp,
+    this.hsnCode,
+    this.taxRate,
+    this.taxAmount,
+    this.taxableValue,
+    this.subTotal,
+    this.discount,
     this.id,
     this.productName,
     this.quantity,
@@ -1454,6 +1520,16 @@ class OrderReturnItem {
 
   factory OrderReturnItem.fromJson(Map<String, dynamic> json) =>
       OrderReturnItem(
+        cartItemId: OrderDetailsModelDataCartItem._parseNullableInt(
+            json['cart_item_id']),
+        unitPrice: json['unit_price']?.toString(),
+        mrp: json['mrp']?.toString(),
+        hsnCode: json['hsn_code']?.toString(),
+        taxRate: json['tax_rate']?.toString(),
+        taxAmount: json['tax_amount']?.toString(),
+        taxableValue: json['taxable_value']?.toString(),
+        subTotal: json['sub_total']?.toString(),
+        discount: json['discount']?.toString(),
         id: json["id"],
         productName: json["product_name"],
         quantity: json["quantity"] is num
@@ -1468,6 +1544,15 @@ class OrderReturnItem {
       );
 
   Map<String, dynamic> toJson() => {
+        if (cartItemId != null) 'cart_item_id': cartItemId,
+        if (unitPrice != null) 'unit_price': unitPrice,
+        if (mrp != null) 'mrp': mrp,
+        if (hsnCode != null) 'hsn_code': hsnCode,
+        if (taxRate != null) 'tax_rate': taxRate,
+        if (taxAmount != null) 'tax_amount': taxAmount,
+        if (taxableValue != null) 'taxable_value': taxableValue,
+        if (subTotal != null) 'sub_total': subTotal,
+        if (discount != null) 'discount': discount,
         "id": id,
         "product_name": productName,
         "quantity": quantity,

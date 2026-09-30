@@ -43,7 +43,6 @@ void main() {
 
     for (final marker in [
       'Future<void> _saveOrder(',
-      'Future<void> _saveOrderAndPrint()',
       'Future<void> _createOrderAndPrint()',
       'Future<void> _confirmOrder()',
     ]) {
@@ -69,7 +68,6 @@ void main() {
 
     for (final marker in [
       'Future<void> saveOrder()',
-      'Future<void> saveOrderAndPrint()',
       'Future<void> createOrderAndPrint()',
       'Future<void> confirmOrder()',
     ]) {

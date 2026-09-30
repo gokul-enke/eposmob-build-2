@@ -69,7 +69,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
   bool _isConfirmingAndPrinting = false;
   bool _isLoadingOrder = false;
   bool _isClearingCart = false;
-  bool _isSavingAndPrinting = false;
   bool _isCreatingNewOrder = false;
 
   bool get _isQuotationPage => widget.mode == BillingPageMode.quotation;
@@ -252,7 +251,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
       onCreateOrderAndPrint: createOrderAndPrint,
       onConfirmOrder: confirmOrder,
       onNewOrder: createNewOrder,
-      onSaveOrderAndPrint: saveOrderAndPrint,
     );
 
     if (accessToken != null && accessToken.isNotEmpty) {
@@ -526,14 +524,12 @@ class BillingPageMobileState extends State<BillingPageMobile>
         _isConfirmingAndPrinting = false;
         _isLoadingOrder = false;
         _isClearingCart = false;
-        _isSavingAndPrinting = false;
         _isCreatingNewOrder = false;
       });
       final billingProvider =
           Provider.of<BillingProvider>(context, listen: false);
       billingProvider.setLoadingSaveOrder(false);
       billingProvider.setLoadingConfirmOrder(false);
-      billingProvider.setLoadingSaveOrderAndPrint(false);
     }
   }
 
@@ -897,16 +893,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
     if (_isConfirmingOrder || _isConfirmingAndPrinting) return;
     if (!_isQuotationPage && !_showConfirmOrderButton) return;
 
-    final billingProvider =
-        Provider.of<BillingProvider>(context, listen: false);
-    if (_connectivityController.shouldBlockOnlineCheckout(billingProvider)) {
-      showScaffoldError(
-        context: context,
-        message: BillingMobileErrorMessages.noInternetConfirm,
-      );
-      return;
-    }
-
     if (!_isCustomerSatisfiedForCheckout()) {
       showScaffoldError(
           context: context, message: BillingMobileErrorMessages.selectCustomer);
@@ -928,7 +914,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
     }
     if (!mounted) return;
     if (confirmed) {
-      _controller.refreshCustomersInBackgroundAfterSale(context);
       // Mirror desktop `_confirmOrder`: reset the workspace and re-apply the
       // default customer (when configured) after a successful confirm.
       setState(() {
@@ -944,16 +929,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
   Future<void> createOrderAndPrint() async {
     if (_isConfirmingAndPrinting || _isConfirmingOrder) return;
     if (!_isQuotationPage && !_showConfirmOrderAndPrintButton) return;
-
-    final billingProvider =
-        Provider.of<BillingProvider>(context, listen: false);
-    if (_connectivityController.shouldBlockOnlineCheckout(billingProvider)) {
-      showScaffoldError(
-        context: context,
-        message: BillingMobileErrorMessages.noInternetCreateOrder,
-      );
-      return;
-    }
 
     if (_skipCheckoutOnConfirmAndPrint) {
       billingDebugLog(
@@ -984,7 +959,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
         _pendingPrintOrderNumber = null;
       }
       if (result.orderCreated) {
-        _controller.refreshCustomersInBackgroundAfterSale(context);
         // Mirror desktop `_createOrderAndPrint`: reset the workspace and
         // re-apply the default customer (when configured) once the order has
         // been created, regardless of whether printing succeeded.
@@ -1081,73 +1055,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
   }
 
   Future<void> createQuotationAndPrint() => createQuotation(shouldPrint: true);
-
-  Future<void> saveOrderAndPrint() async {
-    if (_isSavingAndPrinting ||
-        _isConfirmingOrder ||
-        _isConfirmingAndPrinting) {
-      return;
-    }
-
-    if (_skipCheckoutOnConfirmAndPrint) {
-      billingDebugLog(
-        'SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct save & print',
-      );
-      await _controller.prepareDirectConfirmAndPrint(context);
-      if (!mounted) return;
-      setState(() {});
-    }
-
-    if (!_isCustomerSatisfiedForCheckout()) {
-      showScaffoldError(
-        context: context,
-        message: BillingMobileErrorMessages.selectCustomer,
-      );
-      _switchToTab(1);
-      return;
-    }
-
-    if (!_validatePaymentReady()) return;
-
-    final billingProvider =
-        Provider.of<BillingProvider>(context, listen: false);
-
-    setState(() => _isSavingAndPrinting = true);
-    billingProvider.setLoadingSaveOrderAndPrint(true);
-
-    try {
-      final order =
-          await CheckoutService(context).saveOrderAndReturnConfirmed();
-      if (!mounted || order == null) return;
-
-      try {
-        await _controller.printSavedOrder(
-          context,
-          order,
-          offerCustomerCopy: true,
-        );
-        if (!mounted) return;
-        _pendingPrintOrderNumber = null;
-      } catch (error) {
-        if (!mounted) return;
-        _showPrintRetrySnackBar(order.orderNumber);
-      }
-
-      if (!mounted) return;
-      setState(() {
-        _controller.resetBillingWorkspaceAfterOrder(context);
-        _lastRehydratedOrderId = null;
-        _autocompleteProductKey = GlobalKey();
-        _autocompletePhoneKey = GlobalKey();
-      });
-      _focusTextField();
-    } finally {
-      billingProvider.setLoadingSaveOrderAndPrint(false);
-      if (mounted) {
-        setState(() => _isSavingAndPrinting = false);
-      }
-    }
-  }
 
   Future<void> createNewOrder() async {
     if (_isCreatingNewOrder || _isLoadingOrder) return;
@@ -1323,7 +1230,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
                       onConfirmOrder: confirmOrder,
                       onSaveOrder: saveOrder,
                       onCreateOrderAndPrint: createOrderAndPrint,
-                      onSaveAndPrint: saveOrderAndPrint,
                       onCreateQuotation: () =>
                           createQuotation(shouldPrint: false),
                       onCreateQuotationAndPrint: createQuotationAndPrint,
@@ -1351,7 +1257,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
                       isSavingOrder: _isSavingOrder,
                       isConfirmingOrder: _isConfirmingOrder,
                       isConfirmingAndPrinting: _isConfirmingAndPrinting,
-                      isSavingAndPrinting: _isSavingAndPrinting,
                     ),
                     // Orders Tab
                     MobileOrdersTab(

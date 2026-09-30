@@ -266,9 +266,13 @@ class SharedPreferenceProvider extends ChangeNotifier {
   Future<void> clearPrinterSettings() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove('default_printer');
+    await prefs.remove('default_printer_open_pdf_output');
+    await prefs.remove('default_printer_b2b_open_pdf_output');
     await prefs.remove('default_paper_size');
     await prefs.remove('default_font_style');
     await prefs.remove('quotation_printer');
+    await prefs.remove('quotation_printer_open_pdf_output');
+    await prefs.remove('kot_printer_open_pdf_output');
     await prefs.remove('quotation_paper_size');
     await prefs.remove('quotation_font_style');
     await prefs.remove('quotation_receipt_theme');

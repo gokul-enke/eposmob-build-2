@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
@@ -17,9 +18,11 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/screens/login/login.dart';
 import 'package:pos_machine/services/session_reset_service.dart';
 import 'package:pos_machine/services/development_printer_service.dart';
+import 'package:pos_machine/services/receipt_identity_service.dart';
 import 'package:pos_machine/screens/settings/realtime_sync_test_page.dart';
 import 'package:pos_machine/screens/settings/widgets/offline_data_page.dart';
 import 'package:provider/provider.dart';
@@ -72,14 +75,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (localProductProvider.sellableProducts.isEmpty) {
         showScaffoldError(
           context: context,
-          message:
-              'settings_ui.msg_resync_empty'.tr,
+          message: 'settings_ui.msg_resync_empty'.tr,
         );
       } else {
         showScaffold(
           context: context,
-          message:
-              'settings_ui.msg_resync_success'.trParams({'count': '${localProductProvider.sellableProducts.length}'}),
+          message: 'settings_ui.msg_resync_success'.trParams(
+              {'count': '${localProductProvider.sellableProducts.length}'}),
         );
         setState(() {});
       }
@@ -88,7 +90,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       Navigator.of(context).pop();
       showScaffoldError(
         context: context,
-        message: 'settings_ui.msg_resync_failed'.trParams({'error': e.toString()}),
+        message:
+            'settings_ui.msg_resync_failed'.trParams({'error': e.toString()}),
       );
     }
   }
@@ -351,6 +354,227 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _showCounterConfigurationDialog() async {
+    final store =
+        Provider.of<StoreSessionProvider>(context, listen: false).activeStore;
+    final storeId = store?.storeId;
+    if (storeId == null || storeId <= 0) {
+      showScaffoldError(
+        context: context,
+        message: 'settings_ui.counter_store_required'.tr,
+      );
+      return;
+    }
+
+    final service = ReceiptIdentityService.instance;
+    final configuration = await service.configurationForStore(storeId);
+    final lastByCounter =
+        await service.lastIssuedSequencesToday(storeId: storeId);
+    if (!mounted) return;
+
+    final controller =
+        TextEditingController(text: '${configuration.counterNumber}');
+    final lastSoldController = TextEditingController();
+    final dateCode = ReceiptIdentityService.todayDateCode();
+    String billNumber(int counter, int sequence) =>
+        ReceiptIdentityService.formatReceiptNumber(
+          storeId: storeId,
+          counterNumber: counter,
+          dateCode: dateCode,
+          sequence: sequence,
+        );
+    String? validationError;
+    String? lastSoldError;
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final parsed = int.tryParse(controller.text.trim());
+          final counter = parsed ?? configuration.counterNumber;
+          final issuedToday = lastByCounter[counter] ?? 0;
+          final enteredLastSold = int.tryParse(lastSoldController.text.trim());
+          final nextSequence = (enteredLastSold != null &&
+                      enteredLastSold > issuedToday
+                  ? enteredLastSold
+                  : issuedToday) +
+              1;
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            title: Text('settings_ui.counter_title'.tr),
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'settings_ui.counter_description'.tr,
+                    style: const TextStyle(height: 1.4),
+                  ),
+                  const SizedBox(height: 18),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: InputDecoration(
+                      labelText: 'settings_ui.counter_number'.tr,
+                      helperText: 'settings_ui.counter_range'.tr,
+                      errorText: validationError,
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: (_) => setDialogState(() {
+                      validationError = null;
+                      lastSoldError = null;
+                    }),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    issuedToday > 0
+                        ? 'settings_ui.counter_last_today'.trParams({
+                            'number': billNumber(counter, issuedToday),
+                          })
+                        : 'settings_ui.counter_none_today'.tr,
+                    style: TextStyle(color: Colors.grey.shade800),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: lastSoldController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: InputDecoration(
+                      labelText: 'settings_ui.counter_last_sold'.tr,
+                      helperText: 'settings_ui.counter_last_sold_helper'
+                          .trParams({'example': billNumber(counter, 10)}),
+                      helperMaxLines: 3,
+                      errorText: lastSoldError,
+                      errorMaxLines: 3,
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: (_) => setDialogState(() {
+                      lastSoldError = null;
+                    }),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'settings_ui.counter_preview'.trParams({
+                      'number': billNumber(counter, nextSequence),
+                    }),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'settings_ui.counter_device'.trParams({
+                      'device': configuration.shortDeviceId,
+                    }),
+                    style: TextStyle(color: Colors.grey.shade700),
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF8E1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFFD54F)),
+                    ),
+                    child: Text(
+                      'settings_ui.counter_unique_warning'.tr,
+                      style: const TextStyle(height: 1.35),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text('general.cancel'.tr),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final value = int.tryParse(controller.text.trim());
+                  if (value == null ||
+                      value < ReceiptIdentityService.minimumCounterNumber ||
+                      value > ReceiptIdentityService.maximumCounterNumber) {
+                    setDialogState(() {
+                      validationError = 'settings_ui.counter_invalid'.tr;
+                    });
+                    return;
+                  }
+                  final lastSoldText = lastSoldController.text.trim();
+                  if (lastSoldText.isNotEmpty) {
+                    final lastSold = int.tryParse(lastSoldText);
+                    final issued = lastByCounter[value] ?? 0;
+                    if (lastSold == null ||
+                        lastSold < 1 ||
+                        lastSold > ReceiptIdentityService.maximumSequence) {
+                      setDialogState(() {
+                        lastSoldError =
+                            'settings_ui.counter_last_sold_invalid'.trParams({
+                          'max': '${ReceiptIdentityService.maximumSequence}',
+                        });
+                      });
+                      return;
+                    }
+                    if (lastSold < issued) {
+                      setDialogState(() {
+                        lastSoldError =
+                            'settings_ui.counter_last_sold_too_low'.trParams({
+                          'number': billNumber(value, issued),
+                        });
+                      });
+                      return;
+                    }
+                  }
+                  Navigator.of(dialogContext).pop(true);
+                },
+                child: Text('general.save'.tr),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    final lastSoldText = lastSoldController.text.trim();
+    lastSoldController.dispose();
+    if (saved != true) {
+      controller.dispose();
+      return;
+    }
+
+    final counterNumber = int.parse(controller.text.trim());
+    controller.dispose();
+    final savedConfiguration = await service.setCounterNumber(
+      storeId: storeId,
+      counterNumber: counterNumber,
+    );
+    if (lastSoldText.isNotEmpty) {
+      try {
+        await service.raiseLastIssuedSequenceToday(
+          storeId: storeId,
+          counterNumber: counterNumber,
+          lastSoldSequence: int.parse(lastSoldText),
+        );
+      } on StateError catch (error) {
+        // A sale issued a number while the dialog was open.
+        if (!mounted) return;
+        showScaffoldError(context: context, message: error.message);
+        return;
+      }
+    }
+    final next = await service.nextReceiptNumber(savedConfiguration);
+    if (!mounted) return;
+    setState(() {});
+    showScaffold(
+      context: context,
+      message: 'settings_ui.counter_saved'.trParams({
+        'number': counterNumber.toString().padLeft(2, '0'),
+        'next': next,
+      }),
+    );
+  }
+
   List<Widget> _buildSettingsCards(BuildContext context) {
     return [
       // _SettingsCard(
@@ -377,6 +601,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: const Color(0xFFE3F2FD),
         iconColor: const Color(0xFF1565C0),
         onTap: () => _showLanguagePicker(context),
+      ),
+      Consumer<StoreSessionProvider>(
+        builder: (context, storeSession, _) {
+          final storeId = storeSession.activeStore?.storeId;
+          if (storeId == null || storeId <= 0) {
+            return _SettingsInfoCard(
+              title: 'settings_ui.counter_title'.tr,
+              subtitle: 'settings_ui.counter_store_required'.tr,
+              icon: const Icon(Icons.point_of_sale, color: Color(0xFF6A1B9A)),
+              backgroundColor: const Color(0xFFF3E5F5),
+              iconColor: const Color(0xFF6A1B9A),
+              onTap: _showCounterConfigurationDialog,
+            );
+          }
+          return FutureBuilder<ReceiptCounterConfiguration>(
+            future:
+                ReceiptIdentityService.instance.configurationForStore(storeId),
+            builder: (context, snapshot) {
+              final configuration = snapshot.data;
+              final subtitle = configuration == null
+                  ? 'settings_ui.loading'.tr
+                  : configuration.isConfigured
+                      ? 'settings_ui.counter_configured'.trParams({
+                          'number': configuration.counterCode,
+                          'device': configuration.shortDeviceId,
+                        })
+                      : 'settings_ui.counter_default_warning'.trParams({
+                          'number': configuration.counterCode,
+                        });
+              return _SettingsInfoCard(
+                title: 'settings_ui.counter_title'.tr,
+                subtitle: subtitle,
+                icon: const Icon(
+                  Icons.point_of_sale,
+                  color: Color(0xFF6A1B9A),
+                  size: 22,
+                ),
+                backgroundColor: const Color(0xFFF3E5F5),
+                iconColor: const Color(0xFF6A1B9A),
+                onTap: _showCounterConfigurationDialog,
+              );
+            },
+          );
+        },
       ),
       Consumer<LocalProductProvider>(
         builder: (context, productProvider, _) {
@@ -669,8 +937,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // refetch so the active locale's names are guaranteed present.
                 if (context.mounted) {
                   unawaited(
-                    Provider.of<DeliveryMethodsProvider>(context,
-                            listen: false)
+                    Provider.of<DeliveryMethodsProvider>(context, listen: false)
                         .fetchDeliveryMethods(forceRefresh: true),
                   );
                 }

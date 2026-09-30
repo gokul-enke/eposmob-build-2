@@ -323,7 +323,7 @@ Extracts mobile-specific layouts from desktop transaction screens into dedicated
 - **`invoice_list_mobile.dart`** (707 lines): mobile invoice list with search, date filters, pagination, and bulk actions.
 - Similar extractions for expense, receipt, customer voucher, and supplier voucher lists.
 - Refactored `create_invoice_modal.dart` for responsive behavior.
-- Added `docs/pdf_sharing_implementation.md` update.
+- Added `future/print-future/pdf_sharing_implementation.md` update.
 
 #### Major issues
 

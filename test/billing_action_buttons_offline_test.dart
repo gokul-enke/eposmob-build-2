@@ -59,7 +59,7 @@ void main() {
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets('offline shows Save & Print instead of Confirm buttons',
+  testWidgets('offline shows the same confirm actions as online',
       (tester) async {
     await tester.pumpWidget(
       MultiProvider(
@@ -80,7 +80,6 @@ void main() {
               onSaveOrder: () {},
               onCreateOrderAndPrint: () {},
               onConfirmOrder: () {},
-              onSaveAndPrint: () {},
             ),
           ),
         ),
@@ -89,10 +88,12 @@ void main() {
 
     await tester.pump();
 
+    // Offline sales are confirmed offline-first; the old never-synced
+    // Save & Print is gone.
     expect(find.text('Save Order'), findsOneWidget);
-    expect(find.text('Save & Print'), findsOneWidget);
-    expect(find.text('Confirm'), findsNothing);
-    expect(find.text('Confirm & Print'), findsNothing);
+    expect(find.text('Save & Print'), findsNothing);
+    expect(find.text('Confirm'), findsOneWidget);
+    expect(find.text('Confirm & Print'), findsOneWidget);
   });
 
   testWidgets('online shows Save Order plus confirm actions', (tester) async {
@@ -115,7 +116,6 @@ void main() {
               onSaveOrder: () {},
               onCreateOrderAndPrint: () {},
               onConfirmOrder: () {},
-              onSaveAndPrint: () {},
             ),
           ),
         ),

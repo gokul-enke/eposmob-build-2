@@ -1,5 +1,8 @@
 # pos_machine
 
+Print and receipt guides, verification reports and remaining work are collected
+in [future/print-future](../future/print-future/README.md).
+
 A new Flutter project.
 
 ## Getting Started

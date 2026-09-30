@@ -237,6 +237,13 @@ class DocumentConfigProvider extends ChangeNotifier {
           for (final entry in configs.entries) {
             await _saveToHive(entry.key, entry.value.toJson());
           }
+          // This endpoint returns the full active configuration set. Keeping
+          // removed keys lets stale aliases (e.g. Credit Note) shadow Return Bill.
+          final obsoleteKeys = _docConfigBox?.keys
+              .where((key) => !configs.containsKey(key)).toList();
+          if (obsoleteKeys != null && obsoleteKeys.isNotEmpty) {
+            await _docConfigBox!.deleteAll(obsoleteKeys);
+          }
         }
         await cacheDocumentLogosLocally();
 

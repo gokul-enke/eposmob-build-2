@@ -428,14 +428,14 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                         Expanded(
                           flex: showClearSaveActions ? 2 : 1,
                           child: _buildCurrentCartFooterButton(
-                            label: 'restaurant.save_print'.tr,
+                            label: 'restaurant.confirm_and_print'.tr,
                             color: const Color(0xFFF59E0B),
                             isDisabled: cartItems.isEmpty ||
                                 !hasOfflineOrderContext ||
                                 _isLoadingConfirm,
                             isLoading: _isLoadingConfirm,
                             onTap: () =>
-                                showOfflineSaveAndPrintCheckoutFromParent(),
+                                showOfflineConfirmCheckoutFromParent(),
                           ),
                         ),
                       ],
@@ -811,13 +811,13 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
 
       showScaffold(
         context: context,
-            message: 'billing.item_removed_successfully'.tr,
+        message: 'billing.item_removed_successfully'.tr,
       );
     } catch (e) {
       showScaffoldError(
         context: context,
-        message: 'restaurant.failed_remove_item'
-            .trParams({'error': e.toString()}),
+        message:
+            'restaurant.failed_remove_item'.trParams({'error': e.toString()}),
       );
     }
   }
@@ -853,8 +853,8 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
     } catch (e) {
       showScaffoldError(
         context: context,
-        message: 'restaurant.failed_clear_cart'
-            .trParams({'error': e.toString()}),
+        message:
+            'restaurant.failed_clear_cart'.trParams({'error': e.toString()}),
       );
     }
   }
@@ -919,13 +919,18 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
           context: context,
           tableId: widget.tableId,
           address: deliveryAddressForDraft,
+          addressId: deliveryAddressIdForDraft,
+          pincode: deliveryPincodeForDraft,
           deliveryCharge: deliveryChargeForDraft,
           alternatePhone: selectedCustomerAlternatePhoneForDraft,
           customerVatNumber: selectedCustomerVatNumberForDraft,
           customerCrNumber: selectedCustomerCrNumberForDraft,
           customerType: selectedCustomerTypeForDraft,
+          quotationId: localProductProvider.currentOrder?.quotationId,
+          quotationNumber: localProductProvider.currentOrder?.quotationNumber,
         );
-        showScaffold(context: context, message: 'billing.updated_local_draft'.tr);
+        showScaffold(
+            context: context, message: 'billing.updated_local_draft'.tr);
       } else {
         debugPrint('📝 Creating new local draft');
         final saved = localProductProvider.saveCurrentCartAsOrder(
@@ -948,11 +953,15 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
           context: context,
           tableId: widget.tableId,
           address: deliveryAddressForDraft,
+          addressId: deliveryAddressIdForDraft,
+          pincode: deliveryPincodeForDraft,
           deliveryCharge: deliveryChargeForDraft,
           alternatePhone: selectedCustomerAlternatePhoneForDraft,
           customerVatNumber: selectedCustomerVatNumberForDraft,
           customerCrNumber: selectedCustomerCrNumberForDraft,
           customerType: selectedCustomerTypeForDraft,
+          quotationId: localProductProvider.currentOrder?.quotationId,
+          quotationNumber: localProductProvider.currentOrder?.quotationNumber,
         );
         showScaffold(
             context: context,

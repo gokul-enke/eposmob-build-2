@@ -293,8 +293,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
         if (hasInternet) {
           orderPanelState?.showCheckoutFromParent();
         } else {
-          // Offline F2 opens checkout (Save), never skip-to-print.
-          orderPanelState?.showOfflineSaveAndPrintCheckoutFromParent(
+          // Offline F2 opens checkout (Confirm), never skip-to-print.
+          orderPanelState?.showOfflineConfirmCheckoutFromParent(
             allowSkipCheckout: false,
           );
         }
@@ -312,7 +312,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         if (hasInternet) {
           orderPanelState?.showCheckoutFromParent(initialStep: 3);
         } else {
-          orderPanelState?.showOfflineSaveAndPrintCheckoutFromParent(
+          orderPanelState?.showOfflineConfirmCheckoutFromParent(
             initialStep: 3,
             allowSkipCheckout: false,
           );
@@ -323,27 +323,21 @@ class _RestaurantPageState extends State<RestaurantPage> {
         if (hasInternet) {
           orderPanelState?.showCurrentCartConfirmAndPrintFromParent();
         } else {
-          // Offline F6 = Save & Print (respects skip-checkout setting).
-          orderPanelState?.showOfflineSaveAndPrintCheckoutFromParent();
+          // Offline F6 = Confirm & Print (respects skip-checkout setting).
+          orderPanelState?.showOfflineConfirmCheckoutFromParent();
         }
       } else if (key == LogicalKeyboardKey.f7) {
         _startNewCounterOrder();
       } else if (key == LogicalKeyboardKey.f8) {
         unawaited(orderPanelState?.saveCurrentCartFromParent() ?? Future<void>.value());
       } else if (key == LogicalKeyboardKey.f9) {
-        if (hasInternet) {
-          unawaited(orderPanelState?.saveCurrentCartFromParent() ?? Future<void>.value());
-        } else {
-          if (disableCounterConfirmActions) return;
-          // Offline F9 = Save & Print (respects skip-checkout setting).
-          orderPanelState?.showOfflineSaveAndPrintCheckoutFromParent();
-        }
+        unawaited(orderPanelState?.saveCurrentCartFromParent() ?? Future<void>.value());
       } else if (key == LogicalKeyboardKey.f10) {
         if (disableCounterConfirmActions) return;
         if (hasInternet) {
           orderPanelState?.showCheckoutFromParent(initialStep: 2);
         } else {
-          orderPanelState?.showOfflineSaveAndPrintCheckoutFromParent(
+          orderPanelState?.showOfflineConfirmCheckoutFromParent(
             initialStep: 2,
             allowSkipCheckout: false,
           );
@@ -962,13 +956,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       ),
                   ] else
                     _buildCounterActionButton(
-                      text: 'restaurant.save_print'.tr,
-                      shortcutLabel: showShortcuts ? 'F9' : null,
+                      text: 'restaurant.confirm_and_print'.tr,
+                      shortcutLabel: showShortcuts ? 'F6' : null,
                       color: const Color(0xFFF59E0B),
                       isDisabled: !canCheckout || disableConfirmActions,
                       isLoading: isCheckoutActionLoading,
                       onPressed: () =>
-                          _orderPanelKey.currentState?.showOfflineSaveAndPrintCheckoutFromParent(),
+                          _orderPanelKey.currentState?.showOfflineConfirmCheckoutFromParent(),
                     ),
                 ],
               ),

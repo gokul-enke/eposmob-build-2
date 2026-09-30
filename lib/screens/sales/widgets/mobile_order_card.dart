@@ -431,7 +431,7 @@ class MobileOrderCard extends StatelessWidget {
                   orderDetails.data?.priceSummary?.discount?.toString() ??
                       "0.00",
               orderDate: DateHelper.formatInputToDisplay(orderDate),
-              orderNumber: orderDetails.data!.orderNumber.toString(),
+              orderNumber: orderDetails.data!.customerReceiptNumber ?? ordersId,
               customerName: customerName,
               customerPhone: customerPhone,
               customerEmail: customerEmail,
@@ -514,13 +514,12 @@ class MobileOrderCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        if (order.orderNumber != null &&
-                            order.orderNumber!.isNotEmpty) ...[
+                        if (order.customerReceiptNumber != null) ...[
                           const SizedBox(width: 6),
                           GestureDetector(
                             onTap: () {
-                              Clipboard.setData(
-                                  ClipboardData(text: order.orderNumber!));
+                              Clipboard.setData(ClipboardData(
+                                  text: order.customerReceiptNumber!));
                               showScaffold(
                                 context: context,
                                 message: 'sales.order_number_copied'.tr,
@@ -539,6 +538,18 @@ class MobileOrderCard extends StatelessWidget {
                   _buildStatusChip(order.status ?? "pending"),
                 ],
               ),
+              if (order.receiptNumber?.trim().isNotEmpty == true) ...[
+                const SizedBox(height: 5),
+                SelectableText(
+                  order.receiptNumber!.trim(),
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s11,
+                    0.12,
+                    ColorManager.kPrimaryColor,
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               Row(
                 children: [

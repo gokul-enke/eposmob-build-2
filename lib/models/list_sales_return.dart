@@ -103,9 +103,26 @@ class SalesReturnOrder {
   final int userId;
   final int status;
   final DateTime createdAt;
+  final bool hasCreatedAt;
   final DateTime updatedAt;
   final List<SalesReturnItem> items;
   final Order? order; // Add nested order object
+
+  /// Backend order number, e.g. `ORD-004689`.
+  String get originalOrderNumber {
+    final value = order?.orderNumber.trim() ?? '';
+    return value.isNotEmpty ? value : orderId.toString();
+  }
+
+  /// Bill number issued on the POS device, e.g. `2-01-260929-0002`. Shown as
+  /// "Bill No."; the API field is `receipt_number`, which is unrelated to the
+  /// Receipts (payment voucher) module.
+  /// Null for orders created before device receipt numbers existed.
+  String? get receiptNumber => order?.receiptNumber;
+
+  /// The number a cashier or customer recognises: the bill number when
+  /// the sale has one, otherwise the backend order number.
+  String get displayNumber => receiptNumber ?? originalOrderNumber;
 
   SalesReturnOrder({
     required this.id,
@@ -114,12 +131,14 @@ class SalesReturnOrder {
     required this.userId,
     required this.status,
     required this.createdAt,
+    this.hasCreatedAt = true,
     required this.updatedAt,
     required this.items,
     this.order,
   });
 
   factory SalesReturnOrder.fromJson(Map<String, dynamic> json) {
+    final sourceCreatedAt = DateTime.tryParse(json['created_at']?.toString() ?? '');
     return SalesReturnOrder(
       id: json['id'] is int
           ? json['id']
@@ -127,16 +146,15 @@ class SalesReturnOrder {
       orderId: json['order_id'] is int
           ? json['order_id']
           : int.tryParse(json['order_id']?.toString() ?? '0') ?? 0,
-      totalAmount: json['total_amount']?.toString() ?? '0.00',
+      totalAmount: json['total_amount']?.toString() ?? '',
       userId: json['user_id'] is int
           ? json['user_id']
           : int.tryParse(json['user_id']?.toString() ?? '0') ?? 0,
       status: json['status'] is int
           ? json['status']
           : int.tryParse(json['status']?.toString() ?? '0') ?? 0,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
-          : DateTime.now(),
+      createdAt: sourceCreatedAt ?? DateTime.now(),
+      hasCreatedAt: sourceCreatedAt != null,
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])
           : DateTime.now(),
@@ -159,6 +177,10 @@ class SalesReturnItem {
   final DateTime createdAt;
   final DateTime updatedAt;
   final CartItem cartItem;
+  final String? taxAmount;
+  final String? taxableValue;
+  final String? subTotal;
+  final String? discount;
 
   SalesReturnItem({
     required this.id,
@@ -170,6 +192,10 @@ class SalesReturnItem {
     required this.createdAt,
     required this.updatedAt,
     required this.cartItem,
+    this.taxAmount,
+    this.taxableValue,
+    this.subTotal,
+    this.discount,
   });
 
   factory SalesReturnItem.fromJson(Map<String, dynamic> json) {
@@ -184,7 +210,8 @@ class SalesReturnItem {
     final cartItemPayload = <String, dynamic>{
       ...json,
       ...cartItem,
-      if (cartItem['unit_price'] == null && json['price'] != null)
+      if (cartItem['unit_price'] == null &&
+          json['unit_price'] == null && json['price'] != null)
         'unit_price': json['price'],
       if (cartItem['total_price'] == null && json['total_price'] != null)
         'total_price': json['total_price'],
@@ -205,6 +232,10 @@ class SalesReturnItem {
           ? json['cart_item_id']
           : int.tryParse(json['cart_item_id']?.toString() ?? '0') ?? 0,
       price: json['price']?.toString() ?? '0.00',
+      taxAmount: json['tax_amount']?.toString(),
+      taxableValue: json['taxable_value']?.toString(),
+      subTotal: json['sub_total']?.toString(),
+      discount: json['discount']?.toString(),
       reason: json['reason']?.toString() ?? '',
       quantity: (json['quantity'] is String)
           ? num.tryParse(json['quantity']) ?? 0
@@ -215,12 +246,16 @@ class SalesReturnItem {
       updatedAt: json['updated_at'] != null
           ? DateTime.tryParse(json['updated_at'].toString()) ?? DateTime.now()
           : DateTime.now(),
-      cartItem: CartItem.fromJson(cartItemPayload),
+      cartItem: CartItem.fromJson(cartItemPayload,
+          hasUnitPrice: cartItem['unit_price'] != null || json['unit_price'] != null),
     );
   }
 }
 
 class CartItem {
+  /// Distinguishes an explicitly free item from a missing API price.
+  final bool hasUnitPrice;
+  final String? mrp;
   final int id;
   final int cartId;
   final int categoryId;
@@ -230,6 +265,7 @@ class CartItem {
   final String unitPrice;
   final String totalPrice;
   final String taxRate;
+  final bool hasTaxRate;
   final String taxAmount;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -237,6 +273,8 @@ class CartItem {
   final String? productName;
 
   CartItem({
+    this.hasUnitPrice = true,
+    this.mrp,
     required this.id,
     required this.cartId,
     required this.categoryId,
@@ -246,6 +284,7 @@ class CartItem {
     required this.unitPrice,
     required this.totalPrice,
     required this.taxRate,
+    this.hasTaxRate = true,
     required this.taxAmount,
     required this.createdAt,
     required this.updatedAt,
@@ -259,8 +298,10 @@ class CartItem {
           ? productName!
           : 'Unknown Product');
 
-  factory CartItem.fromJson(Map<String, dynamic> json) {
+  factory CartItem.fromJson(Map<String, dynamic> json, {bool? hasUnitPrice}) {
     return CartItem(
+      hasUnitPrice: hasUnitPrice ?? json['unit_price'] != null,
+      mrp: json['mrp']?.toString(),
       id: json['id'] is int
           ? json['id']
           : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
@@ -282,6 +323,7 @@ class CartItem {
       unitPrice: json['unit_price']?.toString() ?? '0.00',
       totalPrice: json['total_price']?.toString() ?? '0.00',
       taxRate: json['tax_rate']?.toString() ?? '0.00',
+      hasTaxRate: json['tax_rate'] != null,
       taxAmount: json['tax_amount']?.toString() ?? '0.00',
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
@@ -307,6 +349,7 @@ class Product {
   final int active;
   final String price;
   final String mrp;
+  final String? hsnCode;
   final String? purchasePrice; // Make this field nullable
   final String unit;
   final String? sku; // Add this missing field as nullable
@@ -326,6 +369,7 @@ class Product {
     required this.active,
     required this.price,
     required this.mrp,
+    this.hsnCode,
     this.purchasePrice, // Nullable
     required this.unit,
     this.sku, // Nullable
@@ -355,6 +399,7 @@ class Product {
           : int.tryParse(json['active']?.toString() ?? '0') ?? 0,
       price: json['price']?.toString() ?? '0.00',
       mrp: json['mrp']?.toString() ?? '0.00',
+      hsnCode: json['hsn_code']?.toString(),
       purchasePrice: json['purchase_price']?.toString(),
       unit: json['unit']?.toString() ?? '',
       sku: json['sku']?.toString(),
@@ -384,6 +429,7 @@ class Order {
   final int? addressId;
   final String orderDate;
   final String orderNumber;
+  final String? receiptNumber;
   final int? paymentId;
   final List<String>? paymentMethod;
   final String? paymentStatus;
@@ -407,6 +453,7 @@ class Order {
     this.addressId,
     required this.orderDate,
     required this.orderNumber,
+    this.receiptNumber,
     this.paymentId,
     this.paymentMethod,
     this.paymentStatus,
@@ -438,6 +485,7 @@ class Order {
           : int.tryParse(json['address_id']?.toString() ?? '0'),
       orderDate: json['order_date']?.toString() ?? '',
       orderNumber: json['order_number']?.toString() ?? '',
+      receiptNumber: _nonEmpty(json['receipt_number']),
       // Handling possible List for payment_id
       paymentId: json['payment_id'] is List
           ? (json['payment_id'].isNotEmpty
@@ -525,4 +573,9 @@ class OrderCustomerUser {
       name: json['name']?.toString() ?? '',
     );
   }
+}
+
+String? _nonEmpty(Object? value) {
+  final text = value?.toString().trim() ?? '';
+  return text.isEmpty ? null : text;
 }

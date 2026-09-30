@@ -33,7 +33,6 @@ import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/customer_purchase_history.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_cart.dart';
-import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/models/quotation_model.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
@@ -57,6 +56,11 @@ import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/providers/quotations_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
+import 'package:pos_machine/features/billing/domain/receipt_customer_balance.dart';
+import 'package:pos_machine/services/local_sale_sync_service.dart';
+import 'package:pos_machine/services/local_first_sale_coordinator.dart';
+import 'package:pos_machine/services/receipt_identity_service.dart';
+import 'package:pos_machine/models/order_submission_payload.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -1377,11 +1381,15 @@ class BillingPageState extends State<BillingPage>
                 ? CheckoutActionMode.quotation
                 : CheckoutActionMode.save);
       } else if (event.logicalKey == LogicalKeyboardKey.f9) {
-        debugPrint("⌨️ [BillingPage] Handling F9 -> save & print");
         if (_isQuotationPage) {
+          debugPrint("⌨️ [BillingPage] Handling F9 -> quotation checkout");
           _showCheckoutModal(actionMode: CheckoutActionMode.quotation);
         } else {
-          _handleSaveAndPrint();
+          // Save & Print was removed: it printed bills that never synced.
+          showScaffold(
+            context: context,
+            message: 'billing.save_and_print_removed'.tr,
+          );
         }
       } else if (event.logicalKey == LogicalKeyboardKey.f10) {
         debugPrint(
@@ -3669,8 +3677,8 @@ class BillingPageState extends State<BillingPage>
                                                             CrossAxisAlignment
                                                                 .start,
                                                         children: [
-                                                         Text(
-                                                           item.product
+                                                          Text(
+                                                            item.product
                                                                     .localizedName ??
                                                                 'general.unknown'
                                                                     .tr,
@@ -3718,13 +3726,16 @@ class BillingPageState extends State<BillingPage>
                                                   const SizedBox(width: 6),
                                                   Tooltip(
                                                     message: isOutOfStock
-                                                        ? 'billing.out_of_stock'.tr
+                                                        ? 'billing.out_of_stock'
+                                                            .tr
                                                         : isLowStock
-                                                            ? 'billing.low_stock'.tr
+                                                            ? 'billing.low_stock'
+                                                                .tr
                                                             : canViewBillingProductDetails
                                                                 ? 'billing.view_details'
                                                                     .tr
-                                                                : 'product_detail.no_permission_view_details'.tr,
+                                                                : 'product_detail.no_permission_view_details'
+                                                                    .tr,
                                                     waitDuration:
                                                         const Duration(
                                                             milliseconds: 400),
@@ -3755,7 +3766,8 @@ class BillingPageState extends State<BillingPage>
                                                     const SizedBox(width: 6),
                                                     Tooltip(
                                                       message:
-                                                          'billing.customer_purchase_history'.tr,
+                                                          'billing.customer_purchase_history'
+                                                              .tr,
                                                       waitDuration:
                                                           const Duration(
                                                               milliseconds:
@@ -5944,7 +5956,7 @@ class BillingPageState extends State<BillingPage>
                 ),
               ),
             ],
-            if (!_isQuotationPage && _hasInternet) ...[
+            if (!_isQuotationPage) ...[
               if (_showConfirmOrderAndPrintButton)
                 FocusTraversalOrder(
                   order: const NumericFocusOrder(
@@ -5972,19 +5984,6 @@ class BillingPageState extends State<BillingPage>
                     shortcutLabel: 'F2',
                   ),
                 ),
-            ],
-            if (!_isQuotationPage && !_hasInternet) ...[
-              FocusTraversalOrder(
-                order: const NumericFocusOrder(BillingFocusOrders.saveAndPrint),
-                child: _buildActionButton(
-                  text: 'billing.save_and_print'.tr,
-                  color: ColorManager.kButtonYellow,
-                  onPressed: () => _handleSaveAndPrint(),
-                  isLoading: isLoadingSaveOrderAndPrint,
-                  isDisabled: disableActions && !isLoadingSaveOrderAndPrint,
-                  shortcutLabel: 'F9',
-                ),
-              ),
             ],
           ],
         ),
@@ -6353,200 +6352,6 @@ class BillingPageState extends State<BillingPage>
     }
   }
 
-  Future<void> _saveOrderAndPrint() async {
-    if (!_beginOrderAction()) {
-      return;
-    }
-
-    setState(() {
-      isLoadingSaveOrderAndPrint = true;
-    });
-    debugPrint("Save Order and Print pressed");
-    try {
-      if (Provider.of<LocalProductProvider>(context, listen: false)
-          .cartItems
-          .isEmpty) {
-        showScaffoldError(
-          context: context,
-          message: "billing.add_items_to_cart".tr,
-        );
-        return;
-      }
-
-      final hasCustomer = selectedCustomerID != null ||
-          (mobileNumberText?.isNotEmpty == true) ||
-          (salesExecutivemobileNumberText?.isNotEmpty == true);
-      if (!hasCustomer) {
-        showScaffoldError(
-          context: context,
-          message: "billing.select_customer".tr,
-        );
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_autocompleteFocusNode != null) {
-            FocusScope.of(context).requestFocus(_autocompleteFocusNode!);
-          } else {
-            FocusScope.of(context).requestFocus(_customerTextFieldFocus);
-          }
-        });
-        return;
-      }
-
-      if (!_ensurePaymentReadyForConfirm(_saveOrderAndPrint)) {
-        return;
-      }
-
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
-
-      // Debug: Log current cart items with custom pricing
-      debugPrint("💾 LOCAL SAVE AND PRINT - Cart items with custom pricing:");
-      for (var item in localProductProvider.cartItems) {
-        debugPrint("  📦 ${item.product.productName}");
-        debugPrint("    - Quantity: ${item.quantity}");
-        debugPrint("    - Custom Price: ${item.price}");
-        debugPrint("    - Custom MRP: ${item.mrp}");
-        debugPrint("    - Stock ID: ${item.selectedStock?.id}");
-      }
-
-      // Validate that all items have valid pricing
-      // bool hasInvalidPricing = localProductProvider.cartItems
-      //     .any((item) => item.price == null || item.price! < 0);
-
-      // if (hasInvalidPricing) {
-      //   showScaffoldError(
-      //     context: context,
-      //     message: "billing.valid_prices".tr,
-      //   );
-      //   return;
-      // }
-
-      // Check if we're editing an existing order
-      SavedOrder? currentOrder = localProductProvider.currentOrder;
-      SavedOrder? orderToUse;
-
-      if (currentOrder != null) {
-        debugPrint(
-            "💾 Promoting saved order to confirmed: ${currentOrder.orderNumber}");
-
-        String? customerNameToSave = selectedCustomer?.name;
-        String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
-
-        final paymentData = _getPaymentMethodData();
-        final currentOrderId = currentOrder.id;
-        localProductProvider.updateSavedOrder(
-          currentOrderId,
-          customerName: customerNameToSave,
-          customerPhone: customerPhoneToSave,
-          comment: _commentController.text,
-          deliveryMethod: deliveryMethod,
-          customerId: selectedCustomerID,
-          paymentMethod: paymentData["paymentMethod"],
-          paidAmount: paymentData["paidAmount"],
-          balanceAmount: _balanceAmount.toString(),
-          transactionId: _transactionNumberController.text,
-          couponId: isCouponApplied ? coupenCodeTextController.text : null,
-          deliveryMethodId: deliveryMethodId,
-          carNumber: _carNumberController.text,
-          deliveryDate: deliveryDate,
-          deliveryTime: deliveryTime,
-          toCustomerCredit: _toCustomerCreditEnabled,
-          context: context,
-          address: deliveryAddress,
-          deliveryCharge: _getDeliveryChargeForOrder(),
-          customerType: selectedCustomer?.customerType,
-        );
-
-        orderToUse = localProductProvider.moveToConfirmedOrders(currentOrderId);
-        orderToUse ??= localProductProvider.saveCurrentCartAsConfirmedOrder(
-          customerName: customerNameToSave,
-          customerPhone: customerPhoneToSave,
-          comment: _commentController.text,
-          deliveryMethod: deliveryMethod,
-          customerId: selectedCustomerID,
-          paymentMethod: paymentData["paymentMethod"],
-          paidAmount: paymentData["paidAmount"],
-          balanceAmount: _balanceAmount.toString(),
-          transactionId: _transactionNumberController.text,
-          couponId: isCouponApplied ? coupenCodeTextController.text : null,
-          deliveryMethodId: deliveryMethodId,
-          carNumber: _carNumberController.text,
-          status: "confirmed",
-          deliveryDate: deliveryDate,
-          deliveryTime: deliveryTime,
-          context: context,
-          toCustomerCredit: _toCustomerCreditEnabled,
-          address: deliveryAddress,
-          deliveryCharge: _getDeliveryChargeForOrder(),
-          customerType: selectedCustomer?.customerType,
-        );
-
-        showScaffold(
-          context: context,
-          message: "billing.order_saved_success".tr,
-        );
-      } else {
-        debugPrint("💾 Creating new confirmed order for printing");
-
-        // **FIX**: Properly determine customer info for phone-only orders
-        String? customerNameToSave = selectedCustomer?.name;
-        String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
-
-        final paymentData = _getPaymentMethodData();
-        orderToUse = localProductProvider.saveCurrentCartAsConfirmedOrder(
-          customerName: customerNameToSave,
-          customerPhone: customerPhoneToSave,
-          comment: _commentController.text,
-          deliveryMethod: deliveryMethod,
-          // Include all API-compatible fields
-          customerId: selectedCustomerID,
-          paymentMethod: paymentData["paymentMethod"],
-          paidAmount: paymentData["paidAmount"],
-          balanceAmount: _balanceAmount.toString(),
-          transactionId: _transactionNumberController.text,
-          couponId: isCouponApplied ? coupenCodeTextController.text : null,
-          deliveryMethodId: deliveryMethodId,
-          carNumber: _carNumberController.text,
-          status: "confirmed",
-          deliveryDate: deliveryDate, // Pass deliveryDate
-          deliveryTime: deliveryTime, // Pass deliveryTime
-          context: context,
-          toCustomerCredit: _toCustomerCreditEnabled,
-          address: deliveryAddress,
-          deliveryCharge: _getDeliveryChargeForOrder(),
-          customerType: selectedCustomer?.customerType,
-        );
-
-        showScaffold(
-          context: context,
-          message: "billing.order_saved_success".tr,
-        );
-      }
-
-      try {
-        await printFromSavedOrder(orderToUse);
-      } catch (error) {
-        debugPrint("Error printing saved order: ${error.toString()}");
-      }
-
-      resetAutocomplete(shouldFetchCustomers: false);
-      _clearOrderWorkspace(
-        localProductProvider: localProductProvider,
-        preserveStockDeduction: true,
-      );
-    } catch (error) {
-      debugPrint(error.toString());
-      showScaffoldError(
-        context: context,
-        message: "billing.failed_save_order".tr,
-      );
-    } finally {
-      setState(() {
-        isLoadingSaveOrderAndPrint = false;
-      });
-      _endOrderAction();
-    }
-  }
-
   Future<void> _createNewOrder() async {
     debugPrint(
         "⌨️ [BillingPage] _createNewOrder started | ${_focusDebugSummary()}");
@@ -6682,676 +6487,290 @@ class BillingPageState extends State<BillingPage>
     }
   }
 
-  Future<void> _createOrderAndPrint() async {
-    if (!_ensureAuthoritativeAppSettings()) {
-      return;
-    }
-    // Check for internet connection before proceeding
-    if (!_hasInternet) {
-      showScaffoldError(
-        context: context,
-        message: "billing.no_internet_create".tr,
-      );
-      return; // Stop execution if no internet
+  OrderSubmissionPayload _buildLocalFirstOrderPayload(
+    LocalProductProvider localProducts,
+    ReceiptIdentity receiptIdentity,
+  ) {
+    final paymentMethods = _getSelectedPaymentMethods();
+    final paidMethods = _getPaidMethods();
+    final storeId = Provider.of<StoreSessionProvider>(context, listen: false)
+        .activeStore
+        ?.storeId;
+    final priceSummary = localProducts.priceSummary!;
+
+    return OrderSubmissionPayload(
+      items: localProducts.buildOrderItemsPayload(),
+      clientSaleId: receiptIdentity.clientSaleId,
+      receiptNumber: receiptIdentity.receiptNumber,
+      issuedAt: receiptIdentity.issuedAt,
+      posDeviceId: receiptIdentity.deviceId,
+      counterNumber: receiptIdentity.counterNumber,
+      customerPhone: _customerPhoneForOrder(),
+      customerId: selectedCustomerID,
+      transactionNumber: _transactionNumberController.text,
+      paymentMethods: paymentMethods,
+      paidMethods: paidMethods,
+      balanceAmount: _balanceAmount.toString(),
+      couponId:
+          isCouponApplied && coupenCodeTextController.text.trim().isNotEmpty
+              ? coupenCodeTextController.text.trim()
+              : null,
+      comment:
+          _commentController.text.isNotEmpty ? _commentController.text : null,
+      deliveryMethodId: deliveryMethodId.isNotEmpty ? deliveryMethodId : null,
+      carNumber: _carNumberController.text.isNotEmpty
+          ? _carNumberController.text
+          : null,
+      status: 'confirmed',
+      deliveryDate: deliveryDate,
+      deliveryTime: deliveryTime,
+      flatDiscount: priceSummary.flatDiscount,
+      percentageDiscount: priceSummary.percentageDiscount,
+      discountAmount: priceSummary.discount,
+      toCustomerCredit: _toCustomerCreditEnabled,
+      creditSaleAmount: !_toCustomerCreditEnabled && _isDebitSelected
+          ? double.tryParse(_debitAmountController.text) ?? 0.0
+          : 0.0,
+      address: deliveryAddress,
+      addressId: _requiresDeliveryAddress ? deliveryAddressId : null,
+      pincode: _requiresDeliveryAddress ? deliveryPincode : null,
+      quotationId: localProducts.currentOrder?.quotationId,
+      deliveryCharge: _getDeliveryChargeForOrder(),
+      storeId: storeId,
+    );
+  }
+
+  SavedOrder _createConfirmedLocalSnapshot(
+    LocalProductProvider localProducts,
+    ReceiptIdentity receiptIdentity,
+  ) {
+    final paymentData = _getPaymentMethodData();
+    String? customerKycValue(Set<String> acceptedKeys) {
+      for (final item in selectedCustomer?.kyc ?? const <Kyc>[]) {
+        final key = item.key?.trim().toUpperCase().replaceAll('_', ' ');
+        final value = item.value?.trim();
+        if (key != null &&
+            acceptedKeys.contains(key) &&
+            value != null &&
+            value.isNotEmpty) {
+          return value;
+        }
+      }
+      return null;
     }
 
-    // Require valid payment before creating order
-    if (!_ensurePaymentReadyForConfirm(_createOrderAndPrint)) {
+    return localProducts.saveCurrentCartAsConfirmedOrder(
+      clientSaleId: receiptIdentity.clientSaleId,
+      receiptNumber: receiptIdentity.receiptNumber,
+      issuedAt: receiptIdentity.issuedAt,
+      customerName: _customerNameForOrder(),
+      customerPhone: _customerPhoneForOrder(),
+      comment: _commentController.text,
+      deliveryMethod: deliveryMethod,
+      customerId: selectedCustomerID ?? selectedCustomer?.id,
+      paymentMethod: paymentData['paymentMethod'],
+      paidAmount: paymentData['paidAmount'],
+      balanceAmount: _balanceAmount.toString(),
+      transactionId: _transactionNumberController.text,
+      couponId: isCouponApplied ? coupenCodeTextController.text.trim() : null,
+      deliveryMethodId: deliveryMethodId,
+      carNumber: _carNumberController.text,
+      status: 'confirmed',
+      deliveryDate: deliveryDate,
+      deliveryTime: deliveryTime,
+      toCustomerCredit: _toCustomerCreditEnabled,
+      context: context,
+      address: OrderCustomerFields.addressForReceipt(
+        customer: selectedCustomer,
+        orderAddress: deliveryAddress,
+        orderAddressId: deliveryAddressId,
+        orderPincode: deliveryPincode,
+      ),
+      addressId: _requiresDeliveryAddress ? deliveryAddressId : null,
+      pincode: _requiresDeliveryAddress ? deliveryPincode : null,
+      deliveryCharge: _getDeliveryChargeForOrder(),
+      alternatePhone: selectedCustomer?.altPhone,
+      customerVatNumber: customerKycValue(const {'VAT', 'VAT NUMBER'}),
+      customerCrNumber: customerKycValue(
+        const {'CR', 'CR NUMBER', 'COMMERCIAL REGISTRATION'},
+      ),
+      customerType: selectedCustomer?.customerType,
+      quotationId: localProducts.currentOrder?.quotationId,
+      quotationNumber: localProducts.currentOrder?.quotationNumber,
+    );
+  }
+
+  Future<void> _confirmLocalFirst({required bool printReceipt}) async {
+    if (!_ensureAuthoritativeAppSettings()) return;
+    if (!_ensurePaymentReadyForConfirm(
+      printReceipt ? _createOrderAndPrint : _confirmOrder,
+    )) {
       return;
     }
+    if (!_beginOrderAction()) return;
 
-    if (!_beginOrderAction()) {
-      return;
+    if (mounted) {
+      setState(() {
+        if (printReceipt) {
+          isLoadingCreateOrder = true;
+        } else {
+          isLoadingConfirmOrder = true;
+        }
+      });
     }
 
-    setState(() {
-      isLoadingCreateOrder = true;
-    });
-    final releaseCheckoutUi =
-        OrderSubmissionCoordinator.instance.holdCheckoutUi();
+    SavedOrder? localOrder;
+    final localProducts =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final outbox = LocalSaleSyncService.instance;
+    final accessToken =
+        Provider.of<AuthModel>(context, listen: false).token ?? '';
+    final customerProvider =
+        Provider.of<CustomerProvider>(context, listen: false);
     try {
       if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(
               context) ||
-          !mounted) return;
+          !mounted) {
+        return;
+      }
       final hasCustomer = selectedCustomerID != null ||
-          (mobileNumberText?.isNotEmpty == true) ||
-          (salesExecutivemobileNumberText?.isNotEmpty == true);
+          (_customerPhoneForOrder()?.isNotEmpty ?? false) ||
+          (salesExecutivemobileNumberText?.isNotEmpty ?? false);
       if (!hasCustomer) {
         showScaffoldError(
-          context: context,
-          message: "billing.select_customer".tr,
-        );
-        // Auto-focus on customer field
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_autocompleteFocusNode != null) {
-            FocusScope.of(context).requestFocus(_autocompleteFocusNode!);
-          } else {
-            FocusScope.of(context).requestFocus(_customerTextFieldFocus);
-          }
-        });
+            context: context, message: 'billing.select_customer'.tr);
         return;
       }
-
-      // Get selected payment methods for multi-payment API payload
-      List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
-
       if (DeliveryMethodRegistry.requiresCarNumber(deliveryMethod) &&
-          _carNumberController.text == "") {
+          _carNumberController.text.isEmpty) {
         showScaffoldError(
-          context: context,
-          message: "billing.enter_car_number".tr,
-        );
+            context: context, message: 'billing.enter_car_number'.tr);
         return;
       }
-
       if (_isDeliveryPincodeMissing()) {
         showScaffoldError(
           context: context,
-          message: "checkout_modal.msg_pincode_required".tr,
+          message: 'checkout_modal.msg_pincode_required'.tr,
         );
         return;
       }
-
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      // debugPrint("accessToken From AuthModel $accessToken");
-      final provider = Provider.of<CartProvider>(context, listen: false);
-      int? cartId = provider.getCartIDForOrder;
-
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
-      if (localProductProvider.cartItems.isEmpty) {
+      if (localProducts.cartItems.isEmpty) {
         showScaffoldError(
           context: context,
-          message: "billing.add_items_to_cart".tr,
+          message: 'billing.add_items_to_cart'.tr,
         );
         return;
       }
 
-      // Validate that all items have valid pricing before API call
-      // bool hasInvalidPricing = localProductProvider.cartItems.any((item) =>
-      //     item.price == null ||
-      //     item.price! < 0 ||
-      //     item.mrp == null ||
-      //     item.mrp! < 0);
-
-      // if (hasInvalidPricing) {
-      //   showScaffoldError(
-      //     context: context,
-      //     message:
-      //         "Please ensure all items have valid prices and MRP before confirming order",
-      //   );
-      //   return;
-      // }
-
-      final items = localProductProvider.buildOrderItemsPayload();
-
-      final priceSummary = localProductProvider.priceSummary!;
-
-      await localProductProvider.flushPersistence();
-      await Provider.of<CartProvider>(context, listen: false)
-          .addToOrderAPI(
-        protectSubmission: true,
-        localDraftId: localProductProvider.currentOrder?.id,
-        cartSessionId: localProductProvider.cartSessionId,
-        items: items,
-        cartIds: cartId ?? 0,
-        accessToken: accessToken ?? "",
-        transactionId: _transactionNumberController.text,
-        totalPrice: priceSummary.netTotal.toString(),
-        customerId: selectedCustomerID,
-        customerPhone: selectedCustomerPhone ?? mobileNumberText,
-        // Always use multi-payment format
-        paymentMethod: null,
-        paidAmount: null,
-        paymentMethods: selectedPaymentMethods,
-        paidMethods: _getPaidMethods(),
-        balanceAmount: _balanceAmount.toString(),
-        comment: _commentController.text,
-        deliveryMethodId: deliveryMethodId,
-        carNumber: _carNumberController.text,
-        status: "confirmed",
-        deliveryDate: deliveryDate,
-        deliveryTime: deliveryTime,
-        // Include discount data
-        couponId: isCouponApplied ? coupenCodeTextController.text : null,
-        flatDiscount: priceSummary.flatDiscount,
-        percentageDiscount: priceSummary.percentageDiscount,
-        discountAmount: priceSummary.discount,
-        toCustomerCredit: _toCustomerCreditEnabled,
-        address: deliveryAddress,
-        addressId: _requiresDeliveryAddress ? deliveryAddressId : null,
-        pincode: _requiresDeliveryAddress ? deliveryPincode : null,
-        deliveryCharge: _getDeliveryChargeForOrder(),
-        quotationId: localProductProvider.currentOrder?.quotationId,
-      )
-          .then((response) async {
-        debugPrint('🧾 BILLING ORDER API RESPONSE: ${json.encode(response)}');
-        if (!mounted) return;
-
-        if (await SubscriptionActionGuard.handleBackendResponse(
-          context,
-          response,
-        )) {
-          return;
-        }
-        if (response["order_id"] != null) {
-          showScaffold(
-            context: context,
-            message: "billing.order_saved_successfully".tr,
+      final storeId = Provider.of<StoreSessionProvider>(context, listen: false)
+          .activeStore
+          ?.storeId;
+      if (storeId == null || storeId <= 0) {
+        throw StateError('Select a valid store before confirming the sale.');
+      }
+      final receiptIdentity =
+          await ReceiptIdentityService.instance.issue(storeId: storeId);
+      final payload =
+          _buildLocalFirstOrderPayload(localProducts, receiptIdentity);
+      final previousDraftId = localProducts.currentOrder?.id;
+      final sourceCartSessionId = localProducts.cartSessionId;
+      final receiptBalance = ReceiptCustomerBalance.compute(
+        isDefaultCustomer: _isDefaultCustomer(selectedCustomer),
+        customerBalance: selectedCustomer?.balance,
+        cartTotal: _getEffectiveOrderTotal(),
+        totalPaid: _getTotalPaidAmount(),
+      );
+      final attemptServerSync =
+          Provider.of<BillingProvider>(context, listen: false).hasInternet;
+      final mode = Provider.of<AppSettingsProvider>(context, listen: false)
+          .saleConfirmationMode;
+      final result =
+          await LocalFirstSaleCoordinator(outbox).confirm<SavedOrder>(
+        surface: LocalSaleSurface.supermarketDesktop,
+        mode: mode,
+        sourceCartSessionId: sourceCartSessionId,
+        payload: payload,
+        accessToken: accessToken,
+        attemptServerSync: attemptServerSync,
+        persistLocalSale: () {
+          localOrder = _createConfirmedLocalSnapshot(
+            localProducts,
+            receiptIdentity,
           );
-          _refreshCustomersInBackgroundAfterSale();
-
-          // Delete the current order if it exists in local storage
-          if (localProductProvider.currentOrder != null) {
-            localProductProvider
-                .deleteSavedOrder(localProductProvider.currentOrder!.id);
+          return LocalSaleIdentity(
+            value: localOrder!,
+            localOrderId: localOrder!.id,
+            localOrderNumber: localOrder!.orderNumber,
+          );
+        },
+        flushLocalPersistence: localProducts.flushPersistence,
+        rollbackLocalSale: (sale) =>
+            localProducts.deleteConfirmedOrder(sale.id),
+        commitLocalWorkspace: (_) {
+          if (previousDraftId != null) {
+            localProducts.deleteSavedOrder(previousDraftId);
           }
-
-          // Clear cart without restoring stock (order is confirmed)
-          localProductProvider.clearCartAfterOrder();
-          unawaited(Provider.of<CartProvider>(context, listen: false)
-              .submissions
-              .completeLocalCleanup(
-                  response, localProductProvider.flushPersistence));
-
-          try {
-            String ordersId = response["order_number"].toString();
-            String? accessToken =
-                Provider.of<AuthModel>(context, listen: false).token;
-
-            final OrderDetailsresponse = await SalesProvider()
-                .listOrderDetails(context, ordersId, accessToken ?? "");
-
-            OrderDetailsModel orderDetails =
-                OrderDetailsModel.fromJson(OrderDetailsresponse);
-
-            String? formattedTotal =
-                orderDetails.data?.cart?.priceSummary?.netPayable?.toString() ??
-                    orderDetails.data?.cart?.priceSummary?.netTotal.toString();
-            String? savedTotal =
-                orderDetails.data?.cart?.priceSummary?.savedTotal.toString();
-
-            String storeName = orderDetails.data!.cart!.storeName ?? "";
-            String orderDate = orderDetails.data!.orderDate ?? "";
-
-            // Extract new print details
-            String? customerAlternatePhone =
-                orderDetails.data?.customerDetails?.alternatePhone;
-            String? paymentMethod =
-                orderDetails.data?.paymentDetails?.paymentMethod ?? 'N/A';
-
-            // Extract payment breakdown (method -> amount mapping from API)
-            Map<String, dynamic>? paymentBreakdown =
-                orderDetails.data?.payments;
-
-            String? orderComment;
-            if (orderDetails.data?.orderProps != null) {
-              try {
-                final commentProp = orderDetails.data!.orderProps!.firstWhere(
-                  (prop) => prop.propsCode == "COMMENT",
-                  orElse: () => OrderDetailsModelDataOrderProp(),
-                );
-                orderComment = commentProp.propsValue;
-              } catch (e) {
-                // ignore
-              }
-            }
-
-            // Extract customer details
-            String? customerName = orderDetails.data?.customerDetails?.name;
-            String? customerPhone = orderDetails.data?.customerDetails?.phone;
-            String? customerEmail = orderDetails.data?.customerDetails?.email;
-            String? customerVatNumber = orderDetails.data?.kycInfo?.vatNumber;
-            String? customerCrNumber = orderDetails.data?.kycInfo?.crNumber;
-            // Use helper to get address from order_props, fallback to customer details
-            String? customerAddress =
-                orderDetails.data?.getCustomerAddressForDisplay();
-
-            // Calculate customer balance for print
-            final isDefaultCustomer = _isDefaultCustomer(selectedCustomer);
-            double? oldBalance =
-                isDefaultCustomer ? null : selectedCustomer?.balance;
-            double totalPaid = _getTotalPaidAmount();
-            if (totalPaid <= 0 && paymentBreakdown != null) {
-              const excludedPaymentKeys = {'DEBIT', 'CREDIT', 'BALANCE'};
-              totalPaid = paymentBreakdown.entries
-                  .where((entry) => !excludedPaymentKeys
-                      .contains(entry.key.trim().toUpperCase()))
-                  .fold<double>(0.0, (sum, entry) {
-                final value = entry.value;
-                return sum +
-                    (value is num
-                        ? value.toDouble()
-                        : double.tryParse(value.toString()) ?? 0.0);
-              });
-            }
-            double? currentBalance =
-                orderDetails.data?.customerDetails?.customerBalance;
-            if (currentBalance == null && oldBalance != null) {
-              double cartTotal = double.tryParse(formattedTotal!) ?? 0.0;
-              // Current balance = Old balance - (Cart Total - Amount Paid)
-              // If customer paid less than cart total, their balance decreases (they owe more)
-              // If customer paid more than cart total, their balance increases (they have credit)
-              currentBalance = oldBalance - (cartTotal - totalPaid);
-            }
-            // No order_props.BALANCE fallback: that field has been observed
-            // stale/incorrect (e.g. "0.0" right after a credit sale), so if
-            // we can't determine the balance from customer_details or a
-            // local computation, leave it null rather than print a value we
-            // can't trust.
-
-            Future<bool> printOnce() {
-              return _printOrderDetailsWithFallback(
-                storeName: storeName,
-                cartItems: orderDetails.data!.cart!.cartItems!,
-                formattedTotal: formattedTotal!,
-                savedTotal: savedTotal,
-                discountAmount:
-                    orderDetails.data!.priceSummary?.discount?.toString() ??
-                        "0.00",
-                orderDate: orderDate,
-                orderNumber: orderDetails.data!.orderNumber.toString(),
-                tokenNumber: orderDetails.data?.tokenNumber,
-                customerName: customerName,
-                customerPhone: customerPhone,
-                customerEmail: customerEmail,
-                customerAddress: customerAddress,
-                customerOldBalance: oldBalance,
-                customerCurrentBalance: currentBalance,
-                paidAmount: totalPaid > 0 ? totalPaid : null,
-                customerAlternatePhone: customerAlternatePhone,
-                customerVatNumber: customerVatNumber,
-                customerCrNumber: customerCrNumber,
-                customerType: selectedCustomer?.customerType,
-                paymentMethod: paymentMethod,
-                paymentBreakdown: paymentBreakdown,
-                orderComment: orderComment,
-                deliveryMethod:
-                    orderDetails.data?.deliveryMethodName ?? deliveryMethod,
-                isDefaultCustomer:
-                    isDefaultCustomer || _isDefaultCustomerPhone(customerPhone),
-                netExcTax: orderDetails.data!.cart!.priceSummary?.netExcTax
-                    ?.toString(),
-                apiTotalTax:
-                    orderDetails.data?.priceSummary?.totalTax?.toDouble(),
-              );
-            }
-
-            final autoPrintSuccess = await printOnce();
-            await _maybePrintCustomerCopy(
-              canPrompt: autoPrintSuccess,
-              printAction: printOnce,
-            );
-          } catch (error) {
-            debugPrint(
-                '[BillingPrint] receipt_failed type=${error.runtimeType}');
-          }
-
-          // Clear the mobile number after successful save
-          setState(() {
-            mobileNumberText = ""; // Clear the variable
-            salesExecutivemobileNumberText = ""; // Clear default phone display
-            selectedCustomerID = null;
-            selectedCustomerPhone = null;
-            mobileNumberTextController.clear();
-            quantityController.clear();
-            barcodeController.clear();
-            selectedProductIdController.clear();
-            unitPriceController.clear();
-            isCustomerFound = false;
-            selectedCustomer = null;
-            isCouponApplied = false;
-            coupenCodeTextController.clear();
-            _transactionNumberController.clear();
-            _paidAmountController.clear();
-            _balanceAmount = 0;
-            _carNumberController.clear();
-            _commentController.clear();
-            deliveryDate = null;
-            deliveryTime = null;
-            deliveryAddress = null;
-            deliveryAddressId = null;
-            deliveryPincode = null;
-            _isCustomerManuallySelected = false;
-            _hasOpenedPaymentModalOnce = false;
-            _toCustomerCreditEnabled = false;
-            _isCashSelected = false;
-            _isCardSelected = false;
-            _isUpiSelected = false;
-            _isCodSelected = false;
-            _isDebitSelected = false;
-            _cashAmountController.clear();
-            _cardAmountController.clear();
-            _upiAmountController.clear();
-            _codAmountController.clear();
-            _debitAmountController.clear();
-            _autocompletePhoneKey = GlobalKey();
-          });
-          Provider.of<CustomerSelectionProvider>(context, listen: false)
-              .clearSelectedCustomer();
-          resetAutocomplete(
-              shouldFetchCustomers:
-                  false); // Preserve customer selection after confirming
-
           _clearOrderWorkspace(
-            localProductProvider: localProductProvider,
+            localProductProvider: localProducts,
             preserveStockDeduction: true,
-            providerCartAlreadyCleared: true,
           );
-        } else {
-          showScaffoldError(
-            context: context,
-            message: response["message"]?.toString() ??
-                "billing.failed_save_order_api".tr,
-            // message: "${addToOrderModel.message}",
-          );
-        }
-      });
-    } catch (error) {
-      if (mounted)
-        showScaffoldError(
-            context: context,
-            message:
-                'We couldn’t complete the checkout screen. Review the order status before billing again.');
-    } finally {
-      releaseCheckoutUi();
-      // Set loading to false at the end of the function
-      if (mounted)
-        setState(() {
-          isLoadingCreateOrder = false; // Indicate that loading has finished
-        });
-      _endOrderAction();
-    }
-  }
-
-  Future<void> _confirmOrder() async {
-    if (!_ensureAuthoritativeAppSettings()) {
-      return;
-    }
-    // Check for internet connection before proceeding
-    if (!_hasInternet) {
-      showScaffoldError(
-        context: context,
-        message: "billing.no_internet".tr,
+        },
+        printLocalReceipt: printReceipt
+            ? (sale) => printFromSavedOrder(
+                  sale,
+                  customerOldBalance: receiptBalance.oldBalance,
+                  customerCurrentBalance: receiptBalance.currentBalance,
+                )
+            : null,
+        withServerOrderNumber: (sale, number) => sale.withOrderNumber(number),
+        onSyncFinished: (record) async {
+          if (record.state == LocalSaleSyncState.synced &&
+              accessToken.isNotEmpty) {
+            try {
+              await customerProvider.fetchCustomers(
+                accessToken: accessToken,
+                listAll: true,
+              );
+            } catch (_) {
+              // The sale is synced; a customer-cache refresh is best effort.
+            }
+          }
+        },
       );
-      return; // Stop execution if no internet
-    }
 
-    // Require valid payment before confirming order
-    if (!_ensurePaymentReadyForConfirm(_confirmOrder)) {
-      return;
-    }
-
-    if (!_beginOrderAction()) {
-      return;
-    }
-
-    setState(() {
-      isLoadingConfirmOrder = true;
-    });
-    final releaseCheckoutUi =
-        OrderSubmissionCoordinator.instance.holdCheckoutUi();
-    try {
-      if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(
-              context) ||
-          !mounted) return;
-      final hasCustomer = selectedCustomerID != null ||
-          (mobileNumberText?.isNotEmpty == true) ||
-          (salesExecutivemobileNumberText?.isNotEmpty == true);
-      if (!hasCustomer) {
+      if (mounted) {
+        (result.needsAttention || !result.printSucceeded
+            ? showScaffoldError
+            : showScaffold)(context: context, message: result.message);
+      }
+    } on OnlineSaleNotConfirmed catch (error) {
+      if (mounted) {
+        showScaffoldError(context: context, message: error.message);
+      }
+    } catch (error, stackTrace) {
+      debugPrint('[LocalSale] confirmation failed: $error\n$stackTrace');
+      if (mounted) {
         showScaffoldError(
           context: context,
-          message: "billing.select_customer".tr,
+          message: localOrder == null
+              ? 'The order could not be saved locally. Nothing was sent.'
+              : 'The order remains in the local sales list and needs attention.',
         );
-        // Auto-focus on customer field
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_autocompleteFocusNode != null) {
-            FocusScope.of(context).requestFocus(_autocompleteFocusNode!);
-          } else {
-            FocusScope.of(context).requestFocus(_customerTextFieldFocus);
-          }
-        });
-        return;
       }
-
-      // Get selected payment methods for multi-payment API payload
-      List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
-
-      if (DeliveryMethodRegistry.requiresCarNumber(deliveryMethod) &&
-          _carNumberController.text == "") {
-        showScaffoldError(
-          context: context,
-          message: "billing.enter_car_number".tr,
-        );
-        return;
-      }
-
-      if (_isDeliveryPincodeMissing()) {
-        showScaffoldError(
-          context: context,
-          message: "checkout_modal.msg_pincode_required".tr,
-        );
-        return;
-      }
-
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      // debugPrint("accessToken From AuthModel $accessToken");
-      final provider = Provider.of<CartProvider>(context, listen: false);
-      int? cartId = provider.getCartIDForOrder;
-
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
-      if (localProductProvider.cartItems.isEmpty) {
-        showScaffoldError(
-          context: context,
-          message: "billing.add_items_to_cart".tr,
-        );
-        return;
-      }
-
-      // Validate that all items have valid pricing before API call
-      // bool hasInvalidPricing = localProductProvider.cartItems.any((item) =>
-      //     item.price == null ||
-      //     item.price! < 0 ||
-      //     item.mrp == null ||
-      //     item.mrp! < 0);
-
-      // if (hasInvalidPricing) {
-      //   showScaffoldError(
-      //     context: context,
-      //     message:
-      //         "Please ensure all items have valid prices and MRP before confirming order",
-      //   );
-      //   return;
-      // }
-
-      final items = localProductProvider.buildOrderItemsPayload();
-
-      await localProductProvider.flushPersistence();
-      await Provider.of<CartProvider>(context, listen: false)
-          .addToOrderAPI(
-        protectSubmission: true,
-        localDraftId: localProductProvider.currentOrder?.id,
-        cartSessionId: localProductProvider.cartSessionId,
-        items: items,
-        cartIds: cartId ?? 0,
-        accessToken: accessToken ?? "",
-        transactionId: _transactionNumberController.text,
-        totalPrice: localProductProvider.priceSummary!.netTotal.toString(),
-        customerId: selectedCustomerID,
-        customerPhone: selectedCustomerPhone ?? mobileNumberText,
-        // Always use multi-payment format
-        paymentMethod: null,
-        paidAmount: null,
-        paymentMethods: selectedPaymentMethods,
-        paidMethods: _getPaidMethods(),
-        balanceAmount: _balanceAmount.toString(),
-        couponId: isCouponApplied ? coupenCodeTextController.text : null,
-        comment: _commentController.text,
-        deliveryMethodId: deliveryMethodId,
-        carNumber: _carNumberController.text,
-        status: "confirmed",
-        deliveryDate: deliveryDate,
-        deliveryTime: deliveryTime,
-        // Include discount data
-        flatDiscount: localProductProvider.priceSummary!.flatDiscount,
-        percentageDiscount:
-            localProductProvider.priceSummary!.percentageDiscount,
-        discountAmount: localProductProvider.priceSummary!.discount,
-        toCustomerCredit: _toCustomerCreditEnabled,
-        address: deliveryAddress,
-        addressId: _requiresDeliveryAddress ? deliveryAddressId : null,
-        pincode: _requiresDeliveryAddress ? deliveryPincode : null,
-        deliveryCharge: _getDeliveryChargeForOrder(),
-        quotationId: localProductProvider.currentOrder?.quotationId,
-      )
-          .then((response) async {
-        debugPrint('🧾 BILLING ORDER API RESPONSE: ${json.encode(response)}');
-        if (!mounted) return;
-
-        if (await SubscriptionActionGuard.handleBackendResponse(
-          context,
-          response,
-        )) {
-          return;
-        }
-        if (response["order_id"] != null) {
-          showScaffold(
-            context: context,
-            message: "billing.order_confirmed_successfully".tr,
-          );
-          _refreshCustomersInBackgroundAfterSale();
-
-          // Delete the current order if it exists in local storage
-          if (localProductProvider.currentOrder != null) {
-            localProductProvider
-                .deleteSavedOrder(localProductProvider.currentOrder!.id);
-          }
-
-          // Clear cart without restoring stock (order is confirmed)
-          localProductProvider.clearCartAfterOrder();
-          unawaited(Provider.of<CartProvider>(context, listen: false)
-              .submissions
-              .completeLocalCleanup(
-                  response, localProductProvider.flushPersistence));
-
-          // Clear the mobile number after successful save
-          setState(() {
-            mobileNumberText = ""; // Clear the variable
-            salesExecutivemobileNumberText = ""; // Clear default phone display
-            selectedCustomerID = null;
-            selectedCustomerPhone = null;
-            mobileNumberTextController.clear();
-            quantityController.clear();
-            barcodeController.clear();
-            selectedProductIdController.clear();
-            unitPriceController.clear();
-            isCustomerFound = false;
-            selectedCustomer = null;
-            isCouponApplied = false;
-            coupenCodeTextController.clear();
-            _transactionNumberController.clear();
-            _paidAmountController.clear();
-            _balanceAmount = 0;
-            _carNumberController.clear();
-            _commentController.clear();
-            deliveryDate = null;
-            deliveryTime = null;
-            deliveryAddress = null;
-            deliveryAddressId = null;
-            deliveryPincode = null;
-            _isCustomerManuallySelected = false;
-            _hasOpenedPaymentModalOnce = false;
-            _toCustomerCreditEnabled = false;
-            _isCashSelected = false;
-            _isCardSelected = false;
-            _isUpiSelected = false;
-            _isCodSelected = false;
-            _isDebitSelected = false;
-            _cashAmountController.clear();
-            _cardAmountController.clear();
-            _upiAmountController.clear();
-            _codAmountController.clear();
-            _debitAmountController.clear();
-            _autocompletePhoneKey = GlobalKey();
-          });
-          Provider.of<CustomerSelectionProvider>(context, listen: false)
-              .clearSelectedCustomer();
-          resetAutocomplete(
-              shouldFetchCustomers:
-                  false); // Preserve customer selection after confirming
-
-          localProductProvider.clearCurrentOrder();
-        } else {
-          showScaffoldError(
-            context: context,
-            message:
-                response["message"]?.toString() ?? "billing.order_failed".tr,
-          );
-        }
-      });
-      _focusTextField();
-    } catch (error) {
-      if (mounted)
-        showScaffoldError(
-            context: context,
-            message:
-                'We couldn’t complete the checkout screen. Review the order status before billing again.');
     } finally {
-      releaseCheckoutUi();
-      // Set loading to false at the end of the function
-      if (mounted)
+      if (mounted) {
         setState(() {
-          isLoadingConfirmOrder = false; // Indicate that loading has finished
+          isLoadingCreateOrder = false;
+          isLoadingConfirmOrder = false;
         });
+      }
       _endOrderAction();
     }
   }
 
-  void _refreshCustomersInBackgroundAfterSale() {
-    try {
-      final authModel = Provider.of<AuthModel>(context, listen: false);
-      final customerProvider =
-          Provider.of<CustomerProvider>(context, listen: false);
-      final accessToken = authModel.token;
+  Future<void> _createOrderAndPrint() => _confirmLocalFirst(printReceipt: true);
 
-      if (accessToken == null || accessToken.isEmpty) {
-        debugPrint(
-            "🔄 Skipping background customer refresh: access token unavailable");
-        return;
-      }
-
-      unawaited(() async {
-        try {
-          debugPrint("🔄 Background customer refresh started after sale");
-          await customerProvider.fetchCustomers(
-            accessToken: accessToken,
-            listAll: true,
-          );
-
-          final refreshedCustomers = customerProvider.allCustomers;
-          if (!mounted ||
-              refreshedCustomers == null ||
-              refreshedCustomers.isEmpty) {
-            return;
-          }
-
-          setState(() {
-            customerList = List<CustomerListModelData>.from(refreshedCustomers);
-          });
-          debugPrint(
-              "✅ Background customer refresh completed: ${refreshedCustomers.length} customers");
-        } catch (error) {
-          // Keep existing list on any failure.
-          debugPrint("❌ Background customer refresh failed: $error");
-        }
-      }());
-    } catch (error) {
-      debugPrint("❌ Failed to start background customer refresh: $error");
-    }
-  }
+  Future<void> _confirmOrder() => _confirmLocalFirst(printReceipt: false);
 
   void _hydrateCustomerListFromProviderCache({
     bool applyDefaultCustomer = true,
@@ -7512,14 +6931,6 @@ class BillingPageState extends State<BillingPage>
       return;
     }
     _showCheckoutModal(actionMode: CheckoutActionMode.confirm);
-  }
-
-  Future<void> _handleSaveAndPrint() async {
-    if (_skipCheckoutOnConfirmAndPrint) {
-      await _saveAndPrintWithoutCheckoutModal();
-      return;
-    }
-    _showCheckoutModal(actionMode: CheckoutActionMode.save);
   }
 
   bool _hasExistingPaymentState() {
@@ -7695,52 +7106,6 @@ class BillingPageState extends State<BillingPage>
     );
 
     await _createOrderAndPrint();
-  }
-
-  Future<void> _saveAndPrintWithoutCheckoutModal() async {
-    if (_isOrderActionBusy) {
-      debugPrint(
-          "⌨️ [BillingPage] Direct save & print ignored because order action is busy");
-      return;
-    }
-
-    debugPrint(
-        "⌨️ [BillingPage] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct save & print");
-
-    await _prepareCheckoutDefaults(
-      applyDefaultCustomer: true,
-      applyDefaultPayment: true,
-    );
-    if (!mounted) return;
-
-    setState(() {
-      _autoFillDefaultPaymentAmounts();
-      _hasOpenedPaymentModalOnce = true;
-    });
-    _updateBalanceAmount();
-
-    final billingProvider =
-        Provider.of<BillingProvider>(context, listen: false);
-    billingProvider.updatePaymentFromModal(
-      isCash: _isCashSelected,
-      isCard: _isCardSelected,
-      isUpi: _isUpiSelected,
-      isCod: _isCodSelected,
-      isDebit: _isDebitSelected,
-      cashAmount: _cashAmountController.text,
-      cardAmount: _cardAmountController.text,
-      upiAmount: _upiAmountController.text,
-      codAmount: _codAmountController.text,
-      debitAmount: _debitAmountController.text,
-      transactionNumber: _transactionNumberController.text,
-      toCustomerCredit: _toCustomerCreditEnabled,
-      cashMethodId: billingProvider.cashPaymentMethodId,
-      cardMethodId: billingProvider.cardPaymentMethodId,
-      upiMethodId: billingProvider.upiPaymentMethodId,
-      codMethodId: billingProvider.codPaymentMethodId,
-    );
-
-    await _saveOrderAndPrint();
   }
 
   /// Opens either the full checkout flow or one selection-only checkout step.
@@ -7920,9 +7285,7 @@ class BillingPageState extends State<BillingPage>
                   : 'billing.confirm_order'.tr),
           printButtonTitle: isQuotationMode
               ? 'billing.create_and_print_quote'.tr
-              : (isSaveMode
-                  ? 'billing.save_and_print'.tr
-                  : 'billing.confirm_and_print'.tr),
+              : 'billing.confirm_and_print'.tr,
           requireCheckoutCompletion: !(isSaveMode || isQuotationMode),
           isQuotationMode: isQuotationMode,
           requireSavedCustomer: requiresSavedQuotationCustomer,
@@ -8149,26 +7512,27 @@ class BillingPageState extends State<BillingPage>
               await _confirmOrder();
             }
           },
-          onConfirmAndPrint: () async {
-            checkoutActionTriggered = true;
-            setState(() {
-              if (isSaveMode || isQuotationMode) {
-                isLoadingSaveOrderAndPrint = true;
-              } else {
-                isLoadingCreateOrder = true;
-                _hasOpenedPaymentModalOnce = true;
-              }
-            });
-            // Close modal after setting loading state
-            if (mounted) Navigator.of(dialogContext).pop();
-            if (isQuotationMode) {
-              await _createQuotationFromCheckout(shouldPrint: true);
-            } else if (isSaveMode) {
-              await _saveOrderAndPrint();
-            } else {
-              await _createOrderAndPrint();
-            }
-          },
+          // Save Order only parks a draft, so it has no print action.
+          onConfirmAndPrint: isSaveMode
+              ? null
+              : () async {
+                  checkoutActionTriggered = true;
+                  setState(() {
+                    if (isQuotationMode) {
+                      isLoadingSaveOrderAndPrint = true;
+                    } else {
+                      isLoadingCreateOrder = true;
+                      _hasOpenedPaymentModalOnce = true;
+                    }
+                  });
+                  // Close modal after setting loading state
+                  if (mounted) Navigator.of(dialogContext).pop();
+                  if (isQuotationMode) {
+                    await _createQuotationFromCheckout(shouldPrint: true);
+                  } else {
+                    await _createOrderAndPrint();
+                  }
+                },
         );
       },
     );
@@ -8315,8 +7679,7 @@ class BillingPageState extends State<BillingPage>
             if (quotationId == null) {
               showScaffoldError(
                 context: context,
-                message:
-                    'billing.quotation_print_missing_id'.tr,
+                message: 'billing.quotation_print_missing_id'.tr,
               );
             } else {
               final details = await quotationsProvider.fetchQuotationDetails(
@@ -8329,8 +7692,7 @@ class BillingPageState extends State<BillingPage>
               if (details == null) {
                 showScaffoldError(
                   context: context,
-                  message:
-                    'billing.quotation_print_details_failed'.tr,
+                  message: 'billing.quotation_print_details_failed'.tr,
                 );
               } else {
                 Future<bool> printOnce() => _printQuotationDetails(details);
@@ -8349,8 +7711,8 @@ class BillingPageState extends State<BillingPage>
         } else {
           showScaffoldError(
             context: context,
-            message: response['message'] ??
-                'billing.quotation_create_failed'.tr,
+            message:
+                response['message'] ?? 'billing.quotation_create_failed'.tr,
           );
         }
       }
@@ -8414,6 +7776,10 @@ class BillingPageState extends State<BillingPage>
       paymentMethod: null,
       paymentBreakdown: null,
       customerType: selectedCustomer?.customerType,
+      customerVatNumber:
+          QuotationPrintService.vatNumberFromKyc(selectedCustomer?.kyc),
+      customerCrNumber:
+          QuotationPrintService.crNumberFromKyc(selectedCustomer?.kyc),
       deliveryMethod: deliveryMethod,
       isDefaultCustomer: _isDefaultCustomer(selectedCustomer),
     );
@@ -8479,7 +7845,7 @@ class BillingPageState extends State<BillingPage>
 
     final double debitAmount =
         double.tryParse(_debitAmountController.text) ?? 0;
-    if (_toCustomerCreditEnabled && debitAmount > 0) {
+    if ((_toCustomerCreditEnabled || _isDebitSelected) && debitAmount > 0) {
       selectedMethodsForStorage.add(debitId);
     }
 
@@ -9534,13 +8900,19 @@ class BillingPageState extends State<BillingPage>
     return autoPrintSuccess;
   }
 
-  Future<void> printFromSavedOrder(SavedOrder savedOrder) async {
+  Future<void> printFromSavedOrder(
+    SavedOrder savedOrder, {
+    double? customerOldBalance,
+    double? customerCurrentBalance,
+  }) async {
     try {
       {
         final printService = const PrintService();
         Future<bool> printOnce() => printService.printSavedOrder(
               context,
               savedOrder,
+              customerOldBalance: customerOldBalance,
+              customerCurrentBalance: customerCurrentBalance,
             );
 
         final autoPrintSuccess = await printOnce();

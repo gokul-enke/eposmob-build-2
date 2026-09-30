@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/order_details.dart';
+import 'package:pos_machine/helpers/return_print_amounts.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/bank_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
@@ -23,6 +24,8 @@ class ReturnBillLayoutParamsBuilder {
     required String returnTotalAmount,
     required String orderDate,
     required String orderNumber,
+    String? originalInvoiceNumber,
+    String? originalInvoiceDate,
     required String selectedPaperSize,
     required DocumentConfig returnBillDocumentConfig,
     String? customerName,
@@ -36,6 +39,7 @@ class ReturnBillLayoutParamsBuilder {
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final zatcaVatNumber = prefs.getString('zatca_vat_number');
+    final zatcaCrNumber = prefs.getString('zatca_cr_number');
     final zatcaCompanyName = prefs.getString('zatca_company_name');
 
     if (!context.mounted) {
@@ -55,12 +59,14 @@ class ReturnBillLayoutParamsBuilder {
         (originalCartItems != null && originalCartItems.isNotEmpty)
             ? originalCartItems
             : fallbackCartItems;
-    final totalAmount = double.tryParse(returnTotalAmount) ?? 0.0;
-    final documentTitle = _resolveDocumentTitle(returnBillDocumentConfig);
     final orderReturns = OrderReturns(
-      returnTotalAmount: totalAmount.toStringAsFixed(2),
+      returnTotalAmount: returnTotalAmount,
       returnItems: returnItems,
     );
+    final totalAmount = ReturnPrintAmounts.total(orderReturns, cartItems);
+
+    final defaultCustomerPhone =
+        appSettings?.autoAssignDefaultCustomerPhone ?? '';
 
     double? customerCurrentBalance;
     if (customerBalance != null && customerBalance.trim().isNotEmpty) {
@@ -76,6 +82,8 @@ class ReturnBillLayoutParamsBuilder {
       discountAmount: '0.00',
       orderDate: orderDate,
       orderNumber: orderNumber,
+      originalInvoiceNumber: originalInvoiceNumber,
+      originalInvoiceDate: originalInvoiceDate,
       isFromLocalStorage: false,
       selectedPaperSize: selectedPaperSize,
       billDocumentConfig: returnBillDocumentConfig,
@@ -90,14 +98,18 @@ class ReturnBillLayoutParamsBuilder {
       customerType: customerType,
       orderReturns: orderReturns,
       customerCurrentBalance: customerCurrentBalance,
-      documentTitleOverride: documentTitle,
       zatcaVatNumber: zatcaVatNumber,
+      zatcaCrNumber: zatcaCrNumber,
       zatcaCompanyName: zatcaCompanyName,
+      // Same walk-in rule as PrintService for sales receipts.
+      isDefaultCustomer: defaultCustomerPhone.isNotEmpty &&
+          customerPhone == defaultCustomerPhone,
       hideDefaultCustomerPhone: appSettings?.hideDefaultPhone ?? true,
       netExcTax: totalAmount.toStringAsFixed(2),
       apiTotalTax: 0,
       bankDetails: bankProvider.banks,
-      storeName: returnBillDocumentConfig.header ?? store?.storeName,
+      // The layouts already print the document header on its own line.
+      storeName: store?.storeName,
       storeLocation: store?.location,
       storePhone: store?.phone,
       storeEmail: store?.email,
@@ -106,37 +118,24 @@ class ReturnBillLayoutParamsBuilder {
     );
   }
 
-  static String _resolveDocumentTitle(DocumentConfig config) {
-    final configuredTitle =
-        config.displayConfiguration?.options?['showInvoiceTitle']?.value;
-    if (configuredTitle != null &&
-        configuredTitle.toString().trim().isNotEmpty) {
-      return configuredTitle.toString().trim();
-    }
-    return 'Sales Return';
-  }
-
   static List<OrderDetailsModelDataCartItem> _returnItemsToCartItems(
     List<OrderReturnItem> returnItems,
     String returnTotalAmount,
   ) {
-    final totalAmount = double.tryParse(returnTotalAmount) ?? 0.0;
-    final totalQty = returnItems.fold<num>(
-      0,
-      (sum, item) => sum + (item.quantity ?? 0),
-    );
+    final returns = OrderReturns(returnTotalAmount: returnTotalAmount,
+        returnItems: returnItems);
 
     return returnItems.map((item) {
       final qty = item.quantity ?? 0;
-      final lineTotal = totalQty > 0 ? totalAmount * qty / totalQty : 0.0;
-      final unitPrice = qty > 0 ? lineTotal / qty : 0.0;
+      final (unitPrice, mrp) = ReturnPrintAmounts.itemRate(item, const [], returns);
+      final lineTotal = unitPrice * qty;
 
       return OrderDetailsModelDataCartItem(
         productName: item.productName,
         quantity: qty,
         unitPrice: unitPrice.toStringAsFixed(2),
         totalPrice: lineTotal.toStringAsFixed(2),
-        mrp: unitPrice.toStringAsFixed(2),
+        mrp: mrp.toStringAsFixed(2),
         taxAmount: '0.00',
       );
     }).toList();

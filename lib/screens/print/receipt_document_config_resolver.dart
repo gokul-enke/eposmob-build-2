@@ -2,6 +2,12 @@ import 'package:pos_machine/models/document_configurations.dart';
 
 typedef DocumentConfigLookup = DocumentConfig? Function(String type);
 
+/// The admin Return Bill record controls return-only printing. Credit Note is
+/// retained as a fallback for tenants that only supply the older name.
+DocumentConfig? resolveReturnDocumentConfig(
+        {required DocumentConfigLookup lookup}) =>
+    lookup('Return Bill') ?? lookup('Credit Note');
+
 /// Resolves the document configuration used by sales receipt printing.
 ///
 /// Standard paper prefers the A4-specific record. Combined sales/return jobs
