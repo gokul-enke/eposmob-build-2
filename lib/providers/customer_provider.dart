@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
@@ -11,8 +10,42 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../resources/app_url.dart';
 
+typedef CustomerHttpGet = Future<http.Response> Function(
+  Uri url, {
+  Map<String, String>? headers,
+});
+
+class _CustomerPage {
+  const _CustomerPage({required this.payload, required this.model});
+
+  final Map<String, dynamic> payload;
+  final CustomerListModel model;
+}
+
+class _CustomerDirectoryResult {
+  const _CustomerDirectoryResult({
+    required this.customers,
+    required this.message,
+  });
+
+  final List<CustomerListModelData> customers;
+  final String? message;
+
+  Map<String, dynamic> toJson() => {
+        'status': 'success',
+        'message': message,
+        'data': customers.map((customer) => customer.toJson()).toList(),
+      };
+}
+
 class CustomerProvider extends ChangeNotifier {
   static const String _customerCacheBoxName = 'customer_cache';
+  static const int _loadAllPageSize = 100;
+  static const int _maximumCustomerPages = 1000;
+
+  CustomerProvider({CustomerHttpGet? httpGet}) : _httpGet = httpGet ?? http.get;
+
+  final CustomerHttpGet _httpGet;
   List<CustomerListModelData>? customerList = [];
   List<CustomerListModelData>? _allCustomers =
       []; // Store all customers for local filtering
@@ -189,64 +222,183 @@ class CustomerProvider extends ChangeNotifier {
     }
   }
 
-  /// Loads the complete customer directory for report filters without
-  /// changing the paginated customer-list screen state.
-  Future<List<CustomerListModelData>> listAllCustomersForReportFilter({
+  /// Loads a complete, screen-owned customer snapshot without changing this
+  /// provider's list, filters, pagination, loading state, or listeners.
+  Future<List<CustomerListModelData>> fetchAllCustomersSnapshot({
     required String accessToken,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final apiKey = prefs.getString('api_key');
     final activeStoreId = prefs.getInt('active_store_id');
     if (apiKey == null || apiKey.isEmpty) {
+      final cached = await _loadCustomersFromCache(storeId: activeStoreId);
+      if (cached != null && cached.isNotEmpty) return _sortedSnapshot(cached);
       throw const HttpException('API key not found. Please restart the app.');
     }
 
-    final customersById = <int, CustomerListModelData>{};
-    var page = 1;
-    var lastPage = 1;
+    final queryParameters = <String, String>{
+      'page': '1',
+      'per_page': _loadAllPageSize.toString(),
+      if (activeStoreId != null) 'store_id': activeStoreId.toString(),
+    };
 
-    do {
-      final uri = Uri.parse(APPUrl.customerListUrl).replace(
-        queryParameters: {
-          'page': page.toString(),
-          if (activeStoreId != null) 'store_id': activeStoreId.toString(),
-        },
+    try {
+      final result = await _fetchCompleteCustomerDirectory(
+        accessToken: accessToken,
+        apiKey: apiKey,
+        queryParameters: queryParameters,
       );
-      final response = await http.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json',
-          'X-Tenant': apiKey,
-        },
-      ).timeout(const Duration(seconds: 20));
-      if (response.statusCode != 200) {
-        throw HttpException(
-          'Customer filter list failed (${response.statusCode}).',
-        );
-      }
+      return _sortedSnapshot(result.customers);
+    } catch (_) {
+      final cached = await _loadCustomersFromCache(storeId: activeStoreId);
+      if (cached != null && cached.isNotEmpty) return _sortedSnapshot(cached);
+      rethrow;
+    }
+  }
 
-      final jsonData = json.decode(response.body) as Map<String, dynamic>;
-      final model = CustomerListModel.fromJson(jsonData);
-      for (final customer in model.data ?? const <CustomerListModelData>[]) {
-        final id = customer.id;
-        if (id != null) customersById[id] = customer;
-      }
-      final pagination = jsonData['pagination'] ?? jsonData['meta'];
-      final rawLastPage = pagination is Map ? pagination['last_page'] : null;
-      lastPage = rawLastPage is int
-          ? rawLastPage
-          : int.tryParse(rawLastPage?.toString() ?? '') ?? 1;
-      page++;
-    } while (page <= lastPage);
-
-    final customers = customersById.values.toList();
+  List<CustomerListModelData> _sortedSnapshot(
+    List<CustomerListModelData> source,
+  ) {
+    final customers = List<CustomerListModelData>.from(source);
     customers.sort(
-      (left, right) => (left.name ?? '').toLowerCase().compareTo(
-            (right.name ?? '').toLowerCase(),
+      (left, right) => left.displayLabel.toLowerCase().compareTo(
+            right.displayLabel.toLowerCase(),
           ),
     );
     return customers;
+  }
+
+  Map<String, dynamic> _successResponse(
+    List<CustomerListModelData> customers, {
+    String? message,
+  }) =>
+      {
+        'status': 'success',
+        'message': message,
+        'data': customers.map((customer) => customer.toJson()).toList(),
+      };
+
+  Map<String, String> _customerHeaders({
+    required String accessToken,
+    required String apiKey,
+  }) =>
+      {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      };
+
+  Future<_CustomerPage> _fetchCustomerPage({
+    required String accessToken,
+    required String apiKey,
+    required Map<String, String> queryParameters,
+  }) async {
+    final url = Uri.parse(APPUrl.customerListUrl).replace(
+      queryParameters: queryParameters,
+    );
+    final response = await _httpGet(
+      url,
+      headers: _customerHeaders(accessToken: accessToken, apiKey: apiKey),
+    ).timeout(const Duration(seconds: 20));
+    if (response.statusCode != 200) {
+      throw HttpException(
+        'Failed to load customers (${response.statusCode}).',
+      );
+    }
+
+    final decoded = json.decode(response.body);
+    if (decoded is! Map) {
+      throw const FormatException('Customer response must be a JSON object.');
+    }
+    final payload = Map<String, dynamic>.from(decoded);
+    if (payload['status']?.toString().toLowerCase() == 'error') {
+      throw HttpException(
+        payload['message']?.toString() ?? 'Failed to load customers.',
+      );
+    }
+    return _CustomerPage(
+      payload: payload,
+      model: CustomerListModel.fromJson(payload),
+    );
+  }
+
+  String _customerIdentity(CustomerListModelData customer) {
+    final id = customer.id;
+    if (id != null) return 'id:$id';
+    return 'fallback:${customer.name ?? ''}|${customer.phone ?? ''}|'
+        '${customer.email ?? ''}|${customer.altPhone ?? ''}';
+  }
+
+  Future<_CustomerDirectoryResult> _fetchCompleteCustomerDirectory({
+    required String accessToken,
+    required String apiKey,
+    required Map<String, String> queryParameters,
+  }) async {
+    final baseQuery = Map<String, String>.from(queryParameters)
+      ..['page'] = '1'
+      ..['per_page'] = _loadAllPageSize.toString();
+    final firstPage = await _fetchCustomerPage(
+      accessToken: accessToken,
+      apiKey: apiKey,
+      queryParameters: baseQuery,
+    );
+    final firstPageCustomers =
+        firstPage.model.data ?? const <CustomerListModelData>[];
+    final customers = <CustomerListModelData>[];
+    final seen = <String>{};
+    for (final customer in firstPageCustomers) {
+      if (seen.add(_customerIdentity(customer))) customers.add(customer);
+    }
+    final responsePageSize = (firstPage.model.perPage ?? _loadAllPageSize) > 0
+        ? firstPage.model.perPage ?? _loadAllPageSize
+        : _loadAllPageSize;
+    final total = firstPage.model.total;
+    final declaredLastPage = firstPage.model.lastPage ??
+        (total == null ? null : (total + responsePageSize - 1) ~/ responsePageSize);
+    var lastFetchedCount = firstPageCustomers.length;
+    var nextPage = 2;
+
+    while (nextPage <= _maximumCustomerPages) {
+      if (declaredLastPage != null) {
+        if (nextPage > declaredLastPage) break;
+      } else if (lastFetchedCount != responsePageSize) {
+        // A flat response with more than the requested page size is an
+        // unpaginated endpoint. Fewer items means the final page.
+        break;
+      }
+
+      final page = await _fetchCustomerPage(
+        accessToken: accessToken,
+        apiKey: apiKey,
+        queryParameters: Map<String, String>.from(baseQuery)
+          ..['page'] = nextPage.toString(),
+      );
+      final pageCustomers = page.model.data ?? const <CustomerListModelData>[];
+      if (pageCustomers.isEmpty) break;
+      lastFetchedCount = pageCustomers.length;
+
+      var added = 0;
+      for (final customer in pageCustomers) {
+        if (seen.add(_customerIdentity(customer))) {
+          customers.add(customer);
+          added++;
+        }
+      }
+      if (added == 0) break;
+      if (declaredLastPage == null && lastFetchedCount < responsePageSize) {
+        break;
+      }
+      nextPage++;
+    }
+
+    if (nextPage > _maximumCustomerPages) {
+      throw const HttpException('Customer pagination exceeded safe limit.');
+    }
+
+    return _CustomerDirectoryResult(
+      customers: customers,
+      message: firstPage.model.message,
+    );
   }
 
   // Change page
@@ -315,17 +467,6 @@ class CustomerProvider extends ChangeNotifier {
       debugPrint('Failed to parse cached customers: $e');
       return null;
     }
-  }
-
-  Future<bool> _tryApplyCachedCustomers({required int? storeId}) async {
-    final cachedCustomers = await _loadCustomersFromCache(storeId: storeId);
-    if (cachedCustomers == null || cachedCustomers.isEmpty) {
-      return false;
-    }
-
-    _allCustomers = cachedCustomers;
-    applyFiltersLocally(page: 1);
-    return true;
   }
 
   /// Clears Hive and in-memory customer cache without affecting login credentials.
@@ -434,10 +575,9 @@ class CustomerProvider extends ChangeNotifier {
     debugPrint("listCustomer API called");
 
     final queryParameters = <String, String>{
-      'page': page.toString(),
+      'page': loadAll ? '1' : page.toString(),
       if (sortAscending) 'sort_asc': 'true',
-      // If loadAll is true, request a large page size to get all customers
-      if (loadAll) 'per_page': '1000',
+      if (loadAll) 'per_page': _loadAllPageSize.toString(),
     };
 
     if (filterName != null && filterName.isNotEmpty) {
@@ -458,13 +598,24 @@ class CustomerProvider extends ChangeNotifier {
     final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
-      if (loadAll && await _tryApplyCachedCustomers(storeId: activeStoreId)) {
+      final cached = loadAll
+          ? await _loadCustomersFromCache(storeId: activeStoreId)
+          : null;
+      if (cached != null && cached.isNotEmpty) {
+        _allCustomers = cached;
+        applyFiltersLocally(
+          filterName: filterName ?? _filterName,
+          filterEmail: filterEmail ?? _filterEmail,
+          filterPhone: filterPhone ?? _filterPhone,
+          filterBalance: _filterBalance,
+          page: _currentPage,
+        );
         _isLoading = false;
         notifyListeners();
-        return {
-          "status": "success",
-          "message": "Loaded customers from local cache",
-        };
+        return _successResponse(
+          cached,
+          message: 'Loaded customers from local cache',
+        );
       }
 
       _isLoading = false;
@@ -480,71 +631,60 @@ class CustomerProvider extends ChangeNotifier {
       queryParameters['store_id'] = activeStoreId.toString();
     }
 
-    final url = Uri.parse(APPUrl.customerListUrl)
-        .replace(queryParameters: queryParameters);
     try {
-      debugPrint("Making API call to ${url.toString()}");
-      debugPrint(
-          "Using token: ${accessToken.substring(0, min(accessToken.length, 10))}...");
-
-      final response = await http.get(url, headers: {
-        'Authorization': 'Bearer $accessToken',
-        'Content-Type': 'application/json',
-        'X-Tenant': apiKey,
-      });
-      debugPrint('API response status code: ${response.statusCode}');
-      debugPrint(
-          'API response body: ${response.body.substring(0, min(response.body.length, 100))}...');
-
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        CustomerListModel customerListModel =
-            CustomerListModel.fromJson(jsonData);
-
-        if (loadAll) {
-          // Store all customers for local filtering and pagination
-          _allCustomers = customerListModel.data;
-          applyFiltersLocally(page: 1);
-          await _saveCustomersToCache(
-            storeId: activeStoreId,
-            customers: customerListModel.data,
-          );
-        } else {
-          customerList = customerListModel.data;
-          notifyListeners();
-        }
-
+      if (loadAll) {
+        final result = await _fetchCompleteCustomerDirectory(
+          accessToken: accessToken,
+          apiKey: apiKey,
+          queryParameters: queryParameters,
+        );
+        _allCustomers = List<CustomerListModelData>.from(result.customers);
+        applyFiltersLocally(
+          filterName: filterName ?? _filterName,
+          filterEmail: filterEmail ?? _filterEmail,
+          filterPhone: filterPhone ?? _filterPhone,
+          filterBalance: _filterBalance,
+          page: _currentPage,
+        );
+        await _saveCustomersToCache(
+          storeId: activeStoreId,
+          customers: _allCustomers,
+        );
         _isLoading = false;
         notifyListeners();
-        return jsonData;
+        return result.toJson();
       } else {
-        debugPrint('Error in API response: ${response.reasonPhrase}');
-        if (loadAll && await _tryApplyCachedCustomers(storeId: activeStoreId)) {
-          _isLoading = false;
-          notifyListeners();
-          return {
-            "status": "success",
-            "message": "Loaded customers from local cache",
-          };
-        }
-
+        final result = await _fetchCustomerPage(
+          accessToken: accessToken,
+          apiKey: apiKey,
+          queryParameters: queryParameters,
+        );
+        customerList = result.model.data;
         _isLoading = false;
         notifyListeners();
-        return {
-          "status": "error",
-          "message": "Failed to load customers: ${response.reasonPhrase}",
-        };
+        return result.payload;
       }
     } catch (error) {
       debugPrint('Exception in listCustomer: $error');
 
-      if (loadAll && await _tryApplyCachedCustomers(storeId: activeStoreId)) {
+      final cached = loadAll
+          ? await _loadCustomersFromCache(storeId: activeStoreId)
+          : null;
+      if (cached != null && cached.isNotEmpty) {
+        _allCustomers = cached;
+        applyFiltersLocally(
+          filterName: filterName ?? _filterName,
+          filterEmail: filterEmail ?? _filterEmail,
+          filterPhone: filterPhone ?? _filterPhone,
+          filterBalance: _filterBalance,
+          page: _currentPage,
+        );
         _isLoading = false;
         notifyListeners();
-        return {
-          "status": "success",
-          "message": "Loaded customers from local cache",
-        };
+        return _successResponse(
+          cached,
+          message: 'Loaded customers from local cache',
+        );
       }
 
       _isLoading = false;

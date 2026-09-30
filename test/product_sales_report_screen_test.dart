@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -500,9 +501,45 @@ void main() {
         isFalse);
     await tester.pump(const Duration(seconds: 5));
   });
+
+  testWidgets('filter option failure is visible and retryable', (tester) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final customerProvider = _TestCustomerProvider(failLoading: true);
+
+    await tester.pumpWidget(
+      _buildReportApp(
+        reportsProvider: _ReportWithData(),
+        customerProvider: customerProvider,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('product-sales-filter-options-error')),
+      findsOneWidget,
+    );
+    expect(customerProvider.loadAttempts, 1);
+
+    await tester.tap(
+      find.byKey(const ValueKey('product-sales-filter-options-retry')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(customerProvider.loadAttempts, 2);
+    expect(
+      find.byKey(const ValueKey('product-sales-filter-options-error')),
+      findsOneWidget,
+    );
+  });
 }
 
-Widget _buildReportApp({required ReportsProvider reportsProvider}) {
+Widget _buildReportApp({
+  required ReportsProvider reportsProvider,
+  CustomerProvider? customerProvider,
+}) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (_) => AuthModel()),
@@ -514,7 +551,7 @@ Widget _buildReportApp({required ReportsProvider reportsProvider}) {
         create: (_) => _TestGridProvider(),
       ),
       ChangeNotifierProvider<CustomerProvider>(
-        create: (_) => _TestCustomerProvider(),
+        create: (_) => customerProvider ?? _TestCustomerProvider(),
       ),
     ],
     child: const GetMaterialApp(
@@ -689,9 +726,14 @@ GetProductSalesReportResponse _reportForPage(int page) {
 }
 
 class _TestCustomerProvider extends CustomerProvider {
-  _TestCustomerProvider({this.customers = const []});
+  _TestCustomerProvider({
+    this.customers = const [],
+    this.failLoading = false,
+  });
 
   final List<CustomerListModelData> customers;
+  final bool failLoading;
+  int loadAttempts = 0;
 
   @override
   Future<void> fetchCustomers({
@@ -701,10 +743,13 @@ class _TestCustomerProvider extends CustomerProvider {
   }) async {}
 
   @override
-  Future<List<CustomerListModelData>> listAllCustomersForReportFilter({
+  Future<List<CustomerListModelData>> fetchAllCustomersSnapshot({
     required String accessToken,
-  }) async =>
-      customers;
+  }) async {
+    loadAttempts++;
+    if (failLoading) throw const HttpException('customer loading failed');
+    return customers;
+  }
 }
 
 class _TestGridProvider extends GridSelectionProvider {

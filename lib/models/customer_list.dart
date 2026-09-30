@@ -10,30 +10,68 @@ class CustomerListModel {
   final String? status;
   final String? message;
   final List<CustomerListModelData>? data;
+  final int? currentPage;
+  final int? lastPage;
+  final int? perPage;
+  final int? total;
 
   CustomerListModel({
     this.status,
     this.message,
     this.data,
+    this.currentPage,
+    this.lastPage,
+    this.perPage,
+    this.total,
   });
 
-  factory CustomerListModel.fromJson(Map<String, dynamic> json) =>
-      CustomerListModel(
-        status: json["status"],
-        message: json["message"],
-        data: json["data"] == null
-            ? []
-            : List<CustomerListModelData>.from(
-                json["data"].map((x) => CustomerListModelData.fromJson(x))),
-      );
+  factory CustomerListModel.fromJson(Map<String, dynamic> json) {
+    final rawData = json['data'];
+    final paginator = rawData is Map<String, dynamic> ? rawData : null;
+    final topLevelPagination = json['pagination'] is Map
+        ? Map<String, dynamic>.from(json['pagination'] as Map)
+        : json['meta'] is Map
+            ? Map<String, dynamic>.from(json['meta'] as Map)
+            : null;
+    final pagination = paginator ?? topLevelPagination;
+    final rawCustomers = paginator?['data'] ?? rawData;
+    final customers = rawCustomers is List
+        ? rawCustomers
+            .whereType<Map>()
+            .map(
+              (customer) => CustomerListModelData.fromJson(
+                Map<String, dynamic>.from(customer),
+              ),
+            )
+            .toList()
+        : <CustomerListModelData>[];
 
-  Map<String, dynamic> toJson() => {
-        "status": status,
-        "message": message,
-        "data": data == null
-            ? []
-            : List<dynamic>.from(data!.map((x) => x.toJson())),
-      };
+    return CustomerListModel(
+      status: json['status']?.toString(),
+      message: json['message']?.toString(),
+      data: customers,
+      currentPage: _parseInt(pagination?['current_page']),
+      lastPage: _parseInt(pagination?['last_page']),
+      perPage: _parseInt(pagination?['per_page']),
+      total: _parseInt(pagination?['total']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    final customers = data == null
+        ? <dynamic>[]
+        : List<dynamic>.from(data!.map((customer) => customer.toJson()));
+    return {
+      'status': status,
+      'message': message,
+      'data': customers,
+    };
+  }
+
+  static int? _parseInt(dynamic value) {
+    if (value is int) return value;
+    return int.tryParse(value?.toString() ?? '');
+  }
 }
 
 class CustomerListModelData {
@@ -124,6 +162,14 @@ class CustomerListModelData {
     this.orders,
     this.addresses,
   });
+
+  String get displayLabel {
+    for (final candidate in [name, phone, email]) {
+      final value = candidate?.trim() ?? '';
+      if (value.isNotEmpty) return value;
+    }
+    return id == null ? '' : '#$id';
+  }
 
   factory CustomerListModelData.fromJson(Map<String, dynamic> json) =>
       CustomerListModelData(

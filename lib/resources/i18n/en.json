@@ -456,7 +456,9 @@
     "share_text": "Product Sales Report",
     "total_revenue": "Total Revenue",
     "total_quantity": "Total Quantity",
-    "no_data": "No product sales found"
+    "no_data": "No product sales found",
+    "filter_load_error": "Some filter options could not be loaded.",
+    "retry": "Retry"
   },
   "purchase": {
     "permission_required": "Purchase permission is required to view purchases.",

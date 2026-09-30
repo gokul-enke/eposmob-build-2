@@ -76,6 +76,8 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
   List<CustomerListModelData> _customerOptions = const [];
   bool _isLoading = false;
   bool _loadFailed = false;
+  bool _filterOptionsLoadFailed = false;
+  bool _isLoadingFilterOptions = false;
   bool _invalidDateRange = false;
   bool _requestWorkerRunning = false;
   int _requestGeneration = 0;
@@ -122,13 +124,18 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
   }
 
   Future<void> _loadFilterOptions() async {
+    if (_isLoadingFilterOptions) return;
+    setState(() {
+      _isLoadingFilterOptions = true;
+      _filterOptionsLoadFailed = false;
+    });
     try {
       final token = context.read<AuthModel>().token ?? '';
       await Future.wait([
         context.read<CategoryProvider>().listAllCategory(),
         context
             .read<CustomerProvider>()
-            .listAllCustomersForReportFilter(accessToken: token)
+            .fetchAllCustomersSnapshot(accessToken: token)
             .then((customers) {
           if (mounted) setState(() => _customerOptions = customers);
         }),
@@ -141,6 +148,9 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
       ]);
     } catch (error) {
       debugPrint('Could not load product report filter options: $error');
+      if (mounted) setState(() => _filterOptionsLoadFailed = true);
+    } finally {
+      if (mounted) setState(() => _isLoadingFilterOptions = false);
     }
   }
 
@@ -457,6 +467,52 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
             runSpacing: 12,
             crossAxisAlignment: WrapCrossAlignment.end,
             children: [
+              if (_filterOptionsLoadFailed)
+                SizedBox(
+                  width: constraints.maxWidth,
+                  child: Container(
+                    key: const ValueKey('product-sales-filter-options-error'),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(
+                        color: Colors.red.withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          color: Colors.red,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'product_sales_report.filter_load_error'.tr,
+                            style: buildCustomStyle(
+                              FontWeightManager.regular,
+                              FontSize.s12,
+                              0.15,
+                              ColorManager.textColor,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          key: const ValueKey(
+                            'product-sales-filter-options-retry',
+                          ),
+                          onPressed: _isLoadingFilterOptions
+                              ? null
+                              : _loadFilterOptions,
+                          child: Text('product_sales_report.retry'.tr),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               FocusTraversalOrder(
                 order: const NumericFocusOrder(1),
                 child: SizedBox(
@@ -551,7 +607,7 @@ class _ProductSalesReportScreenState extends State<ProductSalesReportScreen> {
                       hintText: 'product_sales_report.select_customer'.tr,
                       value: _selectedCustomer,
                       items: customers,
-                      displayText: (item) => item.name ?? '',
+                      displayText: (item) => item.displayLabel,
                       onChanged: (value) {
                         setState(() => _selectedCustomer = value);
                         _loadReport();
