@@ -4419,7 +4419,7 @@
     "btn_reset_api_key": "Reset API Key",
     "error_reset_api_key": "Failed to reset API key. Please try again.",
     "reset_api_key_confirm_title": "Reset API key?",
-    "reset_api_key_confirm_content": "This removes the API key and all saved data from this device. You will need the API key to use CloudPOS again.",
+    "reset_api_key_confirm_content": "This removes the API key and all saved data from this device. You will need the API key to use CLOUDPOS again.",
     "error_fill_details": "Please Fill Details!",
     "error_no_store_permission": "You have no permission to any store. Please contact your administrator.",
     "loading_logging_in": "Logging in...",
