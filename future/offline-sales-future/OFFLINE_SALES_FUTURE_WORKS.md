@@ -1,17 +1,17 @@
 # Offline-first sales: open work
 
 Date: 2026-09-29
-Related doc: `docs/OFFLINE_FIRST_SALES.md` (how it works today)
+Related doc: `docs/POS_OFFLINE_SALES.md` (how it works today)
 
 This lists what was found while building and testing offline-first sales, the
-`OFFLINE_FIRST_SALES` setting, the Confirmed Orders tools (Retry, Log, Remove),
+`POS_OFFLINE_SALES` setting, the Confirmed Orders tools (Retry, Log, Remove),
 bill numbers and the Save & Print removal, but was deliberately left for later.
 
 ---
 
 ## Backend
 
-### 1. `OFFLINE_FIRST_SALES` company setting does not exist yet
+### 1. `POS_OFFLINE_SALES` company setting does not exist yet
 The app reads it from `/api/v1/website-settings`, but no `CompanyProp` row is
 created by `CompanyPropsSeeder` or `CompanyOnboarding`. Until it exists every
 tenant is offline-first. `active = 1` → offline-first, `active = 0` →

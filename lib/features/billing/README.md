@@ -3,7 +3,7 @@
 Feature-first home for the billing/POS screen. See
 `docs/BILLING_RESPONSIVE_REFACTOR_PLAN.md` for the full migration plan and phase
 status. The cross-surface final-sale contract is documented in
-`docs/OFFLINE_FIRST_SALES.md`. Behaviour reference: `wikidata/billing/`.
+`docs/POS_OFFLINE_SALES.md`. Behaviour reference: `wikidata/billing/`.
 
 ## Structure
 

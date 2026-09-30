@@ -4,7 +4,7 @@ import 'package:pos_machine/models/order_submission_payload.dart';
 import 'package:pos_machine/services/local_sale_sync_service.dart';
 
 /// How `Confirm Order` treats the server. Controlled per tenant by the
-/// `OFFLINE_FIRST_SALES` app setting.
+/// `POS_OFFLINE_SALES` app setting.
 enum SaleConfirmationMode {
   /// The sale is final once it is durable on this device; the one server
   /// attempt runs in the background.

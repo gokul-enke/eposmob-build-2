@@ -30,7 +30,7 @@ class AppSettingsProvider extends ChangeNotifier {
   /// Settings that could not be loaded keep offline-first, so a cashier who
   /// started the app without a connection can still complete sales.
   SaleConfirmationMode get saleConfirmationMode =>
-      (appSettings?.offlineFirstSales ?? true)
+      (appSettings?.posOfflineSales ?? true)
           ? SaleConfirmationMode.offlineFirst
           : SaleConfirmationMode.onlineFirst;
 

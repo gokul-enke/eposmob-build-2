@@ -77,10 +77,10 @@ class AppSettings {
   /// POS-only tenants keep it optional.
   final bool ecommerceEnabled;
 
-  /// `OFFLINE_FIRST_SALES`: when true, Confirm Order finalizes the sale on the
+  /// `POS_OFFLINE_SALES`: when true, Confirm Order finalizes the sale on the
   /// device and syncs in the background. When false (online-first), Confirm
   /// Order waits for the server before clearing the cart or printing.
-  final bool offlineFirstSales;
+  final bool posOfflineSales;
   final bool companySubscriptionFallbackEnabled;
   final String companySubscriptionStatus;
   final String companySubscriptionMessage;
@@ -133,7 +133,7 @@ class AppSettings {
     this.posAuthenticateClearCartKey = '',
     this.posHideNonStockProduct = false,
     this.ecommerceEnabled = false,
-    this.offlineFirstSales = true,
+    this.posOfflineSales = true,
     this.companySubscriptionFallbackEnabled = false,
     this.companySubscriptionStatus = 'active',
     this.companySubscriptionMessage = '',
@@ -318,9 +318,9 @@ class AppSettings {
       // Keep the shipped offline-first behavior for tenants that have not
       // received this setting yet. Setting the status to false switches the
       // tenant to online-first confirmation.
-      offlineFirstSales: _readSettingStatus(
+      posOfflineSales: _readSettingStatus(
         settingsMap,
-        'OFFLINE_FIRST_SALES',
+        'POS_OFFLINE_SALES',
         defaultValue: true,
       ),
       // The row status enables this temporary compatibility source. The
@@ -603,10 +603,10 @@ class AppSettings {
           "status": ecommerceEnabled.toString(),
         },
         {
-          "name": "Offline First Sales",
-          "code": "OFFLINE_FIRST_SALES",
+          "name": "POS OFFLINE SALES",
+          "code": "POS_OFFLINE_SALES",
           "value": "",
-          "status": offlineFirstSales.toString(),
+          "status": posOfflineSales.toString(),
         },
         {
           "name": "Company Subscription Status",

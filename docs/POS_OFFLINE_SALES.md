@@ -31,9 +31,9 @@ not create a duplicate. Retries still stay manual: an operator decides, from
 When Offline Mode is on or the device has no internet, the offline-first path
 saves the sale and marks it `needs_review` without sending it.
 
-## Online-first mode (`OFFLINE_FIRST_SALES` app setting)
+## Online-first mode (`POS_OFFLINE_SALES` app setting)
 
-The tenant app setting `OFFLINE_FIRST_SALES` selects the mode, read through
+The tenant app setting `POS_OFFLINE_SALES` selects the mode, read through
 `AppSettingsProvider.saleConfirmationMode`:
 
 | Setting | Mode |
@@ -280,6 +280,6 @@ Contract and lifecycle coverage lives in:
 The tests cover every request field, create versus update contracts, disk-first
 ordering, print failure, outbox write rollback, one-attempt behavior, process
 restart classification, background completion independent of the initiating
-adapter, online-first outcomes, the `OFFLINE_FIRST_SALES` setting, bill number
+adapter, online-first outcomes, the `POS_OFFLINE_SALES` setting, bill number
 issuing, the attempt log, retrying rejected sales, removing sales, the
 update-order endpoint on retry, and Bill No. on Sales Return.
