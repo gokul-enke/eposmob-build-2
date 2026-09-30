@@ -6292,6 +6292,41 @@ class OrderPanelState extends State<OrderPanel> {
               }
             }
           },
+          // Same confirm as above, plus whatsappReceipt for the backend.
+          onConfirmAndWhatsapp: mode == CheckoutModalMode.selectionOnly
+              ? null
+              : () async {
+                  setState(() {
+                    _hasOpenedPaymentModalOnce = true;
+                  });
+                  if (shouldNotifyParentCheckoutLoading) {
+                    widget.onCheckoutActionLoadingChanged?.call(
+                      isLoading: true,
+                      printBill: false,
+                    );
+                  }
+                  Navigator.of(dialogContext).pop();
+                  try {
+                    if (forCurrentCart) {
+                      await _confirmCurrentCart(
+                        printBill: false,
+                        whatsappReceipt: true,
+                      );
+                    } else {
+                      await _confirmOrder(whatsappReceipt: true);
+                    }
+                  } finally {
+                    if (shouldNotifyParentCheckoutLoading) {
+                      widget.onCheckoutActionLoadingChanged?.call(
+                        isLoading: false,
+                        printBill: false,
+                      );
+                    }
+                    if (mounted) {
+                      setState(() {});
+                    }
+                  }
+                },
           onConfirmAndPrint: () async {
             if (mode == CheckoutModalMode.selectionOnly) {
               Navigator.of(dialogContext).pop();
@@ -7470,6 +7505,7 @@ class OrderPanelState extends State<OrderPanel> {
     LocalProductProvider localProducts,
     ReceiptIdentity receiptIdentity, {
     String? existingOrderId,
+    bool whatsappReceipt = false,
   }) {
     localProducts.cartTotal;
     final priceSummary = localProducts.priceSummary;
@@ -7519,6 +7555,7 @@ class OrderPanelState extends State<OrderPanel> {
       quotationId: localProducts.currentOrder?.quotationId,
       deliveryCharge: _getDeliveryChargeForOrder(),
       storeId: storeId,
+      whatsappReceipt: whatsappReceipt,
     );
   }
 
@@ -7567,7 +7604,10 @@ class OrderPanelState extends State<OrderPanel> {
     );
   }
 
-  Future<bool> _confirmCurrentCart({required bool printBill}) async {
+  Future<bool> _confirmCurrentCart({
+    required bool printBill,
+    bool whatsappReceipt = false,
+  }) async {
     // Offline there is no send-to-kitchen, so a table or delivery order is
     // confirmed here too, as the removed offline Save & Print allowed.
     final isOffline =
@@ -7642,6 +7682,7 @@ class OrderPanelState extends State<OrderPanel> {
       final payload = _buildRestaurantConfirmedPayload(
         localProductProvider,
         receiptIdentity,
+        whatsappReceipt: whatsappReceipt,
       );
       final receiptBalance = ReceiptCustomerBalance.compute(
         isDefaultCustomer: _isDefaultCustomer(_selectedCustomer),
@@ -7748,7 +7789,10 @@ class OrderPanelState extends State<OrderPanel> {
     }
   }
 
-  Future<bool> _confirmOrder({bool printBill = false}) async {
+  Future<bool> _confirmOrder({
+    bool printBill = false,
+    bool whatsappReceipt = false,
+  }) async {
     if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
       return false;
     }
@@ -7761,7 +7805,10 @@ class OrderPanelState extends State<OrderPanel> {
     }
     if (!_hasOpenedPaymentModalOnce) {
       _showPaymentMethodModal(
-        onAfterApply: () => _confirmOrder(printBill: printBill),
+        onAfterApply: () => _confirmOrder(
+          printBill: printBill,
+          whatsappReceipt: whatsappReceipt,
+        ),
       );
       return false;
     }
@@ -7828,6 +7875,7 @@ class OrderPanelState extends State<OrderPanel> {
         localProducts,
         receiptIdentity,
         existingOrderId: existingOrderId,
+        whatsappReceipt: whatsappReceipt,
       );
       final receiptBalance = ReceiptCustomerBalance.compute(
         isDefaultCustomer: _isDefaultCustomer(_selectedCustomer),

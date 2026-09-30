@@ -44,7 +44,8 @@ void main() {
     for (final marker in [
       'Future<void> _saveOrder(',
       'Future<void> _createOrderAndPrint()',
-      'Future<void> _confirmOrder()',
+      'Future<void> _confirmOrder(',
+      'Future<void> _handleConfirmAndWhatsapp()',
     ]) {
       expect(
         _methodSource(desktopSource, marker),
@@ -69,7 +70,8 @@ void main() {
     for (final marker in [
       'Future<void> saveOrder()',
       'Future<void> createOrderAndPrint()',
-      'Future<void> confirmOrder()',
+      'Future<void> confirmOrder(',
+      'Future<void> confirmAndWhatsapp()',
     ]) {
       expect(
         _methodSource(mobileSource, marker),

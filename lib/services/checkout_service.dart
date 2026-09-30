@@ -146,8 +146,9 @@ class CheckoutService {
   OrderSubmissionPayload _buildConfirmedSalePayload(
     BillingProvider billingProvider,
     LocalProductProvider localProducts,
-    ReceiptIdentity receiptIdentity,
-  ) {
+    ReceiptIdentity receiptIdentity, {
+    bool whatsappReceipt = false,
+  }) {
     final priceSummary = localProducts.priceSummary!;
     final storeId = Provider.of<StoreSessionProvider>(context, listen: false)
         .activeStore
@@ -194,6 +195,7 @@ class CheckoutService {
       quotationId: localProducts.currentOrder?.quotationId,
       deliveryCharge: resolveDeliveryCharge(context),
       storeId: storeId,
+      whatsappReceipt: whatsappReceipt,
     );
   }
 
@@ -287,8 +289,6 @@ class CheckoutService {
     required bool printReceipt,
     bool whatsappReceipt = false,
   }) async {
-    // Backend WhatsApp delivery will consume this intent in a follow-up.
-    billingDebugCheckout('receiptAction', 'whatsappReceipt=$whatsappReceipt');
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
     final localProducts =
@@ -331,6 +331,7 @@ class CheckoutService {
       billingProvider,
       localProducts,
       receiptIdentity,
+      whatsappReceipt: whatsappReceipt,
     );
     final previousDraftId = localProducts.currentOrder?.id;
     final sourceCartSessionId = localProducts.cartSessionId;

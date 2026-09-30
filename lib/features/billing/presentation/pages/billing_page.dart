@@ -6506,8 +6506,9 @@ class BillingPageState extends State<BillingPage>
 
   OrderSubmissionPayload _buildLocalFirstOrderPayload(
     LocalProductProvider localProducts,
-    ReceiptIdentity receiptIdentity,
-  ) {
+    ReceiptIdentity receiptIdentity, {
+    bool whatsappReceipt = false,
+  }) {
     final paymentMethods = _getSelectedPaymentMethods();
     final paidMethods = _getPaidMethods();
     final storeId = Provider.of<StoreSessionProvider>(context, listen: false)
@@ -6554,6 +6555,7 @@ class BillingPageState extends State<BillingPage>
       quotationId: localProducts.currentOrder?.quotationId,
       deliveryCharge: _getDeliveryChargeForOrder(),
       storeId: storeId,
+      whatsappReceipt: whatsappReceipt,
     );
   }
 
@@ -6619,8 +6621,6 @@ class BillingPageState extends State<BillingPage>
 
   Future<void> _confirmLocalFirst(
       {required bool printReceipt, bool whatsappReceipt = false}) async {
-    // UI intent only; the backend receipt contract will be wired separately.
-    debugPrint("Receipt action: whatsappReceipt=$whatsappReceipt");
     if (!_ensureAuthoritativeAppSettings()) return;
     if (!_ensurePaymentReadyForConfirm(
       printReceipt
@@ -6694,8 +6694,11 @@ class BillingPageState extends State<BillingPage>
       }
       final receiptIdentity =
           await ReceiptIdentityService.instance.issue(storeId: storeId);
-      final payload =
-          _buildLocalFirstOrderPayload(localProducts, receiptIdentity);
+      final payload = _buildLocalFirstOrderPayload(
+        localProducts,
+        receiptIdentity,
+        whatsappReceipt: whatsappReceipt,
+      );
       final previousDraftId = localProducts.currentOrder?.id;
       final sourceCartSessionId = localProducts.cartSessionId;
       final receiptBalance = ReceiptCustomerBalance.compute(
