@@ -759,8 +759,7 @@ class _SideMenuState extends State<SideMenu> {
                   roleProvider.currentUserHasPermissionSync(
                       'menu.reports.supplier_transactions.access');
               final hasProductSalesPermission =
-                  roleProvider.currentUserHasPermissionSync(
-                      'menu.reports.product_sales.access');
+                  roleProvider.currentUserCanAccessProductSalesReportSync();
               final hasNonStockPermission =
                   roleProvider.currentUserHasPermissionSync(
                       'menu.reports.non_stock.access');
