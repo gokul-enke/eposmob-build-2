@@ -33,7 +33,6 @@ class MobileBillingTab extends StatefulWidget {
   final VoidCallback onConfirmOrder;
   final VoidCallback onSaveOrder;
   final VoidCallback onCreateOrderAndPrint;
-  final VoidCallback onSaveAndPrint;
   final VoidCallback? onCreateQuotation;
   final VoidCallback? onCreateQuotationAndPrint;
   final VoidCallback? onOpenQuotationList;
@@ -47,7 +46,6 @@ class MobileBillingTab extends StatefulWidget {
   final bool isSavingOrder;
   final bool isConfirmingOrder;
   final bool isConfirmingAndPrinting;
-  final bool isSavingAndPrinting;
 
   const MobileBillingTab({
     super.key,
@@ -56,7 +54,6 @@ class MobileBillingTab extends StatefulWidget {
     required this.onConfirmOrder,
     required this.onSaveOrder,
     required this.onCreateOrderAndPrint,
-    required this.onSaveAndPrint,
     this.onCreateQuotation,
     this.onCreateQuotationAndPrint,
     this.onOpenQuotationList,
@@ -70,7 +67,6 @@ class MobileBillingTab extends StatefulWidget {
     this.isSavingOrder = false,
     this.isConfirmingOrder = false,
     this.isConfirmingAndPrinting = false,
-    this.isSavingAndPrinting = false,
   });
 
   @override
@@ -493,14 +489,12 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
         onSaveOrder: widget.onSaveOrder,
         onCreateOrderAndPrint: widget.onCreateOrderAndPrint,
         onConfirmOrder: widget.onConfirmOrder,
-        onSaveAndPrint: widget.onSaveAndPrint,
         onCreateQuotation: widget.onCreateQuotation,
         onCreateQuotationAndPrint: widget.onCreateQuotationAndPrint,
         onOpenQuotationList: widget.onOpenQuotationList,
         isSavingOrder: widget.isSavingOrder,
         isConfirmingOrder: widget.isConfirmingOrder,
         isConfirmingAndPrinting: widget.isConfirmingAndPrinting,
-        isSavingAndPrinting: widget.isSavingAndPrinting,
       ),
     );
   }

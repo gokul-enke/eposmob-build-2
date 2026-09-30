@@ -441,6 +441,65 @@ void main() {
   });
 
   group('confirmed orders', () {
+    test('confirmed snapshot uses the same first-added-first order as the API',
+        () async {
+      final provider = LocalProductProvider();
+      provider.initializeProducts([
+        makeProduct(1),
+        makeProduct(2),
+        makeProduct(3),
+      ]);
+
+      provider.addToCart(product: provider.getProductById(1)!, quantity: 1);
+      provider.addToCart(product: provider.getProductById(2)!, quantity: 1);
+      provider.addToCart(product: provider.getProductById(3)!, quantity: 1);
+
+      expect(
+        provider.cartItems.map((item) => item.product.productId),
+        [3, 2, 1],
+      );
+
+      final sale = provider.saveCurrentCartAsConfirmedOrder();
+
+      expect(
+        sale.items.map((item) => item.product.productId),
+        [1, 2, 3],
+      );
+    });
+
+    test('checkout metadata survives confirmed-order persistence', () async {
+      final provider = LocalProductProvider();
+      provider.initializeProducts([makeProduct(1)]);
+      provider.addToCart(product: provider.getProductById(1)!, quantity: 1);
+
+      final sale = provider.saveCurrentCartAsConfirmedOrder(
+        clientSaleId: '01995643-7f83-7a21-9a4b-b8c26d9c7b61',
+        receiptNumber: '2-03-260916-0001',
+        issuedAt: '2026-09-16T04:14:00.000Z',
+        address: 'Main road',
+        addressId: 81,
+        pincode: '682001',
+        quotationId: 91,
+        quotationNumber: 'QT-91',
+        alternatePhone: '9000000001',
+        customerVatNumber: 'VAT-1',
+        customerCrNumber: 'CR-1',
+      );
+      await provider.flushPersistence();
+
+      final row = confirmedBox().get(sale.id)!;
+      expect(sale.id, '01995643-7f83-7a21-9a4b-b8c26d9c7b61');
+      expect(row.orderNumber, '2-03-260916-0001');
+      expect(row.createdAt, '2026-09-16T04:14:00.000Z');
+      expect(row.addressId, 81);
+      expect(row.pincode, '682001');
+      expect(row.quotationId, 91);
+      expect(row.quotationNumber, 'QT-91');
+      expect(row.alternatePhone, '9000000001');
+      expect(row.customerVatNumber, 'VAT-1');
+      expect(row.customerCrNumber, 'CR-1');
+    });
+
     test('rows are keyed by order id and legacy rows are pruned', () async {
       // A row as older builds wrote it, with an auto-increment key.
       await confirmedBox().add(HiveSavedOrder(

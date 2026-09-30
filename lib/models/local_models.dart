@@ -200,6 +200,18 @@ class HiveSavedOrder extends HiveObject {
   @HiveField(29)
   final String? customerType;
 
+  @HiveField(30)
+  final int? addressId;
+
+  @HiveField(31)
+  final String? pincode;
+
+  @HiveField(32)
+  final int? quotationId;
+
+  @HiveField(33)
+  final String? quotationNumber;
+
   HiveSavedOrder({
     required this.id,
     required this.orderNumber,
@@ -232,6 +244,10 @@ class HiveSavedOrder extends HiveObject {
     this.customerVatNumber,
     this.customerCrNumber,
     this.customerType,
+    this.addressId,
+    this.pincode,
+    this.quotationId,
+    this.quotationNumber,
   });
 }
 

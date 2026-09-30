@@ -1,19 +1,10 @@
 import 'package:pos_machine/models/get_product.dart';
 
-/// The field order follows the weighted-product export offered by CloudPOS.
-/// Barcode stays a string so leading zeroes survive the CSV round trip.
+/// The columns the weigh machine's import expects; PLU is the product's SKU.
+/// Barcode and PLU stay strings so leading zeroes survive the CSV round trip.
 class PluCsv {
   static const fileName = 'PLU.csv';
-  static const headers = <String>[
-    'Product Name',
-    'Category',
-    'Barcode',
-    'Price',
-    'MRP',
-    'Unit',
-    'Purchase Price',
-    'Arabic Name',
-  ];
+  static const headers = <String>['NAME', 'BARCODE', 'PRICE', 'UNIT', 'PLU'];
 
   /// The product's SKU for the weigh machine, or null when it has none.
   ///
@@ -47,32 +38,37 @@ class PluCsv {
           .where((product) => isWeighted(product, storeId: storeId))
           .toList(growable: false);
 
-  static String build(Iterable<GetProduct> products) {
+  /// [storeId] picks the stock row whose SKU fills the PLU column, as in
+  /// [skuOf].
+  static String build(Iterable<GetProduct> products, {int? storeId}) {
     final rows = <List<String>>[
       headers,
       for (final product in products)
         [
-          product.productName ?? '',
-          product.category?.name ?? '',
+          product.productName?.trim() ?? '',
           product.barcode ?? '',
           _money(product.price?.price),
-          _money(product.mrp),
-          product.unit ?? '',
-          _money(product.purchasePrice),
-          _arabicName(product.names),
+          unitCode(product.unit),
+          skuOf(product, storeId: storeId) ?? '',
         ],
     ];
     return '${rows.map((row) => row.map(_escape).join(',')).join('\r\n')}\r\n';
   }
 
+  /// The weigh machine reads the unit as a number: 1 for weight, 2 for
+  /// pieces, in any letter case. Other units are written as they are.
+  static String unitCode(String? unit) {
+    final value = unit?.trim() ?? '';
+    return switch (value.toUpperCase()) {
+      'KG' => '1',
+      'PC' || 'PCS' => '2',
+      _ => value,
+    };
+  }
+
   static String _money(Object? value) {
     final number = num.tryParse(value?.toString() ?? '');
     return number == null ? '' : number.toStringAsFixed(2);
-  }
-
-  static String _arabicName(Object? names) {
-    if (names is Map) return names['ar']?.toString() ?? '';
-    return '';
   }
 
   static String _escape(String value) {

@@ -35,6 +35,19 @@ void main() {
     });
   });
 
+  group('AmountHelper VAT truncation', () {
+    test('discards digits after two decimal places without rounding', () {
+      expect(AmountHelper.truncateToTwoDecimals(65.2881356), 65.28);
+      expect(AmountHelper.formatTruncatedAmount(65.2881356), '65.28');
+      expect(AmountHelper.formatTruncatedAmount(1.999), '1.99');
+    });
+
+    test('preserves exact two-decimal and negative values', () {
+      expect(AmountHelper.formatTruncatedAmount(65.28), '65.28');
+      expect(AmountHelper.formatTruncatedAmount(-1.999), '-1.99');
+    });
+  });
+
   group('AmountHelper.roundOffAmount (ties away from zero)', () {
     test('rounds to nearest integer as a double', () {
       expect(AmountHelper.roundOffAmount(2.4), 2.0);
@@ -108,6 +121,45 @@ void main() {
 
     test('Arabic zero renders with Arabic currency word', () {
       expect(helper.convertNumberToWords(0, language: 'ar'), 'صفر روبية');
+    });
+  });
+
+  // Deliberate behaviour (not characterization): Arabic joins every part with
+  // "و" attached to the following word, as the backend preview prints it.
+  group('AmountHelper.convertNumberToWords — Arabic conjunction', () {
+    final helper = AmountHelper();
+    String sar(double amount) =>
+        helper.convertNumberToWords(amount, currency: 'SAR', language: 'ar');
+
+    test('units join the tens word with an attached "و"', () {
+      expect(sar(21), 'واحد وعشرون ريال');
+      expect(sar(22), 'اثنان وعشرون ريال');
+      expect(sar(46), 'ستة وأربعون ريال');
+      expect(sar(59), 'تسعة وخمسون ريال');
+      expect(sar(99), 'تسعة وتسعون ريال');
+    });
+
+    test('round tens and teens need no conjunction', () {
+      expect(sar(30), 'ثلاثون ريال');
+      expect(sar(19), 'تسعة عشر ريال');
+    });
+
+    test('hundreds join their remainder with an attached "و"', () {
+      expect(sar(146), 'مائة وستة وأربعون ريال');
+    });
+
+    test('number groups join with an attached "و"', () {
+      expect(sar(1059), 'ألف وتسعة وخمسون ريال');
+      expect(sar(2500000), 'مليونان وخمسمائة ألف ريال');
+      expect(
+        helper.convertNumberToWords(123456, language: 'ar'),
+        'واحد لاك وثلاثة وعشرون ألف وأربعمائة وستة وخمسون روبية',
+      );
+    });
+
+    test('the fraction joins the whole amount with an attached "و"', () {
+      expect(sar(19.5), 'تسعة عشر ريال وخمسون هللة');
+      expect(sar(0.5), 'خمسون هللة');
     });
   });
 }

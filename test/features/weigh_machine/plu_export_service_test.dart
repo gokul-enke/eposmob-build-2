@@ -79,6 +79,32 @@ void main() {
     );
   });
 
+  test('a second export replaces the existing PLU.csv', () async {
+    await service.export([
+      GetProduct(productId: 1, productName: 'Apples', sku: 'APL'),
+    ]);
+    final file = await service.export([
+      GetProduct(productId: 2, productName: 'Bananas', sku: 'BAN'),
+    ]);
+    final csv = await file.readAsString();
+    expect(csv, contains('Bananas'));
+    expect(csv, isNot(contains('Apples')));
+    expect(File('${file.path}.tmp').existsSync(), isFalse);
+  });
+
+  test('replaces a PLU.csv the scale software marked read-only', () async {
+    final first = await service.export([
+      GetProduct(productId: 1, productName: 'Apples', sku: 'APL'),
+    ]);
+    Process.runSync('attrib', ['+r', first.path]);
+    addTearDown(() => Process.runSync('attrib', ['-r', first.path]));
+
+    final file = await service.export([
+      GetProduct(productId: 2, productName: 'Bananas', sku: 'BAN'),
+    ]);
+    expect(await file.readAsString(), contains('Bananas'));
+  }, skip: !Platform.isWindows);
+
   test('uses the active store' 's stock-row SKUs', () async {
     SharedPreferences.setMockInitialValues({'active_store_id': 35});
     final file = await service.export([

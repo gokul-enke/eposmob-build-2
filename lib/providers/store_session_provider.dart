@@ -364,6 +364,7 @@ class StoreSessionProvider extends ChangeNotifier {
       try {
         await printerSettingsProvider.fetchAndApplyDefaults(
           accessToken: accessToken,
+          forceServerValues: true,
         );
       } catch (e) {
         debugPrint('Warning: Failed to load printer settings defaults: $e');

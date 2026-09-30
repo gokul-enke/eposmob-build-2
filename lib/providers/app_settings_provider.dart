@@ -5,6 +5,7 @@ import 'package:pos_machine/models/get_app_settings.dart';
 import 'dart:convert';
 
 import 'package:pos_machine/resources/app_url.dart';
+import 'package:pos_machine/services/local_first_sale_coordinator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppSettingsProvider extends ChangeNotifier {
@@ -25,6 +26,13 @@ class AppSettingsProvider extends ChangeNotifier {
   bool get posHideNonStockProduct =>
       appSettings?.posHideNonStockProduct ?? false;
   bool get ecommerceEnabled => appSettings?.ecommerceEnabled ?? false;
+
+  /// Settings that could not be loaded keep offline-first, so a cashier who
+  /// started the app without a connection can still complete sales.
+  SaleConfirmationMode get saleConfirmationMode =>
+      (appSettings?.posOfflineSales ?? true)
+          ? SaleConfirmationMode.offlineFirst
+          : SaleConfirmationMode.onlineFirst;
 
   CompanySubscription? get companySubscriptionFallback {
     final settings = _appSettings;

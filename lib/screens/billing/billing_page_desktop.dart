@@ -1146,19 +1146,8 @@ class BillingPageState extends State<BillingPage>
   }
 
   void _createOrderAndPrint() async {
-    // Delegate orchestration to CheckoutService and print by returned order number
-    final createdOrderNumber =
-        await CheckoutService(context).createOrderAndPrint();
-    if (createdOrderNumber != null && createdOrderNumber.isNotEmpty) {
-      try {
-        await const PrintService()
-            .printOrderByIdWithOptions(context, createdOrderNumber);
-      } catch (error) {
-        debugPrint("❌ Error fetching order details for print: $error");
-      }
-    } else {
-      // If service didn't return an order number, we already showed an error toast in the service
-    }
+    // CheckoutService now persists and prints locally before background sync.
+    await CheckoutService(context).createOrderAndPrint();
   }
 
   void _confirmOrder() async {

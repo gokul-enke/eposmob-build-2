@@ -15,6 +15,7 @@ import '../resources/app_url.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/features/subscription/presentation/subscription_provider.dart';
+import 'package:pos_machine/models/order_submission_payload.dart';
 
 @visibleForTesting
 Uri buildListCartUri({
@@ -924,92 +925,38 @@ class CartProvider with ChangeNotifier {
     // debugPrint("Phone $phone");
     // debugPrint("Phone $accessToken");
 
-    Map<String, dynamic> apiBodyData = {};
-
-    // Callers now pass already-normalized paid methods.
-    List<Map<String, dynamic>>? finalPaidMethods = paidMethods != null
-        ? List<Map<String, dynamic>>.from(paidMethods)
-        : null;
-
-    // Use multi-payment format if available, otherwise fall back to single payment
-    if (paymentMethods != null &&
-        finalPaidMethods != null &&
-        finalPaidMethods.isNotEmpty) {
-      apiBodyData = {
-        "items": items?.reversed.toList(),
-        "phone": customerPhone,
-        if (customerId != null) "customer_id": customerId,
-        "transaction_number": transactionId,
-        "payment_method": paymentMethods,
-        "paid_methods": finalPaidMethods,
-        "source_type": "executive",
-        "balance": balanceAmount,
-        "coupon_id": couponId,
-        if (orderId != null) "order_id": orderId,
-        if (comment != null) "comment": comment,
-        if (deliveryMethodId != null) "delivery_method_id": deliveryMethodId,
-        if (tableId != null) "table_id": tableId,
-        if (carNumber != null) "car_number": carNumber,
-        if (status != null) "status": status,
-        if (deliveryDate != null) "delivery_date": deliveryDate,
-        if (deliveryTime != null) "delivery_time": deliveryTime,
-        if (tableId != null) "table": tableId,
-        // Include discount data
-        if (flatDiscount != null) "flat_discount": flatDiscount,
-        if (percentageDiscount != null)
-          "percentage_discount": percentageDiscount,
-        if (discountAmount != null) "discount_amount": discountAmount,
-        if (toCustomerCredit != null) 'to_customer_credit': toCustomerCredit,
-        if (address != null) "address": address,
-        if (addressId != null) "address_id": addressId,
-        if (pincode != null && pincode.trim().isNotEmpty)
-          "pincode": pincode.trim(),
-        if (quotationId != null) "quotation_id": quotationId,
-        "delivery_charge": deliveryCharge ?? 0.0,
-      };
-    } else {
-      // Fallback to single payment method format
-      apiBodyData = {
-        "items": items?.reversed.toList(),
-        "phone": customerPhone,
-        if (customerId != null) "customer_id": customerId,
-        "transaction_number": transactionId,
-        "payment_method": paymentMethod,
-        "paid_amount": paidAmount,
-        "source_type": "executive",
-        "balance": balanceAmount,
-        "coupon_id": couponId,
-        if (orderId != null) "order_id": orderId,
-        if (comment != null) "comment": comment,
-        if (deliveryMethodId != null) "delivery_method_id": deliveryMethodId,
-        if (tableId != null) "table_id": tableId,
-        if (carNumber != null) "car_number": carNumber,
-        if (status != null) "status": status,
-        if (deliveryDate != null) "delivery_date": deliveryDate,
-        if (deliveryTime != null) "delivery_time": deliveryTime,
-        if (tableId != null) "table": tableId,
-        // Include discount data
-        if (flatDiscount != null) "flat_discount": flatDiscount,
-        if (percentageDiscount != null)
-          "percentage_discount": percentageDiscount,
-        if (discountAmount != null) "discount_amount": discountAmount,
-        if (toCustomerCredit != null) 'to_customer_credit': toCustomerCredit,
-        if (address != null) "address": address,
-        if (addressId != null) "address_id": addressId,
-        if (pincode != null && pincode.trim().isNotEmpty)
-          "pincode": pincode.trim(),
-        if (quotationId != null) "quotation_id": quotationId,
-        "delivery_charge": deliveryCharge ?? 0.0,
-      };
-    }
-
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
-
-    if (activeStoreId != null) {
-      apiBodyData["store_id"] = activeStoreId;
-    }
+    final apiBodyData = OrderSubmissionPayload(
+      items: items ?? const <Map<String, dynamic>>[],
+      customerId: customerId,
+      customerPhone: customerPhone,
+      transactionNumber: transactionId,
+      paymentMethod: paymentMethod,
+      paidAmount: paidAmount,
+      paymentMethods: paymentMethods,
+      paidMethods: paidMethods,
+      balanceAmount: balanceAmount,
+      couponId: couponId,
+      orderId: orderId,
+      comment: comment,
+      deliveryMethodId: deliveryMethodId,
+      tableId: tableId,
+      carNumber: carNumber,
+      status: status,
+      deliveryDate: deliveryDate,
+      deliveryTime: deliveryTime,
+      flatDiscount: flatDiscount,
+      percentageDiscount: percentageDiscount,
+      discountAmount: discountAmount,
+      toCustomerCredit: toCustomerCredit,
+      address: address,
+      addressId: addressId,
+      pincode: pincode,
+      quotationId: quotationId,
+      deliveryCharge: deliveryCharge ?? 0,
+    ).toApiJson(fallbackStoreId: activeStoreId);
 
     final url = Uri.parse(APPUrl.addToOrderUrl);
 

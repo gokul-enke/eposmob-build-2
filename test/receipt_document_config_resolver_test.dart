@@ -5,6 +5,23 @@ import 'package:pos_machine/screens/print/receipt_document_config_resolver.dart'
 void main() {
   DocumentConfig config(String type) => DocumentConfig(type: type);
 
+  test(
+      'return printing prefers the admin Return Bill even when Credit Note exists',
+      () {
+    final configs = {
+      'Return Bill': config('Return Bill'),
+      'Credit Note': config('Credit Note')
+    };
+    expect(resolveReturnDocumentConfig(lookup: (type) => configs[type])?.type,
+        'Return Bill');
+    configs.remove('Return Bill');
+    expect(resolveReturnDocumentConfig(lookup: (type) => configs[type])?.type,
+        'Credit Note');
+    configs.clear();
+    expect(
+        resolveReturnDocumentConfig(lookup: (type) => configs[type]), isNull);
+  });
+
   test('combined standard print prefers Sales and Return Bill A4', () {
     final configs = <String, DocumentConfig>{
       'Sales and Return Bill': config('Sales and Return Bill'),

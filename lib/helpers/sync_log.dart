@@ -131,6 +131,8 @@ abstract final class SyncLog {
   static bool _keep(String message) =>
       message.startsWith(_tag) ||
       message.startsWith(_apiTag) ||
+      // Sale sync can run while a data sync is quieting the console.
+      message.startsWith('[LocalSaleSync]') ||
       _problem.hasMatch(message);
 
   /// Prints what a product fetch changed: one summary line, then the full

@@ -2,12 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/components/build_dialog_box.dart'
-    hide
-        showScaffold,
-        showScaffoldError,
-        showLoadingOverlay,
-        hideLoadingOverlay;
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
@@ -17,7 +11,8 @@ import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/screens/sales_return/widgets/sales_return_detail_modal.dart';
 import 'package:pos_machine/screens/sales_return/widgets/sales_return_responsive.dart';
 import 'package:pos_machine/screens/print/return_bill_print.dart';
-import 'package:pos_machine/models/order_details.dart';
+import 'package:pos_machine/helpers/sales_return_detail_helper.dart';
+import 'package:pos_machine/helpers/return_print_identity.dart';
 import 'package:provider/provider.dart';
 import '../../components/build_pagination_control.dart';
 import '../../resources/color_manager.dart';
@@ -261,6 +256,17 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
     );
   }
 
+  /// Copies the number shown first: the bill number when present.
+  void _copyNumber(SalesReturnOrder order) {
+    Clipboard.setData(ClipboardData(text: order.displayNumber));
+    showScaffold(
+      context: context,
+      message: order.receiptNumber != null
+          ? 'sales_return.bill_copy_success'.tr
+          : 'sales_return.copy_success'.tr,
+    );
+  }
+
   Widget _buildMobileReturnCard(SalesReturnOrder order) {
     final totalQuantity = order.items.fold<int>(
       0,
@@ -268,7 +274,8 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
     );
     final bool isCompleted =
         order.status.toString() == '1' || order.status.toString() == 'true';
-    final orderNumber = order.order?.orderNumber ?? order.orderId.toString();
+    final orderNumber = order.displayNumber;
+    final receiptNumber = order.receiptNumber;
 
     return Container(
       padding: const EdgeInsetsDirectional.all(14),
@@ -305,14 +312,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                         if (orderNumber.isNotEmpty) ...[
                           const SizedBox(width: 6),
                           GestureDetector(
-                            onTap: () {
-                              Clipboard.setData(
-                                  ClipboardData(text: orderNumber));
-                              showScaffold(
-                                context: context,
-                                message: 'sales_return.copy_success'.tr,
-                              );
-                            },
+                            onTap: () => _copyNumber(order),
                             child: const Icon(
                               Icons.copy,
                               size: 14,
@@ -322,6 +322,20 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                         ],
                       ],
                     ),
+                    if (receiptNumber != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        order.originalOrderNumber,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s12,
+                          0.13,
+                          Colors.black54,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 4),
                     Text(
                       DateHelper.formatISODate(order.createdAt.toString()),
@@ -392,14 +406,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                 iconColor: Colors.white,
                 tooltip: 'sales_return.print_bill_tooltip'.tr,
                 onPressed: () {
-                  List<OrderReturnItem> returnItems = order.items.map((item) {
-                    return OrderReturnItem(
-                      id: item.id,
-                      productName: item.cartItem.product?.name ?? 'general.unknown'.tr,
-                      quantity: item.quantity,
-                      reason: item.reason,
-                    );
-                  }).toList();
+                  final returnItems = buildTransactionReturnPrintItems(order.items, const []);
 
                   Navigator.push(
                     context,
@@ -407,9 +414,10 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                       builder: (context) => ReturnBillPrintPage(
                         returnItems: returnItems,
                         returnTotalAmount: order.totalAmount,
-                        orderDate: order.createdAt.toString(),
-                        orderNumber: order.order?.orderNumber ??
-                            order.orderId.toString(),
+                        orderDate: ReturnPrintIdentity.fromTransaction(order).date,
+                        orderNumber: ReturnPrintIdentity.fromTransaction(order).number,
+                        originalInvoiceNumber: order.order?.orderNumber,
+                        originalInvoiceDate: order.order?.orderDate,
                         customerName: order.order?.customer?.user?.name,
                       ),
                     ),
@@ -563,30 +571,40 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Flexible(
-                  child: Text(
-                    order.order?.orderNumber ?? order.orderId.toString(),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s12,
-                      0.13,
-                      Colors.black,
-                    ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        order.displayNumber,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s12,
+                          0.13,
+                          Colors.black,
+                        ),
+                      ),
+                      if (order.receiptNumber != null)
+                        Text(
+                          order.originalOrderNumber,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: buildCustomStyle(
+                            FontWeightManager.regular,
+                            FontSize.s10,
+                            0.13,
+                            Colors.black54,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 6),
                 GestureDetector(
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(
-                        text: order.order?.orderNumber ??
-                            order.orderId.toString()));
-                    showScaffold(
-                      context: context,
-                      message: 'sales_return.copy_success'.tr,
-                    );
-                  },
+                  onTap: () => _copyNumber(order),
                   child: const Icon(
                     Icons.copy,
                     size: 14,
@@ -659,15 +677,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                     iconColor: Colors.white,
                     tooltip: 'sales_return.print_bill_tooltip'.tr,
                     onPressed: () {
-                      List<OrderReturnItem> returnItems =
-                          order.items.map((item) {
-                        return OrderReturnItem(
-                          id: item.id,
-                          productName: item.cartItem.product?.name ?? 'general.unknown'.tr,
-                          quantity: item.quantity,
-                          reason: item.reason,
-                        );
-                      }).toList();
+                      final returnItems = buildTransactionReturnPrintItems(order.items, const []);
 
                       Navigator.push(
                         context,
@@ -675,9 +685,10 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                           builder: (context) => ReturnBillPrintPage(
                             returnItems: returnItems,
                             returnTotalAmount: order.totalAmount,
-                            orderDate: order.createdAt.toString(),
-                            orderNumber: order.order?.orderNumber ??
-                                order.orderId.toString(),
+                            orderDate: ReturnPrintIdentity.fromTransaction(order).date,
+                            orderNumber: ReturnPrintIdentity.fromTransaction(order).number,
+                            originalInvoiceNumber: order.order?.orderNumber,
+                            originalInvoiceDate: order.order?.orderDate,
                             customerName: order.order?.customer?.user?.name,
                           ),
                         ),

@@ -7,8 +7,9 @@ SalesReturnCart? matchingLoadedSalesReturnItem(
   Iterable<SalesReturnCart> loadedItems,
 ) {
   for (final loadedItem in loadedItems) {
-    if (loadedItem.cartItemId == summaryItem.cartItemId ||
-        loadedItem.cartItemId == summaryItem.cartItem.id) {
+    if (loadedItem.cartItemId > 0 &&
+        (loadedItem.cartItemId == summaryItem.cartItemId ||
+            loadedItem.cartItemId == summaryItem.cartItem.id)) {
       return loadedItem;
     }
   }
@@ -34,16 +35,30 @@ String salesReturnItemUnitPrice(
   SalesReturnItem summaryItem,
   Iterable<SalesReturnCart> loadedItems,
 ) {
-  final summaryPrice = summaryItem.price.trim();
-  final parsedSummaryPrice = double.tryParse(summaryPrice);
-  if (summaryPrice.isNotEmpty &&
-      (parsedSummaryPrice == null || parsedSummaryPrice > 0)) {
-    return summaryPrice;
+  double? amount(String value) {
+    final parsed = double.tryParse(value.replaceAll(',', '').trim());
+    return parsed != null && parsed.isFinite && parsed >= 0 ? parsed : null;
   }
 
-  final loadedPrice =
-      matchingLoadedSalesReturnItem(summaryItem, loadedItems)?.unitPrice.trim();
-  return loadedPrice?.isNotEmpty == true ? loadedPrice! : summaryPrice;
+  // The return item's `price` can be its line total (e.g. 60 for 12 x 5).
+  // Prefer the original cart's explicit unit price when it is available.
+  final cartPrice = summaryItem.cartItem.unitPrice.trim();
+  if (summaryItem.cartItem.hasUnitPrice &&
+      amount(cartPrice) != null) {
+    return cartPrice.replaceAll(',', '');
+  }
+  final loadedItem = matchingLoadedSalesReturnItem(summaryItem, loadedItems);
+  final loadedPrice = loadedItem?.unitPrice.trim();
+  if (loadedItem?.hasUnitPrice == true &&
+      amount(loadedPrice ?? '') != null) {
+    return loadedPrice!.replaceAll(',', '');
+  }
+  final lineAmount = amount(summaryItem.price);
+  final quantity = summaryItem.quantity.toDouble();
+  if (lineAmount == null || !quantity.isFinite || quantity <= 0) return '';
+  // This is the returned line's value, not the original sale's full quantity.
+  // Preserve precision here; monetary formatting belongs to the renderer.
+  return (lineAmount / quantity).toString();
 }
 
 String salesReturnItemReason(
@@ -66,6 +81,17 @@ List<OrderReturnItem> buildTransactionReturnPrintItems(
   return summaryItems.map((summaryItem) {
     final loadedItem = matchingLoadedSalesReturnItem(summaryItem, loadedItems);
     return OrderReturnItem(
+      cartItemId: summaryItem.cartItemId,
+      hsnCode: summaryItem.cartItem.product?.hsnCode,
+      taxRate: summaryItem.cartItem.hasTaxRate ? summaryItem.cartItem.taxRate : null,
+      // Only allocations on the return record belong to the refund. Nested
+      // cart tax can describe the entire original sold quantity.
+      taxAmount: summaryItem.taxAmount,
+      taxableValue: summaryItem.taxableValue,
+      subTotal: summaryItem.subTotal,
+      discount: summaryItem.discount,
+      unitPrice: salesReturnItemUnitPrice(summaryItem, loadedItems),
+      mrp: summaryItem.cartItem.mrp ?? summaryItem.cartItem.product?.mrp,
       id: summaryItem.id,
       productName: salesReturnItemDisplayName(summaryItem, loadedItems),
       quantity: summaryItem.quantity,

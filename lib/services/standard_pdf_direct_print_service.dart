@@ -64,7 +64,11 @@ class StandardPdfDirectPrintService {
     /// When omitted, the value selected in Printer Settings is used.
     bool? usePrinterSettings,
   }) async {
-    if (selectedPrinter.isDevelopment) return false;
+    // These are output descriptors, not physical system printers. Returning
+    // false lets the caller continue through its existing save/open fallback.
+    if (selectedPrinter.isDevelopment || selectedPrinter.isOpenPdf) {
+      return false;
+    }
 
     try {
       final resolvedUsePrinterSettings = usePrinterSettings ??

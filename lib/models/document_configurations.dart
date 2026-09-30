@@ -143,9 +143,9 @@ class DocumentConfig {
       companyId: json["company_id"],
       type: json["type"],
       logo: json["logo"],
-      showLogo: json["show_logo"],
+      showLogo: _parseIntegerFlag(json["show_logo"]),
       icon: json["icon"],
-      showIcon: json["show_icon"],
+      showIcon: _parseIntegerFlag(json["show_icon"]),
       numberPrefix: json["number_prefix"],
       discountMethod: json["discount_method"],
       header: json["header"],
@@ -166,7 +166,10 @@ class DocumentConfig {
       updatedAt: json["updated_at"],
       language: json["language"], // Parse language from JSON
       isActive: _parseIntegerFlag(json["is_active"]),
-      activeTheme: json["active_theme"], // Parse active theme from JSON
+      // The document-configurations API sends the template id as `theme`;
+      // `active_theme` is the key this model writes back into its own cache.
+      activeTheme:
+          _parseThemeId(json["active_theme"]) ?? _parseThemeId(json["theme"]),
       displayConfiguration: displayConfiguration,
       resolvedLabels: parseResolvedLabels(json["resolved_labels"]),
     );
@@ -228,6 +231,11 @@ class DocumentConfig {
     if (value is bool) return value ? 1 : 0;
     if (value is num) return value.toInt();
     return int.tryParse(value.toString());
+  }
+
+  static String? _parseThemeId(dynamic value) {
+    final theme = value?.toString().trim() ?? '';
+    return theme.isEmpty ? null : theme;
   }
 }
 
@@ -329,6 +337,10 @@ class DisplayOption {
 }
 
 class ResolvedLabels {
+  /// Preserve credit-note labels beyond the historical typed subset.
+  final Map<String, dynamic> additionalLabels;
+
+  String? text(String key) => additionalLabels[key]?.toString();
   final String? itemName;
   final String? unitName;
   final String? priceName;
@@ -385,6 +397,7 @@ class ResolvedLabels {
   final String? taxDefault;
 
   ResolvedLabels({
+    this.additionalLabels = const {},
     this.itemName,
     this.unitName,
     this.priceName,
@@ -436,6 +449,7 @@ class ResolvedLabels {
   });
 
   factory ResolvedLabels.fromJson(Map<String, dynamic> json) => ResolvedLabels(
+        additionalLabels: Map<String, dynamic>.unmodifiable(json),
         itemName: json["item_name"],
         unitName: json["unit_name"] ?? json["unit"],
         priceName: json["price_name"],
@@ -488,6 +502,7 @@ class ResolvedLabels {
       );
 
   Map<String, dynamic> toJson() => {
+        ...additionalLabels,
         "item_name": itemName,
         "unit_name": unitName,
         "price_name": priceName,

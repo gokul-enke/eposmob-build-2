@@ -1,6 +1,28 @@
 import 'package:intl/intl.dart';
 
 class AmountHelper {
+  /// Truncates a monetary value to two decimal places without rounding.
+  ///
+  /// A very small correction is applied before truncation so values already
+  /// expressed with two decimals (for example `65.28`) are not accidentally
+  /// reduced to `65.27` by binary floating-point representation.
+  static double truncateToTwoDecimals(num amount) {
+    final value = amount.toDouble();
+    if (!value.isFinite) return value;
+
+    final scaled = value * 100;
+    const floatingPointCorrection = 1e-9;
+    final corrected = scaled >= 0
+        ? scaled + floatingPointCorrection
+        : scaled - floatingPointCorrection;
+    return corrected.truncateToDouble() / 100;
+  }
+
+  /// Formats a value after truncating it to two decimal places.
+  static String formatTruncatedAmount(num amount) {
+    return truncateToTwoDecimals(amount).toStringAsFixed(2);
+  }
+
   static String formatAmount(dynamic amount) {
     // Check if the amount is a string and attempt to parse it
     if (amount is String) {
@@ -21,7 +43,16 @@ class AmountHelper {
   }
 
   // Add this utility function to convert numbers to words
-  String convertNumberToWords(double number, {String currency = 'INR', String language = 'en'}) {
+  String convertNumberToWords(double number,
+      {String currency = 'INR', String language = 'en'}) {
+    // Negative amounts (e.g. a final total after returns) are spelled as the
+    // absolute value with a leading minus word, never as empty words.
+    if (number < 0) {
+      final isArabic = language.toLowerCase() == 'ar';
+      final words =
+          convertNumberToWords(-number, currency: currency, language: language);
+      return isArabic ? 'سالب $words' : 'Minus $words';
+    }
     // Route to language-specific implementations
     if (language.toLowerCase() == 'ar') {
       return _convertNumberToWordsArabic(number, currency: currency);
@@ -31,7 +62,8 @@ class AmountHelper {
   }
 
   // English implementation
-  String _convertNumberToWordsEnglish(double number, {String currency = 'INR'}) {
+  String _convertNumberToWordsEnglish(double number,
+      {String currency = 'INR'}) {
     // Handle 0 case
     if (number == 0) {
       String mainUnit = _getEnglishCurrencyMain(currency, 0);
@@ -98,7 +130,8 @@ class AmountHelper {
 
     // Get currency units
     String mainUnit = _getEnglishCurrencyMain(currency, wholeNumber);
-    String fractionalUnit = _getEnglishCurrencyFractional(currency, decimalPart);
+    String fractionalUnit =
+        _getEnglishCurrencyFractional(currency, decimalPart);
 
     // Append main currency
     if (wholeNumber > 0) {
@@ -123,24 +156,28 @@ class AmountHelper {
   }
 
   // Helper: English Indian numbering system (Lakhs, Crores)
-  String _convertEnglishIndian(int number, List<String> ones, List<String> tens, {bool recursive = false}) {
+  String _convertEnglishIndian(int number, List<String> ones, List<String> tens,
+      {bool recursive = false}) {
     String result = '';
 
     // Crores (10 Million)
     if (number >= 10000000) {
-      result += '${_convertEnglishIndian(number ~/ 10000000, ones, tens, recursive: true)} Crore ';
+      result +=
+          '${_convertEnglishIndian(number ~/ 10000000, ones, tens, recursive: true)} Crore ';
       number %= 10000000;
     }
 
     // Lakhs (100 Thousand)
     if (number >= 100000) {
-      result += '${_convertEnglishIndian(number ~/ 100000, ones, tens, recursive: true)} Lakh ';
+      result +=
+          '${_convertEnglishIndian(number ~/ 100000, ones, tens, recursive: true)} Lakh ';
       number %= 100000;
     }
 
     // Thousands
     if (number >= 1000) {
-      result += '${_convertEnglishIndian(number ~/ 1000, ones, tens, recursive: true)} Thousand ';
+      result +=
+          '${_convertEnglishIndian(number ~/ 1000, ones, tens, recursive: true)} Thousand ';
       number %= 1000;
     }
 
@@ -166,24 +203,29 @@ class AmountHelper {
   }
 
   // Helper: English International numbering system (Millions, Billions)
-  String _convertEnglishInternational(int number, List<String> ones, List<String> tens, {bool recursive = false}) {
+  String _convertEnglishInternational(
+      int number, List<String> ones, List<String> tens,
+      {bool recursive = false}) {
     String result = '';
 
     // Billions
     if (number >= 1000000000) {
-      result += '${_convertEnglishInternational(number ~/ 1000000000, ones, tens, recursive: true)} Billion ';
+      result +=
+          '${_convertEnglishInternational(number ~/ 1000000000, ones, tens, recursive: true)} Billion ';
       number %= 1000000000;
     }
 
     // Millions
     if (number >= 1000000) {
-      result += '${_convertEnglishInternational(number ~/ 1000000, ones, tens, recursive: true)} Million ';
+      result +=
+          '${_convertEnglishInternational(number ~/ 1000000, ones, tens, recursive: true)} Million ';
       number %= 1000000;
     }
 
     // Thousands
     if (number >= 1000) {
-      result += '${_convertEnglishInternational(number ~/ 1000, ones, tens, recursive: true)} Thousand ';
+      result +=
+          '${_convertEnglishInternational(number ~/ 1000, ones, tens, recursive: true)} Thousand ';
       number %= 1000;
     }
 
@@ -270,10 +312,12 @@ class AmountHelper {
       result += ' $mainUnit';
     }
 
-    // Handle decimal part if any
+    // Handle decimal part if any. The fraction joins the whole amount with an
+    // attached "و"; a fraction-only amount has nothing to join.
     if (decimalPart > 0) {
-      String decimalWords = _convertArabicDecimal(decimalPart);
-      result += ' و $decimalWords $fractionalUnit';
+      final decimalWords =
+          '${_convertArabicDecimal(decimalPart)} $fractionalUnit';
+      result = result.isEmpty ? decimalWords : '$result و$decimalWords';
     }
 
     return result.trim();
@@ -327,12 +371,10 @@ class AmountHelper {
       }
       if (ones == 0) {
         return arabicTens[tens];
-      } else if (ones == 1 || ones == 2) {
-        // Special case: one and two come before
-        return '${arabicOnes[ones]} و ${arabicTens[tens]}';
-      } else {
-        return '${arabicOnes[ones]} ${arabicTens[tens]}';
       }
+      // Units come first and the conjunction attaches to the tens word:
+      // 21 "واحد وعشرون", 59 "تسعة وخمسون".
+      return '${arabicOnes[ones]} و${arabicTens[tens]}';
     }
   }
 
@@ -360,26 +402,29 @@ class AmountHelper {
 
     if (remainder == 0) {
       return arabicHundreds[hundreds];
-    } else if (hundreds == 1 || hundreds == 2) {
-      return '${arabicHundreds[hundreds]} و ${_convertArabicTwoDigits(remainder)}';
-    } else {
-      return '${arabicHundreds[hundreds]} و ${_convertArabicTwoDigits(remainder)}';
     }
+    // 146 "مائة وستة وأربعون".
+    return '${arabicHundreds[hundreds]} و${_convertArabicTwoDigits(remainder)}';
   }
+
+  /// Joins Arabic number groups (crores, lakhs, millions, thousands, the
+  /// hundreds remainder) the way Arabic reads them: the conjunction attaches
+  /// to every group after the first, e.g. 1059 "ألف وتسعة وخمسون".
+  String _joinArabicGroups(List<String> groups) => groups.join(' و');
 
   // Helper: Arabic Indian numbering system (Lakhs, Crores)
   String _convertArabicIndian(int number) {
-    String result = '';
+    final groups = <String>[];
 
     // Crores (10 Million) - كرور
     if (number >= 10000000) {
-      result += '${_convertArabicHundreds(number ~/ 10000000)} كرور ';
+      groups.add('${_convertArabicHundreds(number ~/ 10000000)} كرور');
       number %= 10000000;
     }
 
     // Lakhs (100 Thousand) - لاك
     if (number >= 100000) {
-      result += '${_convertArabicHundreds(number ~/ 100000)} لاك ';
+      groups.add('${_convertArabicHundreds(number ~/ 100000)} لاك');
       number %= 100000;
     }
 
@@ -388,40 +433,40 @@ class AmountHelper {
       int thousands = number ~/ 1000;
       number %= 1000;
       if (thousands == 1) {
-        result += 'ألف ';
+        groups.add('ألف');
       } else if (thousands == 2) {
-        result += 'ألفان ';
+        groups.add('ألفان');
       } else if (thousands > 2 && thousands < 11) {
-        result += '${_convertArabicTwoDigits(thousands)} آلاف ';
+        groups.add('${_convertArabicTwoDigits(thousands)} آلاف');
       } else {
-        result += '${_convertArabicHundreds(thousands)} ألف ';
+        groups.add('${_convertArabicHundreds(thousands)} ألف');
       }
     }
 
     // Hundreds and below
     if (number > 0) {
-      result += '${_convertArabicHundreds(number)} ';
+      groups.add(_convertArabicHundreds(number));
     }
 
-    return result.trim();
+    return _joinArabicGroups(groups);
   }
 
   // Helper: Arabic International numbering system (Millions, Billions)
   String _convertArabicInternational(int number) {
-    String result = '';
+    final groups = <String>[];
 
     // Billions - مليار
     if (number >= 1000000000) {
       int billions = number ~/ 1000000000;
       number %= 1000000000;
       if (billions == 1) {
-        result += 'مليار ';
+        groups.add('مليار');
       } else if (billions == 2) {
-        result += 'ملياران ';
+        groups.add('ملياران');
       } else if (billions > 2 && billions < 11) {
-        result += '${_convertArabicTwoDigits(billions)} مليارات ';
+        groups.add('${_convertArabicTwoDigits(billions)} مليارات');
       } else {
-        result += '${_convertArabicHundreds(billions)} مليار ';
+        groups.add('${_convertArabicHundreds(billions)} مليار');
       }
     }
 
@@ -430,13 +475,13 @@ class AmountHelper {
       int millions = number ~/ 1000000;
       number %= 1000000;
       if (millions == 1) {
-        result += 'مليون ';
+        groups.add('مليون');
       } else if (millions == 2) {
-        result += 'مليونان ';
+        groups.add('مليونان');
       } else if (millions > 2 && millions < 11) {
-        result += '${_convertArabicTwoDigits(millions)} ملايين ';
+        groups.add('${_convertArabicTwoDigits(millions)} ملايين');
       } else {
-        result += '${_convertArabicHundreds(millions)} مليون ';
+        groups.add('${_convertArabicHundreds(millions)} مليون');
       }
     }
 
@@ -445,22 +490,22 @@ class AmountHelper {
       int thousands = number ~/ 1000;
       number %= 1000;
       if (thousands == 1) {
-        result += 'ألف ';
+        groups.add('ألف');
       } else if (thousands == 2) {
-        result += 'ألفان ';
+        groups.add('ألفان');
       } else if (thousands > 2 && thousands < 11) {
-        result += '${_convertArabicTwoDigits(thousands)} آلاف ';
+        groups.add('${_convertArabicTwoDigits(thousands)} آلاف');
       } else {
-        result += '${_convertArabicHundreds(thousands)} ألف ';
+        groups.add('${_convertArabicHundreds(thousands)} ألف');
       }
     }
 
     // Hundreds and below
     if (number > 0) {
-      result += '${_convertArabicHundreds(number)} ';
+      groups.add(_convertArabicHundreds(number));
     }
 
-    return result.trim();
+    return _joinArabicGroups(groups);
   }
 
   // Helper: Convert decimal part to Arabic words

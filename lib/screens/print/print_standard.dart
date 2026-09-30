@@ -2819,6 +2819,10 @@ class StandardPrinter {
     String? customerType,
     String? documentTitleOverride,
     String? netExcTax,
+    double? apiTotalTax,
+    String? tokenNumber,
+    String? deliveryPhone,
+    DocumentConfig? returnBillDocumentConfig,
     String? storeName,
     String? storeLocation,
     String? storePhone,
@@ -2873,6 +2877,7 @@ class StandardPrinter {
         discountAmount: discountAmount,
         orderDate: orderDate,
         orderNumber: orderNumber,
+        tokenNumber: tokenNumber,
         isFromLocalStorage: isFromLocalStorage,
         selectedPaperSize: paperSize,
         billDocumentConfig: billDocumentConfig,
@@ -2888,6 +2893,8 @@ class StandardPrinter {
         paidAmount: paidAmount,
         orderComment: orderComment,
         deliveryMethod: deliveryMethod,
+        // Same fallback as the print flow (PrintPage.autoPrint).
+        deliveryPhone: deliveryPhone ?? customerAlternatePhone,
         customerAlternatePhone: customerAlternatePhone,
         paymentMethod: paymentMethod,
         customerVatNumber: customerVatNumber,
@@ -2901,11 +2908,13 @@ class StandardPrinter {
         isDefaultCustomer: isDefaultCustomer,
         hideDefaultCustomerPhone: hideDefaultCustomerPhone,
         netExcTax: netExcTax,
+        apiTotalTax: apiTotalTax,
         bankDetails: bankProvider.banks,
         storeName: storeContact.name,
         storeLocation: storeContact.location,
         storePhone: storeContact.phone,
         storeEmail: storeContact.email,
+        returnBillDocumentConfig: returnBillDocumentConfig,
       );
 
       // Build the themed PDF via the same factory used by the print flow.

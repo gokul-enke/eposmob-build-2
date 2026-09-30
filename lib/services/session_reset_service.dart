@@ -36,12 +36,16 @@ class SessionResetService {
     'zatca_vat_number',
     'zatca_company_name',
     'default_printer',
+    'default_printer_open_pdf_output',
+    'default_printer_b2b_open_pdf_output',
     'default_paper_size',
     'default_font_style',
     'quotation_printer',
+    'quotation_printer_open_pdf_output',
     'quotation_paper_size',
     'quotation_font_style',
     'kot_printer',
+    'kot_printer_open_pdf_output',
     'kot_paper_size',
     'kot_font_style',
     'billing_receipt_theme',
@@ -59,16 +63,30 @@ class SessionResetService {
     'admin_settings_logo_file_path',
   ];
 
+  /// Bill numbering belongs to the physical till, so every reset keeps it,
+  /// including an API key reset. Losing it restarts today's bills at 0001,
+  /// which clashes with bills already sold. A till moved to another company
+  /// only gets a harmless gap, because bill numbers are unique per company.
+  static const List<String> _receiptIdentityKeys = [
+    'pos_device_id',
+    'pos_counter_numbers_by_store',
+    'pos_receipt_sequences',
+  ];
+
   static const List<String> _deviceScopedKeys = [
     'default_printer',
+    'default_printer_open_pdf_output',
+    'default_printer_b2b_open_pdf_output',
     'default_paper_size',
     'default_font_style',
     'default_printer_name',
     'default_printer_address',
     'quotation_printer',
+    'quotation_printer_open_pdf_output',
     'quotation_paper_size',
     'quotation_font_style',
     'kot_printer',
+    'kot_printer_open_pdf_output',
     'kot_paper_size',
     'kot_font_style',
     'billing_receipt_theme',
@@ -80,6 +98,11 @@ class SessionResetService {
     'kot_receipt_theme',
     'app_locale_code',
     'app_font_size_level',
+    // Receipt identity is device-scoped. Clearing cached tenant data must not
+    // make this physical till reuse an already-issued receipt sequence.
+    'pos_device_id',
+    'pos_counter_numbers_by_store',
+    'pos_receipt_sequences',
   ];
 
   static Future<void> resetAfterLogout(BuildContext context) async {
@@ -152,12 +175,14 @@ class SessionResetService {
       rememberedFlag = prefs.getBool('remember_me') ?? false;
     }
 
-    if (preserveDeviceScopedKeys) {
-      for (final key in _deviceScopedKeys) {
-        final value = prefs.get(key);
-        if (value != null) {
-          preservedDeviceValues[key] = value;
-        }
+    final keysToPreserve = <String>{
+      ..._receiptIdentityKeys,
+      if (preserveDeviceScopedKeys) ..._deviceScopedKeys,
+    };
+    for (final key in keysToPreserve) {
+      final value = prefs.get(key);
+      if (value != null) {
+        preservedDeviceValues[key] = value;
       }
     }
 
@@ -209,7 +234,7 @@ class SessionResetService {
       }
     }
 
-    if (preserveDeviceScopedKeys && preservedDeviceValues.isNotEmpty) {
+    if (preservedDeviceValues.isNotEmpty) {
       for (final entry in preservedDeviceValues.entries) {
         final value = entry.value;
         if (value is String) {

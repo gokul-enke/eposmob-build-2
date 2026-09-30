@@ -87,6 +87,7 @@ import 'package:pos_machine/features/realtime_sync/data/realtime_entity_api.dart
 import 'package:pos_machine/features/realtime_sync/data/realtime_sync_repository.dart';
 import 'package:pos_machine/features/realtime_sync/presentation/realtime_sync_lifecycle.dart';
 import 'package:pos_machine/features/realtime_sync/presentation/realtime_sync_provider.dart';
+import 'package:pos_machine/services/local_sale_sync_service.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_lifecycle.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_provider.dart';
 import 'package:pos_machine/config/sentry_config.dart';
@@ -140,6 +141,7 @@ const List<String> _requiredBoxNames = <String>[
   'cart_items',
   'saved_orders',
   'confirmed_orders',
+  localSaleOutboxName,
 ];
 
 /// Boxes whose absence only degrades the app. They are re-synced from the
@@ -208,6 +210,7 @@ Future<Widget> _bootstrap(ValueChanged<String> reportStage) async {
   try {
     await _startupWork.run(_initializeApp).timeout(_startupBudget);
     await _startupWork.run(OrderSubmissionCoordinator.instance.hydrate);
+    await _startupWork.run(LocalSaleSyncService.instance.hydrate);
     reportStage('Loading products and saved orders…');
     _startupWork.checkRunning();
     final localProducts = _startupProducts = LocalProductProvider();
@@ -215,6 +218,28 @@ Future<Widget> _bootstrap(ValueChanged<String> reportStage) async {
       await _startupWork
           .run(() => localProducts.hydrated)
           .timeout(_maxBoxOpenTimeout);
+      final localSales = LocalSaleSyncService.instance;
+      if (localSales.hasRecordedCartSession(localProducts.cartSessionId)) {
+        final confirmedDraftId = localProducts.currentOrder?.id;
+        if (confirmedDraftId != null) {
+          localProducts.deleteSavedOrder(confirmedDraftId);
+        }
+        localProducts.clearCartAfterOrder();
+        localProducts.clearCurrentOrder();
+        await localProducts.flushPersistence();
+      }
+      // Runs after the check above, which needs the current cart session's
+      // record. Housekeeping must never block startup.
+      try {
+        final pruned = await localSales.pruneSynced();
+        if (pruned.isNotEmpty) {
+          localProducts.deleteConfirmedOrders(pruned.toSet());
+          await localProducts.flushPersistence();
+          debugPrint('[Startup] pruned_synced_sales count=${pruned.length}');
+        }
+      } catch (error) {
+        debugPrint('[Startup] synced sale cleanup failed: $error');
+      }
     } catch (_) {
       // timeout does not cancel hydration. Dispose only after its source has
       // stopped notifying, without mounting this failed startup attempt.
@@ -697,6 +722,7 @@ Future<void> _resetBoxOnDisk(String boxName) async {
 Future<void> _openTypedBox(String boxName) async {
   switch (boxName) {
     case 'order_submissions':
+    case localSaleOutboxName:
       await Hive.openBox(boxName);
       break;
     case 'products':
@@ -868,6 +894,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => StockProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
+        ChangeNotifierProvider.value(value: LocalSaleSyncService.instance),
         ChangeNotifierProvider(create: (_) => Cart()),
         ChangeNotifierProvider(create: (_) => CarouselProvider()),
         ChangeNotifierProvider(create: (_) => SalesProvider()),

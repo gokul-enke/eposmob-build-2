@@ -13,13 +13,25 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/features/billing/domain/receipt_customer_balance.dart';
+import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/services/sales_only_print_helper.dart';
+import 'package:pos_machine/helpers/return_print_identity.dart';
 
 enum PrintMode { salesOnly, returnOnly, combined }
 
 class PrintService {
   const PrintService();
+
+  String? _savedOrderAddress(SavedOrder order) {
+    final address = order.address?.trim() ?? '';
+    final pincode = order.pincode?.trim() ?? '';
+    if (pincode.isEmpty || address.contains(pincode)) {
+      return address.isEmpty ? null : address;
+    }
+    if (address.isEmpty) return pincode;
+    return '$address, $pincode';
+  }
 
   double _calculateSavedOrderDiscountAmount(SavedOrder savedOrder) {
     final subtotal = savedOrder.items.fold<double>(
@@ -42,13 +54,39 @@ class PrintService {
   }
 
   /// Helper method to check if a phone number matches the default customer phone from app settings
-  bool _isDefaultCustomerPhone(BuildContext context, String? phone) {
+  bool _isDefaultCustomerPhone(BuildContext context, String? phone) =>
+      isDefaultCustomerPhone(context, phone);
+
+  /// Whether [phone] is the store's auto-assigned default (walk-in) customer
+  /// phone. Shared by the print and Share-PDF paths.
+  static bool isDefaultCustomerPhone(BuildContext context, String? phone) {
     if (phone == null || phone.isEmpty) return false;
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final defaultPhone =
         appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
     return defaultPhone.isNotEmpty && phone == defaultPhone;
+  }
+
+  /// Total actually paid from an order's `payments` map, excluding the ledger
+  /// keys (DEBIT / CREDIT / BALANCE); null when nothing was paid. Shared by
+  /// the print and Share-PDF paths so both show the same Paid amount.
+  static double? paidAmountFromPayments(Map<String, dynamic>? payments) {
+    if (payments == null) return null;
+    const excludedKeys = {'DEBIT', 'CREDIT', 'BALANCE'};
+    final totalPaid = payments.entries
+        .where((e) => !excludedKeys.contains(e.key.trim().toUpperCase()))
+        .fold<double>(
+      0.0,
+      (sum, e) {
+        final val = e.value;
+        return sum +
+            (val is num
+                ? val.toDouble()
+                : double.tryParse(val.toString()) ?? 0.0);
+      },
+    );
+    return totalPaid > 0 ? totalPaid : null;
   }
 
   /// Shows print options when the order has sales returns; otherwise prints combined.
@@ -201,8 +239,7 @@ class PrintService {
                 ListTile(
                   leading: const Icon(Icons.receipt_long),
                   title: Text('ui_chrome.print_sales'.tr),
-                  subtitle:
-                      Text('ui_chrome.print_sales_sub'.tr),
+                  subtitle: Text('ui_chrome.print_sales_sub'.tr),
                   onTap: () {
                     debugPrint('[PrintService] Print Sales tapped');
                     Navigator.pop(sheetContext, PrintMode.salesOnly);
@@ -304,29 +341,24 @@ class PrintService {
         return false;
       }
 
-      final customerBalance = () {
-        if (orderDetails.data?.orderProps == null) return null;
-        try {
-          final balanceProp = orderDetails.data!.orderProps!.firstWhere(
-            (prop) => prop.propsCode == 'BALANCE',
-            orElse: () => OrderDetailsModelDataOrderProp(),
-          );
-          return balanceProp.propsValue?.toString();
-        } catch (_) {
-          return null;
-        }
-      }();
+      // Customer ledger balance, as the sales path uses. order_props.BALANCE
+      // is deliberately not used: it has been observed stale.
+      final customerBalance =
+          orderDetails.data?.customerDetails?.customerBalance?.toString();
+      final returnIdentity = ReturnPrintIdentity.fromSummary(orderReturns!);
 
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => ReturnBillPrintPage(
-            returnItems: orderReturns!.returnItems!,
+            returnItems: orderReturns.returnItems!,
             originalCartItems: cart.cartItems!,
-            returnTotalAmount: orderReturns.returnTotalAmount ?? '0.00',
+            returnTotalAmount: orderReturns.returnTotalAmount ?? '',
             storeName: cart.storeName,
-            orderDate: orderDetails.data?.orderDate ?? '',
-            orderNumber: orderDetails.data?.orderNumber ?? '',
+            orderDate: returnIdentity.date,
+            orderNumber: returnIdentity.number,
+            originalInvoiceNumber: orderDetails.data?.customerReceiptNumber,
+            originalInvoiceDate: orderDetails.data?.orderDate,
             customerName: orderDetails.data?.customerDetails?.name,
             customerPhone: orderDetails.data?.customerDetails?.phone,
             customerEmail: orderDetails.data?.customerDetails?.email,
@@ -346,6 +378,7 @@ class PrintService {
         ? buildSalesOnlyCartItems(
             cart.cartItems!,
             orderReturns!.returnItems!,
+            completedReturnCartItems: orderDetails.data?.completedReturnCartItems,
           )
         : cart.cartItems!;
 
@@ -368,11 +401,11 @@ class PrintService {
     final formattedTotal = isSalesOnly
         ? _calculateTotalFromCartItems(cartItems)
         : orderDetails.data?.cart?.priceSummary?.netPayable?.toString() ??
-            orderDetails.data?.cart?.priceSummary?.netTotal.toString() ??
+            orderDetails.data?.cart?.priceSummary?.netTotal?.toString() ??
             '0.00';
     final savedTotal = isSalesOnly
         ? _calculateSavedTotalFromCartItems(cartItems)
-        : orderDetails.data?.cart?.priceSummary?.savedTotal.toString() ??
+        : orderDetails.data?.cart?.priceSummary?.savedTotal?.toString() ??
             '0.00';
 
     final storeName = cart.storeName ?? '';
@@ -392,23 +425,7 @@ class PrintService {
         orderDetails.data?.paymentDetails?.paymentMethod ?? 'N/A';
     final Map<String, dynamic>? paymentBreakdown = orderDetails.data?.payments;
 
-    double? paidAmount;
-    if (paymentBreakdown != null) {
-      const excludedKeys = {'DEBIT', 'CREDIT', 'BALANCE'};
-      final totalPaid = paymentBreakdown.entries
-          .where((e) => !excludedKeys.contains(e.key.trim().toUpperCase()))
-          .fold<double>(
-        0.0,
-        (sum, e) {
-          final val = e.value;
-          return sum +
-              (val is num
-                  ? val.toDouble()
-                  : double.tryParse(val.toString()) ?? 0.0);
-        },
-      );
-      if (totalPaid > 0) paidAmount = totalPaid;
-    }
+    final double? paidAmount = paidAmountFromPayments(paymentBreakdown);
 
     String? orderComment;
     double? customerOldBalance;
@@ -477,7 +494,7 @@ class PrintService {
       discountAmount:
           orderDetails.data!.priceSummary?.discount?.toString() ?? '0.00',
       orderDate: orderDate,
-      orderNumber: orderDetails.data!.orderNumber ?? '',
+      orderNumber: orderDetails.data!.customerReceiptNumber ?? '',
       tokenNumber: orderDetails.data?.tokenNumber,
       customerName: customerName,
       customerPhone: customerPhone,
@@ -514,7 +531,7 @@ class PrintService {
             discountAmount:
                 orderDetails.data!.priceSummary?.discount?.toString() ?? '0.00',
             orderDate: orderDate,
-            orderNumber: orderDetails.data!.orderNumber ?? '',
+            orderNumber: orderDetails.data!.customerReceiptNumber ?? '',
             tokenNumber: orderDetails.data?.tokenNumber,
             customerName: customerName,
             customerPhone: customerPhone,
@@ -547,7 +564,11 @@ class PrintService {
 
   /// Print a locally saved order (offline/confirmed in local storage)
   Future<bool> printSavedOrder(
-      BuildContext context, SavedOrder savedOrder) async {
+    BuildContext context,
+    SavedOrder savedOrder, {
+    double? customerOldBalance,
+    double? customerCurrentBalance,
+  }) async {
     try {
       {
         final cartItems = <Map<String, dynamic>>[];
@@ -582,14 +603,16 @@ class PrintService {
 
         double youSaved = totalMRP - netTotal;
         if (youSaved < 0) youSaved = 0.0;
-        final double netExcTax = netTotal - totalTax;
+        final double displayedTotalTax =
+            AmountHelper.truncateToTwoDecimals(totalTax);
+        final double netExcTax = netTotal - displayedTotalTax;
         final double discountAmount =
             _calculateSavedOrderDiscountAmount(savedOrder);
 
         debugPrint("LOCAL PRINT CALCULATION:");
         debugPrint("  - Total MRP: $totalMRP");
         debugPrint("  - Net Total: $netTotal");
-        debugPrint("  - Total Tax: $totalTax");
+        debugPrint("  - Total Tax: $displayedTotalTax");
         debugPrint("  - Net Exc Tax: $netExcTax");
         debugPrint("  - You Saved: $youSaved");
         if (cartItems.isNotEmpty) {
@@ -611,6 +634,7 @@ class PrintService {
             (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
                 ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
                 : null;
+        final customerAddress = _savedOrderAddress(savedOrder);
 
         final autoPrintSuccess = await PrintPage.autoPrint(
           context,
@@ -624,7 +648,7 @@ class PrintService {
           isFromLocalStorage: true,
           customerName: savedOrder.customerName,
           customerPhone: savedOrder.customerPhone,
-          customerAddress: savedOrder.address,
+          customerAddress: customerAddress,
           paymentMethod: displayPaymentMethod,
           paymentBreakdown: paymentBreakdown,
           customerAlternatePhone: savedOrder.alternatePhone,
@@ -634,6 +658,8 @@ class PrintService {
           orderComment: savedOrder.comment,
           deliveryMethod: savedOrder.deliveryMethod,
           paidAmount: paidAmount,
+          customerOldBalance: customerOldBalance,
+          customerCurrentBalance: customerCurrentBalance,
           isDefaultCustomer:
               _isDefaultCustomerPhone(context, savedOrder.customerPhone),
           netExcTax: netExcTax.toString(),
@@ -654,7 +680,7 @@ class PrintService {
                 isFromLocalStorage: true,
                 customerName: savedOrder.customerName,
                 customerPhone: savedOrder.customerPhone,
-                customerAddress: savedOrder.address,
+                customerAddress: customerAddress,
                 paymentMethod: displayPaymentMethod,
                 paymentBreakdown: paymentBreakdown,
                 customerAlternatePhone: savedOrder.alternatePhone,
@@ -664,6 +690,8 @@ class PrintService {
                 orderComment: savedOrder.comment,
                 deliveryMethod: savedOrder.deliveryMethod,
                 paidAmount: paidAmount,
+                customerOldBalance: customerOldBalance,
+                customerCurrentBalance: customerCurrentBalance,
                 isDefaultCustomer:
                     _isDefaultCustomerPhone(context, savedOrder.customerPhone),
                 netExcTax: netExcTax.toString(),
