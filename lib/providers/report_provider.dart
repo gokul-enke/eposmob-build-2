@@ -35,6 +35,40 @@ class ReportsProvider with ChangeNotifier {
       _consumedStocksReport;
   GetStockReportResponse? get stockReport => _stockReport;
 
+  static Uri buildProductSalesReportUri({
+    required String endpoint,
+    String? categoryId,
+    String? productId,
+    String? customerId,
+    String? startDate,
+    String? endDate,
+    int page = 1,
+    int perPage = 25,
+  }) {
+    final queryParameters = <String, String>{
+      'page': page.toString(),
+      'per_page': perPage.toString(),
+    };
+
+    if (categoryId != null && categoryId.isNotEmpty) {
+      queryParameters['category_id'] = categoryId;
+    }
+    if (productId != null && productId.isNotEmpty) {
+      queryParameters['product_id'] = productId;
+    }
+    if (customerId != null && customerId.isNotEmpty) {
+      queryParameters['customer_id'] = customerId;
+    }
+    if (startDate != null && startDate.isNotEmpty) {
+      queryParameters['from'] = startDate;
+    }
+    if (endDate != null && endDate.isNotEmpty) {
+      queryParameters['to'] = endDate;
+    }
+
+    return Uri.parse(endpoint).replace(queryParameters: queryParameters);
+  }
+
   Future<void> fetchCustomerAccountBook({
     required String accessToken,
     String? customerName,
@@ -93,46 +127,34 @@ class ReportsProvider with ChangeNotifier {
     }
   }
 
-  Future<void> fetchProductSalesReport({
+  Future<GetProductSalesReportResponse> fetchProductSalesReport({
     required String accessToken,
     String? categoryId,
     String? productId,
+    String? customerId,
     String? startDate,
     String? endDate,
-    String? amount,
+    int page = 1,
+    int perPage = 25,
+    bool updateState = true,
   }) async {
-    final queryParameters = <String, String>{};
-
-    if (categoryId != null) {
-      queryParameters['category_id'] = categoryId.toString();
-    }
-    if (productId != null) {
-      queryParameters['product_id'] = productId.toString();
-    }
-    if (startDate != null && startDate.isNotEmpty) {
-      queryParameters['from_date'] = startDate;
-    }
-    if (endDate != null && endDate.isNotEmpty) {
-      queryParameters['to_date'] = endDate;
-    }
-    if (amount != null && amount.isNotEmpty) {
-      queryParameters['amount'] = amount;
-    }
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
-    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
 
-    if (activeStoreId != null) {
-      queryParameters['store_id'] = activeStoreId.toString();
-    }
-
-    final uri = Uri.parse(APPUrl.productSalesReport)
-        .replace(queryParameters: queryParameters);
+    final uri = buildProductSalesReportUri(
+      endpoint: APPUrl.productSalesReport,
+      categoryId: categoryId,
+      productId: productId,
+      customerId: customerId,
+      startDate: startDate,
+      endDate: endDate,
+      page: page,
+      perPage: perPage,
+    );
     try {
       final response = await http.get(
         uri,
@@ -146,9 +168,12 @@ class ReportsProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         if (response.body.isNotEmpty) {
           final jsonData = json.decode(response.body);
-          _productSalesReport =
-              GetProductSalesReportResponse.fromJson(jsonData);
-          notifyListeners();
+          final report = GetProductSalesReportResponse.fromJson(jsonData);
+          if (updateState) {
+            _productSalesReport = report;
+            notifyListeners();
+          }
+          return report;
         } else {
           throw Exception('Received empty response');
         }
@@ -464,7 +489,9 @@ class ReportsProvider with ChangeNotifier {
     if (stockLevel != null && stockLevel.isNotEmpty && stockLevel != 'All') {
       queryParameters['stock_level'] = stockLevel;
     }
-    if (expiringWithin != null && expiringWithin.isNotEmpty && expiringWithin != 'All') {
+    if (expiringWithin != null &&
+        expiringWithin.isNotEmpty &&
+        expiringWithin != 'All') {
       queryParameters['expiring_within'] = expiringWithin;
     }
     if (snapshotDate != null && snapshotDate.isNotEmpty) {

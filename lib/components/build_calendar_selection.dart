@@ -20,6 +20,7 @@ class CalendarPickerTableCell extends StatefulWidget {
   final bool isAllowEdit;
   final bool allowTextInput;
   final bool autoDismiss;
+  final bool openOnFocus;
   final FocusNode? focusNode;
 
   const CalendarPickerTableCell({
@@ -35,6 +36,7 @@ class CalendarPickerTableCell extends StatefulWidget {
     this.isAllowEdit = true,
     this.allowTextInput = false,
     this.autoDismiss = true,
+    this.openOnFocus = true,
     this.focusNode,
   }) : super(key: key);
 
@@ -133,7 +135,7 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
   }
 
   void _handleFocusChange() {
-    if (widget.focusNode?.hasFocus ?? false) {
+    if (widget.openOnFocus && (widget.focusNode?.hasFocus ?? false)) {
       if (!_isPickerOpen) {
         _isPickerOpen = true;
         _selectDate(context).then((_) {

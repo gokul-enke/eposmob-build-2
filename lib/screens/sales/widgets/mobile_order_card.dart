@@ -234,17 +234,31 @@ class MobileOrderCard extends StatelessWidget {
                                 context: context,
                                 message: 'sales.order_cancelled_success'.tr,
                               );
-                              salesProvider.fetchOrders(
-                                accessToken: authModel.token ?? "",
-                                page: salesProvider.currentPage,
-                              );
+                              try {
+                                await salesProvider.fetchOrders(
+                                  accessToken: authModel.token ?? "",
+                                  page: salesProvider.currentPage,
+                                );
+                              } catch (refreshError) {
+                                if (context.mounted) {
+                                  showScaffoldError(
+                                    context: context,
+                                    message: SalesProvider.apiErrorMessage(
+                                      refreshError,
+                                      fallback: 'sales.orders_load_failed'.tr,
+                                    ),
+                                  );
+                                }
+                              }
                             }
                           } catch (e) {
                             if (context.mounted) {
                               showScaffoldError(
                                 context: context,
-                                message: 'sales.failed_cancel_order'
-                                    .trParams({'error': '$e'}),
+                                message: SalesProvider.apiErrorMessage(
+                                  e,
+                                  fallback: 'sales.failed_cancel_order'.tr,
+                                ),
                               );
                             }
                           }
