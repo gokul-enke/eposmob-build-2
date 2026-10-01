@@ -199,6 +199,7 @@ class InvoiceProvider extends ChangeNotifier {
     String? type, // credit | debit
     int? perPage,
     int? page,
+    bool updateState = true,
   }) async {
     // Build query parameters
     final queryParams = <String, String>{
@@ -243,12 +244,14 @@ class InvoiceProvider extends ChangeNotifier {
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         // Parse into existing model for UI consumption
-        try {
-          final listModel = ListTransactionModel.fromJson(jsonData);
-          transactionListDetails = listModel.data?.transactions;
-          notifyListeners();
-        } catch (e) {
-          debugPrint('Error parsing customer transactions: $e');
+        if (updateState) {
+          try {
+            final listModel = ListTransactionModel.fromJson(jsonData);
+            transactionListDetails = listModel.data?.transactions;
+            notifyListeners();
+          } catch (e) {
+            debugPrint('Error parsing customer transactions: $e');
+          }
         }
         return jsonData;
       } else {

@@ -301,8 +301,8 @@ class ListPageScaffold<T> extends StatelessWidget {
                                         pages
                                       ])
                                     : Row(children: [
-                                        count,
-                                        const Spacer(),
+                                        Expanded(child: count),
+                                        const SizedBox(width: 12),
                                         pages
                                       ]);
                               })),

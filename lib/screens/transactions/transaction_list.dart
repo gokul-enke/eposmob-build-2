@@ -1,35 +1,40 @@
-import 'dart:ui';
-
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:pos_machine/components/build_calendar_selection.dart';
-import 'package:pos_machine/components/build_pagination_control.dart';
-import 'package:pos_machine/components/build_text_fields.dart';
-import 'package:pos_machine/components/filter_toggle_button.dart';
-import 'package:pos_machine/screens/transactions/widgets/customer_auto_complete.dart';
 import 'package:provider/provider.dart';
-
-import '../../components/build_container_box.dart';
-import '../../components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
-import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
-import '../../components/build_round_button.dart';
-import '../../controllers/sidebar_controller.dart';
+import '../../components/export_share_button.dart';
+import '../../components/filter_toggle_button.dart';
+import '../../core/ui/app_colors.dart';
+import '../../core/ui/app_surface.dart';
+import '../../core/ui/list_page/filter_panel.dart';
+import '../../core/ui/list_page/list_page_header.dart';
+import '../../core/ui/list_page/list_page_scaffold.dart';
 import '../../helpers/date_helper.dart';
 import '../../helpers/ui_code_labels.dart';
 import '../../models/list_transaction.dart';
 import '../../providers/auth_model.dart';
 import '../../providers/invoice_provider.dart';
 import '../../providers/master_data_provider.dart';
-import '../../resources/color_manager.dart';
-import '../../resources/font_manager.dart';
-import '../../resources/style_manager.dart';
+import '../../newcomponents/custom_dialog_box.dart';
+import '../../services/customer_ledger_snapshot.dart';
+import '../../services/list_excel_export_service.dart';
 import 'widgets/common_details_dialog.dart';
+
+typedef _Filters = ({
+  String amount,
+  String name,
+  String reference,
+  String type,
+  String? customerId,
+  String? date
+});
+typedef _ServerFilters = ({String type, String? customerId, String? date});
 
 class CustomerTransactionListScreen extends StatefulWidget {
   const CustomerTransactionListScreen({super.key});
-
   @override
   State<CustomerTransactionListScreen> createState() =>
       _CustomerTransactionListScreenState();
@@ -37,245 +42,552 @@ class CustomerTransactionListScreen extends StatefulWidget {
 
 class _CustomerTransactionListScreenState
     extends State<CustomerTransactionListScreen> {
-  final TextEditingController amountRefController = TextEditingController();
-  final SideBarController sideBarController = Get.put(SideBarController());
-  final TextEditingController referenceSearchController =
-      TextEditingController();
-  String searchReference = '';
-  // Add this with your other controllers
-  final TextEditingController customerSearchController =
-      TextEditingController();
-  // final TextEditingController customerPhoneController =
-  //     TextEditingController(); // Commented out - no backend API field yet
-  String searchCustomer = '';
-  // String searchCustomerPhone = ''; // Commented out - no backend API field yet
-  String searchType = '';
-  String searchTransactionType = '';
-  List<String> customerSuggestions =
-      []; // This should be populated with your customer names
-  List<String> filteredSuggestions = [];
-  bool initLoading = false;
-  bool _showFilters = true;
-  List<ListTransaction>? listTransaction = [];
-  List<ListTransaction>? allTransactions =
-      []; // Store all transactions for filtering
-  String searchAmount = '';
-  DateTime? selectedDate;
-  int currentPage = 1;
-  int totalPages = 1;
-  int _calendarKey = 0;
-  final int itemsPerPage = 20;
-  String? selectedCustomerId; // for API param
+  final _amount = TextEditingController(),
+      _name = TextEditingController(),
+      _reference = TextEditingController();
+  final _nameFocus = FocusNode();
+  final _amountKey = GlobalKey<TextFilterFieldState>(),
+      _referenceKey = GlobalKey<TextFilterFieldState>();
+  final _table = ScrollController();
+  final _progress = ValueNotifier<String?>(null);
+  Timer? _nameTimer;
+  String _type = 'All';
+  String? _customerId;
+  DateTime? _date;
+  bool _loading = false, _showFilters = true;
+  String? _error;
+  int _generation = 0, _page = 1, _pages = 1;
+  List<ListTransaction> _rows = [], _suggestions = [];
+  List<ListTransaction>? _cache;
+  _ServerFilters? _cacheKey;
+  _Filters? _loaded;
 
-  bool get _hasActiveFilters =>
-      searchAmount.isNotEmpty ||
-      searchCustomer.isNotEmpty ||
-      selectedCustomerId != null ||
-      (searchType.isNotEmpty && searchType != 'All') ||
-      searchReference.isNotEmpty ||
-      selectedDate != null;
-
-  Widget _buildFilterToggleButton() {
-    return FilterToggleButton(
-      key: const ValueKey('customer-transactions-filter-toggle'),
-      showFilters: _showFilters,
-      hasActiveFilters: _hasActiveFilters,
-      showTooltip: 'party_accounts.filters'.tr,
-      hideTooltip: 'party_accounts.hide_filters'.tr,
-      onPressed: () => setState(() => _showFilters = !_showFilters),
-    );
-  }
-
-  List<String> getCustomerSuggestions() {
-    if (allTransactions == null) return [];
-    return allTransactions!
-        .map((t) => t.customerName ?? '')
-        .where((name) => name.isNotEmpty)
-        .toSet()
-        .toList();
-  }
+  _Filters get _filters => (
+        amount: _amount.text.trim(),
+        name: _name.text.trim(),
+        reference: _reference.text.trim(),
+        type: _type,
+        customerId: _customerId,
+        date: _date == null ? null : DateFormat('yyyy-MM-dd').format(_date!)
+      );
+  _ServerFilters _server(_Filters f) =>
+      (type: f.type, customerId: f.customerId, date: f.date);
+  bool _local(_Filters f) =>
+      f.amount.isNotEmpty ||
+      f.reference.isNotEmpty ||
+      (f.name.isNotEmpty && f.customerId == null);
+  List<ListTransaction> _match(List<ListTransaction> rows, _Filters f) => rows
+      .where((r) =>
+          (r.amount ?? '').contains(f.amount) &&
+          (r.referenceId ?? '')
+              .toLowerCase()
+              .contains(f.reference.toLowerCase()) &&
+          (f.customerId != null ||
+              (r.customerName ?? '')
+                  .toLowerCase()
+                  .contains(f.name.toLowerCase())))
+      .toList();
 
   @override
   void initState() {
     super.initState();
-    loadInitData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _fetch();
+    });
   }
 
-  Future<void> loadInitData() async {
-    setState(() {
-      initLoading = true;
-    });
+  @override
+  void dispose() {
+    _generation++;
+    _nameTimer?.cancel();
+    _amount.dispose();
+    _name.dispose();
+    _reference.dispose();
+    _nameFocus.dispose();
+    _table.dispose();
+    _progress.dispose();
+    super.dispose();
+  }
 
+  void _cancelPending() {
+    _nameTimer?.cancel();
+    _amountKey.currentState?.cancelPendingSearch();
+    _referenceKey.currentState?.cancelPendingSearch();
+  }
+
+  Future<void> _fetch(
+      {int page = 1, bool force = false, _Filters? filters}) async {
+    final f = filters ?? _filters;
+    final generation = ++_generation;
+    final provider = context.read<InvoiceProvider>();
+    final token = context.read<AuthModel>().token ?? '';
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
-      await _fetchServer(page: 1);
-    } catch (error) {
-      // debugPrint(error.toString());
-    } finally {
+      Future<dynamic> request(int p, int count) =>
+          provider.listCustomerTransactions(
+              accessToken: token,
+              customerId: f.customerId,
+              dateFrom: f.date,
+              dateTo: f.date,
+              type: f.type == 'All' ? null : f.type.toLowerCase(),
+              page: p,
+              perPage: count,
+              updateState: false);
+      List<ListTransaction> rows;
+      List<ListTransaction>? cache;
+      int current, last;
+      if (_local(f)) {
+        cache = !force && _cacheKey == _server(f) ? _cache : null;
+        cache ??= await fetchCustomerLedgerSnapshot((p) => request(p, 1000));
+        final filtered = _match(cache, f);
+        last = ((filtered.length + 19) ~/ 20).clamp(1, 2147483647);
+        current = page.clamp(1, last);
+        rows = filtered.skip((current - 1) * 20).take(20).toList();
+      } else {
+        final result = CustomerLedgerPage.parse(await request(page, 20), page);
+        rows = result.rows;
+        current = result.current;
+        last = result.last;
+      }
+      if (!mounted || generation != _generation) return;
       setState(() {
-        initLoading = false;
-      });
-    }
-  }
-
-  Future<void> _fetchServer({int? page}) async {
-    final String? accessToken =
-        Provider.of<AuthModel>(context, listen: false).token;
-    final invoiceProvider =
-        Provider.of<InvoiceProvider>(context, listen: false);
-
-    final String? dateStr = selectedDate != null
-        ? DateFormat('yyyy-MM-dd').format(selectedDate!)
-        : null;
-
-    final String? typeParam =
-        (searchType.isNotEmpty && searchType != 'All') ? searchType.toLowerCase() : null;
-
-    String? transactionTypeParam;
-    if (searchTransactionType.isNotEmpty && searchTransactionType != 'All') {
-      // API expects lowercase with underscores
-      transactionTypeParam = searchTransactionType.toLowerCase().replaceAll(' ', '_');
-    }
-
-    final value = await invoiceProvider.listCustomerTransactions(
-      accessToken: accessToken ?? '',
-      customerId: selectedCustomerId,
-      dateFrom: dateStr,
-      dateTo: dateStr,
-      transactionType: transactionTypeParam,
-      type: typeParam,
-      perPage: itemsPerPage,
-      page: page ?? currentPage,
-    );
-
-    if (value != null && value['status'] == 'success') {
-      final model = ListTransactionModel.fromJson(value);
-      currentPage = model.data?.currentPage ?? 1;
-      totalPages = model.data?.lastPage ?? 1;
-      allTransactions = model.data?.transactions ?? [];
-      applyFilters(); // apply local amount/reference filters
-    } else {
-      setState(() {
-        allTransactions = [];
-        listTransaction = [];
-        totalPages = 1;
-      });
-      showScaffold(context: context, message: 'party_accounts.data_not_found'.tr);
-    }
-  }
-
-  void applyFilters() {
-    if (allTransactions == null || allTransactions!.isEmpty) {
-      setState(() {
-        listTransaction = [];
-        // totalPages managed by server
-      });
-      return;
-    }
-
-    // Apply filters
-    List<ListTransaction> filteredList = [...allTransactions!];
-
-    // Filter by amount
-    if (searchAmount.isNotEmpty) {
-      filteredList = filteredList
-          .where((transaction) =>
-              transaction.amount != null &&
-              transaction.amount!.contains(searchAmount))
-          .toList();
-    }
-// Filter by reference ID
-    if (searchReference.isNotEmpty) {
-      filteredList = filteredList
-          .where((transaction) =>
-              transaction.referenceId != null &&
-              transaction.referenceId!
-                  .toLowerCase()
-                  .contains(searchReference.toLowerCase()))
-          .toList();
-    }
-    // Filter by customer name
-    if (searchCustomer.isNotEmpty) {
-      filteredList = filteredList
-          .where((transaction) =>
-              transaction.customerName != null &&
-              transaction.customerName!
-                  .toLowerCase()
-                  .contains(searchCustomer.toLowerCase()))
-          .toList();
-    }
-
-    // Filter by customer phone - Commented out: no backend API field
-    // if (searchCustomerPhone.isNotEmpty) {
-    //   filteredList = filteredList
-    //       .where((transaction) =>
-    //           transaction.customerPhone != null &&
-    //           transaction.customerPhone!
-    //               .toLowerCase()
-    //               .contains(searchCustomerPhone.toLowerCase()))
-    //       .toList();
-    // }
-
-    // Filter by type
-    if (searchType.isNotEmpty && searchType != 'All') {
-      filteredList = filteredList
-          .where((transaction) =>
-              transaction.type != null &&
-              transaction.type!.toLowerCase() == searchType.toLowerCase())
-          .toList();
-    }
-
-    // Filter by date
-    if (selectedDate != null) {
-      filteredList = filteredList.where((transaction) {
-        if (transaction.date == null) return false;
-
-        try {
-          // Parse the transaction date - adjust this based on your date format
-          DateTime transactionDate =
-              DateFormat('yyyy-MM-dd').parse(transaction.date!);
-          return transactionDate.year == selectedDate!.year &&
-              transactionDate.month == selectedDate!.month &&
-              transactionDate.day == selectedDate!.day;
-        } catch (e) {
-          return false;
+        _rows = rows;
+        _page = current;
+        _pages = last;
+        _loaded = f;
+        _suggestions = cache ?? rows;
+        if (force) {
+          _cache = null;
+          _cacheKey = null;
         }
-      }).toList();
+        if (cache != null) {
+          _cache = cache;
+          _cacheKey = _server(f);
+        }
+      });
+    } catch (e) {
+      if (mounted && generation == _generation) {
+        setState(() => _error = 'party_accounts.load_error'.tr);
+      }
+    } finally {
+      if (mounted && generation == _generation) {
+        setState(() => _loading = false);
+      }
     }
-
-    // Server already paginates. Just set the filtered list for current page.
-    listTransaction = filteredList;
-
-    setState(() {});
   }
 
-  void resetSearch() {
-    // Clear the text controllers
-    amountRefController.clear();
-    customerSearchController.clear();
-    // customerPhoneController.clear(); // Commented out - no backend API field
-    referenceSearchController.clear();
+  Future<void> _refresh() async {
+    _cancelPending();
+    await _fetch(force: true);
+  }
 
-    // Reset the search variables
+  void _reset() {
+    _cancelPending();
+    _amount.clear();
+    _name.clear();
+    _reference.clear();
     setState(() {
-      searchAmount = '';
-      searchCustomer = '';
-      selectedCustomerId = null;
-      // searchCustomerPhone = ''; // Commented out - no backend API field
-      searchReference = '';
-      searchType = '';
-      selectedDate = null;
-      currentPage = 1;
-      _calendarKey++;
+      _type = 'All';
+      _customerId = null;
+      _date = null;
+      _cache = null;
+      _cacheKey = null;
     });
-
-    // Reload from server
-    _fetchServer(page: 1);
+    _fetch();
   }
 
-  Future<void> refreshData() async {
-    resetSearch();
-    loadInitData();
+  Future<File> _export() async {
+    _cancelPending();
+    final f = _filters;
+    if (_loading || _error != null) {
+      throw StateError('Customer ledger is unavailable.');
+    }
+    final provider = context.read<InvoiceProvider>();
+    final token = context.read<AuthModel>().token ?? '';
+    final master = context.read<MasterDataProvider>();
+    // Materialize payment labels before handing rows to the workbook encoder.
+    final paymentLabels = <String, String>{};
+    String payment(ListTransaction r) => paymentLabels.putIfAbsent(
+        r.paymentMethod ?? '',
+        () =>
+            master.getPaymentMethodValue(
+                int.tryParse(r.paymentMethod ?? '') ?? -1) ??
+            r.paymentMethod ??
+            '');
+    try {
+      if (_loaded != f) {
+        await _fetch(filters: f);
+      }
+      if (!mounted || _error != null || _loaded != f) {
+        throw StateError('Customer ledger filters changed.');
+      }
+      final all = _cacheKey == _server(f) && _cache != null
+          ? _cache!
+          : await fetchCustomerLedgerSnapshot(
+              (p) => provider.listCustomerTransactions(
+                  accessToken: token,
+                  customerId: f.customerId,
+                  dateFrom: f.date,
+                  dateTo: f.date,
+                  type: f.type == 'All' ? null : f.type.toLowerCase(),
+                  page: p,
+                  perPage: 1000,
+                  updateState: false), onProgress: (p, last) {
+              if (mounted) {
+                _progress.value = 'party_accounts.export_fetching'
+                    .trParams({'page': '$p', 'total': '$last'});
+              }
+            });
+      if (!mounted) throw StateError('Customer ledger screen closed.');
+      final rows = _match(all, f);
+      for (final row in rows) {
+        payment(row);
+      }
+      _progress.value = 'supplier_transactions.export_creating'.tr;
+      return await ListExcelExportService.export<ListTransaction>(
+          items: rows,
+          fileNamePrefix: 'customer-transactions',
+          sheetName: 'Customer Transactions',
+          columns: [
+            ListExportColumn(
+                label: 'party_accounts.col_no'.tr, value: (_, i) => i + 1),
+            ListExportColumn(
+                label: 'party_accounts.transaction_id'.tr,
+                value: (r, _) => r.id?.toString()),
+            ListExportColumn(
+                label: 'party_accounts.customer_name'.tr,
+                value: (r, _) => r.customerName),
+            ListExportColumn(
+                label: 'party_accounts.date'.tr, value: (r, _) => r.date),
+            ListExportColumn(
+                label: 'party_accounts.amount'.tr,
+                value: (r, _) => ListExcelExportService.numericValue(r.amount)),
+            ListExportColumn(
+                label: 'party_accounts.currency'.tr,
+                value: (r, _) => r.currency),
+            ListExportColumn(
+                label: 'party_accounts.reference_id'.tr,
+                value: (r, _) => r.referenceId),
+            ListExportColumn(
+                label: 'party_accounts.type'.tr,
+                value: (r, _) => _typeLabel(r.type)),
+            ListExportColumn(
+                label: 'party_accounts.status'.tr,
+                value: (r, _) => _statusLabel(r.status)),
+            ListExportColumn(
+                label: 'party_accounts.transaction_type'.tr,
+                value: (r, _) =>
+                    UiCodeLabels.documentKind(r.transactionType ?? '')),
+            ListExportColumn(
+                label: 'party_accounts.payment_method'.tr,
+                value: (r, _) => paymentLabels[r.paymentMethod ?? '']),
+            ListExportColumn(
+                label: 'party_accounts.reference'.tr,
+                value: (r, _) => r.reference),
+            ListExportColumn(
+                label: 'party_accounts.comment'.tr,
+                value: (r, _) => r.transactionComment),
+            ListExportColumn(
+                label: 'party_accounts.created_at'.tr,
+                value: (r, _) => r.createdAt?.toIso8601String()),
+          ]);
+    } finally {
+      if (mounted) _progress.value = null;
+    }
   }
+
+  String _typeLabel(String? raw) => switch (raw?.toLowerCase()) {
+        'credit' => 'transaction_status_labels.credit'.tr,
+        'debit' => 'transaction_status_labels.debit'.tr,
+        _ => raw ?? '—'
+      };
+  String _statusLabel(String? raw) => switch (raw?.toUpperCase()) {
+        'SUCC' || 'SUCCESS' => 'transaction_status_labels.succ'.tr,
+        'INIT' || 'INITIATED' => 'transaction_status_labels.init'.tr,
+        'FAIL' || 'FAILED' => 'transaction_status_labels.fail'.tr,
+        _ => raw ?? '—'
+      };
+  Widget _badge(String label, Color color) => Align(
+      alignment: Alignment.centerLeft,
+      widthFactor: 1,
+      child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+              color: color.withValues(alpha: .09),
+              borderRadius: BorderRadius.circular(8)),
+          child: Text(label,
+              style: TextStyle(
+                  color: color, fontSize: 13, fontWeight: FontWeight.w600))));
+  Widget _typeBadge(ListTransaction r) => _badge(
+      _typeLabel(r.type),
+      r.type?.toLowerCase() == 'credit'
+          ? AppColors.green
+          : r.type?.toLowerCase() == 'debit'
+              ? AppColors.red
+              : AppColors.muted);
+  Widget _statusBadge(ListTransaction r) => _badge(
+      _statusLabel(r.status),
+      switch (r.status?.toUpperCase()) {
+        'SUCC' || 'SUCCESS' => AppColors.green,
+        'FAIL' || 'FAILED' => AppColors.red,
+        'INIT' || 'INITIATED' => Colors.orange.shade800,
+        _ => AppColors.muted
+      });
+  String _money(ListTransaction r) =>
+      '${r.currency ?? ''} ${double.parse(r.amount!).toStringAsFixed(3)}'
+          .trim();
+  Widget _ref(ListTransaction r) => Row(children: [
+        Expanded(child: TableCells.text(r.referenceId ?? '—')),
+        if (r.referenceId?.isNotEmpty == true)
+          IconButton(
+              tooltip: 'party_accounts.ref_copied'.tr,
+              icon: const Icon(Icons.copy_outlined, size: 16),
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: r.referenceId!));
+                if (mounted) {
+                  showScaffold(
+                      context: context,
+                      message: 'party_accounts.ref_copied'.tr);
+                }
+              })
+      ]);
+
+  Widget _customerField() => RawAutocomplete<ListTransaction>(
+      textEditingController: _name,
+      focusNode: _nameFocus,
+      displayStringForOption: (r) => r.customerName ?? '',
+      optionsBuilder: (value) {
+        final ids = <int?>{};
+        return _suggestions.where((r) =>
+            (r.customerName?.isNotEmpty ?? false) &&
+            (r.customerName!)
+                .toLowerCase()
+                .contains(value.text.toLowerCase()) &&
+            ids.add(r.customerId));
+      },
+      onSelected: (r) {
+        _cancelPending();
+        _customerId = r.customerId?.toString();
+        _fetch();
+      },
+      fieldViewBuilder: (_, controller, focus, submit) => TextField(
+          controller: controller,
+          focusNode: focus,
+          decoration: listFilterDecoration(
+              'party_accounts.customer_name'.tr, Icons.person_outline),
+          onChanged: (_) {
+            _customerId = null;
+            _nameTimer?.cancel();
+            _nameTimer = Timer(const Duration(milliseconds: 300), () {
+              if (mounted) _fetch();
+            });
+          },
+          onSubmitted: (_) {
+            _cancelPending();
+            _fetch();
+          }),
+      optionsViewBuilder: (_, select, options) => Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+              elevation: 4,
+              child: SizedBox(
+                  width: 280,
+                  height: 200,
+                  child: ListView(children: [
+                    for (final r in options)
+                      ListTile(
+                          title: Text(r.customerName ?? ''),
+                          onTap: () => select(r))
+                  ])))));
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+        context: context,
+        initialDate: _date ?? DateTime.now(),
+        firstDate: DateTime(1900),
+        lastDate: DateTime(2100));
+    if (!mounted || picked == null) return;
+    _cancelPending();
+    setState(() => _date = picked);
+    _fetch();
+  }
+
+  Widget _filtersPanel(bool mobile) => FilterPanel(
+          key: ValueKey(
+              'customer-transactions-${mobile ? 'mobile' : 'desktop'}-filters'),
+          title: 'party_accounts.find'.tr,
+          hint: 'party_accounts.filter_hint'.tr,
+          onReset: _reset,
+          fields: [
+            TextFilterField(
+                key: _amountKey,
+                controller: _amount,
+                label: 'party_accounts.amount'.tr,
+                icon: Icons.payments_outlined,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                onSearch: () => _fetch()),
+            _customerField(),
+            DropdownButtonFormField<String>(
+                key: ValueKey('customer-type:$_type'),
+                initialValue: _type,
+                isExpanded: true,
+                decoration: listFilterDecoration(
+                    'party_accounts.type'.tr, Icons.swap_vert),
+                items: [
+                  for (final t in ['All', 'Credit', 'Debit'])
+                    DropdownMenuItem(
+                        value: t,
+                        child:
+                            Text(t == 'All' ? 'common.all'.tr : _typeLabel(t)))
+                ],
+                onChanged: (v) {
+                  _cancelPending();
+                  setState(() => _type = v ?? 'All');
+                  _fetch();
+                }),
+            TextFilterField(
+                key: _referenceKey,
+                controller: _reference,
+                label: 'party_accounts.reference_id'.tr,
+                icon: Icons.tag,
+                onSearch: () => _fetch()),
+            InkWell(
+                key: const ValueKey('customer-transactions-date'),
+                onTap: _pickDate,
+                child: InputDecorator(
+                    decoration: listFilterDecoration('party_accounts.date'.tr,
+                        Icons.calendar_today_outlined),
+                    child: Text(_date == null
+                        ? 'party_accounts.select_date'.tr
+                        : DateFormat('MMM dd, yyyy').format(_date!)))),
+          ]);
+  Widget _card(ListTransaction r, int index) => AppSurface(
+      padding: const EdgeInsets.all(16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        TableCells.identity(r.customerName ?? 'party_accounts.no_name'.tr),
+        const SizedBox(height: 12),
+        Text('${'party_accounts.col_no'.tr}: $index'),
+        Text('${r.date} · ${_money(r)}'),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, children: [_typeBadge(r), _statusBadge(r)]),
+        _ref(r),
+        TableCells.viewButton(() => _showTransactionDetails(r))
+      ]));
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+      builder: (context, size) => ListPageScaffold<ListTransaction>(
+            header: ListPageHeader(
+                icon: Icons.swap_horiz,
+                title: 'party_accounts.title'.tr,
+                subtitle: 'party_accounts.subtitle'.tr,
+                onRefresh: _refresh,
+                extraActions: [
+                  FilterToggleButton(
+                      key:
+                          const ValueKey('customer-transactions-filter-toggle'),
+                      showFilters: _showFilters,
+                      showTooltip: 'party_accounts.filters'.tr,
+                      hideTooltip: 'party_accounts.hide_filters'.tr,
+                      activeFiltersListenable:
+                          Listenable.merge([_amount, _name, _reference]),
+                      activeFiltersBuilder: () =>
+                          _amount.text.trim().isNotEmpty ||
+                          _name.text.trim().isNotEmpty ||
+                          _reference.text.trim().isNotEmpty ||
+                          _date != null ||
+                          _type != 'All',
+                      hasActiveFilters: _filters !=
+                          (
+                            amount: '',
+                            name: '',
+                            reference: '',
+                            type: 'All',
+                            customerId: null,
+                            date: null
+                          ),
+                      onPressed: () =>
+                          setState(() => _showFilters = !_showFilters)),
+                  ExportShareButton(
+                      createFile: _export,
+                      label: 'supplier_transactions.export'.tr,
+                      loadingLabel: 'supplier_transactions.export_creating'.tr,
+                      tooltip: 'party_accounts.export_tooltip'.tr,
+                      errorMessage: 'party_accounts.export_error'.tr,
+                      mimeType:
+                          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                      compact: size.maxWidth < 560,
+                      enabled: !_loading && _error == null && _loaded != null,
+                      progressLabel: _progress),
+                ]),
+            filters: _filtersPanel(size.maxWidth < 700),
+            showFilters: _showFilters,
+            toolbar: _error == null
+                ? null
+                : Row(children: [
+                    Expanded(
+                        child: Text(_error!,
+                            style: const TextStyle(color: AppColors.red))),
+                    TextButton(
+                        onPressed: _refresh,
+                        child: Text('party_accounts.retry'.tr))
+                  ]),
+            tableScrollController: _table,
+            tableMinWidth: 1080,
+            isLoading: _loading,
+            items: _rows,
+            columns: [
+              TableColumnDef(
+                  label: 'party_accounts.col_no'.tr,
+                  flex: .5,
+                  cellBuilder: (_, i) => TableCells.text('$i')),
+              TableColumnDef(
+                  label: 'party_accounts.col_name'.tr,
+                  flex: 2,
+                  cellBuilder: (r, _) => TableCells.identity(
+                      r.customerName ?? 'party_accounts.no_name'.tr)),
+              TableColumnDef(
+                  label: 'party_accounts.date'.tr,
+                  cellBuilder: (r, _) => TableCells.text(r.date ?? '')),
+              TableColumnDef(
+                  label: 'party_accounts.amount'.tr,
+                  flex: 1.2,
+                  cellBuilder: (r, _) => TableCells.text(_money(r))),
+              TableColumnDef(
+                  label: 'party_accounts.reference_id'.tr,
+                  flex: 1.8,
+                  cellBuilder: (r, _) => _ref(r)),
+              TableColumnDef(
+                  label: 'party_accounts.type'.tr,
+                  cellBuilder: (r, _) => _typeBadge(r)),
+              TableColumnDef(
+                  label: 'party_accounts.status'.tr,
+                  cellBuilder: (r, _) => _statusBadge(r)),
+              TableColumnDef(
+                  label: 'party_accounts.col_action'.tr,
+                  cellBuilder: (r, _) =>
+                      TableCells.viewButton(() => _showTransactionDetails(r))),
+            ],
+            cardBuilder: _card,
+            emptyState:
+                Center(child: Text('party_accounts.no_transactions'.tr)),
+            onRefresh: _refresh,
+            currentPage: _page,
+            totalPages: _pages,
+            itemsPerPage: 20,
+            countLabel: 'party_accounts.page_count'
+                .trParams({'count': '${_rows.length}'}),
+            onPageChanged: (p) {
+              if (!_loading) {
+                _cancelPending();
+                _fetch(page: p);
+              }
+            },
+          ));
 
   void _showTransactionDetails(ListTransaction transaction) {
     final masterData = context.read<MasterDataProvider>();
@@ -292,21 +604,38 @@ class _CustomerTransactionListScreenState
         title: 'party_accounts.dialog_title'.tr,
         gridColumns: [
           [
-            CommonDetailsDialog.buildKeyValueRow('party_accounts.customer_name'.tr, transaction.customerName ?? 'party_accounts.no_name'.tr),
-            CommonDetailsDialog.buildKeyValueRow('party_accounts.date'.tr, transaction.date ?? 'party_accounts.na'.tr),
-            CommonDetailsDialog.buildKeyValueRow('party_accounts.type'.tr, UiCodeLabels.documentKind(transaction.type ?? 'party_accounts.na'.tr)),
-            CommonDetailsDialog.buildKeyValueRow('party_accounts.transaction_type'.tr, UiCodeLabels.documentKind(transaction.transactionType ?? 'party_accounts.na'.tr)),
+            CommonDetailsDialog.buildKeyValueRow(
+                'party_accounts.customer_name'.tr,
+                transaction.customerName ?? 'party_accounts.no_name'.tr),
+            CommonDetailsDialog.buildKeyValueRow('party_accounts.date'.tr,
+                transaction.date ?? 'party_accounts.na'.tr),
+            CommonDetailsDialog.buildKeyValueRow(
+                'party_accounts.type'.tr,
+                UiCodeLabels.documentKind(
+                    transaction.type ?? 'party_accounts.na'.tr)),
+            CommonDetailsDialog.buildKeyValueRow(
+                'party_accounts.transaction_type'.tr,
+                UiCodeLabels.documentKind(
+                    transaction.transactionType ?? 'party_accounts.na'.tr)),
             CommonDetailsDialog.buildKeyValueRow(
               'party_accounts.payment_method'.tr,
               paymentLabel,
             ),
           ],
           [
-            CommonDetailsDialog.buildKeyValueRow('party_accounts.amount'.tr, '${transaction.currency ?? ''} ${transaction.amount ?? ''}'),
-            CommonDetailsDialog.buildKeyValueRow('party_accounts.reference_id'.tr, transaction.referenceId ?? 'party_accounts.na'.tr, copyable: true),
-            CommonDetailsDialog.buildKeyValueRow('party_accounts.reference'.tr, transaction.reference ?? 'party_accounts.na'.tr, copyable: true),
-            CommonDetailsDialog.buildKeyValueRow('party_accounts.status'.tr, transaction.status ?? 'party_accounts.na'.tr),
-            CommonDetailsDialog.buildKeyValueRow('party_accounts.comment'.tr, transaction.transactionComment ?? 'party_accounts.na'.tr),
+            CommonDetailsDialog.buildKeyValueRow('party_accounts.amount'.tr,
+                '${transaction.currency ?? ''} ${transaction.amount ?? ''}'),
+            CommonDetailsDialog.buildKeyValueRow(
+                'party_accounts.reference_id'.tr,
+                transaction.referenceId ?? 'party_accounts.na'.tr,
+                copyable: true),
+            CommonDetailsDialog.buildKeyValueRow('party_accounts.reference'.tr,
+                transaction.reference ?? 'party_accounts.na'.tr,
+                copyable: true),
+            CommonDetailsDialog.buildKeyValueRow('party_accounts.status'.tr,
+                transaction.status ?? 'party_accounts.na'.tr),
+            CommonDetailsDialog.buildKeyValueRow('party_accounts.comment'.tr,
+                transaction.transactionComment ?? 'party_accounts.na'.tr),
             CommonDetailsDialog.buildKeyValueRow(
               'party_accounts.created_at'.tr,
               transaction.createdAt != null
@@ -315,1192 +644,6 @@ class _CustomerTransactionListScreenState
             ),
           ],
         ],
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 150,
-            child: Text(
-              '$label: ',
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s14,
-                0.20,
-                ColorManager.textColor,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s14,
-                0.20,
-                ColorManager.textColor,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTableHeader(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: buildCustomStyle(
-          FontWeightManager.medium,
-          FontSize.s12,
-          0.18,
-          ColorManager.kPrimaryColor,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTableCell(String text) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: buildCustomStyle(
-          FontWeightManager.medium,
-          FontSize.s9,
-          0.13,
-          Colors.black,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusChip(String status) {
-    Color backgroundColor;
-    Color textColor;
-
-    switch (status.toUpperCase()) {
-      case 'SUCC':
-      case 'SUCCESS':
-        backgroundColor = Colors.green.withOpacity(0.1);
-        textColor = Colors.green;
-        break;
-      case 'INIT':
-      case 'INITIATED':
-        backgroundColor = Colors.orange.withOpacity(0.1);
-        textColor = Colors.orange;
-        break;
-      case 'FAIL':
-      case 'FAILED':
-        backgroundColor = Colors.red.withOpacity(0.1);
-        textColor = Colors.red;
-        break;
-      default:
-        backgroundColor = Colors.grey.withOpacity(0.1);
-        textColor = Colors.grey;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        _statusLabel(status),
-        style: TextStyle(
-          color: textColor,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTypeCell(String type) {
-    final isCredit = type.toLowerCase() == 'credit';
-    final color = isCredit ? Colors.green : Colors.red;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        _typeLabel(type),
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-        ),
-      ),
-    );
-  }
-
-  String _typeLabel(String type) {
-    switch (type.toLowerCase()) {
-      case 'credit':
-        return 'transaction_status_labels.credit'.tr;
-      case 'debit':
-        return 'transaction_status_labels.debit'.tr;
-      case 'all':
-        return 'common.all'.tr;
-      default:
-        return type;
-    }
-  }
-
-  String _statusLabel(String status) {
-    switch (status.toUpperCase()) {
-      case 'SUCC':
-      case 'SUCCESS':
-        return 'transaction_status_labels.succ'.tr;
-      case 'INIT':
-      case 'INITIATED':
-        return 'transaction_status_labels.init'.tr;
-      case 'FAIL':
-      case 'FAILED':
-        return 'transaction_status_labels.fail'.tr;
-      default:
-        return status;
-    }
-  }
-
-  InputDecoration _mobileInputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: buildCustomStyle(
-          FontWeightManager.medium, FontSize.s12, 0.18, Colors.grey),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(7),
-          borderSide: BorderSide(color: Colors.grey.shade300)),
-      enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(7),
-          borderSide: BorderSide(color: Colors.grey.shade300)),
-      focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(7),
-          borderSide:
-              const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2)),
-      isDense: true,
-    );
-  }
-
-  Widget _mobileDropdown({
-    required String value,
-    required String hint,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return DropdownButtonFormField<String>(
-      value: value,
-      items: items
-          .map((s) => DropdownMenuItem(
-              value: s,
-              child: Text(_typeLabel(s), style: const TextStyle(fontSize: 12))))
-          .toList(),
-      onChanged: onChanged,
-      decoration: _mobileInputDecoration(hint),
-      isExpanded: true,
-    );
-  }
-
-  Widget _buildMobileFilters(Size size) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 4,
-              offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Material(
-        type: MaterialType.transparency,
-        child: ExpansionTile(
-          leading: const Icon(Icons.filter_list, size: 18),
-          title: Text('party_accounts.filters'.tr,
-              style: buildCustomStyle(FontWeightManager.medium,
-                  FontSize.s12, 0.18, ColorManager.textColor)),
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              child: Column(
-                children: [
-                  TextFormField(
-                    controller: amountRefController,
-                    onChanged: (value) {
-                      setState(() {
-                        searchAmount = value;
-                        currentPage = 1;
-                      });
-                      applyFilters();
-                    },
-                    decoration: _mobileInputDecoration('party_accounts.amount'.tr),
-                  ),
-                  const SizedBox(height: 8),
-                  CustomerAutocomplete(
-                    size: size,
-                    customerList: getCustomerSuggestions(),
-                    controller: customerSearchController,
-                    onSelected: (String selectedCustomer) {
-                      setState(() {
-                        searchCustomer = selectedCustomer;
-                        final match = allTransactions?.firstWhere(
-                          (t) => (t.customerName ?? '').toLowerCase() ==
-                              selectedCustomer.toLowerCase(),
-                          orElse: () => ListTransaction(),
-                        );
-                        if (match != null && match.customerId != null) {
-                          selectedCustomerId = match.customerId.toString();
-                        }
-                        currentPage = 1;
-                      });
-                      _fetchServer(page: 1);
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  _mobileDropdown(
-                    value: searchType.isEmpty ? 'All' : searchType,
-                    hint: 'party_accounts.hint_select_type'.tr,
-                    items: const ['All', 'Credit', 'Debit'],
-                    onChanged: (String? value) {
-                      setState(() {
-                        searchType = value == 'All' ? '' : (value ?? '');
-                        currentPage = 1;
-                      });
-                      _fetchServer(page: 1);
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: referenceSearchController,
-                    onChanged: (value) {
-                      setState(() {
-                        searchReference = value;
-                        currentPage = 1;
-                      });
-                      applyFilters();
-                    },
-                    decoration: _mobileInputDecoration('party_accounts.reference_id'.tr),
-                  ),
-                  const SizedBox(height: 8),
-                  BuildBoxShadowContainer(
-                    circleRadius: 7,
-                    height: 45,
-                    width: double.infinity,
-                    child: Center(
-                      child: CalendarPickerTableCell(
-                        key: ValueKey(_calendarKey),
-                        initialDate: selectedDate,
-                        onDateSelected: (DateTime date) {
-                          setState(() {
-                            selectedDate = date;
-                            currentPage = 1;
-                          });
-                          _fetchServer(page: 1);
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: resetSearch,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: ColorManager.kPrimaryColor,
-                        side: const BorderSide(color: ColorManager.kPrimaryColor),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6)),
-                      ),
-                      child: Text('party_accounts.btn_reset_filters'.tr),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Container(
-      height: 300,
-      width: double.infinity,
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.receipt_long,
-            size: 60,
-            color: ColorManager.kPrimaryColor.withOpacity(0.7),
-          ),
-          const SizedBox(height: 15),
-          Text(
-            'party_accounts.no_transactions'.tr,
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s18,
-              0.27,
-              ColorManager.textColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'party_accounts.no_transactions_hint'.tr,
-            style: buildCustomStyle(
-              FontWeightManager.regular,
-              FontSize.s14,
-              0.20,
-              Colors.grey,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMobileList() {
-    return Column(
-      children: [
-        Expanded(
-          child: ListView.separated(
-            itemCount: listTransaction!.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              final tx = listTransaction![index];
-              return InkWell(
-                onTap: () => _showTransactionDetails(tx),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2)),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                SelectableText(
-                                  tx.customerName ?? 'party_accounts.no_name'.tr,
-                                  style: buildCustomStyle(FontWeightManager.semiBold,
-                                      FontSize.s13, 0.19, ColorManager.textColor),
-                                ),
-                                if (tx.referenceId != null && tx.referenceId!.isNotEmpty) ...[
-                                  const SizedBox(height: 2),
-                                  Row(
-                                    children: [
-                                      Flexible(
-                                        child: Text(
-                                          '${'party_accounts.ref_prefix'.tr} ${tx.referenceId}',
-                                          style: buildCustomStyle(FontWeightManager.regular,
-                                              FontSize.s10, 0.15, Colors.grey),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      GestureDetector(
-                                        onTap: () {
-                                          Clipboard.setData(ClipboardData(
-                                              text: tx.referenceId!));
-                                          showScaffold(
-                                            context: context,
-                                            message:
-                                                'party_accounts.ref_copied'.tr,
-                                          );
-                                        },
-                                        child: const Icon(
-                                          Icons.copy,
-                                          size: 14,
-                                          color: Colors.black38,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          _buildStatusChip(tx.status ?? ''),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            '${tx.currency ?? ''} ${tx.amount ?? ''}',
-                            style: buildCustomStyle(FontWeightManager.semiBold,
-                                FontSize.s13, 0.19, ColorManager.kPrimaryColor),
-                          ),
-                          Row(
-                            children: [
-                              Icon(Icons.calendar_today_outlined,
-                                  size: 12, color: Colors.grey.shade400),
-                              const SizedBox(width: 4),
-                              Text(
-                                tx.date ?? 'party_accounts.na'.tr,
-                                style: buildCustomStyle(FontWeightManager.regular,
-                                    FontSize.s11, 0.16, Colors.grey),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 8),
-        PaginationControl(
-          currentPage: currentPage,
-          totalPages: totalPages,
-          onPageChanged: (page) {
-            setState(() {
-              currentPage = page;
-            });
-            _fetchServer(page: page);
-          },
-        ),
-      ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
-    final bool isMobile = size.width < 700;
-
-    if (isMobile) {
-      return SafeArea(
-        child: RefreshIndicator(
-          onRefresh: refreshData,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'party_accounts.title'.tr,
-                        overflow: TextOverflow.ellipsis,
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s18, 0.25, ColorManager.textColor),
-                      ),
-                    ),
-                    _buildFilterToggleButton(),
-                  ],
-                ),
-                if (_showFilters) ...[
-                  const SizedBox(height: 10),
-                  KeyedSubtree(
-                    key: const ValueKey('customer-transactions-mobile-filters'),
-                    child: _buildMobileFilters(size),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                Expanded(
-                  child: initLoading
-                      ? const Center(child: CircularProgressIndicator.adaptive())
-                      : listTransaction == null || listTransaction!.isEmpty
-                          ? _buildEmptyState()
-                          : _buildMobileList(),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    return SafeArea(
-      child: RefreshIndicator(
-        onRefresh: refreshData,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: const [
-              BoxShadow(
-                color: ColorManager.boxShadowColor,
-                blurRadius: 6,
-                offset: Offset(1, 1),
-              ),
-            ],
-            color: Colors.white,
-          ),
-          child: Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'party_accounts.title'.tr,
-                      style: buildCustomStyle(FontWeightManager.semiBold,
-                          FontSize.s20, 0.30, ColorManager.textColor),
-                    ),
-                    _buildFilterToggleButton(),
-                  ],
-                ),
-                if (_showFilters) ...[
-                  const SizedBox(height: 15),
-                  Column(
-                    key: const ValueKey('customer-transactions-desktop-filters'),
-                    children: [
-                    // First row with 4 filters
-                    Row(
-                      children: [
-                        // Amount Search Field
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  'party_accounts.amount'.tr,
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              buildColumnWidgetForTextFields(
-                                height: 45,
-                                width: double.infinity,
-                                onchanged: (value) {
-                                  setState(() {
-                                    searchAmount = value!;
-                                    currentPage = 1;
-                                  });
-                                  applyFilters();
-                                },
-                                controller: amountRefController,
-                                size: size,
-                                hintText: 'party_accounts.amount'.tr,
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(width: 15),
-
-                        // Customer Name Search Field
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  'party_accounts.customer_name'.tr,
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              CustomerAutocomplete(
-                                size: size,
-                                customerList: getCustomerSuggestions(),
-                                controller: customerSearchController,
-                                onSelected: (String selectedCustomer) {
-                                  setState(() {
-                                    searchCustomer = selectedCustomer;
-                                    // try to derive customer_id from current page data
-                                    final match = allTransactions?.firstWhere(
-                                      (t) => (t.customerName ?? '').toLowerCase() ==
-                                          selectedCustomer.toLowerCase(),
-                                      orElse: () => ListTransaction(),
-                                    );
-                                    if (match != null && match.customerId != null) {
-                                      selectedCustomerId = match.customerId.toString();
-                                    }
-                                    currentPage = 1;
-                                  });
-                                  _fetchServer(page: 1);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(width: 15),
-
-                        // Type Filter (Credit/Debit)
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  'party_accounts.type'.tr,
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              BuildBoxShadowContainer(
-                                circleRadius: 7,
-                                height: 45,
-                                width: double.infinity,
-                                color: Colors.white,
-                                child: DropdownButtonFormField<String>(
-                                  value: searchType.isEmpty ? null : searchType,
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.symmetric(
-                                        horizontal: 15, vertical: 12),
-                                    isDense: true,
-                                    filled: true,
-                                    fillColor: Colors.white,
-                                  ),
-                                  dropdownColor: Colors.white,
-                                  hint: Text(
-                                    'party_accounts.hint_select_type'.tr,
-                                    style: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s11,
-                                      0.27,
-                                      ColorManager.textColor.withOpacity(.5),
-                                    ),
-                                  ),
-                                  items: ['All', 'Credit', 'Debit']
-                                      .map((String type) {
-                                    return DropdownMenuItem<String>(
-                                      value: type,
-                                      child: Text(
-                                        _typeLabel(type),
-                                        style: buildCustomStyle(
-                                          FontWeightManager.medium,
-                                          FontSize.s11,
-                                          0.27,
-                                          ColorManager.textColor
-                                              .withOpacity(.5),
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
-                                  onChanged: (String? value) {
-                                    setState(() {
-                                      searchType = value ?? '';
-                                      currentPage = 1;
-                                    });
-                                    _fetchServer(page: 1);
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(width: 15),
-
-                        // Reference ID Search Field
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  'party_accounts.reference_id'.tr,
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              buildColumnWidgetForTextFields(
-                                height: 45,
-                                width: double.infinity,
-                                onchanged: (value) {
-                                  setState(() {
-                                    searchReference = value!;
-                                    currentPage = 1;
-                                  });
-                                  applyFilters();
-                                },
-                                controller: referenceSearchController,
-                                size: size,
-                                hintText: 'party_accounts.reference_id'.tr,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 15),
-
-                    // Second row with Date filter and Reset button
-                    Row(
-                      children: [
-                        // Date Picker
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  'party_accounts.date'.tr,
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s14,
-                                    0.27,
-                                    Colors.black.withOpacity(0.6),
-                                  ),
-                                ),
-                              ),
-                              BuildBoxShadowContainer(
-                                circleRadius: 7,
-                                height: 45,
-                                width: double.infinity,
-                                child: Center(
-                                  child: CalendarPickerTableCell(
-                                    key: ValueKey(_calendarKey),
-                                    initialDate: selectedDate,
-                                    onDateSelected: (DateTime date) {
-                                      setState(() {
-                                        selectedDate = date;
-                                        currentPage = 1;
-                                      });
-                                      _fetchServer(page: 1);
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(width: 15),
-
-                        // Empty space to push reset button to the end
-                        Expanded(
-                          flex: 2,
-                          child: Container(),
-                        ),
-
-                        const SizedBox(width: 15),
-
-                        // Reset Button
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 30),
-                            child: CustomRoundButton(
-                              title: 'party_accounts.btn_reset'.tr,
-                              boxColor: Colors.white,
-                              textColor: ColorManager.kPrimaryColor,
-                              fct: resetSearch,
-                              height: 45,
-                              width: double.infinity,
-                              fontSize: FontSize.s12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                ],
-                Expanded(
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: initLoading
-                            ? const Center(
-                                child: CircularProgressIndicator.adaptive())
-                            : BuildBoxShadowContainer(
-                                margin: const EdgeInsets.only(top: 5),
-                                circleRadius: 7,
-                                offsetValue: const Offset(2, 2),
-                                blurRadius: 8.0,
-                                color: Colors.white,
-                                child: Column(
-                                  children: [
-                                    // Fixed table header
-                                    Container(
-                                      decoration: const BoxDecoration(
-                                        color: ColorManager.tableBGColor,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black12,
-                                            offset: Offset(0, 2),
-                                            blurRadius: 2.0,
-                                          ),
-                                        ],
-                                      ),
-                                      child: Table(
-                                        columnWidths: const {
-                                          0: FlexColumnWidth(0.5), // No
-                                          1: FlexColumnWidth(2.0), // Name
-                                          2: FlexColumnWidth(1.2), // Date
-                                          3: FlexColumnWidth(1.5), // Amount
-                                          4: FlexColumnWidth(
-                                              1.5), // Reference ID
-                                          5: FlexColumnWidth(1.0), // Type
-                                          6: FlexColumnWidth(1.0), // Status
-                                          7: FlexColumnWidth(1.0), // Action
-                                        },
-                                        border: null,
-                                        defaultVerticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        children: [
-                                          TableRow(
-                                            children: [
-                                              _buildTableHeader('party_accounts.col_no'.tr),
-                                              _buildTableHeader('party_accounts.col_name'.tr),
-                                              _buildTableHeader('party_accounts.date'.tr),
-                                              _buildTableHeader('party_accounts.amount'.tr),
-                                              _buildTableHeader('party_accounts.reference_id'.tr),
-                                              _buildTableHeader('party_accounts.type'.tr),
-                                              _buildTableHeader('party_accounts.status'.tr),
-                                              _buildTableHeader('party_accounts.col_action'.tr),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    // Scrollable table body
-                                    Expanded(
-                                      child: MouseRegion(
-                                        cursor: SystemMouseCursors.grab,
-                                        child: ScrollConfiguration(
-                                          behavior:
-                                              ScrollConfiguration.of(context)
-                                                  .copyWith(
-                                            dragDevices: {
-                                              PointerDeviceKind.mouse,
-                                              PointerDeviceKind.touch,
-                                              PointerDeviceKind.stylus,
-                                              PointerDeviceKind.trackpad,
-                                            },
-                                          ),
-                                          child: SingleChildScrollView(
-                                            physics:
-                                                const BouncingScrollPhysics(),
-                                            scrollDirection: Axis.vertical,
-                                            child: listTransaction == null ||
-                                                    listTransaction!.isEmpty
-                                                ? Container(
-                                                    height: 300,
-                                                    width: double.infinity,
-                                                    alignment: Alignment.center,
-                                                    child: Column(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .center,
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .center,
-                                                      children: [
-                                                        Icon(
-                                                          Icons.receipt_long,
-                                                          size: 60,
-                                                          color: ColorManager
-                                                              .kPrimaryColor
-                                                              .withOpacity(0.7),
-                                                        ),
-                                                        const SizedBox(
-                                                            height: 15),
-                                                        Text(
-                                                          'party_accounts.no_transactions'.tr,
-                                                          style:
-                                                              buildCustomStyle(
-                                                            FontWeightManager
-                                                                .medium,
-                                                            FontSize.s18,
-                                                            0.27,
-                                                            ColorManager
-                                                                .textColor,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(
-                                                            height: 8),
-                                                        Text(
-                                                          'party_accounts.no_transactions_hint'.tr,
-                                                          style:
-                                                              buildCustomStyle(
-                                                            FontWeightManager
-                                                                .regular,
-                                                            FontSize.s14,
-                                                            0.20,
-                                                            Colors.grey,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  )
-                                                : Table(
-                                                    columnWidths: const {
-                                                      0: FlexColumnWidth(
-                                                          0.5), // No
-                                                      1: FlexColumnWidth(
-                                                          2.0), // Name
-                                                      2: FlexColumnWidth(
-                                                          1.2), // Date
-                                                      3: FlexColumnWidth(
-                                                          1.5), // Amount
-                                                      4: FlexColumnWidth(
-                                                          1.5), // Reference ID
-                                                      5: FlexColumnWidth(
-                                                          1.0), // Type
-                                                      6: FlexColumnWidth(
-                                                          1.0), // Status
-                                                      7: FlexColumnWidth(
-                                                          1.0), // Action
-                                                    },
-                                                    border: null,
-                                                    defaultVerticalAlignment:
-                                                        TableCellVerticalAlignment
-                                                            .middle,
-                                                    children: [
-                                                      // Table Rows
-                                                      ...listTransaction!
-                                                          .asMap()
-                                                          .entries
-                                                          .map((entry) {
-                                                        final int index =
-                                                            entry.key;
-                                                        final transaction =
-                                                            entry.value;
-                                                        return TableRow(
-                                                          decoration:
-                                                              BoxDecoration(
-                                                            color: index % 2 ==
-                                                                    0
-                                                                ? Colors.white
-                                                                : Colors.grey
-                                                                    .withOpacity(
-                                                                        0.1),
-                                                          ),
-                                                          children: [
-                                                            _buildTableCell(
-                                                                '${index + 1 + (currentPage - 1) * itemsPerPage}'),
-                                                             TableCell(
-                                                               verticalAlignment: TableCellVerticalAlignment.middle,
-                                                               child: Padding(
-                                                                 padding: const EdgeInsets.all(8.0),
-                                                                 child: Center(
-                                                                   child: SelectableText(
-                                                                     "${transaction.customerName ?? 'party_accounts.no_name'.tr}",
-                                                                     textAlign: TextAlign.center,
-                                                                     style: buildCustomStyle(
-                                                                       FontWeightManager.medium,
-                                                                       FontSize.s9,
-                                                                       0.13,
-                                                                       Colors.black,
-                                                                     ),
-                                                                   ),
-                                                                 ),
-                                                               ),
-                                                             ),
-                                                            _buildTableCell(
-                                                                "${transaction.date ?? 'N/A'}"),
-                                                            _buildTableCell(
-                                                                "${transaction.currency} ${transaction.amount}"),
-                                                            TableCell(
-                                                              verticalAlignment:
-                                                                  TableCellVerticalAlignment
-                                                                      .middle,
-                                                              child: Padding(
-                                                                padding:
-                                                                    const EdgeInsets
-                                                                        .all(
-                                                                        8.0),
-                                                                child: Row(
-                                                                  mainAxisAlignment:
-                                                                      MainAxisAlignment
-                                                                          .center,
-                                                                  children: [
-                                                                    Text(
-                                                                      transaction.referenceId ?? 'party_accounts.na'.tr,
-                                                                      textAlign:
-                                                                          TextAlign
-                                                                              .center,
-                                                                      style:
-                                                                          buildCustomStyle(
-                                                                        FontWeightManager
-                                                                            .medium,
-                                                                        FontSize
-                                                                            .s9,
-                                                                        0.13,
-                                                                        Colors
-                                                                            .black,
-                                                                      ),
-                                                                    ),
-                                                                    if (transaction.referenceId != null && transaction.referenceId!.isNotEmpty) ...[
-                                                                      const SizedBox(
-                                                                          width:
-                                                                              6),
-                                                                      GestureDetector(
-                                                                        onTap:
-                                                                            () {
-                                                                          Clipboard.setData(
-                                                                              ClipboardData(
-                                                                                  text: transaction.referenceId!));
-                                                                          showScaffold(
-                                                                            context:
-                                                                                context,
-                                                                            message:
-                                                                                'party_accounts.ref_copied'.tr,
-                                                                          );
-                                                                        },
-                                                                        child:
-                                                                            const Icon(
-                                                                          Icons
-                                                                              .copy,
-                                                                          size:
-                                                                              14,
-                                                                          color:
-                                                                              Colors.black38,
-                                                                        ),
-                                                                      ),
-                                                                    ],
-                                                                  ],
-                                                                ),
-                                                              ),
-                                                            ),
-                                                            Center(
-                                                              child: _buildTypeCell(
-                                                                  "${transaction.type}"),
-                                                            ),
-                                                            Center(
-                                                              child: _buildStatusChip(
-                                                                  "${transaction.status}"),
-                                                            ),
-                                                            Center(
-                                                              child: Padding(
-                                                                padding:
-                                                                    const EdgeInsets
-                                                                        .all(
-                                                                        8.0),
-                                                                child:
-                                                                    BuildBoxShadowContainer(
-                                                                  margin:
-                                                                      const EdgeInsets
-                                                                          .only(
-                                                                          left:
-                                                                              5,
-                                                                          right:
-                                                                              5),
-                                                                  circleRadius:
-                                                                      5,
-                                                                  child:
-                                                                      IconButton(
-                                                                    icon: Icon(
-                                                                      Icons
-                                                                          .visibility,
-                                                                      size: 18,
-                                                                      color: ColorManager
-                                                                          .kPrimaryColor
-                                                                          .withOpacity(
-                                                                              0.9),
-                                                                    ),
-                                                                    onPressed:
-                                                                        () {
-                                                                      _showTransactionDetails(
-                                                                          transaction);
-                                                                    },
-                                                                    constraints:
-                                                                        const BoxConstraints(
-                                                                      minWidth:
-                                                                          36,
-                                                                      minHeight:
-                                                                          36,
-                                                                    ),
-                                                                    padding:
-                                                                        EdgeInsets
-                                                                            .zero,
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        );
-                                                      }).toList(),
-                                                    ],
-                                                  ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                      ),
-                      const SizedBox(height: 10),
-                      PaginationControl(
-                        currentPage: currentPage,
-                        totalPages: totalPages,
-                        onPageChanged: (int page) {
-                          setState(() {
-                            currentPage = page;
-                          });
-                          _fetchServer(page: page);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

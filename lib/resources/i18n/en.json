@@ -4703,7 +4703,19 @@
     "payment_method": "Payment Method",
     "reference": "Reference",
     "comment": "Comment",
-    "created_at": "Created At"
+    "created_at": "Created At",
+    "subtitle": "Manage customer transactions and account history.",
+    "find": "Find customer transactions",
+    "filter_hint": "Results update as you type.",
+    "load_error": "Unable to load transactions. Previous results may be out of date.",
+    "retry": "Retry",
+    "select_date": "Select Date",
+    "export_tooltip": "Export all matching customer transactions",
+    "export_error": "Unable to export customer transactions. Please retry.",
+    "export_fetching": "Fetching page @page of @total…",
+    "transaction_id": "Transaction ID",
+    "currency": "Currency",
+    "page_count": "@count transactions on this page"
   },
   "printer_settings": {
     "title": "Printer Settings",
