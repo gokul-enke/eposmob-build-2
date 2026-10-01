@@ -213,4 +213,119 @@ void main() {
       expect(notifications, 0);
     });
   }
+  for (final duplicateIds in [
+    <Object>[1, 1],
+    <Object>[1, '1']
+  ]) {
+    for (final samePage in [true, false]) {
+      test(
+          'duplicate IDs $duplicateIds ${samePage ? 'within' : 'across'} pages reject export and preserve loaded state',
+          () async {
+        final provider = TransactionProvider()..setAccessToken('test-token');
+        await http.runWithClient(
+            () => provider.fetchTransactionsFromServerV2(page: 2),
+            () => MockClient((_) async => http.Response(
+                jsonEncode({
+                  'status': 'success',
+                  'data': {
+                    'current_page': 2,
+                    'last_page': 3,
+                    'data': [
+                      {
+                        'id': 99,
+                        'reference': 'EXISTING',
+                        'supplier': {
+                          'id': 7,
+                          'user': {'name': 'Existing Supplier'}
+                        }
+                      }
+                    ]
+                  }
+                }),
+                200)));
+        final visible = provider.listTransactionModelDataList;
+        final options = provider.getSupplierOptions();
+        var notifications = 0;
+        provider.addListener(() => notifications++);
+        await expectLater(
+            http.runWithClient(
+                () => provider.fetchTransactionsForExport(
+                    search: 'will-not-match'),
+                () => MockClient((request) async {
+                      final page =
+                          int.parse(request.url.queryParameters['page']!);
+                      final ids =
+                          samePage ? duplicateIds : [duplicateIds[page - 1]];
+                      return http.Response(
+                          jsonEncode({
+                            'status': 'success',
+                            'data': {
+                              'current_page': page,
+                              'last_page': samePage ? 1 : 2,
+                              'total': 2,
+                              'data': [
+                                for (final id in ids)
+                                  {'id': id, 'reference': 'DUPLICATE'}
+                              ]
+                            }
+                          }),
+                          200);
+                    })),
+            throwsFormatException);
+        expect(provider.listTransactionModelDataList, same(visible));
+        expect(provider.listTransactionModelDataList!.single.reference,
+            'EXISTING');
+        expect(provider.transactionCurrentPage, 2);
+        expect(provider.transactionTotalPages, 3);
+        expect(provider.getSupplierOptions(), options);
+        expect(provider.transactionIsLoading, false);
+        expect(notifications, 0);
+      });
+    }
+  }
+  for (final id in [null, 0, -1, '', 'bad', 1.5, true]) {
+    test('invalid ID $id rejects export', () async {
+      final provider = TransactionProvider()..setAccessToken('test-token');
+      await expectLater(
+          http.runWithClient(
+              () => provider.fetchTransactionsForExport(),
+              () => MockClient((_) async => http.Response(
+                  jsonEncode({
+                    'status': 'success',
+                    'data': {
+                      'current_page': 1,
+                      'last_page': 1,
+                      'data': [
+                        {'id': id}
+                      ]
+                    }
+                  }),
+                  200))),
+          throwsFormatException);
+    });
+  }
+  test(
+      'unique numeric-string IDs with a repeated reference export successfully',
+      () async {
+    final provider = TransactionProvider()..setAccessToken('test-token');
+    final rows = await http.runWithClient(
+        () => provider.fetchTransactionsForExport(),
+        () => MockClient((request) async {
+              final page = int.parse(request.url.queryParameters['page']!);
+              return http.Response(
+                  jsonEncode({
+                    'status': 'success',
+                    'data': {
+                      'current_page': page,
+                      'last_page': 2,
+                      'data': [
+                        {'id': '$page', 'reference': 'SAME-INVOICE'}
+                      ]
+                    }
+                  }),
+                  200);
+            }));
+    expect(rows.map((row) => row.id), [1, 2]);
+    expect(rows.map((row) => row.reference), ['SAME-INVOICE', 'SAME-INVOICE']);
+  });
 }

@@ -257,6 +257,7 @@ class TransactionProvider extends ChangeNotifier {
       throw const HttpException('API key not found. Please restart the app.');
     }
     final items = <TransactionModel>[];
+    final transactionIds = <int>{};
     var lastPage = 1;
     for (var page = 1; page <= lastPage; page++) {
       final uri = Uri.parse(APPUrl.supplierTransactionsV2).replace(
@@ -297,6 +298,17 @@ class TransactionProvider extends ChangeNotifier {
       }
       onProgress?.call(page, lastPage);
       for (final row in rows) {
+        if (row is! Map<String, dynamic>) {
+          throw const FormatException('Invalid transaction export row');
+        }
+        final id = _safeParseInt(row['id']);
+        if (id <= 0) {
+          throw const FormatException('Invalid transaction export ID');
+        }
+        // Stable pagination metadata does not prevent overlapping offset pages.
+        if (!transactionIds.add(id)) {
+          throw const FormatException('Duplicate transaction export ID');
+        }
         items.add(_createTransactionFromJson(row, items.length));
       }
     }
