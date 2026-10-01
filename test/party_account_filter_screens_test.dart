@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/filter_toggle_button.dart';
-import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/transaction_provider.dart';
@@ -15,6 +14,10 @@ class _TestTranslations extends Translations {
   @override
   Map<String, Map<String, String>> get keys => {
         'en_US': {
+          'pagination.page_of': 'Page @current of @total',
+          'party_accounts.page_count': '@count transactions on this page',
+          'supplier_transactions.page_count':
+              '@count transactions on this page',
           'party_accounts.title': 'Customer Transaction',
           'party_accounts.hint_select_type': 'Select Type',
           'party_accounts.filters': 'Filters',
@@ -37,6 +40,7 @@ class _FakeInvoiceProvider extends InvoiceProvider {
     String? type,
     int? perPage,
     int? page,
+    bool updateState = true,
   }) async =>
       {
         'status': 'success',
@@ -98,6 +102,10 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(toggleKey), findsOneWidget);
+    if (find.byKey(filterKey).evaluate().isEmpty) {
+      await tester.tap(find.byKey(toggleKey));
+      await tester.pump();
+    }
     expect(find.byKey(filterKey), findsOneWidget);
 
     await tester.tap(find.byKey(toggleKey));
@@ -123,7 +131,7 @@ void main() {
       tester,
       screen: const TransactionScreen(),
       toggleKey: const ValueKey('supplier-transactions-filter-toggle'),
-      filterKey: const ValueKey('supplier-transactions-desktop-filters'),
+      filterKey: const ValueKey('supplier-transactions-filters'),
     );
   });
 
@@ -144,7 +152,7 @@ void main() {
       tester,
       screen: const TransactionScreen(),
       toggleKey: const ValueKey('supplier-transactions-filter-toggle'),
-      filterKey: const ValueKey('supplier-transactions-mobile-filters'),
+      filterKey: const ValueKey('supplier-transactions-filters'),
       surfaceSize: const Size(600, 900),
     );
   });
@@ -164,7 +172,7 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.byType(CalendarPickerTableCell));
+    await tester.tap(find.byKey(const ValueKey('customer-transactions-date')));
     await tester.pumpAndSettle();
 
     final calendar = tester.widget<CalendarDatePicker>(
@@ -173,6 +181,8 @@ void main() {
     final selectedDate = DateTime(DateTime.now().year, 1, 15);
     final selectedDateLabel = DateFormat('MMM dd, yyyy').format(selectedDate);
     calendar.onDateChanged(selectedDate);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
 
     expect(find.text(selectedDateLabel), findsOneWidget);
@@ -200,7 +210,7 @@ void main() {
       (
         const TransactionScreen(),
         const ValueKey('supplier-transactions-filter-toggle'),
-        const ValueKey('supplier-transactions-mobile-filters'),
+        const ValueKey('supplier-transactions-filters'),
       ),
     ];
     final failures = <String>[];
@@ -235,7 +245,6 @@ void main() {
       }
       expect(find.byKey(testCase.$3), findsOneWidget);
 
-      await tester.tap(find.byType(ExpansionTile));
       await tester.pumpAndSettle();
       final exception = tester.takeException();
       if (exception != null) {

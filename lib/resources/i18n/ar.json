@@ -1530,6 +1530,11 @@
     "reset": "إعادة تعيين"
   },
   "supplier_list": {
+    "subtitle": "إدارة بيانات الموردين وجهات الاتصال والأرصدة.",
+    "find": "البحث عن الموردين",
+    "find_hint": "تتحدث النتائج أثناء الكتابة.",
+    "count_on_page": "@count موردين في هذه الصفحة",
+
     "error_fetching": "خطأ في جلب الموردين",
     "error_searching": "خطأ في البحث عن الموردين",
     "no_suppliers_desktop": "لم يتم العثور على موردين",
@@ -3460,6 +3465,17 @@
     "contact_administrator": "اتصل بالمسؤول"
   },
   "invoice": {
+    "settings_unverified": "لم يتم التحقق من إعدادات زاتكا. يرجى الانتظار حتى يتم تحميل الإعدادات بنجاح.",
+    "subtitle": "إدارة فواتير العملاء وحالة الدفع.",
+    "find": "البحث عن الفواتير",
+    "filter_hint": "تتحدث النتائج أثناء الكتابة.",
+    "page_count": "@count فاتورة في هذه الصفحة",
+    "export_creating": "جارٍ إنشاء Excel…",
+    "export_fetching": "جارٍ جلب الصفحة @page من @total…",
+    "export_tooltip": "تصدير جميع الفواتير المطابقة",
+    "export_failed": "تعذر تصدير الفواتير",
+    "from_date": "من تاريخ",
+    "to_date": "إلى تاريخ",
     "all_status": "جميع الحالات",
     "all_zatca_status": "جميع حالات ZATCA",
     "create_title": "إنشاء فاتورة",
@@ -3606,6 +3622,17 @@
     "yes_print": "نعم، اطبع"
   },
   "receipt": {
+    "copy": "نسخ",
+    "subtitle": "إدارة إيصالات العملاء والمدفوعات.",
+    "find": "البحث عن الإيصالات",
+    "filter_hint": "تتحدث النتائج أثناء الكتابة.",
+    "from_date": "من تاريخ",
+    "to_date": "إلى تاريخ",
+    "page_count": "@count إيصالات في هذه الصفحة",
+    "export_creating": "جارٍ إنشاء Excel…",
+    "export_fetching": "جارٍ جلب الصفحة @page من @total…",
+    "export_tooltip": "تصدير الإيصالات المصفاة",
+    "export_failed": "تعذر تصدير الإيصالات",
     "edit_item_title": "تعديل العنصر",
     "add_item_title": "إضافة عنصر",
     "item_type_label": "نوع العنصر",
@@ -3788,9 +3815,30 @@
     "create_failed": "فشل إنشاء القسيمة",
     "hint_all_types": "كل الأنواع",
     "hint_all_status": "كل الحالات",
-    "hint_select_status": "اختر الحالة"
+    "hint_select_status": "اختر الحالة",
+    "subtitle": "إدارة سندات العملاء والمدفوعات.",
+    "find": "البحث عن سندات العملاء",
+    "filter_hint": "تصفية سندات العملاء.",
+    "page_count": "@count سند في هذه الصفحة",
+    "export_tooltip": "تصدير سندات العملاء المصفاة",
+    "export_creating": "جارٍ إنشاء Excel…",
+    "export_failed": "تعذر تصدير سندات العملاء",
+    "mobile_header_title": "قائمة قسائم العملاء",
+    "col_customer_name": "اسم العميل",
+    "from_date": "من تاريخ",
+    "to_date": "إلى تاريخ",
+    "copy_voucher_number": "نسخ رقم السند",
+    "stale_rows_warning": "تعذر تحديث السندات. يتم عرض السجلات المحملة سابقًا وقد لا تطابق عوامل التصفية المحددة. التصدير غير متاح حتى ينجح التحديث.",
+    "retry_loading": "إعادة المحاولة"
   },
   "supplier_voucher": {
+    "export_tooltip": "تصدير جميع سندات الموردين المطابقة",
+    "subtitle": "إدارة سندات الموردين والمدفوعات.",
+    "find": "البحث عن سندات الموردين",
+    "filter_hint": "تتحدث النتائج أثناء الكتابة.",
+    "page_count": "@count سند في هذه الصفحة",
+    "export_creating": "جارٍ إنشاء Excel…",
+    "export_failed": "تعذر تصدير سندات الموردين",
     "list_title": "قائمة قسائم الموردين",
     "create_voucher_button": "إنشاء قسيمة مورد",
     "voucher_no_hint": "رقم القسيمة",
@@ -3909,7 +3957,19 @@
     "valid_price_required": "أدخل سعراً صحيحاً",
     "card_upi_not_allowed_together": "لا يمكن استخدام البطاقة و UPI معًا",
     "price_below_minimum": "السعر أقل من الحد الأدنى لسعر البيع @price",
-    "valid_quantity_required": "أدخل كمية صالحة"
+    "valid_quantity_required": "أدخل كمية صالحة",
+    "subtitle": "إدارة الفواتير الأولية وحالة الدفع.",
+    "find": "البحث عن الفواتير الأولية",
+    "filter_hint": "تتحدث النتائج أثناء الكتابة.",
+    "export_tooltip": "تصدير جميع الفواتير الأولية المطابقة",
+    "export_failed": "تعذر تصدير الفواتير الأولية",
+    "export_creating": "إنشاء ملف Excel…",
+    "export_fetching": "جلب الصفحة @page من @total…",
+    "page_count": "@count فاتورة أولية في هذه الصفحة",
+    "copy_invoice": "نسخ رقم الفاتورة",
+    "copy_quotation": "نسخ رقم عرض السعر",
+    "stale_rows_warning": "تعذر تحديث الفواتير الأولية. قد لا تطابق السجلات السابقة عوامل التصفية المحددة. التصدير غير متاح حتى ينجح التحديث.",
+    "retry": "إعادة المحاولة"
   },
   "nav": {
     "home": "الرئيسية",
@@ -4487,7 +4547,16 @@
       "أكتوبر",
       "نوفمبر",
       "ديسمبر"
-    ]
+    ],
+    "subtitle": "إدارة المصروفات والمدفوعات.",
+    "find": "البحث عن المصروفات",
+    "filter_hint": "تتحدث النتائج أثناء الكتابة.",
+    "currency": "العملة",
+    "export_tooltip": "تصدير جميع المصروفات المطابقة للفلاتر",
+    "export_error": "تعذر تصدير المصروفات. يرجى المحاولة مرة أخرى.",
+    "load_error": "تعذر تحديث المصروفات. قد تكون البيانات السابقة قديمة. التصدير غير متاح حتى ينجح التحميل.",
+    "retry": "إعادة المحاولة",
+    "page_count": "@count مصروفات في هذه الصفحة"
   },
   "party_accounts": {
     "title": "معاملات العملاء",
@@ -4517,7 +4586,19 @@
     "payment_method": "طريقة الدفع",
     "reference": "المرجع",
     "comment": "التعليق",
-    "created_at": "تاريخ الإنشاء"
+    "created_at": "تاريخ الإنشاء",
+    "subtitle": "إدارة معاملات العملاء وسجل الحساب.",
+    "find": "البحث عن معاملات العملاء",
+    "filter_hint": "تتحدث النتائج أثناء الكتابة.",
+    "load_error": "تعذر تحميل المعاملات. قد تكون النتائج السابقة غير محدثة.",
+    "retry": "إعادة المحاولة",
+    "select_date": "اختر التاريخ",
+    "export_tooltip": "تصدير جميع معاملات العملاء المطابقة",
+    "export_error": "تعذر تصدير معاملات العملاء. يرجى إعادة المحاولة.",
+    "export_fetching": "جاري جلب الصفحة @page من @total…",
+    "transaction_id": "معرف المعاملة",
+    "currency": "العملة",
+    "page_count": "@count معاملة في هذه الصفحة"
   },
   "printer_settings": {
     "title": "إعدادات الطابعة",
@@ -4874,7 +4955,19 @@
     "reference": "المرجع",
     "comment": "التعليق",
     "na": "غير متاح",
-    "error_loading": "خطأ في تحميل المعاملات: @error"
+    "error_loading": "خطأ في تحميل المعاملات: @error",
+    "subtitle": "إدارة مدفوعات الموردين وسجل المعاملات.",
+    "find": "البحث عن معاملات الموردين",
+    "find_hint": "تصفية معاملات الموردين.",
+    "count_on_page": "@count معاملات في هذه الصفحة",
+    "copy_reference": "نسخ المرجع",
+    "export": "تصدير",
+    "exporting": "جارٍ التصدير...",
+    "export_tooltip": "تصدير جميع معاملات الموردين المطابقة",
+    "export_failed": "تعذر تصدير معاملات الموردين",
+    "currency": "العملة",
+    "export_fetching": "جارٍ جلب الصفحة @page من @total…",
+    "export_creating": "جارٍ إنشاء Excel…"
   },
   "order_panel": {
     "error_status_served_not_found": "حالة 'SERVED' غير موجودة",
@@ -6088,5 +6181,17 @@
   },
   "supplier": {
     "search_supplier": "البحث عن مورد"
+  },
+  "list": {
+    "refresh": "تحديث",
+    "reset": "إعادة تعيين",
+    "view": "عرض",
+    "export_waiting_save": "بانتظار حفظ باسم…",
+    "export_saving": "جارٍ حفظ الملف…",
+    "export_waiting_share": "بانتظار المشاركة…",
+    "export_overwrite_title": "استبدال الملف الموجود؟",
+    "export_overwrite_message": "الملف @name موجود بالفعل. هل تريد استبداله؟",
+    "export_cancel": "إلغاء",
+    "export_overwrite": "استبدال"
   }
 }

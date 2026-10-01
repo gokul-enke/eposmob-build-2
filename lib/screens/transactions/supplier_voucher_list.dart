@@ -1,806 +1,422 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/gestures.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
-import 'package:pos_machine/components/build_pagination_control.dart'
-    as pagination;
-import 'package:pos_machine/models/supplier_voucher.dart';
-import 'package:pos_machine/providers/supplier_voucher_provider.dart';
-import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
-
-import '../../components/build_container_box.dart';
-import '../../components/build_dropdown_with_search.dart';
+import '../../components/export_share_button.dart';
 import '../../components/filter_toggle_button.dart';
-import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
+import '../../core/ui/app_surface.dart';
+import '../../core/ui/list_page/filter_panel.dart';
+import '../../core/ui/list_page/list_page_header.dart';
+import '../../core/ui/list_page/list_page_scaffold.dart';
+import '../../helpers/ui_code_labels.dart';
+import '../../models/supplier_voucher.dart';
+import '../../newcomponents/custom_dialog_box.dart';
+import '../../providers/app_settings_provider.dart';
 import '../../providers/auth_model.dart';
+import '../../providers/supplier_voucher_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
-import 'widgets/supplier_voucher_print.dart';
+import '../../services/list_excel_export_service.dart';
 import 'widgets/common_details_dialog.dart';
 import 'widgets/share_helper.dart';
-import 'supplier_voucher_list_mobile.dart';
-import 'package:pos_machine/helpers/ui_code_labels.dart'; 
+import 'widgets/supplier_voucher_print.dart';
 
 class SupplierVoucherListScreen extends StatefulWidget {
   const SupplierVoucherListScreen({super.key});
-
   @override
   State<SupplierVoucherListScreen> createState() =>
       _SupplierVoucherListScreenState();
 }
 
 class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
-  final SideBarController sideBarController = Get.put(SideBarController());
-  bool isInitialized = false;
-  final TextEditingController voucherNumberController = TextEditingController();
-  String? selectedType;
-  String? selectedStatus;
+  final voucherNumberController = TextEditingController();
+  final _voucherSearchKey = GlobalKey<TextFilterFieldState>();
+  String? selectedType, selectedStatus;
   int? selectedSupplierId;
   bool _showFilters = true;
-
-  final FocusNode supplierFocusNode = FocusNode();
-  final FocusNode typeFocusNode = FocusNode();
-  final FocusNode statusFocusNode = FocusNode();
+  bool _visibilityInitialized = false;
+  final _exportProgress = ValueNotifier<String?>(null);
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      loadVouchers();
+      if (mounted) refreshData();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_visibilityInitialized) {
+      _showFilters =
+          MediaQuery.sizeOf(context).width >= ListLayoutBreakpoints.mobile;
+      _visibilityInitialized = true;
+    }
   }
 
   @override
   void dispose() {
     voucherNumberController.dispose();
-    supplierFocusNode.dispose();
-    typeFocusNode.dispose();
-    statusFocusNode.dispose();
+    _exportProgress.dispose();
     super.dispose();
   }
 
-  Future<void> loadVouchers() async {
-    if (isInitialized) return;
-
-    try {
-      final String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-
-      if (accessToken == null || accessToken.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('supplier_voucher.auth_token_missing'.tr)),
-        );
-        return;
-      }
-
-      await Provider.of<SupplierVoucherProvider>(context, listen: false)
-          .listAllSupplierVouchers(accessToken: accessToken);
-      setState(() {
-        isInitialized = true;
-      });
-    } catch (error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('supplier_voucher.error_loading_vouchers'.tr.replaceAll('@error', error.toString()))),
-      );
-    }
-  }
-
-  void searchVouchers() {
-    SupplierVoucherProvider provider =
-        Provider.of<SupplierVoucherProvider>(context, listen: false);
-    provider.applyFilters(
-      supplierId: selectedSupplierId,
-      voucherNumber: voucherNumberController.text,
-      type: selectedType,
-      status: selectedStatus,
-    );
-  }
+  void searchVouchers({int page = 1}) =>
+      context.read<SupplierVoucherProvider>().applyFilters(
+            supplierId: selectedSupplierId,
+            voucherNumber: voucherNumberController.text,
+            type: selectedType,
+            status: selectedStatus,
+            page: page,
+          );
 
   void resetSearch() {
+    _voucherSearchKey.currentState?.cancelPendingSearch();
     setState(() {
       voucherNumberController.clear();
+      selectedSupplierId = null;
       selectedType = null;
       selectedStatus = null;
-      selectedSupplierId = null;
     });
-
-    Provider.of<SupplierVoucherProvider>(context, listen: false).resetFilters();
+    context.read<SupplierVoucherProvider>().resetFilters();
   }
 
   Future<void> refreshData() async {
-    final String? accessToken =
-        Provider.of<AuthModel>(context, listen: false).token;
-    if (accessToken == null || accessToken.isEmpty) return;
-
-    setState(() {
-      voucherNumberController.clear();
-    });
-
-    await Provider.of<SupplierVoucherProvider>(context, listen: false)
-        .listAllSupplierVouchers(accessToken: accessToken);
+    final token = context.read<AuthModel>().token;
+    if (token == null || token.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('supplier_voucher.auth_token_missing'.tr)));
+      return;
+    }
+    try {
+      await context
+          .read<SupplierVoucherProvider>()
+          .listAllSupplierVouchers(accessToken: token);
+      if (!mounted) return;
+      final error = context.read<SupplierVoucherProvider>().loadError;
+      if (error != null) throw error;
+      final suppliers =
+          context.read<SupplierVoucherProvider>().allVouchers ?? [];
+      if (selectedSupplierId != null &&
+          !suppliers.any((v) => v.supplier.id == selectedSupplierId)) {
+        setState(() => selectedSupplierId = null);
+      }
+      // Keep the controls and the refreshed rows using the same filters.
+      searchVouchers();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('supplier_voucher.error_loading_vouchers'
+              .trParams({'error': '$error'}))));
+    }
   }
+
+  Future<File> _createExport() {
+    // Cancel the timer, then apply pending edits without changing the page.
+    _voucherSearchKey.currentState?.cancelPendingSearch();
+    searchVouchers(page: context.read<SupplierVoucherProvider>().currentPage);
+    final items = List<SupplierVoucher>.of(
+        context.read<SupplierVoucherProvider>().filteredVouchers);
+    final currency =
+        context.read<AppSettingsProvider>().appSettings?.currency ?? 'INR';
+    _exportProgress.value = 'supplier_voucher.export_creating'.tr;
+    return ListExcelExportService.export<SupplierVoucher>(
+      items: items,
+      fileNamePrefix: 'supplier-vouchers',
+      sheetName: 'supplier_voucher.mobile_header_title'.tr,
+      columns: [
+        ListExportColumn(
+            label: 'supplier_voucher.col_voucher_number'.tr,
+            value: (v, _) => v.voucherNumber),
+        ListExportColumn(
+            label: 'supplier_voucher.col_supplier_name'.tr,
+            value: (v, _) => v.supplier.name),
+        ListExportColumn(
+            label: 'supplier_voucher.col_type'.tr,
+            value: (v, _) => UiCodeLabels.voucherType(v.type)),
+        ListExportColumn(
+            label: 'supplier_voucher.col_voucher_date'.tr,
+            value: (v, _) => v.voucherDate),
+        ListExportColumn(
+            label: 'supplier_voucher.col_due_date'.tr,
+            value: (v, _) => v.dueDate),
+        ListExportColumn(
+            label: 'supplier_voucher.col_payment_method'.tr,
+            value: (v, _) => UiCodeLabels.payment(v.paymentMethod)),
+        ListExportColumn(
+            label: 'supplier_voucher.col_paid_amount'.tr,
+            value: (v, _) => ListExcelExportService.numericValue(v.amount)),
+        ListExportColumn(
+            label: 'supplier_transactions.currency'.tr,
+            value: (_, __) => currency),
+        ListExportColumn(
+            label: 'supplier_voucher.col_status'.tr,
+            value: (v, _) => UiCodeLabels.status(v.status)),
+      ],
+    );
+  }
+
+  Widget _filters(SupplierVoucherProvider provider) {
+    final suppliers = <int, String>{
+      for (final voucher in provider.allVouchers ?? <SupplierVoucher>[])
+        voucher.supplier.id: voucher.supplier.name,
+    };
+    return FilterPanel(
+      key: const ValueKey('supplier-voucher-desktop-filters'),
+      title: 'supplier_voucher.find'.tr,
+      hint: 'supplier_voucher.filter_hint'.tr,
+      onReset: resetSearch,
+      fields: [
+        DropdownSearch<int>(
+          key: ValueKey(selectedSupplierId),
+          selectedItem: suppliers.containsKey(selectedSupplierId)
+              ? selectedSupplierId
+              : 0,
+          items: (_, __) => [0, ...suppliers.keys],
+          itemAsString: (id) => id == 0
+              ? 'supplier_voucher.all_suppliers_hint'.tr
+              : suppliers[id] ?? '',
+          decoratorProps: DropDownDecoratorProps(
+              decoration: listFilterDecoration(
+                  'supplier_voucher.col_supplier_name'.tr,
+                  Icons.local_shipping_outlined)),
+          dropdownBuilder: (_, id) => Text(
+              id == null || id == 0
+                  ? 'supplier_voucher.all_suppliers_hint'.tr
+                  : suppliers[id] ?? '',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
+          popupProps: PopupProps.menu(
+              showSearchBox: true,
+              searchFieldProps: TextFieldProps(
+                  decoration:
+                      listFilterDecoration('general.search'.tr, Icons.search))),
+          onChanged: (value) {
+            setState(() => selectedSupplierId = value == 0 ? null : value);
+            searchVouchers();
+          },
+        ),
+        TextFilterField(
+            key: _voucherSearchKey,
+            controller: voucherNumberController,
+            label: 'supplier_voucher.voucher_no_hint'.tr,
+            icon: Icons.receipt_long_outlined,
+            onSearch: searchVouchers),
+        DropdownButtonFormField<String>(
+            key: ValueKey(selectedType),
+            initialValue: selectedType,
+            isExpanded: true,
+            decoration: listFilterDecoration(
+                'supplier_voucher.col_type'.tr, Icons.swap_vert),
+            items: [
+              DropdownMenuItem<String>(
+                  value: null,
+                  child: Text('supplier_voucher.hint_all_types'.tr)),
+              for (final type
+                  in provider.getTypeOptions().where((v) => v != 'All Types'))
+                DropdownMenuItem(
+                    value: type, child: Text(UiCodeLabels.voucherType(type)))
+            ],
+            onChanged: (value) {
+              setState(() => selectedType = value);
+              searchVouchers();
+            }),
+        DropdownButtonFormField<String>(
+            key: ValueKey(selectedStatus),
+            initialValue: selectedStatus,
+            isExpanded: true,
+            decoration: listFilterDecoration(
+                'supplier_voucher.col_status'.tr, Icons.check_circle_outline),
+            items: [
+              DropdownMenuItem<String>(
+                  value: null,
+                  child: Text('supplier_voucher.hint_all_status'.tr)),
+              for (final status in provider
+                  .getStatusOptions()
+                  .where((v) => v != 'All Status'))
+                DropdownMenuItem(
+                    value: status, child: Text(UiCodeLabels.status(status)))
+            ],
+            onChanged: (value) {
+              setState(() => selectedStatus = value);
+              searchVouchers();
+            }),
+      ],
+    );
+  }
+
+  Widget _reference(SupplierVoucher voucher) => Row(children: [
+        Expanded(child: TableCells.text(voucher.voucherNumber)),
+        IconButton(
+            icon: const Icon(Icons.copy_outlined, size: 16),
+            tooltip: 'supplier_voucher.col_voucher_number'.tr,
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: voucher.voucherNumber));
+              showScaffold(
+                  context: context,
+                  message: 'supplier_voucher.voucher_number_copied'.tr);
+            }),
+      ]);
+
+  Widget _actions(SupplierVoucher voucher) => Wrap(spacing: 6, children: [
+        _action(Icons.visibility_outlined, 'list.view'.tr,
+            () => _showVoucherDetails(voucher)),
+        _action(
+            Icons.print_outlined,
+            'general.print'.tr,
+            () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => SupplierVoucherPrintPage(
+                        voucher: voucher, returnToPreviousRoute: true)))),
+        _action(
+            Icons.share_outlined,
+            'supplier_voucher.share_action'.tr,
+            () => ShareHelper.showShareSupplierVoucherSheet(
+                context: context, voucher: voucher)),
+      ]);
+
+  Widget _action(IconData icon, String tooltip, VoidCallback onPressed) =>
+      IconButton.outlined(
+          icon: Icon(icon, size: 18),
+          tooltip: tooltip,
+          onPressed: onPressed,
+          style: IconButton.styleFrom(
+              foregroundColor: ColorManager.kPrimaryColor,
+              side: const BorderSide(color: Color(0xFFE1E3E5)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10))));
+
+  String _amount(SupplierVoucher voucher) =>
+      '${context.read<AppSettingsProvider>().appSettings?.currency ?? 'INR'} ${voucher.amount}';
+
+  Widget _card(SupplierVoucher voucher, int number) => AppSurface(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        TableCells.identity(voucher.supplier.name),
+        const SizedBox(height: 10),
+        _reference(voucher),
+        Text(
+            '${'supplier_voucher.col_type'.tr}: ${UiCodeLabels.voucherType(voucher.type)}'),
+        Text(
+            '${'supplier_voucher.col_voucher_date'.tr}: ${voucher.voucherDate}'),
+        Text('${'supplier_voucher.col_due_date'.tr}: ${voucher.dueDate}'),
+        Text(
+            '${'supplier_voucher.col_payment_method'.tr}: ${UiCodeLabels.payment(voucher.paymentMethod)}'),
+        Text('${'supplier_voucher.col_paid_amount'.tr}: ${_amount(voucher)}'),
+        const SizedBox(height: 10),
+        _buildStatusChip(voucher.status),
+        const SizedBox(height: 10),
+        _actions(voucher),
+      ]));
 
   @override
   Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
-    final bool isMobile = size.width < 700;
-
-    if (isMobile) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Consumer<SupplierVoucherProvider>(
-            builder: (context, voucherProvider, child) {
-              // Build supplier map from allVouchers
-              final supplierMap = <int, String>{};
-              for (final v in voucherProvider.allVouchers ?? []) {
-                supplierMap[v.supplier.id] = v.supplier.name;
-              }
-              return SupplierVoucherMobileView(
-                vouchers: voucherProvider.voucherListDetails ?? const <SupplierVoucher>[],
-                isLoading: voucherProvider.isLoading,
-                voucherNumberController: voucherNumberController,
-                supplierFocusNode: supplierFocusNode,
-                typeFocusNode: typeFocusNode,
-                statusFocusNode: statusFocusNode,
-                selectedSupplierId: selectedSupplierId,
-                selectedType: selectedType,
-                selectedStatus: selectedStatus,
-                supplierOptions: supplierMap,
-                typeOptions: voucherProvider.getTypeOptions()
-                    .where((t) => t != 'All Types').toList(),
-                statusOptions: voucherProvider.getStatusOptions()
-                    .where((s) => s != 'All Status').toList(),
-                onSearchChanged: searchVouchers,
-                onReset: resetSearch,
-                onSupplierChanged: (v) {
-                  setState(() => selectedSupplierId = v);
-                  searchVouchers();
-                },
-                onTypeChanged: (v) {
-                  setState(() => selectedType = v);
-                  searchVouchers();
-                },
-                onStatusChanged: (v) {
-                  setState(() => selectedStatus = v);
-                  searchVouchers();
-                },
-                onViewDetails: _showVoucherDetails,
-                onShare: (voucher) => ShareHelper.showShareSupplierVoucherSheet(
-                  context: context,
-                  voucher: voucher,
-                ),
-                currentPage: voucherProvider.currentPage,
-                totalPages: voucherProvider.totalPages,
-                onPageChanged: (page) => voucherProvider.goToPage(page),
-                onCreateVoucher: () {
-                  final controller = Get.find<SideBarController>();
-                  controller.index.value =
-                      (controller.index.value == 75) ? 76 : 73;
-                },
-                onRefresh: refreshData,
-              );
-            },
-          ),
-        ),
-      );
-    }
-    return SafeArea(
-      child: RefreshIndicator(
-        onRefresh: refreshData,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: const [
-              BoxShadow(
-                color: ColorManager.boxShadowColor,
-                blurRadius: 6,
-                offset: Offset(1, 1),
-              ),
-            ],
-            color: Colors.white,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(size),
-                if (_showFilters) ...[
-                  const SizedBox(height: 10),
-                  KeyedSubtree(
-                    key: const ValueKey('supplier-voucher-desktop-filters'),
-                    child: _buildSearchBar(size),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-                _buildVoucherTable(),
-                const SizedBox(height: 10),
-                _buildPaginationControls(),
+    final provider = context.watch<SupplierVoucherProvider>();
+    return LayoutBuilder(
+        builder: (context, bounds) => ListPageScaffold<SupplierVoucher>(
+              header: ListPageHeader(
+                  icon: Icons.receipt_long_outlined,
+                  title: 'supplier_voucher.mobile_header_title'.tr,
+                  subtitle: 'supplier_voucher.subtitle'.tr,
+                  onRefresh: refreshData,
+                  onAdd: () {
+                    final controller = Get.put(SideBarController());
+                    controller.index.value =
+                        controller.index.value == 75 ? 76 : 73;
+                  },
+                  addLabel: 'supplier_voucher.create_voucher_button'.tr,
+                  addShortLabel: 'supplier_voucher.mobile_create_button'.tr,
+                  extraActions: [
+                    FilterToggleButton(
+                        showFilters: _showFilters,
+                        hasActiveFilters: selectedSupplierId != null ||
+                            selectedType != null ||
+                            selectedStatus != null ||
+                            voucherNumberController.text.isNotEmpty,
+                        activeFiltersListenable: voucherNumberController,
+                        activeFiltersBuilder: () =>
+                            selectedSupplierId != null ||
+                            selectedType != null ||
+                            selectedStatus != null ||
+                            voucherNumberController.text.isNotEmpty,
+                        showTooltip: 'supplier_voucher.show_filters'.tr,
+                        hideTooltip: 'supplier_voucher.hide_filters'.tr,
+                        onPressed: () =>
+                            setState(() => _showFilters = !_showFilters)),
+                    ExportShareButton(
+                        createFile: _createExport,
+                        label: 'supplier_transactions.export'.tr,
+                        tooltip: 'supplier_voucher.export_tooltip'.tr,
+                        loadingLabel: 'supplier_voucher.export_creating'.tr,
+                        progressLabel: _exportProgress,
+                        errorMessage: 'supplier_voucher.export_failed'.tr,
+                        enabled: !provider.isLoading &&
+                            provider.filteredVouchers.isNotEmpty,
+                        compact: bounds.maxWidth < ListLayoutBreakpoints.header,
+                        mimeType:
+                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
+                  ]),
+              filters: _filters(provider),
+              showFilters: _showFilters,
+              isLoading: provider.isLoading,
+              items: provider.voucherListDetails ?? [],
+              tableMinWidth: 1280,
+              columns: [
+                TableColumnDef(
+                    label: 'supplier_voucher.col_voucher_number'.tr,
+                    flex: 1.6,
+                    cellBuilder: (v, _) => _reference(v)),
+                TableColumnDef(
+                    label: 'supplier_voucher.col_supplier_name'.tr,
+                    flex: 2,
+                    cellBuilder: (v, _) =>
+                        TableCells.identity(v.supplier.name)),
+                TableColumnDef(
+                    label: 'supplier_voucher.col_type'.tr,
+                    cellBuilder: (v, _) =>
+                        TableCells.text(UiCodeLabels.voucherType(v.type))),
+                TableColumnDef(
+                    label: 'supplier_voucher.col_voucher_date'.tr,
+                    flex: 1.3,
+                    cellBuilder: (v, _) => TableCells.text(v.voucherDate)),
+                TableColumnDef(
+                    label: 'supplier_voucher.col_due_date'.tr,
+                    flex: 1.3,
+                    cellBuilder: (v, _) => TableCells.text(v.dueDate)),
+                TableColumnDef(
+                    label: 'supplier_voucher.col_payment_method'.tr,
+                    flex: 1.2,
+                    cellBuilder: (v, _) =>
+                        TableCells.text(UiCodeLabels.payment(v.paymentMethod))),
+                TableColumnDef(
+                    label: 'supplier_voucher.col_paid_amount'.tr,
+                    flex: 1.4,
+                    cellBuilder: (v, _) => TableCells.text(_amount(v))),
+                TableColumnDef(
+                    label: 'supplier_voucher.col_status'.tr,
+                    cellBuilder: (v, _) => _buildStatusChip(v.status)),
+                TableColumnDef(
+                    label: 'supplier_voucher.col_action'.tr,
+                    flex: 1.8,
+                    cellBuilder: (v, _) => _actions(v)),
               ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(Size size) {
-    final hasActiveFilters = voucherNumberController.text.isNotEmpty ||
-        selectedSupplierId != null ||
-        selectedType != null ||
-        selectedStatus != null;
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: Text(
-            'supplier_voucher.list_title'.tr,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
-                0.30, ColorManager.textColor),
-          ),
-        ),
-        const SizedBox(width: 8),
-        FilterToggleButton(
-          showFilters: _showFilters,
-          hasActiveFilters: hasActiveFilters,
-          activeFiltersListenable: voucherNumberController,
-          activeFiltersBuilder: () =>
-              voucherNumberController.text.isNotEmpty ||
-              selectedSupplierId != null ||
-              selectedType != null ||
-              selectedStatus != null,
-          onPressed: () => setState(() => _showFilters = !_showFilters),
-          showTooltip: 'supplier_voucher.show_filters'.tr,
-          hideTooltip: 'supplier_voucher.hide_filters'.tr,
-        ),
-        const SizedBox(width: 8),
-        CustomRoundButton(
-          title: 'supplier_voucher.create_voucher_button'.tr,
-          fct: () {
-            final controller = Get.find<SideBarController>();
-            // If this list was opened via Transactions alias (75), go to 76. Otherwise go to 73.
-            controller.index.value = (controller.index.value == 75) ? 76 : 73;
-          },
-          fontSize: FontSize.s12,
-          height: 45,
-          width: 180,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSearchBar(Size size) {
-    return Column(
-      children: [
-        SizedBox(
-          height: 55,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSupplierFilter(),
-              const SizedBox(width: 10),
-              _buildVoucherNumberSearch(),
-              const SizedBox(width: 10),
-              Expanded(flex: 1, child: _buildTypeFilter()),
-              const SizedBox(width: 10),
-              Expanded(flex: 1, child: _buildStatusFilter()),
-            ],
-          ),
-        ),
-        SizedBox(
-          height: 46,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              CustomRoundButton(
-                title: 'general.reset'.tr,
-                boxColor: Colors.white,
-                textColor: ColorManager.kPrimaryColor,
-                fct: resetSearch,
-                height: 45,
-                width: 150,
-                fontSize: FontSize.s12,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSupplierFilter() {
-    return Expanded(
-      flex: 1,
-      child: Consumer<SupplierVoucherProvider>(
-        builder: (context, voucherProvider, child) {
-          final uniqueSuppliers = <int, String>{};
-          if (voucherProvider.allVouchers != null) {
-            for (var voucher in voucherProvider.allVouchers!) {
-              uniqueSuppliers[voucher.supplier.id] = voucher.supplier.name;
-            }
-          }
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Padding(
-              //   padding: const EdgeInsets.all(8.0),
-              //   child: Text(
-              //     "Supplier",
-              //     style: buildCustomStyle(FontWeightManager.regular,
-              //         FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
-              //   ),
-              // ),
-              // const SizedBox(height: 8),
-              BuildDropDownWithSearch<int>(
-                focusNode: supplierFocusNode,
-                title: null,
-                showName: false,
-                hintText: 'supplier_voucher.all_suppliers_hint'.tr,
-                value: selectedSupplierId,
-                items: uniqueSuppliers.keys.toList(),
-                onChanged: (int? newValue) {
-                  setState(() {
-                    selectedSupplierId = newValue;
-                  });
-                  searchVouchers();
-                },
-                displayText: (int? id) {
-                  if (id == null) return 'supplier_voucher.all_suppliers_hint'.tr;
-                  return uniqueSuppliers[id] ?? 'general.unknown'.tr;
-                },
-                height: 45,
-                margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildVoucherNumberSearch() {
-    return Expanded(
-      flex: 1,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Padding(
-          //   padding: const EdgeInsets.all(8.0),
-          //   child: Text(
-          //     "Voucher No",
-          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-          //         0.27, Colors.black.withOpacity(0.6)),
-          //   ),
-          // ),
-          // const SizedBox(height: 8),
-          BuildBoxShadowContainer(
-            height: 45,
-            width: double.infinity,
-            circleRadius: 7,
-            child: TextFormField(
-              controller: voucherNumberController,
-              onChanged: (value) => searchVouchers(),
-              cursorColor: ColorManager.kPrimaryColor,
-              cursorHeight: 13,
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                  0.18, ColorManager.textColor),
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                hintText: 'supplier_voucher.voucher_no_hint'.tr,
-                hintStyle: buildCustomStyle(FontWeightManager.medium,
-                    FontSize.s10, 0.18, ColorManager.textColor),
-                contentPadding: const EdgeInsets.only(left: 15),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTypeFilter() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 10.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Consumer<SupplierVoucherProvider>(
-            builder: (context, voucherProvider, child) {
-              List<String> typeOptions = voucherProvider.getTypeOptions();
-
-              return BuildDropDownWithSearch<String>(
-                focusNode: typeFocusNode,
-                title: null,
-                showName: false,
-                hintText: 'supplier_voucher.hint_all_types'.tr,
-                value: selectedType,
-                items:
-                    typeOptions.where((type) => type != "All Types").toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    selectedType = newValue;
-                  });
-                  searchVouchers();
-                },
-                displayText: (type) => type.toUpperCase(),
-                height: 45,
-                margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusFilter() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 10.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Consumer<SupplierVoucherProvider>(
-            builder: (context, voucherProvider, child) {
-              List<String> statusOptions = voucherProvider.getStatusOptions();
-
-              return BuildDropDownWithSearch<String>(
-                focusNode: statusFocusNode,
-                title: null,
-                showName: false,
-                hintText: 'supplier_voucher.hint_all_status'.tr,
-                value: selectedStatus,
-                items: statusOptions
-                    .where((status) => status != "All Status")
-                    .toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    selectedStatus = newValue;
-                  });
-                  searchVouchers();
-                },
-                displayText: UiCodeLabels.status,
-                height: 45,
-                margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVoucherTable() {
-    return Expanded(
-      child: Consumer<SupplierVoucherProvider>(
-        builder: (context, voucherProvider, child) {
-          final isLoading = voucherProvider.isLoading;
-          final voucherList = voucherProvider.voucherListDetails;
-
-          return isLoading
-              ? const Center(child: CircularProgressIndicator.adaptive())
-              : voucherList == null || voucherList.isEmpty
-                  ? _buildNoVouchersFoundUI()
-                  : BuildBoxShadowContainer(
-                      margin: const EdgeInsets.only(top: 5),
-                      circleRadius: 7,
-                      offsetValue: const Offset(2, 2),
-                      blurRadius: 8.0,
-                      color: Colors.white,
-                      child: Column(
-                        children: [
-                          Container(
-                            decoration: const BoxDecoration(
-                              color: ColorManager.tableBGColor,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black12,
-                                  offset: Offset(0, 2),
-                                  blurRadius: 2.0,
-                                ),
-                              ],
-                            ),
-                            child: Table(
-                              columnWidths: {
-                                0: const FlexColumnWidth(1.4),
-                                1: const FlexColumnWidth(1.6),
-                                2: const FlexColumnWidth(0.9),
-                                3: const FlexColumnWidth(1.3),
-                                4: const FlexColumnWidth(1.3),
-                                5: const FlexColumnWidth(1.0),
-                                6: const FlexColumnWidth(0.9),
-                                7: const FlexColumnWidth(0.9),
-                                8: FlexColumnWidth(
-                                    MediaQuery.of(context).size.width < 900
-                                        ? 2.6
-                                        : 1.8),
-                              },
-                              border: null,
-                              defaultVerticalAlignment:
-                                  TableCellVerticalAlignment.middle,
-                              children: [
-                                TableRow(
-                                  children: [
-                                    _buildTableHeader('supplier_voucher.col_voucher_number'.tr),
-                                    _buildTableHeader('supplier_voucher.col_supplier_name'.tr),
-                                    _buildTableHeader('supplier_voucher.col_type'.tr),
-                                    _buildTableHeader('supplier_voucher.col_voucher_date'.tr),
-                                    _buildTableHeader('supplier_voucher.col_due_date'.tr),
-                                    _buildTableHeader('supplier_voucher.col_payment_method'.tr),
-                                    _buildTableHeader('supplier_voucher.col_paid_amount'.tr),
-                                    _buildTableHeader('supplier_voucher.col_status'.tr),
-                                    _buildTableHeader('supplier_voucher.col_action'.tr),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          Expanded(
-                            child: SingleChildScrollView(
-                              physics: const BouncingScrollPhysics(),
-                              scrollDirection: Axis.vertical,
-                              child: Table(
-                                columnWidths: {
-                                  0: const FlexColumnWidth(1.4),
-                                  1: const FlexColumnWidth(1.6),
-                                  2: const FlexColumnWidth(0.9),
-                                  3: const FlexColumnWidth(1.3),
-                                  4: const FlexColumnWidth(1.3),
-                                  5: const FlexColumnWidth(1.0),
-                                  6: const FlexColumnWidth(0.9),
-                                  7: const FlexColumnWidth(0.9),
-                                  8: FlexColumnWidth(
-                                      MediaQuery.of(context).size.width < 900
-                                          ? 2.6
-                                          : 1.8),
-                                },
-                                border: null,
-                                defaultVerticalAlignment:
-                                    TableCellVerticalAlignment.middle,
-                                children:
-                                    voucherList.asMap().entries.map((entry) {
-                                  final int index = entry.key;
-                                  final voucher = entry.value;
-                                  return TableRow(
-                                    decoration: BoxDecoration(
-                                      color: index % 2 == 0
-                                          ? Colors.white
-                                          : Colors.grey.withOpacity(0.1),
-                                    ),
-                                    children: [
-                                       TableCell(
-                                         verticalAlignment:
-                                             TableCellVerticalAlignment.middle,
-                                         child: Padding(
-                                           padding: const EdgeInsets.all(8.0),
-                                           child: Row(
-                                             mainAxisAlignment:
-                                                 MainAxisAlignment.center,
-                                             children: [
-                                               Text(
-                                                 voucher.voucherNumber,
-                                                 textAlign: TextAlign.center,
-                                                 style: buildCustomStyle(
-                                                   FontWeightManager.medium,
-                                                   FontSize.s9,
-                                                   0.13,
-                                                   Colors.black,
-                                                 ),
-                                               ),
-                                               const SizedBox(width: 6),
-                                               GestureDetector(
-                                                 onTap: () {
-                                                   Clipboard.setData(
-                                                       ClipboardData(
-                                                           text: voucher
-                                                               .voucherNumber));
-                                                   showScaffold(
-                                                     context: context,
-                                                     message:
-                                                         'supplier_voucher.voucher_number_copied'.tr,
-                                                   );
-                                                 },
-                                                 child: const Icon(
-                                                   Icons.copy,
-                                                   size: 14,
-                                                   color: Colors.black38,
-                                                 ),
-                                               ),
-                                             ],
-                                           ),
-                                         ),
-                                       ),
-                                      TableCell(
-                                        verticalAlignment: TableCellVerticalAlignment.middle,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Center(
-                                            child: SelectableText(
-                                              voucher.supplier.name,
-                                              textAlign: TextAlign.center,
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s9,
-                                                0.13,
-                                                Colors.black,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      _buildTableCell(UiCodeLabels.voucherType(voucher.type)),
-                                      _buildTableCell(voucher.voucherDate),
-                                      _buildTableCell(voucher.dueDate),
-                                      _buildTableCell(UiCodeLabels.payment(voucher.paymentMethod)),
-                                      _buildTableCell(
-                                          '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${voucher.amount}'),
-                                      Center(
-                                        child: _buildStatusChip(voucher.status),
-                                      ),
-                                      Center(
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const SizedBox(width: 8),
-                                              BuildBoxShadowContainer(
-                                                margin: const EdgeInsets.only(
-                                                    left: 5, right: 5),
-                                                circleRadius: 5,
-                                                child: IconButton(
-                                                  icon: Icon(
-                                                    Icons.visibility,
-                                                    size: 18,
-                                                    color: ColorManager
-                                                        .kPrimaryColor
-                                                        .withOpacity(0.9),
-                                                  ),
-                                                  onPressed: () =>
-                                                      _showVoucherDetails(
-                                                          voucher),
-                                                  constraints:
-                                                      const BoxConstraints(
-                                                    minWidth: 36,
-                                                    minHeight: 36,
-                                                  ),
-                                                  padding: EdgeInsets.zero,
-                                                ),
-                                              ),
-                                              BuildBoxShadowContainer(
-                                                margin: const EdgeInsets.only(
-                                                    left: 5, right: 5),
-                                                circleRadius: 5,
-                                                child: IconButton(
-                                                  icon: Icon(
-                                                    Icons.print,
-                                                    size: 18,
-                                                    color: ColorManager
-                                                        .kPrimaryColor
-                                                        .withOpacity(0.9),
-                                                  ),
-                                                  onPressed: () {
-                                                    Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (context) =>
-                                                            SupplierVoucherPrintPage(
-                                                          voucher: voucher,
-                                                          returnToPreviousRoute:
-                                                              true,
-                                                        ),
-                                                      ),
-                                                    );
-                                                  },
-                                                  constraints:
-                                                      const BoxConstraints(
-                                                    minWidth: 36,
-                                                    minHeight: 36,
-                                                  ),
-                                                  padding: EdgeInsets.zero,
-                                                ),
-                                              ),
-                                              BuildBoxShadowContainer(
-                                                margin: const EdgeInsets.only(
-                                                    left: 5, right: 5),
-                                                circleRadius: 5,
-                                                child: IconButton(
-                                                  icon: Icon(
-                                                    Icons.share,
-                                                    size: 18,
-                                                    color: ColorManager
-                                                        .kPrimaryColor
-                                                        .withOpacity(0.9),
-                                                  ),
-                                                  onPressed: () {
-                                                    ShareHelper.showShareSupplierVoucherSheet(
-                                                      context: context,
-                                                      voucher: voucher,
-                                                    );
-                                                  },
-                                                  constraints:
-                                                      const BoxConstraints(
-                                                    minWidth: 36,
-                                                    minHeight: 36,
-                                                  ),
-                                                  padding: EdgeInsets.zero,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-        },
-      ),
-    );
-  }
-
-  Widget _buildPaginationControls() {
-    return Consumer<SupplierVoucherProvider>(
-        builder: (context, voucherProvider, child) {
-      return pagination.PaginationControl(
-        currentPage: voucherProvider.currentPage,
-        totalPages: voucherProvider.totalPages,
-        onPageChanged: (int page) {
-          voucherProvider.goToPage(page);
-        },
-      );
-    });
-  }
-
-  Widget _buildTableHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-      child: Text(
-        title,
-        textAlign: TextAlign.center,
-        style: buildCustomStyle(
-          FontWeightManager.medium,
-          FontSize.s12,
-          0.18,
-          ColorManager.kPrimaryColor,
-        ),
-      ),
-    );
-  }
-
-  TableCell _buildTableCell(String content) {
-    return TableCell(
-      verticalAlignment: TableCellVerticalAlignment.middle,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Text(
-          content,
-          textAlign: TextAlign.center,
-          style: buildCustomStyle(
-            FontWeightManager.medium,
-            FontSize.s9,
-            0.13,
-            Colors.black,
-          ),
-        ),
-      ),
-    );
+              cardBuilder: _card,
+              emptyState:
+                  Center(child: Text('supplier_voucher.no_vouchers_found'.tr)),
+              onRefresh: refreshData,
+              currentPage: provider.currentPage,
+              totalPages: provider.totalPages,
+              itemsPerPage: provider.itemsPerPage,
+              countLabel: 'supplier_voucher.page_count'.trParams(
+                  {'count': '${provider.voucherListDetails?.length ?? 0}'}),
+              onPageChanged: provider.goToPage,
+            ));
   }
 
   Widget _buildStatusChip(String status) {
@@ -809,19 +425,19 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
 
     switch (status.toUpperCase()) {
       case 'PAID':
-        backgroundColor = Colors.green.withOpacity(0.1);
+        backgroundColor = Colors.green.withValues(alpha: 0.1);
         textColor = Colors.green;
         break;
       case 'PENDING':
-        backgroundColor = Colors.orange.withOpacity(0.1);
+        backgroundColor = Colors.orange.withValues(alpha: 0.1);
         textColor = Colors.orange;
         break;
       case 'CANCELLED':
-        backgroundColor = Colors.red.withOpacity(0.1);
+        backgroundColor = Colors.red.withValues(alpha: 0.1);
         textColor = Colors.red;
         break;
       default:
-        backgroundColor = Colors.grey.withOpacity(0.1);
+        backgroundColor = Colors.grey.withValues(alpha: 0.1);
         textColor = Colors.grey;
     }
 
@@ -842,45 +458,6 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
     );
   }
 
-  Widget _buildNoVouchersFoundUI() {
-    return Container(
-      height: double.infinity,
-      width: double.infinity,
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.receipt_long,
-            size: 60,
-            color: ColorManager.kPrimaryColor.withOpacity(0.7),
-          ),
-          const SizedBox(height: 15),
-          Text(
-            'supplier_voucher.no_vouchers_found'.tr,
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s18,
-              0.27,
-              ColorManager.textColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'supplier_voucher.try_adjusting_search'.tr,
-            style: buildCustomStyle(
-              FontWeightManager.regular,
-              FontSize.s14,
-              0.20,
-              Colors.grey,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showVoucherDetails(SupplierVoucher voucher) {
     showDialog(
       context: context,
@@ -888,16 +465,28 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
         title: 'supplier_voucher.details_title'.tr,
         gridColumns: [
           [
-            CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_voucher_number'.tr, voucher.voucherNumber, copyable: true),
-            CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_supplier_name'.tr, voucher.supplier.name),
-            CommonDetailsDialog.buildKeyValueRow('supplier_voucher.field_supplier_phone'.tr, voucher.supplier.phone, copyable: true),
-            CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_type'.tr, UiCodeLabels.voucherType(voucher.type)),
+            CommonDetailsDialog.buildKeyValueRow(
+                'supplier_voucher.col_voucher_number'.tr, voucher.voucherNumber,
+                copyable: true),
+            CommonDetailsDialog.buildKeyValueRow(
+                'supplier_voucher.col_supplier_name'.tr, voucher.supplier.name),
+            CommonDetailsDialog.buildKeyValueRow(
+                'supplier_voucher.field_supplier_phone'.tr,
+                voucher.supplier.phone,
+                copyable: true),
+            CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_type'.tr,
+                UiCodeLabels.voucherType(voucher.type)),
           ],
           [
-            CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_voucher_date'.tr, voucher.voucherDate),
-            CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_due_date'.tr, voucher.dueDate),
-            CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_status'.tr, voucher.status),
-            CommonDetailsDialog.buildKeyValueRow('supplier_voucher.col_payment_method'.tr, UiCodeLabels.payment(voucher.paymentMethod)),
+            CommonDetailsDialog.buildKeyValueRow(
+                'supplier_voucher.col_voucher_date'.tr, voucher.voucherDate),
+            CommonDetailsDialog.buildKeyValueRow(
+                'supplier_voucher.col_due_date'.tr, voucher.dueDate),
+            CommonDetailsDialog.buildKeyValueRow(
+                'supplier_voucher.col_status'.tr, voucher.status),
+            CommonDetailsDialog.buildKeyValueRow(
+                'supplier_voucher.col_payment_method'.tr,
+                UiCodeLabels.payment(voucher.paymentMethod)),
           ],
         ],
         sectionTitle: 'supplier_voucher.items_section_title'.tr,
@@ -923,11 +512,16 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
                   TableRow(
                     children: [
                       _buildTableHeaderCell('supplier_voucher.col_voucher'.tr),
-                      _buildTableHeaderCell('supplier_voucher.col_item_name'.tr),
-                      _buildTableHeaderCell('supplier_voucher.col_quantity_upper'.tr),
-                      _buildTableHeaderCell('supplier_voucher.col_unit_amount_upper'.tr),
-                      _buildTableHeaderCell('supplier_voucher.col_tax_upper'.tr),
-                      _buildTableHeaderCell('supplier_voucher.col_total_amount_upper'.tr),
+                      _buildTableHeaderCell(
+                          'supplier_voucher.col_item_name'.tr),
+                      _buildTableHeaderCell(
+                          'supplier_voucher.col_quantity_upper'.tr),
+                      _buildTableHeaderCell(
+                          'supplier_voucher.col_unit_amount_upper'.tr),
+                      _buildTableHeaderCell(
+                          'supplier_voucher.col_tax_upper'.tr),
+                      _buildTableHeaderCell(
+                          'supplier_voucher.col_total_amount_upper'.tr),
                     ],
                   ),
                 ],
@@ -951,7 +545,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
                   decoration: BoxDecoration(
                     color: index % 2 == 0
                         ? Colors.white
-                        : Colors.grey.withOpacity(0.05),
+                        : Colors.grey.withValues(alpha: 0.05),
                   ),
                   children: [
                     _buildTableBodyCell(voucher.voucherNumber),
@@ -1025,41 +619,6 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
           0.15,
           Colors.black,
         ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 150,
-            child: Text(
-              title,
-              style: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s14,
-                0.21,
-                Colors.black54,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              value.isNotEmpty ? value : 'N/A',
-              style: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s14,
-                0.21,
-                Colors.black,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

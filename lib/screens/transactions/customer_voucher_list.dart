@@ -1,14 +1,20 @@
+import 'dart:io';
+import '../../components/export_share_button.dart';
+import '../../core/ui/app_surface.dart';
+import '../../core/ui/list_page/filter_panel.dart';
+import '../../core/ui/list_page/list_page_header.dart';
+import '../../core/ui/list_page/list_page_scaffold.dart';
+import '../../services/list_excel_export_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/gestures.dart';
+
 import 'package:get/get.dart';
 import 'package:pos_machine/helpers/ui_code_labels.dart';
 import 'package:intl/intl.dart';
 import '../../components/build_calendar_selection.dart';
-import 'package:pos_machine/components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
+
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
-import 'package:pos_machine/components/build_pagination_control.dart'
-    as pagination;
+
 import 'package:pos_machine/models/customer_voucher.dart';
 import 'package:pos_machine/providers/customer_voucher_provider.dart';
 import 'package:provider/provider.dart';
@@ -18,21 +24,18 @@ import 'package:open_file/open_file.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:flutter/foundation.dart';
 
-import '../../components/build_container_box.dart';
-import '../../components/build_dropdown_with_search.dart';
 import '../../components/filter_toggle_button.dart';
-import '../../components/build_round_button.dart';
+
 import '../../controllers/sidebar_controller.dart';
 import '../../providers/auth_model.dart';
 import '../../providers/app_settings_provider.dart';
-import '../../providers/customer_voucher_provider.dart';
+
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import 'widgets/customer_voucher_print.dart';
 import 'widgets/common_details_dialog.dart';
 import 'widgets/share_helper.dart';
-import 'customer_voucher_list_mobile.dart'; 
 
 class CustomerVoucherListScreen extends StatefulWidget {
   const CustomerVoucherListScreen({super.key});
@@ -45,6 +48,10 @@ class CustomerVoucherListScreen extends StatefulWidget {
 class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
   final SideBarController sideBarController = Get.put(SideBarController());
   bool isInitialized = false;
+  bool _visibilityInitialized = false;
+  final _nameKey = GlobalKey<TextFilterFieldState>();
+  final _numberKey = GlobalKey<TextFilterFieldState>();
+  final _tableController = ScrollController();
   final TextEditingController searchTextController = TextEditingController();
   final TextEditingController voucherNumberController = TextEditingController();
   final TextEditingController dateFromController = TextEditingController();
@@ -62,12 +69,23 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      loadVouchers();
+      if (mounted) loadVouchers();
     });
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_visibilityInitialized) {
+      _showFilters =
+          MediaQuery.sizeOf(context).width >= ListLayoutBreakpoints.mobile;
+      _visibilityInitialized = true;
+    }
+  }
+
+  @override
   void dispose() {
+    _tableController.dispose();
     searchTextController.dispose();
     voucherNumberController.dispose();
     dateFromController.dispose();
@@ -95,12 +113,19 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
 
       await Provider.of<CustomerVoucherProvider>(context, listen: false)
           .listAllCustomerVouchers(accessToken: accessToken);
+      if (!mounted) return;
+      final error = context.read<CustomerVoucherProvider>().loadError;
+      if (error != null) throw error;
       setState(() {
         isInitialized = true;
       });
     } catch (error) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('customer_voucher.error_loading_vouchers'.tr.replaceAll('@error', error.toString()))),
+        SnackBar(
+            content: Text('customer_voucher.error_loading_vouchers'
+                .tr
+                .replaceAll('@error', error.toString()))),
       );
     }
   }
@@ -113,7 +138,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-    if (pickedDate != null) {
+    if (pickedDate != null && mounted && context.mounted) {
       final TimeOfDay? pickedTime = await showTimePicker(
         context: context,
         initialTime: TimeOfDay.now(),
@@ -123,12 +148,13 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
               colorScheme: const ColorScheme.light(
                 primary: ColorManager.kPrimaryColor,
               ),
-              dialogBackgroundColor: Colors.white,
+              dialogTheme: const DialogThemeData(backgroundColor: Colors.white),
             ),
             child: child!,
           );
         },
       );
+      if (!mounted) return;
       final TimeOfDay resolvedTime = pickedTime ??
           (isFromDate
               ? const TimeOfDay(hour: 0, minute: 0)
@@ -162,17 +188,15 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
       voucherNumber: voucherNumberController.text,
       type: selectedType,
       status: selectedStatus,
-      dateFrom: dateFromController.text.isEmpty
-          ? null
-          : dateFromController.text,
-      dateTo: dateToController.text.isEmpty
-          ? null
-          : dateToController.text,
+      dateFrom:
+          dateFromController.text.isEmpty ? null : dateFromController.text,
+      dateTo: dateToController.text.isEmpty ? null : dateToController.text,
     );
   }
 
   void resetSearch() {
-    debugPrint("Resetting all filters");
+    _nameKey.currentState?.cancelPendingSearch();
+    _numberKey.currentState?.cancelPendingSearch();
     setState(() {
       searchTextController.clear();
       voucherNumberController.clear();
@@ -186,17 +210,8 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
   }
 
   Future<void> refreshData() async {
-    debugPrint("Refreshing data");
-    final String? accessToken =
-        Provider.of<AuthModel>(context, listen: false).token;
-    if (accessToken == null || accessToken.isEmpty) return;
-
-    setState(() {
-      searchTextController.clear();
-    });
-
-    await Provider.of<CustomerVoucherProvider>(context, listen: false)
-        .listAllCustomerVouchers(accessToken: accessToken);
+    isInitialized = false;
+    await loadVouchers();
   }
 
   Future<void> _showVoucherActionsSheet(CustomerVoucher voucher) async {
@@ -284,7 +299,8 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                 ),
                 Text(
                   'customer_voucher.more_options_title'.tr,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
                 const Divider(height: 1),
@@ -311,7 +327,9 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
         return;
       }
 
-      showScaffold(context: context, message: 'customer_voucher.processing_zatca_phase2'.tr);
+      showScaffold(
+          context: context,
+          message: 'customer_voucher.processing_zatca_phase2'.tr);
       showLoadingOverlay(context, message: 'customer_voucher.processing'.tr);
 
       final provider =
@@ -336,7 +354,9 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
         }
         showScaffold(
           context: context,
-          message: 'customer_voucher.processed_phase2'.tr.replaceAll('@number', voucherNumber),
+          message: 'customer_voucher.processed_phase2'
+              .tr
+              .replaceAll('@number', voucherNumber),
         );
       } else {
         final msg = (result is Map ? result['message'] : null) ??
@@ -346,7 +366,11 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
       }
     } catch (e) {
       debugPrint('[ZATCA][Phase2 Send With PDF] EXCEPTION: $e');
-      showScaffoldError(context: context, message: 'customer_voucher.error_generic'.tr.replaceAll('@error', e.toString()));
+      showScaffoldError(
+          context: context,
+          message: 'customer_voucher.error_generic'
+              .tr
+              .replaceAll('@error', e.toString()));
     } finally {
       hideLoadingOverlay();
     }
@@ -365,7 +389,8 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
         return;
       }
 
-      showScaffold(context: context, message: 'customer_voucher.sending_to_zatca'.tr);
+      showScaffold(
+          context: context, message: 'customer_voucher.sending_to_zatca'.tr);
       showLoadingOverlay(context, message: 'customer_voucher.sending'.tr);
 
       final provider =
@@ -386,7 +411,9 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
         // Do NOT open PDF here per requirement. Just inform the user.
         showScaffold(
           context: context,
-          message: 'customer_voucher.submitted_to_zatca'.tr.replaceAll('@number', voucherNumber),
+          message: 'customer_voucher.submitted_to_zatca'
+              .tr
+              .replaceAll('@number', voucherNumber),
         );
       } else {
         final msg = (result is Map ? result['message'] : null) ??
@@ -396,7 +423,11 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
       }
     } catch (e) {
       debugPrint('[ZATCA][Phase2 Send] EXCEPTION: $e');
-      showScaffoldError(context: context, message: 'customer_voucher.error_generic'.tr.replaceAll('@error', e.toString()));
+      showScaffoldError(
+          context: context,
+          message: 'customer_voucher.error_generic'
+              .tr
+              .replaceAll('@error', e.toString()));
     } finally {
       hideLoadingOverlay();
     }
@@ -407,7 +438,9 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
     try {
       if (kIsWeb) {
         await launchUrlString(url, mode: LaunchMode.externalApplication);
-        showScaffold(context: context, message: 'customer_voucher.opened_pdf_browser'.tr);
+        showScaffold(
+            context: context,
+            message: 'customer_voucher.opened_pdf_browser'.tr);
         return;
       }
 
@@ -430,909 +463,362 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
       );
 
       await OpenFile.open(savePath);
-      showScaffold(context: context, message: 'customer_voucher.pdf_downloaded'.tr);
+      showScaffold(
+          context: context, message: 'customer_voucher.pdf_downloaded'.tr);
     } catch (e) {
       debugPrint('[ZATCA][PDF] ERROR while downloading/opening: $e');
       try {
         await launchUrlString(url, mode: LaunchMode.externalApplication);
       } catch (_) {}
-      showScaffoldError(context: context, message: 'customer_voucher.failed_open_pdf'.tr);
+      showScaffoldError(
+          context: context, message: 'customer_voucher.failed_open_pdf'.tr);
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
-    final bool isMobile = size.width < 700;
-
-    if (isMobile) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Consumer<CustomerVoucherProvider>(
-            builder: (context, voucherProvider, child) {
-              return CustomerVoucherMobileView(
-                vouchers: voucherProvider.voucherListDetails ?? const <CustomerVoucher>[],
-                isLoading: voucherProvider.isLoading,
-                searchTextController: searchTextController,
-                voucherNumberController: voucherNumberController,
-                nameFocusNode: nameFocusNode,
-                voucherNoFocusNode: voucherNoFocusNode,
-                selectedType: selectedType,
-                selectedStatus: selectedStatus,
-                typeOptions: voucherProvider.getTypeOptions()
-                    .where((t) => t != 'All Types').toList(),
-                statusOptions: voucherProvider.getStatusOptions()
-                    .where((s) => s != 'All Status').toList(),
-                onSearchChanged: searchVouchers,
-                onReset: resetSearch,
-                onTypeChanged: (v) {
-                  setState(() => selectedType = v);
-                  searchVouchers();
-                },
-                onStatusChanged: (v) {
-                  setState(() => selectedStatus = v);
-                  searchVouchers();
-                },
-                onViewDetails: _showVoucherDetails,
-                onShowActions: _showVoucherActionsSheet,
-                currentPage: voucherProvider.currentPage,
-                totalPages: voucherProvider.totalPages,
-                onPageChanged: (page) => voucherProvider.goToPage(page),
-                onCreateVoucher: () =>
-                    Get.find<SideBarController>().index.value = 71,
-                onRefresh: refreshData,
-              );
-            },
-          ),
-        ),
-      );
-    }
-    return SafeArea(
-      child: RefreshIndicator(
-        onRefresh: refreshData,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: const [
-              BoxShadow(
-                color: ColorManager.boxShadowColor,
-                blurRadius: 6,
-                offset: Offset(1, 1),
-              ),
-            ],
-            color: Colors.white,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(size),
-                if (_showFilters) ...[
-                  KeyedSubtree(
-                    key: const ValueKey('customer-voucher-desktop-filters'),
-                    child: _buildSearchBar(size),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-                _buildVoucherTable(),
-                const SizedBox(height: 10),
-                _buildPaginationControls(),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(Size size) {
-    final hasActiveFilters = searchTextController.text.isNotEmpty ||
-        voucherNumberController.text.isNotEmpty ||
-        dateFromController.text.isNotEmpty ||
-        dateToController.text.isNotEmpty ||
-        selectedType != null ||
-        selectedStatus != null;
-
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Text(
-                'customer_voucher.list_title'.tr,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s20,
-                    0.30,
-                    ColorManager.textColor),
-              ),
-            ),
-            const SizedBox(width: 8),
-            FilterToggleButton(
-              showFilters: _showFilters,
-              hasActiveFilters: hasActiveFilters,
-              activeFiltersListenable: Listenable.merge([
-                searchTextController,
-                voucherNumberController,
-                dateFromController,
-                dateToController,
-              ]),
-              activeFiltersBuilder: () =>
-                  searchTextController.text.isNotEmpty ||
-                  voucherNumberController.text.isNotEmpty ||
-                  dateFromController.text.isNotEmpty ||
-                  dateToController.text.isNotEmpty ||
-                  selectedType != null ||
-                  selectedStatus != null,
-              onPressed: () => setState(() => _showFilters = !_showFilters),
-              showTooltip: 'customer_voucher.show_filters'.tr,
-              hideTooltip: 'customer_voucher.hide_filters'.tr,
-            ),
-            const SizedBox(width: 8),
-            CustomRoundButton(
-              title: 'customer_voucher.create_voucher_button'.tr,
-              fct: () {
-                Get.find<SideBarController>().index.value =
-                    71; // Create Voucher Screen
-              },
-              fontSize: FontSize.s12,
-              height: 45,
-              width: 150,
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-      ],
-    );
-  }
-
-  Widget _buildSearchBar(Size size) {
-    return Column(
-      children: [
-        // First row of search fields
-        SizedBox(
-          height: 55,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildCustomerNameSearch(),
-              const SizedBox(width: 10),
-              _buildVoucherNumberSearch(),
-              const SizedBox(width: 10),
-              Expanded(
-                flex: 1,
-                child: _buildTypeFilter(),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                flex: 1,
-                child: _buildStatusFilter(),
-              ),
-            ],
-          ),
-        ),
-        // Second row with date range search and reset button
-        SizedBox(
-          height: 55,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 2,
-                child: _buildDateRangeSearch(),
-              ),
-              const SizedBox(width: 10),
-              CustomRoundButton(
-                title: 'general.reset'.tr,
-                boxColor: Colors.white,
-                textColor: ColorManager.kPrimaryColor,
-                fct: resetSearch,
-                height: 45,
-                width: 150,
-                fontSize: FontSize.s12,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCustomerNameSearch() {
-    return Expanded(
-      flex: 1,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Padding(
-          //   padding: const EdgeInsets.all(8.0),
-          //   child: Text(
-          //     "Customer Name",
-          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-          //         0.27, Colors.black.withOpacity(0.6)),
-          //   ),
-          // ),
-          // const SizedBox(height: 8),
-          BuildBoxShadowContainer(
-            height: 45,
-            width: double.infinity,
-            circleRadius: 7,
-            child: TextFormField(
+  Widget _filters(CustomerVoucherProvider provider) => FilterPanel(
+        key: const ValueKey('customer-voucher-desktop-filters'),
+        title: 'customer_voucher.find'.tr,
+        hint: 'customer_voucher.filter_hint'.tr,
+        onReset: resetSearch,
+        fields: [
+          TextFilterField(
+              key: _nameKey,
               controller: searchTextController,
-              onChanged: (value) => searchVouchers(),
-              cursorColor: ColorManager.kPrimaryColor,
-              cursorHeight: 13,
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                  0.18, ColorManager.textColor),
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                hintText: 'customer_voucher.customer_name_hint'.tr,
-                hintStyle: buildCustomStyle(FontWeightManager.medium,
-                    FontSize.s10, 0.18, ColorManager.textColor),
-                contentPadding: const EdgeInsets.only(left: 15),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVoucherNumberSearch() {
-    return Expanded(
-      flex: 1,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Padding(
-          //   padding: const EdgeInsets.all(8.0),
-          //   child: Text(
-          //     "Voucher No",
-          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-          //         0.27, Colors.black.withOpacity(0.6)),
-          //   ),
-          // ),
-          // const SizedBox(height: 8),
-          BuildBoxShadowContainer(
-            height: 45,
-            width: double.infinity,
-            circleRadius: 7,
-            child: TextFormField(
+              label: 'customer_voucher.customer_name_hint'.tr,
+              icon: Icons.person_outline,
+              onSearch: searchVouchers),
+          TextFilterField(
+              key: _numberKey,
               controller: voucherNumberController,
-              onChanged: (value) => searchVouchers(),
-              cursorColor: ColorManager.kPrimaryColor,
-              cursorHeight: 13,
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                  0.18, ColorManager.textColor),
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                hintText: 'customer_voucher.voucher_no_hint'.tr,
-                hintStyle: buildCustomStyle(FontWeightManager.medium,
-                    FontSize.s10, 0.18, ColorManager.textColor),
-                contentPadding: const EdgeInsets.only(left: 15),
-              ),
-            ),
-          ),
+              label: 'customer_voucher.voucher_no_hint'.tr,
+              icon: Icons.receipt_long_outlined,
+              onSearch: searchVouchers),
+          _dropdown(
+              'customer_voucher.col_type'.tr,
+              selectedType,
+              {
+                ...provider.getTypeOptions().where((v) => v != 'All Types'),
+                if (selectedType != null) selectedType!
+              }.toList(),
+              UiCodeLabels.voucherType, (v) {
+            setState(() => selectedType = v);
+            searchVouchers();
+          }),
+          _dropdown(
+              'customer_voucher.col_status'.tr,
+              selectedStatus,
+              provider
+                  .getStatusOptions()
+                  .where((v) => v != 'All Status')
+                  .toList(),
+              UiCodeLabels.status, (v) {
+            setState(() => selectedStatus = v);
+            searchVouchers();
+          }),
+          for (final from in [true, false])
+            TextField(
+                controller: from ? dateFromController : dateToController,
+                readOnly: true,
+                decoration: listFilterDecoration(
+                    from
+                        ? 'customer_voucher.from_date'.tr
+                        : 'customer_voucher.to_date'.tr,
+                    Icons.calendar_today_outlined),
+                onTap: () => _selectDate(context, isFromDate: from)),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTypeFilter() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 10.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Consumer<CustomerVoucherProvider>(
-            builder: (context, voucherProvider, child) {
-              List<String> typeOptions = voucherProvider.getTypeOptions();
-
-              return BuildDropDownWithSearch<String>(
-                focusNode: typeFocusNode,
-                title: null,
-                showName: false,
-                hintText: 'customer_voucher.hint_all_types'.tr,
-                value: selectedType,
-                items:
-                    typeOptions.where((type) => type != "All Types").toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    selectedType = newValue;
-                  });
-                  searchVouchers();
-                },
-                displayText: (type) => type.toUpperCase(),
-                height: 45,
-                margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusFilter() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 10.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Consumer<CustomerVoucherProvider>(
-            builder: (context, voucherProvider, child) {
-              List<String> statusOptions = voucherProvider.getStatusOptions();
-
-              return BuildDropDownWithSearch<String>(
-                focusNode: statusFocusNode,
-                title: null,
-                showName: false,
-                hintText: 'customer_voucher.hint_all_status'.tr,
-                value: selectedStatus,
-                items: statusOptions
-                    .where((status) => status != "All Status")
-                    .toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    selectedStatus = newValue;
-                  });
-                  searchVouchers();
-                },
-                displayText: UiCodeLabels.status,
-                height: 45,
-                margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDateRangeSearch() {
-    return Row(
-      children: [
-        Expanded(
-          child: BuildBoxShadowContainer(
-            height: 45,
-            width: double.infinity,
-            circleRadius: 7,
-            child: TextFormField(
-              controller: dateFromController,
-              onTap: () => _selectDate(context, isFromDate: true),
-              readOnly: true,
-              cursorColor: ColorManager.kPrimaryColor,
-              cursorHeight: 13,
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                  0.18, ColorManager.textColor),
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                hintText: 'customer_voucher.date_range_hint'.tr,
-                hintStyle: buildCustomStyle(FontWeightManager.medium,
-                    FontSize.s10, 0.18, ColorManager.textColor.withOpacity(.5)),
-                prefixIcon: const Icon(
-                  Icons.calendar_today,
-                  size: 16,
-                  color: ColorManager.kPrimaryColor,
-                ),
-                contentPadding: const EdgeInsets.only(left: 15, top: 12),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: BuildBoxShadowContainer(
-            height: 45,
-            width: double.infinity,
-            circleRadius: 7,
-            child: TextFormField(
-              controller: dateToController,
-              onTap: () => _selectDate(context, isFromDate: false),
-              readOnly: true,
-              cursorColor: ColorManager.kPrimaryColor,
-              cursorHeight: 13,
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                  0.18, ColorManager.textColor),
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                hintText: 'customer_voucher.date_range_hint'.tr,
-                hintStyle: buildCustomStyle(FontWeightManager.medium,
-                    FontSize.s10, 0.18, ColorManager.textColor.withOpacity(.5)),
-                prefixIcon: const Icon(
-                  Icons.calendar_today,
-                  size: 16,
-                  color: ColorManager.kPrimaryColor,
-                ),
-                contentPadding: const EdgeInsets.only(left: 15, top: 12),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildVoucherTable() {
-    return Expanded(
-      child: Consumer<CustomerVoucherProvider>(
-        builder: (context, voucherProvider, child) {
-          final isLoading = voucherProvider.isLoading;
-          final voucherList = voucherProvider.voucherListDetails;
-
-          return Column(
-            children: [
-              Expanded(
-                child: isLoading
-                    ? const Center(child: CircularProgressIndicator.adaptive())
-                    : BuildBoxShadowContainer(
-                        margin: const EdgeInsets.only(top: 5),
-                        circleRadius: 7,
-                        offsetValue: const Offset(2, 2),
-                        blurRadius: 8.0,
-                        color: Colors.white,
-                        child: Column(
-                          children: [
-                            // Fixed table header
-                            Container(
-                              decoration: const BoxDecoration(
-                                color: ColorManager.tableBGColor,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black12,
-                                    offset: Offset(0, 2),
-                                    blurRadius: 2.0,
-                                  ),
-                                ],
-                              ),
-                              child: Table(
-                                columnWidths: {
-                                  0: const FlexColumnWidth(
-                                      1.4), // Voucher Number
-                                  1: const FlexColumnWidth(
-                                      1.6), // Customer Name
-                                  2: const FlexColumnWidth(0.9), // Type
-                                  3: const FlexColumnWidth(1.3), // Voucher Date
-                                  4: const FlexColumnWidth(1.3), // Due Date
-                                  5: const FlexColumnWidth(
-                                      1.0), // Payment Method
-                                  6: const FlexColumnWidth(0.9), // Amount
-                                  7: const FlexColumnWidth(0.9), // Status
-                                  8: FlexColumnWidth(
-                                      MediaQuery.of(context).size.width < 900
-                                          ? 2.2
-                                          : 1.5),
-                                },
-                                border: null,
-                                defaultVerticalAlignment:
-                                    TableCellVerticalAlignment.middle,
-                                children: [
-                                  TableRow(
-                                    children: [
-                                      _buildTableHeader('customer_voucher.col_voucher_number'.tr),
-                                      _buildTableHeader('customer_voucher.customer_name_hint'.tr),
-                                      _buildTableHeader('customer_voucher.col_type'.tr),
-                                      _buildTableHeader('customer_voucher.col_voucher_date'.tr),
-                                      _buildTableHeader('customer_voucher.col_due_date'.tr),
-                                      _buildTableHeader('customer_voucher.col_payment_method'.tr),
-                                      _buildTableHeader('customer_voucher.col_paid_amount'.tr),
-                                      _buildTableHeader('customer_voucher.col_status'.tr),
-                                      _buildTableHeader('customer_voucher.col_action'.tr),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            // Scrollable table body
-                            Expanded(
-                              child: MouseRegion(
-                                cursor: SystemMouseCursors.grab,
-                                child: ScrollConfiguration(
-                                  behavior:
-                                      ScrollConfiguration.of(context).copyWith(
-                                    dragDevices: {
-                                      PointerDeviceKind.mouse,
-                                      PointerDeviceKind.touch,
-                                      PointerDeviceKind.stylus,
-                                      PointerDeviceKind.trackpad,
-                                    },
-                                  ),
-                                  child: voucherList == null ||
-                                          voucherList.isEmpty
-                                      ? _buildNoVouchersFoundUI()
-                                      : SingleChildScrollView(
-                                          physics:
-                                              const BouncingScrollPhysics(),
-                                          scrollDirection: Axis.vertical,
-                                          child: Table(
-                                            columnWidths: {
-                                              0: const FlexColumnWidth(1.4),
-                                              1: const FlexColumnWidth(1.6),
-                                              2: const FlexColumnWidth(0.9),
-                                              3: const FlexColumnWidth(1.3),
-                                              4: const FlexColumnWidth(1.3),
-                                              5: const FlexColumnWidth(1.0),
-                                              6: const FlexColumnWidth(0.9),
-                                              7: const FlexColumnWidth(0.9),
-                                              8: FlexColumnWidth(
-                                                  MediaQuery.of(context)
-                                                              .size
-                                                              .width <
-                                                          900
-                                                      ? 2.2
-                                                      : 1.5),
-                                            },
-                                            border: null,
-                                            defaultVerticalAlignment:
-                                                TableCellVerticalAlignment
-                                                    .middle,
-                                            children: voucherList
-                                                .asMap()
-                                                .entries
-                                                .map((entry) {
-                                              final int index = entry.key;
-                                              final voucher = entry.value;
-                                              return TableRow(
-                                                decoration: BoxDecoration(
-                                                  color: index % 2 == 0
-                                                      ? Colors.white
-                                                      : Colors.grey
-                                                          .withOpacity(0.1),
-                                                ),
-                                                children: [
-                                                   TableCell(
-                                                     verticalAlignment:
-                                                         TableCellVerticalAlignment
-                                                             .middle,
-                                                     child: Padding(
-                                                       padding:
-                                                           const EdgeInsets.all(
-                                                               8.0),
-                                                       child: Row(
-                                                         mainAxisAlignment:
-                                                             MainAxisAlignment
-                                                                 .center,
-                                                         children: [
-                                                           Text(
-                                                             voucher
-                                                                 .voucherNumber,
-                                                             textAlign:
-                                                                 TextAlign
-                                                                     .center,
-                                                             style:
-                                                                 buildCustomStyle(
-                                                               FontWeightManager
-                                                                   .medium,
-                                                               FontSize.s9,
-                                                               0.13,
-                                                               Colors.black,
-                                                             ),
-                                                           ),
-                                                           const SizedBox(
-                                                               width: 6),
-                                                           GestureDetector(
-                                                             onTap: () {
-                                                               Clipboard.setData(
-                                                                   ClipboardData(
-                                                                       text: voucher
-                                                                           .voucherNumber));
-                                                               showScaffold(
-                                                                 context:
-                                                                     context,
-                                                                 message:
-                                                                     'customer_voucher.voucher_number_copied'.tr,
-                                                               );
-                                                             },
-                                                             child: const Icon(
-                                                               Icons.copy,
-                                                               size: 14,
-                                                               color: Colors
-                                                                   .black38,
-                                                             ),
-                                                           ),
-                                                         ],
-                                                       ),
-                                                     ),
-                                                   ),
-                                                   TableCell(
-                                                     verticalAlignment: TableCellVerticalAlignment.middle,
-                                                     child: Padding(
-                                                       padding: const EdgeInsets.all(8.0),
-                                                       child: Center(
-                                                         child: SelectableText(
-                                                           voucher.customer.user.name.toString(),
-                                                           textAlign: TextAlign.center,
-                                                           style: buildCustomStyle(
-                                                             FontWeightManager.medium,
-                                                             FontSize.s9,
-                                                             0.13,
-                                                             Colors.black,
-                                                           ),
-                                                         ),
-                                                       ),
-                                                     ),
-                                                   ),
-                                                  _buildTableCell(UiCodeLabels.voucherType(voucher.type)),
-                                                  _buildTableCell(
-                                                      voucher.voucherDate),
-                                                  _buildTableCell(
-                                                      voucher.dueDate),
-                                                  _buildTableCell(
-                                                      UiCodeLabels.payment(voucher.paymentMethod)),
-                                                  _buildTableCell(
-                                                      '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${voucher.amount}'),
-                                                  Center(
-                                                    child: _buildStatusChip(
-                                                        voucher.status),
-                                                  ),
-                                                  Center(
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                              8.0),
-                                                      child: Row(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        children: [
-                                                          const SizedBox(
-                                                              width: 8),
-                                                          BuildBoxShadowContainer(
-                                                            margin:
-                                                                const EdgeInsets
-                                                                    .only(
-                                                                    left: 5,
-                                                                    right: 5),
-                                                            circleRadius: 5,
-                                                            child: IconButton(
-                                                              icon: Icon(
-                                                                Icons
-                                                                    .visibility,
-                                                                size: 18,
-                                                                color: ColorManager
-                                                                    .kPrimaryColor
-                                                                    .withOpacity(
-                                                                        0.9),
-                                                              ),
-                                                              onPressed: () =>
-                                                                  _showVoucherDetails(
-                                                                      voucher),
-                                                              constraints:
-                                                                  const BoxConstraints(
-                                                                minWidth: 36,
-                                                                minHeight: 36,
-                                                              ),
-                                                              padding:
-                                                                  EdgeInsets
-                                                                      .zero,
-                                                            ),
-                                                          ),
-                                                          BuildBoxShadowContainer(
-                                                            margin:
-                                                                const EdgeInsets
-                                                                    .only(
-                                                                    left: 5,
-                                                                    right: 5),
-                                                            circleRadius: 5,
-                                                            child: IconButton(
-                                                              icon: Icon(
-                                                                Icons.print,
-                                                                size: 18,
-                                                                color: ColorManager
-                                                                    .kPrimaryColor
-                                                                    .withOpacity(
-                                                                        0.9),
-                                                              ),
-                                                              onPressed: () {
-                                                                Navigator.push(
-                                                                  context,
-                                                                  MaterialPageRoute(
-                                                                    builder:
-                                                                        (context) =>
-                                                                            CustomerVoucherPrintPage(
-                                                                      voucher:
-                                                                          voucher,
-                                                                      returnToPreviousRoute:
-                                                                          true,
-                                                                    ),
-                                                                  ),
-                                                                );
-                                                              },
-                                                              constraints:
-                                                                  const BoxConstraints(
-                                                                minWidth: 36,
-                                                                minHeight: 36,
-                                                              ),
-                                                              padding:
-                                                                  EdgeInsets
-                                                                      .zero,
-                                                            ),
-                                                          ),
-                                                          BuildBoxShadowContainer(
-                                                            margin:
-                                                                const EdgeInsets
-                                                                    .only(
-                                                                    left: 5,
-                                                                    right: 5),
-                                                            circleRadius: 5,
-                                                            child: IconButton(
-                                                              icon: Icon(
-                                                                Icons.more_vert,
-                                                                size: 18,
-                                                                color: ColorManager
-                                                                    .kPrimaryColor
-                                                                    .withOpacity(
-                                                                        0.9),
-                                                              ),
-                                                              onPressed: () =>
-                                                                  _showVoucherActionsSheet(
-                                                                      voucher),
-                                                              constraints:
-                                                                  const BoxConstraints(
-                                                                minWidth: 36,
-                                                                minHeight: 36,
-                                                              ),
-                                                              padding:
-                                                                  EdgeInsets
-                                                                      .zero,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              );
-                                            }).toList(),
-                                          ),
-                                        ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildPaginationControls() {
-    return Consumer<CustomerVoucherProvider>(
-        builder: (context, voucherProvider, child) {
-      debugPrint(
-          "Building pagination controls: currentPage=${voucherProvider.currentPage}, totalPages=${voucherProvider.totalPages}");
-      return pagination.PaginationControl(
-        currentPage: voucherProvider.currentPage,
-        totalPages: voucherProvider.totalPages,
-        onPageChanged: (int page) {
-          debugPrint("Page changed to: $page");
-          voucherProvider.goToPage(page);
-        },
       );
-    });
-  }
+  Widget _dropdown(String label, String? value, List<String> options,
+          String Function(String) display, ValueChanged<String?> onChanged) =>
+      DropdownButtonFormField<String>(
+          key: ValueKey('$label:$value'),
+          initialValue: value,
+          isExpanded: true,
+          decoration: listFilterDecoration(label, Icons.swap_vert),
+          items: [
+            DropdownMenuItem<String>(
+                value: null,
+                child: Text(label == 'customer_voucher.col_type'.tr
+                    ? 'customer_voucher.hint_all_types'.tr
+                    : 'customer_voucher.hint_all_status'.tr)),
+            for (final option in options)
+              DropdownMenuItem(value: option, child: Text(display(option)))
+          ],
+          onChanged: onChanged);
 
-  Widget _buildTableHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-      child: Text(
-        title,
-        textAlign: TextAlign.center,
-        style: buildCustomStyle(
-          FontWeightManager.medium,
-          FontSize.s12,
-          0.18,
-          ColorManager.kPrimaryColor,
-        ),
-      ),
+  Future<File> _createExport() {
+    _nameKey.currentState?.cancelPendingSearch();
+    _numberKey.currentState?.cancelPendingSearch();
+    final provider = context.read<CustomerVoucherProvider>();
+    if (provider.isLoading || provider.loadError != null) {
+      throw StateError('Refresh vouchers before exporting.');
+    }
+    // Apply pending edits to the visible list and provider filters as well.
+    // Name/number/type/status are local filters, so this makes no extra request.
+    provider.applyFilters(
+      customerName: searchTextController.text,
+      voucherNumber: voucherNumberController.text,
+      type: selectedType,
+      status: selectedStatus,
+      dateFrom:
+          dateFromController.text.isEmpty ? null : dateFromController.text,
+      dateTo: dateToController.text.isEmpty ? null : dateToController.text,
+      page: provider.currentPage,
     );
-  }
-
-  TableCell _buildTableCell(String content) {
-    return TableCell(
-      verticalAlignment: TableCellVerticalAlignment.middle,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Text(
-          content,
-          textAlign: TextAlign.center,
-          style: buildCustomStyle(
-            FontWeightManager.medium,
-            FontSize.s9,
-            0.13,
-            Colors.black,
-          ),
-        ),
-      ),
-    );
+    final items = provider.filterForExport(
+        customerName: searchTextController.text,
+        voucherNumber: voucherNumberController.text,
+        type: selectedType,
+        status: selectedStatus);
+    final currency =
+        context.read<AppSettingsProvider>().appSettings?.currency ?? 'INR';
+    return ListExcelExportService.export<CustomerVoucher>(
+        items: items,
+        fileNamePrefix: 'customer-vouchers',
+        sheetName: 'customer_voucher.list_title'.tr,
+        columns: [
+          ListExportColumn(
+              label: 'customer_voucher.col_voucher_number'.tr,
+              value: (v, _) => v.voucherNumber),
+          ListExportColumn(
+              label: 'customer_voucher.col_customer_name'.tr,
+              value: (v, _) => v.customer.user.name),
+          ListExportColumn(
+              label: 'customer_voucher.col_type'.tr,
+              value: (v, _) => UiCodeLabels.voucherType(v.type)),
+          ListExportColumn(
+              label: 'customer_voucher.col_voucher_date'.tr,
+              value: (v, _) => v.voucherDate),
+          ListExportColumn(
+              label: 'customer_voucher.col_due_date'.tr,
+              value: (v, _) => v.dueDate),
+          ListExportColumn(
+              label: 'customer_voucher.col_payment_method'.tr,
+              value: (v, _) => UiCodeLabels.payment(v.paymentMethod)),
+          ListExportColumn(
+              label: 'customer_voucher.col_paid_amount'.tr,
+              value: (v, _) => ListExcelExportService.numericValue(v.amount)),
+          ListExportColumn(
+              label: 'supplier_transactions.currency'.tr,
+              value: (_, __) => currency),
+          ListExportColumn(
+              label: 'customer_voucher.col_status'.tr,
+              value: (v, _) => UiCodeLabels.status(v.status)),
+        ]);
   }
 
   Widget _buildStatusChip(String status) {
-    Color backgroundColor;
-    Color textColor;
-
-    switch (status.toUpperCase()) {
-      case 'PAID':
-        backgroundColor = Colors.green.withOpacity(0.1);
-        textColor = Colors.green;
-        break;
-      case 'PENDING':
-        backgroundColor = Colors.orange.withOpacity(0.1);
-        textColor = Colors.orange;
-        break;
-      case 'CANCELLED':
-        backgroundColor = Colors.red.withOpacity(0.1);
-        textColor = Colors.red;
-        break;
-      default:
-        backgroundColor = Colors.grey.withOpacity(0.1);
-        textColor = Colors.grey;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        UiCodeLabels.status(status),
-        style: TextStyle(
-          color: textColor,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
+    final color = status.toLowerCase() == 'paid'
+        ? const Color(0xff2c6e49)
+        : status.toLowerCase() == 'pending'
+            ? Colors.orange.shade800
+            : status.toLowerCase() == 'cancelled'
+                ? const Color(0xffb42318)
+                : Colors.grey;
+    return Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10)),
+            child: Text(UiCodeLabels.status(status),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    color: color, fontSize: 12, fontWeight: FontWeight.w600))));
   }
 
-  Widget _buildNoVouchersFoundUI() {
-    return Container(
-      height: double.infinity,
-      width: double.infinity,
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.receipt_long,
-            size: 60,
-            color: ColorManager.kPrimaryColor.withOpacity(0.7),
-          ),
-          const SizedBox(height: 15),
-          Text(
-            'customer_voucher.no_vouchers_found'.tr,
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s18,
-              0.27,
-              ColorManager.textColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'customer_voucher.try_adjusting_search'.tr,
-            style: buildCustomStyle(
-              FontWeightManager.regular,
-              FontSize.s14,
-              0.20,
-              Colors.grey,
-            ),
-          ),
-        ],
-      ),
-    );
+  Widget _reference(CustomerVoucher voucher) => Row(children: [
+        Expanded(child: TableCells.text(voucher.voucherNumber)),
+        IconButton(
+            icon: const Icon(Icons.copy_outlined, size: 16),
+            tooltip: 'customer_voucher.copy_voucher_number'.tr,
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: voucher.voucherNumber));
+              showScaffold(
+                  context: context,
+                  message: 'customer_voucher.voucher_number_copied'.tr);
+            }),
+      ]);
+
+  Widget _actions(CustomerVoucher voucher) =>
+      Wrap(spacing: 6, runSpacing: 6, children: [
+        TableCells.viewButton(() => _showVoucherDetails(voucher)),
+        _action(
+            Icons.print_outlined,
+            'general.print'.tr,
+            () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => CustomerVoucherPrintPage(
+                        voucher: voucher, returnToPreviousRoute: true)))),
+        _action(Icons.more_vert, 'customer_voucher.more_options_title'.tr,
+            () => _showVoucherActionsSheet(voucher)),
+      ]);
+
+  Widget _action(IconData icon, String tooltip, VoidCallback onPressed) =>
+      IconButton.outlined(
+          icon: Icon(icon, size: 18),
+          tooltip: tooltip,
+          onPressed: onPressed,
+          style: IconButton.styleFrom(
+              foregroundColor: ColorManager.kPrimaryColor,
+              side: const BorderSide(color: Color(0xFFE1E3E5)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10))));
+
+  String _amount(CustomerVoucher voucher) =>
+      '${context.read<AppSettingsProvider>().appSettings?.currency ?? 'INR'} ${voucher.amount}';
+
+  Widget _card(CustomerVoucher voucher, int number) => AppSurface(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        TableCells.identity(voucher.customer.user.name),
+        const SizedBox(height: 10),
+        _reference(voucher),
+        Text(
+            '${'customer_voucher.col_type'.tr}: ${UiCodeLabels.voucherType(voucher.type)}'),
+        Text(
+            '${'customer_voucher.col_voucher_date'.tr}: ${voucher.voucherDate}'),
+        Text('${'customer_voucher.col_due_date'.tr}: ${voucher.dueDate}'),
+        Text(
+            '${'customer_voucher.col_payment_method'.tr}: ${UiCodeLabels.payment(voucher.paymentMethod)}'),
+        Text('${'customer_voucher.col_paid_amount'.tr}: ${_amount(voucher)}'),
+        const SizedBox(height: 10),
+        _buildStatusChip(voucher.status),
+        const SizedBox(height: 10),
+        _actions(voucher),
+      ]));
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<CustomerVoucherProvider>();
+    return LayoutBuilder(
+        builder: (context, bounds) => ListPageScaffold<CustomerVoucher>(
+              header: ListPageHeader(
+                  icon: Icons.receipt_long_outlined,
+                  title: 'customer_voucher.mobile_header_title'.tr,
+                  subtitle: 'customer_voucher.subtitle'.tr,
+                  onRefresh: refreshData,
+                  onAdd: () {
+                    final controller = Get.put(SideBarController());
+                    controller.index.value = 71;
+                  },
+                  addLabel: 'customer_voucher.create_voucher_button'.tr,
+                  addShortLabel: 'customer_voucher.mobile_create_button'.tr,
+                  extraActions: [
+                    FilterToggleButton(
+                        showFilters: _showFilters,
+                        hasActiveFilters:
+                            searchTextController.text.isNotEmpty ||
+                                dateFromController.text.isNotEmpty ||
+                                dateToController.text.isNotEmpty ||
+                                selectedType != null ||
+                                selectedStatus != null ||
+                                voucherNumberController.text.isNotEmpty,
+                        activeFiltersListenable: Listenable.merge([
+                          searchTextController,
+                          voucherNumberController,
+                          dateFromController,
+                          dateToController
+                        ]),
+                        activeFiltersBuilder: () =>
+                            searchTextController.text.isNotEmpty ||
+                            dateFromController.text.isNotEmpty ||
+                            dateToController.text.isNotEmpty ||
+                            selectedType != null ||
+                            selectedStatus != null ||
+                            voucherNumberController.text.isNotEmpty,
+                        showTooltip: 'customer_voucher.show_filters'.tr,
+                        hideTooltip: 'customer_voucher.hide_filters'.tr,
+                        onPressed: () =>
+                            setState(() => _showFilters = !_showFilters)),
+                    ExportShareButton(
+                        createFile: _createExport,
+                        label: 'supplier_transactions.export'.tr,
+                        tooltip: 'customer_voucher.export_tooltip'.tr,
+                        loadingLabel: 'customer_voucher.export_creating'.tr,
+                        errorMessage: 'customer_voucher.export_failed'.tr,
+                        enabled: !provider.isLoading &&
+                            provider.loadError == null &&
+                            (provider.allVouchers?.isNotEmpty ?? false),
+                        compact: bounds.maxWidth < ListLayoutBreakpoints.header,
+                        mimeType:
+                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
+                  ]),
+              toolbar: provider.loadError == null
+                  ? null
+                  : AppSurface(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('customer_voucher.stale_rows_warning'.tr,
+                                style:
+                                    const TextStyle(color: Color(0xffb42318))),
+                            TextButton.icon(
+                                onPressed:
+                                    provider.isLoading ? null : refreshData,
+                                icon: const Icon(Icons.refresh),
+                                label:
+                                    Text('customer_voucher.retry_loading'.tr)),
+                          ]),
+                    ),
+              filters: _filters(provider),
+              showFilters: _showFilters,
+              isLoading: provider.isLoading,
+              items: provider.voucherListDetails ?? [],
+              tableMinWidth: 1440,
+              tableScrollController: _tableController,
+              columns: [
+                TableColumnDef(
+                    label: 'customer_voucher.col_voucher_number'.tr,
+                    flex: 1.6,
+                    cellBuilder: (v, _) => _reference(v)),
+                TableColumnDef(
+                    label: 'customer_voucher.col_customer_name'.tr,
+                    flex: 2,
+                    cellBuilder: (v, _) =>
+                        TableCells.identity(v.customer.user.name)),
+                TableColumnDef(
+                    label: 'customer_voucher.col_type'.tr,
+                    cellBuilder: (v, _) =>
+                        TableCells.text(UiCodeLabels.voucherType(v.type))),
+                TableColumnDef(
+                    label: 'customer_voucher.col_voucher_date'.tr,
+                    flex: 1.3,
+                    cellBuilder: (v, _) => TableCells.text(v.voucherDate)),
+                TableColumnDef(
+                    label: 'customer_voucher.col_due_date'.tr,
+                    flex: 1.3,
+                    cellBuilder: (v, _) => TableCells.text(v.dueDate)),
+                TableColumnDef(
+                    label: 'customer_voucher.col_payment_method'.tr,
+                    flex: 1.2,
+                    cellBuilder: (v, _) =>
+                        TableCells.text(UiCodeLabels.payment(v.paymentMethod))),
+                TableColumnDef(
+                    label: 'customer_voucher.col_paid_amount'.tr,
+                    flex: 1.4,
+                    cellBuilder: (v, _) => TableCells.text(_amount(v))),
+                TableColumnDef(
+                    label: 'customer_voucher.col_status'.tr,
+                    cellBuilder: (v, _) => _buildStatusChip(v.status)),
+                TableColumnDef(
+                    label: 'customer_voucher.col_action'.tr,
+                    flex: 2.5,
+                    cellBuilder: (v, _) => _actions(v)),
+              ],
+              cardBuilder: _card,
+              emptyState:
+                  Center(child: Text('customer_voucher.no_vouchers_found'.tr)),
+              onRefresh: refreshData,
+              currentPage: provider.currentPage,
+              totalPages: provider.totalPages,
+              itemsPerPage: provider.itemsPerPage,
+              countLabel: 'customer_voucher.page_count'.trParams(
+                  {'count': '${provider.voucherListDetails?.length ?? 0}'}),
+              onPageChanged: provider.goToPage,
+            ));
   }
 
   void _showVoucherDetails(CustomerVoucher voucher) {
@@ -1342,16 +828,29 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
         title: 'customer_voucher.details_title'.tr,
         gridColumns: [
           [
-            CommonDetailsDialog.buildKeyValueRow('customer_voucher.col_voucher_number'.tr, voucher.voucherNumber, copyable: true),
-            CommonDetailsDialog.buildKeyValueRow('customer_voucher.customer_name_hint'.tr, voucher.customer.user.name),
-            CommonDetailsDialog.buildKeyValueRow('customer_voucher.field_customer_phone'.tr, voucher.customer.user.phone, copyable: true),
-            CommonDetailsDialog.buildKeyValueRow('customer_voucher.col_type'.tr, UiCodeLabels.voucherType(voucher.type)),
+            CommonDetailsDialog.buildKeyValueRow(
+                'customer_voucher.col_voucher_number'.tr, voucher.voucherNumber,
+                copyable: true),
+            CommonDetailsDialog.buildKeyValueRow(
+                'customer_voucher.customer_name_hint'.tr,
+                voucher.customer.user.name),
+            CommonDetailsDialog.buildKeyValueRow(
+                'customer_voucher.field_customer_phone'.tr,
+                voucher.customer.user.phone,
+                copyable: true),
+            CommonDetailsDialog.buildKeyValueRow('customer_voucher.col_type'.tr,
+                UiCodeLabels.voucherType(voucher.type)),
           ],
           [
-            CommonDetailsDialog.buildKeyValueRow('customer_voucher.col_voucher_date'.tr, voucher.voucherDate),
-            CommonDetailsDialog.buildKeyValueRow('customer_voucher.col_due_date'.tr, voucher.dueDate),
-            CommonDetailsDialog.buildKeyValueRow('customer_voucher.col_status'.tr, voucher.status),
-            CommonDetailsDialog.buildKeyValueRow('customer_voucher.col_payment_method'.tr, UiCodeLabels.payment(voucher.paymentMethod)),
+            CommonDetailsDialog.buildKeyValueRow(
+                'customer_voucher.col_voucher_date'.tr, voucher.voucherDate),
+            CommonDetailsDialog.buildKeyValueRow(
+                'customer_voucher.col_due_date'.tr, voucher.dueDate),
+            CommonDetailsDialog.buildKeyValueRow(
+                'customer_voucher.col_status'.tr, voucher.status),
+            CommonDetailsDialog.buildKeyValueRow(
+                'customer_voucher.col_payment_method'.tr,
+                UiCodeLabels.payment(voucher.paymentMethod)),
           ],
         ],
         sectionTitle: 'customer_voucher.items_section_title'.tr,
@@ -1377,11 +876,16 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                   TableRow(
                     children: [
                       _buildTableHeaderCell('customer_voucher.col_voucher'.tr),
-                      _buildTableHeaderCell('customer_voucher.col_item_name'.tr),
-                      _buildTableHeaderCell('customer_voucher.col_quantity_upper'.tr),
-                      _buildTableHeaderCell('customer_voucher.col_unit_amount_upper'.tr),
-                      _buildTableHeaderCell('customer_voucher.col_tax_upper'.tr),
-                      _buildTableHeaderCell('customer_voucher.col_total_amount_upper'.tr),
+                      _buildTableHeaderCell(
+                          'customer_voucher.col_item_name'.tr),
+                      _buildTableHeaderCell(
+                          'customer_voucher.col_quantity_upper'.tr),
+                      _buildTableHeaderCell(
+                          'customer_voucher.col_unit_amount_upper'.tr),
+                      _buildTableHeaderCell(
+                          'customer_voucher.col_tax_upper'.tr),
+                      _buildTableHeaderCell(
+                          'customer_voucher.col_total_amount_upper'.tr),
                     ],
                   ),
                 ],
@@ -1479,41 +983,6 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
           0.15,
           Colors.black,
         ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 150,
-            child: Text(
-              title,
-              style: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s14,
-                0.21,
-                Colors.black54,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              value.isNotEmpty ? value : 'N/A',
-              style: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s14,
-                0.21,
-                Colors.black,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
