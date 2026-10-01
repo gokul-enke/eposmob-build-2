@@ -103,14 +103,21 @@ void main() {
     expect(find.text('card #21'), findsOneWidget);
   });
 
-  testWidgets('loading replaces the list but keeps header and filters',
-      (tester) async {
+  testWidgets(
+      'loading replaces the list, keeps header, filters and a disabled '
+      'pagination bar', (tester) async {
+    var pages = 0;
     await setSize(tester, const Size(1280, 800));
-    await tester.pumpWidget(scaffold(isLoading: true));
+    await tester
+        .pumpWidget(scaffold(isLoading: true, onPageChanged: (_) => pages++));
 
     expect(find.byType(AppLoadingView), findsOneWidget);
     expect(find.text('Find'), findsOneWidget);
-    expect(find.text('2 people'), findsNothing);
+    expect(find.text('21 Ann'), findsNothing);
+    // The bar stays (no layout jump) but cannot change page mid-load.
+    expect(find.text('2 people'), findsOneWidget);
+    await tester.tap(find.byTooltip('Previous page'));
+    expect(pages, 0);
   });
 
   testWidgets('empty lists show the empty state', (tester) async {

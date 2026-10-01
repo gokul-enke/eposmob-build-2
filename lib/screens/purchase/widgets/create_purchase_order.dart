@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/suppliers/presentation/widgets/form/supplier_form_host.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
@@ -17,7 +18,6 @@ import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/models/get_suppliers.dart';
 import 'package:pos_machine/models/master_data.dart';
-import 'package:pos_machine/screens/suppliers/add_supplier_modal.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
@@ -2149,10 +2149,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                             circleRadius: 5,
                             child: InkWell(
                               onTap: () async {
-                                final size = MediaQuery.of(context).size;
-                                final result = await showAddSupplierModal(
+                                final result = await showAddSupplierDialog(
                                   context,
-                                  size,
                                   showCreateAnother: false,
                                 );
                                 if (result != null &&

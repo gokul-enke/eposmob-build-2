@@ -1,18 +1,17 @@
 import 'dart:io';
 
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/core/export/file_export_service.dart';
 import 'package:pos_machine/services/list_excel_export_service.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../domain/models/customer_list.dart';
 import '../../domain/customer_display.dart';
 import '../widgets/customer_labels.dart';
 
-/// Excel export of the customers list, shared through the system share
-/// sheet (same flow as the suppliers export).
+/// Excel export of the customers list.
 abstract final class CustomerExcelExport {
-  static const mimeType =
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  static const mimeType = FileExportService.xlsxMimeType;
 
   static List<ListExportColumn<CustomerListModelData>> columns() => [
         ListExportColumn(
@@ -60,22 +59,19 @@ abstract final class CustomerExcelExport {
     );
   }
 
-  /// Writes [customers] to a file and opens the share sheet.
+  /// Writes [customers] to a file and hands it to the user (Save As on
+  /// Windows, the share sheet elsewhere).
   static Future<void> exportAndShare(
-      List<CustomerListModelData> customers) async {
+    BuildContext context,
+    List<CustomerListModelData> customers,
+  ) async {
     final file = await createFile(customers);
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [
-          XFile(
-            file.path,
-            name: file.uri.pathSegments.last,
-            mimeType: mimeType,
-            length: await file.length(),
-          ),
-        ],
-        text: 'customers.export_share_text'.tr,
-      ),
+    if (!context.mounted) return;
+    await FileExportService.deliver(
+      context,
+      file,
+      mimeType: mimeType,
+      shareText: 'customers.export_share_text'.tr,
     );
   }
 }

@@ -9,7 +9,7 @@ import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
-import 'package:pos_machine/providers/supplier_provider.dart';
+import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import 'package:pos_machine/screens/login/login.dart';
 import 'package:pos_machine/services/session_reset_service.dart';
 import 'package:provider/provider.dart';

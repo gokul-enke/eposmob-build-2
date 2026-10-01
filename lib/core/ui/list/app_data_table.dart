@@ -40,6 +40,8 @@ class AppDataTable<T> extends StatelessWidget {
     this.rowNumberOf,
     this.onRowTap,
     this.onRefresh,
+    this.minWidth,
+    this.horizontalController,
   });
 
   final List<T> items;
@@ -51,6 +53,13 @@ class AppDataTable<T> extends StatelessWidget {
   final int Function(int index)? rowNumberOf;
   final ValueChanged<T>? onRowTap;
   final Future<void> Function()? onRefresh;
+
+  /// Below this width the whole table (header and rows) scrolls
+  /// horizontally instead of squeezing its columns.
+  final double? minWidth;
+
+  /// Shows a horizontal scrollbar when [minWidth] scrolling is active.
+  final ScrollController? horizontalController;
 
   Map<int, TableColumnWidth> get _columnWidths => {
         for (var i = 0; i < columns.length; i++)
@@ -150,6 +159,33 @@ class AppDataTable<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final minimum = minWidth;
+    if (minimum == null) return _frame(context);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= minimum) return _frame(context);
+        final scroll = SingleChildScrollView(
+          controller: horizontalController,
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: minimum,
+            height: constraints.maxHeight,
+            child: _frame(context),
+          ),
+        );
+        if (horizontalController == null) return scroll;
+        return Scrollbar(
+          controller: horizontalController,
+          thumbVisibility: true,
+          interactive: true,
+          notificationPredicate: (n) => n.metrics.axis == Axis.horizontal,
+          child: scroll,
+        );
+      },
+    );
+  }
+
+  Widget _frame(BuildContext context) {
     final radius = BorderRadius.circular(AppRadius.card);
     // The border is painted in front of the content: the header and the row
     // Materials fill the full width and would otherwise cover the side edges.

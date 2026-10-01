@@ -5,6 +5,7 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:provider/provider.dart';
 
 import '../../domain/models/customer_list.dart';
+import '../export/customer_excel_export.dart';
 import '../navigation/customer_navigation.dart';
 import '../state/customer_list_controller.dart';
 import '../state/customer_provider.dart';
@@ -41,7 +42,8 @@ class _CustomersListPageState extends State<CustomersListPage> {
     _provider = context.read<CustomerProvider>();
     _controller = CustomerListController(
       _provider,
-      exporter: widget.exporter,
+      exporter: widget.exporter ??
+          (customers) => CustomerExcelExport.exportAndShare(context, customers),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadOnce());
   }

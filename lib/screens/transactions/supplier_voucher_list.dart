@@ -1,20 +1,17 @@
 import 'dart:io';
-import 'package:pos_machine/core/ui/feedback/app_toast.dart';
-import 'package:flutter/material.dart';
+
 import 'package:dropdown_search/dropdown_search.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/core/export/file_export_service.dart';
+import 'package:pos_machine/core/ui/ui.dart';
+import 'package:pos_machine/core/utils/search_debouncer.dart';
 import 'package:provider/provider.dart';
-import '../../components/export_share_button.dart';
-import '../../components/filter_toggle_button.dart';
+
 import '../../controllers/sidebar_controller.dart';
-import '../../core/ui/app_surface.dart';
-import '../../core/ui/list_page/filter_panel.dart';
-import '../../core/ui/list_page/list_page_header.dart';
-import '../../core/ui/list_page/list_page_scaffold.dart';
 import '../../helpers/ui_code_labels.dart';
 import '../../models/supplier_voucher.dart';
-import '../../newcomponents/custom_dialog_box.dart';
 import '../../providers/app_settings_provider.dart';
 import '../../providers/auth_model.dart';
 import '../../providers/supplier_voucher_provider.dart';
@@ -26,8 +23,20 @@ import 'widgets/common_details_dialog.dart';
 import 'widgets/share_helper.dart';
 import 'widgets/supplier_voucher_print.dart';
 
+/// Supplier vouchers list on the shared [ListPageScaffold]. All vouchers are
+/// loaded once; filters and pagination run locally in
+/// [SupplierVoucherProvider].
 class SupplierVoucherListScreen extends StatefulWidget {
-  const SupplierVoucherListScreen({super.key});
+  const SupplierVoucherListScreen({super.key, this.export});
+
+  /// Replaces the export controller (tests).
+  final ExportController? export;
+
+  static const filterToggleKey = ValueKey('supplier-voucher-filter-toggle');
+  static const exportKey = ValueKey('supplier-voucher-export');
+  static const refreshKey = ValueKey('supplier-voucher-refresh');
+  static const filtersKey = ValueKey('supplier-voucher-desktop-filters');
+
   @override
   State<SupplierVoucherListScreen> createState() =>
       _SupplierVoucherListScreenState();
@@ -35,12 +44,18 @@ class SupplierVoucherListScreen extends StatefulWidget {
 
 class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
   final voucherNumberController = TextEditingController();
-  final _voucherSearchKey = GlobalKey<TextFilterFieldState>();
+  late final SearchDebouncer _search = SearchDebouncer(searchVouchers);
+  late final ExportController _export = widget.export ?? ExportController();
   String? selectedType, selectedStatus;
   int? selectedSupplierId;
   bool _showFilters = true;
   bool _visibilityInitialized = false;
-  final _exportProgress = ValueNotifier<String?>(null);
+
+  bool get _hasActiveFilters =>
+      selectedSupplierId != null ||
+      selectedType != null ||
+      selectedStatus != null ||
+      voucherNumberController.text.isNotEmpty;
 
   @override
   void initState() {
@@ -54,16 +69,18 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_visibilityInitialized) {
-      _showFilters =
-          MediaQuery.sizeOf(context).width >= ListLayoutBreakpoints.mobile;
+      // Filters start open on wide screens and closed on phones.
+      _showFilters = MediaQuery.sizeOf(context).width >=
+          ListLayoutBreakpoints.mobileBelow;
       _visibilityInitialized = true;
     }
   }
 
   @override
   void dispose() {
+    _search.dispose();
+    _export.dispose();
     voucherNumberController.dispose();
-    _exportProgress.dispose();
     super.dispose();
   }
 
@@ -77,7 +94,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
           );
 
   void resetSearch() {
-    _voucherSearchKey.currentState?.cancelPendingSearch();
+    _search.cancel();
     setState(() {
       voucherNumberController.clear();
       selectedSupplierId = null;
@@ -117,13 +134,13 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
 
   Future<File> _createExport() {
     // Cancel the timer, then apply pending edits without changing the page.
-    _voucherSearchKey.currentState?.cancelPendingSearch();
+    _search.cancel();
     searchVouchers(page: context.read<SupplierVoucherProvider>().currentPage);
     final items = List<SupplierVoucher>.of(
         context.read<SupplierVoucherProvider>().filteredVouchers);
     final currency =
         context.read<AppSettingsProvider>().appSettings?.currency ?? 'INR';
-    _exportProgress.value = 'supplier_voucher.export_creating'.tr;
+    _export.setStage('supplier_voucher.export_creating'.tr);
     return ListExcelExportService.export<SupplierVoucher>(
       items: items,
       fileNamePrefix: 'supplier-vouchers',
@@ -160,119 +177,146 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
     );
   }
 
-  Widget _filters(SupplierVoucherProvider provider) {
+  Future<void> _runExport() async {
+    final exported = await _export.run(context, createFile: _createExport);
+    if (!exported && mounted) {
+      AppToast.error(context, 'supplier_voucher.export_failed'.tr);
+    }
+  }
+
+  void _openCreateVoucher() {
+    final controller = Get.put(SideBarController());
+    controller.index.value = controller.index.value == 75 ? 76 : 73;
+  }
+
+  /// Supplier picker with search; picking one searches right away.
+  Widget _supplierPicker(Map<int, String> suppliers) => DropdownSearch<int>(
+        key: ValueKey(selectedSupplierId),
+        selectedItem:
+            suppliers.containsKey(selectedSupplierId) ? selectedSupplierId : 0,
+        items: (_, __) => [0, ...suppliers.keys],
+        itemAsString: (id) => id == 0
+            ? 'supplier_voucher.all_suppliers_hint'.tr
+            : suppliers[id] ?? '',
+        decoratorProps: DropDownDecoratorProps(
+          decoration: AppInputDecoration.filter(
+            label: 'supplier_voucher.col_supplier_name'.tr,
+            icon: Icons.local_shipping_outlined,
+          ),
+        ),
+        dropdownBuilder: (_, id) => Text(
+          id == null || id == 0
+              ? 'supplier_voucher.all_suppliers_hint'.tr
+              : suppliers[id] ?? '',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.input,
+        ),
+        popupProps: PopupProps.menu(
+          showSearchBox: true,
+          searchFieldProps: TextFieldProps(
+            decoration: AppInputDecoration.of(
+              label: 'general.search'.tr,
+              icon: Icons.search,
+            ),
+          ),
+        ),
+        onChanged: (value) {
+          setState(() => selectedSupplierId = value == 0 ? null : value);
+          searchVouchers();
+        },
+      );
+
+  FilterPanel _filters(SupplierVoucherProvider provider) {
     final suppliers = <int, String>{
       for (final voucher in provider.allVouchers ?? <SupplierVoucher>[])
         voucher.supplier.id: voucher.supplier.name,
     };
     return FilterPanel(
-      key: const ValueKey('supplier-voucher-desktop-filters'),
+      key: SupplierVoucherListScreen.filtersKey,
       title: 'supplier_voucher.find'.tr,
       hint: 'supplier_voucher.filter_hint'.tr,
+      resetLabel: 'list.reset'.tr,
+      onSearch: _search.schedule,
+      onSubmit: _search.flush,
       onReset: resetSearch,
       fields: [
-        DropdownSearch<int>(
-          key: ValueKey(selectedSupplierId),
-          selectedItem: suppliers.containsKey(selectedSupplierId)
-              ? selectedSupplierId
-              : 0,
-          items: (_, __) => [0, ...suppliers.keys],
-          itemAsString: (id) => id == 0
-              ? 'supplier_voucher.all_suppliers_hint'.tr
-              : suppliers[id] ?? '',
-          decoratorProps: DropDownDecoratorProps(
-              decoration: listFilterDecoration(
-                  'supplier_voucher.col_supplier_name'.tr,
-                  Icons.local_shipping_outlined)),
-          dropdownBuilder: (_, id) => Text(
-              id == null || id == 0
-                  ? 'supplier_voucher.all_suppliers_hint'.tr
-                  : suppliers[id] ?? '',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis),
-          popupProps: PopupProps.menu(
-              showSearchBox: true,
-              searchFieldProps: TextFieldProps(
-                  decoration:
-                      listFilterDecoration('general.search'.tr, Icons.search))),
+        CustomFilterField(child: _supplierPicker(suppliers)),
+        TextFilterField(
+          controller: voucherNumberController,
+          label: 'supplier_voucher.voucher_no_hint'.tr,
+          hint: 'supplier_voucher.voucher_no_hint'.tr,
+          icon: Icons.receipt_long_outlined,
+        ),
+        DropdownFilterField<String?>(
+          label: 'supplier_voucher.col_type'.tr,
+          icon: Icons.swap_vert,
+          value: selectedType,
+          options: [
+            FilterOption(null, 'supplier_voucher.hint_all_types'.tr),
+            for (final type
+                in provider.getTypeOptions().where((v) => v != 'All Types'))
+              FilterOption(type, UiCodeLabels.voucherType(type)),
+          ],
           onChanged: (value) {
-            setState(() => selectedSupplierId = value == 0 ? null : value);
+            setState(() => selectedType = value);
             searchVouchers();
           },
         ),
-        TextFilterField(
-            key: _voucherSearchKey,
-            controller: voucherNumberController,
-            label: 'supplier_voucher.voucher_no_hint'.tr,
-            icon: Icons.receipt_long_outlined,
-            onSearch: searchVouchers),
-        DropdownButtonFormField<String>(
-            key: ValueKey(selectedType),
-            initialValue: selectedType,
-            isExpanded: true,
-            decoration: listFilterDecoration(
-                'supplier_voucher.col_type'.tr, Icons.swap_vert),
-            items: [
-              DropdownMenuItem<String>(
-                  value: null,
-                  child: Text('supplier_voucher.hint_all_types'.tr)),
-              for (final type
-                  in provider.getTypeOptions().where((v) => v != 'All Types'))
-                DropdownMenuItem(
-                    value: type, child: Text(UiCodeLabels.voucherType(type)))
-            ],
-            onChanged: (value) {
-              setState(() => selectedType = value);
-              searchVouchers();
-            }),
-        DropdownButtonFormField<String>(
-            key: ValueKey(selectedStatus),
-            initialValue: selectedStatus,
-            isExpanded: true,
-            decoration: listFilterDecoration(
-                'supplier_voucher.col_status'.tr, Icons.check_circle_outline),
-            items: [
-              DropdownMenuItem<String>(
-                  value: null,
-                  child: Text('supplier_voucher.hint_all_status'.tr)),
-              for (final status in provider
-                  .getStatusOptions()
-                  .where((v) => v != 'All Status'))
-                DropdownMenuItem(
-                    value: status, child: Text(UiCodeLabels.status(status)))
-            ],
-            onChanged: (value) {
-              setState(() => selectedStatus = value);
-              searchVouchers();
-            }),
+        DropdownFilterField<String?>(
+          label: 'supplier_voucher.col_status'.tr,
+          icon: Icons.check_circle_outline,
+          value: selectedStatus,
+          options: [
+            FilterOption(null, 'supplier_voucher.hint_all_status'.tr),
+            for (final status in provider
+                .getStatusOptions()
+                .where((v) => v != 'All Status'))
+              FilterOption(status, UiCodeLabels.status(status)),
+          ],
+          onChanged: (value) {
+            setState(() => selectedStatus = value);
+            searchVouchers();
+          },
+        ),
       ],
     );
   }
 
+  static String _orDash(String? value) =>
+      value == null || value.trim().isEmpty ? '—' : value;
+
+  static Widget _text(String? value) => TableCells.text(_orDash(value));
+
+  void _copyVoucherNumber(SupplierVoucher voucher) {
+    Clipboard.setData(ClipboardData(text: voucher.voucherNumber));
+    AppToast.success(context, 'supplier_voucher.voucher_number_copied'.tr);
+  }
+
+  Widget _copyButton(SupplierVoucher voucher) => IconButton(
+        icon: const Icon(Icons.copy_outlined, size: 16),
+        color: AppColors.muted,
+        tooltip: 'supplier_voucher.col_voucher_number'.tr,
+        onPressed: () => _copyVoucherNumber(voucher),
+      );
+
   Widget _reference(SupplierVoucher voucher) => Row(children: [
-        Expanded(child: TableCells.text(voucher.voucherNumber)),
-        IconButton(
-            icon: const Icon(Icons.copy_outlined, size: 16),
-            tooltip: 'supplier_voucher.col_voucher_number'.tr,
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: voucher.voucherNumber));
-              showScaffold(
-                  context: context,
-                  message: 'supplier_voucher.voucher_number_copied'.tr);
-            }),
+        Expanded(child: _text(voucher.voucherNumber)),
+        _copyButton(voucher),
       ]);
 
-  Widget _actions(SupplierVoucher voucher) => Wrap(spacing: 6, children: [
+  void _openPrint(SupplierVoucher voucher) => Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (_) => SupplierVoucherPrintPage(
+              voucher: voucher, returnToPreviousRoute: true)));
+
+  Widget _actions(SupplierVoucher voucher) =>
+      Wrap(spacing: 6, runSpacing: 6, children: [
         _action(Icons.visibility_outlined, 'list.view'.tr,
             () => _showVoucherDetails(voucher)),
-        _action(
-            Icons.print_outlined,
-            'general.print'.tr,
-            () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => SupplierVoucherPrintPage(
-                        voucher: voucher, returnToPreviousRoute: true)))),
+        _action(Icons.print_outlined, 'general.print'.tr,
+            () => _openPrint(voucher)),
         _action(
             Icons.share_outlined,
             'supplier_voucher.share_action'.tr,
@@ -281,177 +325,190 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
       ]);
 
   Widget _action(IconData icon, String tooltip, VoidCallback onPressed) =>
-      IconButton.outlined(
-          icon: Icon(icon, size: 18),
-          tooltip: tooltip,
-          onPressed: onPressed,
-          style: IconButton.styleFrom(
-              foregroundColor: ColorManager.kPrimaryColor,
-              side: const BorderSide(color: Color(0xFFE1E3E5)),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10))));
+      AppSquareIconButton(
+        icon: icon,
+        tooltip: tooltip,
+        onPressed: onPressed,
+        size: AppSizes.compactControl,
+        iconSize: 18,
+        radius: AppRadius.control,
+        foreground: AppColors.primary,
+      );
 
   String _amount(SupplierVoucher voucher) =>
       '${context.read<AppSettingsProvider>().appSettings?.currency ?? 'INR'} ${voucher.amount}';
 
-  Widget _card(SupplierVoucher voucher, int number) => AppSurface(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        TableCells.identity(voucher.supplier.name),
-        const SizedBox(height: 10),
-        _reference(voucher),
-        Text(
-            '${'supplier_voucher.col_type'.tr}: ${UiCodeLabels.voucherType(voucher.type)}'),
-        Text(
-            '${'supplier_voucher.col_voucher_date'.tr}: ${voucher.voucherDate}'),
-        Text('${'supplier_voucher.col_due_date'.tr}: ${voucher.dueDate}'),
-        Text(
-            '${'supplier_voucher.col_payment_method'.tr}: ${UiCodeLabels.payment(voucher.paymentMethod)}'),
-        Text('${'supplier_voucher.col_paid_amount'.tr}: ${_amount(voucher)}'),
-        const SizedBox(height: 10),
-        _buildStatusChip(voucher.status),
-        const SizedBox(height: 10),
-        _actions(voucher),
-      ]));
+  Widget _statusBadge(String status) {
+    final tone = switch (status.toUpperCase()) {
+      'PAID' => AppBadgeTone.success,
+      'PENDING' => AppBadgeTone.warning,
+      'CANCELLED' => AppBadgeTone.danger,
+      _ => AppBadgeTone.neutral,
+    };
+    return AppBadge(label: UiCodeLabels.status(status), tone: tone);
+  }
+
+  Widget _card(SupplierVoucher voucher, int number) => AppListCard(
+        leading: AppAvatar(
+          name: voucher.supplier.name,
+          semanticLabel: voucher.supplier.name,
+          size: 42,
+        ),
+        title: _orDash(voucher.supplier.name),
+        subtitle: UiCodeLabels.voucherType(voucher.type),
+        trailing: _statusBadge(voucher.status),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppMetricStrip(metrics: [
+              AppMetric(
+                icon: Icons.payments_outlined,
+                label: 'supplier_voucher.col_paid_amount'.tr,
+                value: _amount(voucher),
+              ),
+              AppMetric(
+                icon: Icons.account_balance_wallet_outlined,
+                label: 'supplier_voucher.col_payment_method'.tr,
+                value: _orDash(UiCodeLabels.payment(voucher.paymentMethod)),
+              ),
+            ]),
+            const SizedBox(height: AppSpacing.sm),
+            InfoRow(
+              icon: Icons.receipt_long_outlined,
+              label: 'supplier_voucher.col_voucher_number'.tr,
+              value: _orDash(voucher.voucherNumber),
+              trailing: _copyButton(voucher),
+            ),
+            InfoRow(
+              icon: Icons.event_outlined,
+              label: 'supplier_voucher.col_voucher_date'.tr,
+              value: _orDash(voucher.voucherDate),
+            ),
+            InfoRow(
+              icon: Icons.event_available_outlined,
+              label: 'supplier_voucher.col_due_date'.tr,
+              value: _orDash(voucher.dueDate),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            _actions(voucher),
+          ],
+        ),
+      );
+
+  List<TableColumnDef<SupplierVoucher>> _columns() => [
+        TableColumnDef(
+            label: 'supplier_voucher.col_voucher_number'.tr,
+            flex: 1.6,
+            cellBuilder: (v, _) => _reference(v)),
+        TableColumnDef(
+            label: 'supplier_voucher.col_supplier_name'.tr,
+            flex: 2,
+            cellBuilder: (v, _) => TableCells.avatarName(
+                  name: _orDash(v.supplier.name),
+                  avatar: AppAvatar(
+                    name: v.supplier.name,
+                    semanticLabel: v.supplier.name,
+                    size: 36,
+                  ),
+                )),
+        TableColumnDef(
+            label: 'supplier_voucher.col_type'.tr,
+            cellBuilder: (v, _) => _text(UiCodeLabels.voucherType(v.type))),
+        TableColumnDef(
+            label: 'supplier_voucher.col_voucher_date'.tr,
+            flex: 1.3,
+            cellBuilder: (v, _) => _text(v.voucherDate)),
+        TableColumnDef(
+            label: 'supplier_voucher.col_due_date'.tr,
+            flex: 1.3,
+            cellBuilder: (v, _) => _text(v.dueDate)),
+        TableColumnDef(
+            label: 'supplier_voucher.col_payment_method'.tr,
+            flex: 1.2,
+            cellBuilder: (v, _) =>
+                _text(UiCodeLabels.payment(v.paymentMethod))),
+        TableColumnDef(
+            label: 'supplier_voucher.col_paid_amount'.tr,
+            flex: 1.4,
+            cellBuilder: (v, _) => _text(_amount(v))),
+        TableColumnDef(
+            label: 'supplier_voucher.col_status'.tr,
+            cellBuilder: (v, _) => TableCells.widget(_statusBadge(v.status))),
+        TableColumnDef(
+            label: 'supplier_voucher.col_action'.tr,
+            flex: 1.8,
+            cellBuilder: (v, _) => TableCells.widget(_actions(v))),
+      ];
+
+  /// Filters, Export, Refresh — left to right, before Create.
+  List<HeaderAction> _headerActions(SupplierVoucherProvider provider) => [
+        HeaderAction(
+          key: SupplierVoucherListScreen.filterToggleKey,
+          icon: _showFilters
+              ? Icons.filter_alt_rounded
+              : Icons.filter_alt_outlined,
+          label: _showFilters
+              ? 'supplier_voucher.hide_filters'.tr
+              : 'supplier_voucher.show_filters'.tr,
+          onPressed: () => setState(() => _showFilters = !_showFilters),
+          active: _showFilters,
+          badge: !_showFilters && _hasActiveFilters,
+        ),
+        HeaderAction(
+          key: SupplierVoucherListScreen.exportKey,
+          icon: Icons.ios_share_rounded,
+          label: _export.busy
+              ? (_export.stage ?? 'supplier_voucher.export_creating'.tr)
+              : 'supplier_transactions.export'.tr,
+          onPressed: !provider.isLoading && provider.filteredVouchers.isNotEmpty
+              ? _runExport
+              : null,
+          busy: _export.busy,
+        ),
+        HeaderAction(
+          key: SupplierVoucherListScreen.refreshKey,
+          icon: Icons.refresh_rounded,
+          label: 'list.refresh'.tr,
+          onPressed: refreshData,
+        ),
+      ];
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<SupplierVoucherProvider>();
-    return LayoutBuilder(
-        builder: (context, bounds) => ListPageScaffold<SupplierVoucher>(
-              header: ListPageHeader(
-                  icon: Icons.receipt_long_outlined,
-                  title: 'supplier_voucher.mobile_header_title'.tr,
-                  subtitle: 'supplier_voucher.subtitle'.tr,
-                  onRefresh: refreshData,
-                  onAdd: () {
-                    final controller = Get.put(SideBarController());
-                    controller.index.value =
-                        controller.index.value == 75 ? 76 : 73;
-                  },
-                  addLabel: 'supplier_voucher.create_voucher_button'.tr,
-                  addShortLabel: 'supplier_voucher.mobile_create_button'.tr,
-                  extraActions: [
-                    FilterToggleButton(
-                        showFilters: _showFilters,
-                        hasActiveFilters: selectedSupplierId != null ||
-                            selectedType != null ||
-                            selectedStatus != null ||
-                            voucherNumberController.text.isNotEmpty,
-                        activeFiltersListenable: voucherNumberController,
-                        activeFiltersBuilder: () =>
-                            selectedSupplierId != null ||
-                            selectedType != null ||
-                            selectedStatus != null ||
-                            voucherNumberController.text.isNotEmpty,
-                        showTooltip: 'supplier_voucher.show_filters'.tr,
-                        hideTooltip: 'supplier_voucher.hide_filters'.tr,
-                        onPressed: () =>
-                            setState(() => _showFilters = !_showFilters)),
-                    ExportShareButton(
-                        createFile: _createExport,
-                        label: 'supplier_transactions.export'.tr,
-                        tooltip: 'supplier_voucher.export_tooltip'.tr,
-                        loadingLabel: 'supplier_voucher.export_creating'.tr,
-                        progressLabel: _exportProgress,
-                        errorMessage: 'supplier_voucher.export_failed'.tr,
-                        enabled: !provider.isLoading &&
-                            provider.filteredVouchers.isNotEmpty,
-                        compact: bounds.maxWidth < ListLayoutBreakpoints.header,
-                        mimeType:
-                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
-                  ]),
-              filters: _filters(provider),
-              showFilters: _showFilters,
-              isLoading: provider.isLoading,
-              items: provider.voucherListDetails ?? [],
-              tableMinWidth: 1280,
-              columns: [
-                TableColumnDef(
-                    label: 'supplier_voucher.col_voucher_number'.tr,
-                    flex: 1.6,
-                    cellBuilder: (v, _) => _reference(v)),
-                TableColumnDef(
-                    label: 'supplier_voucher.col_supplier_name'.tr,
-                    flex: 2,
-                    cellBuilder: (v, _) =>
-                        TableCells.identity(v.supplier.name)),
-                TableColumnDef(
-                    label: 'supplier_voucher.col_type'.tr,
-                    cellBuilder: (v, _) =>
-                        TableCells.text(UiCodeLabels.voucherType(v.type))),
-                TableColumnDef(
-                    label: 'supplier_voucher.col_voucher_date'.tr,
-                    flex: 1.3,
-                    cellBuilder: (v, _) => TableCells.text(v.voucherDate)),
-                TableColumnDef(
-                    label: 'supplier_voucher.col_due_date'.tr,
-                    flex: 1.3,
-                    cellBuilder: (v, _) => TableCells.text(v.dueDate)),
-                TableColumnDef(
-                    label: 'supplier_voucher.col_payment_method'.tr,
-                    flex: 1.2,
-                    cellBuilder: (v, _) =>
-                        TableCells.text(UiCodeLabels.payment(v.paymentMethod))),
-                TableColumnDef(
-                    label: 'supplier_voucher.col_paid_amount'.tr,
-                    flex: 1.4,
-                    cellBuilder: (v, _) => TableCells.text(_amount(v))),
-                TableColumnDef(
-                    label: 'supplier_voucher.col_status'.tr,
-                    cellBuilder: (v, _) => _buildStatusChip(v.status)),
-                TableColumnDef(
-                    label: 'supplier_voucher.col_action'.tr,
-                    flex: 1.8,
-                    cellBuilder: (v, _) => _actions(v)),
-              ],
-              cardBuilder: _card,
-              emptyState:
-                  Center(child: Text('supplier_voucher.no_vouchers_found'.tr)),
-              onRefresh: refreshData,
-              currentPage: provider.currentPage,
-              totalPages: provider.totalPages,
-              itemsPerPage: provider.itemsPerPage,
-              countLabel: 'supplier_voucher.page_count'.trParams(
-                  {'count': '${provider.voucherListDetails?.length ?? 0}'}),
-              onPageChanged: provider.goToPage,
-            ));
-  }
-
-  Widget _buildStatusChip(String status) {
-    Color backgroundColor;
-    Color textColor;
-
-    switch (status.toUpperCase()) {
-      case 'PAID':
-        backgroundColor = Colors.green.withValues(alpha: 0.1);
-        textColor = Colors.green;
-        break;
-      case 'PENDING':
-        backgroundColor = Colors.orange.withValues(alpha: 0.1);
-        textColor = Colors.orange;
-        break;
-      case 'CANCELLED':
-        backgroundColor = Colors.red.withValues(alpha: 0.1);
-        textColor = Colors.red;
-        break;
-      default:
-        backgroundColor = Colors.grey.withValues(alpha: 0.1);
-        textColor = Colors.grey;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        UiCodeLabels.status(status),
-        style: TextStyle(
-          color: textColor,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
+    final vouchers = provider.voucherListDetails ?? const <SupplierVoucher>[];
+    return ListenableBuilder(
+      listenable: _export,
+      builder: (context, _) => ListPageScaffold<SupplierVoucher>(
+        header: PageHeader(
+          icon: Icons.receipt_long_outlined,
+          title: 'supplier_voucher.mobile_header_title'.tr,
+          subtitle: 'supplier_voucher.subtitle'.tr,
+          actions: _headerActions(provider),
+          onAdd: _openCreateVoucher,
+          addLabel: 'supplier_voucher.create_voucher_button'.tr,
+          addShortLabel: 'supplier_voucher.mobile_create_button'.tr,
+        ),
+        filters: _filters(provider),
+        showFilters: _showFilters,
+        isLoading: provider.isLoading,
+        items: vouchers,
+        minTableWidth: 1280,
+        columns: _columns(),
+        cardBuilder: _card,
+        emptyState: AppEmptyState(
+          icon: Icons.receipt_long_outlined,
+          title: 'supplier_voucher.no_vouchers_found'.tr,
+          subtitle: 'supplier_voucher.try_adjusting_filters'.tr,
+        ),
+        onRefresh: refreshData,
+        pagination: ListPagination(
+          currentPage: provider.currentPage,
+          totalPages: provider.totalPages,
+          itemsPerPage: provider.itemsPerPage,
+          onPageChanged: provider.goToPage,
+          countLabel: 'supplier_voucher.page_count'
+              .trParams({'count': '${vouchers.length}'}),
         ),
       ),
     );

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_machine/features/customers/data/customer_repository.dart';
-import 'package:pos_machine/features/customers/domain/balance_filter.dart';
+import 'package:pos_machine/core/filters/balance_filter.dart';
 import 'package:pos_machine/features/customers/domain/customer_filter.dart';
 import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';

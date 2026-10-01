@@ -15,7 +15,7 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
-import 'package:pos_machine/providers/supplier_provider.dart';
+import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import 'package:pos_machine/providers/offline_cache_clear_service.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';

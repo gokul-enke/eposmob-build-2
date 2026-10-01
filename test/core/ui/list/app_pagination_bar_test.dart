@@ -86,4 +86,26 @@ void main() {
     expect(state.rowNumber(0), 41);
     expect(state.rowNumber(19), 60);
   });
+
+  testWidgets('a long count label never overflows the wide layout',
+      (tester) async {
+    for (final width in [450.0, 540.0, 600.0]) {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: width,
+              child: AppPaginationBar(
+                currentPage: 12,
+                totalPages: 140,
+                countLabel: 'Showing 20 customer transactions on this page',
+                onPageChanged: (_) {},
+              ),
+            ),
+          ),
+        ),
+      ));
+      expect(tester.takeException(), isNull, reason: 'width ');
+    }
+  });
 }

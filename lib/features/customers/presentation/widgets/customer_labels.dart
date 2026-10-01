@@ -1,5 +1,7 @@
 import 'package:get/get.dart';
 
+import 'package:pos_machine/core/filters/balance_filter.dart';
+
 import '../../domain/customer_display.dart';
 
 /// Translated display text for customer data.
@@ -26,4 +28,11 @@ abstract final class CustomerLabels {
   static String countOnPage(int count) => count == 1
       ? 'customers.count_on_page_one'.tr
       : 'customers.count_on_page'.trParams({'count': '$count'});
+
+  static String balanceFilter(BalanceFilter filter) => switch (filter) {
+        BalanceFilter.all => 'customers.all'.tr,
+        BalanceFilter.positive => 'customers.positive'.tr,
+        BalanceFilter.negative => 'customers.negative'.tr,
+        BalanceFilter.zero => 'customers.zero'.tr,
+      };
 }

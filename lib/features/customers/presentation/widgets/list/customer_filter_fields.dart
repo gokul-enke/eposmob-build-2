@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/core/ui/ui.dart';
 
-import '../../../domain/balance_filter.dart';
+import 'package:pos_machine/core/filters/balance_filter.dart';
 import '../../state/customer_list_controller.dart';
+import '../customer_labels.dart';
 
 /// The customers list filter panel: name, email, phone, balance.
 FilterPanel customerFilterPanel(CustomerListController controller) {
@@ -45,7 +46,7 @@ FilterPanel customerFilterPanel(CustomerListController controller) {
         onChanged: controller.setBalance,
         options: [
           for (final filter in BalanceFilter.values)
-            FilterOption(filter, filter.translationKey.tr),
+            FilterOption(filter, CustomerLabels.balanceFilter(filter)),
         ],
       ),
     ],

@@ -9,7 +9,7 @@ import '../list/app_pagination_bar.dart';
 import '../tokens/app_colors.dart';
 import '../tokens/app_spacing.dart';
 
-/// Width thresholds used by [ListPageScaffold].
+/// Width and height thresholds used by [ListPageScaffold].
 abstract final class ListLayoutBreakpoints {
   /// Below this *screen* width the page uses the mobile layout (collapsible
   /// filters, cards only, tighter padding).
@@ -21,6 +21,9 @@ abstract final class ListLayoutBreakpoints {
 
   /// Widest the page content grows before it is centred.
   static const double maxContentWidth = 1440;
+
+  /// Below this height the whole page scrolls instead of squeezing the list.
+  static const double minimumHeight = 600;
 }
 
 /// Texts for the mobile collapsible filter tile.
@@ -41,12 +44,13 @@ class CollapsedFilterTexts {
 ///
 /// ```
 /// header
-/// filters        (collapsible tile on mobile)
+/// filters        (collapsible tile on mobile; hideable)
+/// toolbar        (optional: totals, chips, bulk actions)
 /// table | cards  (cards on mobile and on narrow list areas)
 /// pagination
 /// ```
 ///
-/// A page only supplies its header, filter fields, columns, card and data.
+/// A page only supplies its header, filters, columns, card and data.
 class ListPageScaffold<T> extends StatelessWidget {
   const ListPageScaffold({
     super.key,
@@ -59,20 +63,27 @@ class ListPageScaffold<T> extends StatelessWidget {
     this.filters,
     this.showFilters = true,
     this.mobileFilterTexts,
+    this.toolbar,
     this.pagination,
     this.onRowTap,
     this.onRefresh,
+    this.minTableWidth,
+    this.tableScrollController,
   });
 
   final Widget header;
-  final FilterPanel? filters;
 
-  /// Hides [filters] (and the mobile filter tile) when false, e.g. from a
-  /// header filter toggle. Applied filters keep working while hidden.
+  /// Usually a [FilterPanel]. On phones a [FilterPanel] with
+  /// [mobileFilterTexts] is shown inside a collapsible tile.
+  final Widget? filters;
+
+  /// Hides [filters] when false (e.g. from a header filter toggle). Hidden
+  /// filters keep their state and keep applying.
   final bool showFilters;
-
-  /// Required for the mobile layout when [filters] is set.
   final CollapsedFilterTexts? mobileFilterTexts;
+
+  /// Extra block between the filters and the list (totals, chips...).
+  final Widget? toolbar;
   final bool isLoading;
   final List<T> items;
   final List<TableColumnDef<T>> columns;
@@ -81,6 +92,13 @@ class ListPageScaffold<T> extends StatelessWidget {
   final ListPagination? pagination;
   final ValueChanged<T>? onRowTap;
   final Future<void> Function()? onRefresh;
+
+  /// The table scrolls horizontally when narrower than this (wide tables
+  /// with many columns).
+  final double? minTableWidth;
+
+  /// Shows a horizontal scrollbar for [minTableWidth] scrolling.
+  final ScrollController? tableScrollController;
 
   int _rowNumber(int index) => pagination?.rowNumber(index) ?? index + 1;
 
@@ -99,21 +117,25 @@ class ListPageScaffold<T> extends StatelessWidget {
         rowNumberOf: _rowNumber,
         onRowTap: onRowTap,
         onRefresh: onRefresh,
+        minWidth: minTableWidth,
+        horizontalController: tableScrollController,
       );
 
   Widget _listWithPagination({required bool forceCards}) {
-    if (isLoading) return const AppLoadingView();
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final useCards = forceCards ||
             constraints.maxWidth < ListLayoutBreakpoints.cardsBelow;
         return Column(
           children: [
-            Expanded(child: useCards ? _cards() : _table()),
+            Expanded(
+              child: isLoading
+                  ? const AppLoadingView()
+                  : (useCards ? _cards() : _table()),
+            ),
             if (pagination != null) ...[
               const SizedBox(height: AppSpacing.sm),
-              AppPaginationBar.fromState(pagination!),
+              AppPaginationBar.fromState(pagination!, enabled: !isLoading),
             ],
           ],
         );
@@ -121,33 +143,65 @@ class ListPageScaffold<T> extends StatelessWidget {
     );
   }
 
-  Widget _mobile() {
+  /// Filters (and toolbar) take at most a share of the height and scroll
+  /// inside it, so the list always stays visible.
+  Widget _capped(Widget child, double maxHeight) => ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: SingleChildScrollView(child: child),
+      );
+
+  List<Widget> _filterAndToolbar({
+    required bool mobile,
+    required double height,
+    required double gap,
+  }) {
+    final filterBlock = filters;
     final texts = mobileFilterTexts;
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        children: [
-          header,
-          if (filters != null && showFilters) ...[
-            const SizedBox(height: AppSpacing.md),
-            if (texts == null)
-              filters!
-            else
-              CollapsibleFilterTile(
+    final shownFilters = filterBlock == null
+        ? null
+        : (mobile && texts != null && filterBlock is FilterPanel)
+            ? CollapsibleFilterTile(
                 title: texts.title,
                 collapsedSubtitle: texts.collapsedSubtitle,
                 expandedSubtitle: texts.expandedSubtitle,
-                child: filters!.embedded(),
-              ),
-          ],
-          const SizedBox(height: AppSpacing.md),
-          Expanded(child: _listWithPagination(forceCards: true)),
-        ],
-      ),
-    );
+                child: filterBlock.embedded(),
+              )
+            : filterBlock;
+
+    return [
+      if (shownFilters != null)
+        // Kept in the tree while hidden so pending input survives.
+        Visibility(
+          visible: showFilters,
+          maintainState: true,
+          child: Padding(
+            padding: EdgeInsets.only(top: gap),
+            child:
+                _capped(shownFilters, height * (toolbar == null ? .48 : .25)),
+          ),
+        ),
+      if (toolbar != null) ...[
+        SizedBox(height: gap),
+        _capped(toolbar!, height * .20),
+      ],
+    ];
   }
 
-  Widget _wide() {
+  Widget _page({required bool mobile, required double height}) {
+    final gap = mobile ? AppSpacing.md : AppSpacing.lg;
+    final column = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        header,
+        ..._filterAndToolbar(mobile: mobile, height: height, gap: gap),
+        SizedBox(height: gap),
+        Expanded(child: _listWithPagination(forceCards: mobile)),
+      ],
+    );
+    if (mobile) {
+      return Padding(
+          padding: const EdgeInsets.all(AppSpacing.md), child: column);
+    }
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Center(
@@ -155,18 +209,7 @@ class ListPageScaffold<T> extends StatelessWidget {
           constraints: const BoxConstraints(
             maxWidth: ListLayoutBreakpoints.maxContentWidth,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              header,
-              if (filters != null && showFilters) ...[
-                const SizedBox(height: AppSpacing.lg),
-                filters!,
-              ],
-              const SizedBox(height: AppSpacing.lg),
-              Expanded(child: _listWithPagination(forceCards: false)),
-            ],
-          ),
+          child: column,
         ),
       ),
     );
@@ -174,12 +217,25 @@ class ListPageScaffold<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isMobile =
+    final mobile =
         MediaQuery.sizeOf(context).width < ListLayoutBreakpoints.mobileBelow;
     return SafeArea(
       child: ColoredBox(
         color: AppColors.surface,
-        child: isMobile ? _mobile() : _wide(),
+        child: LayoutBuilder(
+          builder: (context, bounds) {
+            final short =
+                bounds.maxHeight < ListLayoutBreakpoints.minimumHeight;
+            final height =
+                short ? ListLayoutBreakpoints.minimumHeight : bounds.maxHeight;
+            final page = _page(mobile: mobile, height: height);
+            if (!short) return page;
+            return SingleChildScrollView(
+              child:
+                  SizedBox(height: height, width: bounds.maxWidth, child: page),
+            );
+          },
+        ),
       ),
     );
   }

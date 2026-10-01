@@ -93,18 +93,25 @@ ListPageScaffold<Supplier>(
 
 ## 3. Order of work
 
-One page per PR. Get the first one (Suppliers) reviewed before starting the rest.
+Already on the shared layout (use them as more examples):
 
-1. **Suppliers** — `lib/screens/suppliers/supplier_list.dart` + `supplier_list_mobile.dart` (same desktop/mobile split Customers had, so it maps 1:1).
-2. **Weigh machine colours** — replace `WeighUiColors` / `WeighSurface` in `lib/features/weigh_machine/presentation/widgets/weigh_ui.dart` with `AppColors` / `AppSurface`, then delete `WeighUiColors`.
-3. `lib/screens/transactions/customer_voucher_list.dart` (+ `_mobile`)
-4. `lib/screens/transactions/expense_list_screen.dart`
-5. `lib/screens/purchase/purchase.dart`, `purchase_orders.dart`, `purchase_voucher.dart`
-6. `lib/screens/purchase_return/purchase_return_list.dart`
-7. `lib/screens/sales/sales.dart`, `daily_sales_close_list.dart`, `admin_daily_sales_close_list.dart`
-8. `lib/screens/sales_return/sales_return_list.dart`
-9. `lib/screens/product/stock.dart`
-10. Reports in `lib/screens/reports/` (use `DateRangeFilterField`)
+- Customers — `lib/features/customers/presentation/pages/customers_list_page.dart`
+- Suppliers — `lib/features/suppliers/presentation/pages/suppliers_list_page.dart`
+- Invoices, proforma invoices, receipts, customer vouchers, supplier vouchers,
+  expenses, customer transactions, supplier transactions —
+  `lib/screens/transactions/` (the PR #290 screens, moved onto this layout)
+
+Still to move — one page per PR:
+
+1. **Weigh machine colours** — replace `WeighUiColors` / `WeighSurface` in `lib/features/weigh_machine/presentation/widgets/weigh_ui.dart` with `AppColors` / `AppSurface`, then delete `WeighUiColors`.
+2. `lib/screens/purchase/purchase.dart`, `purchase_orders.dart`, `purchase_voucher.dart`
+3. `lib/screens/purchase_return/purchase_return_list.dart`
+4. `lib/screens/sales/sales.dart`, `daily_sales_close_list.dart`, `admin_daily_sales_close_list.dart`
+5. `lib/screens/sales_return/sales_return_list.dart`
+6. `lib/screens/product/stock.dart`
+7. Reports in `lib/screens/reports/` (use `DateRangeFilterField`)
+
+Export: use `ExportController` + a header `HeaderAction` (see the suppliers page). Never call the share sheet directly — `FileExportService` saves with Save As on Windows, where the native share UI can close the app.
 
 If a page needs something the shared layout can't do (an extra header button, a new filter type), **add it to `lib/core/ui/` with a parameter** and a test in `test/core/ui/`. Never special-case it inside the page.
 

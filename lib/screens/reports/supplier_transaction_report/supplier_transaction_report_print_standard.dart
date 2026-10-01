@@ -14,7 +14,7 @@ import 'package:open_file/open_file.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/services/standard_pdf_direct_print_service.dart';
-import 'package:pos_machine/models/supplier.dart';
+import 'package:pos_machine/features/suppliers/domain/models/supplier.dart';
 import 'package:flutter/foundation.dart';
 
 class SupplierTransactionReportStandardPrinter {

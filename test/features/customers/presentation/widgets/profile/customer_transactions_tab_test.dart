@@ -17,6 +17,8 @@ class _Request {
 }
 
 class _FakeInvoiceProvider extends InvoiceProvider {
+  /// Every updateState value the tab passed.
+  final updateStateArgs = <bool>[];
   _FakeInvoiceProvider({this.rows = 3, this.lastPage = 1, this.fail = false});
 
   final int rows;
@@ -34,8 +36,10 @@ class _FakeInvoiceProvider extends InvoiceProvider {
     String? type,
     int? perPage,
     int? page,
+    bool updateState = true,
   }) async {
     requests.add(_Request(page, type, dateFrom));
+    updateStateArgs.add(updateState);
     if (fail) throw Exception('offline');
     final current = page ?? 1;
     return {
@@ -98,6 +102,8 @@ void main() {
       final api = await _pump(tester, size: const Size(1280, 800));
 
       expect(api.requests.single.page, 1);
+      // The tab owns its list and must not replace the shared one.
+      expect(api.updateStateArgs, everyElement(isFalse));
       expect(_table, findsOneWidget);
       expect(find.text('TXN-1-1'), findsOneWidget);
       expect(find.byType(TransactionCard), findsNothing);

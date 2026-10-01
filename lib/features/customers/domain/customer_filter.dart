@@ -1,4 +1,4 @@
-import 'balance_filter.dart';
+import 'package:pos_machine/core/filters/balance_filter.dart';
 import 'models/customer_list.dart';
 
 /// The customers-list search criteria (immutable). Empty strings mean "no

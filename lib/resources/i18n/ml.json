@@ -1527,14 +1527,16 @@
     "zero": "പൂജ്യം (0)",
     "number": "ഇല്ല",
     "action": "ആക്ഷൻ",
-    "reset": "റീസെറ്റ്"
+    "reset": "റീസെറ്റ്",
+    "search_name": "പേര് ഉപയോഗിച്ച് തിരയുക",
+    "search_email": "ഇമെയിൽ ഉപയോഗിച്ച് തിരയുക",
+    "search_phone": "ഫോൺ ഉപയോഗിച്ച് തിരയുക"
   },
   "supplier_list": {
     "subtitle": "വിതരണക്കാരുടെ വിവരങ്ങളും ബന്ധപ്പെടാനുള്ള വിവരങ്ങളും ബാലൻസുകളും നിയന്ത്രിക്കുക.",
     "find": "വിതരണക്കാരെ കണ്ടെത്തുക",
     "find_hint": "ടൈപ്പ് ചെയ്യുമ്പോൾ ഫലങ്ങൾ പുതുക്കുന്നു.",
     "count_on_page": "ഈ പേജിൽ @count വിതരണക്കാർ",
-
     "error_fetching": "സപ്ലയേഴ്സ് എടുക്കുന്നതിൽ പിഴവ്",
     "error_searching": "പിഴവ്: തിരയുന്നു സപ്ലയേഴ്സ്",
     "no_suppliers_desktop": "സപ്ലയേഴ്സ് കണ്ടെത്തിയില്ല",
@@ -5763,7 +5765,18 @@
     "trans_detail_payment_method": "പേയ്‌മെന്റ് രീതി",
     "trans_detail_date": "തീയതി",
     "trans_label_no_reference": "റഫറൻസ് ഇല്ല",
-    "id_prefix": "ഐഡി: "
+    "id_prefix": "ഐഡി: ",
+    "trans_type_credit": "ക്രെഡിറ്റ്",
+    "trans_type_debit": "ഡെബിറ്റ്",
+    "trans_label_date_range": "തീയതി പരിധി",
+    "trans_hint_date_range": "തീയതി പരിധി തിരഞ്ഞെടുക്കുക",
+    "trans_on_page": "ഈ പേജിൽ @count ഇടപാടുകൾ",
+    "trans_load_failed": "ഇടപാടുകൾ ലോഡ് ചെയ്യാനായില്ല",
+    "col_amount": "തുക",
+    "col_items": "ഇനങ്ങൾ",
+    "orders_purchase_title": "പർച്ചേസ് #@number",
+    "orders_on_page": "ഈ പേജിൽ @count പർച്ചേസ് ഓർഡറുകൾ",
+    "orders_load_failed": "പർച്ചേസ് ഓർഡറുകൾ ലോഡ് ചെയ്യാനായില്ല"
   },
   "customer_transactions": {
     "msg_preparing_report": "തയ്യാറാക്കുന്നു ട്രാൻസാക്ഷൻ റിപ്പോർട്ട്...",

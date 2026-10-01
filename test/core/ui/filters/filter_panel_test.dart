@@ -202,4 +202,28 @@ void main() {
       expect(heights, everyElement(AppSizes.control));
     });
   }
+
+  testWidgets('a custom field gets the shared height and the panel width',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: SizedBox(
+          width: 400,
+          child: FilterPanel(
+            resetLabel: 'Reset',
+            onSearch: () {},
+            onReset: () {},
+            fields: const [
+              CustomFilterField(
+                  child:
+                      ColoredBox(key: ValueKey('custom'), color: Colors.red)),
+            ],
+          ),
+        ),
+      ),
+    ));
+    final size = tester.getSize(find.byKey(const ValueKey('custom')));
+    expect(size.height, AppSizes.control);
+    expect(size.width, greaterThan(300));
+  });
 }

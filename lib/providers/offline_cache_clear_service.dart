@@ -8,7 +8,7 @@ import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
-import 'package:pos_machine/providers/supplier_provider.dart';
+import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import 'package:provider/provider.dart';
 
 enum OfflineCacheTarget {

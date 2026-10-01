@@ -39,15 +39,20 @@ class AppPaginationBar extends StatelessWidget {
     required this.totalPages,
     required this.countLabel,
     required this.onPageChanged,
+    this.enabled = true,
   });
 
-  AppPaginationBar.fromState(ListPagination state, {Key? key})
-      : this(
+  AppPaginationBar.fromState(
+    ListPagination state, {
+    Key? key,
+    bool enabled = true,
+  }) : this(
           key: key,
           currentPage: state.currentPage,
           totalPages: state.totalPages,
           countLabel: state.countLabel,
           onPageChanged: state.onPageChanged,
+          enabled: enabled,
         );
 
   static const compactBreakpoint = 440.0;
@@ -56,6 +61,9 @@ class AppPaginationBar extends StatelessWidget {
   final int totalPages;
   final String countLabel;
   final ValueChanged<int> onPageChanged;
+
+  /// False disables both arrows (e.g. while a page is loading).
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +88,7 @@ class AppPaginationBar extends StatelessWidget {
                 icon: Icons.chevron_left_rounded,
                 size: AppSizes.compactControl,
                 radius: AppRadius.tile,
-                onPressed: currentPage > 1
+                onPressed: enabled && currentPage > 1
                     ? () => onPageChanged(currentPage - 1)
                     : null,
               ),
@@ -103,7 +111,7 @@ class AppPaginationBar extends StatelessWidget {
                 icon: Icons.chevron_right_rounded,
                 size: AppSizes.compactControl,
                 radius: AppRadius.tile,
-                onPressed: currentPage < totalPages
+                onPressed: enabled && currentPage < totalPages
                     ? () => onPageChanged(currentPage + 1)
                     : null,
               ),
@@ -116,7 +124,22 @@ class AppPaginationBar extends StatelessWidget {
               children: [count, const SizedBox(height: 8), pager],
             );
           }
-          return Row(children: [count, const Spacer(), pager]);
+          // The count takes the leftover width and ellipsizes, so long
+          // labels never push the pager off the bar.
+          return Row(
+            children: [
+              Expanded(
+                child: Text(
+                  countLabel,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.caption,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              pager,
+            ],
+          );
         },
       ),
     );

@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:pos_machine/components/filter_toggle_button.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/transaction_provider.dart';
 import 'package:pos_machine/screens/transactions/supplier_transactions/supplier_transactions.dart';
 import 'package:pos_machine/screens/transactions/transaction_list.dart';
 import 'package:provider/provider.dart';
+
+import 'test_support/header_actions.dart';
 
 class _TestTranslations extends Translations {
   @override
@@ -101,18 +102,16 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byKey(toggleKey), findsOneWidget);
+    expect(hasFilterToggle(), isTrue);
     if (find.byKey(filterKey).evaluate().isEmpty) {
-      await tester.tap(find.byKey(toggleKey));
-      await tester.pump();
+      await tapFilterToggle(tester, key: toggleKey);
     }
     expect(find.byKey(filterKey), findsOneWidget);
 
-    await tester.tap(find.byKey(toggleKey));
-    await tester.pump();
+    await tapFilterToggle(tester, key: toggleKey);
 
     expect(find.byKey(filterKey), findsNothing);
-    expect(find.byType(FilterToggleButton), findsOneWidget);
+    expect(hasFilterToggle(), isTrue);
   }
 
   testWidgets('Customer Transactions collapses its desktop filters',
@@ -240,8 +239,7 @@ void main() {
       await tester.pump();
 
       if (find.byKey(testCase.$3).evaluate().isEmpty) {
-        await tester.tap(find.byKey(testCase.$2));
-        await tester.pump();
+        await tapFilterToggle(tester, key: testCase.$2);
       }
       expect(find.byKey(testCase.$3), findsOneWidget);
 

@@ -18,7 +18,7 @@ import '../providers/authentication_providers.dart';
 import '../providers/sales_provider.dart';
 import '../providers/shared_preferences.dart';
 import '../providers/store_session_provider.dart';
-import '../providers/supplier_provider.dart';
+import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';

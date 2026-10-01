@@ -1527,14 +1527,16 @@
     "zero": "Zero (0)",
     "number": "No",
     "action": "Action",
-    "reset": "Reset"
+    "reset": "Reset",
+    "search_name": "Search by name",
+    "search_email": "Search by email",
+    "search_phone": "Search by phone"
   },
   "supplier_list": {
     "subtitle": "Manage supplier details, contacts and balances.",
     "find": "Find suppliers",
     "find_hint": "Results update as you type.",
     "count_on_page": "@count suppliers on this page",
-
     "error_fetching": "Error fetching suppliers",
     "error_searching": "Error searching suppliers",
     "no_suppliers_desktop": "No suppliers found",
@@ -5763,7 +5765,18 @@
     "trans_detail_payment_method": "Payment Method",
     "trans_detail_date": "Date",
     "trans_label_no_reference": "No Reference",
-    "id_prefix": "ID: "
+    "id_prefix": "ID: ",
+    "trans_type_credit": "Credit",
+    "trans_type_debit": "Debit",
+    "trans_label_date_range": "Date Range",
+    "trans_hint_date_range": "Select date range",
+    "trans_on_page": "@count transactions on this page",
+    "trans_load_failed": "Could not load transactions",
+    "col_amount": "Amount",
+    "col_items": "Items",
+    "orders_purchase_title": "Purchase #@number",
+    "orders_on_page": "@count purchase orders on this page",
+    "orders_load_failed": "Could not load purchase orders"
   },
   "customer_transactions": {
     "msg_preparing_report": "Preparing transaction report...",

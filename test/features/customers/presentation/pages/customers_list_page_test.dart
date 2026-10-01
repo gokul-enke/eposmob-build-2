@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/core/ui/ui.dart';
-import 'package:pos_machine/features/customers/domain/balance_filter.dart';
+import 'package:pos_machine/core/filters/balance_filter.dart';
 import 'package:pos_machine/features/customers/domain/customer_filter.dart';
 import 'package:pos_machine/features/customers/presentation/pages/customers_list_page.dart';
 import 'package:pos_machine/features/customers/domain/models/customer_list.dart';

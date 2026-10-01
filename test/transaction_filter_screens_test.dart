@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/components/filter_toggle_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -21,6 +20,8 @@ import 'package:pos_machine/screens/transactions/receipt_list.dart';
 import 'package:pos_machine/screens/transactions/supplier_voucher_list.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'test_support/header_actions.dart';
 
 class _FakeQuotationsProvider extends QuotationsProvider {
   @override
@@ -180,13 +181,13 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(filterKey), findsOneWidget);
-    expect(find.byType(FilterToggleButton), findsOneWidget);
+    expect(hasFilterToggle(), isTrue);
 
-    await tester.tap(find.byType(FilterToggleButton));
+    await tapFilterToggle(tester);
     await tester.pump();
 
     expect(find.byKey(filterKey), findsNothing);
-    expect(find.byType(FilterToggleButton), findsOneWidget);
+    expect(hasFilterToggle(), isTrue);
   }
 
   testWidgets('Invoice List collapses its real desktop filter panel',
@@ -283,13 +284,9 @@ void main() {
       );
       await tester.pump();
 
-      if (screen is ProformaInvoiceListScreen ||
-          screen is CustomerVoucherListScreen ||
-          screen is SupplierVoucherListScreen ||
-          screen is InvoiceListScreen ||
-          screen is ReceiptListScreen) {
-        expect(find.byType(FilterToggleButton), findsOneWidget);
-        await tester.tap(find.byType(FilterToggleButton));
+      if (hasFilterToggle()) {
+        expect(hasFilterToggle(), isTrue);
+        await tapFilterToggle(tester);
       } else {
         expect(find.byType(ExpansionTile), findsOneWidget);
         await tester.tap(find.byType(ExpansionTile));

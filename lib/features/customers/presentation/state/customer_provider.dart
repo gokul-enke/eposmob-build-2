@@ -5,7 +5,7 @@ import 'package:pos_machine/core/pagination/page_slice.dart';
 
 import '../../data/customer_api.dart';
 import '../../data/customer_repository.dart';
-import '../../domain/balance_filter.dart';
+import 'package:pos_machine/core/filters/balance_filter.dart';
 import '../../domain/customer_filter.dart';
 import '../../domain/models/customer_list.dart';
 

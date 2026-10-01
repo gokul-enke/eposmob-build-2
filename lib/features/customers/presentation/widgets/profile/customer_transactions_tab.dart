@@ -41,6 +41,9 @@ class _CustomerTransactionsTabState extends State<CustomerTransactionsTab> {
         type: query.type,
         perPage: query.perPage,
         page: query.page,
+        // The tab keeps its own list; don't replace the shared one the
+        // Transactions screen shows.
+        updateState: false,
       ),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {

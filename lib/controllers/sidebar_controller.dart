@@ -55,7 +55,7 @@ import 'package:pos_machine/screens/reports/non_stock_report/non_stock_report.da
 import 'package:pos_machine/screens/reports/stock_report/stock_report.dart';
 import 'package:pos_machine/screens/reports/consumed_stocks_report/consumed_stocks_report.dart';
 import 'package:pos_machine/screens/settings/location_managment/location_managment.dart';
-import 'package:pos_machine/screens/supplier_profile/open_supplier_profile.dart';
+import 'package:pos_machine/features/suppliers/presentation/pages/supplier_profile_page.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/company_accounts.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/add_company_account.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/account_details_screen.dart';
@@ -91,8 +91,7 @@ import 'package:pos_machine/screens/transactions/view_expense_screen.dart';
 import '../screens/product/widgets/stock_details.dart';
 import '../screens/sales/widgets/sales_order_details.dart';
 import '../widgets/category_list.dart';
-import 'package:pos_machine/screens/suppliers/supplier_list.dart';
-import 'package:pos_machine/screens/suppliers/supplier_details.dart';
+import 'package:pos_machine/features/suppliers/presentation/pages/suppliers_list_page.dart';
 import 'package:pos_machine/screens/sales/confirmed_orders.dart';
 import 'package:pos_machine/screens/sales/daily_sales_close_detail.dart';
 import 'package:pos_machine/screens/sales/daily_sales_close_list.dart';
@@ -114,6 +113,13 @@ class SideBarController extends GetxController {
   static const int addCustomerScreenIndex = 9;
   static const int userProfileScreenIndex = 10;
   static const int customerProfileScreenIndex = 38;
+
+  /// Supplier screens in [screens]. Navigate through [SupplierNavigation].
+  static const int suppliersScreenIndex = 52;
+
+  /// Legacy "supplier details" slot; shows the supplier profile.
+  static const int supplierDetailsScreenIndex = 57;
+  static const int supplierProfileScreenIndex = 69;
 
   RxInt index =
       0.obs; // Default to HomeNew, will be set based on user role during login
@@ -186,7 +192,7 @@ class SideBarController extends GetxController {
     SalesReturnScreen(), //49 Sales Return
     SalesReturnPage(), //50 Sales Return List
     EditOrder(), // 51 Edit Order
-    SupplierListScreen(), // 52 Suppliers List
+    SuppliersListPage(), // 52 Suppliers List
     PrinterSettings(), // 53 Printer Settings
     ConfirmedOrdersScreen(), // 54 Confirmed Orders
     RestaurantPage(
@@ -194,7 +200,7 @@ class SideBarController extends GetxController {
       defaultCounterBillingMode: false,
     ), // 55 Restaurant Page (Attender)
     KitchenMaster(), // 56 Kitchen Master
-    SupplierDetailsScreen(), // 57 Supplier Details
+    SupplierProfilePage(), // 57 Supplier Details (legacy slot, same page)
     SalesExecutiveReportScreen(), // 58 Sales Executive Report
     CompanyAccountsScreen(), // 59 Company Accounts
     AddCompanyAccountScreen(), // 60 Add Company Account
@@ -206,7 +212,7 @@ class SideBarController extends GetxController {
     SimpleTransactionDetailsScreen(), // 66 Simple Transaction Details Screen
     SupplierTransactionReportScreen(), // 67 Supplier Transaction Report
     SupplierTransactionDetailsScreen(), // 68 Supplier Transaction Details Screen
-    OpenSupplierProfileScreen(), // 69 Open Supplier Profile Screen
+    SupplierProfilePage(), // 69 Supplier Profile
     CustomerVoucherListScreen(), // 70 Customer Voucher List
     CreateCustomerVoucherScreen(), // 71 Create Customer Voucher
     SupplierVoucherListScreen(), // 72 Supplier Voucher List

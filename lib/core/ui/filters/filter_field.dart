@@ -57,6 +57,30 @@ class TextFilterField extends FilterFieldDef {
   }
 }
 
+/// Any widget as a filter field (a screen-specific picker, a custom
+/// dropdown). Gets the panel's width and, unless [fixedHeight] is false,
+/// the same [AppSizes.control] height as the other fields.
+///
+/// Prefer [TextFilterField] / [DropdownFilterField] /
+/// [DateRangeFilterField]; use this when none of them fits. Style inner
+/// inputs with [AppInputDecoration.filter] so they match.
+class CustomFilterField extends FilterFieldDef {
+  const CustomFilterField({required this.child, this.fixedHeight = true});
+
+  final Widget child;
+  final bool fixedHeight;
+
+  @override
+  Widget build(
+    BuildContext context, {
+    required VoidCallback onTextChanged,
+    required VoidCallback onTextSubmitted,
+  }) {
+    if (!fixedHeight) return child;
+    return SizedBox(height: AppSizes.control, child: child);
+  }
+}
+
 /// One choice of a [DropdownFilterField].
 @immutable
 class FilterOption<T> {

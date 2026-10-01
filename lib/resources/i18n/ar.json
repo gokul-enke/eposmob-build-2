@@ -1527,14 +1527,16 @@
     "zero": "صفر",
     "number": "الرقم",
     "action": "الإجراء",
-    "reset": "إعادة تعيين"
+    "reset": "إعادة تعيين",
+    "search_name": "البحث بالاسم",
+    "search_email": "البحث بالبريد الإلكتروني",
+    "search_phone": "البحث بالهاتف"
   },
   "supplier_list": {
     "subtitle": "إدارة بيانات الموردين وجهات الاتصال والأرصدة.",
     "find": "البحث عن الموردين",
     "find_hint": "تتحدث النتائج أثناء الكتابة.",
     "count_on_page": "@count موردين في هذه الصفحة",
-
     "error_fetching": "خطأ في جلب الموردين",
     "error_searching": "خطأ في البحث عن الموردين",
     "no_suppliers_desktop": "لم يتم العثور على موردين",
@@ -5584,7 +5586,18 @@
     "trans_detail_payment_method": "طريقة الدفع",
     "trans_detail_date": "التاريخ",
     "trans_label_no_reference": "لا يوجد مرجع",
-    "id_prefix": "ID: "
+    "id_prefix": "ID: ",
+    "trans_type_credit": "دائن",
+    "trans_type_debit": "مدين",
+    "trans_label_date_range": "نطاق التاريخ",
+    "trans_hint_date_range": "اختر نطاق التاريخ",
+    "trans_on_page": "@count معاملة في هذه الصفحة",
+    "trans_load_failed": "تعذر تحميل المعاملات",
+    "col_amount": "المبلغ",
+    "col_items": "الأصناف",
+    "orders_purchase_title": "مشتريات رقم @number",
+    "orders_on_page": "@count أمر شراء في هذه الصفحة",
+    "orders_load_failed": "تعذر تحميل أوامر الشراء"
   },
   "customer_transactions": {
     "msg_preparing_report": "جارٍ إعداد تقرير المعاملات...",

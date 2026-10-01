@@ -10,7 +10,7 @@ import '../providers/invoice_provider.dart';
 import '../providers/purchase_provider.dart';
 import '../providers/stock_provider.dart';
 import '../providers/auth_model.dart';
-import '../providers/supplier_provider.dart';
+import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import 'general_settings_provider.dart';
 import 'app_settings_provider.dart';
 import '../providers/delivery_methods_provider.dart';

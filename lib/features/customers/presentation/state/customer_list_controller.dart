@@ -2,10 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
-import '../../domain/balance_filter.dart';
+import 'package:pos_machine/core/filters/balance_filter.dart';
 import '../../domain/customer_filter.dart';
 import '../../domain/models/customer_list.dart';
-import '../export/customer_excel_export.dart';
 import 'customer_provider.dart';
 
 /// Exports a list of customers (writes and shares a file).
@@ -25,7 +24,7 @@ class CustomerListController extends ChangeNotifier {
     this._provider, {
     this.debounce = const Duration(milliseconds: 300),
     CustomerExporter? exporter,
-  })  : _exporter = exporter ?? CustomerExcelExport.exportAndShare,
+  })  : _exporter = exporter ?? _noExporter,
         nameController = TextEditingController(text: _provider.filter.name),
         emailController = TextEditingController(text: _provider.filter.email),
         phoneController = TextEditingController(text: _provider.filter.phone),
@@ -34,6 +33,9 @@ class CustomerListController extends ChangeNotifier {
   final CustomerProvider _provider;
   final Duration debounce;
   final CustomerExporter _exporter;
+
+  static Future<void> _noExporter(List<CustomerListModelData> _) =>
+      throw UnsupportedError('No exporter was given.');
 
   final TextEditingController nameController;
   final TextEditingController emailController;
