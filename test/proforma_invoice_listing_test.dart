@@ -119,6 +119,13 @@ void main() {
         .createFile);
   }
 
+  Future<void> expectRejectedExport(WidgetTester tester) async {
+    final button =
+        tester.widget<ExportShareButton>(find.byType(ExportShareButton));
+    await tester.runAsync(() =>
+        expectLater(button.createFile(), throwsA(isA<FormatException>())));
+  }
+
   for (final size in [
     const Size(1440, 900),
     const Size(800, 900),
@@ -224,6 +231,58 @@ void main() {
       expect(layout.currentPage, 1);
     });
   }
+  for (final samePage in [true, false]) {
+    testWidgets(
+        'export rejects duplicate IDs with stable counts: samePage=$samePage',
+        (tester) async {
+      final p = await mount(tester, const Size(1440, 900));
+      p.handler = (q) async {
+        final number = int.parse(q['page']!);
+        final result = page(number,
+            last: samePage ? 1 : 2,
+            rows: samePage ? [row(1), row(1)] : [row(1)]);
+        (result['data'] as Map)['total'] = 2;
+        return result;
+      };
+      await expectRejectedExport(tester);
+      final layout = tester.widget<ListPageScaffold<Map<String, dynamic>>>(
+          find.byType(ListPageScaffold<Map<String, dynamic>>));
+      expect(layout.items.single['id'], 1);
+      expect(layout.currentPage, 1);
+      expect(tester.takeException(), isNull);
+    });
+  }
+  testWidgets('export normalizes numeric string IDs when checking duplicates',
+      (tester) async {
+    final p = await mount(tester, const Size(1440, 900));
+    p.handler = (q) async => page(int.parse(q['page']!), rows: [
+          {...row(1), 'id': q['page'] == '1' ? 1 : '1'},
+        ]);
+    await expectRejectedExport(tester);
+  });
+  for (final invalidId in [null, 0, -1, 'invalid']) {
+    testWidgets('export rejects rows without a valid ID: $invalidId',
+        (tester) async {
+      final p = await mount(tester, const Size(1440, 900));
+      p.handler = (_) async => page(1, last: 1, rows: [
+            {...row(1), 'id': invalidId}
+          ]);
+      await expectRejectedExport(tester);
+    });
+  }
+  testWidgets('export accepts distinct numeric string IDs', (tester) async {
+    final p = await mount(tester, const Size(1440, 900));
+    p.handler = (q) async => page(int.parse(q['page']!), rows: [
+          {...row(int.parse(q['page']!)), 'id': q['page']},
+        ]);
+    final file = await export(tester);
+    final rows =
+        Excel.decodeBytes(file!.readAsBytesSync()).tables.values.single.rows;
+    expect(rows.length, 3);
+    expect(rows[1][0]!.value, TextCellValue('0001'));
+    expect(rows[2][0]!.value, TextCellValue('0002'));
+  });
+
   testWidgets('older filter response cannot overwrite new response',
       (tester) async {
     final p = await mount(tester, const Size(1440, 900));

@@ -211,6 +211,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
       }
     }
     final items = <Map<String, dynamic>>[];
+    final ids = <int>{};
     int last = 1;
     int? expectedTotal;
     for (int page = 1; page <= last; page++) {
@@ -232,7 +233,16 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
       }
       last = result.last;
       expectedTotal = result.total;
-      items.addAll(result.rows);
+      for (final row in result.rows) {
+        final id = _parseInt(row['id']);
+        if (id == null || id <= 0) {
+          throw const FormatException('Invalid proforma invoice ID');
+        }
+        if (!ids.add(id)) {
+          throw const FormatException('Duplicate proforma invoice rows');
+        }
+        items.add(row);
+      }
     }
     if (expectedTotal != null && items.length != expectedTotal) {
       throw const FormatException(
