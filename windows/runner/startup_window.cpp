@@ -4,6 +4,35 @@
 namespace {
 constexpr wchar_t kClass[] = L"CLOUDPOS_STARTUP_WINDOW";
 constexpr UINT kCloseSplash = WM_APP + 21;
+
+// GetDpiForWindow/GetDpiForSystem only exist on Windows 10 1607+. Importing
+// them statically stops cloudpos.exe from launching on older Windows, so
+// resolve them at runtime and fall back to the screen DC's DPI.
+UINT GetLegacyScreenDpi() {
+  HDC screen = GetDC(nullptr);
+  if (!screen) return 96;
+  const int dpi = GetDeviceCaps(screen, LOGPIXELSX);
+  ReleaseDC(nullptr, screen);
+  return dpi > 0 ? static_cast<UINT>(dpi) : 96;
+}
+
+UINT GetSystemDpiCompat() {
+  using GetDpiForSystemFn = UINT(WINAPI*)();
+  static const auto get_dpi_for_system = reinterpret_cast<GetDpiForSystemFn>(
+      GetProcAddress(GetModuleHandleW(L"user32.dll"), "GetDpiForSystem"));
+  return get_dpi_for_system ? get_dpi_for_system() : GetLegacyScreenDpi();
+}
+
+UINT GetWindowDpiCompat(HWND window) {
+  using GetDpiForWindowFn = UINT(WINAPI*)(HWND);
+  static const auto get_dpi_for_window = reinterpret_cast<GetDpiForWindowFn>(
+      GetProcAddress(GetModuleHandleW(L"user32.dll"), "GetDpiForWindow"));
+  if (get_dpi_for_window) {
+    const UINT dpi = get_dpi_for_window(window);
+    if (dpi > 0) return dpi;
+  }
+  return GetLegacyScreenDpi();
+}
 }
 
 StartupWindow::StartupWindow() : runner_thread_(GetCurrentThreadId()) {
@@ -36,7 +65,7 @@ void StartupWindow::Run() {
   wc.hIcon = LoadIcon(wc.hInstance, MAKEINTRESOURCE(IDI_APP_ICON));
   wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
   RegisterClassW(&wc);
-  const UINT dpi = GetDpiForSystem();
+  const UINT dpi = GetSystemDpiCompat();
   const int width = MulDiv(480, static_cast<int>(dpi), 96);
   const int height = MulDiv(300, static_cast<int>(dpi), 96);
   HWND window = CreateWindowW(kClass, L"CLOUDPOS", WS_OVERLAPPED | WS_CAPTION |
@@ -78,7 +107,7 @@ LRESULT CALLBACK StartupWindow::WindowProc(HWND window, UINT message,
       RECT rect;
       GetClientRect(window, &rect);
       SetBkMode(dc, TRANSPARENT);
-      const int dpi = static_cast<int>(GetDpiForWindow(window));
+      const int dpi = static_cast<int>(GetWindowDpiCompat(window));
       const int logo_size = MulDiv(112, dpi, 96);
       HICON logo = static_cast<HICON>(LoadImageW(GetModuleHandle(nullptr),
           MAKEINTRESOURCE(IDI_APP_ICON), IMAGE_ICON, logo_size, logo_size, 0));
