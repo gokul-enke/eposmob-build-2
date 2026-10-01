@@ -370,6 +370,109 @@ void main() {
     expect(p.isLoading, isFalse);
   });
 
+  Future<void> waitForReceiptLoad(
+      InvoiceProvider provider, VoidCallback action) async {
+    final done = Completer<void>();
+    void listener() {
+      if (!provider.isLoading && !done.isCompleted) done.complete();
+    }
+
+    provider.addListener(listener);
+    try {
+      action();
+      await done.future.timeout(const Duration(seconds: 5));
+    } finally {
+      provider.removeListener(listener);
+    }
+  }
+
+  for (final resetResult in ['complete', 'empty', 'later-page-failure']) {
+    test('receipt Reset reloads full cache after date filtering: $resetResult',
+        () async {
+      final provider = InvoiceProvider();
+      final requests = <http.Request>[];
+      var resetting = false;
+      final client = MockClient((request) async {
+        requests.add(request);
+        final query = request.url.queryParameters;
+        final current = int.parse(query['page']!);
+        final dateFiltered = query.containsKey('date_from');
+        if (resetting && resetResult == 'later-page-failure' && current == 2) {
+          return http.Response('failed', 500);
+        }
+        final total = dateFiltered
+            ? 2
+            : resetting && resetResult == 'empty'
+                ? 0
+                : 40;
+        return http.Response(
+            jsonEncode({
+              'status': 'success',
+              'message': 'ok',
+              'data': {
+                'current_page': current,
+                'last_page': total <= 2 ? 1 : 2,
+                'total': total,
+                'per_page': 20,
+                'links': [],
+                'data': total == 0
+                    ? []
+                    : List.generate(
+                        dateFiltered ? 2 : 20,
+                        (i) =>
+                            row((current - 1) * 20 + i + 1, matches: i.isEven)),
+              }
+            }),
+            200);
+      });
+      await http.runWithClient(() async {
+        await provider.listAllReceipts(accessToken: 'token', loadAll: true);
+        provider.goToReceiptPage(2);
+        await waitForReceiptLoad(
+            provider,
+            () => provider.applyReceiptFilters(
+                name: 'test',
+                receiptStatus: 'paid',
+                paymentMethod: 'Cash',
+                dateFrom: '2026-10-01',
+                dateTo: '2026-10-31'));
+        expect(provider.allReceipts!.length, 2);
+        expect(provider.getListReceipt!.length, 1);
+        final resetStart = requests.length;
+        resetting = true;
+        await waitForReceiptLoad(provider, provider.resetReceiptFilters);
+        final resetRequests = requests.skip(resetStart).toList();
+        expect(resetRequests.first.url.queryParameters['per_page'], '1000');
+        for (final request in resetRequests) {
+          expect(request.url.queryParameters.containsKey('date_from'), isFalse);
+          expect(request.url.queryParameters.containsKey('date_to'), isFalse);
+          expect(request.url.queryParameters['store_id'], '7');
+        }
+        expect(provider.isLoading, isFalse);
+        expect(provider.receiptCurrentPage, 1);
+        if (resetResult == 'complete') {
+          expect(resetRequests.map((r) => r.url.queryParameters['page']),
+              ['1', '2']);
+          expect(provider.allReceipts!.length, 40);
+          expect(provider.getListReceipt!.length, 20);
+          expect(
+              provider.getListReceipt!.any((r) => r.receiptStatus == 'pending'),
+              isTrue);
+          expect(provider.receiptTotalPages, 2);
+          provider.goToReceiptPage(2);
+          expect(provider.getListReceipt!.first.id, 21);
+          expect(provider.getListReceipt!.last.id, 40);
+        } else if (resetResult == 'empty') {
+          expect(provider.allReceipts, isEmpty);
+          expect(provider.getListReceipt, isEmpty);
+          expect(provider.receiptTotalPages, 1);
+        } else {
+          expect(provider.allReceipts!.map((r) => r.id), [1, 2]);
+        }
+      }, () => client);
+    });
+  }
+
   test('later page failure keeps the previous complete receipt list', () async {
     final p = InvoiceProvider();
     Map<String, dynamic> single(int id) => {

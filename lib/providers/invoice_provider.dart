@@ -587,6 +587,7 @@ class InvoiceProvider extends ChangeNotifier {
       listAllReceipts(
         accessToken: _lastReceiptAccessToken!,
         page: 1,
+        loadAll: true,
       );
     } else {
       applyReceiptFiltersLocally(page: 1);
