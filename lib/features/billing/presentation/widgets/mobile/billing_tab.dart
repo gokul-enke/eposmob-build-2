@@ -33,6 +33,7 @@ class MobileBillingTab extends StatefulWidget {
   final VoidCallback onConfirmOrder;
   final VoidCallback onSaveOrder;
   final VoidCallback onCreateOrderAndPrint;
+  final VoidCallback? onConfirmAndWhatsapp;
   final VoidCallback? onCreateQuotation;
   final VoidCallback? onCreateQuotationAndPrint;
   final VoidCallback? onOpenQuotationList;
@@ -45,6 +46,7 @@ class MobileBillingTab extends StatefulWidget {
   final VoidCallback? onQuotationInlineCustomerChanged;
   final bool isSavingOrder;
   final bool isConfirmingOrder;
+  final bool isConfirmingAndWhatsapp;
   final bool isConfirmingAndPrinting;
 
   const MobileBillingTab({
@@ -54,6 +56,7 @@ class MobileBillingTab extends StatefulWidget {
     required this.onConfirmOrder,
     required this.onSaveOrder,
     required this.onCreateOrderAndPrint,
+    this.onConfirmAndWhatsapp,
     this.onCreateQuotation,
     this.onCreateQuotationAndPrint,
     this.onOpenQuotationList,
@@ -66,6 +69,7 @@ class MobileBillingTab extends StatefulWidget {
     this.onQuotationInlineCustomerChanged,
     this.isSavingOrder = false,
     this.isConfirmingOrder = false,
+    this.isConfirmingAndWhatsapp = false,
     this.isConfirmingAndPrinting = false,
   });
 
@@ -321,11 +325,6 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
       if (mounted) _syncPaymentValidationContext();
     });
 
-    // Safe bottom padding so content can scroll fully above the persistent
-    // bottomSheet buttons (padding 16 + button row height + bottom inset).
-    final bottomInset = MediaQuery.of(context).padding.bottom;
-    final bottomActionsHeight = isQuotationMode ? 156.0 : 156.0;
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -340,7 +339,7 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                 16,
                 14,
                 16,
-                bottomActionsHeight + bottomInset + 16,
+                16,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -483,18 +482,24 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
           ),
         ],
       ),
-      // Bottom Action Buttons
-      bottomSheet: BillingActionButtons(
-        isQuotationMode: isQuotationMode,
-        onSaveOrder: widget.onSaveOrder,
-        onCreateOrderAndPrint: widget.onCreateOrderAndPrint,
-        onConfirmOrder: widget.onConfirmOrder,
-        onCreateQuotation: widget.onCreateQuotation,
-        onCreateQuotationAndPrint: widget.onCreateQuotationAndPrint,
-        onOpenQuotationList: widget.onOpenQuotationList,
-        isSavingOrder: widget.isSavingOrder,
-        isConfirmingOrder: widget.isConfirmingOrder,
-        isConfirmingAndPrinting: widget.isConfirmingAndPrinting,
+      // Reserve the action bar's actual height, including larger text and
+      // whichever actions are enabled by company props.
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: BillingActionButtons(
+          isQuotationMode: isQuotationMode,
+          onSaveOrder: widget.onSaveOrder,
+          onCreateOrderAndPrint: widget.onCreateOrderAndPrint,
+          onConfirmAndWhatsapp: widget.onConfirmAndWhatsapp,
+          onConfirmOrder: widget.onConfirmOrder,
+          onCreateQuotation: widget.onCreateQuotation,
+          onCreateQuotationAndPrint: widget.onCreateQuotationAndPrint,
+          onOpenQuotationList: widget.onOpenQuotationList,
+          isSavingOrder: widget.isSavingOrder,
+          isConfirmingOrder: widget.isConfirmingOrder,
+          isConfirmingAndWhatsapp: widget.isConfirmingAndWhatsapp,
+          isConfirmingAndPrinting: widget.isConfirmingAndPrinting,
+        ),
       ),
     );
   }

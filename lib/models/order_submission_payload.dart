@@ -43,6 +43,7 @@ class OrderSubmissionPayload {
     this.deliveryCharge = 0,
     this.storeId,
     this.sourceType = 'executive',
+    this.whatsappReceipt = false,
   })  : items = _copyMaps(items),
         paymentMethods = paymentMethods == null
             ? null
@@ -92,6 +93,11 @@ class OrderSubmissionPayload {
   final double deliveryCharge;
   final int? storeId;
   final String sourceType;
+
+  /// Set by the Confirm & WhatsApp action. The backend sends the invoice to
+  /// the customer on WhatsApp when it receives `whatsappReceipt: true`; every
+  /// other confirm action omits the field entirely.
+  final bool whatsappReceipt;
 
   double get _normalizedCreditSaleAmount =>
       creditSaleAmount != null && creditSaleAmount! > 0 ? creditSaleAmount! : 0;
@@ -148,6 +154,7 @@ class OrderSubmissionPayload {
       if (quotationId != null) 'quotation_id': quotationId,
       'delivery_charge': deliveryCharge,
       if (resolvedStoreId != null) 'store_id': resolvedStoreId,
+      if (whatsappReceipt) 'whatsappReceipt': true,
     };
     return _deepCopy(body);
   }
@@ -184,6 +191,7 @@ class OrderSubmissionPayload {
       if (discountAmount != null) 'discount_amount': discountAmount,
       if (toCustomerCredit != null) 'to_customer_credit': toCustomerCredit,
       'delivery_charge': deliveryCharge,
+      if (whatsappReceipt) 'whatsappReceipt': true,
     };
     return _deepCopy(body);
   }

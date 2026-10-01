@@ -831,8 +831,10 @@ class BillingMobileController {
     return await CheckoutService(context).saveOrder();
   }
 
-  Future<bool> confirmOrder(BuildContext context) async {
-    return await CheckoutService(context).confirmOrder();
+  Future<bool> confirmOrder(BuildContext context,
+      {bool whatsappReceipt = false}) async {
+    return await CheckoutService(context)
+        .confirmOrder(whatsappReceipt: whatsappReceipt);
   }
 
   Future<CreateOrderAndPrintResult> createOrderAndPrint(

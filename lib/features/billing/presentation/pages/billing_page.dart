@@ -213,6 +213,7 @@ class BillingPageState extends State<BillingPage>
   bool isLoadingSaveOrder = false;
   bool isLoadingCreateOrder = false;
   bool isLoadingConfirmOrder = false;
+  bool isLoadingConfirmAndWhatsapp = false;
   bool isLoadingSaveOrderAndPrint = false;
   bool isLoadingCreateNewOrder = false;
   bool isLoadingRestoreSavedOrder = false;
@@ -302,6 +303,7 @@ class BillingPageState extends State<BillingPage>
       isLoadingSaveOrder ||
       isLoadingCreateOrder ||
       isLoadingConfirmOrder ||
+      isLoadingConfirmAndWhatsapp ||
       isLoadingSaveOrderAndPrint ||
       isLoadingCreateNewOrder ||
       isLoadingRestoreSavedOrder;
@@ -5963,6 +5965,7 @@ class BillingPageState extends State<BillingPage>
                       BillingFocusOrders.confirmAndPrint),
                   child: _buildActionButton(
                     text: 'billing.confirm_and_print'.tr,
+                    flex: 6,
                     color: ColorManager.kButtonBlue,
                     onPressed: () => _handleConfirmAndPrint(),
                     isLoading: isLoadingCreateOrder,
@@ -5970,10 +5973,22 @@ class BillingPageState extends State<BillingPage>
                     shortcutLabel: 'F6',
                   ),
                 ),
+              if (_showConfirmAndWhatsappButton)
+                FocusTraversalOrder(
+                  order: const NumericFocusOrder(225),
+                  child: _buildActionButton(
+                    text: 'general.confirm_and_whatsapp'.tr,
+                    flex: 6,
+                    color: const Color(0xFF15803D),
+                    onPressed: _handleConfirmAndWhatsapp,
+                    isLoading: isLoadingConfirmAndWhatsapp,
+                    isDisabled: disableActions && !isLoadingConfirmAndWhatsapp,
+                  ),
+                ),
               if (_showConfirmOrderButton)
                 FocusTraversalOrder(
-                  order:
-                      const NumericFocusOrder(BillingFocusOrders.confirmOrder),
+                  order: const NumericFocusOrder(
+                      BillingFocusOrders.confirmOrder),
                   child: _buildActionButton(
                     text: 'billing.confirm_order'.tr,
                     color: ColorManager.kButtonGreen,
@@ -5998,10 +6013,12 @@ class BillingPageState extends State<BillingPage>
     required bool isLoading,
     bool isDisabled = false,
     String? shortcutLabel,
+    int flex = 5,
   }) {
     return Expanded(
+      flex: flex,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 4),
         child: Material(
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(10.0),
@@ -6489,8 +6506,9 @@ class BillingPageState extends State<BillingPage>
 
   OrderSubmissionPayload _buildLocalFirstOrderPayload(
     LocalProductProvider localProducts,
-    ReceiptIdentity receiptIdentity,
-  ) {
+    ReceiptIdentity receiptIdentity, {
+    bool whatsappReceipt = false,
+  }) {
     final paymentMethods = _getSelectedPaymentMethods();
     final paidMethods = _getPaidMethods();
     final storeId = Provider.of<StoreSessionProvider>(context, listen: false)
@@ -6537,6 +6555,7 @@ class BillingPageState extends State<BillingPage>
       quotationId: localProducts.currentOrder?.quotationId,
       deliveryCharge: _getDeliveryChargeForOrder(),
       storeId: storeId,
+      whatsappReceipt: whatsappReceipt,
     );
   }
 
@@ -6600,10 +6619,13 @@ class BillingPageState extends State<BillingPage>
     );
   }
 
-  Future<void> _confirmLocalFirst({required bool printReceipt}) async {
+  Future<void> _confirmLocalFirst(
+      {required bool printReceipt, bool whatsappReceipt = false}) async {
     if (!_ensureAuthoritativeAppSettings()) return;
     if (!_ensurePaymentReadyForConfirm(
-      printReceipt ? _createOrderAndPrint : _confirmOrder,
+      printReceipt
+          ? _createOrderAndPrint
+          : () => _confirmOrder(whatsappReceipt: whatsappReceipt),
     )) {
       return;
     }
@@ -6613,6 +6635,8 @@ class BillingPageState extends State<BillingPage>
       setState(() {
         if (printReceipt) {
           isLoadingCreateOrder = true;
+        } else if (whatsappReceipt) {
+          isLoadingConfirmAndWhatsapp = true;
         } else {
           isLoadingConfirmOrder = true;
         }
@@ -6670,8 +6694,11 @@ class BillingPageState extends State<BillingPage>
       }
       final receiptIdentity =
           await ReceiptIdentityService.instance.issue(storeId: storeId);
-      final payload =
-          _buildLocalFirstOrderPayload(localProducts, receiptIdentity);
+      final payload = _buildLocalFirstOrderPayload(
+        localProducts,
+        receiptIdentity,
+        whatsappReceipt: whatsappReceipt,
+      );
       final previousDraftId = localProducts.currentOrder?.id;
       final sourceCartSessionId = localProducts.cartSessionId;
       final receiptBalance = ReceiptCustomerBalance.compute(
@@ -6762,6 +6789,7 @@ class BillingPageState extends State<BillingPage>
         setState(() {
           isLoadingCreateOrder = false;
           isLoadingConfirmOrder = false;
+          isLoadingConfirmAndWhatsapp = false;
         });
       }
       _endOrderAction();
@@ -6770,7 +6798,8 @@ class BillingPageState extends State<BillingPage>
 
   Future<void> _createOrderAndPrint() => _confirmLocalFirst(printReceipt: true);
 
-  Future<void> _confirmOrder() => _confirmLocalFirst(printReceipt: false);
+  Future<void> _confirmOrder({bool whatsappReceipt = false}) =>
+      _confirmLocalFirst(printReceipt: false, whatsappReceipt: whatsappReceipt);
 
   void _hydrateCustomerListFromProviderCache({
     bool applyDefaultCustomer = true,
@@ -6924,6 +6953,21 @@ class BillingPageState extends State<BillingPage>
         true;
   }
 
+  bool get _showConfirmAndWhatsappButton =>
+      Provider.of<AppSettingsProvider>(context, listen: false)
+          .appSettings
+          ?.showConfirmWhatsappButton ??
+      false;
+
+  Future<void> _handleConfirmAndWhatsapp() async {
+    if (!_showConfirmAndWhatsappButton || _isOrderActionBusy) return;
+    if (_skipCheckoutOnConfirmAndPrint) {
+      await _confirmAndPrintWithoutCheckoutModal(whatsappReceipt: true);
+      return;
+    }
+    _showCheckoutModal(actionMode: CheckoutActionMode.confirm);
+  }
+
   Future<void> _handleConfirmAndPrint() async {
     if (!_showConfirmOrderAndPrintButton) return;
     if (_skipCheckoutOnConfirmAndPrint) {
@@ -7062,7 +7106,8 @@ class BillingPageState extends State<BillingPage>
     _applyDefaultDeliveryMethodIfNeeded();
   }
 
-  Future<void> _confirmAndPrintWithoutCheckoutModal() async {
+  Future<void> _confirmAndPrintWithoutCheckoutModal(
+      {bool whatsappReceipt = false}) async {
     if (_isOrderActionBusy) {
       debugPrint(
           "⌨️ [BillingPage] Direct confirm & print ignored because order action is busy");
@@ -7105,7 +7150,11 @@ class BillingPageState extends State<BillingPage>
       codMethodId: billingProvider.codPaymentMethodId,
     );
 
-    await _createOrderAndPrint();
+    if (whatsappReceipt) {
+      await _confirmOrder(whatsappReceipt: true);
+    } else {
+      await _createOrderAndPrint();
+    }
   }
 
   /// Opens either the full checkout flow or one selection-only checkout step.
@@ -7512,6 +7561,17 @@ class BillingPageState extends State<BillingPage>
               await _confirmOrder();
             }
           },
+          onConfirmAndWhatsapp: isSaveMode || isQuotationMode
+              ? null
+              : () async {
+                  checkoutActionTriggered = true;
+                  setState(() {
+                    isLoadingConfirmAndWhatsapp = true;
+                    _hasOpenedPaymentModalOnce = true;
+                  });
+                  if (mounted) Navigator.of(dialogContext).pop();
+                  await _confirmOrder(whatsappReceipt: true);
+                },
           // Save Order only parks a draft, so it has no print action.
           onConfirmAndPrint: isSaveMode
               ? null
@@ -7541,6 +7601,7 @@ class BillingPageState extends State<BillingPage>
         // Modal was dismissed (Esc/close) without triggering checkout action.
         isLoadingSaveOrder = false;
         isLoadingConfirmOrder = false;
+        isLoadingConfirmAndWhatsapp = false;
         isLoadingSaveOrderAndPrint = false;
         isLoadingCreateOrder = false;
       });

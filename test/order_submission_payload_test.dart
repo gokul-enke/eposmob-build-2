@@ -238,4 +238,18 @@ void main() {
     ]);
     expect((body['paid_methods'] as List).single['amount'], 10);
   });
+
+  test('whatsappReceipt is sent only by the Confirm & WhatsApp action', () {
+    final whatsapp = OrderSubmissionPayload(
+      items: const [],
+      transactionNumber: '',
+      whatsappReceipt: true,
+    );
+    expect(whatsapp.toApiJson()['whatsappReceipt'], isTrue);
+    expect(whatsapp.toUpdateApiJson()['whatsappReceipt'], isTrue);
+
+    final plain = OrderSubmissionPayload(items: const [], transactionNumber: '');
+    expect(plain.toApiJson().containsKey('whatsappReceipt'), isFalse);
+    expect(plain.toUpdateApiJson().containsKey('whatsappReceipt'), isFalse);
+  });
 }

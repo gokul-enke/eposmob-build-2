@@ -84,6 +84,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   bool _isLoadingKotBill = false;
   bool _isLoadingCounterConfirmOrder = false;
   bool _isLoadingCounterConfirmAndPrint = false;
+  bool _isLoadingCounterConfirmAndWhatsapp = false;
   bool _showTablesPanel = true; // Desktop toggle for left tables panel
   bool _isTablesPanelPrefLoaded = false;
   double _leftPanelWidthFraction = 0.22;
@@ -882,17 +883,22 @@ class _RestaurantPageState extends State<RestaurantPage> {
         final hasInternet = Provider.of<BillingProvider>(context).hasInternet;
         final appSettings = Provider.of<AppSettingsProvider>(context).appSettings;
         final showConfirmAndPrintButton = appSettings?.showConfirmOrderAndPrintButton ?? true;
+        final showConfirmAndWhatsappButton =
+            appSettings?.showConfirmWhatsappButton ?? false;
         final canCheckout = hasItems;
-        final isCheckoutActionLoading =
-            _isLoadingCounterConfirmOrder || _isLoadingCounterConfirmAndPrint;
+        final isCheckoutActionLoading = _isLoadingCounterConfirmOrder ||
+            _isLoadingCounterConfirmAndPrint ||
+            _isLoadingCounterConfirmAndWhatsapp;
         final disableConfirmActions =
             _shouldDisableCounterCheckoutActions() || isCheckoutActionLoading;
         final showFooterConfirmOrder = widget.allowCounterBillingFromAttender &&
             _isCounterBillingMode &&
             hasInternet &&
             (appSettings?.showConfirmOrderButton ?? true);
-        final hasFooterCheckoutAction =
+        final hasConfirmOrPrintAction =
             !hasInternet || showConfirmAndPrintButton || showFooterConfirmOrder;
+        final hasFooterCheckoutAction =
+            hasConfirmOrPrintAction || showConfirmAndWhatsappButton;
         final confirmOrderIsLoading = _isLoadingCounterConfirmOrder ||
             (!showConfirmAndPrintButton && _isLoadingCounterConfirmAndPrint);
         return SafeArea(
@@ -964,6 +970,17 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       onPressed: () =>
                           _orderPanelKey.currentState?.showOfflineConfirmCheckoutFromParent(),
                     ),
+                  if (showConfirmAndWhatsappButton) ...[
+                    if (hasConfirmOrPrintAction) const SizedBox(width: 12),
+                    _buildCounterActionButton(
+                      text: 'general.confirm_and_whatsapp'.tr,
+                      color: const Color(0xFF15803D),
+                      isDisabled: !canCheckout || disableConfirmActions,
+                      isLoading: _isLoadingCounterConfirmAndWhatsapp,
+                      onPressed: () => _orderPanelKey.currentState
+                          ?.showCurrentCartConfirmAndWhatsappFromParent(),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -1095,10 +1112,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
   void _setCounterCheckoutLoading({
     required bool isLoading,
     required bool printBill,
+    bool whatsappReceipt = false,
   }) {
     if (!mounted) return;
     setState(() {
-      if (printBill) {
+      if (whatsappReceipt) {
+        _isLoadingCounterConfirmAndWhatsapp = isLoading;
+      } else if (printBill) {
         _isLoadingCounterConfirmAndPrint = isLoading;
       } else {
         _isLoadingCounterConfirmOrder = isLoading;
