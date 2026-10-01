@@ -165,7 +165,8 @@ class TransactionProvider extends ChangeNotifier {
 
     try {
       final queryParams = <String, String>{
-        if (supplierId != null && supplierId.isNotEmpty) 'supplier_id': supplierId,
+        if (supplierId != null && supplierId.isNotEmpty)
+          'supplier_id': supplierId,
         if (transactionType != null && transactionType.isNotEmpty)
           'transaction_type': transactionType,
         if (type != null && type.isNotEmpty) 'type': type,
@@ -217,13 +218,15 @@ class TransactionProvider extends ChangeNotifier {
               }
             }
             _listTransactionModelDataList = transactionList;
-            _filteredTransactionsList = List.from(_listTransactionModelDataList!);
+            _filteredTransactionsList =
+                List.from(_listTransactionModelDataList!);
             _transactionCurrentPage = data['current_page'] ?? 1;
             _transactionTotalPages = data['last_page'] ?? 1;
           }
         }
       } else {
-        throw Exception('Failed to load transactions v2: ${response.statusCode}');
+        throw Exception(
+            'Failed to load transactions v2: ${response.statusCode}');
       }
     } catch (e) {
       debugPrint('Error in fetchTransactionsFromServerV2: $e');
@@ -232,6 +235,88 @@ class TransactionProvider extends ChangeNotifier {
       _transactionIsLoading = false;
       notifyListeners();
     }
+  }
+
+  /// Fetch a separate export snapshot without replacing the visible page.
+  Future<List<TransactionModel>> fetchTransactionsForExport({
+    String? supplierId,
+    String? transactionType,
+    String? type,
+    String? search,
+    String? status,
+    String? supplierName,
+    void Function(int page, int totalPages)? onProgress,
+  }) async {
+    final token = _accessToken;
+    if (token == null || token.isEmpty) {
+      throw StateError('Access token not set');
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final apiKey = prefs.getString('api_key');
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException('API key not found. Please restart the app.');
+    }
+    final items = <TransactionModel>[];
+    var lastPage = 1;
+    for (var page = 1; page <= lastPage; page++) {
+      final uri = Uri.parse(APPUrl.supplierTransactionsV2).replace(
+        queryParameters: {
+          if (supplierId != null && supplierId.isNotEmpty)
+            'supplier_id': supplierId,
+          if (transactionType != null && transactionType.isNotEmpty)
+            'transaction_type': transactionType,
+          if (type != null && type.isNotEmpty) 'type': type,
+          'page': '$page',
+          'per_page': '50',
+        },
+      );
+      final response = await _getWithRetry(uri, headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      });
+      if (response.statusCode != 200) {
+        throw HttpException(
+            'Transaction export failed: ${response.statusCode}');
+      }
+      final json = jsonDecode(response.body);
+      final data = json['data'];
+      if (json['status'] != 'success' ||
+          data is! Map ||
+          data['data'] is! List ||
+          data['last_page'] is! int ||
+          data['current_page'] != page ||
+          data['last_page'] < 1) {
+        throw const FormatException('Invalid transaction export response');
+      }
+      if (page == 1) lastPage = data['last_page'];
+      final rows = data['data'] as List;
+      if (rows.isEmpty && (page > 1 || page < lastPage)) {
+        throw const FormatException('Incomplete transaction export response');
+      }
+      onProgress?.call(page, lastPage);
+      for (final row in rows) {
+        items.add(_createTransactionFromJson(row, items.length));
+      }
+    }
+    return filterTransactions(items,
+        search: search, status: status, supplierName: supplierName);
+  }
+
+  static List<TransactionModel> filterTransactions(List<TransactionModel> items,
+      {String? search, String? status, String? supplierName}) {
+    return items.where((tx) {
+      final query = search?.trim().toLowerCase() ?? '';
+      final supplierQuery = supplierName?.trim().toLowerCase() ?? '';
+      return (query.isEmpty ||
+              tx.reference.toLowerCase().contains(query) ||
+              tx.supplier.user.name.toLowerCase().contains(query)) &&
+          (status == null ||
+              status.isEmpty ||
+              tx.status.toLowerCase() == status.toLowerCase()) &&
+          (supplierQuery.isEmpty ||
+              tx.supplier.user.name.toLowerCase().contains(supplierQuery));
+    }).toList();
   }
 
   void applyTransactionFiltersLocally({
@@ -521,7 +606,8 @@ class TransactionProvider extends ChangeNotifier {
           : null,
       transactionType: json['transaction_type'] ?? '',
       // API may use payment_mode or payment_method
-      paymentMode: (json['payment_mode'] ?? json['payment_method'] ?? '').toString(),
+      paymentMode:
+          (json['payment_mode'] ?? json['payment_method'] ?? '').toString(),
       amount: json['amount'] ?? '0',
       taxAmount: json['tax_amount']?.toString(),
       currency: json['currency'] ?? 'INR',
@@ -556,9 +642,7 @@ class TransactionProvider extends ChangeNotifier {
     late Object lastError;
     while (true) {
       try {
-        return await http
-            .get(uri, headers: headers)
-            .timeout(_requestTimeout);
+        return await http.get(uri, headers: headers).timeout(_requestTimeout);
       } on SocketException catch (e) {
         lastError = e;
       } on HandshakeException catch (e) {

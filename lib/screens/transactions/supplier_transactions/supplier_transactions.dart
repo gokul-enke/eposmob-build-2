@@ -1,227 +1,255 @@
-import 'dart:ui';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
-import 'package:pos_machine/screens/transactions/widgets/supplier_auto_complete_search.dart';
 import 'package:provider/provider.dart';
-import 'package:pos_machine/components/build_pagination_control.dart';
-import 'package:pos_machine/components/filter_toggle_button.dart';
-import 'package:pos_machine/helpers/date_helper.dart';
-import 'package:pos_machine/helpers/ui_code_labels.dart';
+import '../../../core/ui/app_surface.dart';
+import '../../../core/ui/list_page/filter_panel.dart';
+import '../../../core/ui/list_page/list_page_header.dart';
+import '../../../core/ui/list_page/list_page_scaffold.dart';
+import '../../../components/filter_toggle_button.dart';
+import '../../../components/export_share_button.dart';
+import '../../../services/list_excel_export_service.dart';
+import '../../../helpers/date_helper.dart';
+import '../../../helpers/ui_code_labels.dart';
+import '../../../models/transaction_model.dart';
 import '../../../providers/auth_model.dart';
 import '../../../providers/transaction_provider.dart';
-import '../../../components/build_container_box.dart';
-import '../../../components/build_round_button.dart';
-import '../../../models/transaction_model.dart';
-import '../../../resources/color_manager.dart';
-import '../../../resources/font_manager.dart';
-import '../../../resources/style_manager.dart';
+import '../../../newcomponents/custom_dialog_box.dart';
 import '../widgets/common_details_dialog.dart';
 
 class TransactionScreen extends StatefulWidget {
   const TransactionScreen({super.key});
-
   @override
   State<TransactionScreen> createState() => _TransactionScreenState();
 }
 
 class _TransactionScreenState extends State<TransactionScreen> {
-  final TextEditingController searchController = TextEditingController();
-  final TextEditingController typeController = TextEditingController();
-  final TextEditingController transactionTypeController = TextEditingController();
-  final TextEditingController statusController = TextEditingController();
-  final TextEditingController paymentModeController = TextEditingController();
-  final TextEditingController supplierController = TextEditingController();
-  final TextEditingController supplierSearchController =
-      TextEditingController();
-
-  TransactionModel? selectedTransaction;
-  bool initLoading = false;
-  bool isInitialized = false;
+  final searchController = TextEditingController();
+  final supplierSearchController = TextEditingController();
+  final typeController = TextEditingController(text: 'All Types');
+  final transactionTypeController = TextEditingController(text: 'All');
+  final statusController = TextEditingController(text: 'All Status');
+  final _supplierFocus = FocusNode();
+  bool initLoading = true;
   bool _showFilters = true;
+  bool _visibilityInitialized = false;
+  TransactionModel? selectedTransaction;
+  final _exportProgress = ValueNotifier<String?>(null);
+  List<TransactionModel>? _localItems;
+  Future<List<TransactionModel>>? _localSource;
+  String? _localSourceKey;
+  int _localPage = 1;
+  bool _localLoading = false;
+  int _requestRevision = 0;
+  bool get _usesLocalFilters =>
+      searchController.text.trim().isNotEmpty ||
+      statusController.text != 'All Status' ||
+      (supplierSearchController.text.trim().isNotEmpty &&
+          context
+                  .read<TransactionProvider>()
+                  .lookupSupplierIdByName(supplierSearchController.text) ==
+              null);
 
   bool get _hasActiveFilters =>
       searchController.text.isNotEmpty ||
       supplierSearchController.text.isNotEmpty ||
-      transactionTypeController.text != 'All' ||
       typeController.text != 'All Types' ||
-      statusController.text != 'All Status' ||
-      paymentModeController.text != 'All Payment Modes' ||
-      supplierController.text != 'All Suppliers';
+      transactionTypeController.text != 'All' ||
+      statusController.text != 'All Status';
 
-  Widget _buildFilterToggleButton() {
-    return FilterToggleButton(
-      key: const ValueKey('supplier-transactions-filter-toggle'),
-      showFilters: _showFilters,
-      hasActiveFilters: _hasActiveFilters,
-      showTooltip: 'supplier_transactions.filters'.tr,
-      hideTooltip: 'supplier_transactions.hide_filters'.tr,
-      onPressed: () => setState(() => _showFilters = !_showFilters),
+  Future<File> _createExport() async {
+    _exportProgress.value = 'supplier_transactions.exporting'.tr;
+    final provider = context.read<TransactionProvider>();
+    // Capture the applied API filter values before awaiting the export fetch.
+    final items = await provider.fetchTransactionsForExport(
+      supplierId: provider
+          .lookupSupplierIdByName(supplierSearchController.text)
+          ?.toString(),
+      transactionType: transactionTypeController.text == 'All'
+          ? null
+          : transactionTypeController.text,
+      type: typeController.text == 'All Types' ? null : typeController.text,
+      search: searchController.text,
+      status:
+          statusController.text == 'All Status' ? null : statusController.text,
+      supplierName: supplierSearchController.text,
+      onProgress: (page, total) {
+        if (mounted) {
+          _exportProgress.value = 'supplier_transactions.export_fetching'
+              .trParams({'page': '$page', 'total': '$total'});
+        }
+      },
+    );
+    if (mounted) {
+      _exportProgress.value = 'supplier_transactions.export_creating'.tr;
+    }
+    return ListExcelExportService.export<TransactionModel>(
+      items: items,
+      fileNamePrefix: 'supplier-transactions',
+      sheetName: 'supplier_transactions.title'.tr,
+      columns: [
+        ListExportColumn(
+            label: 'supplier_transactions.col_si_no'.tr,
+            value: (_, index) => index + 1),
+        ListExportColumn(
+            label: 'supplier_transactions.supplier'.tr,
+            value: (tx, _) => tx.supplier.user.name),
+        ListExportColumn(
+            label: 'supplier_transactions.col_date'.tr,
+            value: (tx, _) => DateHelper.formatISODate(tx.date)),
+        ListExportColumn(
+            label: 'supplier_transactions.type'.tr,
+            value: (tx, _) => UiCodeLabels.documentKind(tx.type)),
+        ListExportColumn(
+            label: 'supplier_transactions.col_transaction_type'.tr,
+            value: (tx, _) => UiCodeLabels.documentKind(tx.transactionType)),
+        ListExportColumn(
+            label: 'supplier_transactions.col_payment_mode'.tr,
+            value: (tx, _) => UiCodeLabels.payment(tx.paymentMode)),
+        ListExportColumn(
+            label: 'supplier_transactions.col_amount'.tr,
+            value: (tx, _) => ListExcelExportService.numericValue(tx.amount)),
+        ListExportColumn(
+            label: 'supplier_transactions.currency'.tr,
+            value: (tx, _) => tx.currency),
+        ListExportColumn(
+            label: 'supplier_transactions.tax_amount'.tr,
+            value: (tx, _) =>
+                ListExcelExportService.numericValue(tx.taxAmount)),
+        ListExportColumn(
+            label: 'supplier_transactions.col_reference'.tr,
+            value: (tx, _) => tx.reference),
+        ListExportColumn(
+            label: 'supplier_transactions.status'.tr,
+            value: (tx, _) => UiCodeLabels.status(tx.status)),
+        ListExportColumn(
+            label: 'supplier_transactions.comment'.tr,
+            value: (tx, _) => tx.transactionComment),
+      ],
     );
   }
 
   @override
   void initState() {
     super.initState();
-    debugPrint('TransactionScreen:initState');
-    final accessToken =
-        Provider.of<AuthModel>(context, listen: false).token ?? '';
-    debugPrint(
-        'TransactionScreen:obtainedToken length=${accessToken.length} isEmpty=${accessToken.isEmpty}');
-    Provider.of<TransactionProvider>(context, listen: false)
-        .setAccessToken(accessToken);
-    loadInitData();
-
-    // Initialize controllers with default values
-    typeController.text = "All Types";
-    transactionTypeController.text = "All";
-    statusController.text = "All Status";
-    paymentModeController.text = "All Payment Modes";
-    supplierController.text = "All Suppliers";
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      context
+          .read<TransactionProvider>()
+          .setAccessToken(context.read<AuthModel>().token ?? '');
+      await _fetchPage(1);
+      if (mounted) setState(() => initLoading = false);
+    });
   }
 
-  void loadInitData() async {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_visibilityInitialized) {
+      _showFilters =
+          MediaQuery.sizeOf(context).width >= ListLayoutBreakpoints.mobile;
+      _visibilityInitialized = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    _requestRevision++;
+    _exportProgress.dispose();
+    searchController.dispose();
+    supplierSearchController.dispose();
+    typeController.dispose();
+    transactionTypeController.dispose();
+    statusController.dispose();
+    _supplierFocus.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchPage(int page) async {
+    final provider = context.read<TransactionProvider>();
+    final supplierId = provider
+        .lookupSupplierIdByName(supplierSearchController.text)
+        ?.toString();
+    final revision = ++_requestRevision;
     try {
-      debugPrint('TransactionScreen:loadInitData start');
-      setState(() => initLoading = true);
-      // Initial server-side fetch (no filters)
-      await Provider.of<TransactionProvider>(context, listen: false)
-          .fetchTransactionsFromServerV2(page: 1, perPage: 50);
-      setState(() {
-        isInitialized = true;
-        initLoading = false;
-      });
-      debugPrint('TransactionScreen:loadInitData success');
-    } catch (error) {
-      debugPrint("Error loading transactions: $error");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'supplier_transactions.error_loading'
-                .trParams({'error': '$error'}),
-          ),
-        ),
+      if (_usesLocalFilters) {
+        if (_localItems == null) {
+          setState(() => _localLoading = true);
+          final key =
+              '$supplierId|${transactionTypeController.text}|${typeController.text}';
+          if (_localSourceKey != key) {
+            _localSource = null;
+            _localSourceKey = key;
+          }
+          final result =
+              await (_localSource ??= provider.fetchTransactionsForExport(
+            supplierId: supplierId,
+            transactionType: transactionTypeController.text == 'All'
+                ? null
+                : transactionTypeController.text,
+            type:
+                typeController.text == 'All Types' ? null : typeController.text,
+          ));
+          if (!mounted || revision != _requestRevision) return;
+          _localItems = TransactionProvider.filterTransactions(result,
+              search: searchController.text,
+              status: statusController.text == 'All Status'
+                  ? null
+                  : statusController.text,
+              supplierName: supplierSearchController.text);
+        }
+        if (mounted && revision == _requestRevision) {
+          setState(() => _localPage = page);
+        }
+        return;
+      }
+      _localItems = null;
+      await provider.fetchTransactionsFromServerV2(
+        supplierId: supplierId,
+        transactionType: transactionTypeController.text == 'All'
+            ? null
+            : transactionTypeController.text,
+        type: typeController.text == 'All Types' ? null : typeController.text,
+        page: page,
+        perPage: 50,
       );
-      setState(() => initLoading = false);
-      debugPrint('TransactionScreen:loadInitData error=$error');
+    } catch (error) {
+      if (revision == _requestRevision) _localSource = null;
+      if (!mounted || revision != _requestRevision) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('supplier_transactions.error_loading'
+              .trParams({'error': '$error'}))));
+    } finally {
+      if (mounted && revision == _requestRevision) {
+        setState(() => _localLoading = false);
+      }
     }
   }
 
   void searchTransactions() {
-    final txProvider = Provider.of<TransactionProvider>(context, listen: false);
-    String? supplierId;
-    if (supplierSearchController.text.isNotEmpty) {
-      supplierId = txProvider.lookupSupplierIdByName(supplierSearchController.text)?.toString();
-    }
+    _localItems = null;
+    _fetchPage(1);
+  }
 
-    txProvider.fetchTransactionsFromServerV2(
-      supplierId: supplierId,
-      transactionType: transactionTypeController.text == "All"
-          ? null
-          : transactionTypeController.text,
-      type: typeController.text == "All Types" ? null : typeController.text,
-      // date filters not present in this UI
-      page: 1,
-      perPage: 50,
-    );
+  Future<void> _onRefresh() {
+    final page = _usesLocalFilters
+        ? _localPage
+        : context.read<TransactionProvider>().transactionCurrentPage;
+    _localItems = null;
+    _localSource = null;
+    return _fetchPage(page);
   }
 
   void resetSearch() {
     setState(() {
       searchController.clear();
-      typeController.text = "All Types";
-      transactionTypeController.text = "All";
-      statusController.text = "All Status";
-      paymentModeController.text = "All Payment Modes";
       supplierSearchController.clear();
+      typeController.text = 'All Types';
+      transactionTypeController.text = 'All';
+      statusController.text = 'All Status';
     });
-    // Refetch from server with defaults
-    Provider.of<TransactionProvider>(context, listen: false)
-        .fetchTransactionsFromServerV2(page: 1, perPage: 50);
-  }
-
-  Future<void> _onRefresh() async {
-    final txProvider = Provider.of<TransactionProvider>(context, listen: false);
-    String? supplierId;
-    if (supplierSearchController.text.isNotEmpty) {
-      supplierId = txProvider.lookupSupplierIdByName(supplierSearchController.text)?.toString();
-    }
-    await txProvider.fetchTransactionsFromServerV2(
-      supplierId: supplierId,
-      transactionType: transactionTypeController.text == "All"
-          ? null
-          : transactionTypeController.text,
-      type: typeController.text == "All Types" ? null : typeController.text,
-      page: txProvider.transactionCurrentPage,
-      perPage: 50,
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 150,
-            child: Text(
-              '$label: ',
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s14,
-                0.20,
-                ColorManager.textColor,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s14,
-                0.20,
-                ColorManager.textColor,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTableHeader(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: buildCustomStyle(
-          FontWeightManager.medium,
-          FontSize.s12,
-          0.18,
-          ColorManager.kPrimaryColor,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTableCell(String text) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: buildCustomStyle(
-          FontWeightManager.medium,
-          FontSize.s9,
-          0.13,
-          Colors.black,
-        ),
-      ),
-    );
+    searchTransactions();
   }
 
   Widget _buildStatusChip(String status) {
@@ -231,21 +259,21 @@ class _TransactionScreenState extends State<TransactionScreen> {
     switch (status.toUpperCase()) {
       case 'SUCC':
       case 'SUCCESS':
-        backgroundColor = Colors.green.withOpacity(0.1);
+        backgroundColor = Colors.green.withValues(alpha: 0.1);
         textColor = Colors.green;
         break;
       case 'INIT':
       case 'INITIATED':
-        backgroundColor = Colors.orange.withOpacity(0.1);
+        backgroundColor = Colors.orange.withValues(alpha: 0.1);
         textColor = Colors.orange;
         break;
       case 'FAIL':
       case 'FAILED':
-        backgroundColor = Colors.red.withOpacity(0.1);
+        backgroundColor = Colors.red.withValues(alpha: 0.1);
         textColor = Colors.red;
         break;
       default:
-        backgroundColor = Colors.grey.withOpacity(0.1);
+        backgroundColor = Colors.grey.withValues(alpha: 0.1);
         textColor = Colors.grey;
     }
 
@@ -272,7 +300,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -297,946 +325,301 @@ class _TransactionScreenState extends State<TransactionScreen> {
         title: 'supplier_transactions.dialog_title'.tr,
         gridColumns: [
           [
-            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.supplier_name'.tr, transaction.supplier.user.name),
-            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.date'.tr, DateHelper.formatISODate(transaction.date)),
-            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.type'.tr, UiCodeLabels.documentKind(transaction.type)),
-            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.transaction_type'.tr, UiCodeLabels.documentKind(transaction.transactionType)),
-            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.payment_mode'.tr, UiCodeLabels.payment(transaction.paymentMode)),
+            CommonDetailsDialog.buildKeyValueRow(
+                'supplier_transactions.supplier_name'.tr,
+                transaction.supplier.user.name),
+            CommonDetailsDialog.buildKeyValueRow(
+                'supplier_transactions.date'.tr,
+                DateHelper.formatISODate(transaction.date)),
+            CommonDetailsDialog.buildKeyValueRow(
+                'supplier_transactions.type'.tr,
+                UiCodeLabels.documentKind(transaction.type)),
+            CommonDetailsDialog.buildKeyValueRow(
+                'supplier_transactions.transaction_type'.tr,
+                UiCodeLabels.documentKind(transaction.transactionType)),
+            CommonDetailsDialog.buildKeyValueRow(
+                'supplier_transactions.payment_mode'.tr,
+                UiCodeLabels.payment(transaction.paymentMode)),
           ],
           [
-            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.amount'.tr, '${transaction.currency} ${transaction.amount}'),
-            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.tax_amount'.tr, transaction.taxAmount ?? 'supplier_transactions.na'.tr),
-            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.reference'.tr, transaction.reference, copyable: true),
-            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.status'.tr, transaction.status),
-            CommonDetailsDialog.buildKeyValueRow('supplier_transactions.comment'.tr, transaction.transactionComment ?? 'supplier_transactions.na'.tr),
+            CommonDetailsDialog.buildKeyValueRow(
+                'supplier_transactions.amount'.tr,
+                '${transaction.currency} ${transaction.amount}'),
+            CommonDetailsDialog.buildKeyValueRow(
+                'supplier_transactions.tax_amount'.tr,
+                transaction.taxAmount ?? 'supplier_transactions.na'.tr),
+            CommonDetailsDialog.buildKeyValueRow(
+                'supplier_transactions.reference'.tr, transaction.reference,
+                copyable: true),
+            CommonDetailsDialog.buildKeyValueRow(
+                'supplier_transactions.status'.tr, transaction.status),
+            CommonDetailsDialog.buildKeyValueRow(
+                'supplier_transactions.comment'.tr,
+                transaction.transactionComment ??
+                    'supplier_transactions.na'.tr),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildFilterDropdown({
-    required String title,
-    required TextEditingController controller,
-    required List<String> options,
-    required double width,
-    bool isSmallScreen = false,
-  }) {
-    return SizedBox(
-      width: isSmallScreen ? width * 0.3 : width * 0.15,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              title,
-              style: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s14,
-                0.27,
-                Colors.black.withOpacity(0.6),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          BuildBoxShadowContainer(
-            circleRadius: 7,
-            alignment: Alignment.centerLeft,
-            padding: const EdgeInsets.only(left: 15),
-            height: 45,
-            child: DropdownButtonFormField<String>(
-              isExpanded: true,
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              dropdownColor: Colors.white,
-              value: controller.text,
-              hint: Text(
-                title,
-                style: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s12,
-                  0.27,
-                  ColorManager.textColor.withOpacity(.5),
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-              items: options.map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(
-                    UiCodeLabels.documentKind(value),
-                    style: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s12,
-                      0.27,
-                      ColorManager.textColor.withOpacity(.5),
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() => controller.text = newValue!);
-                searchTransactions();
-              },
-            ),
-          ),
-        ],
-      ),
+  Widget _dropdown(String label, TextEditingController controller,
+      List<String> options, IconData icon) {
+    return DropdownButtonFormField<String>(
+      key: ValueKey('$label:${controller.text}'),
+      initialValue: controller.text,
+      isExpanded: true,
+      decoration: listFilterDecoration(label, icon),
+      items: options
+          .map((value) => DropdownMenuItem(
+              value: value,
+              child: Text(
+                  controller == statusController
+                      ? UiCodeLabels.status(value)
+                      : UiCodeLabels.documentKind(value),
+                  overflow: TextOverflow.ellipsis)))
+          .toList(),
+      onChanged: (value) {
+        if (value == null) return;
+        setState(() => controller.text = value);
+        searchTransactions();
+      },
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    debugPrint('TransactionScreen:build start');
-    final transactionProvider = Provider.of<TransactionProvider>(context);
-    debugPrint('TransactionScreen:build transactionProvider=not-null isLoading=${transactionProvider.transactionIsLoading}');
-    Size size = MediaQuery.of(context).size;
-    final bool isSmallScreen = size.width < 600;
-
-    final isMobile = size.width < 700;
-
-    if (isMobile) {
-      return SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _onRefresh,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'supplier_transactions.title'.tr,
-                        overflow: TextOverflow.ellipsis,
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s18, 0.25, ColorManager.textColor),
-                      ),
-                    ),
-                    _buildFilterToggleButton(),
-                  ],
-                ),
-                if (_showFilters) ...[
-                  const SizedBox(height: 10),
-                  KeyedSubtree(
-                    key: const ValueKey('supplier-transactions-mobile-filters'),
-                    child: _buildMobileFilters(size, transactionProvider),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                Expanded(
-                  child: initLoading || transactionProvider.transactionIsLoading
-                      ? const Center(child: CircularProgressIndicator.adaptive())
-                      : transactionProvider.listTransactionModelDataList == null ||
-                              transactionProvider.listTransactionModelDataList!.isEmpty
-                          ? _buildEmptyState(transactionProvider)
-                          : _buildMobileList(transactionProvider),
-                ),
-              ],
-            ),
-          ),
+  Widget _supplierField(TransactionProvider provider) =>
+      RawAutocomplete<String>(
+        textEditingController: supplierSearchController,
+        focusNode: _supplierFocus,
+        optionsBuilder: (value) => value.text.isEmpty
+            ? const Iterable<String>.empty()
+            : provider.getSupplierOptions().where((name) =>
+                name.toLowerCase().contains(value.text.toLowerCase())),
+        onSelected: (_) => searchTransactions(),
+        fieldViewBuilder: (context, controller, focus, submit) => TextField(
+          controller: controller,
+          focusNode: focus,
+          decoration: listFilterDecoration('supplier_transactions.supplier'.tr,
+              Icons.local_shipping_outlined),
+          onChanged: (_) => searchTransactions(),
+          onSubmitted: (_) => submit(),
+        ),
+        optionsViewBuilder: (context, select, options) => Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+              elevation: 4,
+              borderRadius: BorderRadius.circular(10),
+              child: SizedBox(
+                  width: 280,
+                  height: 200,
+                  child: ListView.builder(
+                      padding: EdgeInsets.zero,
+                      itemCount: options.length,
+                      itemBuilder: (context, index) => ListTile(
+                            selected:
+                                AutocompleteHighlightedOption.of(context) ==
+                                    index,
+                            title: Text(options.elementAt(index)),
+                            onTap: () => select(options.elementAt(index)),
+                          )))),
         ),
       );
-    }
 
-    return SafeArea(
-      child: RefreshIndicator(
-        onRefresh: _onRefresh,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: const [
-              BoxShadow(
-                color: ColorManager.boxShadowColor,
-                blurRadius: 6,
-                offset: Offset(1, 1),
-              )
-            ],
-            color: Colors.white,
-          ),
-          child: Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                /// Title
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'supplier_transactions.title'.tr,
-                      style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        FontSize.s20,
-                        0.30,
-                        ColorManager.textColor,
-                      ),
-                    ),
-                    _buildFilterToggleButton(),
-                  ],
-                ),
-
-                if (_showFilters) ...[
-                  const SizedBox(height: 15),
-                  Column(
-                    key: const ValueKey('supplier-transactions-desktop-filters'),
-                    children: [
-                      /// First Row (Filters)
-                      Row(
-                        children: [
-                    Expanded(
-                      child: _buildSearchField(
-                        title: 'supplier_transactions.search'.tr,
-                        child: TextField(
-                          controller: searchController,
-                          onChanged: (value) => searchTransactions(),
-                          decoration: InputDecoration(
-                            hintText: 'supplier_transactions.hint_search'.tr,
-                            hintStyle: buildCustomStyle(
-                              FontWeightManager.medium,
-                              FontSize.s12,
-                              0.27,
-                              ColorManager.textColor.withOpacity(.5),
-                            ),
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                          style: buildCustomStyle(
-                            FontWeightManager.medium,
-                            FontSize.s12,
-                            0.27,
-                            ColorManager.textColor.withOpacity(.5),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Builder(
-                        builder: (ctx) {
-                          debugPrint('TransactionScreen:building SupplierAutocomplete');
-                          final supplierOptions = transactionProvider.getSupplierOptions();
-                          debugPrint('TransactionScreen:supplierOptions length=${supplierOptions.length}');
-                          return _buildSearchField(
-                            title: 'supplier_transactions.supplier'.tr,
-                            child: SupplierAutocomplete(
-                              size: size,
-                              onSelected: (_) => searchTransactions(),
-                              supplierList: supplierOptions,
-                              controller: supplierSearchController,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _buildFilterDropdown(
-                        title: 'supplier_transactions.trans_type'.tr,
-                        controller: transactionTypeController,
-                        options: const ["All", "Invoice", "Voucher"],
-                        width: size.width,
-                        isSmallScreen: isSmallScreen,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _buildFilterDropdown(
-                        title: 'supplier_transactions.type'.tr,
-                        controller: typeController,
-                        options: const ["All Types", "Credit", "Debit"],
-                        width: size.width,
-                        isSmallScreen: isSmallScreen,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _buildFilterDropdown(
-                        title: 'supplier_transactions.status'.tr,
-                        controller: statusController,
-                        options: transactionProvider.getStatusOptions(),
-                        width: size.width,
-                        isSmallScreen: isSmallScreen,
-                      ),
-                    ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 15),
-
-                      /// Second Row (Reset button aligned right)
-                      Row(
-                        children: [
-                    // Empty space to push reset button to the end
-                    Expanded(
-                      flex: 3,
-                      child: Container(),
-                    ),
-
-                    // Reset Button
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 10.0),
-                        child: CustomRoundButton(
-                          title: 'supplier_transactions.btn_reset'.tr,
-                          boxColor: Colors.white,
-                          textColor: ColorManager.kPrimaryColor,
-                          fct: resetSearch,
-                          height: 45,
-                          width: double.infinity,
-                          fontSize: FontSize.s12,
-                        ),
-                      ),
-                    ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                ],
-
-                /// Table + Pagination
-                Expanded(
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: initLoading ||
-                                transactionProvider.transactionIsLoading
-                            ? const Center(
-                                child: CircularProgressIndicator.adaptive())
-                            : transactionProvider
-                                            .listTransactionModelDataList ==
-                                        null ||
-                                    transactionProvider
-                                        .listTransactionModelDataList!.isEmpty
-                                ? _buildEmptyState(transactionProvider)
-                                : _buildTransactionTable(transactionProvider),
-                      ),
-                      const SizedBox(height: 10),
-                      PaginationControl(
-                        currentPage: transactionProvider.transactionCurrentPage,
-                        totalPages: transactionProvider.transactionTotalPages,
-                        onPageChanged: (int page) {
-                          final txProvider = Provider.of<TransactionProvider>(context, listen: false);
-                          String? supplierId;
-                          if (supplierSearchController.text.isNotEmpty) {
-                            supplierId = txProvider.lookupSupplierIdByName(supplierSearchController.text)?.toString();
-                          }
-                          txProvider.fetchTransactionsFromServerV2(
-                            supplierId: supplierId,
-                            transactionType: transactionTypeController.text == "All"
-                                ? null
-                                : transactionTypeController.text,
-                            type: typeController.text == "All Types" ? null : typeController.text,
-                            page: page,
-                            perPage: 50,
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Helper for consistent fields
-  Widget _buildSearchField({required String title, required Widget child}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            title,
-            style: buildCustomStyle(
-              FontWeightManager.regular,
-              FontSize.s14,
-              0.27,
-              Colors.black.withOpacity(0.6),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        BuildBoxShadowContainer(
-          circleRadius: 7,
-          alignment: Alignment.centerLeft,
-          padding: const EdgeInsets.only(left: 15),
-          height: 45,
-          child: child,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEmptyState(TransactionProvider provider) {
-    final hasFilters = searchController.text.isNotEmpty ||
-        typeController.text != "All Types" ||
-        statusController.text != "All Status" ||
-        paymentModeController.text != "All Payment Modes" ||
-        supplierController.text != "All Suppliers";
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.search_off, size: 48, color: Colors.grey),
-          const SizedBox(height: 16),
-          Text(
-            provider.allTransactions?.isEmpty ?? true
-                ? 'supplier_transactions.no_transactions'.tr
-                : 'supplier_transactions.no_filter_match'.tr,
-            style: const TextStyle(color: Colors.grey),
-          ),
-          if (hasFilters)
-            TextButton(
-              onPressed: resetSearch,
-              child: Text('supplier_transactions.btn_reset_filters'.tr),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTransactionTable(TransactionProvider provider) {
-    return BuildBoxShadowContainer(
-      margin: const EdgeInsets.only(top: 5),
-      circleRadius: 7,
-      offsetValue: const Offset(2, 2),
-      blurRadius: 8.0,
-      color: Colors.white,
-      child: Column(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              color: ColorManager.tableBGColor,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  offset: Offset(0, 2),
-                  blurRadius: 2.0,
-                ),
-              ],
-            ),
-            child: Table(
-              columnWidths: const {
-                0: FlexColumnWidth(0.6), // SI No
-                1: FlexColumnWidth(1.8), // Supplier
-                2: FlexColumnWidth(1.2), // Date
-                3: FlexColumnWidth(1.0), // Type
-                4: FlexColumnWidth(1.5), // Transaction Type
-                5: FlexColumnWidth(1.2), // Payment Mode
-                6: FlexColumnWidth(1.2), // Amount
-                7: FlexColumnWidth(1.5), // Reference
-                8: FlexColumnWidth(1.0), // Status
-                9: FlexColumnWidth(1.0), // Action
-              },
-              border: null,
-              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-              children: [
-                TableRow(
-                  children: [
-                    _buildTableHeader('supplier_transactions.col_si_no'.tr),
-                    _buildTableHeader('supplier_transactions.supplier'.tr),
-                    _buildTableHeader('supplier_transactions.col_date'.tr),
-                    _buildTableHeader('supplier_transactions.type'.tr),
-                    _buildTableHeader('supplier_transactions.col_transaction_type'.tr),
-                    _buildTableHeader('supplier_transactions.col_payment_mode'.tr),
-                    _buildTableHeader('supplier_transactions.col_amount'.tr),
-                    _buildTableHeader('supplier_transactions.col_reference'.tr),
-                    _buildTableHeader('supplier_transactions.status'.tr),
-                    _buildTableHeader('supplier_transactions.col_action'.tr),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: MouseRegion(
-              cursor: SystemMouseCursors.grab,
-              child: ScrollConfiguration(
-                behavior: ScrollConfiguration.of(context).copyWith(
-                  dragDevices: {
-                    PointerDeviceKind.mouse,
-                    PointerDeviceKind.touch,
-                    PointerDeviceKind.stylus,
-                    PointerDeviceKind.trackpad,
-                  },
-                ),
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  scrollDirection: Axis.vertical,
-                  child: Table(
-                    columnWidths: const {
-                      0: FlexColumnWidth(0.6), // SI No
-                      1: FlexColumnWidth(1.8), // Supplier
-                      2: FlexColumnWidth(1.2), // Date
-                      3: FlexColumnWidth(1.0), // Type
-                      4: FlexColumnWidth(1.5), // Transaction Type
-                      5: FlexColumnWidth(1.2), // Payment Mode
-                      6: FlexColumnWidth(1.2), // Amount
-                      7: FlexColumnWidth(1.5), // Reference
-                      8: FlexColumnWidth(1.0), // Status
-                      9: FlexColumnWidth(1.0), // Action
-                    },
-                    border: null,
-                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                    children: [
-                      ...provider.listTransactionModelDataList!
-                          .asMap()
-                          .entries
-                          .map((entry) =>
-                              _buildTransactionRow(entry.key, entry.value))
-                          .toList(),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  TableRow _buildTransactionRow(int index, TransactionModel transaction) {
-    return TableRow(
-      decoration: BoxDecoration(
-        color: index % 2 == 0 ? Colors.white : Colors.grey.withOpacity(0.1),
-      ),
-      children: [
-        _buildTableCell(transaction.siNo.toString()),
-        TableCell(
-          verticalAlignment: TableCellVerticalAlignment.middle,
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Center(
-              child: SelectableText(
-                transaction.supplier.user.name,
-                textAlign: TextAlign.center,
-                style: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s9,
-                  0.13,
-                  Colors.black,
-                ),
-              ),
-            ),
-          ),
-        ),
-        _buildTableCell(DateHelper.formatISODate(transaction.date)),
-        Center(child: _buildTypeCell(transaction.type)),
-        _buildTableCell(UiCodeLabels.documentKind(transaction.transactionType)),
-        _buildTableCell(UiCodeLabels.payment(transaction.paymentMode)),
-        _buildTableCell('${transaction.currency} ${transaction.amount}'),
-        TableCell(
-          verticalAlignment: TableCellVerticalAlignment.middle,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-                vertical: 12.0, horizontal: 10.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Flexible(
-                  child: Text(
-                    transaction.reference,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s9,
-                      0.13,
-                      Colors.black,
-                    ),
-                  ),
-                ),
-                if (transaction.reference.isNotEmpty && transaction.reference != 'N/A') ...[
-                  const SizedBox(width: 6),
-                  GestureDetector(
-                    onTap: () {
-                      Clipboard.setData(ClipboardData(
-                          text: transaction.reference));
-                      showScaffold(
-                        context: context,
-                        message: 'supplier_transactions.ref_copied'.tr,
-                      );
-                    },
-                    child: const Icon(
-                      Icons.copy,
-                      size: 14,
-                      color: Colors.black38,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-        Center(child: _buildStatusChip(transaction.status)),
-        Center(
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: BuildBoxShadowContainer(
-              margin: const EdgeInsets.only(left: 5, right: 5),
-              circleRadius: 5,
-              child: IconButton(
-                icon: Icon(
-                  Icons.visibility,
-                  size: 18,
-                  color: ColorManager.kPrimaryColor.withOpacity(0.9),
-                ),
-                onPressed: () => _showTransactionDetails(transaction),
-                constraints: const BoxConstraints(
-                  minWidth: 36,
-                  minHeight: 36,
-                ),
-                padding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-  Widget _buildMobileFilters(Size size, TransactionProvider transactionProvider) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 4,
-              offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Material(
-        type: MaterialType.transparency,
-        child: ExpansionTile(
-          leading: const Icon(Icons.filter_list, size: 18),
-          title: Text('supplier_transactions.filters'.tr,
-              style: buildCustomStyle(FontWeightManager.medium,
-                  FontSize.s12, 0.18, ColorManager.textColor)),
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              child: Column(
-                children: [
-                  // Search
-                  TextFormField(
-                    controller: searchController,
-                    onChanged: (_) => searchTransactions(),
-                    decoration: _mobileInputDecoration('supplier_transactions.hint_search'.tr),
-                  ),
-                  const SizedBox(height: 8),
-                  // Supplier autocomplete — reuse existing field in a box
-                  TextFormField(
-                    controller: supplierSearchController,
-                    onChanged: (_) => searchTransactions(),
-                    decoration: _mobileInputDecoration('supplier_transactions.supplier'.tr),
-                  ),
-                  const SizedBox(height: 8),
-                  _mobileDropdown(
-                    value: transactionTypeController.text,
-                    hint: 'supplier_transactions.trans_type'.tr,
-                    items: const ['All', 'Invoice', 'Voucher'],
-                    onChanged: (v) {
-                      setState(() => transactionTypeController.text = v!);
-                      searchTransactions();
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  _mobileDropdown(
-                    value: typeController.text,
-                    hint: 'supplier_transactions.type'.tr,
-                    items: const ['All Types', 'Credit', 'Debit'],
-                    onChanged: (v) {
-                      setState(() => typeController.text = v!);
-                      searchTransactions();
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  _mobileDropdown(
-                    value: statusController.text,
-                    hint: 'supplier_transactions.status'.tr,
-                    items: transactionProvider.getStatusOptions(),
-                    onChanged: (v) {
-                      setState(() => statusController.text = v!);
-                      searchTransactions();
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: resetSearch,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: ColorManager.kPrimaryColor,
-                        side: const BorderSide(color: ColorManager.kPrimaryColor),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6)),
-                      ),
-                      child: Text('supplier_transactions.btn_reset_filters'.tr),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  InputDecoration _mobileInputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: buildCustomStyle(
-          FontWeightManager.medium, FontSize.s12, 0.18, Colors.grey),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(7),
-          borderSide: BorderSide(color: Colors.grey.shade300)),
-      enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(7),
-          borderSide: BorderSide(color: Colors.grey.shade300)),
-      focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(7),
-          borderSide:
-              const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2)),
-      isDense: true,
-    );
-  }
-
-  Widget _mobileDropdown({
-    required String value,
-    required String hint,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return DropdownButtonFormField<String>(
-      value: value,
-      items: items
-          .map((s) => DropdownMenuItem(
-              value: s,
-              child: Text(UiCodeLabels.documentKind(s),
-                  style: const TextStyle(fontSize: 12))))
-          .toList(),
-      onChanged: onChanged,
-      decoration: _mobileInputDecoration(hint),
-      isExpanded: true,
-    );
-  }
-
-  Widget _buildMobileList(TransactionProvider provider) {
-    final transactions = provider.listTransactionModelDataList!;
-    return Column(
-      children: [
+  Widget _reference(TransactionModel tx) => Row(children: [
         Expanded(
-          child: ListView.separated(
-            itemCount: transactions.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              final tx = transactions[index];
-              return Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2)),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: SelectableText(
-                            tx.supplier.user.name,
-                            style: buildCustomStyle(FontWeightManager.semiBold,
-                                FontSize.s13, 0.19, ColorManager.textColor),
-                          ),
-                        ),
-                        _buildStatusChip(tx.status),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        _buildTypeCell(tx.type),
-                        const SizedBox(width: 8),
-                        Text(UiCodeLabels.documentKind(tx.transactionType),
-                            style: buildCustomStyle(FontWeightManager.regular,
-                                FontSize.s11, 0.16, Colors.grey)),
-                        const Spacer(),
-                        Text(
-                          '${tx.currency} ${tx.amount}',
-                          style: buildCustomStyle(FontWeightManager.semiBold,
-                              FontSize.s13, 0.19, ColorManager.kPrimaryColor),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.calendar_today_outlined,
-                            size: 12, color: Colors.grey.shade400),
-                        const SizedBox(width: 4),
-                        Text(DateHelper.formatISODate(tx.date),
-                            style: buildCustomStyle(FontWeightManager.regular,
-                                FontSize.s11, 0.16, Colors.grey)),
-                        const Spacer(),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '${'supplier_transactions.ref_prefix'.tr} ${tx.reference}',
-                              style: buildCustomStyle(FontWeightManager.regular,
-                                  FontSize.s11, 0.16, Colors.grey),
-                            ),
-                            if (tx.reference.isNotEmpty && tx.reference != 'N/A') ...[
-                              const SizedBox(width: 6),
-                              GestureDetector(
-                                onTap: () {
-                                  Clipboard.setData(ClipboardData(
-                                      text: tx.reference));
-                                  showScaffold(
-                                    context: context,
-                                    message: 'supplier_transactions.ref_copied'.tr,
-                                  );
-                                },
-                                child: const Icon(
-                                  Icons.copy,
-                                  size: 14,
-                                  color: Colors.black38,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: InkWell(
-                        onTap: () => _showTransactionDetails(tx),
-                        borderRadius: BorderRadius.circular(6),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                                color:
-                                    ColorManager.kPrimaryColor.withOpacity(0.3)),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.visibility_outlined,
-                                  size: 13,
-                                  color: ColorManager.kPrimaryColor),
-                              const SizedBox(width: 4),
-                              Text('supplier_transactions.btn_view'.tr,
-                                  style: TextStyle(
-                                      fontSize: 11,
-                                      color: ColorManager.kPrimaryColor)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
+            child: Tooltip(
+                message: tx.reference, child: TableCells.text(tx.reference))),
+        if (tx.reference.isNotEmpty && tx.reference != 'N/A')
+          IconButton(
+              tooltip: 'supplier_transactions.copy_reference'.tr,
+              icon: const Icon(Icons.copy_outlined, size: 16),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: tx.reference));
+                showScaffold(
+                    context: context,
+                    message: 'supplier_transactions.ref_copied'.tr);
+              }),
+      ]);
+
+  Widget _card(TransactionModel tx, int number) => AppSurface(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        TableCells.identity(tx.supplier.user.name),
+        const SizedBox(height: 12),
+        Text('${'supplier_transactions.col_si_no'.tr}: ${tx.siNo}'),
+        Text(
+            '${'supplier_transactions.col_date'.tr}: ${DateHelper.formatISODate(tx.date)}'),
         const SizedBox(height: 8),
-        PaginationControl(
-          currentPage: provider.transactionCurrentPage,
-          totalPages: provider.transactionTotalPages,
-          onPageChanged: (page) {
-            String? supplierId;
-            if (supplierSearchController.text.isNotEmpty) {
-              supplierId = provider
-                  .lookupSupplierIdByName(supplierSearchController.text)
-                  ?.toString();
-            }
-            provider.fetchTransactionsFromServerV2(
-              supplierId: supplierId,
-              transactionType: transactionTypeController.text == 'All'
-                  ? null
-                  : transactionTypeController.text,
-              type: typeController.text == 'All Types'
-                  ? null
-                  : typeController.text,
-              page: page,
-              perPage: 50,
-            );
-          },
-        ),
-      ],
-    );
-  }
+        Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [_buildTypeCell(tx.type), _buildStatusChip(tx.status)]),
+        const SizedBox(height: 8),
+        Text(
+            '${'supplier_transactions.col_transaction_type'.tr}: ${UiCodeLabels.documentKind(tx.transactionType)}'),
+        Text(
+            '${'supplier_transactions.col_payment_mode'.tr}: ${UiCodeLabels.payment(tx.paymentMode)}'),
+        Text(
+            '${'supplier_transactions.col_amount'.tr}: ${tx.currency} ${tx.amount}'),
+        _reference(tx),
+        SizedBox(
+            width: double.infinity,
+            child: TableCells.viewButton(() => _showTransactionDetails(tx))),
+      ]));
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  @override
+  Widget build(BuildContext context) =>
+      Consumer<TransactionProvider>(builder: (context, provider, _) {
+        final local = _usesLocalFilters;
+        final allLocal = _localItems ?? <TransactionModel>[];
+        final localPages = ((allLocal.length + 49) ~/ 50).clamp(1, 1 << 30);
+        final currentPage = local
+            ? _localPage.clamp(1, localPages)
+            : provider.transactionCurrentPage;
+        final items = local
+            ? allLocal.skip((currentPage - 1) * 50).take(50).toList()
+            : provider.listTransactionModelDataList ?? <TransactionModel>[];
+        final statuses = <String>{
+          'All Status',
+          statusController.text,
+          ...?provider.listTransactionModelDataList?.map((tx) => tx.status),
+          ...allLocal.map((tx) => tx.status)
+        }.where((value) => value.isNotEmpty).toList();
+        return ListPageScaffold<TransactionModel>(
+          tableMinWidth: 1200,
+          header: ListPageHeader(
+              icon: Icons.swap_horiz_rounded,
+              title: 'supplier_transactions.title'.tr,
+              subtitle: 'supplier_transactions.subtitle'.tr,
+              onRefresh: _onRefresh,
+              extraActions: [
+                FilterToggleButton(
+                  key: const ValueKey('supplier-transactions-filter-toggle'),
+                  showFilters: _showFilters,
+                  hasActiveFilters: _hasActiveFilters,
+                  activeFiltersListenable: Listenable.merge(
+                      [searchController, supplierSearchController]),
+                  activeFiltersBuilder: () => _hasActiveFilters,
+                  showTooltip: 'supplier_transactions.filters'.tr,
+                  hideTooltip: 'supplier_transactions.hide_filters'.tr,
+                  onPressed: () => setState(() => _showFilters = !_showFilters),
+                ),
+                ExportShareButton(
+                  key: const ValueKey('supplier-transactions-export'),
+                  compact: MediaQuery.sizeOf(context).width <
+                      ListLayoutBreakpoints.actions,
+                  enabled: !initLoading &&
+                      !provider.transactionIsLoading &&
+                      items.isNotEmpty,
+                  createFile: _createExport,
+                  progressLabel: _exportProgress,
+                  label: 'supplier_transactions.export'.tr,
+                  loadingLabel: 'supplier_transactions.exporting'.tr,
+                  tooltip: 'supplier_transactions.export_tooltip'.tr,
+                  errorMessage: 'supplier_transactions.export_failed'.tr,
+                  mimeType:
+                      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                  shareText: 'supplier_transactions.title'.tr,
+                ),
+              ]),
+          showFilters: _showFilters,
+          filters: FilterPanel(
+              key: const ValueKey('supplier-transactions-filters'),
+              title: 'supplier_transactions.find'.tr,
+              hint: 'supplier_transactions.find_hint'.tr,
+              onReset: resetSearch,
+              fields: [
+                TextFilterField(
+                    controller: searchController,
+                    label: 'supplier_transactions.search'.tr,
+                    icon: Icons.search_rounded,
+                    onSearch: searchTransactions),
+                _supplierField(provider),
+                _dropdown(
+                    'supplier_transactions.trans_type'.tr,
+                    transactionTypeController,
+                    const ['All', 'Invoice', 'Voucher'],
+                    Icons.receipt_long_outlined),
+                _dropdown(
+                    'supplier_transactions.type'.tr,
+                    typeController,
+                    const ['All Types', 'Credit', 'Debit'],
+                    Icons.swap_vert_rounded),
+                _dropdown('supplier_transactions.status'.tr, statusController,
+                    statuses, Icons.check_circle_outline),
+              ]),
+          isLoading:
+              initLoading || provider.transactionIsLoading || _localLoading,
+          items: items,
+          onRefresh: _onRefresh,
+          onItemTap: _showTransactionDetails,
+          cardBuilder: _card,
+          emptyState: AppSurface(
+              child: Column(children: [
+            const Icon(Icons.search_off, size: 48, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text((_hasActiveFilters
+                    ? 'supplier_transactions.no_filter_match'
+                    : 'supplier_transactions.no_transactions')
+                .tr),
+            if (_hasActiveFilters)
+              TextButton(
+                  onPressed: resetSearch,
+                  child: Text('supplier_transactions.btn_reset_filters'.tr)),
+          ])),
+          currentPage: currentPage,
+          totalPages: local ? localPages : provider.transactionTotalPages,
+          itemsPerPage: 50,
+          onPageChanged: _fetchPage,
+          countLabel: 'supplier_transactions.count_on_page'
+              .trParams({'count': '${items.length}'}),
+          columns: [
+            TableColumnDef(
+                label: 'supplier_transactions.col_si_no'.tr,
+                flex: .5,
+                cellBuilder: (tx, _) => TableCells.text('${tx.siNo}')),
+            TableColumnDef(
+                label: 'supplier_transactions.supplier'.tr,
+                flex: 2,
+                cellBuilder: (tx, _) =>
+                    TableCells.identity(tx.supplier.user.name)),
+            TableColumnDef(
+                label: 'supplier_transactions.col_date'.tr,
+                flex: 1.2,
+                cellBuilder: (tx, _) =>
+                    TableCells.text(DateHelper.formatISODate(tx.date))),
+            TableColumnDef(
+                label: 'supplier_transactions.type'.tr,
+                cellBuilder: (tx, _) => _buildTypeCell(tx.type)),
+            TableColumnDef(
+                label: 'supplier_transactions.col_transaction_type'.tr,
+                flex: 1.3,
+                cellBuilder: (tx, _) => TableCells.text(
+                    UiCodeLabels.documentKind(tx.transactionType))),
+            TableColumnDef(
+                label: 'supplier_transactions.col_payment_mode'.tr,
+                flex: 1.2,
+                cellBuilder: (tx, _) =>
+                    TableCells.text(UiCodeLabels.payment(tx.paymentMode))),
+            TableColumnDef(
+                label: 'supplier_transactions.col_amount'.tr,
+                flex: 1.3,
+                cellBuilder: (tx, _) =>
+                    TableCells.text('${tx.currency} ${tx.amount}')),
+            TableColumnDef(
+                label: 'supplier_transactions.col_reference'.tr,
+                flex: 1.6,
+                cellBuilder: (tx, _) => _reference(tx)),
+            TableColumnDef(
+                label: 'supplier_transactions.status'.tr,
+                flex: 1.1,
+                cellBuilder: (tx, _) => _buildStatusChip(tx.status)),
+            TableColumnDef(
+                label: 'supplier_transactions.col_action'.tr,
+                flex: 1.2,
+                cellBuilder: (tx, _) =>
+                    TableCells.viewButton(() => _showTransactionDetails(tx))),
+          ],
+        );
+      });
 }
-
-///////////////////////////////////////////////////////////////////////////////------------------------///////////////////////////////////////

@@ -79,7 +79,10 @@ class ListPageScaffold<T> extends StatelessWidget {
       required this.itemsPerPage,
       required this.countLabel,
       required this.onPageChanged,
-      this.onItemTap});
+      this.onItemTap,
+      this.tableMinWidth = ListLayoutBreakpoints.table});
+  /// Minimum content width; desktop tables scroll horizontally below this.
+  final double tableMinWidth;
   final Widget header;
   final Widget? filters;
   final bool showFilters;
@@ -147,9 +150,7 @@ class ListPageScaffold<T> extends StatelessWidget {
                                           child: CircularProgressIndicator
                                               .adaptive()))
                                   : LayoutBuilder(builder: (context, size) {
-                                      final table = !mobile &&
-                                          size.maxWidth >=
-                                              ListLayoutBreakpoints.table;
+                                      final table = !mobile;
                                       final body = ScrollConfiguration(
                                           behavior: ScrollConfiguration.of(context)
                                               .copyWith(dragDevices: {
@@ -179,7 +180,7 @@ class ListPageScaffold<T> extends StatelessWidget {
                                                       itemBuilder: (_, index) =>
                                                           table ? Material(color: AppColors.surface, child: InkWell(onTap: onItemTap == null ? null : () => onItemTap!(items[index]), child: _row(columns.map((col) => col.cellBuilder(items[index], number(index))).toList()))) : cardBuilder(items[index], number(index)))));
                                       if (!table) return body;
-                                      return ClipRRect(
+                                      final tableContent = ClipRRect(
                                           borderRadius: BorderRadius.circular(
                                               AppRadius.card),
                                           child: DecoratedBox(
@@ -211,6 +212,16 @@ class ListPageScaffold<T> extends StatelessWidget {
                                                         heading: true)),
                                                 Expanded(child: body)
                                               ])));
+                                      return SingleChildScrollView(
+                                        scrollDirection: Axis.horizontal,
+                                        child: SizedBox(
+                                          width: size.maxWidth < tableMinWidth
+                                              ? tableMinWidth
+                                              : size.maxWidth,
+                                          height: size.maxHeight,
+                                          child: tableContent,
+                                        ),
+                                      );
                                     })),
                           const SizedBox(height: 8),
                           AppSurface(

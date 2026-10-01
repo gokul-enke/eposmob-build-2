@@ -8,6 +8,36 @@ import 'package:pos_machine/components/export_share_button.dart';
 import 'package:pos_machine/services/list_excel_export_service.dart';
 
 void main() {
+  test('monetary strings export as numeric cells and identifiers stay text',
+      () async {
+    final directory =
+        await Directory.systemTemp.createTemp('money-export-test-');
+    addTearDown(() => directory.delete(recursive: true));
+    final file = await ListExcelExportService.export<String>(
+        items: [
+          '00123'
+        ],
+        columns: [
+          ListExportColumn(label: 'Reference', value: (value, _) => value),
+          ListExportColumn(
+              label: 'Amount',
+              value: (_, __) =>
+                  ListExcelExportService.numericValue('1,250.500')),
+          ListExportColumn(
+              label: 'Tax',
+              value: (_, __) => ListExcelExportService.numericValue('0.125')),
+        ],
+        fileNamePrefix: 'money-test',
+        sheetName: 'Export',
+        outputDirectory: directory);
+    final rows =
+        Excel.decodeBytes(await file.readAsBytes()).tables['Export']!.rows;
+    expect(rows[1][0]!.value, TextCellValue('00123'));
+    expect(rows[1][1]!.value, const DoubleCellValue(1250.5));
+    expect(rows[1][2]!.value, const DoubleCellValue(.125));
+    expect(ListExcelExportService.numericValue(null), isNull);
+    expect(ListExcelExportService.numericValue('bad'), 'bad');
+  });
   test('exports every supplied row with headers and numeric values', () async {
     final directory = await Directory.systemTemp.createTemp('list-export-');
     addTearDown(() async {

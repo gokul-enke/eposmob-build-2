@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'build_dialog_box.dart';
@@ -24,6 +27,7 @@ class ExportShareButton extends StatefulWidget {
     this.compact = false,
     this.enabled = true,
     this.shareFile,
+    this.progressLabel,
   });
 
   final Future<File> Function() createFile;
@@ -36,6 +40,7 @@ class ExportShareButton extends StatefulWidget {
   final bool compact;
   final bool enabled;
   final ShareExportFile? shareFile;
+  final ValueListenable<String?>? progressLabel;
 
   @override
   State<ExportShareButton> createState() => _ExportShareButtonState();
@@ -43,6 +48,7 @@ class ExportShareButton extends StatefulWidget {
 
 class _ExportShareButtonState extends State<ExportShareButton> {
   bool _isExporting = false;
+  String? _stage;
 
   void _startExport() {
     unawaited(_exportAndShare());
@@ -50,7 +56,10 @@ class _ExportShareButtonState extends State<ExportShareButton> {
 
   Future<void> _exportAndShare() async {
     if (_isExporting) return;
-    setState(() => _isExporting = true);
+    setState(() {
+      _isExporting = true;
+      _stage = null;
+    });
 
     try {
       final file = await widget.createFile();
@@ -58,6 +67,8 @@ class _ExportShareButtonState extends State<ExportShareButton> {
         throw StateError('The exported file was not created.');
       }
       if (!mounted) return;
+
+      debugPrint('Export: file generated; opening save/share dialog');
 
       final renderBox = context.findRenderObject();
       final origin = renderBox is RenderBox && renderBox.hasSize
@@ -73,11 +84,61 @@ class _ExportShareButtonState extends State<ExportShareButton> {
         message: widget.errorMessage,
       );
     } finally {
-      if (mounted) setState(() => _isExporting = false);
+      if (mounted) {
+        setState(() {
+          _isExporting = false;
+          _stage = null;
+        });
+      }
     }
   }
 
   Future<void> _shareFile(File file, Rect? shareOrigin) async {
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      // Save exports directly on Windows instead of invoking the native
+      // DataTransferManager share UI, which can terminate the app process.
+      setState(() => _stage = 'list.export_waiting_save'.tr);
+      final destination = await FilePicker.platform.saveFile(
+        fileName: file.uri.pathSegments.last,
+        type: FileType.custom,
+        allowedExtensions: const ['xlsx'],
+        lockParentWindow: true,
+      );
+      debugPrint(destination == null
+          ? 'Export: Save As cancelled'
+          : 'Export: Save As destination selected');
+      if (destination == null) return;
+      final path = destination.toLowerCase().endsWith('.xlsx')
+          ? destination
+          : '$destination.xlsx';
+      // The native dialog only confirmed its returned path, not an appended extension.
+      if (path != destination && await File(path).exists()) {
+        if (!mounted) return;
+        final overwrite = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+                  title: Text('list.export_overwrite_title'.tr),
+                  content: Text('list.export_overwrite_message'
+                      .trParams({'name': File(path).uri.pathSegments.last})),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: Text('list.export_cancel'.tr)),
+                    FilledButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: Text('list.export_overwrite'.tr)),
+                  ],
+                ));
+        if (overwrite != true) return;
+      }
+      if (File(path).absolute.path.toLowerCase() !=
+          file.absolute.path.toLowerCase()) {
+        if (mounted) setState(() => _stage = 'list.export_saving'.tr);
+        await file.copy(path);
+      }
+      return;
+    }
+    setState(() => _stage = 'list.export_waiting_share'.tr);
     final params = ShareParams(
       files: [
         XFile(
@@ -95,8 +156,17 @@ class _ExportShareButtonState extends State<ExportShareButton> {
 
   @override
   Widget build(BuildContext context) {
+    final progress = widget.progressLabel;
+    if (progress == null) return _buildButton(context, null);
+    return ValueListenableBuilder<String?>(
+        valueListenable: progress,
+        builder: (context, value, _) => _buildButton(context, value));
+  }
+
+  Widget _buildButton(BuildContext context, String? progress) {
+    final loadingLabel = _stage ?? progress ?? widget.loadingLabel;
     final icon = _isExporting
-        ? SizedBox(
+        ? const SizedBox(
             width: 18,
             height: 18,
             child: CircularProgressIndicator(
@@ -113,7 +183,7 @@ class _ExportShareButtonState extends State<ExportShareButton> {
           data: const IconThemeData(color: Colors.white),
           child: icon,
         ),
-        tooltip: _isExporting ? widget.loadingLabel : widget.tooltip,
+        tooltip: _isExporting ? loadingLabel : widget.tooltip,
         constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
         style: IconButton.styleFrom(
           fixedSize: const Size(44, 44),
@@ -142,7 +212,7 @@ class _ExportShareButtonState extends State<ExportShareButton> {
           borderRadius: BorderRadius.circular(AppRadius.control),
         ),
       ),
-      child: Text(_isExporting ? widget.loadingLabel : widget.label),
+      child: Text(_isExporting ? loadingLabel : widget.label),
     );
   }
 }

@@ -20,6 +20,13 @@ class ListExportColumn<T> {
 class ListExcelExportService {
   const ListExcelExportService._();
 
+  /// Convert monetary values only; preserve invalid input rather than dropping it.
+  static Object? numericValue(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    final number = double.tryParse(value.replaceAll(',', '').trim());
+    return number != null && number.isFinite ? number : value;
+  }
+
   static const staleExportAge = Duration(hours: 24);
 
   static Future<File> export<T>({

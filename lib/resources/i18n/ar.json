@@ -4829,7 +4829,19 @@
     "reference": "المرجع",
     "comment": "التعليق",
     "na": "غير متاح",
-    "error_loading": "خطأ في تحميل المعاملات: @error"
+    "error_loading": "خطأ في تحميل المعاملات: @error",
+    "subtitle": "إدارة مدفوعات الموردين وسجل المعاملات.",
+    "find": "البحث عن معاملات الموردين",
+    "find_hint": "تصفية معاملات الموردين.",
+    "count_on_page": "@count معاملات في هذه الصفحة",
+    "copy_reference": "نسخ المرجع",
+    "export": "تصدير",
+    "exporting": "جارٍ التصدير...",
+    "export_tooltip": "تصدير جميع معاملات الموردين المطابقة",
+    "export_failed": "تعذر تصدير معاملات الموردين",
+    "currency": "العملة",
+    "export_fetching": "جارٍ جلب الصفحة @page من @total…",
+    "export_creating": "جارٍ إنشاء Excel…"
   },
   "order_panel": {
     "error_status_served_not_found": "حالة 'SERVED' غير موجودة",
@@ -6045,6 +6057,13 @@
   "list": {
     "refresh": "تحديث",
     "reset": "إعادة تعيين",
-    "view": "عرض"
-}
+    "view": "عرض",
+    "export_waiting_save": "بانتظار حفظ باسم…",
+    "export_saving": "جارٍ حفظ الملف…",
+    "export_waiting_share": "بانتظار المشاركة…",
+    "export_overwrite_title": "استبدال الملف الموجود؟",
+    "export_overwrite_message": "الملف @name موجود بالفعل. هل تريد استبداله؟",
+    "export_cancel": "إلغاء",
+    "export_overwrite": "استبدال"
+  }
 }
