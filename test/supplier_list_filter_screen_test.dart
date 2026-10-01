@@ -1,3 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:excel/excel.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -10,6 +17,8 @@ import 'package:pos_machine/screens/suppliers/supplier_list.dart';
 import 'package:provider/provider.dart';
 
 class _FakeSupplierProvider extends SupplierProvider {
+  bool loadFixtures = false;
+  int requests = 0;
   String? lastSupplierName;
   String? lastSupplierEmail;
   String? lastSupplierPhone;
@@ -19,8 +28,31 @@ class _FakeSupplierProvider extends SupplierProvider {
   Future<List<Supplier>?> fetchSuppliers({
     required String accessToken,
     String? supplierName,
-  }) async =>
-      <Supplier>[];
+  }) async {
+    if (!loadFixtures) return <Supplier>[];
+    return http.runWithClient(
+        () => super.fetchSuppliers(
+            accessToken: accessToken, supplierName: supplierName),
+        () => MockClient((_) async {
+              requests++;
+              return http.Response(
+                  jsonEncode({
+                    'status': 'success',
+                    'data': [
+                      for (int id = 1; id <= 28; id++)
+                        {
+                          'id': id,
+                          'name': id == 26 ? 'Other' : 'Acme',
+                          'email':
+                              id == 27 ? 'other@test.com' : 'acme@test.com',
+                          'phone': id == 28 ? '99999' : '00123',
+                          'current_balance': 10
+                        }
+                    ]
+                  }),
+                  200);
+            }));
+  }
 
   @override
   void applyFiltersLocally({
@@ -245,6 +277,52 @@ void main() {
     await pumpSupplierList(tester, size: const Size(375, 300));
     await tester.tap(find.byKey(const ValueKey('supplier-list-filter-toggle')));
     await tester.pump();
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets(
+      'export flushes pending supplier filters for Excel and table without API calls',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({'api_key': 'test'});
+    final provider = _FakeSupplierProvider()..loadFixtures = true;
+    await pumpSupplierList(tester,
+        size: const Size(1440, 900),
+        supplierProvider: provider,
+        authenticated: true);
+    await tester.pumpAndSettle();
+    expect(provider.filteredSuppliers.length, 28);
+    provider.goToPage(2);
+    await tester.enterText(find.byType(TextField).at(0), 'Acme');
+    await tester.enterText(find.byType(TextField).at(1), 'acme@test');
+    await tester.enterText(find.byType(TextField).at(2), '00123');
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(provider.filteredSuppliers.length, 28);
+    final dir = (await tester.runAsync(
+        () => Directory.systemTemp.createTemp('supplier-export-test-')))!;
+    addTearDown(() => dir.delete(recursive: true));
+    const channel = MethodChannel('plugins.flutter.io/path_provider');
+    tester.binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (_) async => dir.path);
+    addTearDown(() => tester.binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, null));
+    final export =
+        tester.widget<ExportShareButton>(find.byType(ExportShareButton));
+    final file = await tester.runAsync(export.createFile);
+    final rows =
+        Excel.decodeBytes(file!.readAsBytesSync()).tables.values.single.rows;
+    expect(rows.length, 26);
+    expect(provider.filteredSuppliers.length, 25);
+    expect(provider.supplierList!.length, 5);
+    expect(provider.currentPage, 2);
+    expect(
+        rows.skip(1).every((row) =>
+            row[1]!.value == TextCellValue('Acme') &&
+            row[2]!.value == TextCellValue('acme@test.com') &&
+            row[3]!.value == TextCellValue('00123')),
+        isTrue);
+    expect(provider.requests, 1);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(provider.currentPage, 2);
+    expect(provider.requests, 1);
     expect(tester.takeException(), isNull);
   });
 }

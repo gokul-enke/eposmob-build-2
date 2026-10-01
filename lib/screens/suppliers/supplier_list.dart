@@ -30,6 +30,9 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
   final TextEditingController searchTextController = TextEditingController();
   final TextEditingController searchEmailController = TextEditingController();
   final TextEditingController searchPhoneController = TextEditingController();
+  final _nameFilterKey = GlobalKey<TextFilterFieldState>();
+  final _emailFilterKey = GlobalKey<TextFilterFieldState>();
+  final _phoneFilterKey = GlobalKey<TextFilterFieldState>();
   String selectedBalanceFilter = 'All';
   bool initLoading = false;
   bool _showFilters = true;
@@ -59,7 +62,16 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
   }
 
   Future<File> _createSupplierExport() {
-    final suppliers = context.read<SupplierProvider>().filteredSuppliers;
+    _cancelPendingSearches();
+    final provider = context.read<SupplierProvider>();
+    provider.applyFiltersLocally(
+      supplierName: searchTextController.text,
+      supplierEmail: searchEmailController.text,
+      supplierPhone: searchPhoneController.text,
+      filterBalance: selectedBalanceFilter,
+      page: provider.currentPage,
+    );
+    final suppliers = provider.filteredSuppliers;
     return ListExcelExportService.export<Supplier>(
       items: suppliers,
       fileNamePrefix: 'suppliers',
@@ -225,7 +237,14 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
       phone: searchPhoneController.text,
       balance: selectedBalanceFilter);
 
+  void _cancelPendingSearches() {
+    _nameFilterKey.currentState?.cancelPendingSearch();
+    _emailFilterKey.currentState?.cancelPendingSearch();
+    _phoneFilterKey.currentState?.cancelPendingSearch();
+  }
+
   void _reset() {
+    _cancelPendingSearches();
     setState(() {
       searchTextController.clear();
       searchEmailController.clear();
@@ -303,18 +322,21 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                     onReset: _reset,
                     fields: [
                       TextFilterField(
+                          key: _nameFilterKey,
                           controller: searchTextController,
                           label: 'suppliers.name'.tr,
                           icon: Icons.person_outline_rounded,
                           keyboardType: TextInputType.name,
                           onSearch: _search),
                       TextFilterField(
+                          key: _emailFilterKey,
                           controller: searchEmailController,
                           label: 'suppliers.email'.tr,
                           icon: Icons.mail_outline_rounded,
                           keyboardType: TextInputType.emailAddress,
                           onSearch: _search),
                       TextFilterField(
+                          key: _phoneFilterKey,
                           controller: searchPhoneController,
                           label: 'suppliers.phone'.tr,
                           icon: Icons.phone_outlined,
