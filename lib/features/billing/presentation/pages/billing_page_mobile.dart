@@ -66,6 +66,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
   String? _lastRehydratedOrderId;
   bool _isSavingOrder = false;
   bool _isConfirmingOrder = false;
+  bool _isConfirmingAndWhatsapp = false;
   bool _isConfirmingAndPrinting = false;
   bool _isLoadingOrder = false;
   bool _isClearingCart = false;
@@ -521,6 +522,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
       setState(() {
         _isSavingOrder = false;
         _isConfirmingOrder = false;
+        _isConfirmingAndWhatsapp = false;
         _isConfirmingAndPrinting = false;
         _isLoadingOrder = false;
         _isClearingCart = false;
@@ -889,9 +891,17 @@ class BillingPageMobileState extends State<BillingPageMobile>
     }
   }
 
-  Future<void> confirmOrder() async {
-    if (_isConfirmingOrder || _isConfirmingAndPrinting) return;
-    if (!_isQuotationPage && !_showConfirmOrderButton) return;
+  Future<void> confirmOrder({bool whatsappReceipt = false}) async {
+    if (_isConfirmingOrder ||
+        _isConfirmingAndWhatsapp ||
+        _isConfirmingAndPrinting) return;
+    if (!_isQuotationPage &&
+        !(whatsappReceipt
+            ? (Provider.of<AppSettingsProvider>(context, listen: false)
+                    .appSettings
+                    ?.showConfirmWhatsappButton ??
+                false)
+            : _showConfirmOrderButton)) return;
 
     if (!_isCustomerSatisfiedForCheckout()) {
       showScaffoldError(
@@ -902,14 +912,27 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
     if (!_validatePaymentReady()) return;
 
-    setState(() => _isConfirmingOrder = true);
+    setState(() {
+      if (whatsappReceipt) {
+        _isConfirmingAndWhatsapp = true;
+      } else {
+        _isConfirmingOrder = true;
+      }
+    });
 
     bool confirmed = false;
     try {
-      confirmed = await _controller.confirmOrder(context);
+      confirmed = await _controller.confirmOrder(context,
+          whatsappReceipt: whatsappReceipt);
     } finally {
       if (mounted) {
-        setState(() => _isConfirmingOrder = false);
+        setState(() {
+          if (whatsappReceipt) {
+            _isConfirmingAndWhatsapp = false;
+          } else {
+            _isConfirmingOrder = false;
+          }
+        });
       }
     }
     if (!mounted) return;
@@ -926,8 +949,29 @@ class BillingPageMobileState extends State<BillingPageMobile>
     _focusTextField();
   }
 
+  Future<void> confirmAndWhatsapp() async {
+    if (_isConfirmingOrder ||
+        _isConfirmingAndWhatsapp ||
+        _isConfirmingAndPrinting ||
+        _isQuotationPage) {
+      return;
+    }
+    if (!(Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.showConfirmWhatsappButton ??
+        false)) return;
+    if (_skipCheckoutOnConfirmAndPrint) {
+      await _controller.prepareDirectConfirmAndPrint(context);
+      if (!mounted) return;
+      setState(() {});
+    }
+    await confirmOrder(whatsappReceipt: true);
+  }
+
   Future<void> createOrderAndPrint() async {
-    if (_isConfirmingAndPrinting || _isConfirmingOrder) return;
+    if (_isConfirmingAndPrinting ||
+        _isConfirmingOrder ||
+        _isConfirmingAndWhatsapp) return;
     if (!_isQuotationPage && !_showConfirmOrderAndPrintButton) return;
 
     if (_skipCheckoutOnConfirmAndPrint) {
@@ -1182,6 +1226,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
     super.build(context);
     return OrderSubmissionGuard(
         busy: _isConfirmingOrder ||
+            _isConfirmingAndWhatsapp ||
             _isConfirmingAndPrinting ||
             _isSavingOrder ||
             _isClearingCart,
@@ -1230,6 +1275,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
                       onConfirmOrder: confirmOrder,
                       onSaveOrder: saveOrder,
                       onCreateOrderAndPrint: createOrderAndPrint,
+                      onConfirmAndWhatsapp: confirmAndWhatsapp,
                       onCreateQuotation: () =>
                           createQuotation(shouldPrint: false),
                       onCreateQuotationAndPrint: createQuotationAndPrint,
@@ -1256,6 +1302,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
                           _handleQuotationInlineCustomerChanged,
                       isSavingOrder: _isSavingOrder,
                       isConfirmingOrder: _isConfirmingOrder,
+                      isConfirmingAndWhatsapp: _isConfirmingAndWhatsapp,
                       isConfirmingAndPrinting: _isConfirmingAndPrinting,
                     ),
                     // Orders Tab

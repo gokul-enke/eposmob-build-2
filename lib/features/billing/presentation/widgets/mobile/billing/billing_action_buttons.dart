@@ -15,12 +15,14 @@ class BillingActionButtons extends StatelessWidget {
   final bool isQuotationMode;
   final VoidCallback onSaveOrder;
   final VoidCallback onCreateOrderAndPrint;
+  final VoidCallback? onConfirmAndWhatsapp;
   final VoidCallback onConfirmOrder;
   final VoidCallback? onCreateQuotation;
   final VoidCallback? onCreateQuotationAndPrint;
   final VoidCallback? onOpenQuotationList;
   final bool isSavingOrder;
   final bool isConfirmingOrder;
+  final bool isConfirmingAndWhatsapp;
   final bool isConfirmingAndPrinting;
 
   const BillingActionButtons({
@@ -28,17 +30,22 @@ class BillingActionButtons extends StatelessWidget {
     this.isQuotationMode = false,
     required this.onSaveOrder,
     required this.onCreateOrderAndPrint,
+    this.onConfirmAndWhatsapp,
     required this.onConfirmOrder,
     this.onCreateQuotation,
     this.onCreateQuotationAndPrint,
     this.onOpenQuotationList,
     this.isSavingOrder = false,
     this.isConfirmingOrder = false,
+    this.isConfirmingAndWhatsapp = false,
     this.isConfirmingAndPrinting = false,
   });
 
   bool get _isCheckoutBusy =>
-      isSavingOrder || isConfirmingOrder || isConfirmingAndPrinting;
+      isSavingOrder ||
+      isConfirmingOrder ||
+      isConfirmingAndWhatsapp ||
+      isConfirmingAndPrinting;
 
   @override
   Widget build(BuildContext context) {
@@ -104,6 +111,30 @@ class BillingActionButtons extends StatelessWidget {
             showConfirmButton: showConfirmButton,
             showConfirmAndPrintButton: showConfirmAndPrintButton,
           ),
+          if ((appSettings?.showConfirmWhatsappButton ?? false) &&
+              onConfirmAndWhatsapp != null) ...[
+            const SizedBox(height: 10),
+            ElevatedButton.icon(
+              icon: isConfirmingAndWhatsapp
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2))
+                  : const Icon(Icons.chat_outlined, size: 18),
+              label: Text('general.confirm_and_whatsapp'.tr),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF15803D),
+                foregroundColor: Colors.white,
+                minimumSize:
+                    const Size(double.infinity, kBillingMinTouchTarget),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed:
+                  (hasItems && !_isCheckoutBusy) ? onConfirmAndWhatsapp : null,
+            ),
+          ],
         ],
       ),
     );

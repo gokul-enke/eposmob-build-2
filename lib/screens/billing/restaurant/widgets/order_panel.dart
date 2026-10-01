@@ -94,6 +94,7 @@ class OrderPanel extends StatefulWidget {
   final void Function({
     required bool isLoading,
     required bool printBill,
+    bool whatsappReceipt,
   })? onCheckoutActionLoadingChanged;
 
   const OrderPanel({
@@ -6292,6 +6293,43 @@ class OrderPanelState extends State<OrderPanel> {
               }
             }
           },
+          // Same confirm as above, plus whatsappReceipt for the backend.
+          onConfirmAndWhatsapp: mode == CheckoutModalMode.selectionOnly
+              ? null
+              : () async {
+                  setState(() {
+                    _hasOpenedPaymentModalOnce = true;
+                  });
+                  if (shouldNotifyParentCheckoutLoading) {
+                    widget.onCheckoutActionLoadingChanged?.call(
+                      isLoading: true,
+                      printBill: false,
+                      whatsappReceipt: true,
+                    );
+                  }
+                  Navigator.of(dialogContext).pop();
+                  try {
+                    if (forCurrentCart) {
+                      await _confirmCurrentCart(
+                        printBill: false,
+                        whatsappReceipt: true,
+                      );
+                    } else {
+                      await _confirmOrder(whatsappReceipt: true);
+                    }
+                  } finally {
+                    if (shouldNotifyParentCheckoutLoading) {
+                      widget.onCheckoutActionLoadingChanged?.call(
+                        isLoading: false,
+                        printBill: false,
+                        whatsappReceipt: true,
+                      );
+                    }
+                    if (mounted) {
+                      setState(() {});
+                    }
+                  }
+                },
           onConfirmAndPrint: () async {
             if (mode == CheckoutModalMode.selectionOnly) {
               Navigator.of(dialogContext).pop();
@@ -7470,6 +7508,7 @@ class OrderPanelState extends State<OrderPanel> {
     LocalProductProvider localProducts,
     ReceiptIdentity receiptIdentity, {
     String? existingOrderId,
+    bool whatsappReceipt = false,
   }) {
     localProducts.cartTotal;
     final priceSummary = localProducts.priceSummary;
@@ -7519,6 +7558,7 @@ class OrderPanelState extends State<OrderPanel> {
       quotationId: localProducts.currentOrder?.quotationId,
       deliveryCharge: _getDeliveryChargeForOrder(),
       storeId: storeId,
+      whatsappReceipt: whatsappReceipt,
     );
   }
 
@@ -7567,7 +7607,10 @@ class OrderPanelState extends State<OrderPanel> {
     );
   }
 
-  Future<bool> _confirmCurrentCart({required bool printBill}) async {
+  Future<bool> _confirmCurrentCart({
+    required bool printBill,
+    bool whatsappReceipt = false,
+  }) async {
     // Offline there is no send-to-kitchen, so a table or delivery order is
     // confirmed here too, as the removed offline Save & Print allowed.
     final isOffline =
@@ -7642,6 +7685,7 @@ class OrderPanelState extends State<OrderPanel> {
       final payload = _buildRestaurantConfirmedPayload(
         localProductProvider,
         receiptIdentity,
+        whatsappReceipt: whatsappReceipt,
       );
       final receiptBalance = ReceiptCustomerBalance.compute(
         isDefaultCustomer: _isDefaultCustomer(_selectedCustomer),
@@ -7748,7 +7792,10 @@ class OrderPanelState extends State<OrderPanel> {
     }
   }
 
-  Future<bool> _confirmOrder({bool printBill = false}) async {
+  Future<bool> _confirmOrder({
+    bool printBill = false,
+    bool whatsappReceipt = false,
+  }) async {
     if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
       return false;
     }
@@ -7761,7 +7808,10 @@ class OrderPanelState extends State<OrderPanel> {
     }
     if (!_hasOpenedPaymentModalOnce) {
       _showPaymentMethodModal(
-        onAfterApply: () => _confirmOrder(printBill: printBill),
+        onAfterApply: () => _confirmOrder(
+          printBill: printBill,
+          whatsappReceipt: whatsappReceipt,
+        ),
       );
       return false;
     }
@@ -7828,6 +7878,7 @@ class OrderPanelState extends State<OrderPanel> {
         localProducts,
         receiptIdentity,
         existingOrderId: existingOrderId,
+        whatsappReceipt: whatsappReceipt,
       );
       final receiptBalance = ReceiptCustomerBalance.compute(
         isDefaultCustomer: _isDefaultCustomer(_selectedCustomer),
@@ -8012,11 +8063,17 @@ class OrderPanelState extends State<OrderPanel> {
     }
   }
 
-  Future<void> _confirmCurrentCartAndPrintWithoutCheckoutModal() async {
+  /// With [whatsappReceipt] the sale is confirmed without printing and the
+  /// backend sends the invoice on WhatsApp instead.
+  Future<void> _confirmCurrentCartAndPrintWithoutCheckoutModal({
+    bool whatsappReceipt = false,
+  }) async {
     if (_isLoadingConfirm) return;
 
     debugPrint(
-      '[Restaurant] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct counter confirm & print',
+      whatsappReceipt
+          ? '[Restaurant] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct counter confirm & WhatsApp'
+          : '[Restaurant] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct counter confirm & print',
     );
 
     _hydrateCustomerListFromProviderCache();
@@ -8056,19 +8113,41 @@ class OrderPanelState extends State<OrderPanel> {
 
     widget.onCheckoutActionLoadingChanged?.call(
       isLoading: true,
-      printBill: true,
+      printBill: !whatsappReceipt,
+      whatsappReceipt: whatsappReceipt,
     );
     try {
-      await _confirmCurrentCart(printBill: true);
+      await _confirmCurrentCart(
+        printBill: !whatsappReceipt,
+        whatsappReceipt: whatsappReceipt,
+      );
     } finally {
       widget.onCheckoutActionLoadingChanged?.call(
         isLoading: false,
-        printBill: true,
+        printBill: !whatsappReceipt,
+        whatsappReceipt: whatsappReceipt,
       );
       if (mounted) {
         setState(() {});
       }
     }
+  }
+
+  /// Counter Confirm & WhatsApp. Mirrors Confirm & Print: skip-checkout
+  /// confirms straight away, otherwise the checkout modal opens and its
+  /// Confirm & WhatsApp button finishes the sale.
+  void showCurrentCartConfirmAndWhatsappFromParent() {
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    if (!(appSettings?.showConfirmWhatsappButton ?? false)) return;
+
+    if (_skipCheckoutOnConfirmAndPrint) {
+      unawaited(
+        _confirmCurrentCartAndPrintWithoutCheckoutModal(whatsappReceipt: true),
+      );
+      return;
+    }
+    showCheckoutFromParent(forCurrentCart: true);
   }
 
   void showCurrentCartConfirmAndPrintFromParent() {

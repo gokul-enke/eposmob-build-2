@@ -44,6 +44,7 @@ class AppSettings {
   final bool showTaxRatePos;
   final bool showConfirmOrderButton;
   final bool showConfirmOrderAndPrintButton;
+  final bool showConfirmWhatsappButton;
   final bool enableKOTPrint;
   final String defaultDeliveryMethod;
   final String defaultPaymentMethod;
@@ -108,6 +109,7 @@ class AppSettings {
     required this.showTaxRatePos,
     required this.showConfirmOrderButton,
     this.showConfirmOrderAndPrintButton = true,
+    this.showConfirmWhatsappButton = false,
     required this.enableKOTPrint,
     required this.defaultDeliveryMethod,
     required this.defaultPaymentMethod,
@@ -234,6 +236,8 @@ class AppSettings {
         defaultValue: true,
       ),
       enableKOTPrint: settingsMap['ENABLE_KOT_PRINT']?['status'] ?? false,
+      showConfirmWhatsappButton:
+          _readSettingStatus(settingsMap, 'SHOW_CONFIRM_WHATSAPP_BUTTON'),
       defaultDeliveryMethod:
           settingsMap['DEFAULT_DELIVERY_METHOD']?['value'] ?? "",
       defaultPaymentMethod:
@@ -463,6 +467,12 @@ class AppSettings {
           "code": "SHOW_CONFIRM_ORDER_AND_PRINT_BUTTON",
           "value": "",
           "status": showConfirmOrderAndPrintButton.toString(),
+        },
+        {
+          "name": "Show Confirm Whatsapp Button",
+          "code": "SHOW_CONFIRM_WHATSAPP_BUTTON",
+          "value": "",
+          "status": showConfirmWhatsappButton.toString(),
         },
         {
           "name": "Enable KOT Print",

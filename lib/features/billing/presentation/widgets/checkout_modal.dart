@@ -137,8 +137,10 @@ class CheckoutModal extends StatefulWidget {
       onQuotationDatesUpdated;
 
   final Future<void> Function() onConfirmOrder;
+
   /// Null hides the print action, e.g. for Save Order, which never prints.
   final Future<void> Function()? onConfirmAndPrint;
+  final Future<void> Function()? onConfirmAndWhatsapp;
 
   /// Optional initial step the modal should open at:
   /// 0 = Customer, 1 = Delivery, 2 = Discount, 3 = Payment.
@@ -208,6 +210,7 @@ class CheckoutModal extends StatefulWidget {
     this.onQuotationDatesUpdated,
     required this.onConfirmOrder,
     required this.onConfirmAndPrint,
+    this.onConfirmAndWhatsapp,
     this.initialStep,
   });
 
@@ -220,6 +223,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
   bool _hasEvaluatedSkipCustomerSelection = false;
   bool _isConfirming = false;
   bool _isPrinting = false;
+  bool _isConfirmingAndWhatsapp = false;
+
+  bool get _isReceiptActionBusy =>
+      _isConfirming || _isPrinting || _isConfirmingAndWhatsapp;
   bool _hasOpenedPaymentModalOnce =
       false; // Track if payment step has been visited
   bool _isAddingCustomer = false;
@@ -3547,7 +3554,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
   }
 
   void _handleConfirm() async {
-    if (_isConfirming) return;
+    if (_isReceiptActionBusy) return;
     _syncQuotationInlineCustomer();
     setState(() => _isConfirming = true);
     try {
@@ -3561,13 +3568,23 @@ class _CheckoutModalState extends State<CheckoutModal> {
       widget.onConfirmAndPrint == null ? null : _handlePrint;
 
   void _handlePrint() async {
-    if (_isPrinting) return;
+    if (_isReceiptActionBusy) return;
     _syncQuotationInlineCustomer();
     setState(() => _isPrinting = true);
     try {
       await widget.onConfirmAndPrint?.call();
     } finally {
       if (mounted) setState(() => _isPrinting = false);
+    }
+  }
+
+  void _handleWhatsapp() async {
+    if (_isReceiptActionBusy || !_canPrint) return;
+    setState(() => _isConfirmingAndWhatsapp = true);
+    try {
+      await widget.onConfirmAndWhatsapp?.call();
+    } finally {
+      if (mounted) setState(() => _isConfirmingAndWhatsapp = false);
     }
   }
 
@@ -4020,6 +4037,31 @@ class _CheckoutModalState extends State<CheckoutModal> {
     );
   }
 
+  Widget _buildWhatsappFooterButton(bool compactFooter) {
+    return Opacity(
+      opacity: _canPrint ? 1.0 : 0.5,
+      child: CustomRoundButtonWithIconAdvanced(
+        title: 'general.confirm_and_whatsapp'.tr,
+        isLoading: _isConfirmingAndWhatsapp,
+        fct: _canPrint
+            ? _handleWhatsapp
+            : () {
+                _goToStep(3);
+                showScaffoldError(
+                    context: context, message: _disabledActionMessage());
+              },
+        size: MediaQuery.of(context).size,
+        icon: const Icon(Icons.chat_outlined, color: Colors.white, size: 20),
+        height: compactFooter ? 42 : 48,
+        width: double.infinity,
+        fontSize: compactFooter ? FontSize.s12 : FontSize.s14,
+        boxColor: _canPrint ? const Color(0xFF15803D) : Colors.grey.shade400,
+        borderColor: _canPrint ? const Color(0xFF15803D) : Colors.grey.shade400,
+        radius: 12,
+      ),
+    );
+  }
+
   Widget _buildFooter({
     VoidCallback? onBack,
     VoidCallback? onNext,
@@ -4028,6 +4070,13 @@ class _CheckoutModalState extends State<CheckoutModal> {
     VoidCallback? onPrint,
     VoidCallback? onConfirm,
   }) {
+    final showWhatsapp = onConfirm != null &&
+        !widget.isQuotationMode &&
+        widget.onConfirmAndWhatsapp != null &&
+        (Provider.of<AppSettingsProvider>(context)
+                .appSettings
+                ?.showConfirmWhatsappButton ??
+            false);
     final resolvedNextLabel = nextLabel ?? 'checkout_modal.btn_next'.tr;
     final compactFooter = widget.isQuotationMode || _isDenseCheckout;
     final double horizontalPadding =
@@ -4165,6 +4214,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 ),
             ],
           ),
+          if (showWhatsapp)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: _buildWhatsappFooterButton(compactFooter),
+            ),
         ],
       ),
     );
