@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 
 import 'build_dialog_box.dart';
 import '../resources/color_manager.dart';
+import '../core/ui/app_colors.dart';
 
 typedef ShareExportFile = Future<void> Function(File file, Rect? shareOrigin);
 
@@ -100,36 +101,45 @@ class _ExportShareButtonState extends State<ExportShareButton> {
             height: 18,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: widget.compact ? ColorManager.kPrimaryColor : Colors.white,
+              color: Colors.white,
             ),
           )
         : const Icon(Icons.ios_share, size: 20);
 
     if (widget.compact) {
-      return IconButton(
+      return IconButton.filled(
         onPressed: _isExporting || !widget.enabled ? null : _startExport,
         icon: IconTheme(
-          data: const IconThemeData(color: ColorManager.kPrimaryColor),
+          data: const IconThemeData(color: Colors.white),
           child: icon,
         ),
         tooltip: _isExporting ? widget.loadingLabel : widget.tooltip,
         constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+        style: IconButton.styleFrom(
+          fixedSize: const Size(44, 44),
+          backgroundColor: ColorManager.kPrimaryColor,
+          disabledBackgroundColor:
+              ColorManager.kPrimaryColor.withValues(alpha: .45),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.control),
+          ),
+        ),
       );
     }
 
-    return ElevatedButton(
+    return FilledButton(
       onPressed: _isExporting || !widget.enabled ? null : _startExport,
-      style: ElevatedButton.styleFrom(
+      style: FilledButton.styleFrom(
         backgroundColor: ColorManager.kPrimaryColor,
         foregroundColor: Colors.white,
         disabledBackgroundColor: ColorManager.kPrimaryColor.withValues(
           alpha: 0.45,
         ),
         disabledForegroundColor: Colors.white70,
-        fixedSize: const Size(150, 45),
-        elevation: 0,
+        minimumSize: const Size(150, 44),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(5),
+          borderRadius: BorderRadius.circular(AppRadius.control),
         ),
       ),
       child: Text(_isExporting ? widget.loadingLabel : widget.label),

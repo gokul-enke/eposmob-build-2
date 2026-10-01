@@ -1509,6 +1509,11 @@
     "reset": "Reset"
   },
   "supplier_list": {
+    "subtitle": "Manage supplier details, contacts and balances.",
+    "find": "Find suppliers",
+    "find_hint": "Results update as you type.",
+    "count_on_page": "@count suppliers on this page",
+
     "error_fetching": "Error fetching suppliers",
     "error_searching": "Error searching suppliers",
     "no_suppliers_desktop": "No suppliers found",
@@ -6036,5 +6041,10 @@
     "outdoor": "Outdoor",
     "reserved": "Reserved",
     "table_list": "Table List"
-  }
+  },
+  "list": {
+    "refresh": "Refresh",
+    "reset": "Reset",
+    "view": "View"
+}
 }

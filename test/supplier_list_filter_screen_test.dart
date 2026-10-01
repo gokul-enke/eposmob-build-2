@@ -48,6 +48,26 @@ class _TestTranslations extends Translations {
   @override
   Map<String, Map<String, String>> get keys => {
         'en_US': {
+          'suppliers.title': 'Suppliers',
+          'suppliers.name': 'Name',
+          'suppliers.email': 'Email',
+          'suppliers.phone': 'Phone',
+          'suppliers.balance': 'Balance',
+          'suppliers.all': 'All',
+          'suppliers.positive': 'Positive (+ve)',
+          'suppliers.negative': 'Negative (-ve)',
+          'suppliers.zero': 'Zero (0)',
+          'supplier_list.subtitle':
+              'Manage supplier details, contacts and balances.',
+          'supplier_list.find': 'Find suppliers',
+          'supplier_list.find_hint': 'Results update as you type.',
+          'supplier_list.count_on_page': '@count suppliers on this page',
+          'list.refresh': 'Refresh',
+          'list.reset': 'Reset',
+          'list.view': 'View',
+          'pagination.page_of': 'Page @current of @total',
+          'pagination.previous_page': 'Previous page',
+          'pagination.next_page': 'Next page',
           'suppliers.list': 'Supplier List',
           'suppliers.add': 'Add Supplier',
           'supplier_list_mobile.title': 'Supplier List',
@@ -208,5 +228,23 @@ void main() {
     expect(supplierProvider.lastSupplierEmail, 'accounts@acme.test');
     expect(supplierProvider.lastSupplierPhone, '555');
     expect(supplierProvider.lastFilterBalance, 'Positive (+ve)');
+  });
+  testWidgets('hiding filters preserves pending search', (tester) async {
+    final provider = _FakeSupplierProvider();
+    await pumpSupplierList(tester,
+        size: const Size(1440, 900),
+        supplierProvider: provider,
+        authenticated: true);
+    await tester.enterText(find.byType(TextField).first, 'Acme');
+    await tester.tap(find.byKey(const ValueKey('supplier-list-filter-toggle')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(provider.lastSupplierName, 'Acme');
+  });
+  testWidgets('expanded filters fit short mobile viewport', (tester) async {
+    await pumpSupplierList(tester, size: const Size(375, 300));
+    await tester.tap(find.byKey(const ValueKey('supplier-list-filter-toggle')));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
   });
 }
