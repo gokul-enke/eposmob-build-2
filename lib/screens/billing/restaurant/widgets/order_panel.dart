@@ -94,6 +94,7 @@ class OrderPanel extends StatefulWidget {
   final void Function({
     required bool isLoading,
     required bool printBill,
+    bool whatsappReceipt,
   })? onCheckoutActionLoadingChanged;
 
   const OrderPanel({
@@ -6303,6 +6304,7 @@ class OrderPanelState extends State<OrderPanel> {
                     widget.onCheckoutActionLoadingChanged?.call(
                       isLoading: true,
                       printBill: false,
+                      whatsappReceipt: true,
                     );
                   }
                   Navigator.of(dialogContext).pop();
@@ -6320,6 +6322,7 @@ class OrderPanelState extends State<OrderPanel> {
                       widget.onCheckoutActionLoadingChanged?.call(
                         isLoading: false,
                         printBill: false,
+                        whatsappReceipt: true,
                       );
                     }
                     if (mounted) {
@@ -8060,11 +8063,17 @@ class OrderPanelState extends State<OrderPanel> {
     }
   }
 
-  Future<void> _confirmCurrentCartAndPrintWithoutCheckoutModal() async {
+  /// With [whatsappReceipt] the sale is confirmed without printing and the
+  /// backend sends the invoice on WhatsApp instead.
+  Future<void> _confirmCurrentCartAndPrintWithoutCheckoutModal({
+    bool whatsappReceipt = false,
+  }) async {
     if (_isLoadingConfirm) return;
 
     debugPrint(
-      '[Restaurant] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct counter confirm & print',
+      whatsappReceipt
+          ? '[Restaurant] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct counter confirm & WhatsApp'
+          : '[Restaurant] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct counter confirm & print',
     );
 
     _hydrateCustomerListFromProviderCache();
@@ -8104,19 +8113,41 @@ class OrderPanelState extends State<OrderPanel> {
 
     widget.onCheckoutActionLoadingChanged?.call(
       isLoading: true,
-      printBill: true,
+      printBill: !whatsappReceipt,
+      whatsappReceipt: whatsappReceipt,
     );
     try {
-      await _confirmCurrentCart(printBill: true);
+      await _confirmCurrentCart(
+        printBill: !whatsappReceipt,
+        whatsappReceipt: whatsappReceipt,
+      );
     } finally {
       widget.onCheckoutActionLoadingChanged?.call(
         isLoading: false,
-        printBill: true,
+        printBill: !whatsappReceipt,
+        whatsappReceipt: whatsappReceipt,
       );
       if (mounted) {
         setState(() {});
       }
     }
+  }
+
+  /// Counter Confirm & WhatsApp. Mirrors Confirm & Print: skip-checkout
+  /// confirms straight away, otherwise the checkout modal opens and its
+  /// Confirm & WhatsApp button finishes the sale.
+  void showCurrentCartConfirmAndWhatsappFromParent() {
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    if (!(appSettings?.showConfirmWhatsappButton ?? false)) return;
+
+    if (_skipCheckoutOnConfirmAndPrint) {
+      unawaited(
+        _confirmCurrentCartAndPrintWithoutCheckoutModal(whatsappReceipt: true),
+      );
+      return;
+    }
+    showCheckoutFromParent(forCurrentCart: true);
   }
 
   void showCurrentCartConfirmAndPrintFromParent() {
