@@ -286,7 +286,8 @@ class TransactionProvider extends ChangeNotifier {
           data['data'] is! List ||
           data['last_page'] is! int ||
           data['current_page'] != page ||
-          data['last_page'] < 1) {
+          data['last_page'] < page ||
+          (page > 1 && data['last_page'] != lastPage)) {
         throw const FormatException('Invalid transaction export response');
       }
       if (page == 1) lastPage = data['last_page'];

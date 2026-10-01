@@ -172,4 +172,45 @@ void main() {
       [2, 2]
     ]);
   });
+  for (final changedLastPage in [3, 1]) {
+    test(
+        'changed last_page $changedLastPage rejects export without mutating visible state',
+        () async {
+      final provider = TransactionProvider()..setAccessToken('test-token');
+      final requestedPages = <int>[];
+      final progress = <List<int>>[];
+      var notifications = 0;
+      provider.addListener(() => notifications++);
+      await expectLater(
+          http.runWithClient(
+            () => provider.fetchTransactionsForExport(
+                onProgress: (page, total) => progress.add([page, total])),
+            () => MockClient((request) async {
+              final page = int.parse(request.url.queryParameters['page']!);
+              requestedPages.add(page);
+              return http.Response(
+                  jsonEncode({
+                    'status': 'success',
+                    'data': {
+                      'current_page': page,
+                      'last_page': page == 1 ? 2 : changedLastPage,
+                      'data': [
+                        {'id': page, 'reference': 'INV-$page'}
+                      ],
+                    }
+                  }),
+                  200);
+            }),
+          ),
+          throwsFormatException);
+      expect(requestedPages, [1, 2]);
+      expect(progress, [
+        [1, 2]
+      ]);
+      expect(provider.transactionCurrentPage, 1);
+      expect(provider.listTransactionModelDataList, isEmpty);
+      expect(provider.transactionIsLoading, isFalse);
+      expect(notifications, 0);
+    });
+  }
 }
