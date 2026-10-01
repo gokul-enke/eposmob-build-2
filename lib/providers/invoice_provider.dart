@@ -1542,6 +1542,7 @@ class InvoiceProvider extends ChangeNotifier {
     String? dateFrom,
     String? dateTo,
     int? page,
+    bool updateState = true,
   }) async {
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -1577,10 +1578,11 @@ class InvoiceProvider extends ChangeNotifier {
         //'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
-      });
+      }).timeout(const Duration(seconds: 30));
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
+        if (!updateState) return jsonData;
         // Detect new grouped structure: data.data is a List of customer groups each having 'transactions'
         try {
           final data = jsonData['data'];
@@ -1605,7 +1607,9 @@ class InvoiceProvider extends ChangeNotifier {
         transactionListDetails = listTransactionModel.data?.transactions;
         notifyListeners();
         return jsonData;
-      } else {}
+      } else {
+        throw HttpException("Customer report request failed (${response.statusCode}).");
+      }
     } finally {
       // _isLoading = false;
       // notifyListeners();

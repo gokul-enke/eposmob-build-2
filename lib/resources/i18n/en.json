@@ -3280,7 +3280,18 @@
     "total_amount": "Total Amount:",
     "you_saved": "You Saved:",
     "discount": "Discount:",
-    "net_total": "Net Total:"
+    "net_total": "Net Total:",
+    "subtitle": "Review customer debits, credits and balances.",
+    "find": "Find customer transactions",
+    "filter_hint": "Filter by customer and date range.",
+    "load_error": "Could not load the report. Previous results remain visible.",
+    "retry": "Retry",
+    "customer_load_error": "Could not load customers. Refresh to try again.",
+    "export_tooltip": "Export all report pages matching these filters",
+    "export_error": "Could not export the complete report. Please try again.",
+    "export_fetching": "Fetching page @page of @total…",
+    "count": "@count customers on this page",
+    "customer_id": "Customer ID"
   },
   "supplier_transaction_report": {
     "hide": "Hide",

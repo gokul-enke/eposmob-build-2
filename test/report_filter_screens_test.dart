@@ -54,6 +54,7 @@ class _FakeInvoiceProvider extends InvoiceProvider {
     String? dateFrom,
     String? dateTo,
     int? page,
+    bool updateState = true,
   }) async =>
       {
         'status': 'success',
@@ -420,7 +421,10 @@ void main() {
     );
 
     await tester.tap(
-      find.byKey(const ValueKey('customer-transactions-report-reset')),
+      find.descendant(
+          of: find
+              .byKey(const ValueKey('customer-transactions-report-filters')),
+          matching: find.byType(TextButton)),
     );
     await tester.pump();
 
