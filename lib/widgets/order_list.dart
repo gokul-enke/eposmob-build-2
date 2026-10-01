@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/customers/data/customer_repository.dart';
 import 'package:get/get.dart';
 // import 'package:get/get_core/src/get_main.dart';
 import 'package:pos_machine/components/build_container_box.dart';
@@ -11,7 +12,7 @@ import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
-import 'package:pos_machine/screens/customers/add_customer_modal.dart';
+import 'package:pos_machine/features/customers/presentation/widgets/form/customer_form_host.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
@@ -19,11 +20,11 @@ import 'package:pos_machine/features/subscription/presentation/subscription_acti
 
 import '../components/build_payment_row.dart';
 import '../models/add_to_order.dart';
-import '../models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import '../models/list_cart.dart';
 import '../providers/auth_model.dart';
 import '../providers/cart_provider.dart';
-import '../providers/customer_provider.dart';
+import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
 import '../resources/color_manager.dart';
 
 class OrderList extends StatefulWidget {
@@ -270,11 +271,10 @@ class _OrderListState extends State<OrderList> {
                                   // debugPrint(mobileNumberTextController.text);
 
                                   try {
-                                    final response = await CustomerProvider()
-                                        .findCustomerByPhone(
+                                    final response = await CustomerRepository()
+                                        .findByPhone(
                                             accessToken ?? "",
-                                            mobileNumberTextController.text,
-                                            context);
+                                            mobileNumberTextController.text);
 
                                     if (response["status"] == "success") {
                                       CustomerListModel customerListModel =
@@ -426,8 +426,7 @@ class _OrderListState extends State<OrderList> {
                       circleRadius: 5,
                       child: InkWell(
                         onTap: () => {
-                          showAddCustomerModal(context, size,
-                              mobileNumber: mobileNumberText),
+                          showAddCustomerDialog(context, mobileNumber: mobileNumberText),
                         },
                         child: WebsafeSvg.asset(
                           ImageAssets.userIcon,

@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/features/billing/domain/billing_crash_guards.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/models/delivery_method_registry.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';

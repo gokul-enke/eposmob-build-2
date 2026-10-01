@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:pos_machine/features/customers/data/customer_repository.dart';
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -17,7 +18,7 @@ import 'package:pos_machine/helpers/delivery_method_display.dart';
 import 'package:pos_machine/models/delivery_method_registry.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/models/order_details.dart';
@@ -28,7 +29,7 @@ import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
-import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
@@ -70,7 +71,7 @@ import 'package:pos_machine/features/billing/presentation/widgets/coupon_modal.d
 import 'package:pos_machine/features/billing/presentation/widgets/price_fields.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
-import 'package:pos_machine/screens/customers/add_customer_modal.dart';
+import 'package:pos_machine/features/customers/presentation/widgets/form/customer_form_host.dart';
 // import 'package:pos_machine/screens/print/print_kot.dart'; // Add KOT print import
 
 enum CheckoutActionMode { confirm, save }
@@ -1948,9 +1949,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                 RegExp(r'^[0-9]+$').hasMatch(normalizedSearchQuery)) {
               phoneToPreFill = normalizedSearchQuery;
             }
-            final result = await showAddCustomerModal(
-                context, MediaQuery.of(context).size,
-                mobileNumber: phoneToPreFill, customerName: initialName);
+            final result = await showAddCustomerDialog(context, mobileNumber: phoneToPreFill, customerName: initialName);
 
             if (result != null && result['status'] == 'success') {
               final responseData = result['response']?['data'];
@@ -3732,13 +3731,13 @@ class BillingPageState extends State<BillingPageRestaurant>
                             final response;
                             if (RegExp(r'^[0-9]+$')
                                 .hasMatch(mobileNumberTextController.text)) {
-                              response = await CustomerProvider()
-                                  .findCustomerByPhone(accessToken ?? "",
-                                      mobileNumberTextController.text, context);
+                              response = await CustomerRepository()
+                                  .findByPhone(accessToken ?? "",
+                                      mobileNumberTextController.text);
                             } else {
-                              response = await CustomerProvider()
-                                  .findCustomerByName(accessToken ?? "",
-                                      mobileNumberTextController.text, context);
+                              response = await CustomerRepository()
+                                  .findByName(accessToken ?? "",
+                                      mobileNumberTextController.text);
                             }
 
                             if (response["status"] == "success") {
@@ -4150,8 +4149,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                     child: InkWell(
                       onTap: () async {
                         debugPrint("ADD NEW CUSTOMER BUTTON PRESSED");
-                        final result = await showAddCustomerModal(context, size,
-                            mobileNumber: mobileNumberTextController.text);
+                        final result = await showAddCustomerDialog(context, mobileNumber: mobileNumberTextController.text);
                         if (result != null &&
                             result is Map &&
                             result['status'] == 'success') {
@@ -4163,9 +4161,9 @@ class BillingPageState extends State<BillingPageRestaurant>
                             String? accessToken =
                                 Provider.of<AuthModel>(context, listen: false)
                                     .token;
-                            final response = await CustomerProvider()
-                                .findCustomerByPhone(
-                                    accessToken ?? '', createdPhone, context);
+                            final response = await CustomerRepository()
+                                .findByPhone(
+                                    accessToken ?? '', createdPhone);
                             if (response != null &&
                                 response['status'] == 'success') {
                               final listModel =

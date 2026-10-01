@@ -14,7 +14,7 @@ import '../providers/supplier_provider.dart';
 import 'general_settings_provider.dart';
 import 'app_settings_provider.dart';
 import '../providers/delivery_methods_provider.dart';
-import '../providers/customer_provider.dart';
+import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
 import '../providers/role_provider.dart';
 import 'offline_sync_endpoints.dart';
 import 'package:pos_machine/features/realtime_sync/domain/sync_operation_gate.dart';

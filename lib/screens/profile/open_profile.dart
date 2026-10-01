@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/authentication_providers.dart';
-import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
 import 'package:pos_machine/screens/login/login.dart';
 import 'package:pos_machine/services/session_reset_service.dart';
 import 'package:pos_machine/screens/profile/widgets/change_password_widget.dart';
@@ -51,8 +51,7 @@ class _OpenProfileScreenState extends State<OpenProfileScreen> {
 
       CustomerProvider customerProvider =
           Provider.of<CustomerProvider>(context, listen: false);
-      selectedCustomer = await customerProvider.fetchUserById(
-          accessToken ?? "", userId, context);
+      selectedCustomer = await customerProvider.reloadSelectedCustomer(accessToken ?? "", userId);
     } catch (error) {
       // debugPrint(error.toString());
     } finally {

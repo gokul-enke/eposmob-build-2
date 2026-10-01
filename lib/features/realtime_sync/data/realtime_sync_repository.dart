@@ -1,6 +1,6 @@
 import 'package:pos_machine/features/realtime_sync/data/realtime_entity_api.dart';
 import 'package:pos_machine/features/realtime_sync/domain/realtime_sync_models.dart';
-import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:pos_machine/features/customers/presentation/navigation/customer_navigation.dart';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -1009,13 +1010,9 @@ class _SideMenuState extends State<SideMenu> {
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.users,
                   title: 'nav.customers'.tr,
-                  onTap: () {
-                    sideBarController.index.value = 5;
-                  },
-                  selected: sideBarController.index.value == 5 ||
-                      sideBarController.index.value == 9 ||
-                      sideBarController.index.value == 10 ||
-                      sideBarController.index.value == 38,
+                  onTap: CustomerNavigation.openList,
+                  selected: CustomerNavigation.sectionIndices
+                      .contains(sideBarController.index.value),
                 ),
               );
             },

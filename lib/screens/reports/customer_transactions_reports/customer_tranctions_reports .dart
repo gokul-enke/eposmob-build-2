@@ -19,7 +19,7 @@ import 'package:pos_machine/components/build_pagination_control.dart';
 
 // Add imports for customer autocomplete and date filtering
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
-import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'dart:async';
 

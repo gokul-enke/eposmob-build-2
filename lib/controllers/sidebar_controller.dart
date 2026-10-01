@@ -9,10 +9,10 @@ import 'package:pos_machine/screens/category/add_category_properties.dart';
 import 'package:pos_machine/screens/category/add_category_screen.dart';
 import 'package:pos_machine/screens/category/edit_category_screen.dart';
 import 'package:pos_machine/screens/category/widgets/view_category.dart';
-import 'package:pos_machine/screens/customer_profile/open_customer_profile.dart';
-import 'package:pos_machine/screens/customers/add_customers.dart';
+import 'package:pos_machine/features/customers/presentation/pages/customer_profile_page.dart';
+import 'package:pos_machine/features/customers/presentation/pages/add_customer_page.dart';
 import 'package:pos_machine/screens/cart/cart_list.dart';
-import 'package:pos_machine/screens/customers/customers.dart';
+import 'package:pos_machine/features/customers/presentation/pages/customers_list_page.dart';
 import 'package:pos_machine/screens/sales/widgets/quotation_details.dart';
 import 'package:pos_machine/screens/dashboard/dashboard.dart';
 
@@ -108,6 +108,13 @@ class SideBarController extends GetxController {
   /// above it would otherwise silently point those callers elsewhere.
   static const int invoiceListScreenIndex = 21;
 
+  /// Customer screens in [screens]. Navigate through [CustomerNavigation]
+  /// rather than setting these indices directly.
+  static const int customersScreenIndex = 5;
+  static const int addCustomerScreenIndex = 9;
+  static const int userProfileScreenIndex = 10;
+  static const int customerProfileScreenIndex = 38;
+
   RxInt index =
       0.obs; // Default to HomeNew, will be set based on user role during login
   RxBool isExpanded = false.obs;
@@ -132,11 +139,11 @@ class SideBarController extends GetxController {
     SalesScreen(), //2
     CartScreen(), //3
     TransactionScreen(), //4
-    CustomersScreen(), //5
+    CustomersListPage(), //5
     LoyalityCardScreen(), //6
     NotificationScreen(), //7
     SupportScreen(), //8
-    AddCustomersScreen(), //9
+    AddCustomerPage(), //9
     OpenProfileScreen(), //10
     SalesOrderDetailsScreen(), //11
     AddCategoryScreen(), //12
@@ -165,7 +172,7 @@ class SideBarController extends GetxController {
     TabBarForEditProduct(), //35
     ViewPurchaseWidget(), //36
     AddVoucherDetailsWidget(), //37
-    OpenCustomerProfileScreen(), //38
+    CustomerProfilePage(), //38
     AccountBookScreen(), //39
     ProductSalesReportScreen(), //40
     SalesReportScreen(), //41

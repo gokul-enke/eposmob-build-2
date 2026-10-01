@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/features/realtime_sync/domain/realtime_sync_models.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_stock.dart';
 import 'package:pos_machine/resources/app_url.dart';

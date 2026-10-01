@@ -5,6 +5,7 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
+import 'package:pos_machine/core/utils/phone_number_formatter.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/supplier.dart';
 import 'package:pos_machine/providers/category_providers.dart';
@@ -199,7 +200,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                       isStarRed: true,
                       controller: phoneNumberController,
                       keyboardType: TextInputType.number,
-                      inputFormatters: [PhoneNumberFormatter()],
+                      inputFormatters: [const PhoneNumberFormatter()],
                       validator: validatePhoneNumber,
                       onchanged: (value) {},
                       hintText: 'add_supplier.field_phone'.tr,
@@ -210,7 +211,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                       autofocus: true,
                       controller: altPhoneNumberController,
                       keyboardType: TextInputType.number,
-                      inputFormatters: [PhoneNumberFormatter()],
+                      inputFormatters: [const PhoneNumberFormatter()],
                       onchanged: (value) {},
                       hintText: 'add_supplier.field_alt_phone'.tr,
                       size: size,
@@ -224,7 +225,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                           isStarRed: true,
                           controller: phoneNumberController,
                           keyboardType: TextInputType.number,
-                          inputFormatters: [PhoneNumberFormatter()],
+                          inputFormatters: [const PhoneNumberFormatter()],
                           validator: validatePhoneNumber,
                           onchanged: (value) {},
                           hintText: 'add_supplier.field_phone'.tr,
@@ -234,7 +235,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
                           autofocus: true,
                           controller: altPhoneNumberController,
                           keyboardType: TextInputType.number,
-                          inputFormatters: [PhoneNumberFormatter()],
+                          inputFormatters: [const PhoneNumberFormatter()],
                           onchanged: (value) {},
                           hintText: 'add_supplier.field_alt_phone'.tr,
                           size: size,
@@ -1239,29 +1240,5 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
       return 'add_supplier.validator_phone_invalid'.tr;
     }
     return null; // Return null if there are no errors
-  }
-}
-
-class PhoneNumberFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
-    String formattedText = formatPhoneNumber(newValue.text);
-    return TextEditingValue(
-      text: formattedText,
-      selection: TextSelection.collapsed(offset: formattedText.length),
-    );
-  }
-
-  String formatPhoneNumber(String input) {
-    input =
-        input.replaceAll(RegExp(r'\D'), ''); // Remove non-numeric characters
-    if (input.length > 3) {
-      input = '${input.substring(0, 3)}-${input.substring(3)}';
-    }
-    if (input.length > 7) {
-      input = '${input.substring(0, 7)}-${input.substring(7)}';
-    }
-    return input;
   }
 }

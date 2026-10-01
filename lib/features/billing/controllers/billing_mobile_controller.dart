@@ -12,12 +12,12 @@ import 'package:pos_machine/features/billing/domain/add_product_with_variant.dar
 import 'package:pos_machine/features/billing/domain/quotation_checkout.dart';
 import 'package:pos_machine/features/billing/domain/billing_totals.dart';
 import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
-import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/services/checkout_service.dart';

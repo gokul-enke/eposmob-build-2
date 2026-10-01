@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart'; // Re-enabled for .tr translations
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/delivery_method_display.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/models/delivery_method.dart';
 import 'package:pos_machine/models/delivery_method_registry.dart';
 // import 'package:pos_machine/resources/color_manager.dart'; // Unused
@@ -28,7 +28,7 @@ import 'package:pos_machine/features/billing/domain/payment_validation.dart';
 import 'package:pos_machine/helpers/payment_auto_fill_helper.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/location_provider.dart';
-import 'package:pos_machine/screens/customer_profile/widgets/customer_address_form_widget.dart';
+import 'package:pos_machine/features/customers/presentation/widgets/address/customer_address_form_dialog.dart';
 
 enum CheckoutModalMode {
   checkout,

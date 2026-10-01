@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/features/billing/domain/billing_crash_guards.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 
 class CustomerSummaryCard extends StatelessWidget {

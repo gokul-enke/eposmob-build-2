@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 
 class CustomerSelectionProvider extends ChangeNotifier {
   CustomerListModelData? _selectedCustomer;

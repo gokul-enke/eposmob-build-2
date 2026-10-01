@@ -1,4 +1,5 @@
 import 'package:pos_machine/components/order_submission_guard.dart';
+import 'package:pos_machine/features/customers/data/customer_repository.dart';
 import 'package:pos_machine/services/order_submission_coordinator.dart';
 import 'dart:async';
 import 'dart:collection';
@@ -29,7 +30,7 @@ import 'package:pos_machine/features/subscription/presentation/subscription_acti
 import 'package:pos_machine/features/billing/domain/payment_validation.dart';
 import 'package:pos_machine/features/billing/domain/product_details_helpers.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/models/customer_purchase_history.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_cart.dart';
@@ -40,7 +41,7 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
-import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
 import 'package:pos_machine/providers/customer_purchase_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
@@ -82,7 +83,7 @@ import 'package:pos_machine/widgets/horizontal_saved_orders_view.dart';
 import 'package:pos_machine/widgets/product_autocomplete_list.dart';
 import 'package:pos_machine/widgets/sidebar_product_list.dart';
 import 'package:pos_machine/widgets/product_details_dialog.dart';
-import 'package:pos_machine/widgets/customer_purchase_history_modal.dart';
+import 'package:pos_machine/features/customers/presentation/widgets/purchase_history/customer_purchase_history_dialog.dart';
 import 'package:pos_machine/widgets/live_clock.dart';
 import 'package:pos_machine/widgets/open_cash_drawer_button.dart';
 import 'package:provider/provider.dart';
@@ -97,7 +98,7 @@ import 'package:pos_machine/features/billing/presentation/widgets/delivery_metho
 import 'package:pos_machine/features/billing/presentation/widgets/coupon_modal.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/price_fields.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
-import 'package:pos_machine/screens/customers/add_customer_modal.dart';
+import 'package:pos_machine/features/customers/presentation/widgets/form/customer_form_host.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/keyboard_shortcuts_help_dialog.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/pos_security_key_dialog.dart';
 
@@ -4604,7 +4605,7 @@ class BillingPageState extends State<BillingPage>
 
       final result = await showDialog<Map<String, dynamic>?>(
         context: context,
-        builder: (context) => CustomerPurchaseHistoryModal(
+        builder: (context) => CustomerPurchaseHistoryDialog(
           product: item.product,
           purchaseHistory: purchaseHistory.data.take(5).toList(),
           customerName: customerName,
@@ -5208,13 +5209,13 @@ class BillingPageState extends State<BillingPage>
                             final response;
                             if (RegExp(r'^[0-9]+$')
                                 .hasMatch(mobileNumberTextController.text)) {
-                              response = await CustomerProvider()
-                                  .findCustomerByPhone(accessToken ?? "",
-                                      mobileNumberTextController.text, context);
+                              response = await CustomerRepository()
+                                  .findByPhone(accessToken ?? "",
+                                      mobileNumberTextController.text);
                             } else {
-                              response = await CustomerProvider()
-                                  .findCustomerByName(accessToken ?? "",
-                                      mobileNumberTextController.text, context);
+                              response = await CustomerRepository()
+                                  .findByName(accessToken ?? "",
+                                      mobileNumberTextController.text);
                             }
 
                             if (response["status"] == "success") {
@@ -5626,8 +5627,7 @@ class BillingPageState extends State<BillingPage>
                     child: InkWell(
                       onTap: () async {
                         debugPrint("ADD NEW CUSTOMER BUTTON PRESSED");
-                        final result = await showAddCustomerModal(context, size,
-                            mobileNumber: mobileNumberTextController.text);
+                        final result = await showAddCustomerDialog(context, mobileNumber: mobileNumberTextController.text);
                         if (result != null &&
                             result is Map &&
                             result['status'] == 'success') {
@@ -5639,9 +5639,9 @@ class BillingPageState extends State<BillingPage>
                             String? accessToken =
                                 Provider.of<AuthModel>(context, listen: false)
                                     .token;
-                            final response = await CustomerProvider()
-                                .findCustomerByPhone(
-                                    accessToken ?? '', createdPhone, context);
+                            final response = await CustomerRepository()
+                                .findByPhone(
+                                    accessToken ?? '', createdPhone);
                             if (response != null &&
                                 response['status'] == 'success') {
                               final listModel =
@@ -7388,9 +7388,7 @@ class BillingPageState extends State<BillingPage>
             debugPrint(
                 "🧾 [CheckoutCustomer] Opening add customer modal prefillName=$initialName, prefillPhone=$phoneToPreFill, search=$searchQuery");
 
-            final result = await showAddCustomerModal(
-                context, MediaQuery.of(context).size,
-                mobileNumber: phoneToPreFill, customerName: initialName);
+            final result = await showAddCustomerDialog(context, mobileNumber: phoneToPreFill, customerName: initialName);
 
             if (result != null && result['status'] == 'success') {
               final responseData = result['response']?['data'];

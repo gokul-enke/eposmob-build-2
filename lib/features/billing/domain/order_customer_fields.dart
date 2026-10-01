@@ -1,4 +1,4 @@
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 
 /// Shared helpers for deriving the customer name/phone that get persisted onto a
 /// saved order, so the desktop billing page and the mobile billing flow build
