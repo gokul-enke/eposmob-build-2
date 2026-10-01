@@ -3768,6 +3768,17 @@
     "share_subject": "Order PDF"
   },
   "receipt": {
+    "copy": "Copy",
+    "subtitle": "Manage customer receipts and payments.",
+    "find": "Find receipts",
+    "filter_hint": "Results update as you type.",
+    "from_date": "From Date",
+    "to_date": "To Date",
+    "page_count": "@count receipts on this page",
+    "export_creating": "Creating Excel…",
+    "export_fetching": "Fetching page @page of @total…",
+    "export_tooltip": "Export filtered receipts",
+    "export_failed": "Could not export receipts",
     "edit_item_title": "Edit Item",
     "add_item_title": "Add Item",
     "item_type_label": "Item Type",

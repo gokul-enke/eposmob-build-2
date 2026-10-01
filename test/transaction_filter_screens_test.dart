@@ -283,7 +283,9 @@ void main() {
       );
       await tester.pump();
 
-      if (screen is SupplierVoucherListScreen || screen is InvoiceListScreen) {
+      if (screen is SupplierVoucherListScreen ||
+          screen is InvoiceListScreen ||
+          screen is ReceiptListScreen) {
         expect(find.byType(FilterToggleButton), findsOneWidget);
         await tester.tap(find.byType(FilterToggleButton));
       } else {

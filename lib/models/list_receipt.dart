@@ -17,7 +17,7 @@ class ReceiptResponse {
     debugPrint("🔍 Status: ${json['status']}");
     debugPrint("🔍 Message: ${json['message']}");
     debugPrint("🔍 Data: ${json['data']}");
-    
+
     return ReceiptResponse(
       status: json['status'] ?? '',
       message: json['message'] ?? '',
@@ -67,8 +67,10 @@ class ReceiptPayment {
       paymentDate: json['payment_date']?.toString() ?? '',
       description: json['description']?.toString(),
       updatedBy: json['updated_by'],
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(json['updated_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+          json['created_at'] ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(
+          json['updated_at'] ?? DateTime.now().toIso8601String()),
     );
   }
 }
@@ -182,12 +184,28 @@ class Receipt {
       userId: json['user_id'],
       customerId: json['customer_id'] ?? 0,
       companyId: json['company_id'] ?? 0,
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(json['updated_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+          json['created_at'] ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(
+          json['updated_at'] ?? DateTime.now().toIso8601String()),
       company: Company.fromJson(json['company'] ?? {}),
       customer: Customer.fromJson(json['customer'] ?? {}),
       receiptPayments: payments,
     );
+  }
+
+  /// Receipts may omit the summary method and provide it on payment rows.
+  List<String> get paymentMethods {
+    final methods = <String, String>{};
+    for (final value in [
+      ...paymentMethod.split(','),
+      ...receiptPayments.map((payment) => payment.paymentMethod),
+    ]) {
+      final method = value.trim();
+      if (method.isNotEmpty)
+        methods.putIfAbsent(method.toLowerCase(), () => method);
+    }
+    return methods.values.toList(growable: false);
   }
 
   // Helper method to handle payment_method which can be String or List<String>
@@ -233,8 +251,10 @@ class Company {
       webUrl: json['web_url'] ?? '',
       verified: json['verified'] ?? 0,
       status: json['status'] ?? '',
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(json['updated_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+          json['created_at'] ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(
+          json['updated_at'] ?? DateTime.now().toIso8601String()),
       deletedAt: json['deleted_at'],
     );
   }
@@ -290,8 +310,10 @@ class Customer {
       storeId: json['store_id'],
       companyId: json['company_id'],
       deletedAt: json['deleted_at'],
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(json['updated_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+          json['created_at'] ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(
+          json['updated_at'] ?? DateTime.now().toIso8601String()),
       user: User.fromJson(json['user'] ?? {}),
     );
   }
@@ -330,8 +352,10 @@ class User {
       emailVerifiedAt: json['email_verified_at'],
       phoneVerified: json['phone_verified'] ?? 0,
       companyId: json['company_id'],
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(json['updated_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+          json['created_at'] ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(
+          json['updated_at'] ?? DateTime.now().toIso8601String()),
     );
   }
 }

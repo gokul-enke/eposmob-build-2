@@ -3601,6 +3601,17 @@
     "yes_print": "نعم، اطبع"
   },
   "receipt": {
+    "copy": "نسخ",
+    "subtitle": "إدارة إيصالات العملاء والمدفوعات.",
+    "find": "البحث عن الإيصالات",
+    "filter_hint": "تتحدث النتائج أثناء الكتابة.",
+    "from_date": "من تاريخ",
+    "to_date": "إلى تاريخ",
+    "page_count": "@count إيصالات في هذه الصفحة",
+    "export_creating": "جارٍ إنشاء Excel…",
+    "export_fetching": "جارٍ جلب الصفحة @page من @total…",
+    "export_tooltip": "تصدير الإيصالات المصفاة",
+    "export_failed": "تعذر تصدير الإيصالات",
     "edit_item_title": "تعديل العنصر",
     "add_item_title": "إضافة عنصر",
     "item_type_label": "نوع العنصر",
