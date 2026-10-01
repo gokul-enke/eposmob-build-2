@@ -4664,7 +4664,16 @@
       "Oct",
       "Nov",
       "Dec"
-    ]
+    ],
+    "subtitle": "Manage expense entries and payments.",
+    "find": "Find expenses",
+    "filter_hint": "Results update as you type.",
+    "currency": "Currency",
+    "export_tooltip": "Export all expenses matching the filters",
+    "export_error": "Could not export expenses. Please try again.",
+    "load_error": "Could not refresh expenses. Previously loaded rows may be out of date. Export is unavailable until loading succeeds.",
+    "retry": "Retry",
+    "page_count": "@count expenses on this page"
   },
   "party_accounts": {
     "title": "Customer Transaction",

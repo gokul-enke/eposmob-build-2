@@ -1,27 +1,25 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/helpers/date_helper.dart';
-import 'package:pos_machine/helpers/ui_code_labels.dart';
 import 'package:provider/provider.dart';
-
-import '../../newcomponents/custom_container_box.dart';
-import '../../newcomponents/custom_dialog_box.dart';
-import '../../newcomponents/custom_round_button.dart';
-import '../../newcomponents/custom_dropdown_with_search.dart';
-import '../../components/build_pagination_control.dart';
+import 'package:dropdown_search/dropdown_search.dart';
+import '../../components/export_share_button.dart';
 import '../../components/filter_toggle_button.dart';
 import '../../controllers/sidebar_controller.dart';
-import '../../providers/auth_model.dart';
-import '../../providers/expense_provider.dart';
-import '../../providers/app_settings_provider.dart';
-import '../../resources/color_manager.dart';
-import '../../resources/font_manager.dart';
-import '../../resources/style_manager.dart';
-import '../../models/master_data.dart';
+import '../../core/ui/app_surface.dart';
+import '../../core/ui/list_page/filter_panel.dart';
+import '../../core/ui/list_page/list_page_header.dart';
+import '../../core/ui/list_page/list_page_scaffold.dart';
+import '../../helpers/date_helper.dart';
 import '../../models/expense.dart';
+import '../../newcomponents/custom_dialog_box.dart';
+import '../../models/master_data.dart';
+import '../../providers/auth_model.dart';
+import '../../providers/app_settings_provider.dart';
+import '../../providers/expense_provider.dart';
 import '../../providers/master_data_provider.dart';
-import '../dashboard/widgets/dashboard_responsive.dart';
+import '../../services/list_excel_export_service.dart';
 import 'widgets/expense_list_responsive.dart';
 
 @visibleForTesting
@@ -38,44 +36,34 @@ bool isMeaningfulExpenseFilterSelection(
 
 class ExpenseListScreen extends StatefulWidget {
   const ExpenseListScreen({super.key});
-
   @override
   State<ExpenseListScreen> createState() => _ExpenseListScreenState();
 }
 
 class _ExpenseListScreenState extends State<ExpenseListScreen> {
-  final SideBarController sideBarController = Get.find<SideBarController>();
-  final TextEditingController searchTextController = TextEditingController();
-
-  final FocusNode _categoryFilterFocus = FocusNode();
-  final FocusNode _referenceFilterFocus = FocusNode();
-  final FocusNode _debitFilterFocus = FocusNode();
-  final FocusNode _statusFilterFocus = FocusNode();
-  final FocusNode _resetButtonFocus = FocusNode();
-
-  String? selectedCategory;
-  String? selectedDebitAccount;
-  String? selectedStatus;
+  final _reference = TextEditingController();
+  final _referenceKey = GlobalKey<TextFilterFieldState>();
+  final _tableController = ScrollController();
   bool _showFilters = true;
 
   @override
   void initState() {
     super.initState();
-    searchTextController.addListener(() {
-      final provider = Provider.of<ExpenseProvider>(context, listen: false);
-      provider.setReference(searchTextController.text);
-    });
-
+    _reference.text = context.read<ExpenseProvider>().filterReference;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final String? token = Provider.of<AuthModel>(context, listen: false).token;
-      if (token != null) {
-        final provider = Provider.of<ExpenseProvider>(context, listen: false);
-        provider.fetchGeneralPayments(accessToken: token, type: 'EXPENSE');
-        provider.fetchAccountOptions(accessToken: token);
-        _loadCategoriesFromMasterData();
-      }
-      _categoryFilterFocus.requestFocus();
+      if (mounted) _refresh();
     });
+  }
+
+  Future<void> _refresh() async {
+    final token = context.read<AuthModel>().token;
+    if (token == null || token.isEmpty) return;
+    final provider = context.read<ExpenseProvider>();
+    await Future.wait([
+      provider.fetchGeneralPayments(accessToken: token),
+      provider.fetchAccountOptions(accessToken: token),
+      _loadCategoriesFromMasterData(),
+    ]);
   }
 
   Future<void> _loadCategoriesFromMasterData() async {
@@ -114,839 +102,281 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
 
   @override
   void dispose() {
-    searchTextController.dispose();
-    _categoryFilterFocus.dispose();
-    _referenceFilterFocus.dispose();
-    _debitFilterFocus.dispose();
-    _statusFilterFocus.dispose();
-    _resetButtonFocus.dispose();
+    _reference.dispose();
+    _tableController.dispose();
     super.dispose();
   }
 
-  bool _hasActiveFilters() {
-    final allLabel = 'common.all'.tr;
-    return isMeaningfulExpenseFilterSelection(
-          selectedCategory,
-          allLabel: allLabel,
-        ) ||
-        isMeaningfulExpenseFilterSelection(
-          selectedDebitAccount,
-          allLabel: allLabel,
-        ) ||
-        isMeaningfulExpenseFilterSelection(
-          selectedStatus,
-          allLabel: allLabel,
-        ) ||
-        searchTextController.text.trim().isNotEmpty;
+  void _reset() {
+    _referenceKey.currentState?.cancelPendingSearch();
+    _reference.clear();
+    context.read<ExpenseProvider>().resetFilters();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final isPhone = expenseListIsPhone(context);
-
-    return ExpenseListShell(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildHeader(isPhone),
-          const SizedBox(height: 12),
-          if (!isPhone && _showFilters) ...[
-            KeyedSubtree(
-              key: const ValueKey('expense-desktop-filters'),
-              child: _buildFilterSection(isPhone),
-            ),
-            const SizedBox(height: 12),
-          ],
-          Expanded(child: _buildExpenseTable()),
-          const SizedBox(height: 12),
-          _buildPaginationControls(),
-        ],
-      ),
+  Widget _dropdown(String label, IconData icon, String selected,
+      Iterable<String> values, ValueChanged<String> onChanged,
+      {bool searchable = false}) {
+    final options = <String>{
+      'All',
+      ...values.where((v) => v.trim().isNotEmpty),
+      selected
+    }.toList();
+    String display(String value) => value == 'All' ? 'common.all'.tr : value;
+    if (searchable) {
+      return DropdownSearch<String>(
+        selectedItem: selected,
+        items: (_, __) => options,
+        itemAsString: display,
+        decoratorProps: DropDownDecoratorProps(
+            decoration: listFilterDecoration(label, icon)),
+        popupProps: const PopupProps.menu(showSearchBox: true),
+        onChanged: (value) => onChanged(value ?? 'All'),
+      );
+    }
+    return DropdownButtonFormField<String>(
+      key: ValueKey('$label:$selected'),
+      initialValue: selected,
+      isExpanded: true,
+      decoration: listFilterDecoration(label, icon),
+      items: [
+        for (final value in options)
+          DropdownMenuItem(
+              value: value,
+              child: Text(display(value), overflow: TextOverflow.ellipsis))
+      ],
+      onChanged: (value) => onChanged(value ?? 'All'),
     );
   }
 
-  Widget _buildBreadcrumb() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          'expense.title'.tr,
-          style: buildCustomStyle(
-            FontWeightManager.medium,
-            FontSize.s12,
-            0.20,
-            Colors.grey,
-          ),
-        ),
-        const Icon(Icons.chevron_right, size: 14, color: Colors.grey),
-        Text(
-          'expense.breadcrumb_list'.tr,
-          style: buildCustomStyle(
-            FontWeightManager.medium,
-            FontSize.s12,
-            0.20,
-            ColorManager.kPrimaryColor,
-          ),
-        ),
+  Widget _filters(ExpenseProvider provider) => FilterPanel(
+        key: const ValueKey('expense-desktop-filters'),
+        title: 'expense.find'.tr,
+        hint: 'expense.filter_hint'.tr,
+        onReset: _reset,
+        fields: [
+          _dropdown(
+              'expense.category'.tr,
+              Icons.category_outlined,
+              provider.filterCategory,
+              provider.categoryOptions.map((v) => v['name']?.toString() ?? ''),
+              provider.setCategory,
+              searchable: true),
+          TextFilterField(
+              key: _referenceKey,
+              controller: _reference,
+              label: 'expense.hint_reference_no'.tr,
+              icon: Icons.tag,
+              onSearch: () => provider.setReference(_reference.text)),
+          _dropdown(
+              'expense.filter_debit_account'.tr,
+              Icons.account_balance_outlined,
+              provider.filterDebitAccount,
+              provider.debitAccountOptions
+                  .map((v) => v['name']?.toString() ?? ''),
+              provider.setDebitAccount,
+              searchable: true),
+          _dropdown(
+              'expense.status'.tr,
+              Icons.check_circle_outline,
+              provider.filterStatus,
+              provider.availableStatuses,
+              provider.setStatus),
+        ],
+      );
+
+  Future<File> _export() {
+    final provider = context.read<ExpenseProvider>();
+    if (provider.isLoading || provider.loadError != null) {
+      throw StateError('Expense data is unavailable.');
+    }
+    _referenceKey.currentState?.cancelPendingSearch();
+    if (provider.filterReference != _reference.text) {
+      provider.setReference(_reference.text);
+    }
+    final rows = List<Expense>.of(provider.allFiltered);
+    final currency =
+        context.read<AppSettingsProvider>().appSettings?.currency ?? '';
+    return ListExcelExportService.export<Expense>(
+      items: rows,
+      fileNamePrefix: 'expenses',
+      sheetName: 'Expenses',
+      columns: [
+        ListExportColumn(
+            label: 'expense.col_reference_number'.tr,
+            value: (e, _) => e.referenceNumber),
+        ListExportColumn(
+            label: 'expense.col_payment_date'.tr,
+            value: (e, _) => DateHelper.formatDate(e.paymentDate)),
+        ListExportColumn(
+            label: 'expense.category'.tr, value: (e, _) => e.category),
+        ListExportColumn(
+            label: 'expense.col_debit_ac'.tr, value: (e, _) => e.debitAccount),
+        ListExportColumn(
+            label: 'expense.col_credit_ac'.tr,
+            value: (e, _) => e.creditAccount),
+        ListExportColumn(label: 'expense.amount'.tr, value: (e, _) => e.amount),
+        ListExportColumn(
+            label: 'expense.currency'.tr, value: (_, __) => currency),
+        ListExportColumn(label: 'expense.status'.tr, value: (e, _) => e.status),
+        ListExportColumn(
+            label: 'expense.payment_method'.tr,
+            value: (e, _) => e.paymentMethod),
+        ListExportColumn(
+            label: 'expense.label_description_vendor'.tr,
+            value: (e, _) => e.description),
+        ListExportColumn(
+            label: 'expense.label_notes_remarks'.tr, value: (e, _) => e.notes),
       ],
     );
   }
 
-  Widget _buildHeader(bool isPhone) {
-    return ExpenseListPageHeader(
-      title: 'expense.title'.tr,
-      breadcrumb: _buildBreadcrumb(),
-      filterAction: FilterToggleButton(
-        showFilters: isPhone ? false : _showFilters,
-        hasActiveFilters: _hasActiveFilters(),
-        activeFiltersListenable: searchTextController,
-        activeFiltersBuilder: _hasActiveFilters,
-        onPressed: isPhone
-            ? _openMobileFilterSheet
-            : () => setState(() => _showFilters = !_showFilters),
-        showTooltip: 'expense.show_filters'.tr,
-        hideTooltip: 'expense.hide_filters'.tr,
-      ),
-      trailing: SizedBox(
-        width: isPhone ? 108 : 140,
-        child: CustomRoundButtonAdvanced(
-          title: 'expense.new_entry'.tr,
-          fct: () {
-            sideBarController.index.value = 94;
-          },
-          width: isPhone ? 108 : 140,
-          height: isPhone ? 40 : 44,
-          fontSize: 12,
-          radius: 8,
-        ),
-      ),
-    );
+  void _view(Expense expense) {
+    Get.find<SideBarController>().index.value = 95;
+    Get.put(ExpenseViewController()).selectedRef.value =
+        expense.referenceNumber;
   }
 
-  void _openMobileFilterSheet() {
-    final provider = Provider.of<ExpenseProvider>(context, listen: false);
+  Widget _referenceCell(Expense expense) => Row(children: [
+        Expanded(child: TableCells.text(expense.referenceNumber)),
+        IconButton(
+            icon: const Icon(Icons.copy_outlined, size: 16),
+            tooltip: 'expense.copied_to_clipboard'.tr,
+            onPressed: () async {
+              await Clipboard.setData(
+                  ClipboardData(text: expense.referenceNumber));
+              if (!mounted) return;
+              showScaffold(
+                  context: context, message: 'expense.copied_to_clipboard'.tr);
+            }),
+      ]);
 
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        final bottomInset = MediaQuery.viewInsetsOf(sheetContext).bottom;
+  Widget _card(Expense expense, int index, String currency) => AppSurface(
+        padding: const EdgeInsets.all(16),
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          _referenceCell(expense),
+          const SizedBox(height: 8),
+          Text(
+              '${'expense.col_payment_date'.tr}: ${DateHelper.formatDate(expense.paymentDate)}'),
+          Text('${'expense.category'.tr}: ${expense.category}'),
+          Text('${'expense.col_debit_ac'.tr}: ${expense.debitAccount}'),
+          Text('${'expense.col_credit_ac'.tr}: ${expense.creditAccount}'),
+          Text(
+              '${'expense.amount'.tr}: $currency ${expense.amount.toStringAsFixed(2)}'),
+          const SizedBox(height: 8),
+          Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: ExpenseListStatusPill(status: expense.status)),
+          const SizedBox(height: 8),
+          TableCells.viewButton(() => _view(expense)),
+        ]),
+      );
 
-        return Padding(
-          padding: EdgeInsets.only(bottom: bottomInset),
-          child: DraggableScrollableSheet(
-            initialChildSize: 0.48,
-            minChildSize: 0.35,
-            maxChildSize: 0.82,
-            expand: false,
-            builder: (_, scrollController) {
-              return Material(
-                color: Colors.white,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16)),
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  children: [
-                    const SizedBox(height: 10),
-                    Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 8, 4, 0),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsetsDirectional.only(start: 8),
-                              child: Text(
-                                'expense.filters'.tr,
-                                style: buildCustomStyle(
-                                  FontWeightManager.semiBold,
-                                  FontSize.s16,
-                                  0.25,
-                                  ColorManager.textColor,
-                                ),
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () => Navigator.pop(sheetContext),
-                            tooltip: 'expense.close'.tr,
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView(
-                        controller: scrollController,
-                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
-                        children: [
-                          _buildMobileFilterFields(provider),
-                          const SizedBox(height: 16),
-                          _buildResetButton(
-                            provider,
-                            fullWidth: true,
-                            popSheet: true,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildMobileFilterFields(ExpenseProvider provider) {
-    final List<String> categoriesList = [
-      'common.all'.tr,
-      ...provider.categoryOptions
-          .map((e) => e['name']?.toString() ?? '')
-          .where((e) => e.isNotEmpty),
-    ];
-
-    final List<String> debitAccountsList = [
-      'common.all'.tr,
-      ...provider.debitAccountOptions
-          .map((e) => e['name']?.toString() ?? '')
-          .where((e) => e.isNotEmpty),
-    ];
-
-    final List<String> statusOptions = provider.availableStatuses;
-
-    return ExpenseListMobileFilterFields(
-      categoryFilter: _buildCategoryFilter(categoriesList, provider),
-      referenceFilter: _buildReferenceFilter(),
-      debitFilter: _buildDebitFilter(debitAccountsList, provider),
-      statusFilter: _buildStatusFilter(statusOptions, provider),
-    );
-  }
-
-  Widget _buildFilterSection(bool isPhone) {
-    final provider = Provider.of<ExpenseProvider>(context);
-
-    final List<String> categoriesList = [
-      'common.all'.tr,
-      ...provider.categoryOptions
-          .map((e) => e['name']?.toString() ?? '')
-          .where((e) => e.isNotEmpty),
-    ];
-
-    final List<String> debitAccountsList = [
-      'common.all'.tr,
-      ...provider.debitAccountOptions
-          .map((e) => e['name']?.toString() ?? '')
-          .where((e) => e.isNotEmpty),
-    ];
-
-    final List<String> statusOptions = provider.availableStatuses;
-
-    return ExpenseListContentCard(
-      padding: EdgeInsets.all(isPhone ? 14 : 16),
-      child: FocusTraversalGroup(
-        policy: OrderedTraversalPolicy(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ExpenseListSectionTitle(title: 'expense.filters'.tr),
-            const SizedBox(height: 12),
-            if (isPhone) ...[
-              _buildCategoryFilter(categoriesList, provider),
-              const SizedBox(height: 10),
-              _buildReferenceFilter(),
-              const SizedBox(height: 10),
-              _buildDebitFilter(debitAccountsList, provider),
-              const SizedBox(height: 10),
-              _buildStatusFilter(statusOptions, provider),
-              const SizedBox(height: 12),
-              _buildResetButton(provider, fullWidth: true),
-            ] else ...[
-              SizedBox(
-                height: 48,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: _buildCategoryFilter(categoriesList, provider)),
-                    const SizedBox(width: 10),
-                    Expanded(child: _buildReferenceFilter()),
-                    const SizedBox(width: 10),
-                    Expanded(child: _buildDebitFilter(debitAccountsList, provider)),
-                    const SizedBox(width: 10),
-                    Expanded(child: _buildStatusFilter(statusOptions, provider)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              Align(
-                alignment: AlignmentDirectional.centerEnd,
-                child: _buildResetButton(provider, fullWidth: false),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryFilter(List<String> categoriesList, ExpenseProvider provider) {
-    return FocusTraversalOrder(
-      order: const NumericFocusOrder(1),
-      child: CustomDropDownWithSearch<String>(
-        key: const ValueKey('list_category_filter_dropdown'),
-        hintText: 'expense.all_categories'.tr,
-        value: selectedCategory,
-        items: categoriesList,
-        onChanged: (val) {
-          setState(() {
-            selectedCategory = val;
-          });
-          provider.setCategory(val ?? 'All');
-        },
-        displayText: (item) => item,
-        showName: false,
-        height: 44,
-        autofocus: false,
-        focusNode: _categoryFilterFocus,
-      ),
-    );
-  }
-
-  Widget _buildReferenceFilter() {
-    return FocusTraversalOrder(
-      order: const NumericFocusOrder(2),
-      child: CustomBoxShadowContainer(
-        height: 44,
-        circleRadius: 10,
-        border: Border.all(color: Colors.grey.withOpacity(0.12)),
-        child: TextFormField(
-          controller: searchTextController,
-          focusNode: _referenceFilterFocus,
-          textInputAction: TextInputAction.next,
-          onFieldSubmitted: (_) => _debitFilterFocus.requestFocus(),
-          cursorColor: ColorManager.kPrimaryColor,
-          cursorHeight: 13,
-          decoration: InputDecoration(
-            border: InputBorder.none,
-            hintText: 'expense.hint_reference_no'.tr,
-            hintStyle: buildCustomStyle(
-              FontWeightManager.regular,
-              FontSize.s12,
-              0.27,
-              ColorManager.textColor.withOpacity(0.5),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 12,
-            ),
-          ),
-          style: buildCustomStyle(
-            FontWeightManager.medium,
-            FontSize.s12,
-            0.27,
-            ColorManager.textColor,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDebitFilter(List<String> debitAccountsList, ExpenseProvider provider) {
-    return FocusTraversalOrder(
-      order: const NumericFocusOrder(3),
-      child: CustomDropDownWithSearch<String>(
-        key: const ValueKey('list_debit_account_filter_dropdown'),
-        hintText: 'expense.all_debit_accounts'.tr,
-        value: selectedDebitAccount,
-        items: debitAccountsList,
-        onChanged: (val) {
-          setState(() {
-            selectedDebitAccount = val;
-          });
-          provider.setDebitAccount(val ?? 'All');
-        },
-        displayText: (item) => item,
-        showName: false,
-        height: 44,
-        autofocus: false,
-        focusNode: _debitFilterFocus,
-      ),
-    );
-  }
-
-  Widget _buildStatusFilter(List<String> statusOptions, ExpenseProvider provider) {
-    return FocusTraversalOrder(
-      order: const NumericFocusOrder(4),
-      child: CustomDropDownWithSearch<String>(
-        key: const ValueKey('list_status_filter_dropdown'),
-        hintText: 'expense.all_status_hint'.tr,
-        value: selectedStatus,
-        items: statusOptions,
-        onChanged: (val) {
-          setState(() {
-            selectedStatus = val;
-          });
-          provider.setStatus(val ?? 'All');
-        },
-        displayText: (item) => UiCodeLabels.status(item),
-        showName: false,
-        height: 44,
-        autofocus: false,
-        focusNode: _statusFilterFocus,
-      ),
-    );
-  }
-
-  Widget _buildResetButton(
-    ExpenseProvider provider, {
-    required bool fullWidth,
-    bool popSheet = false,
-  }) {
-    return FocusTraversalOrder(
-      order: const NumericFocusOrder(5),
-      child: Focus(
-        focusNode: _resetButtonFocus,
-        onKey: (node, event) {
-          if (event is RawKeyDownEvent &&
-              (event.logicalKey == LogicalKeyboardKey.enter ||
-                  event.logicalKey == LogicalKeyboardKey.numpadEnter)) {
-            _resetFilters(provider, popSheet: popSheet);
-            return KeyEventResult.handled;
-          }
-          return KeyEventResult.ignored;
-        },
-        child: CustomRoundButtonAdvanced(
-          title: 'expense.reset'.tr,
-          boxColor: Colors.white,
-          textColor: ColorManager.kPrimaryColor,
-          borderColor: ColorManager.kPrimaryColor,
-          fct: () => _resetFilters(provider, popSheet: popSheet),
-          height: 44,
-          width: fullWidth ? double.infinity : 150,
-          fontSize: 12,
-          radius: 8,
-        ),
-      ),
-    );
-  }
-
-  void _resetFilters(ExpenseProvider provider, {bool popSheet = false}) {
-    searchTextController.clear();
-    setState(() {
-      selectedCategory = null;
-      selectedDebitAccount = null;
-      selectedStatus = null;
-    });
-    provider.resetFilters();
-    _categoryFilterFocus.requestFocus();
-    if (popSheet && mounted) {
-      Navigator.of(context).pop();
-    }
-  }
-
-  void _openExpenseView(String referenceNumber) {
-    sideBarController.index.value = 95;
-    Get.put(ExpenseViewController()).selectedRef.value = referenceNumber;
-  }
-
-  Widget _buildExpenseTable() {
-    return Consumer<ExpenseProvider>(
-      builder: (context, provider, child) {
-        final currency =
-            Provider.of<AppSettingsProvider>(context).appSettings?.currency ?? "";
-
-        if (provider.isLoading) {
-          return const ExpenseListContentCard(
-            child: Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 40.0),
-                child: CircularProgressIndicator(
-                  color: ColorManager.kPrimaryColor,
-                ),
-              ),
-            ),
-          );
-        }
-
-        final expenseList = provider.expenses;
-
-        if (expenseList.isEmpty) {
-          return ExpenseListContentCard(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.receipt_long_outlined,
-                    size: 56,
-                    color: ColorManager.kPrimaryColor.withOpacity(0.45),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    'expense.no_expenses_found'.tr,
-                    style: buildCustomStyle(
-                      FontWeightManager.semiBold,
-                      FontSize.s16,
-                      0.27,
-                      ColorManager.textColor,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'expense.no_expenses_hint'.tr,
-                    textAlign: TextAlign.center,
-                    style: buildCustomStyle(
-                      FontWeightManager.regular,
-                      FontSize.s12,
-                      0.10,
-                      Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final useCards = expenseListUseCards(constraints.maxWidth);
-            final isPhone = expenseListIsPhone(context);
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (!isPhone)
-                  DashboardSectionHeader(
-                    title: 'expense.expense_records'.tr,
-                  ),
-                Expanded(
-                  child: useCards
-                      ? _buildMobileList(expenseList, currency)
-                      : _buildDesktopTable(expenseList, currency),
-                ),
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<ExpenseProvider>();
+    final currency = context.select<AppSettingsProvider, String>(
+        (p) => p.appSettings?.currency ?? '');
+    return LayoutBuilder(
+        builder: (context, constraints) => ListPageScaffold<Expense>(
+              header: ListPageHeader(
+                  icon: Icons.payments_outlined,
+                  title: 'expense.title'.tr,
+                  subtitle: 'expense.subtitle'.tr,
+                  onRefresh: provider.isLoading ? null : _refresh,
+                  onAdd: () => Get.find<SideBarController>().index.value = 94,
+                  addLabel: 'expense.new_entry'.tr,
+                  addShortLabel: 'expense.btn_create'.tr,
+                  extraActions: [
+                    FilterToggleButton(
+                        showFilters: _showFilters,
+                        hasActiveFilters: provider.filterCategory != 'All' ||
+                            provider.filterDebitAccount != 'All' ||
+                            provider.filterStatus != 'All' ||
+                            _reference.text.trim().isNotEmpty,
+                        activeFiltersListenable: _reference,
+                        activeFiltersBuilder: () =>
+                            provider.filterCategory != 'All' ||
+                            provider.filterDebitAccount != 'All' ||
+                            provider.filterStatus != 'All' ||
+                            _reference.text.trim().isNotEmpty,
+                        onPressed: () =>
+                            setState(() => _showFilters = !_showFilters)),
+                    ExportShareButton(
+                        createFile: _export,
+                        enabled:
+                            !provider.isLoading && provider.loadError == null,
+                        compact:
+                            constraints.maxWidth < ListLayoutBreakpoints.header,
+                        label: 'supplier_transactions.export'.tr,
+                        loadingLabel:
+                            'supplier_transactions.export_creating'.tr,
+                        tooltip: 'expense.export_tooltip'.tr,
+                        errorMessage: 'expense.export_error'.tr,
+                        mimeType:
+                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
+                  ]),
+              filters: _filters(provider),
+              showFilters: _showFilters,
+              toolbar: provider.loadError == null
+                  ? null
+                  : AppSurface(
+                      child: Row(children: [
+                      Expanded(child: Text('expense.load_error'.tr)),
+                      TextButton(
+                          onPressed: provider.isLoading ? null : _refresh,
+                          child: Text('expense.retry'.tr)),
+                    ])),
+              isLoading: provider.isLoading,
+              items: provider.expenses,
+              tableMinWidth: 1150,
+              tableScrollController: _tableController,
+              columns: [
+                TableColumnDef(
+                    label: 'expense.col_reference_number'.tr,
+                    flex: 1.5,
+                    cellBuilder: (e, _) => _referenceCell(e)),
+                TableColumnDef(
+                    label: 'expense.col_payment_date'.tr,
+                    cellBuilder: (e, _) =>
+                        TableCells.text(DateHelper.formatDate(e.paymentDate))),
+                TableColumnDef(
+                    label: 'expense.category'.tr,
+                    flex: 1.4,
+                    cellBuilder: (e, _) => TableCells.text(e.category)),
+                TableColumnDef(
+                    label: 'expense.col_debit_ac'.tr,
+                    flex: 1.4,
+                    cellBuilder: (e, _) => TableCells.text(e.debitAccount)),
+                TableColumnDef(
+                    label: 'expense.col_credit_ac'.tr,
+                    flex: 1.4,
+                    cellBuilder: (e, _) => TableCells.text(e.creditAccount)),
+                TableColumnDef(
+                    label: 'expense.amount'.tr,
+                    flex: 1.1,
+                    cellBuilder: (e, _) => TableCells.text(
+                        '$currency ${e.amount.toStringAsFixed(2)}')),
+                TableColumnDef(
+                    label: 'expense.status'.tr,
+                    cellBuilder: (e, _) => Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: ExpenseListStatusPill(status: e.status))),
+                TableColumnDef(
+                    label: 'expense.breadcrumb_view'.tr,
+                    cellBuilder: (e, _) =>
+                        TableCells.viewButton(() => _view(e))),
               ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s11,
-                0.1,
-                Colors.grey.shade500,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s11,
-                0.1,
-                ColorManager.textColor,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMobileList(List<Expense> expenseList, String currency) {
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      itemCount: expenseList.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final exp = expenseList[index];
-        final dateStr = _formatPaymentDate(exp.paymentDate);
-
-        return InkWell(
-          onTap: () => _openExpenseView(exp.referenceNumber),
-          borderRadius: BorderRadius.circular(14),
-          child: ExpenseListContentCard(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              exp.referenceNumber,
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s13,
-                                0.15,
-                                ColorManager.textColor,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          GestureDetector(
-                            onTap: () {
-                              Clipboard.setData(ClipboardData(
-                                  text: exp.referenceNumber));
-                              showScaffold(
-                                context: context,
-                                message: 'expense.copied_to_clipboard'.tr,
-                              );
-                            },
-                            child: const Icon(
-                              Icons.copy,
-                              size: 14,
-                              color: Colors.black38,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '$currency ${exp.amount.toStringAsFixed(2)}',
-                      style: buildCustomStyle(
-                        FontWeightManager.bold,
-                        FontSize.s13,
-                        0.1,
-                        ColorManager.textColor,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ExpenseListStatusPill(status: exp.status),
-                  ],
-                ),
-                Divider(color: Colors.grey.withOpacity(0.08), height: 16),
-                _buildInfoRow('expense.col_payment_date'.tr, dateStr),
-                _buildInfoRow('expense.category'.tr, exp.category),
-                _buildInfoRow('expense.col_debit_ac'.tr, exp.debitAccount),
-                _buildInfoRow('expense.col_credit_ac'.tr, exp.creditAccount),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildDesktopTable(List<Expense> expenseList, String currency) {
-    return ExpenseListResponsiveTable(
-      minWidth: kExpenseListTableMinWidth,
-      table: Column(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: ColorManager.tableBGColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-            ),
-            child: Table(
-              columnWidths: const {
-                0: FlexColumnWidth(1.2),
-                1: FlexColumnWidth(1.2),
-                2: FlexColumnWidth(1.2),
-                3: FlexColumnWidth(1.5),
-                4: FlexColumnWidth(1.5),
-                5: FlexColumnWidth(1.2),
-                6: FlexColumnWidth(1.0),
-                7: FlexColumnWidth(0.8),
-              },
-              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-              children: [
-                TableRow(
-                  children: [
-                    _buildTableHeader('expense.col_reference_number'.tr),
-                    _buildTableHeader('expense.col_payment_date'.tr),
-                    _buildTableHeader('expense.category'.tr),
-                    _buildTableHeader('expense.col_debit_ac'.tr),
-                    _buildTableHeader('expense.col_credit_ac'.tr),
-                    _buildTableHeader('expense.amount'.tr),
-                    _buildTableHeader('expense.status'.tr, alignment: Alignment.center),
-                    _buildTableHeader('expense.breadcrumb_view'.tr, alignment: Alignment.center),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Table(
-                columnWidths: const {
-                  0: FlexColumnWidth(1.2),
-                  1: FlexColumnWidth(1.2),
-                  2: FlexColumnWidth(1.2),
-                  3: FlexColumnWidth(1.5),
-                  4: FlexColumnWidth(1.5),
-                  5: FlexColumnWidth(1.2),
-                  6: FlexColumnWidth(1.0),
-                  7: FlexColumnWidth(0.8),
-                },
-                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                children: expenseList.asMap().entries.map((entry) {
-                  final idx = entry.key;
-                  final exp = entry.value;
-                  final dateStr = _formatPaymentDate(exp.paymentDate);
-
-                  return TableRow(
-                    decoration: BoxDecoration(
-                      color: idx.isEven
-                          ? Colors.white
-                          : Colors.grey.withOpacity(0.04),
-                      border: Border(
-                        bottom: BorderSide(
-                          color: Colors.grey.shade200,
-                          width: 0.5,
-                        ),
-                      ),
-                    ),
-                    children: [
-                       TableCell(
-                        verticalAlignment: TableCellVerticalAlignment.middle,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 12.0, horizontal: 10.0),
-                          child: Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  exp.referenceNumber,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s12,
-                                    0.1,
-                                    ColorManager.textColor,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              GestureDetector(
-                                onTap: () {
-                                  Clipboard.setData(ClipboardData(
-                                      text: exp.referenceNumber));
-                                  showScaffold(
-                                    context: context,
-                                    message:
-                                        'expense.copied_to_clipboard'.tr,
-                                  );
-                                },
-                                child: const Icon(
-                                  Icons.copy,
-                                  size: 14,
-                                  color: Colors.black38,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      _buildTableCell(dateStr),
-                      _buildTableCell(exp.category),
-                      _buildTableCell(exp.debitAccount),
-                      _buildTableCell(exp.creditAccount),
-                      _buildTableCell(
-                        '$currency ${exp.amount.toStringAsFixed(2)}',
-                      ),
-                      Center(child: ExpenseListStatusPill(status: exp.status)),
-                      Center(
-                        child: ExpenseListViewAction(
-                          onPressed: () => _openExpenseView(exp.referenceNumber),
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTableHeader(String text, {Alignment alignment = Alignment.centerLeft}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 10.0),
-      child: Align(
-        alignment: alignment,
-        child: Text(
-          text,
-          style: buildCustomStyle(
-            FontWeightManager.bold,
-            FontSize.s12,
-            0.1,
-            ColorManager.textColor,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTableCell(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 10.0),
-      child: Text(
-        text,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: buildCustomStyle(
-          FontWeightManager.medium,
-          FontSize.s12,
-          0.1,
-          ColorManager.textColor,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPaginationControls() {
-    final provider = Provider.of<ExpenseProvider>(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Center(
-        child: PaginationControl(
-          currentPage: provider.currentPage,
-          totalPages: provider.totalPages,
-          onPageChanged: (page) {
-            provider.setPage(page);
-          },
-        ),
-      ),
-    );
-  }
-
-  String _formatPaymentDate(DateTime paymentDate) {
-    return DateHelper.formatDate(paymentDate);
+              cardBuilder: (e, i) => _card(e, i, currency),
+              emptyState: Center(child: Text('expense.no_expenses_found'.tr)),
+              onRefresh: _refresh,
+              currentPage: provider.currentPage,
+              totalPages: provider.totalPages,
+              itemsPerPage: provider.itemsPerPage,
+              countLabel: 'expense.page_count'
+                  .trParams({'count': '${provider.expenses.length}'}),
+              onPageChanged: provider.setPage,
+            ));
   }
 }
 

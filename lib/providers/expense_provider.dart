@@ -19,6 +19,9 @@ class ExpenseProvider extends ChangeNotifier {
   int _currentPage = 1;
   final int _itemsPerPage = 10;
   bool _isLoading = false;
+  Object? _loadError;
+  int _loadGeneration = 0;
+  Object? get loadError => _loadError;
 
   List<Map<String, dynamic>> categoryOptions = [];
   List<Map<String, dynamic>> debitAccountOptions = [];
@@ -226,6 +229,7 @@ class ExpenseProvider extends ChangeNotifier {
       }
       return true;
     }).toList();
+    _currentPage = _currentPage.clamp(1, totalPages);
     notifyListeners();
   }
 
@@ -293,69 +297,136 @@ class ExpenseProvider extends ChangeNotifier {
     required String accessToken,
     String type = "EXPENSE",
   }) async {
+    final generation = ++_loadGeneration;
     _isLoading = true;
+    _loadError = null;
     notifyListeners();
-
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
-    final int? activeStoreId = prefs.getInt('active_store_id');
-
-    if (apiKey == null || apiKey.isEmpty) {
-      _isLoading = false;
-      notifyListeners();
-      return;
-    }
-
-    final queryParams = {
-      'type': type,
-    };
-    if (activeStoreId != null) {
-      queryParams['store_id'] = activeStoreId.toString();
-    }
-
-    final uri = Uri.parse(APPUrl.listGeneralPayments).replace(queryParameters: queryParams);
-    debugPrint("Fetching general payments from: $uri");
-
     try {
-      final response = await http.get(
-        uri,
-        headers: {
+      final prefs = await SharedPreferences.getInstance();
+      final apiKey = prefs.getString('api_key');
+      if (apiKey == null || apiKey.isEmpty) {
+        throw StateError('Tenant is unavailable.');
+      }
+      final storeId = prefs.getInt('active_store_id');
+      final staged = <Expense>[];
+      final references = <String>{};
+      var page = 1;
+      int? lastPage;
+      int? expectedTotal;
+      do {
+        final uri = Uri.parse(APPUrl.listGeneralPayments).replace(
+          queryParameters: {
+            'type': type,
+            if (storeId != null) 'store_id': '$storeId',
+            // Preserve the existing first request for non-paginated responses.
+            if (page > 1) 'page': '$page',
+          },
+        );
+        final response = await http.get(uri, headers: {
           'Authorization': 'Bearer $accessToken',
           'X-Tenant': apiKey,
-        },
-      );
-
-      debugPrint("Response status: ${response.statusCode}");
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-
-        List<dynamic> rawList = [];
-        if (jsonData['data'] is List) {
-          rawList = jsonData['data'];
-        } else if (jsonData['data'] is Map && jsonData['data']['data'] is List) {
-          rawList = jsonData['data']['data'];
+        }).timeout(const Duration(seconds: 30));
+        if (generation != _loadGeneration) return;
+        if (response.statusCode != 200) {
+          throw StateError('Expense request failed (${response.statusCode}).');
         }
-
-        _allExpenses.clear();
-        for (var item in rawList) {
-          final expense = Expense.fromJson(item);
-          final resolvedCategory = resolveOptionLabel(
-            categoryOptions,
-            expense.category,
-            id: expense.categoryId,
-          );
-          _allExpenses.add(expense.copyWith(category: resolvedCategory));
-           debugPrint("🏷️ category raw: ${expense.category}, id: ${expense.categoryId}, resolved: $resolvedCategory");
+        final body = json.decode(response.body);
+        if (body is! Map ||
+            body['status'] == 'failed' ||
+            body['success'] == false) {
+          throw const FormatException('Invalid expense response.');
         }
-        _applyFilters();
-      } else {
-        debugPrint("Error loading general payments: ${response.statusCode} - ${response.body}");
+        final data = body['data'] is List &&
+                (body.containsKey('current_page') ||
+                    body.containsKey('last_page'))
+            ? {
+                'data': body['data'],
+                'current_page': body['current_page'],
+                'last_page': body['last_page'],
+                'total': body['total']
+              }
+            : body['data'];
+        final List rows;
+        if (data is List && page == 1) {
+          rows = data;
+          lastPage = 1;
+        } else if (data is Map && data['data'] is List) {
+          rows = data['data'] as List;
+          // An unpaginated nested list is also an existing API contract.
+          final hasPagination =
+              data.containsKey('current_page') || data.containsKey('last_page');
+          if (!hasPagination && page == 1) {
+            lastPage = 1;
+          } else {
+            final current = data['current_page'];
+            final last = data['last_page'];
+            final total = data['total'];
+            if (current is! int ||
+                current != page ||
+                last is! int ||
+                last < page ||
+                (lastPage != null && last != lastPage) ||
+                (total != null && (total is! int || total < 0)) ||
+                (page > 1 && total != expectedTotal) ||
+                (rows.isEmpty && (page > 1 || last > 1))) {
+              throw const FormatException('Incomplete expense pagination.');
+            }
+            lastPage = last;
+            expectedTotal = total as int?;
+          }
+        } else {
+          throw const FormatException('Expense rows are missing.');
+        }
+        for (final row in rows) {
+          if (row is! Map) throw const FormatException('Invalid expense row.');
+          final reference = row['reference_number'] ?? row['reference_no'];
+          final date = row['payment_date'];
+          final rawAmount = row['amount'];
+          final amount = rawAmount is num
+              ? rawAmount.toDouble()
+              : rawAmount is String
+                  ? double.tryParse(rawAmount.trim())
+                  : null;
+          if (reference is! String ||
+              reference.trim().isEmpty ||
+              date is! String ||
+              DateTime.tryParse(date) == null ||
+              amount == null ||
+              !amount.isFinite) {
+            throw const FormatException('Required expense fields are invalid.');
+          }
+          if (!references.add(reference.trim())) {
+            throw const FormatException('Duplicate expense reference.');
+          }
+          final expense = Expense.fromJson({
+            ...Map<String, dynamic>.from(row),
+            'amount': amount,
+          });
+          staged.add(expense);
+        }
+        page++;
+      } while (page <= lastPage);
+      if (expectedTotal != null && staged.length != expectedTotal) {
+        throw const FormatException('Incomplete expense total.');
       }
-    } catch (e) {
-      debugPrint("Exception loading general payments: $e");
+      if (generation != _loadGeneration) return;
+      final resolved = staged
+          .map((expense) => expense.copyWith(
+                category: resolveOptionLabel(categoryOptions, expense.category,
+                    id: expense.categoryId),
+              ))
+          .toList();
+      _allExpenses
+        ..clear()
+        ..addAll(resolved);
+      _applyFilters();
+    } catch (error) {
+      if (generation == _loadGeneration) _loadError = error;
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (generation == _loadGeneration) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
