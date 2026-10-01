@@ -3794,7 +3794,21 @@
     "create_failed": "فشل إنشاء القسيمة",
     "hint_all_types": "كل الأنواع",
     "hint_all_status": "كل الحالات",
-    "hint_select_status": "اختر الحالة"
+    "hint_select_status": "اختر الحالة",
+    "subtitle": "إدارة سندات العملاء والمدفوعات.",
+    "find": "البحث عن سندات العملاء",
+    "filter_hint": "تصفية سندات العملاء.",
+    "page_count": "@count سند في هذه الصفحة",
+    "export_tooltip": "تصدير سندات العملاء المصفاة",
+    "export_creating": "جارٍ إنشاء Excel…",
+    "export_failed": "تعذر تصدير سندات العملاء",
+    "mobile_header_title": "قائمة قسائم العملاء",
+    "col_customer_name": "اسم العميل",
+    "from_date": "من تاريخ",
+    "to_date": "إلى تاريخ",
+    "copy_voucher_number": "نسخ رقم السند",
+    "stale_rows_warning": "تعذر تحديث السندات. يتم عرض السجلات المحملة سابقًا وقد لا تطابق عوامل التصفية المحددة. التصدير غير متاح حتى ينجح التحديث.",
+    "retry_loading": "إعادة المحاولة"
   },
   "supplier_voucher": {
     "export_tooltip": "تصدير جميع سندات الموردين المطابقة",

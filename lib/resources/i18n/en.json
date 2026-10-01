@@ -3961,7 +3961,21 @@
     "create_failed": "Failed to create voucher",
     "hint_all_types": "All Types",
     "hint_all_status": "All Status",
-    "hint_select_status": "Select Status"
+    "hint_select_status": "Select Status",
+    "subtitle": "Manage customer vouchers and payments.",
+    "find": "Find customer vouchers",
+    "filter_hint": "Filter customer vouchers.",
+    "page_count": "@count vouchers on this page",
+    "export_tooltip": "Export filtered customer vouchers",
+    "export_creating": "Creating Excel…",
+    "export_failed": "Could not export customer vouchers",
+    "mobile_header_title": "Customer Voucher List",
+    "col_customer_name": "Customer Name",
+    "from_date": "From Date",
+    "to_date": "To Date",
+    "copy_voucher_number": "Copy voucher number",
+    "stale_rows_warning": "Could not update vouchers. Showing previously loaded records; they may not match the selected filters. Export is unavailable until refresh succeeds.",
+    "retry_loading": "Retry"
   },
   "supplier_voucher": {
     "export_tooltip": "Export all matching supplier vouchers",

@@ -283,7 +283,8 @@ void main() {
       );
       await tester.pump();
 
-      if (screen is SupplierVoucherListScreen ||
+      if (screen is CustomerVoucherListScreen ||
+          screen is SupplierVoucherListScreen ||
           screen is InvoiceListScreen ||
           screen is ReceiptListScreen) {
         expect(find.byType(FilterToggleButton), findsOneWidget);
