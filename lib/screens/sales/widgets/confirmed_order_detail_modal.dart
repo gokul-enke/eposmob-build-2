@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -693,12 +694,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
 */
     } catch (error) {
       debugPrint("Error printing order: ${error.toString()}");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("confirmed_orders.failed_print".tr),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppToast.error(context, "confirmed_orders.failed_print".tr);
     }
   }
 

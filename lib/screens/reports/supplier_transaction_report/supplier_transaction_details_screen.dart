@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_container_box.dart';
@@ -218,12 +219,7 @@ class _SupplierTransactionDetailsScreenState
     } catch (error) {
       debugPrint('Error loading supplier transaction data: $error');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('supplier_transaction_report.err_loading_transaction_data'.tr.replaceAll('@error', error.toString())),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppToast.error(context, 'supplier_transaction_report.err_loading_transaction_data'.tr.replaceAll('@error', error.toString()));
       }
     } finally {
       if (mounted) {

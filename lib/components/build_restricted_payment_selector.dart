@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../resources/color_manager.dart';
@@ -230,26 +231,8 @@ class _BuildRestrictedPaymentSelectorState
   }
 
   void _showRestrictionMessage() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          widget.restrictionMessage ??
-              'general.card_upi_not_allowed_together'.tr,
-          style: buildCustomStyle(
-            FontWeightManager.medium,
-            FontSize.s12,
-            0.27,
-            Colors.white,
-          ),
-        ),
-        backgroundColor: ColorManager.kErrorColor,
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-    );
+    AppToast.warning(context, widget.restrictionMessage ??
+              'general.card_upi_not_allowed_together'.tr, duration: const Duration(seconds: 2));
   }
 
   void _notifyChange() {

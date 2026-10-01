@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_container_box.dart';
@@ -215,23 +216,13 @@ class _CustomerTransactionsReportScreenState
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('customer_transaction_report.failed_load_transaction_data'.tr),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppToast.error(context, 'customer_transaction_report.failed_load_transaction_data'.tr);
         }
       }
     } catch (error) {
       debugPrint('Error loading transaction data: $error');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('customer_transaction_report.err_loading_transaction_data'.tr.replaceAll('@error', error.toString())),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppToast.error(context, 'customer_transaction_report.err_loading_transaction_data'.tr.replaceAll('@error', error.toString()));
       }
     } finally {
       if (mounted) {
@@ -249,12 +240,7 @@ class _CustomerTransactionsReportScreenState
     if (fromDate == null || toDate == null || !fromDate.isAfter(toDate)) {
       return true;
     }
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text('customer_transaction_report.from_date_after_to_date'.tr),
-        backgroundColor: Colors.orange,
-      ));
+    AppToast.warning(context, 'customer_transaction_report.from_date_after_to_date'.tr);
     return false;
   }
 

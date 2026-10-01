@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -248,7 +249,5 @@ class _BodyBlock extends StatelessWidget {
 
 void _copy(BuildContext context, String text, String message) {
   Clipboard.setData(ClipboardData(text: text));
-  ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-    SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
-  );
+  AppToast.success(context, message, duration: const Duration(seconds: 2));
 }

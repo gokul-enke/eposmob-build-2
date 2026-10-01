@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -102,9 +103,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
           Provider.of<AuthModel>(context, listen: false).token;
 
       if (accessToken == null || accessToken.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('receipt.auth_token_missing'.tr)),
-        );
+        AppToast.error(context, 'receipt.auth_token_missing'.tr);
         return;
       }
 
@@ -132,9 +131,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
           Provider.of<AuthModel>(context, listen: false).token;
 
       if (accessToken == null || accessToken.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('receipt.auth_token_missing'.tr)),
-        );
+        AppToast.error(context, 'receipt.auth_token_missing'.tr);
         return;
       }
 

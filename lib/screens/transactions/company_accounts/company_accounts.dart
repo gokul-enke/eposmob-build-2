@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/helpers/ui_code_labels.dart';
 import 'package:pos_machine/components/build_container_box.dart';
@@ -78,24 +79,13 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
       } else {
         debugPrint('No access token available');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content:
-                  Text('company_accounts.auth_token_missing'.tr),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppToast.error(context, 'company_accounts.auth_token_missing'.tr);
         }
       }
     } catch (error) {
       debugPrint('Error loading company accounts: $error');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('company_accounts.error_loading'.trParams({'error': error.toString()})),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppToast.error(context, 'company_accounts.error_loading'.trParams({'error': error.toString()}));
       }
     } finally {
       if (mounted) {

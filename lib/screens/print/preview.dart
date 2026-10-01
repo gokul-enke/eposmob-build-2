@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 
@@ -79,9 +80,7 @@ class ReceiptPreviewWidget extends StatelessWidget {
         child: const Icon(Icons.print),
         onPressed: () {
           // TODO: Implement actual printing logic
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('voucher_print.printing'.tr)),
-          );
+          AppToast.info(context, 'voucher_print.printing'.tr);
         },
       ),
     );

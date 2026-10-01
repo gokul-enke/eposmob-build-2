@@ -1,4 +1,5 @@
 import 'package:pos_machine/components/order_submission_guard.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -857,18 +858,9 @@ class BillingPageMobileState extends State<BillingPageMobile>
     });
   }
 
-  void _showPrintRetrySnackBar(String orderNumber) {
+  void _showPrintRetryToast(String orderNumber) {
     _pendingPrintOrderNumber = orderNumber;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(BillingMobileErrorMessages.printRetryPrompt),
-        action: SnackBarAction(
-          label: 'general.retry'.tr,
-          onPressed: () => _retryPendingPrint(),
-        ),
-        duration: const Duration(seconds: 12),
-      ),
-    );
+    AppToast.show(context, BillingMobileErrorMessages.printRetryPrompt, type: AppToastType.warning, actionLabel: 'general.retry'.tr, onAction: () => _retryPendingPrint(), duration: const Duration(seconds: 12));
   }
 
   Future<void> _retryPendingPrint() async {
@@ -998,7 +990,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
       final result = await _controller.createOrderAndPrint(context);
       if (!mounted) return;
       if (result.printFailed && result.orderNumber != null) {
-        _showPrintRetrySnackBar(result.orderNumber!);
+        _showPrintRetryToast(result.orderNumber!);
       } else if (result.orderCreated && result.printSucceeded) {
         _pendingPrintOrderNumber = null;
       }

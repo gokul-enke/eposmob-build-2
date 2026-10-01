@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -809,14 +810,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
 
   void _printOrder(DummyOrder order) {
     // Show print confirmation
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('confirmed_orders.msg_printing_order'.trParams({'number': order.orderNumber})),
-        backgroundColor: ColorManager.successGreen,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    AppToast.info(context, 'confirmed_orders.msg_printing_order'.trParams({'number': order.orderNumber}));
   }
 
   void _showOrderDetailsModal(BuildContext context, DummyOrder order) {
@@ -1000,16 +994,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
                             confirmedOrders
                                 .removeWhere((o) => o.id == order.id);
                           });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content:
-                                  Text('confirmed_orders.msg_order_deleted'.trParams({'number': order.orderNumber})),
-                              backgroundColor: ColorManager.kButtonRed,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10)),
-                            ),
-                          );
+                          AppToast.success(context, 'confirmed_orders.msg_order_deleted'.trParams({'number': order.orderNumber}));
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: ColorManager.kButtonRed,
@@ -1070,15 +1055,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
 
   void _syncConfirmedOrders() {
     if (confirmedOrders.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('confirmed_orders.no_orders_to_sync'.tr),
-          backgroundColor: ColorManager.kButtonRed,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
+      AppToast.warning(context, 'confirmed_orders.no_orders_to_sync'.tr);
       return;
     }
 
@@ -1156,19 +1133,9 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen>
     // Simulate sync process
     Future.delayed(const Duration(seconds: 3), () {
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'confirmed_orders.successfully_synced'.trParams(
+      AppToast.success(context, 'confirmed_orders.successfully_synced'.trParams(
               {'count': confirmedOrders.length.toString()},
-            ),
-          ),
-          backgroundColor: ColorManager.successGreen,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
+            ));
     });
   }
 }

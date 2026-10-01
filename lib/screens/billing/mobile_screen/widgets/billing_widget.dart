@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/helpers/delivery_method_display.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
@@ -424,44 +425,20 @@ class _BillingWidgetState extends State<BillingWidget> {
   void _completeOrder(BuildContext context, BillingProvider billingProvider,
       LocalProductProvider localProvider, double grandTotal) {
     if (billingProvider.mobileNumberTextController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('mobile_billing.error_enter_customer_name'.tr),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-      );
+      AppToast.warning(context, 'mobile_billing.error_enter_customer_name'.tr);
       return;
     }
 
     if (!billingProvider.isCashSelected &&
         !billingProvider.isCardSelected &&
         !billingProvider.isUpiSelected) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('mobile_billing.error_select_payment_method'.tr),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-      );
+      AppToast.warning(context, 'mobile_billing.error_select_payment_method'.tr);
       return;
     }
 
     double totalPaid = billingProvider.totalPaidAmount;
     if (totalPaid < grandTotal) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('mobile_billing.error_paid_less_than_total'.tr),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-      );
+      AppToast.warning(context, 'mobile_billing.error_paid_less_than_total'.tr);
       return;
     }
 

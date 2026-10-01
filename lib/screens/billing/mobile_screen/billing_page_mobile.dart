@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
@@ -30,14 +31,7 @@ class _BillingPageMobileState extends State<BillingPageMobile> {
       billingProvider.initConnectivityListener(
         onConnectivityChanged: (message) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(message),
-                duration: const Duration(seconds: 2),
-                backgroundColor:
-                    message.contains('No internet') ? Colors.red : Colors.green,
-              ),
-            );
+            AppToast.show(context, message, type: message.contains('No internet') ? AppToastType.error : AppToastType.success, duration: const Duration(seconds: 2));
           }
         },
       );
@@ -64,30 +58,22 @@ class _BillingPageMobileState extends State<BillingPageMobile> {
     billingProvider.clearCart();
     localProvider.clearCart();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('mobile_billing.msg_cart_cleared'.tr)),
-    );
+    AppToast.success(context, 'mobile_billing.msg_cart_cleared'.tr);
   }
 
   void _saveOrder() {
     // Implement save order logic
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('mobile_billing.msg_order_saved'.tr)),
-    );
+    AppToast.success(context, 'mobile_billing.msg_order_saved'.tr);
   }
 
   void _createOrderAndPrint() {
     // Implement create and print logic
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('mobile_billing.msg_order_created_print'.tr)),
-    );
+    AppToast.success(context, 'mobile_billing.msg_order_created_print'.tr);
   }
 
   void _confirmOrder() {
     // Implement confirm order logic
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('mobile_billing.msg_order_confirmed'.tr)),
-    );
+    AppToast.success(context, 'mobile_billing.msg_order_confirmed'.tr);
   }
 
   @override

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
@@ -425,12 +426,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 if (orderDetailsModelData?.cart == null ||
                     cartItems == null ||
                     cartItems!.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('sales_order_details.msg_no_print_data'.tr),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  AppToast.error(context, 'sales_order_details.msg_no_print_data'.tr);
                   return;
                 }
 

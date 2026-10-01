@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import '../../components/export_share_button.dart';
 import '../../core/ui/app_surface.dart';
 import '../../core/ui/list_page/filter_panel.dart';
@@ -105,9 +106,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
           Provider.of<AuthModel>(context, listen: false).token;
 
       if (accessToken == null || accessToken.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('customer_voucher.auth_token_missing'.tr)),
-        );
+        AppToast.error(context, 'customer_voucher.auth_token_missing'.tr);
         return;
       }
 
@@ -121,12 +120,8 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
       });
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('customer_voucher.error_loading_vouchers'
-                .tr
-                .replaceAll('@error', error.toString()))),
-      );
+      AppToast.error(context, 'customer_voucher.error_loading_vouchers'
+          .tr.replaceAll('@error', error.toString()));
     }
   }
 

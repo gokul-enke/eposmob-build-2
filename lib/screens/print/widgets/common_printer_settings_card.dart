@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -74,9 +75,7 @@ class _CommonPrinterSettingsCardState extends State<CommonPrinterSettingsCard> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _usePrinterSettings = previousValue);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('printer_settings.save_failed'.tr)),
-      );
+      AppToast.error(context, 'printer_settings.save_failed'.tr);
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }

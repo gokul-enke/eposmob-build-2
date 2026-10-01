@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/services.dart';
@@ -89,8 +90,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
   Future<void> refreshData() async {
     final token = context.read<AuthModel>().token;
     if (token == null || token.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('supplier_voucher.auth_token_missing'.tr)));
+      AppToast.error(context, 'supplier_voucher.auth_token_missing'.tr);
       return;
     }
     try {
@@ -110,9 +110,8 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
       searchVouchers();
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('supplier_voucher.error_loading_vouchers'
-              .trParams({'error': '$error'}))));
+      AppToast.error(context, 'supplier_voucher.error_loading_vouchers'
+          .trParams({'error': '$error'}));
     }
   }
 

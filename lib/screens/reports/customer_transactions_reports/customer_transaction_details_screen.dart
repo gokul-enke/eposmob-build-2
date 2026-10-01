@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:pos_machine/features/customers/data/customer_repository.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
@@ -247,23 +248,13 @@ class _SimpleTransactionDetailsScreenState
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('customer_transaction_report.failed_load_transaction_data'.tr),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppToast.error(context, 'customer_transaction_report.failed_load_transaction_data'.tr);
         }
       }
     } catch (error) {
       debugPrint("Error loading transactions: $error");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('customer_transaction_report.err_loading_transactions'.tr.replaceAll('@error', error.toString())),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppToast.error(context, 'customer_transaction_report.err_loading_transactions'.tr.replaceAll('@error', error.toString()));
       }
     } finally {
       if (mounted) {
@@ -1101,12 +1092,7 @@ class _SimpleTransactionDetailsScreenState
 
     // Show a message that the print process has started
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('customer_transaction_report.preparing_report_printing'.tr),
-          backgroundColor: ColorManager.kPrimaryColor,
-        ),
-      );
+      AppToast.info(context, 'customer_transaction_report.preparing_report_printing'.tr);
     }
   }
 

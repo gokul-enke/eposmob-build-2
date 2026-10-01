@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
@@ -119,13 +120,7 @@ class ViewPurchaseWidget extends StatelessWidget {
                                   label: 'purchase_order.print'.tr,
                                   icon: Icons.print_outlined,
                                   onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'purchase_order.print_coming_soon'.tr,
-                                        ),
-                                      ),
-                                    );
+                                    AppToast.info(context, 'purchase_order.print_coming_soon'.tr);
                                   },
                                 ),
                               ],

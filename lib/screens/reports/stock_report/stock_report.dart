@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -139,14 +140,7 @@ class _StockReportScreenState extends State<StockReportScreen> {
     } catch (error) {
       debugPrint('Error loading stock report: $error');
       if (mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text('stock_report.unavailable'.tr),
-              backgroundColor: Colors.red,
-            ),
-          );
+        AppToast.error(context, 'stock_report.unavailable'.tr);
       }
     } finally {
       if (mounted) {
@@ -1255,14 +1249,7 @@ class _StockReportScreenState extends State<StockReportScreen> {
                     GestureDetector(
                       onTap: () {
                         Clipboard.setData(ClipboardData(text: item.barcode!));
-                        ScaffoldMessenger.of(context)
-                          ..hideCurrentSnackBar()
-                          ..showSnackBar(
-                            SnackBar(
-                              content: Text('stock_report.barcode_copied'.tr),
-                              duration: const Duration(seconds: 1),
-                            ),
-                          );
+                        AppToast.success(context, 'stock_report.barcode_copied'.tr, duration: const Duration(seconds: 1));
                       },
                       child: const Icon(
                         Icons.copy,

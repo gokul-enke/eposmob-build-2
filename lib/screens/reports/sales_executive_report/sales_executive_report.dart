@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_container_box.dart';
@@ -139,12 +140,7 @@ class _SalesExecutiveReportScreenState
     final from = DateTime.tryParse(fromDateController.text.trim());
     final to = DateTime.tryParse(toDateController.text.trim());
     if (from == null || to == null || !from.isAfter(to)) return true;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text('sales_executive_report.from_date_after_to_date'.tr),
-        backgroundColor: Colors.orange,
-      ));
+    AppToast.warning(context, 'sales_executive_report.from_date_after_to_date'.tr);
     return false;
   }
 

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -217,9 +218,8 @@ class _TransactionScreenState extends State<TransactionScreen> {
     } catch (error) {
       if (revision == _requestRevision) _localSource = null;
       if (!mounted || revision != _requestRevision) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('supplier_transactions.error_loading'
-              .trParams({'error': '$error'}))));
+      AppToast.error(context, 'supplier_transactions.error_loading'
+          .trParams({'error': '$error'}));
     } finally {
       if (mounted && revision == _requestRevision) {
         setState(() => _localLoading = false);

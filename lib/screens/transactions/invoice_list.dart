@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import '../../core/ui/app_surface.dart';
 import '../../core/ui/app_colors.dart';
 import '../../core/ui/list_page/list_page_header.dart';
@@ -749,9 +750,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           Provider.of<AuthModel>(context, listen: false).token;
 
       if (accessToken == null || accessToken.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('invoice.auth_token_missing'.tr)),
-        );
+        AppToast.error(context, 'invoice.auth_token_missing'.tr);
         return;
       }
 
@@ -769,12 +768,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       });
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('invoice.error_loading_invoices'
-                .tr
-                .replaceAll('@error', error.toString()))),
-      );
+      AppToast.error(context, 'invoice.error_loading_invoices'
+          .tr.replaceAll('@error', error.toString()));
     }
   }
 

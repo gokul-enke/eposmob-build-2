@@ -65,7 +65,6 @@ abstract final class AppToast {
   static AppToastPosition position = AppToastPosition.start;
 
   static OverlayEntry? _entry;
-  static Timer? _timer;
 
   /// Whether a toast is on screen.
   static bool get isShowing => _entry != null;
@@ -132,16 +131,14 @@ abstract final class AppToast {
                   onAction();
                 }
               : null,
+          duration: duration ?? (hasAction ? actionDuration : type.duration),
           onClose: () => _remove(entry),
+          onDisposed: () => _forget(entry),
         ),
       ),
     );
     overlay.insert(entry);
     _entry = entry;
-    _timer = Timer(
-      duration ?? (hasAction ? actionDuration : type.duration),
-      () => _remove(entry),
-    );
   }
 
   /// Removes the toast on screen, if any.
@@ -150,10 +147,14 @@ abstract final class AppToast {
     if (entry != null) _remove(entry);
   }
 
+  /// The toast's widget went away without being removed here (its overlay
+  /// was torn down), so stop tracking it.
+  static void _forget(OverlayEntry entry) {
+    if (identical(_entry, entry)) _entry = null;
+  }
+
   static void _remove(OverlayEntry entry) {
     if (!identical(_entry, entry)) return;
-    _timer?.cancel();
-    _timer = null;
     _entry = null;
     if (entry.mounted) entry.remove();
   }
@@ -207,21 +208,53 @@ class _ToastPlacement extends StatelessWidget {
   }
 }
 
-class _Toast extends StatelessWidget {
+/// One toast. Owns its auto-dismiss timer, so the timer is cancelled with the
+/// toast (replaced, closed, or its overlay torn down) — like a SnackBar.
+class _Toast extends StatefulWidget {
   const _Toast({
     super.key,
     required this.message,
     required this.type,
+    required this.duration,
     required this.onClose,
+    required this.onDisposed,
     this.actionLabel,
     this.onAction,
   });
 
   final String message;
   final AppToastType type;
+  final Duration duration;
   final String? actionLabel;
   final VoidCallback? onAction;
   final VoidCallback onClose;
+  final VoidCallback onDisposed;
+
+  @override
+  State<_Toast> createState() => _ToastState();
+}
+
+class _ToastState extends State<_Toast> {
+  late final Timer _timer;
+
+  String get message => widget.message;
+  AppToastType get type => widget.type;
+  String? get actionLabel => widget.actionLabel;
+  VoidCallback? get onAction => widget.onAction;
+  VoidCallback get onClose => widget.onClose;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(widget.duration, widget.onClose);
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    widget.onDisposed();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
