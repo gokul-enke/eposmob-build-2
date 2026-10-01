@@ -1,3 +1,11 @@
+import 'dart:io';
+import '../../core/ui/app_surface.dart';
+import '../../core/ui/app_colors.dart';
+import '../../core/ui/list_page/list_page_header.dart';
+import '../../core/ui/list_page/list_page_scaffold.dart';
+import '../../core/ui/list_page/filter_panel.dart';
+import '../../components/export_share_button.dart';
+import '../../services/list_excel_export_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -5,7 +13,7 @@ import 'package:intl/intl.dart';
 import 'dart:async';
 import 'dart:ui';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
-import 'package:pos_machine/components/build_pagination_control.dart';
+
 import 'package:pos_machine/models/list_invoice.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:provider/provider.dart';
@@ -16,11 +24,10 @@ import 'package:open_file/open_file.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 import '../../components/build_calendar_selection.dart';
-import '../../components/build_container_box.dart';
+
 import '../../components/filter_toggle_button.dart';
 import '../transactions/create_invoice_modal.dart';
-import '../../components/build_dropdown_with_search.dart';
-import '../../components/build_round_button.dart';
+
 import '../../controllers/sidebar_controller.dart';
 import '../../providers/auth_model.dart';
 import '../../providers/app_settings_provider.dart';
@@ -29,7 +36,7 @@ import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import 'widgets/common_details_dialog.dart';
 import 'widgets/share_helper.dart';
-import 'invoice_list_mobile.dart';
+
 import '../../helpers/ui_code_labels.dart';
 
 class InvoiceListScreen extends StatefulWidget {
@@ -58,7 +65,11 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   String? activeBulkSyncType;
   Timer? _invoiceSearchDebounce;
   bool _zatcaCleanupScheduled = false;
+  bool _lastVerifiedPhase2Enabled = false;
   bool _showFilters = true;
+  bool _visibilityInitialized = false;
+  final _tableScrollController = ScrollController();
+  final _exportProgress = ValueNotifier<String?>(null);
 
   final FocusNode invoiceNoFocusNode = FocusNode();
   final FocusNode nameFocusNode = FocusNode();
@@ -74,6 +85,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _invoiceProvider = Provider.of<InvoiceProvider>(context, listen: false);
 
       // Applied when the user arrives from the dashboard ZATCA alert, so the
@@ -103,11 +115,22 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     dateToFocusNode.addListener(_handleDateToFocusChange);
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_visibilityInitialized) {
+      _showFilters =
+          MediaQuery.sizeOf(context).width >= ListLayoutBreakpoints.mobile;
+      _visibilityInitialized = true;
+    }
+  }
+
   void _resetInvoiceFilters({
     required bool clearProviderFilters,
     bool reloadProvider = false,
     bool notifyProvider = true,
   }) {
+    _invoiceSearchDebounce?.cancel();
     searchTextController.clear();
     invoiceNumberController.clear();
     orderNumberController.clear();
@@ -153,6 +176,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     _isPickerOpen = true;
     await _selectDate(context, isFromDate: isFromDate);
     // Advance focus so when date dialog dismisses, it doesn't land back and loop
+    if (!mounted) return;
     FocusScope.of(context).nextFocus();
     Future.delayed(const Duration(milliseconds: 300), () {
       _isPickerOpen = false;
@@ -172,8 +196,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         (appSettingsProvider.appSettings?.zatcaPhase2Enabled ?? false);
 
     // Do not clear a user's filter during an in-flight settings refresh. Wait
-    // until the request has either resolved disabled or failed.
-    if (appSettingsProvider.loading ||
+    // until a successful response has verified that Phase 2 is disabled.
+    if (!appSettingsProvider.isReady ||
         phase2VerifiedEnabled ||
         _zatcaCleanupScheduled ||
         (selectedZatcaStatus == null && selectedInvoiceIds.isEmpty)) {
@@ -188,7 +212,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       final latestSettings = context.read<AppSettingsProvider>();
       final bool latestPhase2VerifiedEnabled = latestSettings.isReady &&
           (latestSettings.appSettings?.zatcaPhase2Enabled ?? false);
-      if (latestSettings.loading || latestPhase2VerifiedEnabled) return;
+      if (!latestSettings.isReady || latestPhase2VerifiedEnabled) return;
 
       final bool hadZatcaFilter = selectedZatcaStatus != null;
       setState(() {
@@ -206,6 +230,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   void dispose() {
     _invoiceSearchDebounce?.cancel();
     _sidebarIndexWorker?.dispose();
+    _exportProgress.dispose();
+    _tableScrollController.dispose();
     // Do not notify a provider while this route is being disposed. The
     // Flutter tree is locked during disposal and an eager notification can
     // trigger "markNeedsBuild called when widget tree was locked".
@@ -233,7 +259,18 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     super.dispose();
   }
 
+  bool _canRunPhase2Action() {
+    if (!mounted) return false;
+    final settings = context.read<AppSettingsProvider>();
+    if (settings.isReady && (settings.appSettings?.zatcaPhase2Enabled ?? false))
+      return true;
+    showScaffoldError(
+        context: context, message: 'invoice.settings_unverified'.tr);
+    return false;
+  }
+
   Future<void> _performZatcaPhase2SendWithPdf(Invoice invoice) async {
+    if (!_canRunPhase2Action()) return;
     try {
       final String? token =
           Provider.of<AuthModel>(context, listen: false).token;
@@ -307,6 +344,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   }
 
   Future<void> _performZatcaPhase2Resync(Invoice invoice) async {
+    if (!_canRunPhase2Action()) return;
     try {
       final String? token =
           Provider.of<AuthModel>(context, listen: false).token;
@@ -399,11 +437,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     await showDialog(
       context: context,
       builder: (ctx) {
-        final appSettings =
-            Provider.of<AppSettingsProvider>(context, listen: false)
-                .appSettings;
+        final appSettings = Provider.of<AppSettingsProvider>(ctx).appSettings;
         final bool phase1 = appSettings?.zatcaPhase1Enabled ?? false;
-        final bool phase2 = appSettings?.zatcaPhase2Enabled ?? false;
+        final bool phase2 = context.read<AppSettingsProvider>().isReady &&
+            (appSettings?.zatcaPhase2Enabled ?? false);
 
         // Read both ZATCA status fields
         final String? zatcaStatus = invoice.zatcaStatus?.toLowerCase();
@@ -620,6 +657,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   }
 
   Future<void> _performZatcaPhase2Send(Invoice invoice) async {
+    if (!_canRunPhase2Action()) return;
     try {
       final String? token =
           Provider.of<AuthModel>(context, listen: false).token;
@@ -647,7 +685,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
 
       // 2. Show stylized confirmation dialog
       final shouldSend = await _showZatcaConfirmationDialog(count: 1);
-      if (shouldSend != true) return;
+      if (shouldSend != true || !_canRunPhase2Action()) return;
 
       showScaffold(context: context, message: 'invoice.sending_to_zatca'.tr);
       showLoadingOverlay(context, message: 'invoice.sending'.tr);
@@ -725,10 +763,12 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         // and then re-fetching.
         zatcaStatus: selectedZatcaStatus,
       );
+      if (!mounted) return;
       setState(() {
         isInitialized = true;
       });
     } catch (error) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text('invoice.error_loading_invoices'
@@ -799,7 +839,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-    if (pickedDate != null) {
+    if (pickedDate != null && mounted) {
       final TimeOfDay? pickedTime = await showTimePicker(
         context: context,
         initialTime: TimeOfDay.now(),
@@ -815,6 +855,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           );
         },
       );
+      if (!mounted) return;
       // Time is optional — use picked time or default
       final TimeOfDay resolvedTime = pickedTime ??
           (isFromDate
@@ -841,294 +882,359 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
-    final bool isMobile = size.width < 700;
-    final appSettingsProvider = context.watch<AppSettingsProvider>();
-    final bool showZatcaControls = appSettingsProvider.isReady &&
-        (appSettingsProvider.appSettings?.zatcaPhase2Enabled ?? false);
-    _clearUnavailableZatcaStateAfterBuild(appSettingsProvider);
+  bool get _hasActiveFilters =>
+      invoiceNumberController.text.isNotEmpty ||
+      searchTextController.text.isNotEmpty ||
+      phoneController.text.isNotEmpty ||
+      dateFromController.text.isNotEmpty ||
+      dateToController.text.isNotEmpty ||
+      selectedStatus != null ||
+      selectedZatcaStatus != null;
 
-    if (isMobile) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Consumer<InvoiceProvider>(
-            builder: (context, invoiceProvider, child) {
-              return InvoiceMobileView(
-                showZatcaControls: showZatcaControls,
-                invoices:
-                    invoiceProvider.invoiceListDetails ?? const <Invoice>[],
-                isLoading: invoiceProvider.isLoading,
-                selectedInvoiceIds: selectedInvoiceIds,
-                onToggleSelect: (id, selected) => setState(() {
-                  if (selected)
-                    selectedInvoiceIds.add(id);
-                  else
-                    selectedInvoiceIds.remove(id);
-                }),
-                onViewDetails: _showInvoiceDetails,
-                onShowActions: _showInvoiceActionsSheet,
-                searchTextController: searchTextController,
-                invoiceNumberController: invoiceNumberController,
-                phoneController: phoneController,
-                dateFromController: dateFromController,
-                dateToController: dateToController,
-                invoiceNoFocusNode: invoiceNoFocusNode,
-                nameFocusNode: nameFocusNode,
-                phoneFocusNode: phoneFocusNode,
-                dateFromFocusNode: dateFromFocusNode,
-                dateToFocusNode: dateToFocusNode,
-                onSearchChanged: _debounceInvoiceSearch,
-                onReset: resetSearch,
-                onSelectDate: ({required isFromDate}) =>
-                    _selectDate(context, isFromDate: isFromDate),
-                selectedStatus: selectedStatus,
-                selectedZatcaStatus: selectedZatcaStatus,
-                statusOptions: invoiceProvider.getStatusOptions(),
-                zatcaStatusOptions: invoiceProvider.getZatcaStatusOptions(),
-                onStatusChanged: (v) {
-                  setState(() => selectedStatus = v);
-                  searchInvoices();
-                },
-                onZatcaStatusChanged: (v) {
-                  setState(() => selectedZatcaStatus = v);
-                  searchInvoices();
-                },
-                currentPage: invoiceProvider.currentPage,
-                totalPages: invoiceProvider.totalPages,
-                onPageChanged: (page) {
-                  _invoiceSearchDebounce?.cancel();
-                  _clearSelectedInvoices();
-                  invoiceProvider.goToPage(page);
-                },
-                isBulkSending: isBulkSending,
-                activeBulkSyncType: activeBulkSyncType,
-                onBulkSync: (syncType, ids) async {
-                  final token =
-                      Provider.of<AuthModel>(context, listen: false).token;
-                  if (token == null || token.isEmpty) return;
-                  await _performBulkZatcaSync(
-                    idsToSync: ids,
-                    syncType: syncType,
-                    accessToken: token,
-                  );
-                },
-                onSelectPage: () => setState(() {
-                  for (final inv in invoiceProvider.invoiceListDetails ??
-                      const <Invoice>[]) {
-                    selectedInvoiceIds.add(inv.id);
-                  }
-                }),
-                onUnselectAll: () => setState(() => selectedInvoiceIds.clear()),
-                onCreateInvoice: () async {
-                  final result = await showCreateInvoiceModal(context, size);
-                  if (result == true) {
-                    await refreshData();
-                    if (mounted) setState(() {});
-                  }
-                },
-                onRefresh: refreshData,
-              );
-            },
-          ),
-        ),
-      );
-    }
-
-    return SafeArea(
-      child: RefreshIndicator(
-        onRefresh: refreshData,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: const [
-              BoxShadow(
-                color: ColorManager.boxShadowColor,
-                blurRadius: 6,
-                offset: Offset(1, 1),
-              ),
-            ],
-            color: Colors.white,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(size),
-                const SizedBox(height: 10),
-                _buildSearchBar(size, showZatcaControls: showZatcaControls),
-                // const SizedBox(height: 10),
-                _buildInvoiceTable(showZatcaControls: showZatcaControls),
-                const SizedBox(height: 10),
-                _buildPaginationControls(),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(Size size) {
-    final hasActiveFilters = invoiceNumberController.text.isNotEmpty ||
-        searchTextController.text.isNotEmpty ||
-        phoneController.text.isNotEmpty ||
-        dateFromController.text.isNotEmpty ||
-        dateToController.text.isNotEmpty ||
-        selectedStatus != null ||
-        selectedZatcaStatus != null;
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: Text(
-            'invoice.list_title'.tr,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
-                0.30, ColorManager.textColor),
-          ),
-        ),
-        const SizedBox(width: 8),
-        FilterToggleButton(
-          showFilters: _showFilters,
-          hasActiveFilters: hasActiveFilters,
-          activeFiltersListenable: Listenable.merge([
-            invoiceNumberController,
-            searchTextController,
-            phoneController,
-            dateFromController,
-            dateToController,
-          ]),
-          activeFiltersBuilder: () =>
-              invoiceNumberController.text.isNotEmpty ||
-              searchTextController.text.isNotEmpty ||
-              phoneController.text.isNotEmpty ||
-              dateFromController.text.isNotEmpty ||
-              dateToController.text.isNotEmpty ||
-              selectedStatus != null ||
-              selectedZatcaStatus != null,
-          onPressed: () => setState(() => _showFilters = !_showFilters),
-          showTooltip: 'invoice.show_filters'.tr,
-          hideTooltip: 'invoice.hide_filters'.tr,
-        ),
-        const SizedBox(width: 8),
-        CustomRoundButton(
-          title: 'invoice.create_invoice_button'.tr,
-          fct: () async {
-            final result = await showCreateInvoiceModal(context, size);
-            debugPrint("[InvoiceList] Modal closed with result: $result");
-            // Refresh invoice list if a new invoice was created
-            if (result == true) {
-              debugPrint("[InvoiceList] Refreshing invoice list...");
-              await refreshData();
-              if (mounted) setState(() {});
-              debugPrint("[InvoiceList] Invoice list refreshed");
-            }
+  Future<File> _createExport() async {
+    final pendingSearch = _invoiceSearchDebounce?.isActive ?? false;
+    _invoiceSearchDebounce?.cancel();
+    if (pendingSearch) searchInvoices();
+    final token = context.read<AuthModel>().token;
+    if (token == null || token.isEmpty)
+      throw StateError('Missing access token.');
+    // Capture the controls before awaiting; export never updates list state.
+    final currency =
+        context.read<AppSettingsProvider>().appSettings?.currency ?? 'INR';
+    final showZatca = _lastVerifiedPhase2Enabled;
+    _exportProgress.value = 'invoice.export_creating'.tr;
+    final items = await context.read<InvoiceProvider>().fetchInvoicesForExport(
+          accessToken: token,
+          name: searchTextController.text,
+          invoiceNumber: invoiceNumberController.text,
+          phone: phoneController.text,
+          fromDate: dateFromController.text,
+          toDate: dateToController.text,
+          status: selectedStatus,
+          zatcaStatus: showZatca ? selectedZatcaStatus : null,
+          onProgress: (page, total) {
+            if (mounted)
+              _exportProgress.value = 'invoice.export_fetching'
+                  .trParams({'page': '$page', 'total': '$total'});
           },
-          fontSize: 12,
-          height: 45,
-          width: 120,
-        ),
-      ],
-    );
+        );
+    if (mounted) _exportProgress.value = 'invoice.export_creating'.tr;
+    return ListExcelExportService.export<Invoice>(
+        items: items,
+        fileNamePrefix: 'invoices',
+        sheetName: 'invoice.list_title'.tr,
+        columns: [
+          ListExportColumn(
+              label: 'invoice.field_invoice_number'.tr,
+              value: (v, _) => v.invoiceNumber),
+          ListExportColumn(
+              label: 'invoice.col_amount'.tr,
+              value: (v, _) => ListExcelExportService.numericValue(v.amount)),
+          ListExportColumn(
+              label: 'supplier_transactions.currency'.tr,
+              value: (_, __) => currency),
+          ListExportColumn(
+              label: 'invoice.col_name'.tr,
+              value: (v, _) => v.customer.user.name),
+          ListExportColumn(
+              label: 'invoice.phone'.tr,
+              value: (v, _) => v.customer.user.phone),
+          ListExportColumn(
+              label: 'invoice.field_invoice_date'.tr,
+              value: (v, _) => v.invoiceDate),
+          ListExportColumn(
+              label: 'invoice.field_type'.tr,
+              value: (v, _) => _localizedInvoiceType(v.type)),
+          ListExportColumn(
+              label: 'invoice.field_due_date'.tr, value: (v, _) => v.dueDate),
+          ListExportColumn(
+              label: 'invoice.field_status'.tr,
+              value: (v, _) => UiCodeLabels.status(v.status)),
+          if (showZatca)
+            ListExportColumn(
+                label: 'invoice.col_zatca_status'.tr,
+                value: (v, _) =>
+                    v.zatcaStatus ?? v.zatcaRequestStatus ?? 'not_sent'),
+        ]);
   }
 
-  Widget _buildSearchBar(
-    Size size, {
-    required bool showZatcaControls,
-  }) {
-    return Column(
-      children: [
-        if (_showFilters) ...[
-          // First row of search fields
+  Widget _textFilter(TextEditingController controller, FocusNode focus,
+          String label, IconData icon,
+          {TextInputType keyboardType = TextInputType.text}) =>
+      TextField(
+          controller: controller,
+          focusNode: focus,
+          keyboardType: keyboardType,
+          decoration: listFilterDecoration(label, icon),
+          onChanged: (_) => _debounceInvoiceSearch(),
+          onSubmitted: (_) {
+            _invoiceSearchDebounce?.cancel();
+            searchInvoices();
+          });
+
+  Widget _dateFilter(bool from) => TextField(
+      controller: from ? dateFromController : dateToController,
+      focusNode: from ? dateFromFocusNode : dateToFocusNode,
+      readOnly: true,
+      decoration: listFilterDecoration(
+          from ? 'invoice.from_date'.tr : 'invoice.to_date'.tr,
+          Icons.calendar_today_outlined),
+      onTap: () {
+        if (!_isPickerOpen) _openDatePicker(isFromDate: from);
+      });
+
+  Widget _filters(InvoiceProvider provider, bool showZatca) => FilterPanel(
+          key: const ValueKey('invoice-desktop-filters'),
+          title: 'invoice.find'.tr,
+          hint: 'invoice.filter_hint'.tr,
+          onReset: resetSearch,
+          fields: [
+            _textFilter(invoiceNumberController, invoiceNoFocusNode,
+                'invoice.invoice_no'.tr, Icons.receipt_long_outlined),
+            _textFilter(searchTextController, nameFocusNode, 'invoice.name'.tr,
+                Icons.person_outline),
+            _textFilter(phoneController, phoneFocusNode, 'invoice.phone'.tr,
+                Icons.phone_outlined,
+                keyboardType: TextInputType.phone),
+            if (showZatca)
+              DropdownButtonFormField<String>(
+                  key: ValueKey('zatca-$selectedZatcaStatus'),
+                  initialValue: selectedZatcaStatus,
+                  focusNode: zatcaFocusNode,
+                  isExpanded: true,
+                  decoration: listFilterDecoration(
+                      'invoice.col_zatca_status'.tr, Icons.cloud_sync_outlined),
+                  items: [
+                    DropdownMenuItem<String>(
+                        value: null,
+                        child: Text('invoice.all_zatca_status'.tr)),
+                    for (final value in provider
+                        .getZatcaStatusOptions()
+                        .where((v) => v != 'All ZATCA Status'))
+                      DropdownMenuItem(
+                          value: value, child: Text(UiCodeLabels.zatca(value)))
+                  ],
+                  onChanged: (v) {
+                    setState(() => selectedZatcaStatus = v);
+                    _invoiceSearchDebounce?.cancel();
+                    searchInvoices();
+                  }),
+            DropdownButtonFormField<String>(
+                key: ValueKey('status-$selectedStatus'),
+                initialValue: selectedStatus,
+                focusNode: statusFocusNode,
+                isExpanded: true,
+                decoration: listFilterDecoration(
+                    'invoice.field_status'.tr, Icons.check_circle_outline),
+                items: [
+                  DropdownMenuItem<String>(
+                      value: null, child: Text('invoice.all_status'.tr)),
+                  for (final value in {
+                    ...provider
+                        .getStatusOptions()
+                        .where((v) => v != 'All Status'),
+                    if (selectedStatus != null) selectedStatus!
+                  })
+                    DropdownMenuItem(
+                        value: value, child: Text(UiCodeLabels.status(value)))
+                ],
+                onChanged: (v) {
+                  setState(() => selectedStatus = v);
+                  _invoiceSearchDebounce?.cancel();
+                  searchInvoices();
+                }),
+            _dateFilter(true),
+            _dateFilter(false),
+          ]);
+
+  Widget _selection(Invoice invoice) => Checkbox(
+      value: selectedInvoiceIds.contains(invoice.id),
+      onChanged: isBulkSending
+          ? null
+          : (value) => setState(() {
+                if (value == true) {
+                  selectedInvoiceIds.add(invoice.id);
+                } else {
+                  selectedInvoiceIds.remove(invoice.id);
+                }
+              }));
+
+  Widget _reference(Invoice invoice) => Row(children: [
+        Expanded(child: TableCells.text(invoice.invoiceNumber)),
+        IconButton(
+            icon: const Icon(Icons.copy_outlined, size: 16),
+            tooltip: 'invoice.field_invoice_number'.tr,
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: invoice.invoiceNumber));
+              showScaffold(
+                  context: context,
+                  message: 'invoice.invoice_number_copied'.tr);
+            })
+      ]);
+
+  Widget _actions(Invoice invoice) => Wrap(
+        spacing: 6,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          TableCells.viewButton(() => _showInvoiceDetails(invoice)),
           SizedBox(
-            key: const ValueKey('invoice-desktop-filters'),
-            height: 55,
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 1,
-                  child: _buildInvoiceNumberSearch(),
-                ),
-                // Name Search Field
-                Expanded(
-                  flex: 1,
-                  child: _buildSearchTextField(),
-                ),
-
-                // Invoice Number Search Field
-
-                // // Order Number Search Field
-                // Expanded(
-                //   flex: 1,
-                //   child: _buildOrderNumberSearch(),
-                // ),
-
-                // Phone Search Field
-                Expanded(
-                  flex: 1,
-                  child: _buildPhoneSearch(),
-                ),
-
-                if (showZatcaControls)
-                  Expanded(
-                    flex: 1,
-                    child: _buildZatcaStatusFilter(),
-                  ),
-              ],
-            ),
-          ),
-          // Second row of search fields
-          SizedBox(
-            height: 55,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Status Filter
-                Expanded(
-                  flex: 1,
-                  child: _buildStatusFilter(),
-                ),
-
-                // Date Range Search
-                Expanded(
-                  flex: 2,
-                  child: _buildDateRangeSearch(),
-                ),
-
-                //SizedBox(width: 10),
-
-                // Reset Button
-                Expanded(
-                  flex: 1,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 10),
-                    child: CustomRoundButton(
-                      title: 'general.reset'.tr,
-                      boxColor: Colors.white,
-                      textColor: ColorManager.kPrimaryColor,
-                      fct: resetSearch,
-                      height: 45,
-                      width: double.infinity,
-                      fontSize: FontSize.s12,
-                    ),
-                  ),
-                ),
-              ],
+            width: 36,
+            height: 36,
+            child: IconButton.outlined(
+              style: IconButton.styleFrom(
+                foregroundColor: ColorManager.kPrimaryColor,
+                side: const BorderSide(color: AppColors.border),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.control)),
+              ),
+              icon: const Icon(Icons.more_vert, size: 18),
+              tooltip: 'general.more'.tr,
+              onPressed: () => _showInvoiceActionsSheet(invoice),
             ),
           ),
         ],
-        if (showZatcaControls) _buildSelectionActions(),
-        const SizedBox(height: 10),
-      ],
-    );
+      );
+
+  Widget _card(Invoice invoice, bool showZatca) => AppSurface(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(child: TableCells.identity(invoice.customer.user.name)),
+          if (showZatca) _selection(invoice)
+        ]),
+        _reference(invoice),
+        Text('${'invoice.col_amount'.tr}: ${invoice.amount}'),
+        Text('${'invoice.field_invoice_date'.tr}: ${invoice.invoiceDate}'),
+        Text('${'invoice.field_due_date'.tr}: ${invoice.dueDate}'),
+        Text(
+            '${'invoice.field_type'.tr}: ${_localizedInvoiceType(invoice.type)}'),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          _buildStatusChip(invoice.status),
+          if (showZatca) _buildZatcaStatusChip(invoice)
+        ]),
+        const SizedBox(height: 8),
+        _actions(invoice),
+      ]));
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = context.watch<AppSettingsProvider>();
+    final provider = context.watch<InvoiceProvider>();
+    if (settings.isReady) {
+      _lastVerifiedPhase2Enabled =
+          settings.appSettings?.zatcaPhase2Enabled ?? false;
+    }
+    final showZatca = _lastVerifiedPhase2Enabled;
+    _clearUnavailableZatcaStateAfterBuild(settings);
+    return LayoutBuilder(
+        builder: (context, bounds) => ListPageScaffold<Invoice>(
+              header: ListPageHeader(
+                  icon: Icons.receipt_long_outlined,
+                  title: 'invoice.list_title'.tr,
+                  subtitle: 'invoice.subtitle'.tr,
+                  onRefresh: refreshData,
+                  onAdd: () async {
+                    final result = await showCreateInvoiceModal(
+                        context, MediaQuery.sizeOf(context));
+                    if (result == true && mounted) await refreshData();
+                  },
+                  addLabel: 'invoice.create_invoice_button'.tr,
+                  addShortLabel: 'invoice.create'.tr,
+                  extraActions: [
+                    FilterToggleButton(
+                        showFilters: _showFilters,
+                        hasActiveFilters: _hasActiveFilters,
+                        activeFiltersListenable: Listenable.merge([
+                          invoiceNumberController,
+                          searchTextController,
+                          phoneController,
+                          dateFromController,
+                          dateToController
+                        ]),
+                        activeFiltersBuilder: () => _hasActiveFilters,
+                        showTooltip: 'invoice.show_filters'.tr,
+                        hideTooltip: 'invoice.hide_filters'.tr,
+                        onPressed: () =>
+                            setState(() => _showFilters = !_showFilters)),
+                    ExportShareButton(
+                        createFile: _createExport,
+                        label: 'supplier_transactions.export'.tr,
+                        loadingLabel: 'invoice.export_creating'.tr,
+                        progressLabel: _exportProgress,
+                        tooltip: 'invoice.export_tooltip'.tr,
+                        errorMessage: 'invoice.export_failed'.tr,
+                        enabled: !provider.isLoading &&
+                            !isBulkSending &&
+                            (provider.invoiceListDetails?.isNotEmpty ?? false),
+                        compact: bounds.maxWidth < ListLayoutBreakpoints.header,
+                        mimeType:
+                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                  ]),
+              filters: _filters(provider, showZatca),
+              showFilters: _showFilters,
+              toolbar: showZatca ? _buildSelectionActions() : null,
+              tableScrollController: _tableScrollController,
+              isLoading: provider.isLoading,
+              items: provider.invoiceListDetails ?? [],
+              tableMinWidth: showZatca ? 1350 : 1150,
+              columns: [
+                if (showZatca)
+                  TableColumnDef(
+                      label: '',
+                      flex: .5,
+                      cellBuilder: (v, _) => _selection(v)),
+                TableColumnDef(
+                    label: 'invoice.field_invoice_number'.tr,
+                    flex: 1.7,
+                    cellBuilder: (v, _) => _reference(v)),
+                TableColumnDef(
+                    label: 'invoice.col_amount'.tr,
+                    cellBuilder: (v, _) => TableCells.text(v.amount)),
+                TableColumnDef(
+                    label: 'invoice.col_name'.tr,
+                    flex: 1.8,
+                    cellBuilder: (v, _) =>
+                        TableCells.identity(v.customer.user.name)),
+                TableColumnDef(
+                    label: 'invoice.field_invoice_date'.tr,
+                    flex: 1.3,
+                    cellBuilder: (v, _) => TableCells.text(v.invoiceDate)),
+                TableColumnDef(
+                    label: 'invoice.field_type'.tr,
+                    cellBuilder: (v, _) =>
+                        TableCells.text(_localizedInvoiceType(v.type))),
+                TableColumnDef(
+                    label: 'invoice.field_due_date'.tr,
+                    flex: 1.3,
+                    cellBuilder: (v, _) => TableCells.text(v.dueDate)),
+                TableColumnDef(
+                    label: 'invoice.field_status'.tr,
+                    cellBuilder: (v, _) => _buildStatusChip(v.status)),
+                if (showZatca)
+                  TableColumnDef(
+                      label: 'invoice.col_zatca_status'.tr,
+                      flex: 1.4,
+                      cellBuilder: (v, _) => _buildZatcaStatusChip(v)),
+                TableColumnDef(
+                    label: 'invoice.col_action'.tr,
+                    flex: 1.6,
+                    cellBuilder: (v, _) => _actions(v))
+              ],
+              cardBuilder: (v, _) => _card(v, showZatca),
+              emptyState: Center(child: Text('invoice.no_invoices_found'.tr)),
+              onRefresh: refreshData,
+              currentPage: provider.currentPage,
+              totalPages: provider.totalPages,
+              itemsPerPage: provider.itemsPerPage,
+              countLabel: 'invoice.page_count'.trParams(
+                  {'count': '${provider.invoiceListDetails?.length ?? 0}'}),
+              onPageChanged: (page) {
+                _invoiceSearchDebounce?.cancel();
+                _clearSelectedInvoices();
+                provider.goToPage(page);
+              },
+            ));
   }
 
   Future<void> _performBulkZatcaSync({
@@ -1136,6 +1242,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     required String syncType, // 'selected', 'all', 'failed', 'not_sent'
     required String accessToken,
   }) async {
+    if (!_canRunPhase2Action()) return;
     // Only selected mode requires explicit IDs from UI selection.
     if (syncType == 'selected' && idsToSync.isEmpty) {
       showScaffold(
@@ -1167,7 +1274,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       count: idsToSync.length,
       message: confirmationMessage,
     );
-    if (shouldSend != true) return;
+    if (shouldSend != true || !_canRunPhase2Action()) return;
 
     setState(() {
       isBulkSending = true;
@@ -1237,587 +1344,100 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     }
   }
 
-  List<int> _getFailedInvoiceIds() {
-    final allInvoices = Provider.of<InvoiceProvider>(context, listen: false)
-            .invoiceListDetails ??
-        <Invoice>[];
-    return allInvoices
-        .where((inv) => inv.zatcaRequestStatus?.toLowerCase() == 'failed')
-        .map((inv) => inv.id)
-        .toList();
-  }
-
-  List<int> _getNotSentInvoiceIds() {
-    final allInvoices = Provider.of<InvoiceProvider>(context, listen: false)
-            .invoiceListDetails ??
-        <Invoice>[];
-    return allInvoices
-        .where((inv) =>
-            inv.zatcaStatus?.toLowerCase() != 'pass' &&
-            inv.zatcaStatus?.toLowerCase() != 'success' &&
-            inv.zatcaStatus?.toLowerCase() != 'sent')
-        .map((inv) => inv.id)
-        .toList();
-  }
-
-  List<int> _getAllInvoiceIds() {
-    final allInvoices = Provider.of<InvoiceProvider>(context, listen: false)
-            .invoiceListDetails ??
-        <Invoice>[];
-    return allInvoices.map((inv) => inv.id).toList();
-  }
-
   Widget _buildSelectionActions() {
-    final provider = Provider.of<InvoiceProvider>(context);
-    final String? token = Provider.of<AuthModel>(context, listen: false).token;
-    final hasSelection = selectedInvoiceIds.isNotEmpty;
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Single row: 4 sync buttons + selection info
-          Row(
-            children: [
-              CustomRoundButton(
-                title: 'invoice.sync_all_button'.tr,
-                boxColor: Colors.blueAccent,
-                textColor: Colors.white,
-                borderColor: Colors.transparent,
-                isLoading: isBulkSending && activeBulkSyncType == 'all',
-                fct: isBulkSending || token == null || token.isEmpty
-                    ? () {}
-                    : () async {
-                        await _performBulkZatcaSync(
-                          idsToSync: const <int>[],
-                          syncType: 'all',
-                          accessToken: token,
-                        );
-                      },
-                height: 40,
-                width: 110,
-                fontSize: FontSize.s10,
-              ),
-              const SizedBox(width: 8),
-              CustomRoundButton(
-                title: 'invoice.sync_failed_button'.tr,
-                boxColor: Colors.redAccent,
-                textColor: Colors.white,
-                borderColor: Colors.transparent,
-                isLoading: isBulkSending && activeBulkSyncType == 'failed',
-                fct: isBulkSending || token == null || token.isEmpty
-                    ? () {}
-                    : () async {
-                        await _performBulkZatcaSync(
-                          idsToSync: const <int>[],
-                          syncType: 'failed',
-                          accessToken: token,
-                        );
-                      },
-                height: 40,
-                width: 110,
-                fontSize: FontSize.s10,
-              ),
-              const SizedBox(width: 8),
-              CustomRoundButton(
-                title: 'invoice.sync_not_send_button'.tr,
-                boxColor: Colors.orangeAccent,
-                textColor: Colors.white,
-                borderColor: Colors.transparent,
-                isLoading: isBulkSending && activeBulkSyncType == 'not_sent',
-                fct: isBulkSending || token == null || token.isEmpty
-                    ? () {}
-                    : () async {
-                        await _performBulkZatcaSync(
-                          idsToSync: const <int>[],
-                          syncType: 'not_sent',
-                          accessToken: token,
-                        );
-                      },
-                height: 40,
-                width: 130,
-                fontSize: FontSize.s10,
-              ),
-              const SizedBox(width: 8),
-              CustomRoundButton(
-                title: 'invoice.sync_selected_button'.tr,
-                boxColor: hasSelection ? Colors.lightBlue : Colors.grey,
-                textColor: Colors.white,
-                borderColor: Colors.transparent,
-                isLoading: isBulkSending && activeBulkSyncType == 'selected',
-                fct: (isBulkSending ||
-                        !hasSelection ||
-                        token == null ||
-                        token.isEmpty)
-                    ? () {}
-                    : () async {
-                        final selectedList = selectedInvoiceIds.toList();
-                        await _performBulkZatcaSync(
-                          idsToSync: selectedList,
-                          syncType: 'selected',
-                          accessToken: token,
-                        );
-                      },
-                height: 40,
-                width: 130,
-                fontSize: FontSize.s10,
-              ),
-              const Spacer(),
-              // Selection info on the right
-              Text(
-                'invoice.records_selected'
-                    .tr
-                    .replaceAll('@count', selectedInvoiceIds.length.toString()),
-                style: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s14,
-                  0.20,
-                  ColorManager.textColor,
-                ),
-              ),
-              if ((provider.invoiceListDetails?.isNotEmpty ?? false) &&
-                  selectedInvoiceIds.length <
-                      (provider.invoiceListDetails?.length ?? 0)) ...[
-                const SizedBox(width: 15),
-                InkWell(
-                  onTap: () {
-                    final currentInvoices =
-                        provider.invoiceListDetails ?? const <Invoice>[];
-                    setState(() {
-                      for (final inv in currentInvoices) {
-                        selectedInvoiceIds.add(inv.id);
-                      }
-                    });
-                    debugPrint(
-                        "[DEBUG] Bulk Select: Found ${currentInvoices.length}, Selected ${selectedInvoiceIds.length}");
-                  },
-                  child: Text(
-                    'invoice.select_page'.tr,
-                    style: buildCustomStyle(
-                      FontWeightManager.bold,
-                      FontSize.s11,
-                      0.18,
-                      ColorManager.kPrimaryColor,
-                    ),
-                  ),
-                ),
-              ],
-              const SizedBox(width: 15),
-              InkWell(
-                onTap: () {
-                  setState(() {
-                    selectedInvoiceIds.clear();
-                  });
-                },
-                child: Text(
-                  'invoice.unselect'.tr,
-                  style: buildCustomStyle(
-                    FontWeightManager.bold,
-                    FontSize.s11,
-                    0.18,
-                    const Color.fromARGB(255, 198, 78, 78),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInvoiceNumberSearch() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final provider = context.read<InvoiceProvider>();
+    final token = context.read<AuthModel>().token;
+    final settings = context.read<AppSettingsProvider>();
+    final disabled = isBulkSending ||
+        provider.isLoading ||
+        !settings.isReady ||
+        !(settings.appSettings?.zatcaPhase2Enabled ?? false) ||
+        token == null ||
+        token.isEmpty;
+    Widget sync(String mode, String label, Color color) => FilledButton(
+        onPressed: disabled ||
+                (mode == 'selected' && selectedInvoiceIds.isEmpty)
+            ? null
+            : () => _performBulkZatcaSync(
+                idsToSync:
+                    mode == 'selected' ? selectedInvoiceIds.toList() : const [],
+                syncType: mode,
+                accessToken: token),
+        style: FilledButton.styleFrom(
+            backgroundColor: color,
+            minimumSize: const Size(0, 40),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            textStyle:
+                const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10))),
+        child: Text(isBulkSending && activeBulkSyncType == mode
+            ? 'invoice.sending'.tr
+            : label));
+    final syncActions = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        // Padding(
-        //   padding: const EdgeInsets.all(8.0),
-        //   child: Text(
-        //     "Invoice No",
-        //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-        //         0.27, Colors.black.withOpacity(0.6)),
-        //   ),
-        // ),
-        // const SizedBox(height: 8),
-        BuildBoxShadowContainer(
-          height: 45,
-          width: double.infinity,
-          circleRadius: 7,
-          child: TextFormField(
-            controller: invoiceNumberController,
-            focusNode: invoiceNoFocusNode,
-            autofocus: true,
-            onChanged: (value) => _debounceInvoiceSearch(),
-            cursorColor: ColorManager.kPrimaryColor,
-            cursorHeight: 13,
-            textInputAction: TextInputAction.next,
-            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
-            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                0.18, ColorManager.textColor),
-            decoration: decoration.copyWith(
-              hintText: 'invoice.search_invoice_no_hint'.tr,
-              hintStyle: buildCustomStyle(FontWeightManager.medium,
-                  FontSize.s10, 0.18, ColorManager.textColor),
-              prefixIconColor: Colors.black,
-              focusedBorder: OutlineInputBorder(
-                borderSide: const BorderSide(
-                    color: ColorManager.kPrimaryColor, width: 1.2),
-                borderRadius: BorderRadius.circular(7),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(7),
-              ),
-            ),
-          ),
-        ),
+        sync('all', 'invoice.sync_all_button'.tr, Colors.blueAccent),
+        sync('failed', 'invoice.sync_failed_button'.tr, Colors.redAccent),
+        sync('not_sent', 'invoice.sync_not_send_button'.tr, Colors.orange),
+        sync('selected', 'invoice.sync_selected_button'.tr, Colors.blueAccent),
       ],
     );
-  }
-
-  Widget _buildPhoneSearch() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 10.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Padding(
-          //   padding: const EdgeInsets.all(8.0),
-          //   child: Text(
-          //     "Phone",
-          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-          //         0.27, Colors.black.withOpacity(0.6)),
-          //   ),
-          // ),
-          // const SizedBox(height: 8),
-          BuildBoxShadowContainer(
-            height: 45,
-            width: double.infinity,
-            circleRadius: 7,
-            child: TextFormField(
-              controller: phoneController,
-              focusNode: phoneFocusNode,
-              onChanged: (value) => _debounceInvoiceSearch(),
-              cursorColor: ColorManager.kPrimaryColor,
-              cursorHeight: 13,
-              keyboardType: TextInputType.phone,
-              textInputAction: TextInputAction.next,
-              onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                  0.18, ColorManager.textColor),
-              decoration: decoration.copyWith(
-                hintText: 'invoice.search_phone_hint'.tr,
-                hintStyle: buildCustomStyle(FontWeightManager.medium,
-                    FontSize.s10, 0.18, ColorManager.textColor),
-                prefixIconColor: Colors.black,
-                focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(
-                      color: ColorManager.kPrimaryColor, width: 1.2),
-                  borderRadius: BorderRadius.circular(7),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(7),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmailSearch() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 10.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Padding(
-          //   padding: const EdgeInsets.all(8.0),
-          //   child: Text(
-          //     "Email",
-          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-          //         0.27, Colors.black.withOpacity(0.6)),
-          //   ),
-          // ),
-          // const SizedBox(height: 8),
-          BuildBoxShadowContainer(
-            height: 45,
-            width: double.infinity,
-            circleRadius: 7,
-            child: TextFormField(
-              controller: emailController,
-              onChanged: (value) => searchInvoices(),
-              cursorColor: ColorManager.kPrimaryColor,
-              cursorHeight: 13,
-              keyboardType: TextInputType.emailAddress,
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                  0.18, ColorManager.textColor),
-              decoration: decoration.copyWith(
-                hintText: 'invoice.search_email_hint'.tr,
-                hintStyle: buildCustomStyle(FontWeightManager.medium,
-                    FontSize.s10, 0.18, ColorManager.textColor),
-                prefixIconColor: Colors.black,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDateRangeSearch() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 10.0),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Padding(
-                //   padding: const EdgeInsets.all(8.0),
-                //   child: Text(
-                //     "From Date",
-                //     style: buildCustomStyle(FontWeightManager.regular,
-                //         FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
-                //   ),
-                // ),
-                // const SizedBox(height: 8),
-                BuildBoxShadowContainer(
-                  height: 45,
-                  width: double.infinity,
-                  circleRadius: 7,
-                  child: TextFormField(
-                    controller: dateFromController,
-                    focusNode: dateFromFocusNode,
-                    onTap: () => _selectDate(context, isFromDate: true),
-                    readOnly: true,
-                    cursorColor: ColorManager.kPrimaryColor,
-                    textInputAction: TextInputAction.next,
-                    onFieldSubmitted: (_) =>
-                        _selectDate(context, isFromDate: true),
-                    style: buildCustomStyle(FontWeightManager.medium,
-                        FontSize.s10, 0.18, ColorManager.textColor),
-                    decoration: decoration.copyWith(
-                      hintText: 'invoice.date_range_hint'.tr,
-                      hintStyle: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s10,
-                          0.18,
-                          ColorManager.textColor.withOpacity(.5)),
-                      prefixIcon: Container(
-                        padding: const EdgeInsets.all(8),
-                        child: const Icon(
-                          Icons.calendar_today,
-                          size: 16,
-                          color: ColorManager.kPrimaryColor,
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: const BorderSide(
-                            color: ColorManager.kPrimaryColor, width: 1.2),
-                        borderRadius: BorderRadius.circular(7),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(7),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Padding(
-                //   padding: const EdgeInsets.all(8.0),
-                //   child: Text(
-                //     "To Date",
-                //     style: buildCustomStyle(FontWeightManager.regular,
-                //         FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
-                //   ),
-                // ),
-                // const SizedBox(height: 8),
-                BuildBoxShadowContainer(
-                  height: 45,
-                  width: double.infinity,
-                  circleRadius: 7,
-                  child: TextFormField(
-                    controller: dateToController,
-                    focusNode: dateToFocusNode,
-                    onTap: () => _selectDate(context, isFromDate: false),
-                    readOnly: true,
-                    cursorColor: ColorManager.kPrimaryColor,
-                    textInputAction: TextInputAction.next,
-                    onFieldSubmitted: (_) =>
-                        _selectDate(context, isFromDate: false),
-                    style: buildCustomStyle(FontWeightManager.medium,
-                        FontSize.s10, 0.18, ColorManager.textColor),
-                    decoration: decoration.copyWith(
-                      hintText: 'invoice.date_range_hint'.tr,
-                      hintStyle: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s10,
-                          0.18,
-                          ColorManager.textColor.withOpacity(.5)),
-                      prefixIcon: Container(
-                        padding: const EdgeInsets.all(8),
-                        child: const Icon(
-                          Icons.calendar_today,
-                          size: 16,
-                          color: ColorManager.kPrimaryColor,
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: const BorderSide(
-                            color: ColorManager.kPrimaryColor, width: 1.2),
-                        borderRadius: BorderRadius.circular(7),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(7),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusFilter() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final selectionActions = Wrap(
+      alignment: WrapAlignment.end,
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        // Padding(
-        //   padding: const EdgeInsets.all(8.0),
-        //   child: Text(
-        //     "Status",
-        //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-        //         0.27, Colors.black.withOpacity(0.6)),
-        //   ),
-        // ),
-        // const SizedBox(height: 8),
-        Consumer<InvoiceProvider>(
-          builder: (context, invoiceProvider, child) {
-            List<String> statusOptions = invoiceProvider.getStatusOptions();
-
-            // Find the display text for the currently selected status
-            String? selectedStatusDisplay;
-            if (selectedStatus != null) {
-              selectedStatusDisplay = statusOptions.contains(selectedStatus)
-                  ? selectedStatus
-                  : "All Status";
-            }
-
-            return BuildDropDownWithSearch<String>(
-              title: null,
-              showName: false,
-              hintText: 'invoice.all_status'.tr,
-              value: selectedStatus,
-              items: statusOptions
-                  .where((status) => status != "All Status")
-                  .toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  selectedStatus = newValue;
-                });
-                searchInvoices();
-              },
-              displayText: (status) => UiCodeLabels.status(status),
-              height: 45,
-              margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-              focusNode: statusFocusNode,
-            );
-          },
-        ),
+        Text('invoice.records_selected'
+            .trParams({'count': '${selectedInvoiceIds.length}'})),
+        TextButton(
+            onPressed: disabled
+                ? null
+                : () => setState(() {
+                      selectedInvoiceIds.addAll(
+                          (provider.invoiceListDetails ?? []).map((v) => v.id));
+                    }),
+            style: TextButton.styleFrom(
+                foregroundColor: ColorManager.kPrimaryColor),
+            child: Text('invoice.select_page'.tr)),
+        TextButton(
+            onPressed: isBulkSending
+                ? null
+                : () => setState(() => selectedInvoiceIds.clear()),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
+            child: Text('invoice.unselect'.tr)),
       ],
     );
+    return LayoutBuilder(builder: (context, constraints) {
+      if (constraints.maxWidth >= 1000) {
+        return Row(
+          children: [
+            Expanded(flex: 3, child: syncActions),
+            const SizedBox(width: 16),
+            Flexible(
+              flex: 2,
+              child: Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: selectionActions),
+            ),
+          ],
+        );
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          syncActions,
+          const SizedBox(height: 8),
+          Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: selectionActions),
+        ],
+      );
+    });
   }
-
-  Widget _buildZatcaStatusFilter() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 10.0),
-      child: Consumer<InvoiceProvider>(
-        builder: (context, invoiceProvider, child) {
-          final zatcaStatusOptions = invoiceProvider.getZatcaStatusOptions();
-
-          return BuildDropDownWithSearch<String>(
-            title: null,
-            showName: false,
-            hintText: 'invoice.all_zatca_status'.tr,
-            value: selectedZatcaStatus,
-            items: zatcaStatusOptions
-                .where((status) => status != "All ZATCA Status")
-                .toList(),
-            onChanged: (String? newValue) {
-              setState(() {
-                selectedZatcaStatus = newValue;
-              });
-              searchInvoices();
-            },
-            displayText: (status) => UiCodeLabels.zatca(status),
-            height: 45,
-            margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-            focusNode: zatcaFocusNode,
-          );
-        },
-      ),
-    );
-  }
-
-  //   Widget _buildOrderNumberSearch() {
-  //   return Padding(
-  //     padding: const EdgeInsets.only(left: 10.0),
-  //     child: Column(
-  //       crossAxisAlignment: CrossAxisAlignment.start,
-  //       children: [
-  //         Padding(
-  //           padding: const EdgeInsets.all(8.0),
-  //           child: Text(
-  //             "Order No",
-  //             style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-  //                 0.27, Colors.black.withOpacity(0.6)),
-  //           ),
-  //         ),
-  //         const SizedBox(height: 8),
-  //         BuildBoxShadowContainer(
-  //           height: 45,
-  //           width: double.infinity,
-  //           circleRadius: 7,
-  //           child: TextFormField(
-  //             controller: orderNumberController,
-  //             onChanged: (value) => searchInvoices(),
-  //             cursorColor: ColorManager.kPrimaryColor,
-  //             cursorHeight: 13,
-  //             style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-  //                 0.18, ColorManager.textColor),
-  //             decoration: decoration.copyWith(
-  //               hintText: "Order No",
-  //               hintStyle: buildCustomStyle(FontWeightManager.medium,
-  //                   FontSize.s10, 0.18, ColorManager.textColor),
-  //               prefixIconColor: Colors.black,
-  //             ),
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
 
   Future<void> _showInvoiceDetails(Invoice invoice) async {
     final String? token = Provider.of<AuthModel>(context, listen: false).token;
@@ -2063,478 +1683,6 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
 //   }
 // }
 
-  Widget _buildDetailRow(String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 150,
-            child: Text(
-              title,
-              style: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s14,
-                0.21,
-                Colors.black54,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              value.isNotEmpty ? value : 'N/A',
-              style: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s14,
-                0.21,
-                Colors.black,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSearchTextField() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 10.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Padding(
-          //   padding: const EdgeInsets.all(8.0),
-          //   child: Text(
-          //     "Name",
-          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-          //         0.27, Colors.black.withOpacity(0.6)),
-          //   ),
-          // ),
-          // const SizedBox(
-          //   height: 8,
-          // ),
-          BuildBoxShadowContainer(
-            height: 45,
-            width: double.infinity,
-            circleRadius: 7,
-            child: TextFormField(
-              controller: searchTextController,
-              focusNode: nameFocusNode,
-              onChanged: (value) {
-                _debounceInvoiceSearch();
-              },
-              cursorColor: ColorManager.kPrimaryColor,
-              cursorHeight: 13,
-              textInputAction: TextInputAction.next,
-              onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                  0.18, ColorManager.textColor),
-              decoration: decoration.copyWith(
-                hintText: 'invoice.search_name_hint'.tr,
-                hintStyle: buildCustomStyle(FontWeightManager.medium,
-                    FontSize.s10, 0.18, ColorManager.textColor),
-                prefixIconColor: Colors.black,
-                focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(
-                      color: ColorManager.kPrimaryColor, width: 1.2),
-                  borderRadius: BorderRadius.circular(7),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(7),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Map<int, TableColumnWidth> _invoiceTableColumnWidths(
-    bool showZatcaControls,
-  ) {
-    final actionWidth = FlexColumnWidth(
-      MediaQuery.of(context).size.width < 900 ? 1.8 : 1.4,
-    );
-
-    if (showZatcaControls) {
-      return {
-        0: const FixedColumnWidth(40),
-        1: const FlexColumnWidth(1.2),
-        2: const FlexColumnWidth(0.8),
-        3: const FlexColumnWidth(1.4),
-        4: const FlexColumnWidth(1.1),
-        5: const FlexColumnWidth(0.7),
-        6: const FlexColumnWidth(1.1),
-        7: const FlexColumnWidth(0.8),
-        8: const FlexColumnWidth(1.2),
-        9: actionWidth,
-      };
-    }
-
-    return {
-      0: const FlexColumnWidth(1.2),
-      1: const FlexColumnWidth(0.8),
-      2: const FlexColumnWidth(1.4),
-      3: const FlexColumnWidth(1.1),
-      4: const FlexColumnWidth(0.7),
-      5: const FlexColumnWidth(1.1),
-      6: const FlexColumnWidth(0.8),
-      7: actionWidth,
-    };
-  }
-
-  Widget _buildInvoiceTable({required bool showZatcaControls}) {
-    return Expanded(
-      child:
-          Consumer<InvoiceProvider>(builder: (context, invoiceProvider, child) {
-        final isLoading = invoiceProvider.isLoading;
-        final invoiceList = invoiceProvider.invoiceListDetails;
-
-        return Column(
-          children: [
-            Expanded(
-              child: isLoading
-                  ? const Center(child: CircularProgressIndicator.adaptive())
-                  : BuildBoxShadowContainer(
-                      margin: const EdgeInsets.only(top: 5),
-                      circleRadius: 7,
-                      offsetValue: const Offset(2, 2),
-                      blurRadius: 8.0,
-                      color: Colors.white,
-                      child: Column(
-                        children: [
-                          // Fixed table header
-                          Container(
-                            decoration: const BoxDecoration(
-                              color: ColorManager.tableBGColor,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black12,
-                                  offset: Offset(0, 2),
-                                  blurRadius: 2.0,
-                                ),
-                              ],
-                            ),
-                            child: Table(
-                              columnWidths: _invoiceTableColumnWidths(
-                                showZatcaControls,
-                              ),
-                              border: null,
-                              defaultVerticalAlignment:
-                                  TableCellVerticalAlignment.middle,
-                              children: [
-                                TableRow(
-                                  children: [
-                                    if (showZatcaControls)
-                                      _buildTableHeader(""),
-                                    _buildTableHeader(
-                                        'invoice.field_invoice_number'.tr),
-                                    _buildTableHeader('invoice.col_amount'.tr),
-                                    _buildTableHeader('invoice.col_name'.tr),
-                                    _buildTableHeader(
-                                        'invoice.field_invoice_date'.tr),
-                                    _buildTableHeader('invoice.field_type'.tr),
-                                    _buildTableHeader(
-                                        'invoice.field_due_date'.tr),
-                                    _buildTableHeader(
-                                        'invoice.field_status'.tr),
-                                    if (showZatcaControls)
-                                      _buildTableHeader(
-                                          'invoice.col_zatca_status'.tr),
-                                    _buildTableHeader('invoice.col_action'.tr),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          // Scrollable table body
-                          Expanded(
-                            child: MouseRegion(
-                              cursor: SystemMouseCursors.grab,
-                              child: ScrollConfiguration(
-                                behavior:
-                                    ScrollConfiguration.of(context).copyWith(
-                                  dragDevices: {
-                                    PointerDeviceKind.mouse,
-                                    PointerDeviceKind.touch,
-                                    PointerDeviceKind.stylus,
-                                    PointerDeviceKind.trackpad,
-                                  },
-                                ),
-                                child: invoiceList == null ||
-                                        invoiceList.isEmpty
-                                    ? _buildNoInvoicesFoundUI()
-                                    : SingleChildScrollView(
-                                        physics: const BouncingScrollPhysics(),
-                                        scrollDirection: Axis.vertical,
-                                        child: Table(
-                                          columnWidths:
-                                              _invoiceTableColumnWidths(
-                                            showZatcaControls,
-                                          ),
-                                          border: null,
-                                          defaultVerticalAlignment:
-                                              TableCellVerticalAlignment.middle,
-                                          children: invoiceList
-                                              .asMap()
-                                              .entries
-                                              .map((entry) {
-                                            final int index = entry.key;
-                                            final invoice = entry.value;
-                                            final isSelected =
-                                                selectedInvoiceIds
-                                                    .contains(invoice.id);
-                                            return TableRow(
-                                              decoration: BoxDecoration(
-                                                color: index % 2 == 0
-                                                    ? Colors.white
-                                                    : Colors.grey
-                                                        .withOpacity(0.1),
-                                              ),
-                                              children: [
-                                                if (showZatcaControls)
-                                                  TableCell(
-                                                    verticalAlignment:
-                                                        TableCellVerticalAlignment
-                                                            .middle,
-                                                    child: Checkbox(
-                                                      value: isSelected,
-                                                      activeColor: ColorManager
-                                                          .kPrimaryColor,
-                                                      onChanged: (bool? value) {
-                                                        setState(() {
-                                                          if (value == true) {
-                                                            selectedInvoiceIds
-                                                                .add(
-                                                                    invoice.id);
-                                                          } else {
-                                                            selectedInvoiceIds
-                                                                .remove(
-                                                                    invoice.id);
-                                                          }
-                                                        });
-                                                      },
-                                                    ),
-                                                  ),
-                                                TableCell(
-                                                  verticalAlignment:
-                                                      TableCellVerticalAlignment
-                                                          .middle,
-                                                  child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            8.0),
-                                                    child: Row(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .center,
-                                                      children: [
-                                                        Text(
-                                                          invoice.invoiceNumber,
-                                                          textAlign:
-                                                              TextAlign.center,
-                                                          style:
-                                                              buildCustomStyle(
-                                                            FontWeightManager
-                                                                .medium,
-                                                            FontSize.s9,
-                                                            0.13,
-                                                            Colors.black,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(
-                                                            width: 6),
-                                                        GestureDetector(
-                                                          onTap: () {
-                                                            Clipboard.setData(
-                                                                ClipboardData(
-                                                                    text: invoice
-                                                                        .invoiceNumber));
-                                                            showScaffold(
-                                                              context: context,
-                                                              message:
-                                                                  'invoice.invoice_number_copied'
-                                                                      .tr,
-                                                            );
-                                                          },
-                                                          child: Icon(
-                                                            Icons.copy,
-                                                            size: 14,
-                                                            color: ColorManager
-                                                                .textColor
-                                                                .withOpacity(
-                                                                    0.6),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ),
-                                                _buildTableCell(
-                                                    invoice.amount.toString()),
-                                                TableCell(
-                                                  verticalAlignment:
-                                                      TableCellVerticalAlignment
-                                                          .middle,
-                                                  child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            8.0),
-                                                    child: Center(
-                                                      child: SelectableText(
-                                                        invoice
-                                                            .customer.user.name
-                                                            .toString(),
-                                                        textAlign:
-                                                            TextAlign.center,
-                                                        style: buildCustomStyle(
-                                                          FontWeightManager
-                                                              .medium,
-                                                          FontSize.s9,
-                                                          0.13,
-                                                          Colors.black,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                                _buildTableCell(
-                                                    invoice.invoiceDate),
-                                                _buildTableCell(
-                                                    _localizedInvoiceType(
-                                                        invoice.type)),
-                                                _buildTableCell(
-                                                    invoice.dueDate),
-                                                Center(
-                                                    child: _buildStatusChip(
-                                                        invoice.status)),
-                                                if (showZatcaControls)
-                                                  Center(
-                                                    child:
-                                                        _buildZatcaStatusChip(
-                                                            invoice),
-                                                  ),
-                                                Center(
-                                                  child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            8.0),
-                                                    child: Row(
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      children: [
-                                                        const SizedBox(
-                                                            width: 8),
-                                                        BuildBoxShadowContainer(
-                                                          margin:
-                                                              const EdgeInsets
-                                                                  .only(
-                                                                  left: 5,
-                                                                  right: 5),
-                                                          circleRadius: 5,
-                                                          child: IconButton(
-                                                            icon: Icon(
-                                                              Icons.visibility,
-                                                              size: 18,
-                                                              color: ColorManager
-                                                                  .kPrimaryColor
-                                                                  .withOpacity(
-                                                                      0.9),
-                                                            ),
-                                                            onPressed: () =>
-                                                                _showInvoiceDetails(
-                                                                    invoice),
-                                                            constraints:
-                                                                const BoxConstraints(
-                                                              minWidth: 36,
-                                                              minHeight: 36,
-                                                            ),
-                                                            padding:
-                                                                EdgeInsets.zero,
-                                                          ),
-                                                        ),
-                                                        Builder(
-                                                          builder: (context) {
-                                                            final appSettings =
-                                                                Provider.of<AppSettingsProvider>(
-                                                                        context,
-                                                                        listen:
-                                                                            false)
-                                                                    .appSettings;
-                                                            final bool phase1 =
-                                                                appSettings
-                                                                        ?.zatcaPhase1Enabled ??
-                                                                    false;
-                                                            final bool phase2 =
-                                                                appSettings
-                                                                        ?.zatcaPhase2Enabled ??
-                                                                    false;
-                                                            final bool
-                                                                showZatcaMenu =
-                                                                phase1 ||
-                                                                    phase2;
-                                                            if (!showZatcaMenu) {
-                                                              return const SizedBox
-                                                                  .shrink();
-                                                            }
-                                                            return BuildBoxShadowContainer(
-                                                              margin:
-                                                                  const EdgeInsets
-                                                                      .only(
-                                                                      left: 5,
-                                                                      right: 5),
-                                                              circleRadius: 5,
-                                                              child: IconButton(
-                                                                icon: Icon(
-                                                                  Icons
-                                                                      .more_vert,
-                                                                  size: 18,
-                                                                  color: ColorManager
-                                                                      .kPrimaryColor
-                                                                      .withOpacity(
-                                                                          0.9),
-                                                                ),
-                                                                onPressed: () =>
-                                                                    _showInvoiceActionsSheet(
-                                                                        invoice),
-                                                                constraints:
-                                                                    const BoxConstraints(
-                                                                  minWidth: 36,
-                                                                  minHeight: 36,
-                                                                ),
-                                                                padding:
-                                                                    EdgeInsets
-                                                                        .zero,
-                                                              ),
-                                                            );
-                                                          },
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            );
-                                          }).toList(),
-                                        ),
-                                      ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-            ),
-          ],
-        );
-      }),
-    );
-  }
-
   Future<void> _performZatcaPhase1Print(Invoice invoice) async {
     try {
       final String? token =
@@ -2632,52 +1780,34 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     }
   }
 
-  Widget _buildStatusChip(String status) {
-    Color backgroundColor;
-    Color textColor;
+  Widget _statusBadge(String label, Color color) => Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(label,
+              style: TextStyle(
+                  color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+        ),
+      );
 
-    switch (status.toUpperCase()) {
-      case 'paid':
-      case 'PAID':
-        backgroundColor = Colors.green.withOpacity(0.1);
-        textColor = Colors.green;
-        break;
-      case 'pending':
-      case 'PENDING':
-        backgroundColor = Colors.orange.withOpacity(0.1);
-        textColor = Colors.orange;
-        break;
-      case 'FAIL':
-      case 'FAILED':
-        backgroundColor = Colors.red.withOpacity(0.1);
-        textColor = Colors.red;
-        break;
-      default:
-        backgroundColor = Colors.grey.withOpacity(0.1);
-        textColor = Colors.grey;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
+  Widget _buildStatusChip(String status) => _statusBadge(
         switch (status.toUpperCase()) {
           'PAID' => 'invoice.status_paid'.tr,
           'PENDING' => 'invoice.status_pending'.tr,
           'FAIL' || 'FAILED' => 'invoice.status_failed'.tr,
           _ => status,
         },
-        style: TextStyle(
-          color: textColor,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
+        switch (status.toUpperCase()) {
+          'PAID' => AppColors.green,
+          'PENDING' => const Color(0xFF9A6700),
+          'FAIL' || 'FAILED' => AppColors.red,
+          _ => AppColors.muted,
+        },
+      );
 
   String _localizedInvoiceType(String type) => switch (type.toLowerCase()) {
         'order' => 'invoice.type_order'.tr,
@@ -2686,52 +1816,20 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       };
 
   Widget _buildZatcaStatusChip(Invoice invoice) {
-    String label = 'invoice.zatca_status_not_sent'.tr;
-    Color backgroundColor = Colors.orange.withOpacity(0.12);
-    Color textColor = Colors.orange;
-
-    final String? zatcaStatus = invoice.zatcaStatus?.toLowerCase();
-    final String? zatcaRequestStatus =
-        invoice.zatcaRequestStatus?.toLowerCase();
-
-    // Determine states based on backend values
-    final bool isZatcaPass = (zatcaStatus == 'pass' ||
-        zatcaStatus == 'success' ||
-        zatcaStatus == 'sent');
-    final bool isRequestFailed = (zatcaRequestStatus == 'failed');
-    final bool isRequestPending =
-        (zatcaRequestStatus == 'pending' || zatcaRequestStatus == 'processing');
-
-    if (isZatcaPass) {
-      label = 'invoice.zatca_status_sent'.tr;
-      backgroundColor = Colors.green.withOpacity(0.12);
-      textColor = Colors.green;
-    } else if (isRequestFailed) {
-      label = 'invoice.zatca_status_failed'.tr;
-      backgroundColor = Colors.red.withOpacity(0.12);
-      textColor = Colors.red;
-    } else if (isRequestPending) {
-      label = 'invoice.zatca_status_pending'.tr;
-      backgroundColor = Colors.blue.withOpacity(0.12);
-      textColor = Colors.blue;
+    final status = invoice.zatcaStatus?.toLowerCase();
+    final requestStatus = invoice.zatcaRequestStatus?.toLowerCase();
+    if (status == 'pass' || status == 'success' || status == 'sent') {
+      return _statusBadge('invoice.zatca_status_sent'.tr, AppColors.green);
     }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        label,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: textColor,
-          fontSize: 9,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
+    if (requestStatus == 'failed') {
+      return _statusBadge('invoice.zatca_status_failed'.tr, AppColors.red);
+    }
+    if (requestStatus == 'pending' || requestStatus == 'processing') {
+      return _statusBadge(
+          'invoice.zatca_status_pending'.tr, ColorManager.kPrimaryColor);
+    }
+    return _statusBadge(
+        'invoice.zatca_status_not_sent'.tr, const Color(0xFF9A6700));
   }
 
   Future<bool> _showZatcaConfirmationDialog({
@@ -2863,215 +1961,5 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           ),
         ) ??
         false;
-  }
-
-  Widget _buildNoInvoicesFoundUI() {
-    return Container(
-      height: double.infinity,
-      width: double.infinity,
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.receipt_long,
-            size: 60,
-            color: ColorManager.kPrimaryColor.withOpacity(0.7),
-          ),
-          const SizedBox(height: 15),
-          Text(
-            'invoice.no_invoices_found'.tr,
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s18,
-              0.27,
-              ColorManager.textColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'invoice.try_adjusting_search'.tr,
-            style: buildCustomStyle(
-              FontWeightManager.regular,
-              FontSize.s14,
-              0.20,
-              Colors.grey,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTableHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-      child: Text(
-        title,
-        textAlign: TextAlign.center,
-        style: buildCustomStyle(
-          FontWeightManager.medium,
-          FontSize.s12,
-          0.18,
-          ColorManager.kPrimaryColor,
-        ),
-      ),
-    );
-  }
-
-  List<TableRow> _buildTableRows(List<Invoice>? invoices) {
-    return invoices?.asMap().entries.map((entry) {
-          final int index = entry.key;
-          final invoice = entry.value;
-          return TableRow(
-            decoration: BoxDecoration(
-              color:
-                  index % 2 == 0 ? Colors.white : Colors.grey.withOpacity(0.1),
-            ),
-            children: [
-              TableCell(
-                verticalAlignment: TableCellVerticalAlignment.middle,
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Center(
-                    child: SelectableText(
-                      invoice.customer.user.name.toString(),
-                      textAlign: TextAlign.center,
-                      style: buildCustomStyle(
-                        FontWeightManager.medium,
-                        FontSize.s9,
-                        0.13,
-                        Colors.black,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              TableCell(
-                verticalAlignment: TableCellVerticalAlignment.middle,
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        invoice.invoiceNumber,
-                        textAlign: TextAlign.center,
-                        style: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s9,
-                          0.13,
-                          Colors.black,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      GestureDetector(
-                        onTap: () {
-                          Clipboard.setData(
-                              ClipboardData(text: invoice.invoiceNumber));
-                          showScaffold(
-                            context: context,
-                            message: 'invoice.number_copied'.tr,
-                          );
-                        },
-                        child: Icon(
-                          Icons.copy,
-                          size: 14,
-                          color: ColorManager.textColor.withOpacity(0.6),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              _buildTableCell(_localizedInvoiceType(invoice.type)),
-              _buildTableCell(invoice.invoiceDate),
-              _buildTableCell(invoice.dueDate),
-              _buildTableCell(invoice.amount.toString()),
-              _buildTableCell(switch (invoice.status.toUpperCase()) {
-                'PAID' => 'invoice.status_paid'.tr,
-                'PENDING' => 'invoice.status_pending'.tr,
-                'FAIL' || 'FAILED' => 'invoice.status_failed'.tr,
-                _ => invoice.status,
-              }),
-              _buildActionCell(invoice.id),
-            ],
-          );
-        }).toList() ??
-        [];
-  }
-
-  TableCell _buildTableCell(String content) {
-    return TableCell(
-      verticalAlignment: TableCellVerticalAlignment.middle,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Text(
-          content,
-          textAlign: TextAlign.center,
-          style: buildCustomStyle(
-            FontWeightManager.medium,
-            FontSize.s9,
-            0.13,
-            Colors.black,
-          ),
-        ),
-      ),
-    );
-  }
-
-  TableCell _buildActionCell(int transactionId) {
-    return TableCell(
-      verticalAlignment: TableCellVerticalAlignment.middle,
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: BuildBoxShadowContainer(
-            margin: const EdgeInsets.only(left: 5, right: 5),
-            circleRadius: 5,
-            child: IconButton(
-              icon: Icon(
-                Icons.visibility,
-                size: 18,
-                color: ColorManager.kPrimaryColor.withOpacity(0.9),
-              ),
-              onPressed: () {
-                String? token =
-                    Provider.of<AuthModel>(context, listen: false).token;
-                InvoiceProvider invoiceProvider =
-                    Provider.of<InvoiceProvider>(context, listen: false);
-                invoiceProvider.callDetailsOfInvoice(
-                    id: transactionId, accessToken: token ?? "");
-                sideBarController.index.value = 31;
-              },
-              constraints: const BoxConstraints(
-                minWidth: 36,
-                minHeight: 36,
-              ),
-              padding: EdgeInsets.zero,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPaginationControls() {
-    return Consumer<InvoiceProvider>(
-        builder: (context, invoiceProvider, child) {
-      debugPrint(
-          "Building pagination controls: currentPage=${invoiceProvider.currentPage}, totalPages=${invoiceProvider.totalPages}");
-      return PaginationControl(
-        currentPage: invoiceProvider.currentPage,
-        totalPages: invoiceProvider.totalPages,
-        onPageChanged: (int page) {
-          debugPrint("Page changed to: $page");
-          _invoiceSearchDebounce?.cancel();
-          _clearSelectedInvoices();
-          invoiceProvider.goToPage(page);
-        },
-      );
-    });
   }
 }

@@ -31,6 +31,7 @@ class InvoiceProvider extends ChangeNotifier {
   Invoice? listInvoice;
   InvoiceDetails? invoiceDetails;
   List<receipt_list.Receipt>? receiptListDetails;
+  int _receiptRequestGeneration = 0;
   ReceiptDetails? receiptDetails;
   List<ListTransaction>? transactionListDetails;
   List<Invoice>? invoiceListDetails;
@@ -198,6 +199,7 @@ class InvoiceProvider extends ChangeNotifier {
     String? type, // credit | debit
     int? perPage,
     int? page,
+    bool updateState = true,
   }) async {
     // Build query parameters
     final queryParams = <String, String>{
@@ -242,12 +244,14 @@ class InvoiceProvider extends ChangeNotifier {
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         // Parse into existing model for UI consumption
-        try {
-          final listModel = ListTransactionModel.fromJson(jsonData);
-          transactionListDetails = listModel.data?.transactions;
-          notifyListeners();
-        } catch (e) {
-          debugPrint('Error parsing customer transactions: $e');
+        if (updateState) {
+          try {
+            final listModel = ListTransactionModel.fromJson(jsonData);
+            transactionListDetails = listModel.data?.transactions;
+            notifyListeners();
+          } catch (e) {
+            debugPrint('Error parsing customer transactions: $e');
+          }
         }
         return jsonData;
       } else {
@@ -438,7 +442,15 @@ class InvoiceProvider extends ChangeNotifier {
   void goToReceiptPage(int page) {
     if (page < 1 || page > _receiptTotalPages) return;
 
-    applyReceiptFiltersLocally(filterName: _receiptFilterName, page: page);
+    applyReceiptFiltersLocally(
+        filterName: _receiptFilterName,
+        filterReceiptNumber: _receiptFilterReceiptNumber,
+        filterPaymentReference: _receiptFilterPaymentReference,
+        filterStatus: _receiptFilterStatus,
+        filterPaymentMethod: _receiptFilterPaymentMethod,
+        filterPhone: _receiptfilterPhone,
+        filterEmail: _receiptfilterEmail,
+        page: page);
   }
 
   void applyFilters(
@@ -578,6 +590,7 @@ class InvoiceProvider extends ChangeNotifier {
       listAllReceipts(
         accessToken: _lastReceiptAccessToken!,
         page: 1,
+        loadAll: true,
       );
     } else {
       applyReceiptFiltersLocally(page: 1);
@@ -741,6 +754,42 @@ class InvoiceProvider extends ChangeNotifier {
   }
 
   // Apply receipt filters locally
+  List<receipt_list.Receipt> _matchingReceipts(
+    List<receipt_list.Receipt> rows, {
+    String? filterName,
+    String? filterReceiptNumber,
+    String? filterPaymentReference,
+    String? filterStatus,
+    String? filterPaymentMethod,
+    String? filterPhone,
+    String? filterEmail,
+  }) {
+    bool contains(String value, String? filter) {
+      final normalized = _normalizeOptionalFilter(filter);
+      return normalized == null ||
+          value.toLowerCase().contains(normalized.toLowerCase());
+    }
+
+    bool equal(String value, String? filter) {
+      final normalized = _normalizeOptionalFilter(filter);
+      return normalized == null ||
+          value.toLowerCase() == normalized.toLowerCase();
+    }
+
+    return rows
+        .where((r) =>
+            contains(r.customer.user.name, filterName) &&
+            contains(r.receiptNumber, filterReceiptNumber) &&
+            contains(r.paymentReference, filterPaymentReference) &&
+            contains(r.customer.user.phone, filterPhone) &&
+            contains(r.customer.user.email, filterEmail) &&
+            equal(r.receiptStatus, filterStatus) &&
+            (_normalizeOptionalFilter(filterPaymentMethod) == null ||
+                r.paymentMethods
+                    .any((method) => equal(method, filterPaymentMethod))))
+        .toList();
+  }
+
   void applyReceiptFiltersLocally(
       {String? filterName,
       String? filterReceiptNumber,
@@ -763,74 +812,14 @@ class InvoiceProvider extends ChangeNotifier {
       return;
     }
 
-    // Filter receipts
-    List<receipt_list.Receipt> filteredReceipts = [..._allReceipts!];
-    debugPrint("Starting with ${filteredReceipts.length} receipts");
-
-    if (filterName != null && filterName.isNotEmpty) {
-      filteredReceipts = filteredReceipts.where((receipt) {
-        final bool matchesName = receipt.customer.user.name
-            .toLowerCase()
-            .contains(filterName.toLowerCase());
-        return matchesName;
-      }).toList();
-      debugPrint(
-          "After name filter: ${filteredReceipts.length} receipts match '$filterName'");
-    }
-
-    // Apply receipt number filter
-    if (filterReceiptNumber != null && filterReceiptNumber.isNotEmpty) {
-      filteredReceipts = filteredReceipts.where((receipt) {
-        return receipt.receiptNumber
-            .toLowerCase()
-            .contains(filterReceiptNumber.toLowerCase());
-      }).toList();
-    }
-    if (filterPhone != null && filterPhone.isNotEmpty) {
-      filteredReceipts = filteredReceipts.where((receipt) {
-        return receipt.customer.user.phone != null &&
-            receipt.customer.user.phone.contains(filterPhone);
-      }).toList();
-      debugPrint(
-          "After phone filter: ${filteredReceipts.length} invoices match '$filterPhone'");
-    }
-
-    // Apply email filter
-    if (filterEmail != null && filterEmail.isNotEmpty) {
-      filteredReceipts = filteredReceipts.where((receipt) {
-        return receipt.customer.user.email != null &&
-            receipt.customer.user.email
-                .toLowerCase()
-                .contains(filterEmail.toLowerCase());
-      }).toList();
-      debugPrint(
-          "After email filter: ${filteredReceipts.length} invoices match '$filterEmail'");
-    }
-
-    // Apply payment reference filter
-    if (filterPaymentReference != null && filterPaymentReference.isNotEmpty) {
-      filteredReceipts = filteredReceipts.where((receipt) {
-        return receipt.paymentReference
-            .toLowerCase()
-            .contains(filterPaymentReference.toLowerCase());
-      }).toList();
-    }
-
-    // Apply status filter
-    if (filterStatus != null && filterStatus.isNotEmpty) {
-      filteredReceipts = filteredReceipts.where((receipt) {
-        return receipt.receiptStatus.toLowerCase() ==
-            filterStatus.toLowerCase();
-      }).toList();
-    }
-
-    // Apply payment method filter
-    if (filterPaymentMethod != null && filterPaymentMethod.isNotEmpty) {
-      filteredReceipts = filteredReceipts.where((receipt) {
-        return receipt.paymentMethod.toLowerCase() ==
-            filterPaymentMethod.toLowerCase();
-      }).toList();
-    }
+    final filteredReceipts = _matchingReceipts(_allReceipts!,
+        filterName: filterName,
+        filterReceiptNumber: filterReceiptNumber,
+        filterPaymentReference: filterPaymentReference,
+        filterStatus: filterStatus,
+        filterPaymentMethod: filterPaymentMethod,
+        filterPhone: filterPhone,
+        filterEmail: filterEmail);
 
     // Update total pages
     _receiptTotalPages =
@@ -1173,7 +1162,8 @@ class InvoiceProvider extends ChangeNotifier {
     await prefs.remove(_paymentMethodsCacheKeyPrefix);
     // Drop every per-language variant, not just the active one.
     for (final language in ApiLocale.supported) {
-      await prefs.remove('${_paymentListCacheKeyBase(activeStoreId)}_$language');
+      await prefs
+          .remove('${_paymentListCacheKeyBase(activeStoreId)}_$language');
       await prefs.remove('${_paymentListCacheKeyBase(null)}_$language');
     }
     if (activeStoreId != null) {
@@ -1715,6 +1705,99 @@ class InvoiceProvider extends ChangeNotifier {
     return List<Invoice>.from(listInvoiceModel.data.invoices);
   }
 
+  /// Fetch all matching pages without changing visible rows or list filters.
+  Future<List<Invoice>> fetchInvoicesForExport({
+    required String accessToken,
+    String? name,
+    String? invoiceNumber,
+    String? phone,
+    String? fromDate,
+    String? toDate,
+    String? status,
+    String? zatcaStatus,
+    void Function(int page, int totalPages)? onProgress,
+    http.Client? client,
+    Duration requestTimeout = const Duration(seconds: 30),
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final tenant = prefs.getString('api_key');
+    final store = prefs.getInt('active_store_id');
+    if (tenant == null || tenant.isEmpty) {
+      throw const HttpException('API key not found. Please restart the app.');
+    }
+    final filters = <String, String>{
+      'per_page': '100',
+      if (store != null) 'store_id': '$store',
+    };
+    void add(String key, String? value) {
+      final normalized = _normalizeOptionalFilter(value);
+      if (normalized != null) filters[key] = normalized;
+    }
+
+    add('name', name);
+    add('invoice_number', invoiceNumber);
+    add('phone', phone);
+    add('date_from', _formatInvoiceApiDate(fromDate));
+    add('date_to', _formatInvoiceApiDate(toDate));
+    add('status', status);
+    add('zatca_status', _mapZatcaStatusToApi(zatcaStatus));
+    final headers = {
+      'Authorization': 'Bearer $accessToken',
+      'X-Tenant': tenant
+    };
+    final items = <Invoice>[];
+    final ids = <int>{};
+    int? lastPage, expectedTotal;
+    for (int page = 1; page <= (lastPage ?? 1); page++) {
+      final uri = Uri.parse(APPUrl.listAllInvoices)
+          .replace(queryParameters: {...filters, 'page': '$page'});
+      final response = await (client == null
+              ? http.get(uri, headers: headers)
+              : client.get(uri, headers: headers))
+          .timeout(requestTimeout);
+      if (response.statusCode != 200)
+        throw HttpException(
+            'Failed to fetch invoice page $page (${response.statusCode})',
+            uri: uri);
+      final payload = json.decode(response.body);
+      if (payload is! Map<String, dynamic> ||
+          payload['status'] != 'success' ||
+          payload['data'] is! Map<String, dynamic>) {
+        throw const FormatException('Invalid invoice export response.');
+      }
+      final data = payload['data'] as Map<String, dynamic>;
+      final current = int.tryParse('${data['current_page']}');
+      final last = int.tryParse('${data['last_page']}');
+      final total = int.tryParse('${data['total']}');
+      final rows = data['data'];
+      if (current != page ||
+          last == null ||
+          last < page ||
+          total == null ||
+          total < 0 ||
+          (lastPage != null && last != lastPage) ||
+          (expectedTotal != null && total != expectedTotal) ||
+          rows is! List ||
+          rows.any((row) => row is! Map<String, dynamic>) ||
+          (rows.isEmpty && (page > 1 || total > 0))) {
+        throw const FormatException('Incomplete invoice export page.');
+      }
+      lastPage = last;
+      expectedTotal = total;
+      for (final row in rows) {
+        final invoice = Invoice.fromJson(row as Map<String, dynamic>);
+        if (!ids.add(invoice.id))
+          throw const FormatException('Duplicate invoice export rows.');
+        items.add(invoice);
+      }
+      onProgress?.call(page, last);
+    }
+    if (items.length != expectedTotal)
+      throw const FormatException(
+          'Invoice export count does not match the API total.');
+    return items;
+  }
+
   Future<dynamic> listAllInvoices({
     required String accessToken,
     String? name,
@@ -2036,16 +2119,176 @@ class InvoiceProvider extends ChangeNotifier {
 
   //          *********************** LIST ALL RECEIPT API ***************************************************
 
+  /// Fetch every date-matched API page and apply the same local filters as the list.
+  Future<List<receipt_list.Receipt>> fetchReceiptsForExport({
+    required String accessToken,
+    String? name,
+    String? receiptNumber,
+    String? paymentReference,
+    String? email,
+    String? paymentMethod,
+    String? phone,
+    String? fromDate,
+    String? toDate,
+    String? status,
+    void Function(int page, int totalPages)? onProgress,
+    http.Client? client,
+    Duration requestTimeout = const Duration(seconds: 30),
+  }) async {
+    final snapshot = await _fetchReceiptPages(
+        accessToken: accessToken,
+        fromDate: fromDate,
+        toDate: toDate,
+        onProgress: onProgress,
+        client: client,
+        requestTimeout: requestTimeout);
+    return _matchingReceipts(snapshot.items,
+        filterName: _normalizeOptionalFilter(name),
+        filterReceiptNumber: _normalizeOptionalFilter(receiptNumber),
+        filterPaymentReference: _normalizeOptionalFilter(paymentReference),
+        filterStatus: _normalizeOptionalFilter(status),
+        filterPaymentMethod: _normalizeOptionalFilter(paymentMethod),
+        filterPhone: _normalizeOptionalFilter(phone),
+        filterEmail: _normalizeOptionalFilter(email));
+  }
+
+  Future<({List<receipt_list.Receipt> items, Map<String, dynamic> data})>
+      _fetchReceiptPages({
+    required String accessToken,
+    String? fromDate,
+    String? toDate,
+    void Function(int page, int totalPages)? onProgress,
+    http.Client? client,
+    int pageSize = 100,
+    Duration requestTimeout = const Duration(seconds: 30),
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final tenant = prefs.getString('api_key');
+    final store = prefs.getInt('active_store_id');
+    if (tenant == null || tenant.isEmpty) {
+      throw const HttpException('API key not found. Please restart the app.');
+    }
+    final filters = <String, String>{
+      'per_page': '$pageSize',
+      if (store != null) 'store_id': '$store',
+    };
+    void add(String key, String? value) {
+      final normalized = _normalizeOptionalFilter(value);
+      if (normalized != null) filters[key] = normalized;
+    }
+
+    add('date_from', _formatInvoiceApiDate(fromDate));
+    add('date_to', _formatInvoiceApiDate(toDate));
+    final headers = {
+      'Authorization': 'Bearer $accessToken',
+      'X-Tenant': tenant
+    };
+    final items = <receipt_list.Receipt>[];
+    final ids = <int>{};
+    int? lastPage, expectedTotal;
+    Map<String, dynamic>? firstData;
+    for (int page = 1; page <= (lastPage ?? 1); page++) {
+      final uri = Uri.parse(APPUrl.listAllReceipts)
+          .replace(queryParameters: {...filters, 'page': '$page'});
+      final response = await (client == null
+              ? http.get(uri, headers: headers)
+              : client.get(uri, headers: headers))
+          .timeout(requestTimeout);
+      if (response.statusCode != 200)
+        throw HttpException(
+            'Failed to fetch receipt page $page (${response.statusCode})',
+            uri: uri);
+      final payload = json.decode(response.body);
+      if (payload is! Map<String, dynamic> ||
+          payload['status'] != 'success' ||
+          payload['data'] is! Map<String, dynamic>) {
+        throw const FormatException('Invalid receipt response.');
+      }
+      final data = payload['data'] as Map<String, dynamic>;
+      firstData ??= data;
+      final current = int.tryParse('${data['current_page']}');
+      final last = int.tryParse('${data['last_page']}');
+      final total = int.tryParse('${data['total']}');
+      final rows = data['data'];
+      if (current != page ||
+          last == null ||
+          last < page ||
+          total == null ||
+          total < 0 ||
+          (lastPage != null && last != lastPage) ||
+          (expectedTotal != null && total != expectedTotal) ||
+          rows is! List ||
+          rows.any((row) => row is! Map<String, dynamic>) ||
+          (rows.isEmpty && (page > 1 || total > 0))) {
+        throw const FormatException('Incomplete receipt page.');
+      }
+      lastPage = last;
+      expectedTotal = total;
+      for (final row in rows) {
+        final invoice =
+            receipt_list.Receipt.fromJson(row as Map<String, dynamic>);
+        if (!ids.add(invoice.id))
+          throw const FormatException('Duplicate receipt rows.');
+        items.add(invoice);
+      }
+      onProgress?.call(page, last);
+    }
+    if (items.length != expectedTotal)
+      throw const FormatException(
+          'Receipt count does not match the API total.');
+    return (items: items, data: firstData!);
+  }
+
   Future<dynamic> listAllReceipts({
     required String accessToken,
     int page = 1,
     bool loadAll = false, // Add parameter to load all receipts
     String? dateFrom,
     String? dateTo,
+    http.Client? client,
   }) async {
+    final requestGeneration = ++_receiptRequestGeneration;
     _lastReceiptAccessToken = accessToken;
     _isLoading = true;
     notifyListeners();
+
+    if (loadAll) {
+      try {
+        final snapshot = await _fetchReceiptPages(
+            accessToken: accessToken,
+            fromDate: dateFrom,
+            toDate: dateTo,
+            client: client,
+            pageSize: 1000);
+        if (requestGeneration != _receiptRequestGeneration) return null;
+        final metadata = receipt_list.ReceiptData.fromJson({
+          ...snapshot.data,
+          'data': <Map<String, dynamic>>[],
+          'links': snapshot.data['links'] ?? [],
+        });
+        metadata.data = snapshot.items;
+        _allReceipts = snapshot.items;
+        _receiptData = metadata;
+        applyReceiptFiltersLocally(
+            filterName: _receiptFilterName,
+            filterReceiptNumber: _receiptFilterReceiptNumber,
+            filterPaymentReference: _receiptFilterPaymentReference,
+            filterStatus: _receiptFilterStatus,
+            filterPaymentMethod: _receiptFilterPaymentMethod,
+            filterPhone: _receiptfilterPhone,
+            filterEmail: _receiptfilterEmail,
+            page: _receiptCurrentPage);
+        return {'status': 'success', 'data': snapshot.data};
+      } catch (error) {
+        if (requestGeneration != _receiptRequestGeneration) return null;
+        return {'status': 'error', 'message': error.toString()};
+      } finally {
+        if (requestGeneration == _receiptRequestGeneration) {
+          _isLoading = false;
+          notifyListeners();
+        }
+      }
+    }
 
     debugPrint(
         "🔍 Calling listAllReceipts with page: $page, loadAll: $loadAll, dateFrom: $dateFrom, dateTo: $dateTo");
@@ -2057,8 +2300,6 @@ class InvoiceProvider extends ChangeNotifier {
 
     final queryParameters = <String, String>{
       'page': page.toString(),
-      // If loadAll is true, request a large page size to get all receipts
-      if (loadAll) 'per_page': '1000',
       if (dateFrom != null && dateFrom.isNotEmpty) 'date_from': dateFrom,
       if (dateTo != null && dateTo.isNotEmpty) 'date_to': dateTo,
     };
@@ -2078,13 +2319,14 @@ class InvoiceProvider extends ChangeNotifier {
       if (apiKey == null || apiKey.isEmpty) {
         throw const HttpException("API key not found. Please restart the app.");
       }
-      final response = await http.get(
-        url,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'X-Tenant': apiKey,
-        },
-      );
+      final headers = {
+        'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey
+      };
+      final response = await (client == null
+          ? http.get(url, headers: headers)
+          : client.get(url, headers: headers));
+      if (requestGeneration != _receiptRequestGeneration) return null;
       debugPrint("🔍 Response status: ${response.statusCode}");
 
       if (response.statusCode == 200) {
@@ -2094,39 +2336,23 @@ class InvoiceProvider extends ChangeNotifier {
         receipt_list.ReceiptResponse receiptResponse =
             receipt_list.ReceiptResponse.fromJson(jsonData);
 
-        if (loadAll) {
-          // Store all receipts for local filtering and pagination
-          _allReceipts = receiptResponse.data.data;
-          _receiptData = receiptResponse.data;
-          applyReceiptFiltersLocally(
-            filterName: _receiptFilterName,
-            filterReceiptNumber: _receiptFilterReceiptNumber,
-            filterPaymentReference: _receiptFilterPaymentReference,
-            filterStatus: _receiptFilterStatus,
-            filterPaymentMethod: _receiptFilterPaymentMethod,
-            filterPhone: _receiptfilterPhone,
-            filterEmail: _receiptfilterEmail,
-            page: _receiptCurrentPage,
-          );
-        } else {
-          receiptListDetails = receiptResponse.data.data;
-          applyReceiptFiltersLocally(
-            filterName: _receiptFilterName,
-            filterReceiptNumber: _receiptFilterReceiptNumber,
-            filterPaymentReference: _receiptFilterPaymentReference,
-            filterStatus: _receiptFilterStatus,
-            filterPaymentMethod: _receiptFilterPaymentMethod,
-            filterPhone: _receiptfilterPhone,
-            filterEmail: _receiptfilterEmail,
-            page: _receiptCurrentPage,
-          );
-          _receiptData = receiptResponse.data;
+        receiptListDetails = receiptResponse.data.data;
+        applyReceiptFiltersLocally(
+          filterName: _receiptFilterName,
+          filterReceiptNumber: _receiptFilterReceiptNumber,
+          filterPaymentReference: _receiptFilterPaymentReference,
+          filterStatus: _receiptFilterStatus,
+          filterPaymentMethod: _receiptFilterPaymentMethod,
+          filterPhone: _receiptfilterPhone,
+          filterEmail: _receiptfilterEmail,
+          page: _receiptCurrentPage,
+        );
+        _receiptData = receiptResponse.data;
 
-          // Update pagination info
-          _receiptCurrentPage = receiptResponse.data.currentPage;
-          _receiptTotalPages = receiptResponse.data.lastPage;
-          _receiptItemsPerPage = receiptResponse.data.perPage.toInt();
-        }
+        // Update pagination info
+        _receiptCurrentPage = receiptResponse.data.currentPage;
+        _receiptTotalPages = receiptResponse.data.lastPage;
+        _receiptItemsPerPage = receiptResponse.data.perPage.toInt();
 
         _isLoading = false;
         notifyListeners();
@@ -2139,6 +2365,7 @@ class InvoiceProvider extends ChangeNotifier {
         return {'status': 'error', 'message': 'Failed to fetch receipts'};
       }
     } catch (e) {
+      if (requestGeneration != _receiptRequestGeneration) return null;
       _isLoading = false;
       notifyListeners();
       debugPrint("❌ Exception in listAllReceipts: $e");
@@ -2148,10 +2375,16 @@ class InvoiceProvider extends ChangeNotifier {
 
   // Load all receipts for local filtering and pagination
   Future<void> loadAllReceipts(String accessToken) async {
-    await listAllReceipts(
+    final result = await listAllReceipts(
       accessToken: accessToken,
       loadAll: true,
+      dateFrom: _receiptFilterDateFrom,
+      dateTo: _receiptFilterDateTo,
     );
+    if (result is Map && result['status'] == 'error') {
+      throw HttpException(
+          result['message']?.toString() ?? 'Failed to fetch receipts');
+    }
   }
 
   //          *********************** CALL DETAILS OF RECEIPT API ***************************************************
@@ -2513,19 +2746,14 @@ class InvoiceProvider extends ChangeNotifier {
   }
 
   List<String> getPaymentMethodOptions() {
-    if (_allReceipts == null || _allReceipts!.isEmpty) {
-      return ["All Payment Methods"];
+    final methods = <String, String>{};
+    for (final receipt in _allReceipts ?? <receipt_list.Receipt>[]) {
+      for (final method in receipt.paymentMethods) {
+        methods.putIfAbsent(method.toLowerCase(), () => method);
+      }
     }
-
-    final uniqueMethods = _allReceipts!
-        .map((receipt) => receipt.paymentMethod)
-        .where((method) => method != null && method.isNotEmpty)
-        .map((method) => method!)
-        .toSet()
-        .toList();
-
-    uniqueMethods.sort();
-    return ["All Payment Methods", ...uniqueMethods];
+    final uniqueMethods = methods.values.toList()..sort();
+    return ['All Payment Methods', ...uniqueMethods];
   }
 }
 

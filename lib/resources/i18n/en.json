@@ -1509,6 +1509,11 @@
     "reset": "Reset"
   },
   "supplier_list": {
+    "subtitle": "Manage supplier details, contacts and balances.",
+    "find": "Find suppliers",
+    "find_hint": "Results update as you type.",
+    "count_on_page": "@count suppliers on this page",
+
     "error_fetching": "Error fetching suppliers",
     "error_searching": "Error searching suppliers",
     "no_suppliers_desktop": "No suppliers found",
@@ -3571,6 +3576,17 @@
     "contact_administrator": "Contact Administrator"
   },
   "invoice": {
+    "settings_unverified": "ZATCA settings are not verified. Please wait for settings to load successfully.",
+    "subtitle": "Manage customer invoices and payment status.",
+    "find": "Find invoices",
+    "filter_hint": "Results update as you type.",
+    "page_count": "@count invoices on this page",
+    "export_creating": "Creating Excel…",
+    "export_fetching": "Fetching page @page of @total…",
+    "export_tooltip": "Export all matching invoices",
+    "export_failed": "Could not export invoices",
+    "from_date": "From Date",
+    "to_date": "To Date",
     "selected_count": "@count selected",
     "amount_prefix": "Amount: @amount",
     "type_prefix": "Type: @type",
@@ -3752,6 +3768,17 @@
     "share_subject": "Order PDF"
   },
   "receipt": {
+    "copy": "Copy",
+    "subtitle": "Manage customer receipts and payments.",
+    "find": "Find receipts",
+    "filter_hint": "Results update as you type.",
+    "from_date": "From Date",
+    "to_date": "To Date",
+    "page_count": "@count receipts on this page",
+    "export_creating": "Creating Excel…",
+    "export_fetching": "Fetching page @page of @total…",
+    "export_tooltip": "Export filtered receipts",
+    "export_failed": "Could not export receipts",
     "edit_item_title": "Edit Item",
     "add_item_title": "Add Item",
     "item_type_label": "Item Type",
@@ -3934,9 +3961,30 @@
     "create_failed": "Failed to create voucher",
     "hint_all_types": "All Types",
     "hint_all_status": "All Status",
-    "hint_select_status": "Select Status"
+    "hint_select_status": "Select Status",
+    "subtitle": "Manage customer vouchers and payments.",
+    "find": "Find customer vouchers",
+    "filter_hint": "Filter customer vouchers.",
+    "page_count": "@count vouchers on this page",
+    "export_tooltip": "Export filtered customer vouchers",
+    "export_creating": "Creating Excel…",
+    "export_failed": "Could not export customer vouchers",
+    "mobile_header_title": "Customer Voucher List",
+    "col_customer_name": "Customer Name",
+    "from_date": "From Date",
+    "to_date": "To Date",
+    "copy_voucher_number": "Copy voucher number",
+    "stale_rows_warning": "Could not update vouchers. Showing previously loaded records; they may not match the selected filters. Export is unavailable until refresh succeeds.",
+    "retry_loading": "Retry"
   },
   "supplier_voucher": {
+    "export_tooltip": "Export all matching supplier vouchers",
+    "subtitle": "Manage supplier vouchers and payments.",
+    "find": "Find supplier vouchers",
+    "filter_hint": "Results update as you type.",
+    "page_count": "@count vouchers on this page",
+    "export_creating": "Creating Excel…",
+    "export_failed": "Could not export supplier vouchers",
     "list_title": "Supplier Voucher List",
     "create_voucher_button": "Create Supplier Voucher",
     "voucher_no_hint": "Voucher No",
@@ -4055,7 +4103,19 @@
     "status_pending": "Pending",
     "status_paid": "Paid",
     "status_overdue": "Overdue",
-    "status_order_created": "Order Created"
+    "status_order_created": "Order Created",
+    "subtitle": "Manage proforma invoices and payment status.",
+    "find": "Find proforma invoices",
+    "filter_hint": "Results update as you type.",
+    "export_tooltip": "Export all matching proforma invoices",
+    "export_failed": "Could not export proforma invoices",
+    "export_creating": "Creating Excel…",
+    "export_fetching": "Fetching page @page of @total…",
+    "page_count": "@count proforma invoices on this page",
+    "copy_invoice": "Copy invoice number",
+    "copy_quotation": "Copy quotation number",
+    "stale_rows_warning": "Could not update proforma invoices. Previously loaded rows may not match the selected filters. Export is unavailable until refresh succeeds.",
+    "retry": "Retry"
   },
   "nav": {
     "home": "Home",
@@ -4604,7 +4664,16 @@
       "Oct",
       "Nov",
       "Dec"
-    ]
+    ],
+    "subtitle": "Manage expense entries and payments.",
+    "find": "Find expenses",
+    "filter_hint": "Results update as you type.",
+    "currency": "Currency",
+    "export_tooltip": "Export all expenses matching the filters",
+    "export_error": "Could not export expenses. Please try again.",
+    "load_error": "Could not refresh expenses. Previously loaded rows may be out of date. Export is unavailable until loading succeeds.",
+    "retry": "Retry",
+    "page_count": "@count expenses on this page"
   },
   "party_accounts": {
     "title": "Customer Transaction",
@@ -4634,7 +4703,19 @@
     "payment_method": "Payment Method",
     "reference": "Reference",
     "comment": "Comment",
-    "created_at": "Created At"
+    "created_at": "Created At",
+    "subtitle": "Manage customer transactions and account history.",
+    "find": "Find customer transactions",
+    "filter_hint": "Results update as you type.",
+    "load_error": "Unable to load transactions. Previous results may be out of date.",
+    "retry": "Retry",
+    "select_date": "Select Date",
+    "export_tooltip": "Export all matching customer transactions",
+    "export_error": "Unable to export customer transactions. Please retry.",
+    "export_fetching": "Fetching page @page of @total…",
+    "transaction_id": "Transaction ID",
+    "currency": "Currency",
+    "page_count": "@count transactions on this page"
   },
   "printer_settings": {
     "title": "Printer Settings",
@@ -4991,7 +5072,19 @@
     "reference": "Reference",
     "comment": "Comment",
     "na": "N/A",
-    "error_loading": "Error loading transactions: @error"
+    "error_loading": "Error loading transactions: @error",
+    "subtitle": "Manage supplier payments and transaction history.",
+    "find": "Find supplier transactions",
+    "find_hint": "Filter supplier transactions.",
+    "count_on_page": "@count transactions on this page",
+    "copy_reference": "Copy reference",
+    "export": "Export",
+    "exporting": "Exporting...",
+    "export_tooltip": "Export all matching supplier transactions",
+    "export_failed": "Could not export supplier transactions",
+    "currency": "Currency",
+    "export_fetching": "Fetching page @page of @total…",
+    "export_creating": "Creating Excel…"
   },
   "order_panel": {
     "add_comment": "Add Comment",
@@ -6036,5 +6129,17 @@
     "outdoor": "Outdoor",
     "reserved": "Reserved",
     "table_list": "Table List"
+  },
+  "list": {
+    "refresh": "Refresh",
+    "reset": "Reset",
+    "view": "View",
+    "export_waiting_save": "Waiting for Save As…",
+    "export_saving": "Saving file…",
+    "export_waiting_share": "Waiting for share…",
+    "export_overwrite_title": "Replace existing file?",
+    "export_overwrite_message": "@name already exists. Replace it?",
+    "export_cancel": "Cancel",
+    "export_overwrite": "Replace"
   }
 }

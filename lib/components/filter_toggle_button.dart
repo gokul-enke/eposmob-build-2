@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../resources/color_manager.dart';
+import '../core/ui/app_colors.dart';
 
 /// Shared button for showing and hiding list filters.
 class FilterToggleButton extends StatelessWidget {
@@ -44,12 +45,19 @@ class FilterToggleButton extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          IconButton(
+          IconButton.outlined(
             icon: Icon(
               showFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
               color: ColorManager.kPrimaryColor,
             ),
             padding: EdgeInsets.zero,
+            style: IconButton.styleFrom(
+              fixedSize: const Size(44, 44),
+              side: const BorderSide(color: AppColors.border),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.control),
+              ),
+            ),
             constraints: const BoxConstraints(
               minWidth: 44,
               minHeight: 44,

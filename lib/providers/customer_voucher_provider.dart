@@ -9,6 +9,8 @@ import 'dart:async';
 
 class CustomerVoucherProvider extends ChangeNotifier {
   bool _isLoading = false;
+  Object? loadError;
+  int _loadGeneration = 0;
   List<CustomerVoucher>? _allVouchers;
   List<CustomerVoucher>? voucherListDetails;
 
@@ -40,7 +42,16 @@ class CustomerVoucherProvider extends ChangeNotifier {
 
   // Type options
   List<String> getTypeOptions() {
-    return ['All Types', 'other', 'refund', 'adjustment'];
+    return [
+      'All Types',
+      ...{
+        'other',
+        'refund',
+        'adjustment',
+        for (final v in _allVouchers ?? <CustomerVoucher>[])
+          if (v.type.isNotEmpty) v.type
+      }
+    ];
   }
 
   // Pagination navigation
@@ -65,6 +76,7 @@ class CustomerVoucherProvider extends ChangeNotifier {
     String? dateTo,
     int page = 1,
   }) {
+    final datesChanged = dateFrom != _filterDateFrom || dateTo != _filterDateTo;
     _filterCustomerName = customerName;
     _filterVoucherNumber = voucherNumber;
     _filterType = type;
@@ -73,7 +85,7 @@ class CustomerVoucherProvider extends ChangeNotifier {
     _filterDateTo = dateTo;
     _currentPage = page;
 
-    if (_lastAccessToken != null) {
+    if (datesChanged && _lastAccessToken != null) {
       listAllCustomerVouchers(accessToken: _lastAccessToken!);
     } else {
       applyFiltersLocally(
@@ -123,54 +135,11 @@ class CustomerVoucherProvider extends ChangeNotifier {
       return;
     }
 
-    // Filter vouchers
-    List<CustomerVoucher> filteredVouchers = [..._allVouchers!];
-    debugPrint("Starting with ${filteredVouchers.length} vouchers");
-
-    // Filter by customer name
-    if (filterCustomerName != null && filterCustomerName.isNotEmpty) {
-      filteredVouchers = filteredVouchers.where((voucher) {
-        final bool matchesName = voucher.customer.user.name
-            .toLowerCase()
-            .contains(filterCustomerName.toLowerCase());
-        return matchesName;
-      }).toList();
-      debugPrint(
-          "After customer name filter: ${filteredVouchers.length} vouchers match '$filterCustomerName'");
-    }
-
-    // Filter by voucher number
-    if (filterVoucherNumber != null && filterVoucherNumber.isNotEmpty) {
-      filteredVouchers = filteredVouchers.where((voucher) {
-        return voucher.voucherNumber
-            .toLowerCase()
-            .contains(filterVoucherNumber.toLowerCase());
-      }).toList();
-      debugPrint(
-          "After voucher number filter: ${filteredVouchers.length} vouchers match '$filterVoucherNumber'");
-    }
-
-    // Filter by type
-    if (filterType != null &&
-        filterType.isNotEmpty &&
-        filterType != 'All Types') {
-      filteredVouchers = filteredVouchers.where((voucher) {
-        return voucher.type.toLowerCase() == filterType.toLowerCase();
-      }).toList();
-      debugPrint(
-          "After type filter: ${filteredVouchers.length} vouchers match '$filterType'");
-    }
-
-    // Filter by status
-    if (filterStatus != null &&
-        filterStatus.isNotEmpty &&
-        filterStatus != 'All Status') {
-      filteredVouchers = filteredVouchers.where((voucher) {
-        return voucher.status.toLowerCase() == filterStatus.toLowerCase();
-      }).toList();
-      debugPrint(
-          "After status filter: ${filteredVouchers.length} vouchers match '$filterStatus'");
-    }
+    final filteredVouchers = filterForExport(
+        customerName: filterCustomerName,
+        voucherNumber: filterVoucherNumber,
+        type: filterType,
+        status: filterStatus);
 
     // Update total pages
     _totalPages = (filteredVouchers.length / _itemsPerPage).ceil();
@@ -207,52 +176,113 @@ class CustomerVoucherProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  List<CustomerVoucher> filterForExport(
+      {String? customerName,
+      String? voucherNumber,
+      String? type,
+      String? status}) {
+    // Filter vouchers
+    List<CustomerVoucher> filteredVouchers = [...?_allVouchers];
+    debugPrint("Starting with ${filteredVouchers.length} vouchers");
+
+    // Filter by customer name
+    if (customerName != null && customerName.isNotEmpty) {
+      filteredVouchers = filteredVouchers.where((voucher) {
+        final bool matchesName = voucher.customer.user.name
+            .toLowerCase()
+            .contains(customerName.toLowerCase());
+        return matchesName;
+      }).toList();
+      debugPrint(
+          "After customer name filter: ${filteredVouchers.length} vouchers match '$customerName'");
+    }
+
+    // Filter by voucher number
+    if (voucherNumber != null && voucherNumber.isNotEmpty) {
+      filteredVouchers = filteredVouchers.where((voucher) {
+        return voucher.voucherNumber
+            .toLowerCase()
+            .contains(voucherNumber.toLowerCase());
+      }).toList();
+      debugPrint(
+          "After voucher number filter: ${filteredVouchers.length} vouchers match '$voucherNumber'");
+    }
+
+    // Filter by type
+    if (type != null && type.isNotEmpty && type != 'All Types') {
+      filteredVouchers = filteredVouchers.where((voucher) {
+        return voucher.type.toLowerCase() == type.toLowerCase();
+      }).toList();
+      debugPrint(
+          "After type filter: ${filteredVouchers.length} vouchers match '$type'");
+    }
+
+    // Filter by status
+    if (status != null && status.isNotEmpty && status != 'All Status') {
+      filteredVouchers = filteredVouchers.where((voucher) {
+        return voucher.status.toLowerCase() == status.toLowerCase();
+      }).toList();
+      debugPrint(
+          "After status filter: ${filteredVouchers.length} vouchers match '$status'");
+    }
+
+    return filteredVouchers;
+  }
+
   // List all customer vouchers
   Future<void> listAllCustomerVouchers({
     required String accessToken,
   }) async {
     debugPrint("listAllCustomerVouchers called");
+    final generation = ++_loadGeneration;
+    loadError = null;
     _lastAccessToken = accessToken;
     _isLoading = true;
     notifyListeners();
 
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
-    final int? activeStoreId = prefs.getInt('active_store_id');
-
-    final queryParams = {
-      'page': '1',
-      'per_page': '1000',
-      if (_filterDateFrom != null && _filterDateFrom!.isNotEmpty)
-        'date_from': _filterDateFrom!,
-      if (_filterDateTo != null && _filterDateTo!.isNotEmpty)
-        'date_to': _filterDateTo!,
-    };
-    if (activeStoreId != null) {
-      queryParams['store_id'] = activeStoreId.toString();
-    }
-
-    final uri = Uri.parse(APPUrl.listCustomerVouchers)
-        .replace(queryParameters: queryParams);
-    debugPrint("Fetching vouchers from: $uri");
-
-    if (apiKey == null || apiKey.isEmpty) {
-      throw const HttpException("API key not found. Please restart the app.");
-    }
-
     try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+      final int? activeStoreId = prefs.getInt('active_store_id');
+
+      final queryParams = {
+        'page': '1',
+        'per_page': '1000',
+        if (_filterDateFrom != null && _filterDateFrom!.isNotEmpty)
+          'date_from': _filterDateFrom!,
+        if (_filterDateTo != null && _filterDateTo!.isNotEmpty)
+          'date_to': _filterDateTo!,
+      };
+      if (activeStoreId != null) {
+        queryParams['store_id'] = activeStoreId.toString();
+      }
+
+      final uri = Uri.parse(APPUrl.listCustomerVouchers)
+          .replace(queryParameters: queryParams);
+      debugPrint("Fetching vouchers from: $uri");
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found. Please restart the app.");
+      }
+
       final response = await http.get(
         uri,
         headers: {
           'Authorization': 'Bearer $accessToken',
           'X-Tenant': apiKey,
         },
-      );
+      ).timeout(const Duration(seconds: 30));
 
+      if (generation != _loadGeneration) return;
       debugPrint("Response status: ${response.statusCode}");
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
+        if (jsonData is! Map<String, dynamic> ||
+            jsonData['status'] != true ||
+            jsonData['data'] is! List) {
+          throw const FormatException('Invalid customer voucher response');
+        }
         CustomerVoucherModel customerVoucherModel =
             CustomerVoucherModel.fromJson(jsonData);
 
@@ -269,16 +299,16 @@ class CustomerVoucherProvider extends ChangeNotifier {
         );
       } else {
         debugPrint("Error: ${response.statusCode} - ${response.body}");
-        _allVouchers = [];
-        voucherListDetails = [];
+        throw HttpException("Unable to load vouchers (${response.statusCode})");
       }
     } catch (e) {
       debugPrint("Exception: $e");
-      _allVouchers = [];
-      voucherListDetails = [];
+      if (generation == _loadGeneration) loadError = e;
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (generation == _loadGeneration) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 

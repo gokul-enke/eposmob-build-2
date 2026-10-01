@@ -1,27 +1,22 @@
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
-import '../../components/build_container_box.dart';
 import '../../components/build_dialog_box.dart';
-import '../../components/build_pagination_control.dart';
-import '../../components/build_round_button.dart';
-import '../../components/build_text_fields.dart';
 import '../../components/export_share_button.dart';
 import '../../components/filter_toggle_button.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../models/supplier.dart';
 import '../../providers/auth_model.dart';
 import '../../providers/supplier_provider.dart';
-import '../../resources/color_manager.dart';
-import '../../resources/font_manager.dart';
-import '../../resources/style_manager.dart';
 import '../../services/list_excel_export_service.dart';
+import '../../core/ui/app_surface.dart';
+import '../../core/ui/list_page/filter_panel.dart';
+import '../../core/ui/list_page/list_page_header.dart';
+import '../../core/ui/list_page/list_page_scaffold.dart';
 import 'add_supplier_modal.dart';
-import 'supplier_list_mobile.dart';
 
 class SupplierListScreen extends StatefulWidget {
   const SupplierListScreen({super.key});
@@ -35,6 +30,9 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
   final TextEditingController searchTextController = TextEditingController();
   final TextEditingController searchEmailController = TextEditingController();
   final TextEditingController searchPhoneController = TextEditingController();
+  final _nameFilterKey = GlobalKey<TextFilterFieldState>();
+  final _emailFilterKey = GlobalKey<TextFilterFieldState>();
+  final _phoneFilterKey = GlobalKey<TextFilterFieldState>();
   String selectedBalanceFilter = 'All';
   bool initLoading = false;
   bool _showFilters = true;
@@ -64,7 +62,16 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
   }
 
   Future<File> _createSupplierExport() {
-    final suppliers = context.read<SupplierProvider>().filteredSuppliers;
+    _cancelPendingSearches();
+    final provider = context.read<SupplierProvider>();
+    provider.applyFiltersLocally(
+      supplierName: searchTextController.text,
+      supplierEmail: searchEmailController.text,
+      supplierPhone: searchPhoneController.text,
+      filterBalance: selectedBalanceFilter,
+      page: provider.currentPage,
+    );
+    final suppliers = provider.filteredSuppliers;
     return ListExcelExportService.export<Supplier>(
       items: suppliers,
       fileNamePrefix: 'suppliers',
@@ -128,7 +135,8 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_filterVisibilityInitialized) {
-      _showFilters = MediaQuery.sizeOf(context).width >= 700;
+      _showFilters =
+          MediaQuery.sizeOf(context).width >= ListLayoutBreakpoints.mobile;
       _filterVisibilityInitialized = true;
     }
   }
@@ -156,8 +164,11 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
           "📌 Loaded ${supplierProvider.supplierList?.length ?? 0} suppliers");
     } catch (error) {
       debugPrint("❌ Supplier listing error: ${error.toString()}");
-      showScaffold(context: context, message: 'supplier_list.error_fetching'.tr);
+      if (mounted)
+        showScaffold(
+            context: context, message: 'supplier_list.error_fetching'.tr);
     } finally {
+      if (!mounted) return;
       setState(() {
         initLoading = false;
       });
@@ -184,21 +195,6 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
     );
   }
 
-  // void searchSuppliers(String value) {
-  //   try {
-  //     String? accessToken =
-  //         Provider.of<AuthModel>(context, listen: false).token;
-  //     if (accessToken == null || accessToken.isEmpty) return;
-
-  //     SupplierProvider supplierProvider =
-  //         Provider.of<SupplierProvider>(context, listen: false);
-  //     supplierProvider.applyFiltersLocally(supplierName: value);
-  //   } catch (error) {
-  //     debugPrint("❌ Supplier search error: ${error.toString()}");
-  //     showScaffold(context: context, message: "Error searching suppliers");
-  //   }
-  // }
-
   void searchSuppliers({
     String name = '',
     String email = '',
@@ -222,1012 +218,210 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
       );
     } catch (error) {
       debugPrint("❌ Supplier search error: ${error.toString()}");
-      showScaffold(context: context, message: 'supplier_list.error_searching'.tr);
+      showScaffold(
+          context: context, message: 'supplier_list.error_searching'.tr);
     }
   }
 
-  Widget _buildTableHeader(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: buildCustomStyle(
-          FontWeightManager.medium,
-          FontSize.s12,
-          0.18,
-          ColorManager.kPrimaryColor,
-        ),
-      ),
-    );
+  @override
+  void dispose() {
+    searchTextController.dispose();
+    searchEmailController.dispose();
+    searchPhoneController.dispose();
+    super.dispose();
   }
 
+  void _search() => searchSuppliers(
+      name: searchTextController.text,
+      email: searchEmailController.text,
+      phone: searchPhoneController.text,
+      balance: selectedBalanceFilter);
+
+  void _cancelPendingSearches() {
+    _nameFilterKey.currentState?.cancelPendingSearch();
+    _emailFilterKey.currentState?.cancelPendingSearch();
+    _phoneFilterKey.currentState?.cancelPendingSearch();
+  }
+
+  void _reset() {
+    _cancelPendingSearches();
+    setState(() {
+      searchTextController.clear();
+      searchEmailController.clear();
+      searchPhoneController.clear();
+      selectedBalanceFilter = 'All';
+    });
+    context.read<SupplierProvider>().resetFilters();
+  }
+
+  void _openSupplier(Supplier supplier) {
+    context.read<SupplierProvider>().selectSupplier(supplier);
+    sideBarController.index.value = 69;
+  }
+
+  Future<void> _addSupplier() async {
+    final result =
+        await showAddSupplierModal(context, MediaQuery.sizeOf(context));
+    if (mounted && result != null && result['status'] == 'success') {
+      await refreshData();
+    }
+  }
+
+  Widget _card(Supplier supplier, int number) => AppSurface(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        InkWell(
+            onTap: () => _openSupplier(supplier),
+            child: TableCells.identity(supplier.name)),
+        const SizedBox(height: 12),
+        TableCells.text('${'suppliers.number'.tr}: $number'),
+        const SizedBox(height: 8),
+        TableCells.text('${'suppliers.email'.tr}: ${supplier.email}'),
+        const SizedBox(height: 8),
+        TableCells.text('${'suppliers.phone'.tr}: ${supplier.phone}'),
+        const SizedBox(height: 8),
+        Text('${'suppliers.address'.tr}: ${supplier.address}'),
+        const SizedBox(height: 8),
+        Row(children: [
+          Expanded(child: TableCells.text('suppliers.current_balance'.tr)),
+          TableCells.amount(supplier.currentBalance)
+        ]),
+        const SizedBox(height: 12),
+        SizedBox(
+            width: double.infinity,
+            child: TableCells.viewButton(() => _openSupplier(supplier))),
+      ]));
+
   @override
-  Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
-
-    final isMobile = size.width < 700;
-
-    if (isMobile) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: SupplierListMobileView(
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, size) {
+        final mobile = size.maxWidth < ListLayoutBreakpoints.mobile;
+        return Consumer<SupplierProvider>(builder: (context, provider, _) {
+          final suppliers = provider.supplierList ?? <Supplier>[];
+          return ListPageScaffold<Supplier>(
+            header: ListPageHeader(
+                icon: Icons.local_shipping_rounded,
+                title: 'suppliers.title'.tr,
+                subtitle: 'supplier_list.subtitle'.tr,
+                onRefresh: () => refreshData(),
+                onAdd: _addSupplier,
+                addLabel: 'suppliers.add'.tr,
+                addShortLabel: 'supplier_list_mobile.btn_add_new'.tr,
+                extraActions: [
+                  _buildFilterToggleButton(),
+                  _buildExportButton(
+                      compact: size.maxWidth < ListLayoutBreakpoints.actions)
+                ]),
             showFilters: _showFilters,
-            filterAction: _buildFilterToggleButton(),
-            exportAction: _buildExportButton(compact: true),
-            nameController: searchTextController,
-            emailController: searchEmailController,
-            phoneController: searchPhoneController,
-            selectedBalanceFilter: selectedBalanceFilter,
-            onBalanceChanged: (val) {
-              setState(() => selectedBalanceFilter = val ?? 'All');
-              searchSuppliers(
-                name: searchTextController.text,
-                email: searchEmailController.text,
-                phone: searchPhoneController.text,
-                balance: val ?? 'All',
-              );
-            },
-            onReset: () {
-              setState(() {
-                searchTextController.clear();
-                searchEmailController.clear();
-                searchPhoneController.clear();
-                selectedBalanceFilter = 'All';
-              });
-              Future.microtask(() {
-                Provider.of<SupplierProvider>(context, listen: false)
-                    .resetFilters();
-              });
-            },
-            onAddSupplier: () async {
-              final result = await showAddSupplierModal(context, size);
-              if (result != null && result["status"] == "success") {
-                refreshData();
-              }
-            },
-            onSearch: ({name = '', email = '', phone = '', balance = 'All'}) {
-              searchSuppliers(
-                  name: name, email: email, phone: phone, balance: balance);
-            },
-          ),
-        ),
-      );
-    }
-
-    return SafeArea(
-      child: RefreshIndicator(
-        onRefresh: refreshData,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: const [
-              BoxShadow(
-                color: ColorManager.boxShadowColor,
-                blurRadius: 6,
-                offset: Offset(1, 1),
-              ),
+            filters: KeyedSubtree(
+                key: ValueKey(mobile
+                    ? 'supplier-list-mobile-filters'
+                    : 'supplier-list-desktop-filters'),
+                child: FilterPanel(
+                    title: 'supplier_list.find'.tr,
+                    hint: 'supplier_list.find_hint'.tr,
+                    onReset: _reset,
+                    fields: [
+                      TextFilterField(
+                          key: _nameFilterKey,
+                          controller: searchTextController,
+                          label: 'suppliers.name'.tr,
+                          icon: Icons.person_outline_rounded,
+                          keyboardType: TextInputType.name,
+                          onSearch: _search),
+                      TextFilterField(
+                          key: _emailFilterKey,
+                          controller: searchEmailController,
+                          label: 'suppliers.email'.tr,
+                          icon: Icons.mail_outline_rounded,
+                          keyboardType: TextInputType.emailAddress,
+                          onSearch: _search),
+                      TextFilterField(
+                          key: _phoneFilterKey,
+                          controller: searchPhoneController,
+                          label: 'suppliers.phone'.tr,
+                          icon: Icons.phone_outlined,
+                          keyboardType: TextInputType.phone,
+                          onSearch: _search),
+                      DropdownButtonFormField<String>(
+                          key: ValueKey(selectedBalanceFilter),
+                          initialValue: selectedBalanceFilter,
+                          isExpanded: true,
+                          decoration: listFilterDecoration(
+                              'suppliers.balance'.tr,
+                              Icons.account_balance_wallet_outlined),
+                          items: const [
+                            'All',
+                            'Positive (+ve)',
+                            'Negative (-ve)',
+                            'Zero (0)'
+                          ]
+                              .map((value) => DropdownMenuItem(
+                                  value: value,
+                                  child: Text(switch (value) {
+                                    'Positive (+ve)' => 'suppliers.positive'.tr,
+                                    'Negative (-ve)' => 'suppliers.negative'.tr,
+                                    'Zero (0)' => 'suppliers.zero'.tr,
+                                    _ => 'suppliers.all'.tr,
+                                  })))
+                              .toList(),
+                          onChanged: (value) {
+                            setState(
+                                () => selectedBalanceFilter = value ?? 'All');
+                            _search();
+                          }),
+                    ])),
+            isLoading: initLoading || provider.isLoading,
+            items: suppliers,
+            onRefresh: refreshData,
+            onItemTap: _openSupplier,
+            cardBuilder: _card,
+            emptyState: AppSurface(
+                child: Column(children: [
+              const Icon(Icons.local_shipping_outlined, size: 48),
+              const SizedBox(height: 18),
+              Text('supplier_list.no_suppliers_desktop'.tr),
+              const SizedBox(height: 6),
+              Text('supplier_list.try_adjusting_search'.tr),
+            ])),
+            currentPage: provider.currentPage,
+            totalPages: provider.totalPages,
+            itemsPerPage: provider.itemsPerPage,
+            onPageChanged: provider.goToPage,
+            countLabel: 'supplier_list.count_on_page'
+                .trParams({'count': '${suppliers.length}'}),
+            columns: [
+              TableColumnDef(
+                  label: 'suppliers.number'.tr,
+                  flex: .5,
+                  cellBuilder: (_, number) => TableCells.text('$number')),
+              TableColumnDef(
+                  label: 'suppliers.name'.tr,
+                  flex: 2.2,
+                  cellBuilder: (item, _) => TableCells.identity(item.name)),
+              TableColumnDef(
+                  label: 'suppliers.email'.tr,
+                  flex: 1.7,
+                  cellBuilder: (item, _) => TableCells.text(item.email)),
+              TableColumnDef(
+                  label: 'suppliers.phone'.tr,
+                  flex: 1.3,
+                  cellBuilder: (item, _) => TableCells.text(item.phone)),
+              TableColumnDef(
+                  label: 'suppliers.address'.tr,
+                  flex: 1.4,
+                  cellBuilder: (item, _) => TableCells.text(item.address)),
+              TableColumnDef(
+                  label: 'suppliers.current_balance'.tr,
+                  flex: 1.3,
+                  cellBuilder: (item, _) =>
+                      TableCells.amount(item.currentBalance)),
+              TableColumnDef(
+                  label: 'suppliers.action'.tr,
+                  flex: 1.1,
+                  cellBuilder: (item, _) =>
+                      TableCells.viewButton(() => _openSupplier(item))),
             ],
-            color: Colors.white,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(),
-              if (_showFilters) ...[
-                const SizedBox(height: 15),
-                KeyedSubtree(
-                  key: const ValueKey('supplier-list-desktop-filters'),
-                  child: _buildSearchBar(size),
-                ),
-                const SizedBox(height: 15),
-              ],
-              Expanded(
-                child: Consumer<SupplierProvider>(
-                  builder: (context, supplierProvider, child) {
-                    final isLoading = supplierProvider.isLoading;
-                    final suppliers = supplierProvider.supplierList ?? [];
-
-                    return Column(
-                      children: [
-                        Expanded(
-                          child: isLoading
-                              ? const Center(
-                                  child: CircularProgressIndicator.adaptive())
-                              : BuildBoxShadowContainer(
-                                  width: size.width,
-                                  margin: const EdgeInsets.only(top: 20),
-                                  circleRadius: 7,
-                                  offsetValue: const Offset(1, 1),
-                                  blurRadius: 8.0,
-                                  color: Colors.white,
-                                  child: Column(
-                                    children: [
-                                      // Fixed table header
-                                      Container(
-                                        decoration: const BoxDecoration(
-                                          color: ColorManager.tableBGColor,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black12,
-                                              offset: Offset(0, 2),
-                                              blurRadius: 2.0,
-                                            ),
-                                          ],
-                                        ),
-                                        child: Table(
-                                          columnWidths: const {
-                                            0: FlexColumnWidth(0.4), // No
-                                            1: FlexColumnWidth(1.8), // Name
-                                            2: FlexColumnWidth(2.0), // Email
-                                            3: FlexColumnWidth(1.3), // Phone
-                                            4: FlexColumnWidth(1.5), // Address
-                                            5: FlexColumnWidth(
-                                                1.5), // Current Balance
-                                            6: FlexColumnWidth(0.8), // Action
-                                          },
-                                          border: null,
-                                          defaultVerticalAlignment:
-                                              TableCellVerticalAlignment.middle,
-                                          children: [
-                                            TableRow(
-                                              children: [
-                                                _buildTableHeader(
-                                                    'suppliers.number'.tr),
-                                                _buildTableHeader(
-                                                    'suppliers.name'.tr),
-                                                _buildTableHeader(
-                                                    'suppliers.email'.tr),
-                                                _buildTableHeader(
-                                                    'suppliers.phone'.tr),
-                                                _buildTableHeader(
-                                                    'suppliers.address'.tr),
-                                                _buildTableHeader(
-                                                    'suppliers.current_balance'
-                                                        .tr),
-                                                _buildTableHeader(
-                                                    'suppliers.action'.tr),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      // Scrollable table body
-                                      Expanded(
-                                        child: MouseRegion(
-                                          cursor: SystemMouseCursors.grab,
-                                          child: ScrollConfiguration(
-                                            behavior:
-                                                ScrollConfiguration.of(context)
-                                                    .copyWith(
-                                              dragDevices: {
-                                                PointerDeviceKind.mouse,
-                                                PointerDeviceKind.touch,
-                                                PointerDeviceKind.stylus,
-                                                PointerDeviceKind.trackpad,
-                                              },
-                                            ),
-                                            child: SingleChildScrollView(
-                                              physics:
-                                                  const BouncingScrollPhysics(),
-                                              scrollDirection: Axis.vertical,
-                                              child: suppliers.isEmpty
-                                                  ? Container(
-                                                      height: 300,
-                                                      width: double.infinity,
-                                                      alignment:
-                                                          Alignment.center,
-                                                      child: Column(
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .center,
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .center,
-                                                        children: [
-                                                          Icon(
-                                                            Icons.business,
-                                                            size: 60,
-                                                            color: ColorManager
-                                                                .kPrimaryColor
-                                                                .withOpacity(
-                                                                    0.7),
-                                                          ),
-                                                          const SizedBox(
-                                                              height: 15),
-                                                          Text(
-                                                            'supplier_list.no_suppliers_desktop'.tr,
-                                                            style:
-                                                                buildCustomStyle(
-                                                              FontWeightManager
-                                                                  .medium,
-                                                              FontSize.s18,
-                                                              0.27,
-                                                              ColorManager
-                                                                  .textColor,
-                                                            ),
-                                                          ),
-                                                          const SizedBox(
-                                                              height: 8),
-                                                          Text(
-                                                            'supplier_list.try_adjusting_search'.tr,
-                                                            style:
-                                                                buildCustomStyle(
-                                                              FontWeightManager
-                                                                  .regular,
-                                                              FontSize.s14,
-                                                              0.20,
-                                                              Colors.grey,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    )
-                                                  : Table(
-                                                      columnWidths: const {
-                                                        0: FlexColumnWidth(
-                                                            0.4), // No
-                                                        1: FlexColumnWidth(
-                                                            1.8), // Name
-                                                        2: FlexColumnWidth(
-                                                            2.0), // Email
-                                                        3: FlexColumnWidth(
-                                                            1.3), // Phone
-                                                        4: FlexColumnWidth(
-                                                            1.5), // Address
-                                                        5: FlexColumnWidth(
-                                                            1.5), // Current Balance
-                                                        6: FlexColumnWidth(
-                                                            0.8), // Action
-                                                      },
-                                                      border: null,
-                                                      defaultVerticalAlignment:
-                                                          TableCellVerticalAlignment
-                                                              .middle,
-                                                      children: suppliers
-                                                          .asMap()
-                                                          .entries
-                                                          .map((entry) {
-                                                        final int index =
-                                                            entry.key;
-                                                        final supplier =
-                                                            entry.value;
-                                                        return TableRow(
-                                                          decoration:
-                                                              BoxDecoration(
-                                                            color: index % 2 ==
-                                                                    0
-                                                                ? Colors.white
-                                                                : Colors.grey
-                                                                    .withOpacity(
-                                                                        0.1),
-                                                          ),
-                                                          children: [
-                                                            Padding(
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .all(8.0),
-                                                              child: Text(
-                                                                '${index + 1 + (supplierProvider.currentPage - 1) * supplierProvider.itemsPerPage}',
-                                                                textAlign:
-                                                                    TextAlign
-                                                                        .center,
-                                                                style:
-                                                                    buildCustomStyle(
-                                                                  FontWeightManager
-                                                                      .medium,
-                                                                  FontSize.s9,
-                                                                  0.13,
-                                                                  Colors.black,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                            Padding(
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .all(8.0),
-                                                              child: Text(
-                                                                supplier.name,
-                                                                textAlign:
-                                                                    TextAlign
-                                                                        .center,
-                                                                maxLines: 2,
-                                                                overflow:
-                                                                    TextOverflow
-                                                                        .ellipsis,
-                                                                style:
-                                                                    buildCustomStyle(
-                                                                  FontWeightManager
-                                                                      .medium,
-                                                                  FontSize.s9,
-                                                                  0.13,
-                                                                  Colors.black,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                            Padding(
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .all(8.0),
-                                                              child: Text(
-                                                                supplier.email,
-                                                                textAlign:
-                                                                    TextAlign
-                                                                        .center,
-                                                                maxLines: 2,
-                                                                overflow:
-                                                                    TextOverflow
-                                                                        .ellipsis,
-                                                                style:
-                                                                    buildCustomStyle(
-                                                                  FontWeightManager
-                                                                      .medium,
-                                                                  FontSize.s9,
-                                                                  0.13,
-                                                                  Colors.black,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                            Padding(
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .all(8.0),
-                                                              child: Text(
-                                                                supplier.phone,
-                                                                textAlign:
-                                                                    TextAlign
-                                                                        .center,
-                                                                style:
-                                                                    buildCustomStyle(
-                                                                  FontWeightManager
-                                                                      .medium,
-                                                                  FontSize.s9,
-                                                                  0.13,
-                                                                  Colors.black,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                            Padding(
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .all(8.0),
-                                                              child: Text(
-                                                                supplier.address
-                                                                        .isNotEmpty
-                                                                    ? supplier
-                                                                        .address
-                                                                    : 'supplier_details.na'.tr,
-                                                                textAlign:
-                                                                    TextAlign
-                                                                        .center,
-                                                                maxLines: 2,
-                                                                overflow:
-                                                                    TextOverflow
-                                                                        .ellipsis,
-                                                                style:
-                                                                    buildCustomStyle(
-                                                                  FontWeightManager
-                                                                      .medium,
-                                                                  FontSize.s9,
-                                                                  0.13,
-                                                                  Colors.black,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                            Padding(
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .all(8.0),
-                                                              child: Text(
-                                                                supplier
-                                                                    .currentBalance
-                                                                    .toStringAsFixed(
-                                                                        2),
-                                                                textAlign:
-                                                                    TextAlign
-                                                                        .center,
-                                                                style:
-                                                                    buildCustomStyle(
-                                                                  FontWeightManager
-                                                                      .medium,
-                                                                  FontSize.s9,
-                                                                  0.13,
-                                                                  supplier.currentBalance >=
-                                                                          0
-                                                                      ? ColorManager
-                                                                          .kSuccessColor
-                                                                      : Colors
-                                                                          .red,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                            Center(
-                                                              child: Padding(
-                                                                padding:
-                                                                    const EdgeInsets
-                                                                        .all(
-                                                                        8.0),
-                                                                child:
-                                                                    BuildBoxShadowContainer(
-                                                                  margin:
-                                                                      const EdgeInsets
-                                                                          .only(
-                                                                          left:
-                                                                              5,
-                                                                          right:
-                                                                              5),
-                                                                  circleRadius:
-                                                                      5,
-                                                                  child:
-                                                                      IconButton(
-                                                                    icon: Icon(
-                                                                      Icons
-                                                                          .visibility,
-                                                                      size: 18,
-                                                                      color: ColorManager
-                                                                          .kPrimaryColor
-                                                                          .withOpacity(
-                                                                              0.9),
-                                                                    ),
-                                                                    onPressed:
-                                                                        () {
-                                                                      supplierProvider
-                                                                          .selectSupplier(
-                                                                              supplier);
-                                                                      // Navigate to supplier details using sidebar controller
-                                                                      Get.find<
-                                                                              SideBarController>()
-                                                                          .index
-                                                                          .value = 69; // Index for OpenSupplierProfileScreen
-                                                                    },
-                                                                    constraints:
-                                                                        const BoxConstraints(
-                                                                      minWidth:
-                                                                          36,
-                                                                      minHeight:
-                                                                          36,
-                                                                    ),
-                                                                    padding:
-                                                                        EdgeInsets
-                                                                            .zero,
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        );
-                                                      }).toList(),
-                                                    ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                        ),
-                        const SizedBox(height: 10),
-                        PaginationControl(
-                          currentPage: supplierProvider.currentPage,
-                          totalPages: supplierProvider.totalPages,
-                          onPageChanged: (int page) {
-                            supplierProvider.goToPage(page);
-                          },
-                        ),
-                        const SizedBox(height: 15),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'suppliers.list'.tr,
-          style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
-              0.30, ColorManager.textColor),
-        ),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildFilterToggleButton(),
-            const SizedBox(width: 8),
-            _buildExportButton(),
-            const SizedBox(width: 8),
-            CustomRoundButton(
-              title: 'suppliers.add'.tr,
-              fct: () async {
-                // Show the add supplier modal
-                final result = await showAddSupplierModal(
-                    context, MediaQuery.of(context).size);
-
-                // If the supplier was added successfully, refresh the list
-                if (result != null && result["status"] == "success") {
-                  refreshData();
-                }
-              },
-              fontSize: 12,
-              height: 45,
-              width: 150,
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSearchBar(Size size) {
-    return SizedBox(
-      height: 90,
-      child: Row(
-        children: [
-          // Name Search Field
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 10.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      'suppliers.name'.tr,
-                      style: buildCustomStyle(FontWeightManager.regular,
-                          FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
-                    ),
-                  ),
-                  buildColumnWidgetForTextFields(
-                    height: 45,
-                    width: double.infinity, // Take full available width
-                    onchanged: (value) {
-                      if (value != null) {
-                        Future.microtask(() {
-                          if (value.isEmpty &&
-                              searchEmailController.text.isEmpty &&
-                              searchPhoneController.text.isEmpty &&
-                              selectedBalanceFilter == 'All') {
-                            Provider.of<SupplierProvider>(context,
-                                    listen: false)
-                                .resetFilters();
-                          } else {
-                            searchSuppliers(
-                              name: value,
-                              email: searchEmailController.text,
-                              phone: searchPhoneController.text,
-                              balance: selectedBalanceFilter,
-                            );
-                          }
-                        });
-                      }
-                    },
-                    controller: searchTextController,
-                    size: size,
-                    hintText: 'suppliers.name'.tr,
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Email Search Field
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 10.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      'suppliers.email'.tr,
-                      style: buildCustomStyle(FontWeightManager.regular,
-                          FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
-                    ),
-                  ),
-                  buildColumnWidgetForTextFields(
-                    height: 45,
-                    width: double.infinity, // Take full available width
-                    onchanged: (value) {
-                      if (value != null) {
-                        Future.microtask(() {
-                          if (value.isEmpty &&
-                              searchTextController.text.isEmpty &&
-                              searchPhoneController.text.isEmpty &&
-                              selectedBalanceFilter == 'All') {
-                            Provider.of<SupplierProvider>(context,
-                                    listen: false)
-                                .resetFilters();
-                          } else {
-                            searchSuppliers(
-                              name: searchTextController.text,
-                              email: value,
-                              phone: searchPhoneController.text,
-                              balance: selectedBalanceFilter,
-                            );
-                          }
-                        });
-                      }
-                    },
-                    controller: searchEmailController,
-                    size: size,
-                    hintText: 'suppliers.email'.tr,
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Phone Search Field
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 10.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      'suppliers.phone'.tr,
-                      style: buildCustomStyle(FontWeightManager.regular,
-                          FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
-                    ),
-                  ),
-                  buildColumnWidgetForTextFields(
-                    height: 45,
-                    width: double.infinity, // Take full available width
-                    onchanged: (value) {
-                      if (value != null) {
-                        Future.microtask(() {
-                          if (value.isEmpty &&
-                              searchTextController.text.isEmpty &&
-                              searchEmailController.text.isEmpty &&
-                              selectedBalanceFilter == 'All') {
-                            Provider.of<SupplierProvider>(context,
-                                    listen: false)
-                                .resetFilters();
-                          } else {
-                            searchSuppliers(
-                              name: searchTextController.text,
-                              email: searchEmailController.text,
-                              phone: value,
-                              balance: selectedBalanceFilter,
-                            );
-                          }
-                        });
-                      }
-                    },
-                    controller: searchPhoneController,
-                    size: size,
-                    hintText: 'suppliers.phone'.tr,
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Balance Filter Dropdown
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 10.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      'suppliers.balance'.tr,
-                      style: buildCustomStyle(FontWeightManager.regular,
-                          FontSize.s14, 0.27, Colors.black.withOpacity(0.6)),
-                    ),
-                  ),
-                  BuildBoxShadowContainer(
-                    circleRadius: 7,
-                    alignment: Alignment.centerLeft,
-                    margin:
-                        const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
-                    padding: const EdgeInsets.only(left: 15),
-                    height: 45,
-                    width: double.infinity,
-                    child: DropdownButton<String>(
-                      isExpanded: true,
-                      value: selectedBalanceFilter,
-                      hint: Text(
-                        'suppliers.select_balance'.tr,
-                        style: buildCustomStyle(
-                          FontWeightManager.regular,
-                          FontSize.s12,
-                          0.27,
-                          ColorManager.textColor.withOpacity(.5),
-                        ),
-                      ),
-                      items: [
-                        'All',
-                        'Positive (+ve)',
-                        'Negative (-ve)',
-                        'Zero (0)'
-                      ].map((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(
-                            switch (value) {
-                              'Positive (+ve)' => 'suppliers.positive'.tr,
-                              'Negative (-ve)' => 'suppliers.negative'.tr,
-                              'Zero (0)' => 'suppliers.zero'.tr,
-                              _ => 'suppliers.all'.tr,
-                            },
-                            style: buildCustomStyle(
-                              FontWeightManager.regular,
-                              FontSize.s12,
-                              0.27,
-                              ColorManager.textColor,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (String? newValue) {
-                        if (newValue != null) {
-                          setState(() {
-                            selectedBalanceFilter = newValue;
-                          });
-                          Future.microtask(() {
-                            if (newValue == 'All' &&
-                                searchTextController.text.isEmpty &&
-                                searchEmailController.text.isEmpty &&
-                                searchPhoneController.text.isEmpty) {
-                              Provider.of<SupplierProvider>(context,
-                                      listen: false)
-                                  .resetFilters();
-                            } else {
-                              searchSuppliers(
-                                name: searchTextController.text,
-                                email: searchEmailController.text,
-                                phone: searchPhoneController.text,
-                                balance: newValue,
-                              );
-                            }
-                          });
-                        }
-                      },
-                      underline: Container(),
-                      icon: const Icon(
-                        Icons.keyboard_arrow_down,
-                        color: ColorManager.kPrimaryColor,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Reset Button
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 10.0, top: 30),
-              child: CustomRoundButton(
-                title: 'suppliers.reset'.tr,
-                boxColor: Colors.white,
-                textColor: ColorManager.kPrimaryColor,
-                fct: () {
-                  setState(() {
-                    searchTextController.clear();
-                    searchEmailController.clear();
-                    searchPhoneController.clear();
-                    selectedBalanceFilter = 'All';
-                  });
-                  Future.microtask(() {
-                    Provider.of<SupplierProvider>(context, listen: false)
-                        .resetFilters();
-                  });
-                },
-                height: 45,
-                width: double.infinity, // Take full available width
-                fontSize: FontSize.s12,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class SupplierDetailModal extends StatelessWidget {
-  final Supplier supplier;
-
-  const SupplierDetailModal({Key? key, required this.supplier})
-      : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-      ),
-      elevation: 8,
-      backgroundColor: Colors.white,
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width / 2,
-          maxHeight: MediaQuery.of(context).size.height * 0.7,
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with close button
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'supplier_details.profile_title'.tr,
-                  style: buildCustomStyle(
-                    FontWeightManager.bold,
-                    FontSize.s24,
-                    0.36,
-                    ColorManager.textColor,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.black),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Supplier Information Card
-            Expanded(
-              child: SingleChildScrollView(
-                // padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 16),
-                    _buildInfoRow('supplier_details.label_name'.tr, supplier.name),
-                    const SizedBox(height: 8),
-                    _buildInfoRow('supplier_details.label_email'.tr, supplier.email),
-                    const SizedBox(height: 8),
-                    _buildInfoRow('supplier_details.label_phone'.tr, supplier.phone),
-                    const SizedBox(height: 8),
-                    if (supplier.altPhone != null &&
-                        supplier.altPhone!.isNotEmpty) ...[
-                      _buildInfoRow('supplier_details.label_alt_phone'.tr, supplier.altPhone!),
-                      const SizedBox(height: 8),
-                    ],
-                    _buildInfoRow('supplier_details.label_address'.tr, supplier.address),
-                    const SizedBox(height: 8),
-                    _buildInfoRow(
-                        'supplier_details.label_product_categories'.tr, supplier.productCategories),
-                    const SizedBox(height: 8),
-                    _buildInfoRow(
-                        'supplier_details.label_balance'.tr, supplier.balance.toStringAsFixed(2)),
-                    const SizedBox(height: 8),
-                    _buildInfoRowWithColor(
-                        'supplier_details.label_current_balance'.tr,
-                        supplier.currentBalance.toStringAsFixed(2),
-                        supplier.paymentType),
-                    const SizedBox(height: 8),
-                    _buildInfoRowWithColor('supplier_details.label_balance_status'.tr,
-                        supplier.balanceStatus, supplier.paymentType),
-                    const SizedBox(height: 8),
-                    _buildInfoRow('supplier_details.label_payment_type'.tr, supplier.paymentType),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Action Buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                CustomRoundButton(
-                  fct: () => Navigator.of(context).pop(),
-                  title: 'general.close'.tr,
-                  fontSize: FontSize.s12,
-                  height: MediaQuery.of(context).size.height * .05,
-                  width: 60,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 150,
-            child: Text(
-              "$label ",
-              style: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s14,
-                0.21,
-                Colors.black54,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              value.isNotEmpty ? value : 'supplier_details.na'.tr,
-              style: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s14,
-                0.21,
-                Colors.black,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRowWithColor(
-      String label, String value, String paymentType) {
-    Color textColor = paymentType == 'to_pay'
-        ? Colors.red
-        : paymentType == 'to_receive'
-            ? Colors.green
-            : Colors.black;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 150,
-            child: Text(
-              "$label ",
-              style: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s14,
-                0.21,
-                Colors.black54,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              value.isNotEmpty ? value : 'supplier_details.na'.tr,
-              style: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s14,
-                0.21,
-                textColor,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+          );
+        });
+      });
 }
