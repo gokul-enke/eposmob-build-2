@@ -36,14 +36,20 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
   bool _deliveryChargeRefundable = true;
   late final TextEditingController _refundAmountController;
 
-  double? get _originalTotal =>
-      double.tryParse(widget.initialRefundAmount.replaceAll(',', '').trim());
+  double? get _originalTotal {
+    final amount =
+        double.tryParse(widget.initialRefundAmount.replaceAll(',', '').trim());
+    return amount != null && amount.isFinite ? amount : null;
+  }
+
+  String get _formattedOriginalTotal =>
+      _originalTotal?.toStringAsFixed(3) ?? widget.initialRefundAmount;
 
   @override
   void initState() {
     super.initState();
     _refundAmountController =
-        TextEditingController(text: widget.initialRefundAmount);
+        TextEditingController(text: _formattedOriginalTotal);
     if (widget.isUnpaidCod) {
       _isLoading = false;
     } else {
@@ -205,7 +211,7 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
                 const SizedBox(height: 8),
                 Text(
                   'cancel_order_modal.original_total'.trParams({
-                    'amount': widget.initialRefundAmount,
+                    'amount': _formattedOriginalTotal,
                   }),
                   style: buildCustomStyle(
                     FontWeightManager.regular,
@@ -291,8 +297,18 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
                           return;
                         }
 
-                        final refundAmount =
-                            _refundAmountController.text.trim();
+                        // Formatting the initial full refund must not change
+                        // the amount submitted to the API.
+                        final enteredAmount = _refundAmountController.text.trim();
+                        final enteredValue = double.tryParse(enteredAmount);
+                        final displayedTotal =
+                            double.tryParse(_formattedOriginalTotal);
+                        final isFullRefund = _originalTotal != null &&
+                            enteredValue != null &&
+                            enteredValue == displayedTotal;
+                        final refundAmount = isFullRefund
+                            ? widget.initialRefundAmount.replaceAll(',', '').trim()
+                            : enteredAmount;
                         final parsedRefundAmount =
                             double.tryParse(refundAmount.replaceAll(',', ''));
 
@@ -305,7 +321,8 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
                         }
 
                         if (refundAmount.isEmpty ||
-                            parsedRefundAmount == null) {
+                            parsedRefundAmount == null ||
+                            !parsedRefundAmount.isFinite) {
                           showScaffoldError(
                             context: context,
                             message: 'sales.valid_refund_amount'.tr,
