@@ -59,7 +59,15 @@ void main() {
       errorMessage: 'Failed',
       mimeType: 'application/xlsx',
     ))));
+    final idleSize = tester.getSize(find.byType(FilledButton));
     await tester.tap(find.text('Export'));
+    await tester.pump();
+    progress.value =
+        'Fetching page 999 of 1000 with a very long progress message';
+    await tester.pump();
+    expect(tester.getSize(find.byType(FilledButton)), idleSize);
+    expect(find.byTooltip(progress.value!), findsOneWidget);
+    progress.value = 'Fetching page 1 of 2';
     await tester.pump();
     expect(find.text('Fetching page 1 of 2'), findsOneWidget);
     progress.value = 'Creating Excel';

@@ -67,6 +67,8 @@ class ListPageScaffold<T> extends StatelessWidget {
       {super.key,
       required this.header,
       this.filters,
+      this.toolbar,
+      this.tableScrollController,
       this.showFilters = true,
       required this.isLoading,
       required this.items,
@@ -81,10 +83,13 @@ class ListPageScaffold<T> extends StatelessWidget {
       required this.onPageChanged,
       this.onItemTap,
       this.tableMinWidth = ListLayoutBreakpoints.table});
+
   /// Minimum content width; desktop tables scroll horizontally below this.
   final double tableMinWidth;
   final Widget header;
   final Widget? filters;
+  final Widget? toolbar;
+  final ScrollController? tableScrollController;
   final bool showFilters;
   final bool isLoading;
   final List<T> items;
@@ -138,11 +143,20 @@ class ListPageScaffold<T> extends StatelessWidget {
                                 child: Column(children: [
                                   ConstrainedBox(
                                       constraints: BoxConstraints(
-                                          maxHeight: contentHeight * .48),
+                                          maxHeight: contentHeight *
+                                              (toolbar == null ? .48 : .25)),
                                       child: SingleChildScrollView(
                                           child: filters!)),
                                   const SizedBox(height: AppSpacing.medium)
                                 ])),
+                          if (toolbar != null) ...[
+                            ConstrainedBox(
+                              constraints: BoxConstraints(
+                                  maxHeight: contentHeight * .20),
+                              child: SingleChildScrollView(child: toolbar!),
+                            ),
+                            const SizedBox(height: AppSpacing.medium)
+                          ],
                           Expanded(
                               child: isLoading
                                   ? const AppSurface(
@@ -212,7 +226,8 @@ class ListPageScaffold<T> extends StatelessWidget {
                                                         heading: true)),
                                                 Expanded(child: body)
                                               ])));
-                                      return SingleChildScrollView(
+                                      final scrollView = SingleChildScrollView(
+                                        controller: tableScrollController,
                                         scrollDirection: Axis.horizontal,
                                         child: SizedBox(
                                           width: size.maxWidth < tableMinWidth
@@ -222,6 +237,19 @@ class ListPageScaffold<T> extends StatelessWidget {
                                           child: tableContent,
                                         ),
                                       );
+                                      return tableScrollController == null
+                                          ? scrollView
+                                          : Scrollbar(
+                                              controller: tableScrollController,
+                                              thumbVisibility: true,
+                                              interactive: true,
+                                              notificationPredicate:
+                                                  (notification) =>
+                                                      notification
+                                                          .metrics.axis ==
+                                                      Axis.horizontal,
+                                              child: scrollView,
+                                            );
                                     })),
                           const SizedBox(height: 8),
                           AppSurface(

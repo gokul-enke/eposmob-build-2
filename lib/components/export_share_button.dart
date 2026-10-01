@@ -197,22 +197,43 @@ class _ExportShareButtonState extends State<ExportShareButton> {
       );
     }
 
-    return FilledButton(
-      onPressed: _isExporting || !widget.enabled ? null : _startExport,
-      style: FilledButton.styleFrom(
-        backgroundColor: ColorManager.kPrimaryColor,
-        foregroundColor: Colors.white,
-        disabledBackgroundColor: ColorManager.kPrimaryColor.withValues(
-          alpha: 0.45,
-        ),
-        disabledForegroundColor: Colors.white70,
-        minimumSize: const Size(150, 44),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.control),
+    // Reserve space using the idle label, so progress cannot reflow the header.
+    final labelStyle = FilledButtonTheme.of(context)
+            .style
+            ?.textStyle
+            ?.resolve(const <WidgetState>{}) ??
+        Theme.of(context).textTheme.labelLarge;
+    final labelPainter = TextPainter(
+      text: TextSpan(text: widget.label, style: labelStyle),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout();
+    final labelWidth = labelPainter.width + 32;
+    labelPainter.dispose();
+    final buttonWidth = labelWidth < 150 ? 150.0 : labelWidth;
+    return Tooltip(
+      message: _isExporting ? loadingLabel : widget.tooltip,
+      child: SizedBox(
+        width: buttonWidth,
+        child: FilledButton(
+          onPressed: _isExporting || !widget.enabled ? null : _startExport,
+          style: FilledButton.styleFrom(
+            backgroundColor: ColorManager.kPrimaryColor,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: ColorManager.kPrimaryColor.withValues(
+              alpha: 0.45,
+            ),
+            disabledForegroundColor: Colors.white70,
+            minimumSize: const Size(150, 44),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.control),
+            ),
+          ),
+          child: Text(_isExporting ? loadingLabel : widget.label,
+              maxLines: 1, overflow: TextOverflow.ellipsis),
         ),
       ),
-      child: Text(_isExporting ? loadingLabel : widget.label),
     );
   }
 }

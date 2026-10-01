@@ -3576,6 +3576,17 @@
     "contact_administrator": "Contact Administrator"
   },
   "invoice": {
+    "settings_unverified": "ZATCA settings are not verified. Please wait for settings to load successfully.",
+    "subtitle": "Manage customer invoices and payment status.",
+    "find": "Find invoices",
+    "filter_hint": "Results update as you type.",
+    "page_count": "@count invoices on this page",
+    "export_creating": "Creating Excel…",
+    "export_fetching": "Fetching page @page of @total…",
+    "export_tooltip": "Export all matching invoices",
+    "export_failed": "Could not export invoices",
+    "from_date": "From Date",
+    "to_date": "To Date",
     "selected_count": "@count selected",
     "amount_prefix": "Amount: @amount",
     "type_prefix": "Type: @type",

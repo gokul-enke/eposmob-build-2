@@ -49,9 +49,8 @@ class ListExcelExportService {
         [for (final column in columns) column.value(items[index], index)],
     ];
     final safeSheetName = _safeSheetName(sheetName);
-    final bytes = await Isolate.run(
-      () => _encodeWorkbook(rows, safeSheetName, columns.length),
-    );
+    // Pass only cell data to the worker, never column callbacks or UI state.
+    final bytes = await _encodeInIsolate(rows, safeSheetName, columns.length);
     final directory = outputDirectory ?? await getTemporaryDirectory();
     if (!await directory.exists()) {
       await directory.create(recursive: true);
@@ -174,3 +173,7 @@ String _excelColumnName(int columnCount) {
   }
   return name;
 }
+
+Future<List<int>> _encodeInIsolate(
+        List<List<Object?>> rows, String sheetName, int columnCount) =>
+    Isolate.run(() => _encodeWorkbook(rows, sheetName, columnCount));

@@ -3444,6 +3444,17 @@
     "contact_administrator": "اتصل بالمسؤول"
   },
   "invoice": {
+    "settings_unverified": "لم يتم التحقق من إعدادات زاتكا. يرجى الانتظار حتى يتم تحميل الإعدادات بنجاح.",
+    "subtitle": "إدارة فواتير العملاء وحالة الدفع.",
+    "find": "البحث عن الفواتير",
+    "filter_hint": "تتحدث النتائج أثناء الكتابة.",
+    "page_count": "@count فاتورة في هذه الصفحة",
+    "export_creating": "جارٍ إنشاء Excel…",
+    "export_fetching": "جارٍ جلب الصفحة @page من @total…",
+    "export_tooltip": "تصدير جميع الفواتير المطابقة",
+    "export_failed": "تعذر تصدير الفواتير",
+    "from_date": "من تاريخ",
+    "to_date": "إلى تاريخ",
     "all_status": "جميع الحالات",
     "all_zatca_status": "جميع حالات ZATCA",
     "create_title": "إنشاء فاتورة",
