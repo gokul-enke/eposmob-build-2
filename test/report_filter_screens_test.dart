@@ -38,6 +38,7 @@ class _FakeSalesExecutiveProvider extends SalesExecutiveProvider {
     required BuildContext context,
     String? fromDate,
     String? toDate,
+    bool updateState = true,
   }) async =>
       {'status': 'success', 'data': <dynamic>[]};
 }
@@ -144,6 +145,7 @@ class _ReportTestTranslations extends Translations {
   @override
   Map<String, Map<String, String>> get keys => {
         'en_US': {
+          'pagination.page_of': 'Page @current of @total',
           'pagination.previous': 'Previous',
           'pagination.page': 'Page',
           'pagination.of': 'of',
