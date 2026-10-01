@@ -3775,6 +3775,13 @@
     "hint_select_status": "اختر الحالة"
   },
   "supplier_voucher": {
+    "export_tooltip": "تصدير جميع سندات الموردين المطابقة",
+    "subtitle": "إدارة سندات الموردين والمدفوعات.",
+    "find": "البحث عن سندات الموردين",
+    "filter_hint": "تتحدث النتائج أثناء الكتابة.",
+    "page_count": "@count سند في هذه الصفحة",
+    "export_creating": "جارٍ إنشاء Excel…",
+    "export_failed": "تعذر تصدير سندات الموردين",
     "list_title": "قائمة قسائم الموردين",
     "create_voucher_button": "إنشاء قسيمة مورد",
     "voucher_no_hint": "رقم القسيمة",

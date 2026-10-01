@@ -8,7 +8,13 @@ import 'package:pos_machine/resources/app_url.dart';
 
 class SupplierVoucherProvider extends ChangeNotifier {
   bool _isLoading = false;
+  Future<void>? _voucherLoad;
+  Object? _loadError;
+  Object? get loadError => _loadError;
   List<SupplierVoucher>? _allVouchers;
+  List<SupplierVoucher> _filteredVouchers = [];
+  List<SupplierVoucher> get filteredVouchers =>
+      List.unmodifiable(_filteredVouchers);
   List<SupplierVoucher>? voucherListDetails;
 
   // Pagination properties
@@ -99,6 +105,7 @@ class SupplierVoucherProvider extends ChangeNotifier {
     if (_allVouchers == null || _allVouchers!.isEmpty) {
       debugPrint("No vouchers available for filtering");
       voucherListDetails = [];
+      _filteredVouchers = [];
       _currentPage = 1;
       _totalPages = 1;
       notifyListeners();
@@ -151,6 +158,8 @@ class SupplierVoucherProvider extends ChangeNotifier {
           "After status filter: ${filteredVouchers.length} vouchers match '$filterStatus'");
     }
 
+    _filteredVouchers = List.of(filteredVouchers);
+
     // Update total pages
     _totalPages = (filteredVouchers.length / _itemsPerPage).ceil();
     _totalPages = _totalPages == 0 ? 1 : _totalPages;
@@ -186,35 +195,76 @@ class SupplierVoucherProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Refresh clicks share one load; only that load owns the loading flag.
+  Future<void> listAllSupplierVouchers({required String accessToken}) =>
+      _voucherLoad ??= _loadSupplierVouchers(accessToken: accessToken)
+          .whenComplete(() => _voucherLoad = null);
+
+  SupplierVoucherModel _parseVoucherPage(dynamic payload,
+      {required int expectedPage, int? expectedLastPage}) {
+    if (payload is! Map<String, dynamic>) {
+      throw const FormatException('Invalid voucher response.');
+    }
+    final status = payload['status']?.toString().toLowerCase();
+    if (['failed', 'failure', 'error', 'false'].contains(status)) {
+      throw const FormatException('The voucher API reported a failure.');
+    }
+    final data = payload['data'];
+    List<dynamic> rows;
+    int lastPage;
+    if (data is List && expectedPage == 1 && expectedLastPage == null) {
+      rows = data;
+      lastPage = 1;
+    } else if (data is Map<String, dynamic> && data['data'] is List) {
+      final current = int.tryParse('${data['current_page']}');
+      final last = int.tryParse('${data['last_page']}');
+      if (current != expectedPage ||
+          last == null ||
+          last < expectedPage ||
+          (expectedLastPage != null && last != expectedLastPage)) {
+        throw const FormatException('Invalid voucher pagination.');
+      }
+      rows = data['data'] as List;
+      lastPage = last;
+    } else {
+      throw const FormatException('Missing voucher page data.');
+    }
+    if (rows.any((row) => row is! Map<String, dynamic>) ||
+        (rows.isEmpty && lastPage > 1)) {
+      throw const FormatException('Incomplete voucher page data.');
+    }
+    return SupplierVoucherModel.fromJson(payload);
+  }
+
   // List all supplier vouchers
-  Future<void> listAllSupplierVouchers({
+  Future<void> _loadSupplierVouchers({
     required String accessToken,
   }) async {
     debugPrint("listAllSupplierVouchers called");
+    _loadError = null;
     _isLoading = true;
     notifyListeners();
 
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
-    final int? activeStoreId = prefs.getInt('active_store_id');
-
-    final queryParams = <String, String>{
-      'page': '1',
-      'per_page': '1000',
-    };
-    if (activeStoreId != null) {
-      queryParams['store_id'] = activeStoreId.toString();
-    }
-
-    final uri = Uri.parse(APPUrl.listSupplierVouchers)
-        .replace(queryParameters: queryParams);
-    debugPrint("Fetching vouchers from: $uri");
-
-    if (apiKey == null || apiKey.isEmpty) {
-      throw const HttpException("API key not found. Please restart the app.");
-    }
-
     try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+      final int? activeStoreId = prefs.getInt('active_store_id');
+
+      final queryParams = <String, String>{
+        'page': '1',
+        'per_page': '1000',
+      };
+      if (activeStoreId != null) {
+        queryParams['store_id'] = activeStoreId.toString();
+      }
+
+      final uri = Uri.parse(APPUrl.listSupplierVouchers)
+          .replace(queryParameters: queryParams);
+      debugPrint("Fetching vouchers from: $uri");
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found. Please restart the app.");
+      }
       final headers = {
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
@@ -227,7 +277,7 @@ class SupplierVoucherProvider extends ChangeNotifier {
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         SupplierVoucherModel supplierVoucherModel =
-            SupplierVoucherModel.fromJson(jsonData);
+            _parseVoucherPage(jsonData, expectedPage: 1);
         final vouchers = [...supplierVoucherModel.data];
 
         if (supplierVoucherModel.lastPage > supplierVoucherModel.currentPage) {
@@ -249,30 +299,45 @@ class SupplierVoucherProvider extends ChangeNotifier {
             if (pageResponse.statusCode != 200) {
               debugPrint(
                   "Error loading page $page: ${pageResponse.statusCode} - ${pageResponse.body}");
-              continue;
+              throw HttpException(
+                  "Failed to load voucher page $page (${pageResponse.statusCode}).");
             }
 
             final pageJsonData = json.decode(pageResponse.body);
-            final pageVoucherModel =
-                SupplierVoucherModel.fromJson(pageJsonData);
+            final pageVoucherModel = _parseVoucherPage(pageJsonData,
+                expectedPage: page,
+                expectedLastPage: supplierVoucherModel.lastPage);
             vouchers.addAll(pageVoucherModel.data);
           }
         }
 
+        final ids = <int>{};
+        if (vouchers.any((voucher) => !ids.add(voucher.id))) {
+          throw const FormatException('Duplicate vouchers across API pages.');
+        }
         _allVouchers = vouchers;
         debugPrint("Loaded ${_allVouchers?.length ?? 0} vouchers");
 
         // Apply initial filters
-        applyFiltersLocally(page: 1);
+        applyFiltersLocally(
+            filterSupplierId: _filterSupplierId,
+            filterVoucherNumber: _filterVoucherNumber,
+            filterType: _filterType,
+            filterStatus: _filterStatus,
+            page: 1);
       } else {
         debugPrint("Error: ${response.statusCode} - ${response.body}");
-        _allVouchers = [];
-        voucherListDetails = [];
+        throw HttpException(
+            "Failed to load vouchers (${response.statusCode}).");
       }
     } catch (e) {
       debugPrint("Exception: $e");
       _allVouchers = [];
+      _filteredVouchers = [];
       voucherListDetails = [];
+      _currentPage = 1;
+      _totalPages = 1;
+      _loadError = e;
     } finally {
       _isLoading = false;
       notifyListeners();

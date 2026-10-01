@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -36,10 +38,29 @@ class _FakeQuotationsProvider extends QuotationsProvider {
   }
 }
 
+Map<String, String> _englishTranslations() {
+  final result = <String, String>{};
+  void flatten(Map<String, dynamic> data, String prefix) {
+    for (final entry in data.entries) {
+      final key = prefix.isEmpty ? entry.key : '$prefix.${entry.key}';
+      if (entry.value is Map<String, dynamic>) {
+        flatten(entry.value, key);
+      } else {
+        result[key] = entry.value.toString();
+      }
+    }
+  }
+
+  flatten(
+      jsonDecode(File('lib/resources/i18n/en.json').readAsStringSync()), '');
+  return result;
+}
+
 class _TestTranslations extends Translations {
   @override
   Map<String, Map<String, String>> get keys => {
         'en_US': {
+          ..._englishTranslations(),
           'proforma_invoice.title': 'Proforma Invoice',
           'proforma_invoice.invoice_number_label': 'Invoice Number',
           'proforma_invoice.customer_label': 'Customer',
@@ -262,8 +283,13 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.byType(ExpansionTile), findsOneWidget);
-      await tester.tap(find.byType(ExpansionTile));
+      if (screen is SupplierVoucherListScreen) {
+        expect(find.byType(FilterToggleButton), findsOneWidget);
+        await tester.tap(find.byType(FilterToggleButton));
+      } else {
+        expect(find.byType(ExpansionTile), findsOneWidget);
+        await tester.tap(find.byType(ExpansionTile));
+      }
       await tester.pumpAndSettle();
 
       final exception = tester.takeException();

@@ -3942,6 +3942,13 @@
     "hint_select_status": "Select Status"
   },
   "supplier_voucher": {
+    "export_tooltip": "Export all matching supplier vouchers",
+    "subtitle": "Manage supplier vouchers and payments.",
+    "find": "Find supplier vouchers",
+    "filter_hint": "Results update as you type.",
+    "page_count": "@count vouchers on this page",
+    "export_creating": "Creating Excel…",
+    "export_failed": "Could not export supplier vouchers",
     "list_title": "Supplier Voucher List",
     "create_voucher_button": "Create Supplier Voucher",
     "voucher_no_hint": "Voucher No",

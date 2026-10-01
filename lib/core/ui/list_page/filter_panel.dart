@@ -102,11 +102,13 @@ class TextFilterField extends StatefulWidget {
   final VoidCallback onSearch;
   final TextInputType keyboardType;
   @override
-  State<TextFilterField> createState() => _TextFilterFieldState();
+  State<TextFilterField> createState() => TextFilterFieldState();
 }
 
-class _TextFilterFieldState extends State<TextFilterField> {
+class TextFilterFieldState extends State<TextFilterField> {
   Timer? _debounce;
+
+  void cancelPendingSearch() => _debounce?.cancel();
   @override
   void dispose() {
     _debounce?.cancel();
