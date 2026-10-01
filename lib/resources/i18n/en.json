@@ -4103,7 +4103,19 @@
     "status_pending": "Pending",
     "status_paid": "Paid",
     "status_overdue": "Overdue",
-    "status_order_created": "Order Created"
+    "status_order_created": "Order Created",
+    "subtitle": "Manage proforma invoices and payment status.",
+    "find": "Find proforma invoices",
+    "filter_hint": "Results update as you type.",
+    "export_tooltip": "Export all matching proforma invoices",
+    "export_failed": "Could not export proforma invoices",
+    "export_creating": "Creating Excel…",
+    "export_fetching": "Fetching page @page of @total…",
+    "page_count": "@count proforma invoices on this page",
+    "copy_invoice": "Copy invoice number",
+    "copy_quotation": "Copy quotation number",
+    "stale_rows_warning": "Could not update proforma invoices. Previously loaded rows may not match the selected filters. Export is unavailable until refresh succeeds.",
+    "retry": "Retry"
   },
   "nav": {
     "home": "Home",

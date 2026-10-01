@@ -3936,7 +3936,19 @@
     "valid_price_required": "أدخل سعراً صحيحاً",
     "card_upi_not_allowed_together": "لا يمكن استخدام البطاقة و UPI معًا",
     "price_below_minimum": "السعر أقل من الحد الأدنى لسعر البيع @price",
-    "valid_quantity_required": "أدخل كمية صالحة"
+    "valid_quantity_required": "أدخل كمية صالحة",
+    "subtitle": "إدارة الفواتير الأولية وحالة الدفع.",
+    "find": "البحث عن الفواتير الأولية",
+    "filter_hint": "تتحدث النتائج أثناء الكتابة.",
+    "export_tooltip": "تصدير جميع الفواتير الأولية المطابقة",
+    "export_failed": "تعذر تصدير الفواتير الأولية",
+    "export_creating": "إنشاء ملف Excel…",
+    "export_fetching": "جلب الصفحة @page من @total…",
+    "page_count": "@count فاتورة أولية في هذه الصفحة",
+    "copy_invoice": "نسخ رقم الفاتورة",
+    "copy_quotation": "نسخ رقم عرض السعر",
+    "stale_rows_warning": "تعذر تحديث الفواتير الأولية. قد لا تطابق السجلات السابقة عوامل التصفية المحددة. التصدير غير متاح حتى ينجح التحديث.",
+    "retry": "إعادة المحاولة"
   },
   "nav": {
     "home": "الرئيسية",
