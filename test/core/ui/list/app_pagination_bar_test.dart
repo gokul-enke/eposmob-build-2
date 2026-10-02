@@ -105,7 +105,7 @@ void main() {
           ),
         ),
       ));
-      expect(tester.takeException(), isNull, reason: 'width ');
+      expect(tester.takeException(), isNull, reason: 'width $width');
     }
   });
 }
