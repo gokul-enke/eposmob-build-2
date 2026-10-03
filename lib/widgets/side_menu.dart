@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart' as fa;
 import 'package:get/get.dart';
 
+import 'package:pos_machine/features/purchase_returns/presentation/navigation/purchase_return_navigation.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/customers/presentation/navigation/customer_navigation.dart';
 import 'package:pos_machine/features/expenses/presentation/navigation/expense_navigation.dart';
@@ -712,7 +713,7 @@ class _SideMenuState extends State<SideMenu> {
                     listTitle1: 'nav.purchase_orders'.tr,
                     showTitle1: hasPurchasePermission,
                     onTapTitle2: () {
-                      sideBarController.index.value = 99;
+                      PurchaseReturnNavigation.openList();
                     },
                     listTitle2: 'nav.purchase_returns'.tr,
                     showTitle2: hasPurchasePermission,
@@ -721,8 +722,13 @@ class _SideMenuState extends State<SideMenu> {
                     onTap: () async {
                       sideBarController.index.value = 81;
                     },
-                    selected: [81, 82, 36, 99, 100]
-                        .contains(sideBarController.index.value)),
+                    selected: [
+                      81,
+                      82,
+                      36,
+                      SideBarController.purchaseReturnListIndex,
+                      SideBarController.createPurchaseReturnIndex
+                    ].contains(sideBarController.index.value)),
               );
             },
           ),

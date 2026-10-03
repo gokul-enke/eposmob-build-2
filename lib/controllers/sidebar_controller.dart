@@ -36,8 +36,8 @@ import 'package:pos_machine/screens/purchase/purchase_voucher.dart';
 import 'package:pos_machine/screens/purchase/widgets/add_purchase.dart';
 import 'package:pos_machine/screens/profile/open_profile.dart';
 import 'package:pos_machine/screens/purchase/widgets/view_purchase.dart';
-import 'package:pos_machine/screens/purchase_return/purchase_return_list.dart';
-import 'package:pos_machine/screens/purchase_return/create_purchase_return.dart';
+import 'package:pos_machine/features/purchase_returns/presentation/pages/purchase_return_list_page.dart';
+import 'package:pos_machine/features/purchase_returns/presentation/pages/create_purchase_return_page.dart';
 import 'package:pos_machine/screens/purchase/widgets/view_voucher.dart';
 import 'package:pos_machine/screens/reports/account_book/account_book.dart';
 import 'package:pos_machine/features/reports/presentation/pages/customer_transactions_report_page.dart';
@@ -138,6 +138,10 @@ class SideBarController extends GetxController {
   static const int createSupplierVoucherIndex = 73;
   static const int transactionSupplierVoucherListIndex = 75;
   static const int transactionCreateSupplierVoucherIndex = 76;
+
+  /// Purchase return screens in [screens]. Navigate through [PurchaseReturnNavigation].
+  static const int purchaseReturnListIndex = 99;
+  static const int createPurchaseReturnIndex = 100;
 
   RxInt index =
       0.obs; // Default to HomeNew, will be set based on user role during login
@@ -268,8 +272,8 @@ class SideBarController extends GetxController {
       storeMode: true,
     ), // 97 Store Billing Page (restaurant UI, summary-only order panel)
     StockReportScreen(), // 98 Stock Report Screen
-    PurchaseReturnListScreen(), // 99 Purchase Return List
-    CreatePurchaseReturnScreen(), // 100 Create Purchase Return
+    PurchaseReturnListPage(), // 99 purchaseReturnListIndex
+    CreatePurchaseReturnPage(), // 100 createPurchaseReturnIndex
     WeighMachineExportPage(), // 101 weighMachineExportIndex
   ];
 }

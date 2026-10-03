@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:pos_machine/models/purchase_order_model.dart';
-import 'package:pos_machine/models/purchase_return_model.dart';
+import 'package:pos_machine/features/purchase_returns/domain/models/purchase_return.dart';
 
 /// Keeps the return form's displayed amount in sync with the API calculation.
 ///

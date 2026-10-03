@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pos_machine/helpers/purchase_return_pricing.dart';
+import 'package:pos_machine/features/purchase_returns/domain/purchase_return_pricing.dart';
 import 'package:pos_machine/models/purchase_order_model.dart';
-import 'package:pos_machine/models/purchase_return_model.dart';
+import 'package:pos_machine/features/purchase_returns/domain/models/purchase_return.dart';
 
 void main() {
   test('matches API pricing for a voucher with a global discount', () {

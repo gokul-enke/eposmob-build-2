@@ -1,0 +1,12 @@
+import 'package:get/get.dart';
+import 'package:pos_machine/controllers/sidebar_controller.dart';
+
+abstract final class PurchaseReturnNavigation {
+  static SideBarController get _sidebar => Get.isRegistered<SideBarController>()
+      ? Get.find<SideBarController>()
+      : Get.put(SideBarController());
+  static void openList() =>
+      _sidebar.index.value = SideBarController.purchaseReturnListIndex;
+  static void openCreate() =>
+      _sidebar.index.value = SideBarController.createPurchaseReturnIndex;
+}

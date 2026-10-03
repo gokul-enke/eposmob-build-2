@@ -1,3 +1,6 @@
+import 'package:pos_machine/features/purchase_returns/data/purchase_return_api.dart';
+import 'package:pos_machine/features/purchase_returns/data/purchase_return_repository.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -6,11 +9,19 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/screens/purchase/purchase_orders.dart';
-import 'package:pos_machine/screens/purchase_return/purchase_return_list.dart';
+import 'package:pos_machine/features/purchase_returns/presentation/pages/purchase_return_list_page.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakePurchaseProvider extends PurchaseProvider {
+  _FakePurchaseProvider()
+      : super(
+            purchaseReturnRepository: PurchaseReturnRepository(
+                api: PurchaseReturnApi(
+                    httpGet: (url, {headers}) async => http.Response(
+                        '{"status":"success","data":{"current_page":1,"last_page":1,"data":[]}}',
+                        200))));
+
   @override
   Future<void> listAllStores(String accessToken, String? storeName) async {}
 
@@ -197,7 +208,7 @@ void main() {
       (tester) async {
     await verifyDesktopCollapse(
       tester,
-      screen: const PurchaseReturnListScreen(),
+      screen: const PurchaseReturnListPage(),
       toggleKey: const ValueKey('purchase-return-filter-toggle'),
       panelKey: const ValueKey('purchase-return-filters'),
       actionKey: const ValueKey('purchase-return-create-action'),
@@ -208,7 +219,7 @@ void main() {
       (tester) async {
     await verifyMobileStartsCollapsed(
       tester,
-      screen: const PurchaseReturnListScreen(),
+      screen: const PurchaseReturnListPage(),
       toggleKey: const ValueKey('purchase-return-filter-toggle'),
       panelKey: const ValueKey('purchase-return-filters'),
     );
@@ -229,7 +240,7 @@ void main() {
 
     final returnException = await verifyMobileExpansion(
       tester,
-      screen: const PurchaseReturnListScreen(),
+      screen: const PurchaseReturnListPage(),
       toggleKey: const ValueKey('purchase-return-filter-toggle'),
       panelKey: const ValueKey('purchase-return-filters'),
     );

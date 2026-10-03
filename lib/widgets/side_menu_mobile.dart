@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:pos_machine/features/purchase_returns/presentation/navigation/purchase_return_navigation.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/customers/presentation/navigation/customer_navigation.dart';
 import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
@@ -484,8 +485,13 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                 () => _MobileDrawerExpandableTile(
                   icon: Icons.shopping_bag_rounded,
                   title: 'nav.purchase'.tr,
-                  selected: [81, 82, 36, 99, 100]
-                      .contains(sideBarController.index.value),
+                  selected: [
+                    81,
+                    82,
+                    36,
+                    SideBarController.purchaseReturnListIndex,
+                    SideBarController.createPurchaseReturnIndex
+                  ].contains(sideBarController.index.value),
                   subItems: [
                     _MobileDrawerSubItem(
                       title: 'nav.purchase_orders'.tr,
@@ -493,7 +499,10 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                     ),
                     _MobileDrawerSubItem(
                       title: 'nav.purchase_returns'.tr,
-                      onTap: () => navigate(99),
+                      onTap: () {
+                        PurchaseReturnNavigation.openList();
+                        Navigator.of(context).pop();
+                      },
                     ),
                   ],
                 ),

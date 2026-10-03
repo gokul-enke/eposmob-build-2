@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pos_machine/models/purchase_return_model.dart';
+import 'package:pos_machine/features/purchase_returns/domain/models/purchase_return.dart';
 
 void main() {
   test('parses purchase return pagination and fractional item data', () {

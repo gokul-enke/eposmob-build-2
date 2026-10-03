@@ -18,8 +18,10 @@ import '../models/get_suppliers.dart';
 import '../models/list_purchase.dart';
 
 import '../models/purchase_order_model.dart';
-import '../models/purchase_return_model.dart';
+import '../features/purchase_returns/domain/models/purchase_return.dart';
 import '../resources/app_url.dart';
+import '../features/purchase_returns/data/purchase_return_repository.dart';
+import '../features/purchase_returns/presentation/state/purchase_return_provider.dart';
 
 class PurchaseProvider extends ChangeNotifier {
   bool isLoading = false;
@@ -76,15 +78,44 @@ class PurchaseProvider extends ChangeNotifier {
     if (unitId == null || unitId.isEmpty) return null;
     return unitLabels?[unitId] ?? unitList?[unitId];
   }
+
   Map<String, String>? masterDataValues;
   Map<String, dynamic>? activePurchaseOrderDetails;
 
-  // Purchase return state
-  List<PurchaseReturnData> purchaseReturnsList = [];
-  int purchaseReturnCurrentPage = 1;
-  int purchaseReturnTotalPages = 1;
-  List<ReturnableItem> returnableItemsList = [];
-  ReturnableItemsData? activeReturnableItemsData;
+  final PurchaseReturnProvider purchaseReturnProvider;
+  PurchaseProvider({PurchaseReturnRepository? purchaseReturnRepository})
+      : purchaseReturnProvider =
+            PurchaseReturnProvider(repository: purchaseReturnRepository) {
+    purchaseReturnProvider.addListener(notifyListeners);
+    _initializePurchaseState();
+  }
+  @override
+  void dispose() {
+    purchaseReturnProvider.removeListener(notifyListeners);
+    purchaseReturnProvider.dispose();
+    super.dispose();
+  }
+
+  List<PurchaseReturnData> get purchaseReturnsList =>
+      purchaseReturnProvider.purchaseReturnsList;
+  set purchaseReturnsList(List<PurchaseReturnData> value) =>
+      purchaseReturnProvider.purchaseReturnsList = value;
+  int get purchaseReturnCurrentPage =>
+      purchaseReturnProvider.purchaseReturnCurrentPage;
+  set purchaseReturnCurrentPage(int value) =>
+      purchaseReturnProvider.purchaseReturnCurrentPage = value;
+  int get purchaseReturnTotalPages =>
+      purchaseReturnProvider.purchaseReturnTotalPages;
+  set purchaseReturnTotalPages(int value) =>
+      purchaseReturnProvider.purchaseReturnTotalPages = value;
+  List<ReturnableItem> get returnableItemsList =>
+      purchaseReturnProvider.returnableItemsList;
+  set returnableItemsList(List<ReturnableItem> value) =>
+      purchaseReturnProvider.returnableItemsList = value;
+  ReturnableItemsData? get activeReturnableItemsData =>
+      purchaseReturnProvider.activeReturnableItemsData;
+  set activeReturnableItemsData(ReturnableItemsData? value) =>
+      purchaseReturnProvider.activeReturnableItemsData = value;
 
   Map<String, String>? get getMasterDataValues => masterDataValues;
   List<VoucherDetail>? get getVoucherDetailsList => voucherDetailsList;
@@ -194,7 +225,7 @@ class PurchaseProvider extends ChangeNotifier {
     return supplier.user?.name;
   }
 
-  PurchaseProvider() {
+  void _initializePurchaseState() {
     debugPrint("PurchaseProvider constructor called");
     // Ensure lists are initialized to prevent null issues
     storeList = [];
@@ -210,6 +241,7 @@ class PurchaseProvider extends ChangeNotifier {
     debugPrint(
         "Initial purchaseItemListAllPurchase length: ${purchaseItemListAllPurchase.length}");
   }
+
   GetSuppliersModelData supplierDemo = GetSuppliersModelData(
     id: 0,
     user: User(name: "Select Supplier"), // Name now properly nested
@@ -991,8 +1023,7 @@ class PurchaseProvider extends ChangeNotifier {
         return {
           'status': 'failed',
           'http_status_code': response.statusCode,
-          'message':
-              decoded['message'] ??
+          'message': decoded['message'] ??
               'API request failed with status: ${response.statusCode}',
           ...decoded,
         };
@@ -1204,8 +1235,7 @@ class PurchaseProvider extends ChangeNotifier {
         return {
           'status': 'failed',
           'http_status_code': response.statusCode,
-          'message':
-              decoded['message'] ??
+          'message': decoded['message'] ??
               'API request failed with status: ${response.statusCode}',
           ...decoded,
         };
@@ -1250,17 +1280,15 @@ class PurchaseProvider extends ChangeNotifier {
       debugPrint('📤 [Purchase API] receivePurchaseOrder URL: $url');
       debugPrint(
           '📤 [Purchase API] receivePurchaseOrder Body: ${json.encode(apiBodyData)}');
-      final response = await http
-          .post(
-            url,
-            body: json.encode(apiBodyData),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $accessToken',
-              'X-Tenant': apiKey,
-            },
-          )
-          .timeout(const Duration(seconds: 30));
+      final response = await http.post(
+        url,
+        body: json.encode(apiBodyData),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+      ).timeout(const Duration(seconds: 30));
       debugPrint(
           '📥 [Purchase API] receivePurchaseOrder Status: ${response.statusCode}');
       debugPrint(
@@ -1278,8 +1306,7 @@ class PurchaseProvider extends ChangeNotifier {
         return {
           'status': 'failed',
           'http_status_code': response.statusCode,
-          'message':
-              decoded['message'] ??
+          'message': decoded['message'] ??
               'API request failed with status: ${response.statusCode}',
           ...decoded,
         };
@@ -1300,235 +1327,40 @@ class PurchaseProvider extends ChangeNotifier {
 
   // ── Purchase Returns ────────────────────────────────────────────────
 
-  Future<void> listPurchaseReturns({
-    required String accessToken,
-    int? page,
-    String? supplierId,
-    String? dateFrom,
-    String? dateTo,
-  }) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
-
-    final queryParameters = <String, String>{
-      'page': page?.toString() ?? '1',
-    };
-    if (supplierId != null && supplierId.isNotEmpty) {
-      queryParameters['supplier_id'] = supplierId;
-    }
-    if (dateFrom != null && dateFrom.isNotEmpty) {
-      queryParameters['date_from'] = dateFrom;
-    }
-    if (dateTo != null && dateTo.isNotEmpty) {
-      queryParameters['date_to'] = dateTo;
-    }
-
-    final url = Uri.parse(APPUrl.listPurchaseReturns)
-        .replace(queryParameters: queryParameters);
-
-    if (apiKey == null || apiKey.isEmpty) {
-      throw const HttpException("API key not found. Please restart the app.");
-    }
-    try {
-      final response = await http.get(url, headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $accessToken',
-        'X-Tenant': apiKey,
-      });
-      if (response.statusCode != 200) {
-        throw HttpException(
-          'Failed to load purchase returns (HTTP ${response.statusCode}).',
-        );
-      }
-
-      final decoded = json.decode(response.body);
-      if (decoded is! Map || decoded['status'] != 'success') {
-        final message = decoded is Map ? decoded['message']?.toString() : null;
-        throw HttpException(message ?? 'Failed to load purchase returns.');
-      }
-
-      final jsonData = Map<String, dynamic>.from(decoded);
-      final model = ListPurchaseReturnModel.fromJson(jsonData);
-      purchaseReturnCurrentPage = model.data?.currentPage ?? 1;
-      purchaseReturnTotalPages = model.data?.lastPage ?? 1;
-      purchaseReturnsList = model.data?.data ?? [];
-      notifyListeners();
-    } catch (e) {
-      debugPrint("Error fetching purchase returns: $e");
-      purchaseReturnsList = [];
-      purchaseReturnCurrentPage = 1;
-      purchaseReturnTotalPages = 1;
-      notifyListeners();
-      if (e is HttpException) rethrow;
-      throw const HttpException('Unable to load purchase returns. Please try again.');
-    }
-  }
-
-  Future<PurchaseReturnData?> fetchPurchaseReturnDetails({
-    required String accessToken,
-    required int returnId,
-  }) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
-
-    if (apiKey == null || apiKey.isEmpty) {
-      return null;
-    }
-    try {
-      final url = Uri.parse(APPUrl.purchaseReturnDetails(returnId));
-      final response = await http.get(url, headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $accessToken',
-        'X-Tenant': apiKey,
-      });
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        if (jsonData["status"] == "success" && jsonData["data"] != null) {
-          return PurchaseReturnData.fromJson(jsonData["data"]);
-        }
-      }
-      return null;
-    } catch (e) {
-      debugPrint("Error fetching purchase return details: $e");
-      return null;
-    }
-  }
-
-  Future<void> fetchReturnableItems({
-    required String accessToken,
-    required int purchaseVoucherId,
-  }) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
-
-    if (apiKey == null || apiKey.isEmpty) {
-      throw const HttpException("API key not found. Please restart the app.");
-    }
-    try {
-      final url = Uri.parse(APPUrl.returnableItems(purchaseVoucherId));
-      final response = await http.get(url, headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $accessToken',
-        'X-Tenant': apiKey,
-      });
-      if (response.statusCode != 200) {
-        throw HttpException(
-          'Failed to load returnable items (HTTP ${response.statusCode}).',
-        );
-      }
-
-      final decoded = json.decode(response.body);
-      if (decoded is! Map || decoded['status'] != 'success') {
-        final message = decoded is Map ? decoded['message']?.toString() : null;
-        throw HttpException(message ?? 'Failed to load returnable items.');
-      }
-
-      final parsed = ReturnableItemsResponse.fromJson(
-        Map<String, dynamic>.from(decoded),
-      );
-      activeReturnableItemsData = parsed.data;
-      returnableItemsList = parsed.data?.items ?? [];
-      notifyListeners();
-    } catch (e) {
-      debugPrint("Error fetching returnable items: $e");
-      returnableItemsList = [];
-      activeReturnableItemsData = null;
-      notifyListeners();
-      if (e is HttpException) rethrow;
-      throw const HttpException(
-        'Unable to load returnable items. Please try again.',
-      );
-    }
-  }
-
-  Future<Map<String, dynamic>> createPurchaseReturn({
-    required String accessToken,
-    required int purchaseVoucherId,
-    required String returnDate,
-    required List<Map<String, dynamic>> items,
-    bool hasPayment = false,
-    double? paidAmount,
-    String? paymentMethod,
-  }) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
-
-    if (apiKey == null || apiKey.isEmpty) {
-      return {
-        'status': 'failed',
-        'message': 'API key not found. Please restart the app.',
-      };
-    }
-
-    final payload = <String, dynamic>{
-      'purchase_voucher_id': purchaseVoucherId,
-      'return_date': returnDate,
-      'items': items,
-      'has_payment': hasPayment,
-    };
-    if (hasPayment && paidAmount != null) {
-      payload['paid_amount'] = paidAmount;
-    }
-    if (hasPayment && paymentMethod != null) {
-      payload['payment_method'] = paymentMethod;
-    }
-
-    final body = json.encode(payload);
-
-    try {
-      final url = Uri.parse(APPUrl.createPurchaseReturn);
-      final response = await http
-          .post(url,
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Authorization': 'Bearer $accessToken',
-                'X-Tenant': apiKey,
-              },
-              body: body)
-          .timeout(const Duration(seconds: 30));
-
-      dynamic decoded;
-      try {
-        decoded = json.decode(response.body);
-      } catch (_) {
-        return {
-          'status': 'failed',
-          'http_status_code': response.statusCode,
-          'message': 'Server error (${response.statusCode}). Please try again.',
-        };
-      }
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        if (decoded['status'] == 'success') {
-          return {'status': 'success', 'message': decoded['message'] ?? ''};
-        }
-      }
-      String errorMessage = decoded['message'] ?? 'Failed to create purchase return.';
-      final errors = decoded['errors'] ?? decoded['data'];
-      if (errors is Map) {
-        final firstError = errors.values.firstWhere(
-          (v) => v is List && v.isNotEmpty,
-          orElse: () => null,
-        );
-        if (firstError != null) {
-          errorMessage = firstError[0].toString();
-        }
-      }
-      return {
-        'status': 'failed',
-        'http_status_code': response.statusCode,
-        'message': errorMessage,
-      };
-    } on TimeoutException {
-      return {
-        'status': 'failed',
-        'message': 'Request timed out. Please try again.',
-      };
-    } catch (e) {
-      return {
-        'status': 'failed',
-        'message': 'Error: ${e.toString()}',
-      };
-    }
-  }
+  Future<void> listPurchaseReturns(
+          {required String accessToken,
+          int? page,
+          String? supplierId,
+          String? dateFrom,
+          String? dateTo}) =>
+      purchaseReturnProvider.listPurchaseReturns(
+          accessToken: accessToken,
+          page: page,
+          supplierId: supplierId,
+          dateFrom: dateFrom,
+          dateTo: dateTo);
+  Future<PurchaseReturnData?> fetchPurchaseReturnDetails(
+          {required String accessToken, required int returnId}) =>
+      purchaseReturnProvider.fetchPurchaseReturnDetails(
+          accessToken: accessToken, returnId: returnId);
+  Future<void> fetchReturnableItems(
+          {required String accessToken, required int purchaseVoucherId}) =>
+      purchaseReturnProvider.fetchReturnableItems(
+          accessToken: accessToken, purchaseVoucherId: purchaseVoucherId);
+  Future<Map<String, dynamic>> createPurchaseReturn(
+          {required String accessToken,
+          required int purchaseVoucherId,
+          required String returnDate,
+          required List<Map<String, dynamic>> items,
+          bool hasPayment = false,
+          double? paidAmount,
+          String? paymentMethod}) =>
+      purchaseReturnProvider.createPurchaseReturn(
+          accessToken: accessToken,
+          purchaseVoucherId: purchaseVoucherId,
+          returnDate: returnDate,
+          items: items,
+          hasPayment: hasPayment,
+          paidAmount: paidAmount,
+          paymentMethod: paymentMethod);
 }
